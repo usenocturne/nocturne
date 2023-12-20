@@ -3,6 +3,8 @@
 This is a prebuilt image of Debian 13 (Trixie) for the Spotify Car Thing, aka superbird.
 It combines the stock kernel with a debian rootfs, and launches a fullscreen Chromium kiosk. I like to use it with Home Assistant.
 
+<img src="superbird_ha.jpg" alt="Home Assistant on Car Thing" style="height: 300px;"/>
+
 This image will remove the default Spotify functionality. You should definitely [make a full backup](https://github.com/bishopdynamics/superbird-tool) before proceeding!
 
 Default user and password are both `superbird`
