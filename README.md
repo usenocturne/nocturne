@@ -49,7 +49,7 @@ After installation, you will have 3 different boot options, depending on what bu
 
 ## Installation
 
-1. Download and extract the image from here: (TODO)
+1. Download and extract the image from here [Releases](https://github.com/bishopdynamics/superbird-debian-kiosk/releases)
 2. Put your device in burn mode by holding buttons 1 & 4 while plugging into usb port
 3. Use the latest version of [superbird-tool](https://github.com/bishopdynamics/superbird-tool) to flash the extracted image folder:
 
