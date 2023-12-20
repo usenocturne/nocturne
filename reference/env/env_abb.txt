@@ -1,0 +1,54 @@
+EnableSelinux=enforcing
+Irq_check_en=0
+active_slot=_a
+boot_part=boot_a
+avb2=0
+baudrate=115200
+display_bpp=16
+display_color_bg=0
+display_color_fg=0xffff
+display_color_index=16
+display_height=800
+display_init=1
+display_width=480
+dtb_mem_addr=0x1000000
+fb_addr=0x1f800000
+fdt_high=0x20000000
+loadaddr=1080000
+lock=10001000
+firstboot=0
+recovery_offset=0
+recovery_part=recovery
+
+system_mode=1
+try_auto_burn=update 700 750;
+update=run usb_burning; 
+upgrade_step=0
+usb_burning=update 1000
+wipe_cache=successful
+wipe_data=successful
+
+sdc_burning=sdc_burn ${sdcburncfg}
+sdcburncfg=aml_sdc_burn.ini
+silent=on
+bcb_cmd=get_avb_mode;get_valid_slot;
+bootcmd=run storeboot
+
+init_display_normal=osd open;osd clear;imgread pic logo bootup_spotify $loadaddr;bmp display $bootup_spotify_offset;bmp scale;vout output panel;
+init_display_recovery=osd open;osd clear;imgread pic logo upgrade_logo $loadaddr;bmp display $upgrade_logo_offset;bmp scale;vout output panel;
+init_display_burn=osd open;osd clear;imgread pic logo upgrade_error $loadaddr;bmp display $upgrade_error_offset;bmp scale;vout output panel;
+
+initargs_sysa=init=/sbin/pre-init ramoops.pstore_en=1 ramoops.record_size=0x8000 ramoops.console_size=0x4000 rootfstype=ext4 console=ttyS0,115200n8 no_console_suspend earlycon=aml-uart,0xff803000 ro rootwait skip_initramfs root=/dev/mmcblk0p14 androidboot.slot_suffix=_a
+initargs_sysb=init=/sbin/pre-init ramoops.pstore_en=1 ramoops.record_size=0x8000 ramoops.console_size=0x4000 rootfstype=ext4 console=ttyS0,115200n8 no_console_suspend earlycon=aml-uart,0xff803000 ro rootwait skip_initramfs root=/dev/mmcblk0p15 androidboot.slot_suffix=_b
+
+splash_boot=imgread pic logo bootup_spotify $loadaddr;bmp display $bootup_spotify_offset;bmp scale;run storeboot;
+bootargs_video=logo=osd0,loaded,0x1f800000 fb_width=480 fb_height=800 vout=panel,enable panel_type=lcd_8 frac_rate_policy=1 osd_reverse=0 video_reverse=0
+storeargs=setenv bootargs ${initargs} ${bootargs_video} reboot_mode_android=normal androidboot.selinux=${EnableSelinux} androidboot.firstboot=${firstboot} androidboot.hardware=amlogic irq_check_en=0 jtag=disable uboot_version=${gitver}; setenv avb2 0; if gpio input GPIOA_3; then run init_display_burn; run update; fi;
+storeboot=boot_cooling;run storeargs;get_valid_slot;consume_boot_try;if imgread kernel ${boot_part} ${loadaddr}; then bootm ${loadaddr}; fi;run update;
+
+boot_slot_normal=run init_display_normal; setenv initargs ${initargs_sysa}; setenv active_slot _a; setenv boot_part boot_a;
+boot_slot_recovery=run init_display_recovery; setenv initargs ${initargs_sysb}; setenv active_slot _b; setenv boot_part boot_b;
+
+pick_boot_slot=if gpio input GPIOA_0; then run boot_slot_recovery; else run boot_slot_normal; fi;
+
+preboot=run bcb_cmd; run pick_boot_slot; run storeargs;bcb uboot-command; run storeboot;

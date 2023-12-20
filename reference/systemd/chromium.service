@@ -1,0 +1,10 @@
+[Unit]
+Description=Chromium Fullscreen
+Wants=network-online.target
+
+[Service]
+ExecStart=/scripts/start_chromium.sh > /var/log/chromium.log 2>&1
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

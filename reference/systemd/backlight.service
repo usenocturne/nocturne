@@ -1,0 +1,11 @@
+[Unit]
+Description=Backlight sync to display state
+Wants=network-online.target
+
+[Service]
+ExecStart=/scripts/setup_backlight.sh
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOBLSF

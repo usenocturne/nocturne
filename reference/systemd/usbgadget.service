@@ -1,0 +1,10 @@
+[Unit]
+Description=USB Gadget for RNDIS and ADB
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+ExecStart=/scripts/setup_usbgadget.sh > /var/log/setup_usbgadget.log 2>&1
+
+[Install]
+WantedBy=network.target
