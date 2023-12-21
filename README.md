@@ -30,7 +30,7 @@ Available, but not used in this image:
 Not working: Wifi
 
 WiFi is technically possible on this hardware, but the stock bootloaders and kernel disable it.
-I might be possible to cherry-pick the wifi information from the Radxa Zero device tree (practically the same SoC), but I think you would need to rebuild one or more of the bootloader stages to make it work.
+It might be possible to cherry-pick the wifi information from the Radxa Zero device tree (practically the same SoC), but I think you would need to rebuild one or more of the bootloader stages to make it work.
 
 
 ## Boot Modes
@@ -62,7 +62,7 @@ Requirements:
 
 
 Setup:
-1. Download and extract the image from here [Releases](https://github.com/bishopdynamics/superbird-debian-kiosk/releases)
+1. Download and extract the image from [Releases](https://github.com/bishopdynamics/superbird-debian-kiosk/releases)
 2. Put your device in burn mode by holding buttons 1 & 4 while plugging into usb port
    1. avoid using a USB hub, you will have issues flashing the image
 3. Use the latest version of [superbird-tool](https://github.com/bishopdynamics/superbird-tool) to flash the extracted image folder:
@@ -115,14 +115,14 @@ Here are the general steps:
 
 1. using [superbird-tool](https://github.com/bishopdynamics/superbird-tool), dump the entire device
 2. mount `system_a.ext2` (use this for Utility Mode)
-   1. install usb gadget, so we can us ADB
+   1. install usb gadget, so we can use ADB to get a shell
    2. install debootstrap, so we can manually rebuild the rootfs on-device if desired
    3. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
 3. mount `system_b.ext2` (use this for Debian Mode)
    1. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
 4. use `reference/install_debian.sh` to create a debian rootfs on `data.ext4`
    1. `install_debian.sh data.ext4`
-5. use superbird-tool to write `reference/env/env_switchable.txt`
+5. use superbird-tool to write `reference/env/env_switchable.txt` to superbird env
 6. use superbird-tool to write the modified versions of `system_a.ext2`, `system_b.ext2`, and `data.ext4`
 7. test and tweak
 8. use superbird-tool to do a full device dump
