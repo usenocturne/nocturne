@@ -1,9 +1,11 @@
-# Debian Chromium Kiosk on Spotify Car Thing (superbird)
+# Wall Thing: Debian Chromium Kiosk on Spotify Car Thing (superbird)
 
 This is a prebuilt image of Debian 13 (Trixie) for the Spotify Car Thing, aka superbird.
 It combines the stock kernel with a debian rootfs, and launches a fullscreen Chromium kiosk. I like to use it with Home Assistant.
 
-<img src="superbird_ha.jpg" alt="Home Assistant on Car Thing" style="height: 300px;"/>
+<img src="pictures/superbird_ha_portrait.jpg" alt="Home Assistant on Car Thing" style="height: 300px;"/>
+<img src="pictures/superbird_wall_mount.jpg" alt="Home Assistant on Car Thing" style="height: 300px;"/>
+
 
 This image will remove the default Spotify functionality. You should definitely [make a full backup](https://github.com/bishopdynamics/superbird-tool) before proceeding!
 
@@ -51,8 +53,18 @@ After installation, you will have 3 different boot options, depending on what bu
 
 ## Installation
 
+Requirements:
+* Spotify Car Thing
+* another device to act as host, such as Radxa Zero, Rockpi S, Raspberry Pi 4, etc
+* a USB cable to connect the two
+* power supply for the host device
+* a desktop/laptop for flashing the image to the Car Thing
+
+
+Setup:
 1. Download and extract the image from here [Releases](https://github.com/bishopdynamics/superbird-debian-kiosk/releases)
 2. Put your device in burn mode by holding buttons 1 & 4 while plugging into usb port
+   1. avoid using a USB hub, you will have issues flashing the image
 3. Use the latest version of [superbird-tool](https://github.com/bishopdynamics/superbird-tool) to flash the extracted image folder:
 
 ```bash
@@ -65,9 +77,9 @@ python3 superbird_tool.py --restore_device ~/Downloads/debian_v1.2_2023-12-19
 
 4. Configure a host system
    1. Select a host device. I have tested:
-      1. Radxa Zero with [Armbian](https://www.armbian.com/radxa-zero/) Jammy Minimal CLI
+      1. [Radxa Zero](pictures/superbird_wall_mount.jpg) with [Armbian](https://www.armbian.com/radxa-zero/) Jammy Minimal CLI
          1. The Armbian Bookworm release did not work with USB burn mode, but works fine as a host just for networking
-      2. Radxa Rockpi S, also with Armbian Jammy
+      2. [Radxa Rockpi S](pictures/superbird_landscape_back.jpg) ([with a PoE hat!](pictures/superbird_poe.jpg)), also with Armbian Jammy
       3. Raspberry Pi 4B, with Raspi OS Bookworm Lite
    2. Copy and run `setup_host.sh` on the host device (as root), and reboot
    3. Connect the Car Thing into the host device and power it up
@@ -104,7 +116,8 @@ Here are the general steps:
 1. using [superbird-tool](https://github.com/bishopdynamics/superbird-tool), dump the entire device
 2. mount `system_a.ext2` (use this for Utility Mode)
    1. install usb gadget, so we can us ADB
-   2. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
+   2. install debootstrap, so we can manually rebuild the rootfs on-device if desired
+   3. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
 3. mount `system_b.ext2` (use this for Debian Mode)
    1. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
 4. use `reference/install_debian.sh` to create a debian rootfs on `data.ext4`
