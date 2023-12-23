@@ -114,19 +114,18 @@ All the scripts and resources I used are in `reference/`, see that [Readme](refe
 Here are the general steps:
 
 1. using [superbird-tool](https://github.com/bishopdynamics/superbird-tool), dump the entire device
-2. mount `system_a.ext2` (use this for Utility Mode)
+2. mount `system_b.ext2` (use this for Utility Mode)
    1. install usb gadget, so we can use ADB to get a shell
    2. install debootstrap, so we can manually rebuild the rootfs on-device if desired
+      1. place `reference/install_debian.sh` in `/scripts/`
    3. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
-3. mount `system_b.ext2` (use this for Debian Mode)
-   1. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
-   2. grab `/lib/modules/` to be used with next step
-4. use `reference/install_debian.sh` to create a debian rootfs on `data.ext4`
+   4. grab `/lib/modules/` to be used with next step
+3. use `reference/install_debian.sh` to create a debian rootfs on `data.ext4`
    1. `install_debian.sh data.ext4`
-5. use superbird-tool to write `reference/env/env_switchable.txt` to superbird env
-6. use superbird-tool to write the modified versions of `system_a.ext2`, `system_b.ext2`, and `data.ext4`
-7. test and tweak
-8. use superbird-tool to do a full device dump
+4. use superbird-tool to write `reference/env/env_switchable.txt` to superbird env
+5. use superbird-tool to write the modified versions of `system_a.ext2`, `system_b.ext2`, and `data.ext4`
+6. test and tweak
+7. use superbird-tool to do a full device dump
 
 ## Warranty and Liability
 
