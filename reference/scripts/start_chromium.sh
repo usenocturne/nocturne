@@ -4,15 +4,13 @@
 
 # handle defaults
 URL="https://192.168.1.144:8123/lovelace/"
-WINDOW_WIDTH="480"
-WINDOW_HEIGHT="800"
 SCALE="1.0"
 EXTRA_CHROMIUM_ARGS=""
+EXTRA_XORG_ARGS="-nocursor"
 
 ## Hardcoded Vars
 CHROMIUM_BINARY="/usr/bin/chromium"
 USER_DATA_DIR="/config"
-WINDOW_POSITION="0,0"  # always want window to start at 0,0
 DISK_CACHE_DIR="/dev/null"  # prevent chromium from caching anything
 
 echo "Starting chromium kiosk"
@@ -38,8 +36,6 @@ CHROMIUM_CMD="xinit $CHROMIUM_BINARY \
 	--remote-debugging-port=9222 \
 	--display=$DISPLAY \
 	--force-device-scale-factor=$SCALE \
-	--window-size=${WINDOW_WIDTH},${WINDOW_HEIGHT} \
-	--window-position=$WINDOW_POSITION \
 	--pull-to-refresh=1 \
 	--disable-smooth-scrolling \
 	--disable-login-animations \
@@ -61,7 +57,7 @@ CHROMIUM_CMD="xinit $CHROMIUM_BINARY \
 	--ignore-certificate-errors \
 	--user-data-dir=$USER_DATA_DIR \
 	--kiosk $EXTRA_CHROMIUM_ARGS \
-	--app=$URL"
+	--app=$URL -- $EXTRA_XORG_ARGS"
 
 echo ""
 echo "running chromium command: $CHROMIUM_CMD"

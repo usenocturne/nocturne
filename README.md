@@ -120,6 +120,7 @@ Here are the general steps:
    3. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
 3. mount `system_b.ext2` (use this for Debian Mode)
    1. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
+   2. grab `/lib/modules/` to be used with next step
 4. use `reference/install_debian.sh` to create a debian rootfs on `data.ext4`
    1. `install_debian.sh data.ext4`
 5. use superbird-tool to write `reference/env/env_switchable.txt` to superbird env
