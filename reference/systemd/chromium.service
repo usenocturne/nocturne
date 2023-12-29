@@ -3,7 +3,7 @@ Description=Chromium Fullscreen
 Wants=network-online.target
 
 [Service]
-ExecStart=/scripts/start_chromium.sh > /var/log/chromium.log 2>&1
+ExecStart=/scripts/start_chromium.sh
 # clear display when stopping, so it doesn't just freeze on the last image
 ExecStopPost=/scripts/clear_display.sh
 RestartSec=5

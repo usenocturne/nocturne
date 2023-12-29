@@ -1,5 +1,15 @@
 # Change Log
 
+v1.4
+* added back some python packages for fun
+* added `--local_proxy` flag to `install_debian.sh`, to use a local instance of apt-cacher-ng
+* added some helper scripts for creating an image for release
+* switch to main debian mirror, `http://deb.debian.org/debian/`
+* use x11vnc `-loop` flag instead of our own loop
+* remove ~10px black border around chromium (more pixels!)
+* hide scrollbars in chromium
+* chromium service (including X11) now logs to `/var/log/chromium.log`
+
 v1.3
 * hide cursor in chromium
 * add xorg.conf entries for buttons and knob

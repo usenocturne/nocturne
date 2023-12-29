@@ -8,14 +8,17 @@ SCALE="1.0"
 EXTRA_CHROMIUM_ARGS=""
 EXTRA_XORG_ARGS="-nocursor"
 
-## Hardcoded Vars
+## Hardcoded Vars you dont need to mess with
 CHROMIUM_BINARY="/usr/bin/chromium"
 USER_DATA_DIR="/config"
 DISK_CACHE_DIR="/dev/null"  # prevent chromium from caching anything
 
+# log this script's actions to a file
+exec 1>/var/log/chromium.log 2>&1
+
 echo "Starting chromium kiosk"
 
-command -v "$CHROMIUM_BINARY" || {
+command -v "$CHROMIUM_BINARY" >/dev/null || {
 	echo "Need to install chromium! "
 	exit 1
 }
@@ -24,6 +27,18 @@ command -v "$CHROMIUM_BINARY" || {
 
 # does not get cleaned up properly after previous exit
 rm ${USER_DATA_DIR}/SingletonLock
+
+# get current resolution so we can match it
+#	if you don't set --window-size, chromium will go almost-fullscreen, about 10px shy on all sides
+#	if you don't set --window-position, chromium will start at about 10,10 instead of 0,0
+#	why does chromium do this??!?!
+# here we detect resolution by briefly starting X11 and then parsing output of xrandr
+#	this is simpler and more reliable than parsing xorg.conf
+#	by avoiding a hardcoded resolution here, we only need to make changes in xorg.conf if we want to change resolution or rotate
+
+echo "Briefly starting X11 in order to detect configured resolution"
+DISP_REZ=$(xinit /usr/bin/xrandr 2>/dev/null|grep "\*"|awk '{print $1}'|tr 'x' ',')
+echo "Detected resolution: $DISP_REZ"
 
 CHROMIUM_CMD="xinit $CHROMIUM_BINARY \
 	--no-gpu \
@@ -34,7 +49,8 @@ CHROMIUM_CMD="xinit $CHROMIUM_BINARY \
 	--use-fake-device-for-media-stream \
 	--disable-sync \
 	--remote-debugging-port=9222 \
-	--display=$DISPLAY \
+	--window-size=$DISP_REZ \
+	--window-position=0,0 \
 	--force-device-scale-factor=$SCALE \
 	--pull-to-refresh=1 \
 	--disable-smooth-scrolling \
@@ -48,6 +64,7 @@ CHROMIUM_CMD="xinit $CHROMIUM_BINARY \
 	--disable-pinch \
 	--overscroll-history-navigation=0 \
 	--disable-translate \
+	--hide-scrollbars \
 	--disable-overlay-scrollbar \
 	--disable-features=OverlayScrollbar \
 	--disable-features=TranslateUI \
