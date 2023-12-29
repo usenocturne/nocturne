@@ -18,9 +18,14 @@ if [ -e "./dist/$ARCHIVE_NAME" ]; then
     exit 1
 fi
 
+
 mv "./dumps/debian_current" "./dumps/$RELEASE_NAME"
 
-tar czvf "./dist/$ARCHIVE_NAME" "./dumps/$RELEASE_NAME"
+pushd ./dumps || exit 1
+
+tar czvf "../dist/$ARCHIVE_NAME" "./$RELEASE_NAME"
+
+popd || exit 1
 
 mv "./dumps/$RELEASE_NAME" "./dumps/debian_current"
 
