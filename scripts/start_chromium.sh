@@ -3,10 +3,12 @@
 #	fullscreen, kiosk mode, tweaked for touchscreen, with given url
 
 # handle defaults
-URL="https://192.168.1.144:8123/lovelace/"
-SCALE="1.0"
-EXTRA_CHROMIUM_ARGS=""
-EXTRA_XORG_ARGS="-nocursor"
+# URL="https://192.168.1.144:8123/lovelace/"
+# SCALE="1.0"
+# EXTRA_CHROMIUM_ARGS=""
+# EXTRA_XORG_ARGS="-nocursor"
+
+source /scripts/chromium_settings.sh
 
 ## Hardcoded Vars you dont need to mess with
 CHROMIUM_BINARY="/usr/bin/chromium"

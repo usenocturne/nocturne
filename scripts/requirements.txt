@@ -1,0 +1,3 @@
+# python packages to be installed (as root) using pip, on superbird
+# Home Assistant API, for controlling lighting and recalling scenes
+homeassistant_api

@@ -19,11 +19,11 @@ Default user and password are both `superbird`
 * Automatic blacklight on/off with display wake/sleep
 * Chromium remote debugging, VNC and SSH (forwarded through host device)
 * Chromium browser, fullscreen kiosk mode
+* Buttons and dial used to control a light and recall scenes/automations/scripts on Home Assistant
 
 Available, but not used in this image:
 
 * Bluetooth
-* Buttons and dial (but will wake up display from sleep)
 * Backlight brightness control (currently fixed at 100)
 * Audio (mic array, DSP)
 
@@ -117,10 +117,10 @@ Here are the general steps:
 2. mount `system_b.ext2` (use this for Utility Mode)
    1. install usb gadget, so we can use ADB to get a shell
    2. install debootstrap, so we can manually rebuild the rootfs on-device if desired
-      1. place `reference/install_debian.sh` in `/scripts/`
+      1. place `install_debian.sh` in `/scripts/`
    3. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
    4. grab `/lib/modules/` to be used with next step
-3. use `reference/install_debian.sh` to create a debian rootfs on `data.ext4`
+3. use `install_debian.sh` to create a debian rootfs on `data.ext4`
    1. `install_debian.sh data.ext4`
 4. use superbird-tool to write `reference/env/env_switchable.txt` to superbird env
 5. use superbird-tool to write the modified versions of `system_a.ext2`, `system_b.ext2`, and `data.ext4`

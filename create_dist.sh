@@ -18,7 +18,6 @@ if [ -e "./dist/$ARCHIVE_NAME" ]; then
     exit 1
 fi
 
-
 mv "./dumps/debian_current" "./dumps/$RELEASE_NAME"
 
 pushd ./dumps || exit 1

@@ -19,5 +19,5 @@ if [ ! -f "$DATA_IMAGE" ]; then
     exit 1
 fi
 
-sudo ./reference/install_debian.sh "$DATA_IMAGE" --local_proxy
+sudo ./install_debian.sh "$DATA_IMAGE" --local_proxy
 
