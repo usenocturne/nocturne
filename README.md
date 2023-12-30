@@ -97,12 +97,18 @@ ssh -p 2022 superbird@host-device
 ```
 1. Once you have ssh access to the Car Thing, edit some things:
    1. Probably change password
-   2. Edit the `URL` variable in `/scripts/start_chromium.sh` to change what page to launch in the kiosk
+   2. Edit `/scripts/chromium_settings.sh` to change what URL to launch in the kiosk
       1. Restart X11 and Chromium with: `sudo systemctl restart chromium.service`
-   3. Edit `/etc/X11/xorg.conf` to adjust screen timeout (default 10 mins), orientation (default portrait)
-   4. Edit `/scripts/setup_display.sh` and `/scripts/setup_backlight.sh` to adjust backlight brightness (default 100)
-   5. Edit `/scripts/setup_vnc.sh` to adjust VNC server settings and password
-2. Using your favorite VNC client, connect by VNC to the host device, port 5900, if you need to interact with a page (sign in)
+   3. Edit `/scripts/buttons_settings.py` to change Home Assistant URL and add long-lived token for access
+      1. assign scenes/automations/scripts to buttons, assign a light entity to the knob
+      2. Restart buttons script with: `sudo systemctl restart buttons.service`
+   4. Edit `/etc/X11/xorg.conf` to adjust screen timeout (default 10 mins), orientation (default portrait)
+      1. for landscape, un-comment lines `38` and `71`
+   5. Edit `/scripts/setup_display.sh` and `/scripts/setup_backlight.sh` to adjust backlight brightness (default 100)
+      1. Restart backlight script with: `sudo systemctl restart backlight.service`
+   6. Edit `/scripts/setup_vnc.sh` to adjust VNC server settings and password
+      1. Restart vnc script with: `sudo systemctl restart vnc.service`
+2. Using your favorite VNC client, connect by VNC to the host device's address, port 5900, if you need to interact with a page (sign in)
 3. ?
 4.  Profit
 
