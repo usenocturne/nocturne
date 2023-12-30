@@ -87,7 +87,7 @@ python3 superbird_tool.py --restore_device ~/Downloads/debian_v1.2_2023-12-19
 ```bash
 # the script added an entry in /etc/hosts, so you can use hostname "superbird" from the host device
 ssh superbird@superbird
-# or by ip (the host device is 192.168.7.1)
+# or by ip (host device is 192.168.7.1, superbird is 192.168.7.2)
 ssh superbird@192.168.7.2
 ```
 1. From another device on the same network, you should be able to ssh directly to the Car Thing using port 2022:
