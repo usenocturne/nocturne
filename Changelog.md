@@ -1,5 +1,8 @@
 # Change Log
 
+v1.5.1
+* fixed oops: missing `/scripts/chromium_settings.sh` in prebuilt image
+
 v1.5
 * moved chromium settings into separate file `/scripts/chromium_settings.sh`
 * added buttons service, configure in `/scripts/buttons_settings.py`
@@ -11,6 +14,8 @@ v1.5
 
 Starting with this release, your settings are stored in `/scripts/chromium_settings.sh` and `/scripts/buttons_settings.py`, and those two files will NOT be touched during subsequent upgrades using `update_local.sh`, so your settings will survive upgrades.
 However, your existing settings will NOT be migrated, so if you use `update_local.sh` to upgrade an existing device you will then need to edit those two files.
+
+You should setup ssh key with superbird first, so that you don't have to type the password a bunch of time during upgrade.
 
 If you are coming from v1.2 you should flash the image from Releases instead, you will end up with much more free space.
 

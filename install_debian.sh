@@ -248,6 +248,7 @@ install_script setup_backlight.sh
 install_service backlight.service
 
 install_script start_chromium.sh
+install_script chromium_settings.sh
 install_service chromium.service
 
 in_target chown -R $USER_NAME /scripts
