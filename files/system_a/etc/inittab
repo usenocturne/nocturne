@@ -1,0 +1,63 @@
+# /etc/inittab
+#
+# Copyright (C) 2001 Erik Andersen <andersen@codepoet.org>
+#
+# Note: BusyBox init doesn't support runlevels.  The runlevels field is
+# completely ignored by BusyBox init. If you want runlevels, use
+# sysvinit.
+#
+# Format for each entry: <id>:<runlevels>:<action>:<process>
+#
+# id        == tty to run on, or empty for /dev/console
+# runlevels == ignored
+# action    == one of sysinit, respawn, askfirst, wait, and once
+# process   == program to run
+
+# Startup the system
+::sysinit:/bin/mount -t proc proc /proc
+::sysinit:/bin/mkdir /dev/shm
+::sysinit:/bin/mkdir /dev/pts
+::sysinit:/bin/mount -t tmpfs /var
+::sysinit:/bin/mkdir /var/log
+::sysinit:/bin/mount -a
+::sysinit:/bin/hostname -F /etc/hostname
+::sysinit:/sbin/ifconfig lo 127.0.0.1 up
+::sysinit:/sbin/route add -net 127.0.0.0 netmask 255.0.0.0 lo
+# now run any rc scripts
+::sysinit:/etc/init.d/rcS
+
+# Set up a couple of getty's
+tty1::once:/sbin/getty 38400 tty1
+tty2::once:/sbin/getty 38400 tty2
+
+# Put a getty on the serial port
+#ttyS0::respawn:/sbin/getty -L ttyS0 115200 vt100 # UNSUPPORT GENERIC_SERIAL
+ttyS0::respawn:-/bin/sh  # AMLOGIC_GENERAL_SERIAL
+
+# Logging junk
+#null::sysinit:/bin/touch /var/log/messages
+null::respawn:/sbin/syslogd -n
+null::respawn:/sbin/klogd -n
+#tty3::once:/usr/bin/tail -f /var/log/messages
+
+# Stuff to do for the 3-finger salute
+::ctrlaltdel:/sbin/reboot
+
+# Stuff to do before rebooting
+null::shutdown:/usr/bin/killall klogd
+null::shutdown:/usr/bin/killall syslogd
+null::shutdown:/etc/init.d/rcK
+null::shutdown:/bin/umount -a -r
+null::shutdown:/sbin/swapoff -a
+
+null::sysinit:/usr/bin/remotecfg /etc/remote.conf
+null::sysinit:echo 0 > /sys/class/graphics/fb0/blank
+#null::sysinit:echo 0 > /sys/class/graphics/fb1/free_scale
+#null::sysinit:echo 0 > /sys/class/graphics/fb0/free_scale
+null::sysinit:echo 0 > /sys/module/amvdec_h264mvc/parameters/view_mode
+null::sysinit:echo 96000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+null::sysinit:echo interactive > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+null::sysinit:echo 0 > /sys/class/freq_limit/limit
+null::sysinit:echo 1488000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_dflt_freq
+null::sysinit:echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+#::sysinit:/lib/preinit/auto_reboot.sh

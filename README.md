@@ -13,13 +13,15 @@ Default user and password are both `superbird`
 
 ## Features
 
+Working:
 * Debian 13 (Trixie) aarch64
 * Framebuffer display working with X11, in portrait or landscape, with touch input
 * Networking via USB RNDIS (requires a host device)
 * Automatic blacklight on/off with display wake/sleep
-* Chromium remote debugging, VNC and SSH (forwarded through host device)
+* VNC and SSH (forwarded through host device)
 * Chromium browser, fullscreen kiosk mode
 * Buttons and dial used to control a light and recall scenes/automations/scripts on Home Assistant
+* 256MB `settings` partition used for Chromium user profile
 
 Available, but not used in this image:
 
@@ -27,10 +29,14 @@ Available, but not used in this image:
 * Backlight brightness control (currently fixed at 100)
 * Audio (mic array, DSP)
 
-Not working: Wifi
+Not working: 
+* Wifi
+* GPU acceleration
 
 WiFi is technically possible on this hardware, but the stock bootloaders and kernel disable it.
 It might be possible to cherry-pick the wifi information from the Radxa Zero device tree (practically the same SoC), but I think you would need to rebuild one or more of the bootloader stages to make it work.
+
+GPU: the hardware has a Mali GPU, but the stock OS uses it via DirectFB QT library, and does not include necessary libraries to make it work with X11. It may be possible to grab the needed files from Radxa Zero.
 
 
 ## Boot Modes
@@ -39,7 +45,7 @@ After installation, you will have 3 different boot options, depending on what bu
 
 * Debian Mode - default, no buttons held
   * bootlogo is Android with a checkmark
-  * kernel is `boot_b` root is `data`
+  * kernel is `boot_a` root is `data`
 
 * Utility Mode - hold button 1
   * bootlogo is Spotify
@@ -53,7 +59,7 @@ After installation, you will have 3 different boot options, depending on what bu
 
 ## Installation
 
-Requirements:
+### Requirements:
 * Spotify Car Thing
 * another device to act as host, such as Radxa Zero, Rockpi S, Raspberry Pi 4, etc
 * a USB cable to connect the two
@@ -61,8 +67,8 @@ Requirements:
 * a desktop/laptop for flashing the image to the Car Thing
 
 
-Setup:
-1. Download and extract the image from [Releases](https://github.com/bishopdynamics/superbird-debian-kiosk/releases)
+### Setup:
+1. Download and extract the latest image from [Releases](https://github.com/bishopdynamics/superbird-debian-kiosk/releases)
 2. Put your device in burn mode by holding buttons 1 & 4 while plugging into usb port
    1. avoid using a USB hub, you will have issues flashing the image
 3. Use the latest version of [superbird-tool](https://github.com/bishopdynamics/superbird-tool) to flash the extracted image folder:
@@ -85,7 +91,7 @@ python3 superbird_tool.py --restore_device ~/Downloads/debian_v1.2_2023-12-19
    3. Connect the Car Thing into the host device and power it up
 5. ssh to the host device, and then you should be able to ssh to the Car Thing (user and password are both `superbird`) :
 ```bash
-# the script added an entry in /etc/hosts, so you can use hostname "superbird" from the host device
+# script added entry in /etc/hosts, use hostname "superbird" from host device
 ssh superbird@superbird
 # or by ip (host device is 192.168.7.1, superbird is 192.168.7.2)
 ssh superbird@192.168.7.2
@@ -113,25 +119,35 @@ ssh -p 2022 superbird@host-device
 4.  Profit
 
 
-## How I Created the Final Image
+## How to build the image
 
-All the scripts and resources I used are in `reference/`, see that [Readme](reference/Readme.md) for more details.
+1. using [superbird-tool](https://github.com/bishopdynamics/superbird-tool), use `--dump_device` to dump a stock device into `./dumps/debian_current/`
+2. run `./build_image.sh`, which will:
+   1. replace `env.txt` with switchable version (see [`files/env/env_switchable.txt`](files/env/env_switchable.txt))
+   2. modify `system_a` partition for Utility Mode:
+      1. install usb gadget for ADB (see [`files/systema/etc/init.d/S49usbgadget`](files/systema/etc/init.d/S49usbgadget))
+      2. modify `/etc/fstab` and `/etc/inittab` to not mount `data` or `settings` partitions (see [`files/system_a/etc/`](files/system_a/etc))
+   3. format `settings` partition
+   4. format `data` partition, and:
+      1. use debootstrap to create a minimal debian root filesystem, plus a few extra packages
+         1. `systemd systemd-sysv dbus kmod usbutils htop nano tree file less locales sudo dialog apt wget curl iputils-ping iputils-tracepath iputils-arping iproute2 net-tools openssh-server ntp xserver-xorg-core xserver-xorg-video-fbdev xterm xinit x11-xserver-utils shared-mime-info xserver-xorg-input-evdev libinput-bin xserver-xorg-input-libinput xinput fbset x11vnc chromium python3-minimal python3-pip`
+         2. python packages from [`requirements.txt`](files/data/scripts/requirements.txt)
+      2. copy `/lib/modules/4.9.113` from `system_a`
+      3. configure X11 via [`/etc/X11/xorg.conf`](files/data/etc/X11/xorg.conf.portrait)
+      4. set hostname to `superbird` (configure in [`image_config.sh`](image_config.sh))
+      5.  add entry to `/etc/hosts` to resolve `host` as `192.168.7.1` (host device)
+      6.  create regular user `superbird`, password: `superbird`, with passwordless sudo (configure in [`image_config.sh`](image_config.sh))
+      7.  install scripts to `/scripts/` (see [`files/data/scripts/`](files/data/scripts))
+      8.  install services to `/lib/systemd/system/` (see [`files/data/lib/systemd/system/`](files/data/lib/systemd/system))
+      9.  set locale to `en_US.UTF-8`
+      10. set timezone to `America/Los_Angeles`
+      11. add entry to `/etc/fstab` to mount `settings` partition at `/config` (for chromium profile) (see [`files/data/etc/fstab`](files/data/etc/fstab))
+      12. add entry to `/etc/inittab` to enable serial console at 115200 baud (see [`files/data/etc/inittab`](files/data/etc/inittab))
+3.  You now have an image at `./dumps/debian_current/` ready to flash to device using [superbird-tool](https://github.com/bishopdynamics/superbird-tool)
 
-Here are the general steps:
 
-1. using [superbird-tool](https://github.com/bishopdynamics/superbird-tool), dump the entire device
-2. mount `system_b.ext2` (use this for Utility Mode)
-   1. install usb gadget, so we can use ADB to get a shell
-   2. install debootstrap, so we can manually rebuild the rootfs on-device if desired
-      1. place `install_debian.sh` in `/scripts/`
-   3. modify `/etc/fstab` and `/etc/inittab` to not use `data` partition (see `reference/etc/`)
-   4. grab `/lib/modules/` to be used with next step
-3. use `install_debian.sh` to create a debian rootfs on `data.ext4`
-   1. `install_debian.sh data.ext4`
-4. use superbird-tool to write `reference/env/env_switchable.txt` to superbird env
-5. use superbird-tool to write the modified versions of `system_a.ext2`, `system_b.ext2`, and `data.ext4`
-6. test and tweak
-7. use superbird-tool to do a full device dump
+Hint: Install `apt-cacher-ng` and then run `./build_image.sh --local_proxy` to use locally cached packages (avoid re-downloading packages every time, much faster)
+
 
 ## Warranty and Liability
 

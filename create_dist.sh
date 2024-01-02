@@ -2,6 +2,9 @@
 
 # create a distributable tar.gz from ./dumps/debian_current with given version number (without v) and today's date
 
+# all config lives in image_config.sh
+source ./image_config.sh
+
 DATESTAMP=$(date -I)
 VERSION="$1"
 
@@ -18,7 +21,9 @@ if [ -e "./dist/$ARCHIVE_NAME" ]; then
     exit 1
 fi
 
-mv "./dumps/debian_current" "./dumps/$RELEASE_NAME"
+
+mkdir -p ./dumps
+mv "$EXISTING_DUMP" "./dumps/$RELEASE_NAME"
 
 pushd ./dumps || exit 1
 
@@ -26,6 +31,6 @@ tar czvf "../dist/$ARCHIVE_NAME" "./$RELEASE_NAME"
 
 popd || exit 1
 
-mv "./dumps/$RELEASE_NAME" "./dumps/debian_current"
+mv "./dumps/$RELEASE_NAME" "$EXISTING_DUMP"
 
 echo "Created ./dist/$ARCHIVE_NAME"

@@ -1,5 +1,11 @@
 # Change Log
 
+v1.6
+* `build_image.sh` can now create full image from a stock dump without extra steps
+* `image_config.sh` now contains all user-configurable values for building and updating image
+* the 256MB `settings` partition is now mounted at `/config/`, used for chromium user profile
+* reorganize files to make it clearer where they go
+
 v1.5.1
 * fixed oops: missing `/scripts/chromium_settings.sh` in prebuilt image
 
@@ -15,7 +21,7 @@ v1.5
 Starting with this release, your settings are stored in `/scripts/chromium_settings.sh` and `/scripts/buttons_settings.py`, and those two files will NOT be touched during subsequent upgrades using `update_local.sh`, so your settings will survive upgrades.
 However, your existing settings will NOT be migrated, so if you use `update_local.sh` to upgrade an existing device you will then need to edit those two files.
 
-You should setup ssh key with superbird first, so that you don't have to type the password a bunch of time during upgrade.
+You should setup ssh key with superbird first, so that you don't have to type the password a bunch of times during upgrade.
 
 If you are coming from v1.2 you should flash the image from Releases instead, you will end up with much more free space.
 

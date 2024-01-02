@@ -1,0 +1,5 @@
+# /etc/fstab: static file system information
+# <file system>     <mount point>   <type>  <options>        <dump>  <pass>
+
+# for chromium user profile
+/dev/settings       /config         ext4    rw               0       0

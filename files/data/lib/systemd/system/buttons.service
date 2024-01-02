@@ -1,0 +1,10 @@
+[Unit]
+Description=Button service to integrate with Home Assistant
+Wants=network-online.target
+
+[Service]
+ExecStart=/scripts/start_buttons.sh
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

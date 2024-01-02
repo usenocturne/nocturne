@@ -1,0 +1,10 @@
+[Unit]
+Description=VNC server for remote access
+Wants=network-online.target
+
+[Service]
+ExecStart=/scripts/setup_vnc.sh
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

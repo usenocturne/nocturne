@@ -4,7 +4,12 @@
 # expects a device already in USB Mode or USB Burn Mode
 # also expects a compiled version of superbird_tool in root's PATH
 
-CURRENT_IMAGE="./dumps/debian_current/data.ext4"
+# all config lives in image_config.sh
+source ./image_config.sh
+
+CURRENT_IMAGE="${EXISTING_DUMP}/data.ext4"
+
+echo "Going to flash data partition of connected device using $CURRENT_IMAGE"
 
 if [ ! -f "$CURRENT_IMAGE" ]; then
     echo "Could not find: $CURRENT_IMAGE"
