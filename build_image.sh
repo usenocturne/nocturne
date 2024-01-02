@@ -26,7 +26,7 @@ PACKAGES="$PACKAGES xserver-xorg-core xserver-xorg-video-fbdev xterm xinit x11-x
 # xorg input
 PACKAGES="$PACKAGES xserver-xorg-input-evdev libinput-bin xserver-xorg-input-libinput xinput"
 # additional required tools
-PACKAGES="$PACKAGES fbset x11vnc"
+PACKAGES="$PACKAGES fbset tigervnc-scraping-server"
 
 # NOTE: we cannot install chromium at at the debootstrap stage
 #   so we install chromium and other packages in a separate stage using chroot
@@ -259,6 +259,7 @@ install_service usbgadget.service
 install_script setup_display.sh
 install_script clear_display.sh
 
+install_script vnc_passwd
 install_script setup_vnc.sh
 install_service vnc.service
 

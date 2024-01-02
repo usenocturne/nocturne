@@ -1,5 +1,10 @@
 # Change Log
 
+v1.7
+* switch from `x11vnc` to `tigervnc-scraping-server` for better vnc performance
+  * default password `superbird`, to change: `sudo vncpasswd /scripts/vnc_passwd`, and `sudo systemctl restart vnc.service`
+  * vnc password now survives upgrade via `update_local.sh`
+
 v1.6
 * `build_image.sh` can now create full image from a stock dump without extra steps
 * `image_config.sh` now contains all user-configurable values for building and updating image

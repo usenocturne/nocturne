@@ -112,8 +112,8 @@ ssh -p 2022 superbird@host-device
       1. for landscape, un-comment lines `38` and `71`
    5. Edit `/scripts/setup_display.sh` and `/scripts/setup_backlight.sh` to adjust backlight brightness (default 100)
       1. Restart backlight script with: `sudo systemctl restart backlight.service`
-   6. Edit `/scripts/setup_vnc.sh` to adjust VNC server settings and password
-      1. Restart vnc script with: `sudo systemctl restart vnc.service`
+   6. Change vnc password: `sudo vncpasswd /scripts/vnc_passwd`
+      1. Restart vnc server with: `sudo systemctl restart vnc.service`
 2. Using your favorite VNC client, connect by VNC to the host device's address, port 5900, if you need to interact with a page (sign in)
 3. ?
 4.  Profit

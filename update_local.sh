@@ -2,7 +2,11 @@
 
 # update scripts and service files on a locally attached device
 #   will not overwrite any existing buttons_settings.py or chromium_settings.sh
+#   will not overwrite xorg.conf
+#   will not overwrite vnc_passwd
 #   this is intended to run on the host device, and expects key-based ssh authentication has already been setup with superbird
+
+set -e
 
 # all config lives in image_config.sh
 source ./image_config.sh
@@ -45,7 +49,7 @@ echo "Upgrading locally connected device"
 echo ""
 echo "Installing packages"
 # install packages, most of which should already be installed
-ssh "${USER_NAME}@${HOST_NAME}" "sudo apt update && sudo apt install -y --no-install-recommends --no-install-suggests chromium python3-minimal python3-pip"
+ssh "${USER_NAME}@${HOST_NAME}" "sudo apt update && sudo apt install -y --no-install-recommends --no-install-suggests chromium python3-minimal python3-pip tigervnc-scraping-server"
 
 # install required python packages via pip
 ssh "${USER_NAME}@${HOST_NAME}" "sudo chown -R ${USER_NAME} /scripts"
@@ -79,6 +83,7 @@ fi
 
 deploy_script_if_missing buttons_settings.py
 deploy_script_if_missing chromium_settings.sh
+deploy_script_if_missing vnc_passwd
 
 deploy_script buttons_app.py
 deploy_script clear_display.sh
