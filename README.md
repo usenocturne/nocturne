@@ -11,6 +11,8 @@ This image will remove the default Spotify functionality. You should definitely 
 
 Default user and password are both `superbird`
 
+![Latest Release](https://img.shields.io/github/v/release/bishopdynamics/superbird-debian-kiosk?logo=github)
+
 ## Features
 
 Working:
