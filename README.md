@@ -125,7 +125,7 @@ ssh -p 2022 superbird@host-device
 2. run `./build_image.sh`, which will:
    1. replace `env.txt` with switchable version (see [`files/env/env_switchable.txt`](files/env/env_switchable.txt))
    2. modify `system_a` partition for Utility Mode:
-      1. install usb gadget for ADB (see [`files/systema/etc/init.d/S49usbgadget`](files/systema/etc/init.d/S49usbgadget))
+      1. install usb gadget for ADB (see [`files/system_a/etc/init.d/S49usbgadget`](files/system_a/etc/init.d/S49usbgadget))
       2. modify `/etc/fstab` and `/etc/inittab` to not mount `data` or `settings` partitions (see [`files/system_a/etc/`](files/system_a/etc))
    3. format `settings` partition
    4. format `data` partition, and:
