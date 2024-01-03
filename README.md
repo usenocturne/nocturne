@@ -46,17 +46,17 @@ GPU: the hardware has a Mali GPU, but the stock OS uses it via DirectFB QT libra
 After installation, you will have 3 different boot options, depending on what buttons are held:
 
 * Debian Mode - default, no buttons held
-  * bootlogo is Android with a checkmark
+  * bootlogo says Debian Trixie
   * kernel is `boot_a` root is `data`
 
 * Utility Mode - hold button 1
-  * bootlogo is Spotify
+  * bootlogo says Utility Mode
   * kernel is `boot_a` root is `system_a`
   * adb and already configured
   * scripts to install debian
 
 * USB Burn Mode - hold button 4
-  * bootlogo is Android with exclamation mark
+  * bootlogo says USB Burn Mode
 
 
 ## Installation
