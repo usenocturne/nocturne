@@ -1,7 +1,7 @@
 # Change Log
 
 v1.8
-* customized the boot logos a little bit, using [`aml-imgpack`](https://github.com/bishopdynamics/aml-imgpack/tree/master)
+* customized the boot logos a little bit, using [`aml-imgpack`](https://github.com/bishopdynamics/aml-imgpack)
 
 v1.7
 * switch from `x11vnc` to `tigervnc-scraping-server` for better vnc performance
