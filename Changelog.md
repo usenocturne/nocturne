@@ -1,5 +1,8 @@
 # Change Log
 
+v1.8
+* customized the boot logos a little bit, using [`aml-imgpack`](https://github.com/bishopdynamics/aml-imgpack/tree/master)
+
 v1.7
 * switch from `x11vnc` to `tigervnc-scraping-server` for better vnc performance
   * default password `superbird`, to change: `sudo vncpasswd /scripts/vnc_passwd`, and `sudo systemctl restart vnc.service`

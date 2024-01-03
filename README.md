@@ -145,6 +145,7 @@ ssh -p 2022 superbird@host-device
       10. set timezone to `America/Los_Angeles`
       11. add entry to `/etc/fstab` to mount `settings` partition at `/config` (for chromium profile) (see [`files/data/etc/fstab`](files/data/etc/fstab))
       12. add entry to `/etc/inittab` to enable serial console at 115200 baud (see [`files/data/etc/inittab`](files/data/etc/inittab))
+      13. generate new image for `logo` partition using [`files/logo/*.bmp`](files/logo)
 3.  You now have an image at `./dumps/debian_current/` ready to flash to device using [superbird-tool](https://github.com/bishopdynamics/superbird-tool)
 
 
