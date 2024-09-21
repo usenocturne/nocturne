@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import ColorThief from "color-thief-browser";
+import Link from "next/link";
+import next from "next";
 
 export default function Home() {
   const [accessToken, setAccessToken] = useState(null);
   const [refreshToken, setRefreshToken] = useState(null);
   const [authCode, setAuthCode] = useState(null);
   const [albums, setAlbums] = useState([]);
+  const [currentlyPlayingAlbum, setCurrentlyPlayingAlbum] = useState(null);
   const [playlists, setPlaylists] = useState([]);
   const [artists, setArtists] = useState([]);
   const [topSongs, setTopSongs] = useState([]);
@@ -16,6 +19,16 @@ export default function Home() {
   const [albumName, setAlbumName] = useState("");
   const [artistName, setArtistName] = useState("");
   const [activeSection, setActiveSection] = useState("home");
+  const [currentColor1, setCurrentColor1] = useState("#191414");
+  const [currentColor2, setCurrentColor2] = useState("#191414");
+  const [currentColor3, setCurrentColor3] = useState("#191414");
+  const [currentColor4, setCurrentColor4] = useState("#191414");
+  const [targetColor1, setTargetColor1] = useState("#191414");
+  const [targetColor2, setTargetColor2] = useState("#191414");
+  const [targetColor3, setTargetColor3] = useState("#191414");
+  const [targetColor4, setTargetColor4] = useState("#191414");
+  const [transitionSpeed, setTransitionSpeed] = useState(30);
+  const [loading, setLoading] = useState(true);
 
   function generateCodeVerifier() {
     const array = new Uint8Array(32);
@@ -57,6 +70,7 @@ export default function Home() {
 
   useEffect(() => {
     if (accessToken) {
+      setLoading(false);
       const tokenRefreshInterval = setInterval(() => {
         refreshAccessToken();
       }, 3000 * 1000);
@@ -85,10 +99,80 @@ export default function Home() {
     }
   }, [albums]);
 
+  useEffect(() => {
+    const fetchCurrentPlayback = async () => {
+      if (accessToken) {
+        try {
+          const response = await fetch("https://api.spotify.com/v1/me/player", {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.item) {
+              const currentAlbum = data.item.album;
+              if (
+                !currentlyPlayingAlbum ||
+                currentlyPlayingAlbum.id !== currentAlbum.id
+              ) {
+                setCurrentlyPlayingAlbum(currentAlbum);
+                await fetchRecentlyPlayedAlbums();
+
+                const imageUrl = currentAlbum.images[0].url;
+                localStorage.setItem("albumImage", imageUrl);
+                setAlbumImage(imageUrl);
+                setAlbumName(currentAlbum.name);
+                setArtistName(
+                  currentAlbum.artists.map((artist) => artist.name).join(", ")
+                );
+
+                const colorThief = new ColorThief();
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = imageUrl;
+
+                img.onload = () => {
+                  const dominantColors = colorThief.getPalette(img, 4);
+                  const hexColors = dominantColors.map((color) =>
+                    rgbToHex({ r: color[0], g: color[1], b: color[2] })
+                  );
+
+                  setTimeout(() => {
+                    setTargetColor1(hexColors[0]);
+                    setTargetColor2(hexColors[1]);
+                    setTargetColor3(hexColors[2]);
+                    setTargetColor4(hexColors[3]);
+                  }, 250);
+                };
+              }
+            } else {
+              console.log("No album is currently playing.");
+              setCurrentlyPlayingAlbum(null);
+            }
+          } else {
+            console.error("Error fetching current playback:", response.status);
+          }
+        } catch (error) {
+          console.error("Error fetching current playback:", error);
+        }
+      }
+    };
+
+    if (accessToken) {
+      fetchCurrentPlayback();
+      const intervalId = setInterval(fetchCurrentPlayback, 1000);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [accessToken, currentlyPlayingAlbum]);
+
   const redirectToSpotify = async () => {
-    const clientId = "";
+    const clientId = "f944e760b5644a1ea58de852b88f1802";
     const redirectUri = "http://localhost:3000";
-    const scopes = "user-read-recently-played user-read-private user-top-read";
+    const scopes =
+      "user-read-recently-played user-read-private user-top-read user-read-playback-state";
 
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -106,7 +190,11 @@ export default function Home() {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: "Basic " + btoa(":"),
+          Authorization:
+            "Basic " +
+            btoa(
+              "f944e760b5644a1ea58de852b88f1802:006e8d19cec240c591f21c0f7552c962"
+            ),
         },
         body: new URLSearchParams({
           grant_type: "authorization_code",
@@ -130,7 +218,11 @@ export default function Home() {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: "Basic " + btoa(":"),
+          Authorization:
+            "Basic " +
+            btoa(
+              "f944e760b5644a1ea58de852b88f1802:006e8d19cec240c591f21c0f7552c962"
+            ),
         },
         body: new URLSearchParams({
           grant_type: "refresh_token",
@@ -308,8 +400,104 @@ export default function Home() {
     };
   };
 
+  const hexToRgb = (hex) => {
+    const bigint = parseInt(hex.slice(1), 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return { r, g, b };
+  };
+
+  const rgbToHex = ({ r, g, b }) => {
+    const toHex = (n) => n.toString(16).padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+
+  const getNextColor = (current, target) => {
+    const step = (start, end) => {
+      if (start === end) return start;
+      const diff = end - start;
+      return start + (diff > 0 ? Math.min(1, diff) : Math.max(-1, diff));
+    };
+
+    return {
+      r: step(current.r, target.r),
+      g: step(current.g, target.g),
+      b: step(current.b, target.b),
+    };
+  };
+
+  useEffect(() => {
+    const current1 = hexToRgb(currentColor1);
+    const current2 = hexToRgb(currentColor2);
+    const current3 = hexToRgb(currentColor3);
+    const current4 = hexToRgb(currentColor4);
+
+    const target1 = hexToRgb(targetColor1);
+    const target2 = hexToRgb(targetColor2);
+    const target3 = hexToRgb(targetColor3);
+    const target4 = hexToRgb(targetColor4);
+
+    const intervalId = setInterval(() => {
+      const nextColor1 = getNextColor(current1, target1);
+      const nextColor2 = getNextColor(current2, target2);
+      const nextColor3 = getNextColor(current3, target3);
+      const nextColor4 = getNextColor(current4, target4);
+
+      setCurrentColor1(rgbToHex(nextColor1));
+      setCurrentColor2(rgbToHex(nextColor2));
+      setCurrentColor3(rgbToHex(nextColor3));
+      setCurrentColor4(rgbToHex(nextColor4));
+
+      current1.r = nextColor1.r;
+      current1.g = nextColor1.g;
+      current1.b = nextColor1.b;
+
+      current2.r = nextColor2.r;
+      current2.g = nextColor2.g;
+      current2.b = nextColor2.b;
+
+      current3.r = nextColor3.r;
+      current3.g = nextColor3.g;
+      current3.b = nextColor3.b;
+
+      current4.r = nextColor4.r;
+      current4.g = nextColor4.g;
+      current4.b = nextColor4.b;
+
+      if (
+        nextColor1.r === target1.r &&
+        nextColor1.g === target1.g &&
+        nextColor1.b === target1.b &&
+        nextColor2.r === target2.r &&
+        nextColor2.g === target2.g &&
+        nextColor2.b === target2.b &&
+        nextColor3.r === target3.r &&
+        nextColor3.g === target3.g &&
+        nextColor3.b === target3.b &&
+        nextColor4.r === target4.r &&
+        nextColor4.g === target4.g &&
+        nextColor4.b === target4.b
+      ) {
+        clearInterval(intervalId);
+      }
+    }, transitionSpeed);
+
+    return () => clearInterval(intervalId);
+  }, [
+    currentColor1,
+    currentColor2,
+    currentColor3,
+    currentColor4,
+    targetColor1,
+    targetColor2,
+    targetColor3,
+    targetColor4,
+    transitionSpeed,
+  ]);
+
   const generateMeshGradient = (colors) => {
-    if (colors.length === 0) return "#FFFFFF";
+    if (colors.length === 0) return "#191414";
 
     const positions = ["at 0% 25%", "at 25% 0%", "at 100% 75%", "at 75% 100%"];
 
@@ -331,100 +519,139 @@ export default function Home() {
     <div className="relative min-h-screen">
       <div
         style={{
-          backgroundColor: "#ff99ec",
-          backgroundImage: generateMeshGradient(colors),
+          backgroundImage: generateMeshGradient([
+            currentColor1,
+            currentColor2,
+            currentColor3,
+            currentColor4,
+          ]),
+          transition: "background-image 0.5s linear",
         }}
         className="absolute inset-0"
       ></div>
-      <div className="relative z-10 pl-8 grid grid-cols-[1.5fr_3fr]">
-        <Sidebar
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-        />
+      {!loading && (
+        <div className="relative z-10 pl-8 grid grid-cols-[1.5fr_3fr] fadeIn-animation">
+          <Sidebar
+            activeSection={activeSection}
+            setActiveSection={setActiveSection}
+          />
 
-        <div className="flex overflow-x-auto scroll-container p-2">
-          {activeSection === "home" &&
-            albums.map((album) => (
-              <div key={album.id} className="min-w-[280px] mr-10">
-                <img
-                  src={album.images[0]?.url}
-                  alt="Album Cover"
-                  className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                />
-                <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                  {album.name}
-                </h4>
-                <h4 className="text-[20px] font-base text-white">
-                  {album.artists.map((artist) => artist.name).join(", ")}
-                </h4>
-              </div>
-            ))}
-          {activeSection === "radio" &&
-            playlists.map((playlist) => (
-              <div key={playlist.id} className="min-w-[280px] mr-10">
-                <img
-                  src={playlist.images[0]?.url}
-                  alt="Playlist Cover"
-                  className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                />
-                <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                  {playlist.name}
-                </h4>
-                <h4 className="text-[20px] font-base text-white">
-                  {playlist.owner.display_name}
-                </h4>
-              </div>
-            ))}
-          {activeSection === "browse" &&
-            recommendations.map((item) => (
-              <div key={item.id} className="min-w-[280px] mr-10">
-                <img
-                  src={item.album.images[0]?.url}
-                  alt="Playlist Cover"
-                  className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                />
-                <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                  {item.name}
-                </h4>
-                <h4 className="text-[20px] font-base text-white">
-                  {item.artists.map((artist) => artist.name).join(", ")}
-                </h4>
-              </div>
-            ))}
-          {activeSection === "artists" &&
-            artists.map((artist) => (
-              <div key={artist.id} className="min-w-[280px] mr-10">
-                <img
-                  src={artist.images[0]?.url}
-                  alt="Artist"
-                  className="mt-16 w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
-                />
-                <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                  {artist.name}
-                </h4>
-                <h4 className="text-[20px] font-base text-white">
-                  {artist.followers.total.toLocaleString()} Followers
-                </h4>
-              </div>
-            ))}
-          {activeSection === "songs" &&
-            topSongs.map((track) => (
-              <div key={track.id} className="min-w-[280px] mr-10">
-                <img
-                  src={track.album.images[0]?.url}
-                  alt="Artist"
-                  className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                />
-                <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                  {track.name}
-                </h4>
-                <h4 className="text-[20px] font-base text-white">
-                  {track.artists.map((artist) => artist.name).join(", ")}
-                </h4>
-              </div>
-            ))}
+          <div className="flex overflow-x-auto scroll-container p-2">
+            {activeSection === "home" && (
+              <>
+                {/* Render currently playing album if available */}
+                {currentlyPlayingAlbum && (
+                  <Link
+                    href={`/album/${currentlyPlayingAlbum.id}?accessToken=${accessToken}`}
+                  >
+                    <div className="min-w-[280px] mr-10">
+                      <img
+                        src={currentlyPlayingAlbum.images[0]?.url}
+                        alt="Currently Playing Album Cover"
+                        className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                      />
+                      <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                        {currentlyPlayingAlbum.name}
+                      </h4>
+                      <h4 className="text-[20px] font-base text-white truncate max-w-[280px]">
+                        {currentlyPlayingAlbum.artists
+                          .map((artist) => artist.name)
+                          .join(", ")}
+                      </h4>
+                    </div>
+                  </Link>
+                )}
+
+                {/* Render recently played albums */}
+                {albums.map((album) => (
+                  <Link
+                    key={album.id}
+                    href={`/album/${album.id}?accessToken=${accessToken}`}
+                  >
+                    <div className="min-w-[280px] mr-10">
+                      <img
+                        src={album.images[0]?.url}
+                        alt="Album Cover"
+                        className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                      />
+                      <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                        {album.name}
+                      </h4>
+                      <h4 className="text-[20px] font-base text-white truncate max-w-[280px]">
+                        {album.artists.map((artist) => artist.name).join(", ")}
+                      </h4>
+                    </div>
+                  </Link>
+                ))}
+              </>
+            )}
+            {activeSection === "radio" &&
+              playlists.map((playlist) => (
+                <div key={playlist.id} className="min-w-[280px] mr-10">
+                  <img
+                    src={playlist.images[0]?.url}
+                    alt="Playlist Cover"
+                    className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                  />
+                  <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                    {playlist.name}
+                  </h4>
+                  <h4 className="text-[20px] font-base text-white">
+                    {playlist.owner.display_name}
+                  </h4>
+                </div>
+              ))}
+            {activeSection === "browse" &&
+              recommendations.map((item) => (
+                <div key={item.id} className="min-w-[280px] mr-10">
+                  <img
+                    src={item.album.images[0]?.url}
+                    alt="Playlist Cover"
+                    className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                  />
+                  <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                    {item.name}
+                  </h4>
+                  <h4 className="text-[20px] font-base text-white">
+                    {item.artists.map((artist) => artist.name).join(", ")}
+                  </h4>
+                </div>
+              ))}
+            {activeSection === "artists" &&
+              artists.map((artist) => (
+                <div key={artist.id} className="min-w-[280px] mr-10">
+                  <img
+                    src={artist.images[0]?.url}
+                    alt="Artist"
+                    className="mt-16 w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
+                  />
+                  <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                    {artist.name}
+                  </h4>
+                  <h4 className="text-[20px] font-base text-white">
+                    {artist.followers.total.toLocaleString()} Followers
+                  </h4>
+                </div>
+              ))}
+            {activeSection === "songs" &&
+              topSongs.map((track) => (
+                <div key={track.id} className="min-w-[280px] mr-10">
+                  <img
+                    src={track.album.images[0]?.url}
+                    alt="Artist"
+                    className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                  />
+                  <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                    {track.name}
+                  </h4>
+                  <h4 className="text-[20px] font-base text-white">
+                    {track.artists.map((artist) => artist.name).join(", ")}
+                  </h4>
+                </div>
+              ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

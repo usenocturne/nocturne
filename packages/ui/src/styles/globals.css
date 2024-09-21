@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  background-color: #191414;
+}
+
 .album-shadow {
   box-shadow: 0px 40px 250px rgba(0, 0, 0, 0.25);
 }
@@ -12,4 +16,31 @@
 
 .scroll-container::-webkit-scrollbar {
   display: none; /* For Chrome, Safari, and Edge */
+}
+
+.fade-out {
+  opacity: 0;
+}
+
+.fade-in {
+  -webkit-transition: background-color 1000ms linear;
+  -ms-transition: background-color 1000ms linear;
+  transition: background-color 1000ms linear;
+}
+
+.transition-opacity {
+  transition: opacity 0.3s ease-in-out; /* Match the duration with setTimeout */
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.fadeIn-animation {
+  animation: 1.5s fadeIn;
 }
