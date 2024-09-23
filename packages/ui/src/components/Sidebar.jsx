@@ -1,6 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function Sidebar({ activeSection, setActiveSection }) {
+  const [accessToken, setAccessToken] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    setAccessToken(token);
+  }, []);
+
   const handleSectionClick = (section) => {
     setActiveSection(section);
   };
@@ -152,29 +160,25 @@ export default function Sidebar({ activeSection, setActiveSection }) {
 
   return (
     <div className="space-y-6 pt-12">
-      <div
-        className="relative flex items-center"
-        onClick={() => handleSectionClick("home")}
-      >
-        {activeSection === "home" && (
-          <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
-        )}
-        <div className="mr-4 flex-shrink-0">
-          <div className="h-14 w-14 bg-white/25 rounded-[12px] flex items-center justify-center">
-            <ListenNowIcon className="h-8 w-8" />
+      <Link href={`/now-playing?accessToken=${accessToken}`}>
+        <div className="relative flex items-center">
+          <div className="mr-4 flex-shrink-0">
+            <div className="h-14 w-14 bg-white/25 rounded-[12px] flex items-center justify-center">
+              <ListenNowIcon className="h-8 w-8" />
+            </div>
+          </div>
+          <div>
+            <h4 className="ml-1 text-[24px] font-medium text-white">
+              Now Playing
+            </h4>
           </div>
         </div>
-        <div>
-          <h4 className="ml-1 text-[24px] font-medium text-white">
-            Listen Now
-          </h4>
-        </div>
-      </div>
+      </Link>
       <div
         className="relative flex items-center"
-        onClick={() => handleSectionClick("radio")}
+        onClick={() => handleSectionClick("recents")}
       >
-        {activeSection === "radio" && (
+        {activeSection === "recents" && (
           <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
         )}
         <div className="mr-4 flex-shrink-0">
@@ -183,7 +187,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[24px] font-medium text-white">Radio</h4>
+          <h4 className="ml-1 text-[24px] font-medium text-white">Recents</h4>
         </div>
       </div>
       <div

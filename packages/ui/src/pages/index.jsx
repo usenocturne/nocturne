@@ -68,22 +68,51 @@ export default function Home({
                 ))}
               </>
             )}
-            {activeSection === "radio" &&
-              playlists.map((playlist) => (
-                <div key={playlist.id} className="min-w-[280px] mr-10">
-                  <img
-                    src={playlist.images[0]?.url}
-                    alt="Playlist Cover"
-                    className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                  />
-                  <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                    {playlist.name}
-                  </h4>
-                  <h4 className="text-[20px] font-base text-white">
-                    {playlist.owner.display_name}
-                  </h4>
-                </div>
-              ))}
+            {activeSection === "recents" && (
+              <>
+                {currentlyPlayingAlbum && (
+                  <Link
+                    href={`/album/${currentlyPlayingAlbum.id}?accessToken=${accessToken}`}
+                  >
+                    <div className="min-w-[280px] mr-10">
+                      <img
+                        src={currentlyPlayingAlbum.images[0]?.url}
+                        alt="Currently Playing Album Cover"
+                        className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                      />
+                      <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                        {currentlyPlayingAlbum.name}
+                      </h4>
+                      <h4 className="text-[20px] font-base text-white truncate max-w-[280px]">
+                        {currentlyPlayingAlbum.artists
+                          .map((artist) => artist.name)
+                          .join(", ")}
+                      </h4>
+                    </div>
+                  </Link>
+                )}
+                {albums.map((album) => (
+                  <Link
+                    key={album.id}
+                    href={`/album/${album.id}?accessToken=${accessToken}`}
+                  >
+                    <div className="min-w-[280px] mr-10">
+                      <img
+                        src={album.images[0]?.url}
+                        alt="Album Cover"
+                        className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                      />
+                      <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                        {album.name}
+                      </h4>
+                      <h4 className="text-[20px] font-base text-white truncate max-w-[280px]">
+                        {album.artists.map((artist) => artist.name).join(", ")}
+                      </h4>
+                    </div>
+                  </Link>
+                ))}
+              </>
+            )}
             {activeSection === "browse" &&
               recommendations.map((item) => (
                 <div key={item.id} className="min-w-[280px] mr-10">

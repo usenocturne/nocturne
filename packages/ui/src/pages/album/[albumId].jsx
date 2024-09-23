@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
+import Link from "next/link";
 
 const AlbumPage = ({ album }) => {
   const router = useRouter();
@@ -117,24 +118,28 @@ const AlbumPage = ({ album }) => {
         {album.tracks && album.tracks.items ? (
           album.tracks.items.map((track, index) => (
             <>
-              <div
-                key={track.id}
-                onClick={() => playTrack(track.uri)}
-                className="flex gap-4 items-start mb-4"
+              <Link
+                href={`/now-playing?accessToken=${router.query.accessToken}`}
               >
-                <p className="text-[20px] font-medium text-white w-6 mt-3">
-                  {index + 1}
-                </p>
+                <div
+                  key={track.id}
+                  onClick={() => playTrack(track.uri)}
+                  className="flex gap-4 items-start mb-4"
+                >
+                  <p className="text-[20px] font-medium text-white w-6 mt-3">
+                    {index + 1}
+                  </p>
 
-                <div>
-                  <p className="text-[20px] font-medium text-white truncate max-w-[280px]">
-                    {track.name}
-                  </p>
-                  <p className="text-[16px] font-light text-white truncate max-w-[280px]">
-                    {track.artists.map((artist) => artist.name).join(", ")}
-                  </p>
+                  <div>
+                    <p className="text-[20px] font-medium text-white truncate max-w-[280px]">
+                      {track.name}
+                    </p>
+                    <p className="text-[16px] font-light text-white truncate max-w-[280px]">
+                      {track.artists.map((artist) => artist.name).join(", ")}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </Link>
             </>
           ))
         ) : (

@@ -18,7 +18,7 @@ export default function App({ Component, pageProps }) {
   const [colors, setColors] = useState([]);
   const [albumName, setAlbumName] = useState("");
   const [artistName, setArtistName] = useState("");
-  const [activeSection, setActiveSection] = useState("home");
+  const [activeSection, setActiveSection] = useState("recents");
   const [currentColor1, setCurrentColor1] = useState("#191414");
   const [currentColor2, setCurrentColor2] = useState("#191414");
   const [currentColor3, setCurrentColor3] = useState("#191414");
@@ -73,6 +73,7 @@ export default function App({ Component, pageProps }) {
       setLoading(false);
       const tokenRefreshInterval = setInterval(() => {
         refreshAccessToken();
+        localStorage.setItem("accessToken", accessToken);
       }, 3000 * 1000);
 
       return () => clearInterval(tokenRefreshInterval);
@@ -145,9 +146,53 @@ export default function App({ Component, pageProps }) {
             }
           } else {
             console.error("Error fetching current playback:", response.status);
+            const imageUrl = "/not-playing.webp";
+            localStorage.setItem("albumImage", imageUrl);
+            setAlbumImage(imageUrl);
+
+            const colorThief = new ColorThief();
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = imageUrl;
+
+            img.onload = () => {
+              const dominantColors = colorThief.getPalette(img, 4);
+              const hexColors = dominantColors.map((color) =>
+                rgbToHex({ r: color[0], g: color[1], b: color[2] })
+              );
+
+              setTimeout(() => {
+                setTargetColor1(hexColors[0]);
+                setTargetColor2(hexColors[1]);
+                setTargetColor3(hexColors[2]);
+                setTargetColor4(hexColors[3]);
+              }, 250);
+            };
           }
         } catch (error) {
           console.error("Error fetching current playback:", error);
+          const imageUrl = "/not-playing.webp";
+          localStorage.setItem("albumImage", imageUrl);
+          setAlbumImage(imageUrl);
+
+          const colorThief = new ColorThief();
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = imageUrl;
+
+          img.onload = () => {
+            const dominantColors = colorThief.getPalette(img, 4);
+            const hexColors = dominantColors.map((color) =>
+              rgbToHex({ r: color[0], g: color[1], b: color[2] })
+            );
+
+            setTimeout(() => {
+              setTargetColor1(hexColors[0]);
+              setTargetColor2(hexColors[1]);
+              setTargetColor3(hexColors[2]);
+              setTargetColor4(hexColors[3]);
+            }, 250);
+          };
         }
       }
     };
@@ -238,6 +283,7 @@ export default function App({ Component, pageProps }) {
 
       const data = await response.json();
       setAccessToken(data.access_token);
+      localStorage.setItem("accessToken", data.access_token);
       setRefreshToken(data.refresh_token);
     } catch (error) {
       console.error("Error fetching access token:", error);
