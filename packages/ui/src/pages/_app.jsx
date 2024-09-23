@@ -253,7 +253,7 @@ export default function App({ Component, pageProps }) {
     const clientId = "";
     const redirectUri = "http://localhost:3000";
     const scopes =
-      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state";
+      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify";
 
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);

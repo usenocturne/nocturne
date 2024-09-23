@@ -8,6 +8,7 @@ const NowPlaying = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [lastBackwardPress, setLastBackwardPress] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
 
   const requestRef = useRef();
 
@@ -52,6 +53,63 @@ const NowPlaying = () => {
     const interval = setInterval(fetchCurrentTrack, 1000);
     return () => clearInterval(interval);
   }, [accessToken]);
+
+  const checkIfTrackIsLiked = async (trackId) => {
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/tracks/contains?ids=${trackId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const likedArray = await response.json();
+        setIsLiked(likedArray[0]);
+      } else {
+        console.error("Error checking liked tracks:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error with checkIfTrackIsLiked:", error);
+    }
+  };
+
+  const toggleLikeTrack = async (trackId) => {
+    if (!accessToken) return;
+
+    const endpoint = isLiked
+      ? `https://api.spotify.com/v1/me/tracks?ids=${trackId}`
+      : `https://api.spotify.com/v1/me/tracks?ids=${trackId}`;
+
+    const method = isLiked ? "DELETE" : "PUT";
+
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.ok) {
+        setIsLiked(!isLiked);
+      } else {
+        console.error("Error toggling liked track:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error with toggleLikeTrack:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (currentTrack) {
+      checkIfTrackIsLiked(currentTrack.id);
+    }
+  }, [currentTrack]);
 
   const animateProgress = (start, end, duration) => {
     const startTime = performance.now();
@@ -148,15 +206,15 @@ const NowPlaying = () => {
     }
   };
 
-  const StarIcon = ({ className }) => (
+  const StarIcon = ({ className, isLiked }) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
-      fill="none"
+      fill={isLiked ? "white" : "none"}
       stroke="white"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
     >
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -173,7 +231,7 @@ const NowPlaying = () => {
       <path
         d="M77.8852 111.18C89.9686 117.963 105 109.385 105 95.7045V73.4745L172.135 111.171C184.219 117.963 199.25 109.385 199.25 95.7045V18.555C199.25 4.87502 184.219 -3.70348 172.135 3.08902L105 40.7755V18.5455C105 4.86552 89.9686 -3.71298 77.8852 3.07952L9.17455 41.659C-3.00545 48.499 -3.00545 65.751 9.17455 72.591L77.8852 111.171V111.18Z"
         fill="white"
-        fill-opacity="1.0"
+        fillOpacity="1.0"
       />
     </svg>
   );
@@ -188,12 +246,12 @@ const NowPlaying = () => {
       <path
         d="M134.5 0H103.5C94.9396 0 88 5.70837 88 12.75V191.25C88 198.292 94.9396 204 103.5 204H134.5C143.06 204 150 198.292 150 191.25V12.75C150 5.70837 143.06 0 134.5 0Z"
         fill="white"
-        fill-opacity="1.0"
+        fillOpacity="1.0"
       />
       <path
         d="M46.5 0H15.5C6.93959 0 0 5.70837 0 12.75V191.25C0 198.292 6.93959 204 15.5 204H46.5C55.0604 204 62 198.292 62 191.25V12.75C62 5.70837 55.0604 0 46.5 0Z"
         fill="white"
-        fill-opacity="1.0"
+        fillOpacity="1.0"
       />
     </svg>
   );
@@ -208,8 +266,8 @@ const NowPlaying = () => {
       className={className}
     >
       <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
+        fillRule="evenodd"
+        clipRule="evenodd"
         d="M0.875 21.6541C0.875 5.83819 17.8214 -4.17006 31.6756 3.44419L159.577 73.7901C173.93 81.6814 173.93 102.308 159.577 110.21L31.6867 180.556C17.8325 188.17 0.886083 178.151 0.886083 162.346L0.875 21.6541Z"
         fill="white"
       />
@@ -226,7 +284,7 @@ const NowPlaying = () => {
       <path
         d="M27.865 3.07002C15.7817 -3.70348 0.75 4.87502 0.75 18.555V95.714C0.75 109.394 15.7817 117.973 27.865 111.18L95 73.4745V95.7045C95 109.385 110.032 117.963 122.115 111.171L190.826 72.591C203.006 65.751 203.006 48.499 190.826 41.659L122.115 3.07952C110.032 -3.71298 95 4.86552 95 18.5455V40.7755L27.865 3.07002Z"
         fill="white"
-        fill-opacity="1.0"
+        fillOpacity="1.0"
       />
     </svg>
   );
@@ -239,8 +297,8 @@ const NowPlaying = () => {
       className={className}
     >
       <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
+        fillRule="evenodd"
+        clipRule="evenodd"
         d="M101 202C156.781 202 202 156.781 202 101C202 45.2192 156.781 0 101 0C45.2192 0 0 45.2192 0 101C0 156.781 45.2192 202 101 202ZM47.2509 92.5009C45.1293 94.6224 43.9375 97.4997 43.9375 100.5C43.9375 103.5 45.1293 106.378 47.2509 108.499C49.3724 110.621 52.2497 111.812 55.25 111.812C58.2503 111.812 61.1276 110.621 63.2491 108.499C65.3707 106.378 66.5625 103.5 66.5625 100.5C66.5625 97.4997 65.3707 94.6224 63.2491 92.5009C61.1276 90.3793 58.2503 89.1875 55.25 89.1875C52.2497 89.1875 49.3724 90.3793 47.2509 92.5009ZM92.5009 92.5009C90.3793 94.6224 89.1875 97.4997 89.1875 100.5C89.1875 103.5 90.3793 106.378 92.5009 108.499C94.6224 110.621 97.4997 111.812 100.5 111.812C103.5 111.812 106.378 110.621 108.499 108.499C110.621 106.378 111.812 103.5 111.812 100.5C111.812 97.4997 110.621 94.6224 108.499 92.5009C106.378 90.3793 103.5 89.1875 100.5 89.1875C97.4997 89.1875 94.6224 90.3793 92.5009 92.5009ZM137.751 92.5009C135.629 94.6224 134.438 97.4997 134.438 100.5C134.438 103.5 135.629 106.378 137.751 108.499C139.872 110.621 142.75 111.812 145.75 111.812C148.75 111.812 151.628 110.621 153.749 108.499C155.871 106.378 157.062 103.5 157.062 100.5C157.062 97.4997 155.871 94.6224 153.749 92.5009C151.628 90.3793 148.75 89.1875 145.75 89.1875C142.75 89.1875 139.872 90.3793 137.751 92.5009Z"
         fill="white"
       />
@@ -329,8 +387,11 @@ const NowPlaying = () => {
       </div>
 
       <div className="flex justify-between items-center w-full px-12 mt-4">
-        <div className="flex-shrink-0">
-          <StarIcon className="w-10 h-10" />
+        <div
+          className="flex-shrink-0"
+          onClick={() => toggleLikeTrack(currentTrack.id)}
+        >
+          <StarIcon className="w-10 h-10" isLiked={isLiked} />
         </div>
 
         <div className="flex justify-center gap-12 flex-1">
