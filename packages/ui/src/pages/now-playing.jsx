@@ -80,9 +80,11 @@ const NowPlaying = () => {
     }
   }, [currentTrack, progress, isPlaying]);
 
-  if (!currentTrack) {
-    return <p className="text-white">No track is currently playing.</p>;
-  }
+  const trackName = currentTrack ? currentTrack.name : "Not Playing";
+  const artistName = currentTrack
+    ? currentTrack.artists.map((artist) => artist.name).join(", ")
+    : "";
+  const albumArt = currentTrack ? currentTrack.album.images[0]?.url : "";
 
   const togglePlayPause = async () => {
     try {
@@ -118,17 +120,14 @@ const NowPlaying = () => {
             }),
           });
         } else {
-          return (
-            <div className="bg-[#191414] h-screen w-screen flex flex-col items-center justify-center">
-              <FaSpotify className="w-12 h-12 text-[#1DB954] mb-4" />
-              <p className="text-white text-4xl tracking-tight font-sans">
-                No Devices Found
-              </p>
-              <p className="text-white text-xl tracking-tight font-sans mt-2">
-                Please start playing a song in the Spotify app.
-              </p>
-            </div>
-          );
+          setCurrentTrack({
+            name: "Not Playing",
+            artists: [],
+            album: { images: [{ url: "/not-playing.webp" }] },
+          }),
+            setIsPlaying(false);
+          setProgress(0);
+          return;
         }
       } else {
         const endpoint = isPlaying
@@ -305,17 +304,17 @@ const NowPlaying = () => {
       <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
         <div className="min-w-[280px] mr-8">
           <img
-            src={currentTrack.album.images[0].url}
+            src={albumArt || "/not-playing.webp"}
             alt="Album Cover"
             className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
           />
         </div>
         <div className="flex-1 text-center md:text-left">
           <h4 className="text-[32px] font-medium text-white truncate tracking-tight max-w-[400px]">
-            {currentTrack.name}
+            {trackName}
           </h4>
           <h4 className="text-[24px] font-base text-white truncate tracking-tight max-w-[400px]">
-            {currentTrack.artists.map((artist) => artist.name).join(", ")}
+            {artistName}
           </h4>
         </div>
       </div>
