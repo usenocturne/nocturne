@@ -90,47 +90,24 @@ export default function App({ Component, pageProps }) {
   }, [accessToken]);
 
   useEffect(() => {
-    if (router.pathname.includes("album")) {
-      const albumPageImage = localStorage.getItem("albumPageImage");
-      const colorThief = new ColorThief();
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = albumPageImage;
+    const fetchCurrentPlayback = async () => {
+      if (accessToken) {
+        try {
+          const response = await fetch("https://api.spotify.com/v1/me/player", {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
 
-      img.onload = () => {
-        const dominantColors = colorThief.getPalette(img, 4);
-        const hexColors = dominantColors.map((color) =>
-          rgbToHex({ r: color[0], g: color[1], b: color[2] })
-        );
-
-        setTimeout(() => {
-          setTargetColor1(hexColors[0]);
-          setTargetColor2(hexColors[1]);
-          setTargetColor3(hexColors[2]);
-          setTargetColor4(hexColors[3]);
-        }, 250);
-      };
-    } else {
-      const fetchCurrentPlayback = async () => {
-        if (accessToken) {
-          try {
-            const response = await fetch(
-              "https://api.spotify.com/v1/me/player",
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              }
-            );
-
-            if (response.ok) {
-              const data = await response.json();
-              if (data && data.item) {
-                const currentAlbum = data.item.album;
-                if (
-                  !currentlyPlayingAlbum ||
-                  currentlyPlayingAlbum.id !== currentAlbum.id
-                ) {
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.item) {
+              const currentAlbum = data.item.album;
+              if (
+                !currentlyPlayingAlbum ||
+                currentlyPlayingAlbum.id !== currentAlbum.id
+              ) {
+                if (!router.pathname.includes("album")) {
                   setCurrentlyPlayingAlbum(currentAlbum);
                   await fetchRecentlyPlayedAlbums();
 
@@ -161,36 +138,77 @@ export default function App({ Component, pageProps }) {
                     }, 250);
                   };
                 }
-              } else {
-                console.log("No album is currently playing.");
-                setCurrentlyPlayingAlbum(null);
               }
             } else {
-              console.error(
-                "Error fetching current playback:",
-                response.status
-              );
+              console.log("No album is currently playing.");
+              setCurrentlyPlayingAlbum(null);
             }
-          } catch (error) {
-            console.error("Error fetching current playback:", error);
+          } else {
+            console.error("Error fetching current playback:", response.status);
           }
+        } catch (error) {
+          console.error("Error fetching current playback:", error);
         }
-      };
-
-      if (accessToken) {
-        fetchCurrentPlayback();
-        const intervalId = setInterval(fetchCurrentPlayback, 1000);
-
-        return () => clearInterval(intervalId);
       }
+    };
+
+    if (accessToken) {
+      fetchCurrentPlayback();
+      const intervalId = setInterval(fetchCurrentPlayback, 1000);
+
+      return () => clearInterval(intervalId);
     }
   }, [router.pathname, accessToken, currentlyPlayingAlbum]);
+
+  useEffect(() => {
+    if (router.pathname.includes("album")) {
+      const albumPageImage = localStorage.getItem("albumPageImage");
+      const colorThief = new ColorThief();
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = albumPageImage;
+
+      img.onload = () => {
+        const dominantColors = colorThief.getPalette(img, 4);
+        const hexColors = dominantColors.map((color) =>
+          rgbToHex({ r: color[0], g: color[1], b: color[2] })
+        );
+
+        setTimeout(() => {
+          setTargetColor1(hexColors[0]);
+          setTargetColor2(hexColors[1]);
+          setTargetColor3(hexColors[2]);
+          setTargetColor4(hexColors[3]);
+        }, 250);
+      };
+    } else {
+      const albumImage = localStorage.getItem("albumImage");
+      const colorThief = new ColorThief();
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = albumImage;
+
+      img.onload = () => {
+        const dominantColors = colorThief.getPalette(img, 4);
+        const hexColors = dominantColors.map((color) =>
+          rgbToHex({ r: color[0], g: color[1], b: color[2] })
+        );
+
+        setTimeout(() => {
+          setTargetColor1(hexColors[0]);
+          setTargetColor2(hexColors[1]);
+          setTargetColor3(hexColors[2]);
+          setTargetColor4(hexColors[3]);
+        }, 250);
+      };
+    }
+  }, [router.pathname]);
 
   const redirectToSpotify = async () => {
     const clientId = "";
     const redirectUri = "http://localhost:3000";
     const scopes =
-      "user-read-recently-played user-read-private user-top-read user-read-playback-state";
+      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state";
 
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
