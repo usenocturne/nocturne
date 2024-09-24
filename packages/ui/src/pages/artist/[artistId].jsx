@@ -96,7 +96,7 @@ const ArtistPage = ({ artist }) => {
               <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
                 {artist.name}
               </h4>
-              <h4 className="text-[20px] font-base text-white truncate tracking-tight max-w-[280px]">
+              <h4 className="text-[20px] font-base text-white/60 truncate tracking-tight max-w-[280px]">
                 {artist.followers.total.toLocaleString()} Followers
               </h4>
             </div>
@@ -117,7 +117,7 @@ const ArtistPage = ({ artist }) => {
                 onClick={() => playTrack(track.uri)}
                 className="flex gap-4 items-start mb-4"
               >
-                <p className="text-[20px] font-medium text-white w-6 mt-3">
+                <p className="text-[20px] font-medium text-white/60 w-6 mt-3">
                   {index + 1}
                 </p>
 
@@ -125,7 +125,7 @@ const ArtistPage = ({ artist }) => {
                   <p className="text-[20px] font-medium text-white truncate tracking-tight max-w-[280px]">
                     {track.name}
                   </p>
-                  <p className="text-[16px] font-light text-white truncate tracking-tight max-w-[280px]">
+                  <p className="text-[16px] font-light text-white/60 truncate tracking-tight max-w-[280px]">
                     {track.artists.map((artist) => artist.name).join(", ")}
                   </p>
                 </div>

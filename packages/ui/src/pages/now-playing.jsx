@@ -206,18 +206,36 @@ const NowPlaying = () => {
     }
   };
 
-  const StarIcon = ({ className, isLiked }) => (
+  const StarIcon = ({ className }) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
-      fill={isLiked ? "white" : "none"}
-      stroke="white"
+      fill="none"
+      stroke="rgba(256, 256, 256, 0.6)"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
     >
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+
+  const StarIconFilled = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="rgba(256, 256, 256)"
+      stroke="rgba(256, 256, 256)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <polygon
+        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+        opacity="0.6"
+      />
     </svg>
   );
 
@@ -300,7 +318,6 @@ const NowPlaying = () => {
         fillRule="evenodd"
         clipRule="evenodd"
         d="M101 202C156.781 202 202 156.781 202 101C202 45.2192 156.781 0 101 0C45.2192 0 0 45.2192 0 101C0 156.781 45.2192 202 101 202ZM47.2509 92.5009C45.1293 94.6224 43.9375 97.4997 43.9375 100.5C43.9375 103.5 45.1293 106.378 47.2509 108.499C49.3724 110.621 52.2497 111.812 55.25 111.812C58.2503 111.812 61.1276 110.621 63.2491 108.499C65.3707 106.378 66.5625 103.5 66.5625 100.5C66.5625 97.4997 65.3707 94.6224 63.2491 92.5009C61.1276 90.3793 58.2503 89.1875 55.25 89.1875C52.2497 89.1875 49.3724 90.3793 47.2509 92.5009ZM92.5009 92.5009C90.3793 94.6224 89.1875 97.4997 89.1875 100.5C89.1875 103.5 90.3793 106.378 92.5009 108.499C94.6224 110.621 97.4997 111.812 100.5 111.812C103.5 111.812 106.378 110.621 108.499 108.499C110.621 106.378 111.812 103.5 111.812 100.5C111.812 97.4997 110.621 94.6224 108.499 92.5009C106.378 90.3793 103.5 89.1875 100.5 89.1875C97.4997 89.1875 94.6224 90.3793 92.5009 92.5009ZM137.751 92.5009C135.629 94.6224 134.438 97.4997 134.438 100.5C134.438 103.5 135.629 106.378 137.751 108.499C139.872 110.621 142.75 111.812 145.75 111.812C148.75 111.812 151.628 110.621 153.749 108.499C155.871 106.378 157.062 103.5 157.062 100.5C157.062 97.4997 155.871 94.6224 153.749 92.5009C151.628 90.3793 148.75 89.1875 145.75 89.1875C142.75 89.1875 139.872 90.3793 137.751 92.5009Z"
-        fill="white"
       />
     </svg>
   );
@@ -371,7 +388,7 @@ const NowPlaying = () => {
           <h4 className="text-[32px] font-medium text-white truncate tracking-tight max-w-[400px]">
             {trackName}
           </h4>
-          <h4 className="text-[24px] font-base text-white truncate tracking-tight max-w-[400px]">
+          <h4 className="text-[24px] font-base text-white/60 truncate tracking-tight max-w-[400px]">
             {artistName}
           </h4>
         </div>
@@ -391,7 +408,11 @@ const NowPlaying = () => {
           className="flex-shrink-0"
           onClick={() => toggleLikeTrack(currentTrack.id)}
         >
-          <StarIcon className="w-10 h-10" isLiked={isLiked} />
+          {isLiked ? (
+            <StarIconFilled className="w-10 h-10" />
+          ) : (
+            <StarIcon className="w-10 h-10" />
+          )}
         </div>
 
         <div className="flex justify-center gap-12 flex-1">
@@ -409,7 +430,7 @@ const NowPlaying = () => {
         </div>
 
         <div className="flex-shrink-0">
-          <MenuIcon className="w-10 h-10" />
+          <MenuIcon className="w-10 h-10 fill-white/60" />
         </div>
       </div>
     </div>
