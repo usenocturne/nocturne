@@ -10,6 +10,7 @@ export default function App({ Component, pageProps }) {
   const [authCode, setAuthCode] = useState(null);
   const [albums, setAlbums] = useState([]);
   const [currentlyPlayingAlbum, setCurrentlyPlayingAlbum] = useState(null);
+  const [albumsQueue, setAlbumsQueue] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [artists, setArtists] = useState([]);
   const [radio, setRadio] = useState([]);
@@ -108,6 +109,12 @@ export default function App({ Component, pageProps }) {
               ) {
                 if (!router.pathname.includes("album")) {
                   setCurrentlyPlayingAlbum(currentAlbum);
+                  setAlbumsQueue((prevQueue) => {
+                    const updatedQueue = prevQueue.filter(
+                      (album) => album.id !== currentAlbum.id
+                    );
+                    return [currentAlbum, ...updatedQueue];
+                  });
                   await fetchRecentlyPlayedAlbums();
 
                   const imageUrl = currentAlbum.images[0].url;
@@ -327,28 +334,39 @@ export default function App({ Component, pageProps }) {
   };
 
   const fetchRecentlyPlayedAlbums = async () => {
-    try {
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/player/recently-played",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-      const data = await response.json();
+    if (accessToken) {
+      try {
+        const response = await fetch(
+          "https://api.spotify.com/v1/me/player/recently-played",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
 
-      const uniqueAlbums = data.items.reduce((acc, item) => {
-        const album = item.track.album;
-        if (!acc.some((a) => a.id === album.id)) {
-          acc.push(album);
-        }
-        return acc;
-      }, []);
+        if (response.ok) {
+          const data = await response.json();
+          const albums = data.items.map((item) => item.track.album);
 
-      setAlbums(uniqueAlbums);
-    } catch (error) {
-      console.error("Error fetching recently played albums:", error);
+          setAlbums(albums);
+
+          setAlbumsQueue((prevQueue) => {
+            const uniqueAlbums = [...prevQueue, ...albums].filter(
+              (album, index, self) =>
+                index === self.findIndex((a) => a.id === album.id)
+            );
+            return uniqueAlbums;
+          });
+        } else {
+          console.error(
+            "Error fetching recently played albums:",
+            response.status
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching recently played albums:", error);
+      }
     }
   };
 
@@ -632,6 +650,7 @@ export default function App({ Component, pageProps }) {
           activeSection={activeSection}
           setActiveSection={setActiveSection}
           loading={loading}
+          albumsQueue={albumsQueue}
         />
       </div>
     </main>
