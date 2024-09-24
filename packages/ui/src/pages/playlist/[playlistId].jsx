@@ -85,16 +85,8 @@ const PlaylistPage = ({ playlist }) => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 pt-8 px-8 max-h-screen">
+    <div className="flex flex-col md:flex-row gap-8 pt-10 px-16 max-h-screen">
       <div className="md:w-1/3 h-screen sticky top-0">
-        <div
-          type="button"
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-white"
-        >
-          <p className="text-[20px] font-medium">{"<"}</p>
-          <p className="text-[20px] font-medium">Back</p>
-        </div>
         {playlist.images && playlist.images.length > 0 ? (
           <>
             <div className="min-w-[280px] mr-10">
@@ -116,7 +108,7 @@ const PlaylistPage = ({ playlist }) => {
         )}
       </div>
 
-      <div className="md:w-2/3 ml-12 h-screen overflow-y-scroll scroll-container pb-12">
+      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
         {playlist.tracks && playlist.tracks.items ? (
           playlist.tracks.items.map((track, index) => (
             <Link
