@@ -227,7 +227,19 @@ export default function App({ Component, pageProps }) {
         imageKey = "artistsImage";
         break;
       case activeSection === "radio":
-        imageKey = "radioImage";
+        fetchUserRadio().then((firstPlaylistName) => {
+          if (firstPlaylistName === "DJ") {
+            setTargetColor1("#0a59b8");
+            setTargetColor2("#1776e6");
+            setTargetColor3("#3185e8");
+            setTargetColor4("#19e48d");
+          } else {
+            setTargetColor1("#21305e");
+            setTargetColor2("#1d2238");
+            setTargetColor3("#e468b9");
+            setTargetColor4("#933e8e");
+          }
+        });
         break;
       default:
         break;
@@ -386,10 +398,34 @@ export default function App({ Component, pageProps }) {
           },
         }
       );
+
       const data = await response.json();
-      setRadio(data.playlists.items);
+      const playlists = data.playlists.items;
+
+      const priorityOrder = ["On Repeat", "Repeat Rewind", "DJ"];
+
+      const sortedPlaylists = playlists.sort((a, b) => {
+        const indexA = priorityOrder.indexOf(a.name);
+        const indexB = priorityOrder.indexOf(b.name);
+
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+        if (indexA !== -1) {
+          return -1;
+        }
+        if (indexB !== -1) {
+          return 1;
+        }
+        return 0;
+      });
+
+      setRadio(sortedPlaylists);
+
+      return sortedPlaylists.length > 0 ? sortedPlaylists[0].name : null;
     } catch (error) {
       console.error("Error fetching user playlists:", error);
+      return null;
     }
   };
 
