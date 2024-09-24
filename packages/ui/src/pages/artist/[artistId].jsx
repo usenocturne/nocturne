@@ -101,10 +101,10 @@ const ArtistPage = ({ artist }) => {
                 alt="Artist"
                 className="w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
               />
-              <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+              <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
                 {artist.name}
               </h4>
-              <h4 className="text-[20px] font-base text-white">
+              <h4 className="text-[20px] font-base text-white truncate tracking-tight max-w-[280px]">
                 {artist.followers.total.toLocaleString()} Followers
               </h4>
             </div>
@@ -130,10 +130,10 @@ const ArtistPage = ({ artist }) => {
                 </p>
 
                 <div>
-                  <p className="text-[20px] font-medium text-white truncate max-w-[280px]">
+                  <p className="text-[20px] font-medium text-white truncate tracking-tight max-w-[280px]">
                     {track.name}
                   </p>
-                  <p className="text-[16px] font-light text-white truncate max-w-[280px]">
+                  <p className="text-[16px] font-light text-white truncate tracking-tight max-w-[280px]">
                     {track.artists.map((artist) => artist.name).join(", ")}
                   </p>
                 </div>
