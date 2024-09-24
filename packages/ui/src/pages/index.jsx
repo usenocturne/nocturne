@@ -6,8 +6,7 @@ export default function Home({
   albums,
   playlists,
   artists,
-  topSongs,
-  recommendations,
+  radio,
   currentlyPlayingAlbum,
   activeSection,
   setActiveSection,
@@ -113,21 +112,26 @@ export default function Home({
                 ))}
               </>
             )}
-            {activeSection === "browse" &&
-              recommendations.map((item) => (
-                <div key={item.id} className="min-w-[280px] mr-10">
-                  <img
-                    src={item.album.images[0]?.url}
-                    alt="Playlist Cover"
-                    className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                  />
-                  <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                    {item.name}
-                  </h4>
-                  <h4 className="text-[20px] font-base text-white">
-                    {item.artists.map((artist) => artist.name).join(", ")}
-                  </h4>
-                </div>
+            {activeSection === "library" &&
+              playlists.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/playlist/${item.id}?accessToken=${accessToken}`}
+                >
+                  <div className="min-w-[280px] mr-10">
+                    <img
+                      src={item.images[0]?.url}
+                      alt="Playlist Cover"
+                      className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                    />
+                    <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                      {item.name}
+                    </h4>
+                    <h4 className="text-[20px] font-base text-white">
+                      {item.tracks.total.toLocaleString()} Songs
+                    </h4>
+                  </div>
+                </Link>
               ))}
             {activeSection === "artists" &&
               artists.map((artist) => (
@@ -145,19 +149,19 @@ export default function Home({
                   </h4>
                 </div>
               ))}
-            {activeSection === "songs" &&
-              topSongs.map((track) => (
-                <div key={track.id} className="min-w-[280px] mr-10">
+            {activeSection === "radio" &&
+              radio.map((playlist) => (
+                <div key={playlist.id} className="min-w-[280px] mr-10">
                   <img
-                    src={track.album.images[0]?.url}
-                    alt="Artist"
+                    src={playlist.images[0]?.url}
+                    alt="Playlist Cover"
                     className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                   />
                   <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                    {track.name}
+                    {playlist.name}
                   </h4>
                   <h4 className="text-[20px] font-base text-white">
-                    {track.artists.map((artist) => artist.name).join(", ")}
+                    {playlist.owner.display_name}
                   </h4>
                 </div>
               ))}

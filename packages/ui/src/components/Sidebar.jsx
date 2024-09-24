@@ -13,7 +13,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
     setActiveSection(section);
   };
 
-  const ListenNowIcon = ({ className }) => (
+  const NowPlayingIcon = ({ className }) => (
     <svg
       className={className}
       viewBox="0 0 156 156"
@@ -40,7 +40,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
     </svg>
   );
 
-  const RadioIcon = ({ className }) => (
+  const RecentsIcon = ({ className }) => (
     <svg
       className={className}
       viewBox="0 0 190 133"
@@ -93,7 +93,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
     </svg>
   );
 
-  const BrowseIcon = ({ className }) => (
+  const LibraryIcon = ({ className }) => (
     <svg
       className={className}
       viewBox="0 0 143 143"
@@ -142,7 +142,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
     </svg>
   );
 
-  const SongsIcon = ({ className }) => (
+  const RadioIcon = ({ className }) => (
     <svg
       className={className}
       viewBox="0 0 137 168"
@@ -164,7 +164,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
         <div className="relative flex items-center">
           <div className="mr-4 flex-shrink-0">
             <div className="h-14 w-14 bg-white/25 rounded-[12px] flex items-center justify-center">
-              <ListenNowIcon className="h-8 w-8" />
+              <NowPlayingIcon className="h-8 w-8" />
             </div>
           </div>
           <div>
@@ -183,7 +183,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
         )}
         <div className="mr-4 flex-shrink-0">
           <div className="h-14 w-14 bg-white/25 rounded-[12px] flex items-center justify-center">
-            <RadioIcon className="h-8 w-8" />
+            <RecentsIcon className="h-8 w-8" />
           </div>
         </div>
         <div>
@@ -192,18 +192,18 @@ export default function Sidebar({ activeSection, setActiveSection }) {
       </div>
       <div
         className="relative flex items-center"
-        onClick={() => handleSectionClick("browse")}
+        onClick={() => handleSectionClick("library")}
       >
-        {activeSection === "browse" && (
+        {activeSection === "library" && (
           <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
         )}
         <div className="mr-4 flex-shrink-0">
           <div className="h-14 w-14 bg-white/25 rounded-[12px] flex items-center justify-center">
-            <BrowseIcon className="h-8 w-8" />
+            <LibraryIcon className="h-8 w-8" />
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[24px] font-medium text-white">Browse</h4>
+          <h4 className="ml-1 text-[24px] font-medium text-white">Library</h4>
         </div>
       </div>
       <div
@@ -224,18 +224,18 @@ export default function Sidebar({ activeSection, setActiveSection }) {
       </div>
       <div
         className="relative flex items-center"
-        onClick={() => handleSectionClick("songs")}
+        onClick={() => handleSectionClick("radio")}
       >
-        {activeSection === "songs" && (
+        {activeSection === "radio" && (
           <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
         )}
         <div className="mr-4 flex-shrink-0">
           <div className="h-14 w-14 bg-white/25 rounded-[12px] flex items-center justify-center">
-            <SongsIcon className="h-8 w-8" />
+            <RadioIcon className="h-8 w-8" />
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[24px] font-medium text-white">Songs</h4>
+          <h4 className="ml-1 text-[24px] font-medium text-white">Radio</h4>
         </div>
       </div>
     </div>

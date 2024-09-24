@@ -12,8 +12,7 @@ export default function App({ Component, pageProps }) {
   const [currentlyPlayingAlbum, setCurrentlyPlayingAlbum] = useState(null);
   const [playlists, setPlaylists] = useState([]);
   const [artists, setArtists] = useState([]);
-  const [topSongs, setTopSongs] = useState([]);
-  const [recommendations, setRecommendations] = useState([]);
+  const [radio, setRadio] = useState([]);
   const [albumImage, setAlbumImage] = useState(null);
   const [colors, setColors] = useState([]);
   const [albumName, setAlbumName] = useState("");
@@ -85,8 +84,7 @@ export default function App({ Component, pageProps }) {
       fetchRecentlyPlayedAlbums();
       fetchUserPlaylists();
       fetchTopArtists();
-      fetchTopSongs();
-      fetchRecommendations();
+      fetchUserRadio();
     }
   }, [accessToken]);
 
@@ -206,54 +204,56 @@ export default function App({ Component, pageProps }) {
   }, [router.pathname, accessToken, currentlyPlayingAlbum]);
 
   useEffect(() => {
-    if (router.pathname.includes("album")) {
-      const albumPageImage = localStorage.getItem("albumPageImage");
-      const colorThief = new ColorThief();
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = albumPageImage;
+    const colorThief = new ColorThief();
+    const img = new Image();
+    img.crossOrigin = "anonymous";
 
-      img.onload = () => {
-        const dominantColors = colorThief.getPalette(img, 4);
-        const hexColors = dominantColors.map((color) =>
-          rgbToHex({ r: color[0], g: color[1], b: color[2] })
-        );
+    let imageKey;
 
-        setTimeout(() => {
-          setTargetColor1(hexColors[0]);
-          setTargetColor2(hexColors[1]);
-          setTargetColor3(hexColors[2]);
-          setTargetColor4(hexColors[3]);
-        }, 250);
-      };
-    } else {
-      const albumImage = localStorage.getItem("albumImage");
-      const colorThief = new ColorThief();
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = albumImage;
-
-      img.onload = () => {
-        const dominantColors = colorThief.getPalette(img, 4);
-        const hexColors = dominantColors.map((color) =>
-          rgbToHex({ r: color[0], g: color[1], b: color[2] })
-        );
-
-        setTimeout(() => {
-          setTargetColor1(hexColors[0]);
-          setTargetColor2(hexColors[1]);
-          setTargetColor3(hexColors[2]);
-          setTargetColor4(hexColors[3]);
-        }, 250);
-      };
+    switch (true) {
+      case router.pathname.includes("album"):
+        imageKey = "albumPageImage";
+        break;
+      case router.pathname.includes("playlist"):
+        imageKey = "playlistPageImage";
+        break;
+      case activeSection === "recents":
+        imageKey = "albumImage";
+        break;
+      case activeSection === "library":
+        imageKey = "libraryImage";
+        break;
+      case activeSection === "artists":
+        imageKey = "artistsImage";
+        break;
+      case activeSection === "radio":
+        imageKey = "radioImage";
+        break;
+      default:
+        break;
     }
-  }, [router.pathname]);
+
+    const imageSrc = localStorage.getItem(imageKey);
+    img.src = imageSrc;
+
+    img.onload = () => {
+      const dominantColors = colorThief.getPalette(img, 4);
+      const hexColors = dominantColors.map((color) =>
+        rgbToHex({ r: color[0], g: color[1], b: color[2] })
+      );
+
+      setTargetColor1(hexColors[0]);
+      setTargetColor2(hexColors[1]);
+      setTargetColor3(hexColors[2]);
+      setTargetColor4(hexColors[3]);
+    };
+  }, [router.pathname, activeSection]);
 
   const redirectToSpotify = async () => {
     const clientId = "";
     const redirectUri = "http://localhost:3000";
     const scopes =
-      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify";
+      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative";
 
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -339,16 +339,17 @@ export default function App({ Component, pageProps }) {
 
   const fetchUserPlaylists = async () => {
     try {
-      const response = await fetch(
-        "https://api.spotify.com/v1/browse/categories/0JQ5DAt0tbjZptfcdMSKl3/playlists",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       const data = await response.json();
-      setPlaylists(data.playlists.items);
+      if (response.ok) {
+        const imageUrl = data.items[0].images[0].url;
+        localStorage.setItem("libraryImage", imageUrl);
+      }
+      setPlaylists(data.items);
     } catch (error) {
       console.error("Error fetching user playlists:", error);
     }
@@ -365,54 +366,30 @@ export default function App({ Component, pageProps }) {
         }
       );
       const data = await response.json();
+      if (response.ok) {
+        const imageUrl = data.items[0].images[0].url;
+        localStorage.setItem("artistsImage", imageUrl);
+      }
       setArtists(data.items);
     } catch (error) {
       console.error("Error fetching top artists:", error);
     }
   };
 
-  const fetchTopSongs = async () => {
+  const fetchUserRadio = async () => {
     try {
-      const response = await fetch("https://api.spotify.com/v1/me/top/tracks", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const data = await response.json();
-      setTopSongs(data.items);
-    } catch (error) {
-      console.error("Error fetching top songs:", error);
-    }
-  };
-
-  const fetchRecommendations = async () => {
-    try {
-      const seedArtistId = artists.length > 0 ? artists[0].id : null;
-      const seedTrackId = topSongs.length > 0 ? topSongs[0].id : null;
-
-      const queryParams = new URLSearchParams({
-        limit: 20,
-        ...(seedArtistId && { seed_artists: seedArtistId }),
-        ...(seedTrackId && { seed_tracks: seedTrackId }),
-      });
-
       const response = await fetch(
-        `https://api.spotify.com/v1/recommendations?${queryParams.toString()}`,
+        "https://api.spotify.com/v1/browse/categories/0JQ5DAt0tbjZptfcdMSKl3/playlists",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
-      setRecommendations(data.tracks);
+      setRadio(data.playlists.items);
     } catch (error) {
-      console.error("Error fetching recommendations:", error);
+      console.error("Error fetching user playlists:", error);
     }
   };
 
@@ -610,8 +587,7 @@ export default function App({ Component, pageProps }) {
           albums={albums}
           playlists={playlists}
           artists={artists}
-          topSongs={topSongs}
-          recommendations={recommendations}
+          radio={radio}
           currentlyPlayingAlbum={currentlyPlayingAlbum}
           setCurrentlyPlayingAlbum={setCurrentlyPlayingAlbum}
           activeSection={activeSection}
