@@ -124,10 +124,10 @@ export default function Home({
                       alt="Playlist Cover"
                       className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                     />
-                    <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                    <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {item.name}
                     </h4>
-                    <h4 className="text-[20px] font-base text-white">
+                    <h4 className="text-[20px] font-base text-white tracking-tight">
                       {item.tracks.total.toLocaleString()} Songs
                     </h4>
                   </div>
@@ -135,35 +135,45 @@ export default function Home({
               ))}
             {activeSection === "artists" &&
               artists.map((artist) => (
-                <div key={artist.id} className="min-w-[280px] mr-10">
-                  <img
-                    src={artist.images[0]?.url}
-                    alt="Artist"
-                    className="mt-16 w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
-                  />
-                  <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                    {artist.name}
-                  </h4>
-                  <h4 className="text-[20px] font-base text-white">
-                    {artist.followers.total.toLocaleString()} Followers
-                  </h4>
-                </div>
+                <Link
+                  key={artist.id}
+                  href={`/artist/${artist.id}?accessToken=${accessToken}`}
+                >
+                  <div className="min-w-[280px] mr-10">
+                    <img
+                      src={artist.images[0]?.url}
+                      alt="Artist"
+                      className="mt-16 w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
+                    />
+                    <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                      {artist.name}
+                    </h4>
+                    <h4 className="text-[20px] font-base text-white tracking-tight">
+                      {artist.followers.total.toLocaleString()} Followers
+                    </h4>
+                  </div>
+                </Link>
               ))}
             {activeSection === "radio" &&
               radio.map((playlist) => (
-                <div key={playlist.id} className="min-w-[280px] mr-10">
-                  <img
-                    src={playlist.images[0]?.url}
-                    alt="Playlist Cover"
-                    className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                  />
-                  <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
-                    {playlist.name}
-                  </h4>
-                  <h4 className="text-[20px] font-base text-white">
-                    {playlist.owner.display_name}
-                  </h4>
-                </div>
+                <Link
+                  key={playlist.id}
+                  href={`/playlist/${playlist.id}?accessToken=${accessToken}`}
+                >
+                  <div className="min-w-[280px] mr-10">
+                    <img
+                      src={playlist.images[0]?.url}
+                      alt="Playlist Cover"
+                      className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                    />
+                    <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                      {playlist.name}
+                    </h4>
+                    <h4 className="text-[20px] font-base text-white tracking-tight">
+                      {playlist.owner.display_name}
+                    </h4>
+                  </div>
+                </Link>
               ))}
           </div>
         </div>

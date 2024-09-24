@@ -217,6 +217,9 @@ export default function App({ Component, pageProps }) {
       case router.pathname.includes("playlist"):
         imageKey = "playlistPageImage";
         break;
+      case router.pathname.includes("artist"):
+        imageKey = "artistPageImage";
+        break;
       case activeSection === "recents":
         imageKey = "albumImage";
         break;

@@ -168,7 +168,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
             </div>
           </div>
           <div>
-            <h4 className="ml-1 text-[24px] font-medium text-white">
+            <h4 className="ml-1 text-[24px] font-medium text-white tracking-tight">
               Now Playing
             </h4>
           </div>
@@ -187,7 +187,9 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[24px] font-medium text-white">Recents</h4>
+          <h4 className="ml-1 text-[24px] font-medium text-white tracking-tight">
+            Recents
+          </h4>
         </div>
       </div>
       <div
@@ -203,7 +205,9 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[24px] font-medium text-white">Library</h4>
+          <h4 className="ml-1 text-[24px] font-medium text-white tracking-tight">
+            Library
+          </h4>
         </div>
       </div>
       <div
@@ -219,7 +223,9 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[24px] font-medium text-white">Artists</h4>
+          <h4 className="ml-1 text-[24px] font-medium text-white tracking-tight">
+            Artists
+          </h4>
         </div>
       </div>
       <div
@@ -235,7 +241,9 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[24px] font-medium text-white">Radio</h4>
+          <h4 className="ml-1 text-[24px] font-medium text-white tracking-tight">
+            Radio
+          </h4>
         </div>
       </div>
     </div>
