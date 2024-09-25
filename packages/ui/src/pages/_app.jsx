@@ -30,6 +30,13 @@ export default function App({ Component, pageProps }) {
   const [transitionSpeed, setTransitionSpeed] = useState(30);
   const [loading, setLoading] = useState(true);
 
+  const handleEscapePress = (event) => {
+    if (event.key === "Escape") {
+      router.push("/");
+      setActiveSection("recents");
+    }
+  };
+
   function generateCodeVerifier() {
     const array = new Uint8Array(32);
     window.crypto.getRandomValues(array);
@@ -86,6 +93,8 @@ export default function App({ Component, pageProps }) {
       fetchUserPlaylists();
       fetchTopArtists();
       fetchUserRadio();
+      window.addEventListener("keydown", handleEscapePress);
+      return () => window.removeEventListener("keydown", handleEscapePress);
     }
   }, [accessToken]);
 
