@@ -429,6 +429,73 @@ const NowPlaying = () => {
     setLastBackwardPress(currentTime);
   };
 
+  const VolumeOffIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      stroke="rgba(0, 0, 0)"
+      fill="rgba(0, 0, 0)"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+      opacity="0.5"
+    >
+      <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+      <line x1="22" x2="16" y1="9" y2="15" opacity="0.6" />
+      <line x1="16" x2="22" y1="9" y2="15" opacity="0.6" />
+    </svg>
+  );
+
+  const VolumeLowIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      stroke="rgba(0, 0, 0)"
+      fill="rgba(0, 0, 0)"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+      opacity="0.5"
+    >
+      <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+      <path d="M16 9a5 5 0 0 1 0 6" opacity="0.6" />
+    </svg>
+  );
+
+  const VolumeLoudIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+      opacity="0.5"
+    >
+      <path
+        d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
+        stroke="rgba(0, 0, 0)"
+        fill="rgba(0, 0, 0)"
+      />
+      <path
+        d="M16 9a5 5 0 0 1 0 6"
+        stroke="rgba(0, 0, 0)"
+        fill="rgba(0, 0, 0)"
+        opacity="0.6"
+      />
+      <path
+        d="M19.364 18.364a9 9 0 0 0 0-12.728"
+        stroke="rgba(0, 0, 0)"
+        opacity="0.6"
+      />
+    </svg>
+  );
+
   return (
     <div className="flex flex-col gap-6 min-h-screen w-full">
       <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
@@ -498,7 +565,7 @@ const NowPlaying = () => {
           }
         )}
       >
-        <div className="w-12 h-48 bg-black/20 rounded-[13px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+        <div className="w-14 h-44 bg-black/20 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
           <div
             className={classNames(
               "bg-white w-full transition-height duration-300",
@@ -508,7 +575,15 @@ const NowPlaying = () => {
               }
             )}
             style={{ height: `${volume}%` }}
-          ></div>
+          >
+            <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+              {volume === 0 && <VolumeOffIcon className="w-7 h-7" />}
+              {volume > 0 && volume <= 60 && (
+                <VolumeLowIcon className="w-7 h-7 ml-1.5" />
+              )}
+              {volume > 60 && <VolumeLoudIcon className="w-7 h-7" />}
+            </div>
+          </div>
         </div>
       </div>
     </div>
