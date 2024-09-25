@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
+import classNames from "classnames";
 
 const NowPlaying = () => {
   const router = useRouter();
@@ -9,8 +10,62 @@ const NowPlaying = () => {
   const [progress, setProgress] = useState(0);
   const [lastBackwardPress, setLastBackwardPress] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [volume, setVolume] = useState(100);
+  const [isVolumeVisible, setIsVolumeVisible] = useState(false);
+  const volumeTimeoutRef = useRef(null);
 
   const requestRef = useRef();
+
+  const changeVolume = async (newVolume) => {
+    if (!accessToken) return;
+    try {
+      await fetch(
+        `https://api.spotify.com/v1/me/player/volume?volume_percent=${newVolume}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      setVolume(newVolume);
+      setIsVolumeVisible(true);
+
+      if (volumeTimeoutRef.current) {
+        clearTimeout(volumeTimeoutRef.current);
+      }
+      volumeTimeoutRef.current = setTimeout(() => {
+        setIsVolumeVisible(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Error changing volume:", error);
+    }
+  };
+
+  const handleLeftKeyPress = (event) => {
+    if (event.key === "ArrowLeft") {
+      const newVolume = Math.max(volume - 7, 0);
+      changeVolume(newVolume);
+      console.log("Volume decreased to:", newVolume);
+    }
+  };
+
+  const handleRightKeyPress = (event) => {
+    if (event.key === "ArrowRight") {
+      const newVolume = Math.min(volume + 7, 100);
+      changeVolume(newVolume);
+      console.log("Volume increased to:", newVolume);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleLeftKeyPress);
+    window.addEventListener("keydown", handleRightKeyPress);
+    return () => {
+      window.removeEventListener("keydown", handleLeftKeyPress);
+      window.removeEventListener("keydown", handleRightKeyPress);
+    };
+  }, [volume, accessToken]);
 
   useEffect(() => {
     const tokenFromQuery = router.query.accessToken;
@@ -431,6 +486,29 @@ const NowPlaying = () => {
 
         <div className="flex-shrink-0">
           <MenuIcon className="w-10 h-10 fill-white/60" />
+        </div>
+      </div>
+
+      <div
+        className={classNames(
+          "fixed right-0 top-20 transform transition-opacity duration-300 backdrop-blur-md",
+          {
+            "opacity-0 volumeOutScale": !isVolumeVisible,
+            "opacity-100 volumeInScale": isVolumeVisible,
+          }
+        )}
+      >
+        <div className="w-12 h-48 bg-black/20 rounded-[13px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+          <div
+            className={classNames(
+              "bg-white w-full transition-height duration-300",
+              {
+                "rounded-b-[13px]": volume < 100,
+                "rounded-[13px]": volume === 100,
+              }
+            )}
+            style={{ height: `${volume}%` }}
+          ></div>
         </div>
       </div>
     </div>

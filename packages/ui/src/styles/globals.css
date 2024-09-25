@@ -29,7 +29,7 @@ body {
 }
 
 .transition-opacity {
-  transition: opacity 0.3s ease-in-out; /* Match the duration with setTimeout */
+  transition: opacity 0.3s ease-in-out;
 }
 
 @keyframes fadeIn {
@@ -53,4 +53,50 @@ body {
 
 .progress-bar.no-transition {
   transition: none;
+}
+
+.animate__animated.animate__fadeInRight {
+  --animate-duration: 400ms;
+}
+
+.animate__animated.animate__fadeOutRight {
+  --animate-duration: 400ms;
+}
+
+@keyframes volumeInScale {
+  from {
+    transform: scale(0) translate3d(100%, 0, 0);
+    margin-right: 0;
+  }
+  to {
+    transform: scale(1) translate3d(0, 0, 0);
+    margin-right: 40px;
+  }
+}
+
+.volumeInScale {
+  animation-name: volumeInScale;
+  animation-duration: 0.3s;
+  animation-fill-mode: forwards;
+}
+
+@keyframes volumeOutScale {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+    margin-right: 40px;
+  }
+  to {
+    transform: scale(0) translate3d(100%, 0, 0);
+    margin-right: 0;
+  }
+}
+
+.volumeOutScale {
+  animation-name: volumeOutScale;
+  animation-duration: 1s;
+  animation-fill-mode: forwards;
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
 }
