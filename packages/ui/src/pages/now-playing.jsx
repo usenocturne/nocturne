@@ -42,28 +42,22 @@ const NowPlaying = () => {
     }
   };
 
-  const handleLeftKeyPress = (event) => {
-    if (event.key === "ArrowLeft") {
+  const handleWheelScroll = (event) => {
+    if (event.deltaX > 0) {
+      const newVolume = Math.min(volume + 7, 100);
+      changeVolume(newVolume);
+      console.log("Volume increased to:", newVolume);
+    } else if (event.deltaX < 0) {
       const newVolume = Math.max(volume - 7, 0);
       changeVolume(newVolume);
       console.log("Volume decreased to:", newVolume);
     }
   };
 
-  const handleRightKeyPress = (event) => {
-    if (event.key === "ArrowRight") {
-      const newVolume = Math.min(volume + 7, 100);
-      changeVolume(newVolume);
-      console.log("Volume increased to:", newVolume);
-    }
-  };
-
   useEffect(() => {
-    window.addEventListener("keydown", handleLeftKeyPress);
-    window.addEventListener("keydown", handleRightKeyPress);
+    window.addEventListener("wheel", handleWheelScroll);
     return () => {
-      window.removeEventListener("keydown", handleLeftKeyPress);
-      window.removeEventListener("keydown", handleRightKeyPress);
+      window.removeEventListener("wheel", handleWheelScroll);
     };
   }, [volume, accessToken]);
 
@@ -558,7 +552,7 @@ const NowPlaying = () => {
 
       <div
         className={classNames(
-          "fixed right-0 top-20 transform transition-opacity duration-300 backdrop-blur-md",
+          "fixed right-0 top-[70px] transform transition-opacity duration-300 backdrop-blur-md",
           {
             "opacity-0 volumeOutScale": !isVolumeVisible,
             "opacity-100 volumeInScale": isVolumeVisible,
