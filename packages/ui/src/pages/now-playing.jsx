@@ -255,6 +255,19 @@ const NowPlaying = () => {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Enter") {
+        togglePlayPause();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [togglePlayPause]);
+
   const StarIcon = ({ className }) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
