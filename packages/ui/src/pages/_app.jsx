@@ -65,7 +65,15 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-    if (authCode) {
+    const storedAccessToken = localStorage.getItem("accessToken");
+    const storedRefreshToken = localStorage.getItem("refreshToken");
+
+    if (storedAccessToken && storedRefreshToken) {
+      setAccessToken(storedAccessToken);
+      setRefreshToken(storedRefreshToken);
+      setLoading(false);
+      scheduleTokenRefresh();
+    } else if (authCode) {
       fetchAccessToken(authCode);
     } else if (
       typeof window !== "undefined" &&
@@ -246,18 +254,11 @@ export default function App({ Component, pageProps }) {
         imageKey = "artistsImage";
         break;
       case activeSection === "radio":
-        fetchUserRadio().then((firstPlaylistName) => {
-          if (firstPlaylistName === "DJ") {
-            setTargetColor1("#0a59b8");
-            setTargetColor2("#1776e6");
-            setTargetColor3("#3185e8");
-            setTargetColor4("#19e48d");
-          } else {
-            setTargetColor1("#21305e");
-            setTargetColor2("#1d2238");
-            setTargetColor3("#e468b9");
-            setTargetColor4("#933e8e");
-          }
+        fetchUserRadio().then(() => {
+          setTargetColor1("#21305e");
+          setTargetColor2("#1d2238");
+          setTargetColor3("#e468b9");
+          setTargetColor4("#933e8e");
         });
         break;
       default:
@@ -294,6 +295,13 @@ export default function App({ Component, pageProps }) {
     window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}&code_challenge_method=S256&code_challenge=${codeChallenge}`;
   };
 
+  function scheduleTokenRefresh() {
+    if (refreshToken) {
+      const refreshInterval = (60 * 60 - 5 * 60) * 1000;
+      setTimeout(refreshAccessToken, refreshInterval);
+    }
+  }
+
   const fetchAccessToken = async (code) => {
     const codeVerifier = localStorage.getItem("code_verifier");
 
@@ -314,8 +322,10 @@ export default function App({ Component, pageProps }) {
 
       const data = await response.json();
       setAccessToken(data.access_token);
-      localStorage.setItem("accessToken", data.access_token);
       setRefreshToken(data.refresh_token);
+      localStorage.setItem("accessToken", data.access_token);
+      localStorage.setItem("refreshToken", data.refresh_token);
+      scheduleTokenRefresh();
     } catch (error) {
       console.error("Error fetching access token:", error);
     }
@@ -335,8 +345,14 @@ export default function App({ Component, pageProps }) {
         }),
       });
 
-      const data = await response.json();
-      setAccessToken(data.access_token);
+      if (response.ok) {
+        const data = await response.json();
+        setAccessToken(data.access_token);
+        localStorage.setItem("accessToken", data.access_token);
+        scheduleTokenRefresh();
+      } else {
+        console.error("Error refreshing access token:", response.status);
+      }
     } catch (error) {
       console.error("Error refreshing access token:", error);
     }
@@ -432,9 +448,13 @@ export default function App({ Component, pageProps }) {
       const data = await response.json();
       const playlists = data.playlists.items;
 
-      const priorityOrder = ["On Repeat", "Repeat Rewind", "DJ"];
+      const filteredPlaylists = playlists.filter(
+        (playlist) => playlist.id !== "37i9dQZF1EYkqdzj48dyYq"
+      );
 
-      const sortedPlaylists = playlists.sort((a, b) => {
+      const priorityOrder = ["On Repeat", "Repeat Rewind"];
+
+      const sortedPlaylists = filteredPlaylists.sort((a, b) => {
         const indexA = priorityOrder.indexOf(a.name);
         const indexB = priorityOrder.indexOf(b.name);
 
