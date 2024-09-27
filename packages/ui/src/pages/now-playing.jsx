@@ -517,7 +517,7 @@ const NowPlaying = () => {
           <h4 className="text-[32px] font-medium text-white truncate tracking-tight max-w-[400px]">
             {trackName}
           </h4>
-          <h4 className="text-[24px] font-base text-white/60 truncate tracking-tight max-w-[400px]">
+          <h4 className="text-[24px] font-normal text-white/60 truncate tracking-tight max-w-[400px]">
             {artistName}
           </h4>
         </div>

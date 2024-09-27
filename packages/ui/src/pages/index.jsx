@@ -31,10 +31,10 @@ export default function Home({
                         alt="Currently Playing Album Cover"
                         className="mt-16 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                       />
-                      <h4 className="mt-2 text-[24px] font-medium text-white truncate max-w-[280px]">
+                      <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
                         {album.name}
                       </h4>
-                      <h4 className="text-[20px] font-base text-white truncate max-w-[280px]">
+                      <h4 className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
                         {album.artists.map((artist) => artist.name).join(", ")}
                       </h4>
                     </div>
@@ -57,7 +57,7 @@ export default function Home({
                     <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {item.name}
                     </h4>
-                    <h4 className="text-[20px] font-base text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
                       {item.tracks.total.toLocaleString()} Songs
                     </h4>
                   </div>
@@ -78,7 +78,7 @@ export default function Home({
                     <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {artist.name}
                     </h4>
-                    <h4 className="text-[20px] font-base text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
                       {artist.followers.total.toLocaleString()} Followers
                     </h4>
                   </div>
@@ -99,7 +99,7 @@ export default function Home({
                     <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {playlist.name}
                     </h4>
-                    <h4 className="text-[20px] font-base text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
                       {playlist.owner.display_name}
                     </h4>
                   </div>

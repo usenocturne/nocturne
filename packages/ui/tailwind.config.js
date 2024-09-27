@@ -7,6 +7,17 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Inter", "sans-serif"],
+      },
+      letterSpacing: {
+        "tighter": "-0.05em",
+        "tight": "-0.05em",
+        "normal": "0",
+        "wide": "0.025em",
+        "wider": "0.05em",
+        "widest": "0.1em",
+      },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":

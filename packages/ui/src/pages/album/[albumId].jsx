@@ -96,7 +96,7 @@ const AlbumPage = ({ album }) => {
               <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
                 {album.name}
               </h4>
-              <h4 className="text-[20px] font-base text-white/60 truncate tracking-tight max-w-[280px]">
+              <h4 className="text-[20px] font-normal text-white/60 truncate tracking-tight max-w-[280px]">
                 {album.artists.map((artist) => artist.name).join(", ")}
               </h4>
             </div>
