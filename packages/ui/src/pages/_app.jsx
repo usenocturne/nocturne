@@ -2,6 +2,9 @@ import "../styles/globals.css";
 import { useEffect, useState } from "react";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -37,26 +40,6 @@ export default function App({ Component, pageProps }) {
     }
   };
 
-  function generateCodeVerifier() {
-    const array = new Uint8Array(32);
-    window.crypto.getRandomValues(array);
-    return btoa(String.fromCharCode(...array))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-  }
-
-  async function generateCodeChallenge(codeVerifier) {
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(codeVerifier)
-    );
-    return btoa(String.fromCharCode(...new Uint8Array(digest)))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-  }
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       const code = new URLSearchParams(window.location.search).get("code");
@@ -65,20 +48,7 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-    const storedAccessToken = localStorage.getItem("accessToken");
-    const storedRefreshToken = localStorage.getItem("refreshToken");
-    const tokenExpirationTime = localStorage.getItem("tokenExpirationTime");
-
-    if (storedAccessToken && storedRefreshToken && tokenExpirationTime) {
-      if (Date.now() < parseInt(tokenExpirationTime)) {
-        setAccessToken(storedAccessToken);
-        setRefreshToken(storedRefreshToken);
-        setLoading(false);
-        scheduleTokenRefresh(parseInt(tokenExpirationTime));
-      } else {
-        refreshAccessToken(storedRefreshToken);
-      }
-    } else if (authCode) {
+    if (authCode) {
       fetchAccessToken(authCode);
     } else if (
       typeof window !== "undefined" &&
@@ -90,13 +60,21 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     if (accessToken) {
+      const tokenRefreshInterval = setInterval(() => {
+        refreshAccessToken();
+      }, 3000 * 1000);
+
       setLoading(false);
       fetchRecentlyPlayedAlbums();
       fetchUserPlaylists();
       fetchTopArtists();
       fetchUserRadio();
       window.addEventListener("keydown", handleEscapePress);
-      return () => window.removeEventListener("keydown", handleEscapePress);
+
+      return () => {
+        clearInterval(tokenRefreshInterval);
+        window.removeEventListener("keydown", handleEscapePress);
+      };
     }
   }, [accessToken]);
 
@@ -160,8 +138,6 @@ export default function App({ Component, pageProps }) {
               console.log("No album is currently playing.");
               setCurrentlyPlayingAlbum(null);
             }
-          } else if (response.status === 401) {
-            await refreshAccessToken(refreshToken);
           } else {
             console.error("Error fetching current playback:", response.status);
             const imageUrl = "/not-playing.webp";
@@ -221,7 +197,7 @@ export default function App({ Component, pageProps }) {
 
       return () => clearInterval(intervalId);
     }
-  }, [router.pathname, accessToken, currentlyPlayingAlbum, refreshToken]);
+  }, [router.pathname, accessToken, currentlyPlayingAlbum]);
 
   useEffect(() => {
     const colorThief = new ColorThief();
@@ -277,38 +253,16 @@ export default function App({ Component, pageProps }) {
     };
   }, [router.pathname, activeSection]);
 
-  const redirectToSpotify = async () => {
+  const redirectToSpotify = () => {
     const clientId = "";
     const redirectUri = "http://localhost:3000";
     const scopes =
       "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative";
 
-    const codeVerifier = generateCodeVerifier();
-    const codeChallenge = await generateCodeChallenge(codeVerifier);
-
-    localStorage.setItem("code_verifier", codeVerifier);
-
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}&code_challenge_method=S256&code_challenge=${codeChallenge}`;
+    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}`;
   };
 
-  function scheduleTokenRefresh(expirationTime) {
-    const currentTime = Date.now();
-    const timeUntilExpiration = expirationTime - currentTime;
-    const refreshBuffer = 5 * 60 * 1000;
-
-    if (timeUntilExpiration > refreshBuffer) {
-      setTimeout(
-        () => refreshAccessToken(refreshToken),
-        timeUntilExpiration - refreshBuffer
-      );
-    } else {
-      refreshAccessToken(refreshToken);
-    }
-  }
-
   const fetchAccessToken = async (code) => {
-    const codeVerifier = localStorage.getItem("code_verifier");
-
     try {
       const response = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -320,24 +274,18 @@ export default function App({ Component, pageProps }) {
           grant_type: "authorization_code",
           code: code,
           redirect_uri: "http://localhost:3000",
-          code_verifier: codeVerifier,
         }),
       });
 
       const data = await response.json();
       setAccessToken(data.access_token);
       setRefreshToken(data.refresh_token);
-      const expirationTime = Date.now() + data.expires_in * 1000;
-      localStorage.setItem("accessToken", data.access_token);
-      localStorage.setItem("refreshToken", data.refresh_token);
-      localStorage.setItem("tokenExpirationTime", expirationTime.toString());
-      scheduleTokenRefresh(expirationTime);
     } catch (error) {
       console.error("Error fetching access token:", error);
     }
   };
 
-  const refreshAccessToken = async (currentRefreshToken) => {
+  const refreshAccessToken = async () => {
     try {
       const response = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -347,34 +295,14 @@ export default function App({ Component, pageProps }) {
         },
         body: new URLSearchParams({
           grant_type: "refresh_token",
-          refresh_token: currentRefreshToken,
+          refresh_token: refreshToken,
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setAccessToken(data.access_token);
-        if (data.refresh_token) {
-          setRefreshToken(data.refresh_token);
-          localStorage.setItem("refreshToken", data.refresh_token);
-        }
-        const expirationTime = Date.now() + data.expires_in * 1000;
-        localStorage.setItem("accessToken", data.access_token);
-        localStorage.setItem("tokenExpirationTime", expirationTime.toString());
-        scheduleTokenRefresh(expirationTime);
-      } else {
-        console.error("Error refreshing access token:", response.status);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("tokenExpirationTime");
-        redirectToSpotify();
-      }
+      const data = await response.json();
+      setAccessToken(data.access_token);
     } catch (error) {
       console.error("Error refreshing access token:", error);
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("tokenExpirationTime");
-      redirectToSpotify();
     }
   };
 
@@ -403,8 +331,6 @@ export default function App({ Component, pageProps }) {
             );
             return uniqueAlbums;
           });
-        } else if (response.status === 401) {
-          await refreshAccessToken(refreshToken);
         } else {
           console.error(
             "Error fetching recently played albums:",
@@ -433,8 +359,6 @@ export default function App({ Component, pageProps }) {
           }
         }
         setPlaylists(data.items);
-      } else if (response.status === 401) {
-        await refreshAccessToken(refreshToken);
       } else {
         console.error("Error fetching user playlists:", response.status);
       }
@@ -462,8 +386,6 @@ export default function App({ Component, pageProps }) {
           }
         }
         setArtists(data.items);
-      } else if (response.status === 401) {
-        await refreshAccessToken(refreshToken);
       } else {
         console.error("Error fetching top artists:", response.status);
       }
@@ -512,8 +434,6 @@ export default function App({ Component, pageProps }) {
         setRadio(sortedPlaylists);
 
         return sortedPlaylists.length > 0 ? sortedPlaylists[0].name : null;
-      } else if (response.status === 401) {
-        await refreshAccessToken(refreshToken);
       } else {
         console.error("Error fetching user radio:", response.status);
         return null;
@@ -698,7 +618,9 @@ export default function App({ Component, pageProps }) {
   }, [albumImage]);
 
   return (
-    <main className="overflow-hidden relative min-h-screen">
+    <main
+      className={`overflow-hidden relative min-h-screen ${inter.className}`}
+    >
       <div
         style={{
           backgroundImage: generateMeshGradient([

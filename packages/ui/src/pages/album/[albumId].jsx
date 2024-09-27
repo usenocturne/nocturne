@@ -110,9 +110,7 @@ const AlbumPage = ({ album }) => {
         {album.tracks && album.tracks.items ? (
           album.tracks.items.map((track, index) => (
             <>
-              <Link
-                href={`/now-playing?accessToken=${router.query.accessToken}`}
-              >
+              <Link href={`/now-playing`}>
                 <div
                   key={track.id}
                   onClick={() => playTrack(track.uri)}

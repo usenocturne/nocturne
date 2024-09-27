@@ -111,10 +111,7 @@ const PlaylistPage = ({ playlist }) => {
       <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
         {playlist.tracks && playlist.tracks.items ? (
           playlist.tracks.items.map((track, index) => (
-            <Link
-              key={track.track.id}
-              href={`/now-playing?accessToken=${router.query.accessToken}`}
-            >
+            <Link key={track.track.id} href={`/now-playing`}>
               <div
                 onClick={() => playTrack(track.track.uri)}
                 className="flex gap-4 items-start mb-4"

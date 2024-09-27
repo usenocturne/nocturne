@@ -2,10 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import classNames from "classnames";
 
-const NowPlaying = () => {
+const NowPlaying = ({ accessToken }) => {
   const router = useRouter();
   const [currentTrack, setCurrentTrack] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [lastBackwardPress, setLastBackwardPress] = useState(0);
@@ -62,12 +61,6 @@ const NowPlaying = () => {
   }, [volume, accessToken]);
 
   useEffect(() => {
-    const tokenFromQuery = router.query.accessToken;
-    const tokenFromLocalStorage = localStorage.getItem("accessToken");
-
-    const token = tokenFromQuery || tokenFromLocalStorage;
-    setAccessToken(token);
-
     const fetchCurrentTrack = async () => {
       if (!accessToken) return;
 

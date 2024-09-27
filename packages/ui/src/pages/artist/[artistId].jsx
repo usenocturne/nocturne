@@ -109,10 +109,7 @@ const ArtistPage = ({ artist }) => {
       <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
         {artist.topTracks && artist.topTracks.length > 0 ? (
           artist.topTracks.map((track, index) => (
-            <Link
-              key={track.id}
-              href={`/now-playing?accessToken=${router.query.accessToken}`}
-            >
+            <Link key={track.id} href={`/now-playing`}>
               <div
                 onClick={() => playTrack(track.uri)}
                 className="flex gap-4 items-start mb-4"

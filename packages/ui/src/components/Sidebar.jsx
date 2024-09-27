@@ -2,13 +2,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function Sidebar({ activeSection, setActiveSection }) {
-  const [accessToken, setAccessToken] = useState(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    setAccessToken(token);
-  }, []);
-
   const handleSectionClick = (section) => {
     setActiveSection(section);
   };
@@ -160,7 +153,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
 
   return (
     <div className="space-y-6 pt-12">
-      <Link href={`/now-playing?accessToken=${accessToken}`}>
+      <Link href={`/now-playing`}>
         <div className="relative flex items-center">
           <div className="mr-4 flex-shrink-0">
             <div className="h-14 w-14 bg-white/25 rounded-[12px] flex items-center justify-center">
