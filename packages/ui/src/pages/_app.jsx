@@ -67,12 +67,17 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     const storedAccessToken = localStorage.getItem("accessToken");
     const storedRefreshToken = localStorage.getItem("refreshToken");
+    const tokenExpirationTime = localStorage.getItem("tokenExpirationTime");
 
-    if (storedAccessToken && storedRefreshToken) {
-      setAccessToken(storedAccessToken);
-      setRefreshToken(storedRefreshToken);
-      setLoading(false);
-      scheduleTokenRefresh();
+    if (storedAccessToken && storedRefreshToken && tokenExpirationTime) {
+      if (Date.now() < parseInt(tokenExpirationTime)) {
+        setAccessToken(storedAccessToken);
+        setRefreshToken(storedRefreshToken);
+        setLoading(false);
+        scheduleTokenRefresh(parseInt(tokenExpirationTime));
+      } else {
+        refreshAccessToken(storedRefreshToken);
+      }
     } else if (authCode) {
       fetchAccessToken(authCode);
     } else if (
@@ -86,17 +91,6 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     if (accessToken) {
       setLoading(false);
-      const tokenRefreshInterval = setInterval(() => {
-        refreshAccessToken();
-        localStorage.setItem("accessToken", accessToken);
-      }, 3000 * 1000);
-
-      return () => clearInterval(tokenRefreshInterval);
-    }
-  }, [accessToken]);
-
-  useEffect(() => {
-    if (accessToken) {
       fetchRecentlyPlayedAlbums();
       fetchUserPlaylists();
       fetchTopArtists();
@@ -166,6 +160,8 @@ export default function App({ Component, pageProps }) {
               console.log("No album is currently playing.");
               setCurrentlyPlayingAlbum(null);
             }
+          } else if (response.status === 401) {
+            await refreshAccessToken(refreshToken);
           } else {
             console.error("Error fetching current playback:", response.status);
             const imageUrl = "/not-playing.webp";
@@ -225,7 +221,7 @@ export default function App({ Component, pageProps }) {
 
       return () => clearInterval(intervalId);
     }
-  }, [router.pathname, accessToken, currentlyPlayingAlbum]);
+  }, [router.pathname, accessToken, currentlyPlayingAlbum, refreshToken]);
 
   useEffect(() => {
     const colorThief = new ColorThief();
@@ -295,10 +291,18 @@ export default function App({ Component, pageProps }) {
     window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}&code_challenge_method=S256&code_challenge=${codeChallenge}`;
   };
 
-  function scheduleTokenRefresh() {
-    if (refreshToken) {
-      const refreshInterval = (60 * 60 - 5 * 60) * 1000;
-      setTimeout(refreshAccessToken, refreshInterval);
+  function scheduleTokenRefresh(expirationTime) {
+    const currentTime = Date.now();
+    const timeUntilExpiration = expirationTime - currentTime;
+    const refreshBuffer = 5 * 60 * 1000;
+
+    if (timeUntilExpiration > refreshBuffer) {
+      setTimeout(
+        () => refreshAccessToken(refreshToken),
+        timeUntilExpiration - refreshBuffer
+      );
+    } else {
+      refreshAccessToken(refreshToken);
     }
   }
 
@@ -323,15 +327,17 @@ export default function App({ Component, pageProps }) {
       const data = await response.json();
       setAccessToken(data.access_token);
       setRefreshToken(data.refresh_token);
+      const expirationTime = Date.now() + data.expires_in * 1000;
       localStorage.setItem("accessToken", data.access_token);
       localStorage.setItem("refreshToken", data.refresh_token);
-      scheduleTokenRefresh();
+      localStorage.setItem("tokenExpirationTime", expirationTime.toString());
+      scheduleTokenRefresh(expirationTime);
     } catch (error) {
       console.error("Error fetching access token:", error);
     }
   };
 
-  const refreshAccessToken = async () => {
+  const refreshAccessToken = async (currentRefreshToken) => {
     try {
       const response = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -341,20 +347,34 @@ export default function App({ Component, pageProps }) {
         },
         body: new URLSearchParams({
           grant_type: "refresh_token",
-          refresh_token: refreshToken,
+          refresh_token: currentRefreshToken,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setAccessToken(data.access_token);
+        if (data.refresh_token) {
+          setRefreshToken(data.refresh_token);
+          localStorage.setItem("refreshToken", data.refresh_token);
+        }
+        const expirationTime = Date.now() + data.expires_in * 1000;
         localStorage.setItem("accessToken", data.access_token);
-        scheduleTokenRefresh();
+        localStorage.setItem("tokenExpirationTime", expirationTime.toString());
+        scheduleTokenRefresh(expirationTime);
       } else {
         console.error("Error refreshing access token:", response.status);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("tokenExpirationTime");
+        redirectToSpotify();
       }
     } catch (error) {
       console.error("Error refreshing access token:", error);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("tokenExpirationTime");
+      redirectToSpotify();
     }
   };
 
@@ -383,6 +403,8 @@ export default function App({ Component, pageProps }) {
             );
             return uniqueAlbums;
           });
+        } else if (response.status === 401) {
+          await refreshAccessToken(refreshToken);
         } else {
           console.error(
             "Error fetching recently played albums:",
@@ -402,12 +424,20 @@ export default function App({ Component, pageProps }) {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      const data = await response.json();
       if (response.ok) {
-        const imageUrl = data.items[0].images[0].url;
-        localStorage.setItem("libraryImage", imageUrl);
+        const data = await response.json();
+        if (data.items.length > 0) {
+          const imageUrl = data.items[0].images[0]?.url;
+          if (imageUrl) {
+            localStorage.setItem("libraryImage", imageUrl);
+          }
+        }
+        setPlaylists(data.items);
+      } else if (response.status === 401) {
+        await refreshAccessToken(refreshToken);
+      } else {
+        console.error("Error fetching user playlists:", response.status);
       }
-      setPlaylists(data.items);
     } catch (error) {
       console.error("Error fetching user playlists:", error);
     }
@@ -423,12 +453,20 @@ export default function App({ Component, pageProps }) {
           },
         }
       );
-      const data = await response.json();
       if (response.ok) {
-        const imageUrl = data.items[0].images[0].url;
-        localStorage.setItem("artistsImage", imageUrl);
+        const data = await response.json();
+        if (data.items.length > 0) {
+          const imageUrl = data.items[0].images[0]?.url;
+          if (imageUrl) {
+            localStorage.setItem("artistsImage", imageUrl);
+          }
+        }
+        setArtists(data.items);
+      } else if (response.status === 401) {
+        await refreshAccessToken(refreshToken);
+      } else {
+        console.error("Error fetching top artists:", response.status);
       }
-      setArtists(data.items);
     } catch (error) {
       console.error("Error fetching top artists:", error);
     }
@@ -445,36 +483,43 @@ export default function App({ Component, pageProps }) {
         }
       );
 
-      const data = await response.json();
-      const playlists = data.playlists.items;
+      if (response.ok) {
+        const data = await response.json();
+        const playlists = data.playlists.items;
 
-      const filteredPlaylists = playlists.filter(
-        (playlist) => playlist.id !== "37i9dQZF1EYkqdzj48dyYq"
-      );
+        const filteredPlaylists = playlists.filter(
+          (playlist) => playlist.id !== "37i9dQZF1EYkqdzj48dyYq"
+        );
 
-      const priorityOrder = ["On Repeat", "Repeat Rewind"];
+        const priorityOrder = ["On Repeat", "Repeat Rewind"];
 
-      const sortedPlaylists = filteredPlaylists.sort((a, b) => {
-        const indexA = priorityOrder.indexOf(a.name);
-        const indexB = priorityOrder.indexOf(b.name);
+        const sortedPlaylists = filteredPlaylists.sort((a, b) => {
+          const indexA = priorityOrder.indexOf(a.name);
+          const indexB = priorityOrder.indexOf(b.name);
 
-        if (indexA !== -1 && indexB !== -1) {
-          return indexA - indexB;
-        }
-        if (indexA !== -1) {
-          return -1;
-        }
-        if (indexB !== -1) {
-          return 1;
-        }
-        return 0;
-      });
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
+          if (indexA !== -1) {
+            return -1;
+          }
+          if (indexB !== -1) {
+            return 1;
+          }
+          return 0;
+        });
 
-      setRadio(sortedPlaylists);
+        setRadio(sortedPlaylists);
 
-      return sortedPlaylists.length > 0 ? sortedPlaylists[0].name : null;
+        return sortedPlaylists.length > 0 ? sortedPlaylists[0].name : null;
+      } else if (response.status === 401) {
+        await refreshAccessToken(refreshToken);
+      } else {
+        console.error("Error fetching user radio:", response.status);
+        return null;
+      }
     } catch (error) {
-      console.error("Error fetching user playlists:", error);
+      console.error("Error fetching user radio:", error);
       return null;
     }
   };
