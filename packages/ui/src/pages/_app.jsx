@@ -34,6 +34,11 @@ export default function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(true);
   const [currentlyPlayingTrackUri, setCurrentlyPlayingTrackUri] =
     useState(null);
+  const [sectionGradients, setSectionGradients] = useState({
+    library: null,
+    artists: null,
+    radio: null,
+  });
 
   const handleEscapePress = (event) => {
     if (event.key === "Escape") {
@@ -118,24 +123,9 @@ export default function App({ Component, pageProps }) {
                     currentAlbum.artists.map((artist) => artist.name).join(", ")
                   );
 
-                  const colorThief = new ColorThief();
-                  const img = new Image();
-                  img.crossOrigin = "anonymous";
-                  img.src = imageUrl;
-
-                  img.onload = () => {
-                    const dominantColors = colorThief.getPalette(img, 4);
-                    const hexColors = dominantColors.map((color) =>
-                      rgbToHex({ r: color[0], g: color[1], b: color[2] })
-                    );
-
-                    setTimeout(() => {
-                      setTargetColor1(hexColors[0]);
-                      setTargetColor2(hexColors[1]);
-                      setTargetColor3(hexColors[2]);
-                      setTargetColor4(hexColors[3]);
-                    }, 250);
-                  };
+                  if (activeSection === "recents") {
+                    updateGradientColors(imageUrl);
+                  }
                 }
               }
             } else {
@@ -150,24 +140,9 @@ export default function App({ Component, pageProps }) {
             setAlbumImage(imageUrl);
             setCurrentlyPlayingTrackUri(null);
 
-            const colorThief = new ColorThief();
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.src = imageUrl;
-
-            img.onload = () => {
-              const dominantColors = colorThief.getPalette(img, 4);
-              const hexColors = dominantColors.map((color) =>
-                rgbToHex({ r: color[0], g: color[1], b: color[2] })
-              );
-
-              setTimeout(() => {
-                setTargetColor1(hexColors[0]);
-                setTargetColor2(hexColors[1]);
-                setTargetColor3(hexColors[2]);
-                setTargetColor4(hexColors[3]);
-              }, 250);
-            };
+            if (activeSection === "recents") {
+              updateGradientColors(imageUrl);
+            }
           }
         } catch (error) {
           console.error("Error fetching current playback:", error);
@@ -176,24 +151,9 @@ export default function App({ Component, pageProps }) {
           setAlbumImage(imageUrl);
           setCurrentlyPlayingTrackUri(null);
 
-          const colorThief = new ColorThief();
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.src = imageUrl;
-
-          img.onload = () => {
-            const dominantColors = colorThief.getPalette(img, 4);
-            const hexColors = dominantColors.map((color) =>
-              rgbToHex({ r: color[0], g: color[1], b: color[2] })
-            );
-
-            setTimeout(() => {
-              setTargetColor1(hexColors[0]);
-              setTargetColor2(hexColors[1]);
-              setTargetColor3(hexColors[2]);
-              setTargetColor4(hexColors[3]);
-            }, 250);
-          };
+          if (activeSection === "recents") {
+            updateGradientColors(imageUrl);
+          }
         }
       }
     };
@@ -204,60 +164,41 @@ export default function App({ Component, pageProps }) {
 
       return () => clearInterval(intervalId);
     }
-  }, [router.pathname, accessToken, currentlyPlayingAlbum]);
+  }, [router.pathname, accessToken, currentlyPlayingAlbum, activeSection]);
 
   useEffect(() => {
-    const colorThief = new ColorThief();
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-
-    let imageKey;
+    const updateGradientForSection = (imageKey, section) => {
+      const imageSrc = localStorage.getItem(imageKey);
+      if (imageSrc) {
+        updateGradientColors(imageSrc, section);
+      }
+    };
 
     switch (true) {
       case router.pathname.includes("album"):
-        imageKey = "albumPageImage";
+        updateGradientForSection("albumPageImage");
         break;
       case router.pathname.includes("playlist"):
-        imageKey = "playlistPageImage";
+        updateGradientForSection("playlistPageImage");
         break;
       case router.pathname.includes("artist"):
-        imageKey = "artistPageImage";
+        updateGradientForSection("artistPageImage");
         break;
       case activeSection === "recents":
-        imageKey = "albumImage";
+        updateGradientForSection("albumImage");
         break;
       case activeSection === "library":
-        imageKey = "libraryImage";
+        updateGradientForSection("libraryImage", "library");
         break;
       case activeSection === "artists":
-        imageKey = "artistsImage";
+        updateGradientForSection("artistsImage", "artists");
         break;
       case activeSection === "radio":
-        fetchUserRadio().then(() => {
-          setTargetColor1("#21305e");
-          setTargetColor2("#1d2238");
-          setTargetColor3("#e468b9");
-          setTargetColor4("#933e8e");
-        });
+        updateGradientForSection("radioImage", "radio");
         break;
       default:
         break;
     }
-
-    const imageSrc = localStorage.getItem(imageKey);
-    img.src = imageSrc;
-
-    img.onload = () => {
-      const dominantColors = colorThief.getPalette(img, 4);
-      const hexColors = dominantColors.map((color) =>
-        rgbToHex({ r: color[0], g: color[1], b: color[2] })
-      );
-
-      setTargetColor1(hexColors[0]);
-      setTargetColor2(hexColors[1]);
-      setTargetColor3(hexColors[2]);
-      setTargetColor4(hexColors[3]);
-    };
   }, [router.pathname, activeSection]);
 
   const redirectToSpotify = () => {
@@ -363,6 +304,7 @@ export default function App({ Component, pageProps }) {
           const imageUrl = data.items[0].images[0]?.url;
           if (imageUrl) {
             localStorage.setItem("libraryImage", imageUrl);
+            updateGradientColors(imageUrl, "library");
           }
         }
         setPlaylists(data.items);
@@ -390,6 +332,7 @@ export default function App({ Component, pageProps }) {
           const imageUrl = data.items[0].images[0]?.url;
           if (imageUrl) {
             localStorage.setItem("artistsImage", imageUrl);
+            updateGradientColors(imageUrl, "artists");
           }
         }
         setArtists(data.items);
@@ -439,6 +382,14 @@ export default function App({ Component, pageProps }) {
         });
 
         setRadio(sortedPlaylists);
+
+        if (sortedPlaylists.length > 0) {
+          const imageUrl = sortedPlaylists[0].images[0]?.url;
+          if (imageUrl) {
+            localStorage.setItem("radioImage", imageUrl);
+            updateGradientColors(imageUrl, "radio");
+          }
+        }
 
         return sortedPlaylists.length > 0 ? sortedPlaylists[0].name : null;
       } else {
@@ -536,6 +487,31 @@ export default function App({ Component, pageProps }) {
     };
   };
 
+  const updateGradientColors = (imageUrl, section = null) => {
+    const colorThief = new ColorThief();
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = imageUrl;
+    img.onload = () => {
+      const dominantColors = colorThief.getPalette(img, 4);
+      const hexColors = dominantColors.map((color) =>
+        rgbToHex({ r: color[0], g: color[1], b: color[2] })
+      );
+
+      if (section) {
+        setSectionGradients((prev) => ({
+          ...prev,
+          [section]: hexColors,
+        }));
+      }
+
+      setTargetColor1(hexColors[0]);
+      setTargetColor2(hexColors[1]);
+      setTargetColor3(hexColors[2]);
+      setTargetColor4(hexColors[3]);
+    };
+  };
+
   useEffect(() => {
     const current1 = hexToRgb(currentColor1);
     const current2 = hexToRgb(currentColor2);
@@ -623,6 +599,16 @@ export default function App({ Component, pageProps }) {
       extractColors(albumImage);
     }
   }, [albumImage]);
+
+  useEffect(() => {
+    if (activeSection !== "recents" && sectionGradients[activeSection]) {
+      const [color1, color2, color3, color4] = sectionGradients[activeSection];
+      setTargetColor1(color1);
+      setTargetColor2(color2);
+      setTargetColor3(color3);
+      setTargetColor4(color4);
+    }
+  }, [activeSection, sectionGradients]);
 
   return (
     <main
