@@ -3,6 +3,12 @@ import { useEffect, useState } from "react";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
 import { Inter } from "next/font/google";
+import {
+  fetchRecentlyPlayedAlbums,
+  fetchUserPlaylists,
+  fetchTopArtists,
+  fetchUserRadio,
+} from "../services";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -72,10 +78,10 @@ export default function App({ Component, pageProps }) {
       }, 3000 * 1000);
 
       setLoading(false);
-      fetchRecentlyPlayedAlbums();
-      fetchUserPlaylists();
-      fetchTopArtists();
-      fetchUserRadio();
+      fetchRecentlyPlayedAlbums(accessToken, setAlbums, setAlbumsQueue);
+      fetchUserPlaylists(accessToken, setPlaylists, updateGradientColors);
+      fetchTopArtists(accessToken, setArtists, updateGradientColors);
+      fetchUserRadio(accessToken, setRadio, updateGradientColors);
       window.addEventListener("keydown", handleEscapePress);
 
       return () => {
@@ -113,7 +119,11 @@ export default function App({ Component, pageProps }) {
                     );
                     return [currentAlbum, ...updatedQueue];
                   });
-                  await fetchRecentlyPlayedAlbums();
+                  await fetchRecentlyPlayedAlbums(
+                    accessToken,
+                    setAlbums,
+                    setAlbumsQueue
+                  );
 
                   const imageUrl = currentAlbum.images[0].url;
                   localStorage.setItem("albumImage", imageUrl);
@@ -184,6 +194,9 @@ export default function App({ Component, pageProps }) {
       case router.pathname.includes("artist"):
         updateGradientForSection("artistPageImage");
         break;
+      case router.pathname === "/now-playing":
+        updateGradientForSection("albumImage");
+        break;
       case activeSection === "recents":
         updateGradientForSection("albumImage");
         break;
@@ -194,7 +207,10 @@ export default function App({ Component, pageProps }) {
         updateGradientForSection("artistsImage", "artists");
         break;
       case activeSection === "radio":
-        updateGradientForSection("radioImage", "radio");
+        setTargetColor1("#21305e");
+        setTargetColor2("#1d2238");
+        setTargetColor3("#e468b9");
+        setTargetColor4("#933e8e");
         break;
       default:
         break;
@@ -251,154 +267,6 @@ export default function App({ Component, pageProps }) {
       setAccessToken(data.access_token);
     } catch (error) {
       console.error("Error refreshing access token:", error);
-    }
-  };
-
-  const fetchRecentlyPlayedAlbums = async () => {
-    if (accessToken) {
-      try {
-        const response = await fetch(
-          "https://api.spotify.com/v1/me/player/recently-played",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const albums = data.items.map((item) => item.track.album);
-
-          setAlbums(albums);
-
-          setAlbumsQueue((prevQueue) => {
-            const uniqueAlbums = [...prevQueue, ...albums].filter(
-              (album, index, self) =>
-                index === self.findIndex((a) => a.id === album.id)
-            );
-            return uniqueAlbums;
-          });
-        } else {
-          console.error(
-            "Error fetching recently played albums:",
-            response.status
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching recently played albums:", error);
-      }
-    }
-  };
-
-  const fetchUserPlaylists = async () => {
-    try {
-      const response = await fetch("https://api.spotify.com/v1/me/playlists", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.items.length > 0) {
-          const imageUrl = data.items[0].images[0]?.url;
-          if (imageUrl) {
-            localStorage.setItem("libraryImage", imageUrl);
-            updateGradientColors(imageUrl, "library");
-          }
-        }
-        setPlaylists(data.items);
-      } else {
-        console.error("Error fetching user playlists:", response.status);
-      }
-    } catch (error) {
-      console.error("Error fetching user playlists:", error);
-    }
-  };
-
-  const fetchTopArtists = async () => {
-    try {
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/top/artists",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (data.items.length > 0) {
-          const imageUrl = data.items[0].images[0]?.url;
-          if (imageUrl) {
-            localStorage.setItem("artistsImage", imageUrl);
-            updateGradientColors(imageUrl, "artists");
-          }
-        }
-        setArtists(data.items);
-      } else {
-        console.error("Error fetching top artists:", response.status);
-      }
-    } catch (error) {
-      console.error("Error fetching top artists:", error);
-    }
-  };
-
-  const fetchUserRadio = async () => {
-    try {
-      const response = await fetch(
-        "https://api.spotify.com/v1/browse/categories/0JQ5DAt0tbjZptfcdMSKl3/playlists",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const playlists = data.playlists.items;
-
-        const filteredPlaylists = playlists.filter(
-          (playlist) => playlist.id !== "37i9dQZF1EYkqdzj48dyYq"
-        );
-
-        const priorityOrder = ["On Repeat", "Repeat Rewind"];
-
-        const sortedPlaylists = filteredPlaylists.sort((a, b) => {
-          const indexA = priorityOrder.indexOf(a.name);
-          const indexB = priorityOrder.indexOf(b.name);
-
-          if (indexA !== -1 && indexB !== -1) {
-            return indexA - indexB;
-          }
-          if (indexA !== -1) {
-            return -1;
-          }
-          if (indexB !== -1) {
-            return 1;
-          }
-          return 0;
-        });
-
-        setRadio(sortedPlaylists);
-
-        if (sortedPlaylists.length > 0) {
-          const imageUrl = sortedPlaylists[0].images[0]?.url;
-          if (imageUrl) {
-            localStorage.setItem("radioImage", imageUrl);
-            updateGradientColors(imageUrl, "radio");
-          }
-        }
-
-        return sortedPlaylists.length > 0 ? sortedPlaylists[0].name : null;
-      } else {
-        console.error("Error fetching user radio:", response.status);
-        return null;
-      }
-    } catch (error) {
-      console.error("Error fetching user radio:", error);
-      return null;
     }
   };
 
