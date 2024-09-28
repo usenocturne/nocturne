@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Link from "next/link";
 
-const ArtistPage = ({ artist }) => {
+const ArtistPage = ({ artist, currentlyPlayingTrackUri }) => {
   const router = useRouter();
 
   useEffect(() => {
@@ -11,7 +11,7 @@ const ArtistPage = ({ artist }) => {
     localStorage.setItem("artistPageImage", artistImage);
   }, [artist]);
 
-  const playTrack = async (trackUri) => {
+  const playTrack = async (trackUri, trackIndex) => {
     const accessToken = router.query.accessToken;
 
     try {
@@ -58,6 +58,9 @@ const ArtistPage = ({ artist }) => {
         }
       }
 
+      const allTrackUris = artist.topTracks.map((track) => track.uri);
+      const tracksToPlay = allTrackUris.slice(trackIndex);
+
       const playResponse = await fetch(
         "https://api.spotify.com/v1/me/player/play",
         {
@@ -67,7 +70,7 @@ const ArtistPage = ({ artist }) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            uris: [trackUri],
+            uris: tracksToPlay,
             device_id: activeDeviceId,
           }),
         }
@@ -83,7 +86,7 @@ const ArtistPage = ({ artist }) => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 10 px-16 max-h-screen">
+    <div className="flex flex-col md:flex-row gap-8 pt-10 px-16 max-h-screen">
       <div className="md:w-1/3 h-screen sticky top-0">
         {artist.images && artist.images.length > 0 ? (
           <>
@@ -111,12 +114,23 @@ const ArtistPage = ({ artist }) => {
           artist.topTracks.map((track, index) => (
             <Link key={track.id} href={`/now-playing`}>
               <div
-                onClick={() => playTrack(track.uri)}
+                onClick={() => playTrack(track.uri, index)}
                 className="flex gap-4 items-start mb-4"
               >
-                <p className="text-[20px] font-medium text-white/60 w-6 mt-3">
-                  {index + 1}
-                </p>
+                <div className="text-[20px] font-medium text-white/60 w-6 mt-3">
+                  {track.uri === currentlyPlayingTrackUri ? (
+                    <div className="w-4">
+                      <section>
+                        <div className="wave0"></div>
+                        <div className="wave1"></div>
+                        <div className="wave2"></div>
+                        <div className="wave3"></div>
+                      </section>
+                    </div>
+                  ) : (
+                    <p>{index + 1}</p>
+                  )}
+                </div>
 
                 <div>
                   <p className="text-[20px] font-medium text-white truncate tracking-tight max-w-[280px]">

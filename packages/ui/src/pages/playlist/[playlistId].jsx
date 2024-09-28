@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Link from "next/link";
 
-const PlaylistPage = ({ playlist }) => {
+const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
   const router = useRouter();
 
   useEffect(() => {
@@ -13,7 +13,7 @@ const PlaylistPage = ({ playlist }) => {
     localStorage.setItem("playlistPageImage", playlistImage);
   }, [playlist]);
 
-  const playTrack = async (trackUri) => {
+  const playTrack = async (trackUri, trackIndex) => {
     const accessToken = router.query.accessToken;
 
     try {
@@ -60,6 +60,8 @@ const PlaylistPage = ({ playlist }) => {
         }
       }
 
+      const trackUris = playlist.tracks.items.map((item) => item.track.uri);
+
       const playResponse = await fetch(
         "https://api.spotify.com/v1/me/player/play",
         {
@@ -69,7 +71,10 @@ const PlaylistPage = ({ playlist }) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            uris: [trackUri],
+            uris: trackUris,
+            offset: {
+              position: trackIndex,
+            },
             device_id: activeDeviceId,
           }),
         }
@@ -113,12 +118,23 @@ const PlaylistPage = ({ playlist }) => {
           playlist.tracks.items.map((track, index) => (
             <Link key={track.track.id} href={`/now-playing`}>
               <div
-                onClick={() => playTrack(track.track.uri)}
+                onClick={() => playTrack(track.track.uri, index)}
                 className="flex gap-4 items-start mb-4"
               >
-                <p className="text-[20px] font-medium text-white/60 w-6 mt-3">
-                  {index + 1}
-                </p>
+                <div className="text-[20px] font-medium text-white/60 w-6 mt-3">
+                  {track.track.uri === currentlyPlayingTrackUri ? (
+                    <div className="w-4">
+                      <section>
+                        <div className="wave0"></div>
+                        <div className="wave1"></div>
+                        <div className="wave2"></div>
+                        <div className="wave3"></div>
+                      </section>
+                    </div>
+                  ) : (
+                    <p>{index + 1}</p>
+                  )}
+                </div>
 
                 <div>
                   <p className="text-[20px] font-medium text-white truncate tracking-tight max-w-[280px]">

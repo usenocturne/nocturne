@@ -100,3 +100,68 @@ body {
 .backdrop-blur-md {
   backdrop-filter: blur(12px);
 }
+
+section {
+  display: flex;
+  gap: 3px;
+  padding-top: 8px;
+}
+
+[class*='wave'] {
+  aspect-ratio: .125/1;
+  background-color: #FFFFFF;
+  border-radius: 15px;
+  width: .1vw;
+}
+
+@keyframes waveform {
+  0% {
+    transform: scaleY(.5);
+  }
+  50% {
+    transform: scaleY(1.5);
+  }
+  100% {
+    transform: scaleY(.5);
+  }
+}
+
+[class*='wave'] {
+  aspect-ratio: .125/1;
+  /*This can all be written on one line:*/
+  animation: waveform var(--wavefreq)
+             ease-in-out 0.1s infinite
+             forwards;
+  background-color: #FFFFFF;
+  border-radius: 15px;
+  width: 1vw;
+}
+
+:root {
+  --m: 11.5;
+  --wavefreq: calc(100ms * var(--m));
+}
+
+.wave1 {
+  --wavefreq: calc(200ms * var(--m));
+}
+
+.wave2 {
+  --wavefreq: calc(300ms * var(--m));
+}
+
+.wave3 {
+  --wavefreq: calc(400ms * var(--m));
+}
+
+.wave4 {
+  --wavefreq: calc(500ms * var(--m));
+}
+
+.wave5 {
+  --wavefreq: calc(600ms * var(--m));
+}
+
+.wave6 {
+  --wavefreq: calc(700ms * var(--m));
+}

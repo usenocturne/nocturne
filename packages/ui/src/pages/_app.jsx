@@ -32,6 +32,8 @@ export default function App({ Component, pageProps }) {
   const [targetColor4, setTargetColor4] = useState("#191414");
   const [transitionSpeed, setTransitionSpeed] = useState(30);
   const [loading, setLoading] = useState(true);
+  const [currentlyPlayingTrackUri, setCurrentlyPlayingTrackUri] =
+    useState(null);
 
   const handleEscapePress = (event) => {
     if (event.key === "Escape") {
@@ -90,8 +92,10 @@ export default function App({ Component, pageProps }) {
 
           if (response.ok) {
             const data = await response.json();
-            if (data && data.item) {
+            if (data && data.is_playing) {
               const currentAlbum = data.item.album;
+              const currentTrackUri = data.item.uri;
+              setCurrentlyPlayingTrackUri(currentTrackUri);
               if (
                 !currentlyPlayingAlbum ||
                 currentlyPlayingAlbum.id !== currentAlbum.id
@@ -137,12 +141,14 @@ export default function App({ Component, pageProps }) {
             } else {
               console.log("No album is currently playing.");
               setCurrentlyPlayingAlbum(null);
+              setCurrentlyPlayingTrackUri(null);
             }
           } else {
             console.error("Error fetching current playback:", response.status);
             const imageUrl = "/not-playing.webp";
             localStorage.setItem("albumImage", imageUrl);
             setAlbumImage(imageUrl);
+            setCurrentlyPlayingTrackUri(null);
 
             const colorThief = new ColorThief();
             const img = new Image();
@@ -168,6 +174,7 @@ export default function App({ Component, pageProps }) {
           const imageUrl = "/not-playing.webp";
           localStorage.setItem("albumImage", imageUrl);
           setAlbumImage(imageUrl);
+          setCurrentlyPlayingTrackUri(null);
 
           const colorThief = new ColorThief();
           const img = new Image();
@@ -647,6 +654,7 @@ export default function App({ Component, pageProps }) {
           setActiveSection={setActiveSection}
           loading={loading}
           albumsQueue={albumsQueue}
+          currentlyPlayingTrackUri={currentlyPlayingTrackUri}
         />
       </div>
     </main>

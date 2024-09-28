@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Link from "next/link";
 
-const AlbumPage = ({ album }) => {
+const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
   const router = useRouter();
 
   useEffect(() => {
@@ -11,7 +11,7 @@ const AlbumPage = ({ album }) => {
     localStorage.setItem("albumPageImage", albumImage);
   }, [album]);
 
-  const playTrack = async (trackUri) => {
+  const playTrack = async (trackUri, trackIndex) => {
     const accessToken = router.query.accessToken;
 
     try {
@@ -67,7 +67,8 @@ const AlbumPage = ({ album }) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            uris: [trackUri],
+            context_uri: album.uri, // Use the album URI as context
+            offset: { position: trackIndex }, // Start from the selected track
             device_id: activeDeviceId,
           }),
         }
@@ -113,12 +114,23 @@ const AlbumPage = ({ album }) => {
               <Link href={`/now-playing`}>
                 <div
                   key={track.id}
-                  onClick={() => playTrack(track.uri)}
+                  onClick={() => playTrack(track.uri, index)}
                   className="flex gap-4 items-start mb-4"
                 >
-                  <p className="text-[20px] font-medium text-white/60 w-6 mt-3">
-                    {index + 1}
-                  </p>
+                  <div className="text-[20px] font-medium text-white/60 w-6 mt-3">
+                    {track.uri === currentlyPlayingTrackUri ? (
+                      <div className="w-4">
+                        <section>
+                          <div className="wave0"></div>
+                          <div className="wave1"></div>
+                          <div className="wave2"></div>
+                          <div className="wave3"></div>
+                        </section>
+                      </div>
+                    ) : (
+                      <p>{index + 1}</p>
+                    )}
+                  </div>
 
                   <div>
                     <p className="text-[20px] font-medium text-white truncate tracking-tight max-w-[280px]">
