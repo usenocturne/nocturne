@@ -1,8 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import classNames from "classnames";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import Link from "next/link";
+import { Drawer } from "vaul";
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogPanel,
+  DialogTitle,
+} from "@headlessui/react";
 
-const NowPlaying = ({ accessToken }) => {
+const NowPlaying = ({ accessToken, playlists }) => {
   const router = useRouter();
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -11,9 +20,11 @@ const NowPlaying = ({ accessToken }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [volume, setVolume] = useState(100);
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const volumeTimeoutRef = useRef(null);
-
   const requestRef = useRef();
+  const [open, setOpen] = useState(false);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
 
   const changeVolume = async (newVolume) => {
     if (!accessToken) return;
@@ -45,11 +56,9 @@ const NowPlaying = ({ accessToken }) => {
     if (event.deltaX > 0) {
       const newVolume = Math.min(volume + 7, 100);
       changeVolume(newVolume);
-      console.log("Volume increased to:", newVolume);
     } else if (event.deltaX < 0) {
       const newVolume = Math.max(volume - 7, 0);
       changeVolume(newVolume);
-      console.log("Volume decreased to:", newVolume);
     }
   };
 
@@ -83,7 +92,13 @@ const NowPlaying = ({ accessToken }) => {
             (data.progress_ms / data.item.duration_ms) * 100;
           setProgress(initialProgress);
         } else {
-          console.error("Error fetching current track:", await response.json());
+          setCurrentTrack({
+            name: "Not Playing",
+            artists: [],
+            album: { images: [{ url: "/not-playing.webp" }] },
+          });
+          setIsPlaying(false);
+          setProgress(0);
         }
       } catch (error) {
         console.error("Error with fetchCurrentTrack:", error);
@@ -224,8 +239,8 @@ const NowPlaying = ({ accessToken }) => {
             name: "Not Playing",
             artists: [],
             album: { images: [{ url: "/not-playing.webp" }] },
-          }),
-            setIsPlaying(false);
+          });
+          setIsPlaying(false);
           setProgress(0);
           return;
         }
@@ -260,6 +275,50 @@ const NowPlaying = ({ accessToken }) => {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [togglePlayPause]);
+
+  const skipToNext = async () => {
+    try {
+      await fetch("https://api.spotify.com/v1/me/player/next", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    } catch (error) {
+      console.error("Error skipping to next track:", error);
+    }
+  };
+
+  const skipToPrevious = async () => {
+    const currentTime = Date.now();
+    const timeSinceLastPress = currentTime - lastBackwardPress;
+
+    if (timeSinceLastPress < 2000) {
+      try {
+        await fetch("https://api.spotify.com/v1/me/player/previous", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      } catch (error) {
+        console.error("Error skipping to previous track:", error);
+      }
+    } else {
+      try {
+        await fetch(`https://api.spotify.com/v1/me/player/seek?position_ms=0`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      } catch (error) {
+        console.error("Error restarting the current track:", error);
+      }
+    }
+
+    setLastBackwardPress(currentTime);
+  };
 
   const StarIcon = ({ className }) => (
     <svg
@@ -377,67 +436,15 @@ const NowPlaying = ({ accessToken }) => {
     </svg>
   );
 
-  const PlayPauseButton = () => {
-    if (isPlaying) {
-      return <PauseIcon className="w-10 h-10" />;
-    } else {
-      return <PlayIcon className="w-10 h-10" />;
-    }
-  };
-
-  const skipToNext = async () => {
-    try {
-      await fetch("https://api.spotify.com/v1/me/player/next", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-    } catch (error) {
-      console.error("Error skipping to next track:", error);
-    }
-  };
-
-  const skipToPrevious = async () => {
-    const currentTime = Date.now();
-    const timeSinceLastPress = currentTime - lastBackwardPress;
-
-    if (timeSinceLastPress < 2000) {
-      try {
-        await fetch("https://api.spotify.com/v1/me/player/previous", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-      } catch (error) {
-        console.error("Error skipping to previous track:", error);
-      }
-    } else {
-      try {
-        await fetch(`https://api.spotify.com/v1/me/player/seek?position_ms=0`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-      } catch (error) {
-        console.error("Error restarting the current track:", error);
-      }
-    }
-
-    setLastBackwardPress(currentTime);
-  };
-
   const VolumeOffIcon = ({ className }) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       stroke="rgba(0, 0, 0)"
       fill="rgba(0, 0, 0)"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       opacity="0.5"
     >
@@ -453,9 +460,9 @@ const NowPlaying = ({ accessToken }) => {
       viewBox="0 0 24 24"
       stroke="rgba(0, 0, 0)"
       fill="rgba(0, 0, 0)"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       opacity="0.5"
     >
@@ -471,9 +478,9 @@ const NowPlaying = ({ accessToken }) => {
       height="24"
       viewBox="0 0 24 24"
       fill="none"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       opacity="0.5"
     >
@@ -496,97 +503,345 @@ const NowPlaying = ({ accessToken }) => {
     </svg>
   );
 
+  const PlaylistAddIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M11 12H3" />
+      <path d="M16 6H3" />
+      <path d="M16 18H3" />
+      <path d="M18 9v6" />
+      <path d="M21 12h-6" />
+    </svg>
+  );
+
+  const GoToAlbumIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <circle cx="12" cy="12" r="5" />
+      <path d="M12 12h.01" />
+    </svg>
+  );
+
+  const PlayPauseButton = () => {
+    if (isPlaying) {
+      return <PauseIcon className="w-10 h-10" />;
+    } else {
+      return <PlayIcon className="w-10 h-10" />;
+    }
+  };
+
+  const addTrackToPlaylist = async (playlistId) => {
+    if (!accessToken || !currentTrack) return;
+
+    setSelectedPlaylistId(playlistId);
+
+    try {
+      let allTracks = [];
+      let nextURL = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
+
+      while (nextURL) {
+        const response = await fetch(nextURL, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            "Error fetching tracks in playlist: " + (await response.json())
+          );
+        }
+
+        const data = await response.json();
+        allTracks = allTracks.concat(data.items);
+        nextURL = data.next;
+      }
+
+      const currentTrackIds = allTracks.map((item) => item.track.id);
+
+      if (currentTrackIds.includes(currentTrack.id)) {
+        setDrawerOpen(false);
+        setOpen(true);
+        return;
+      }
+
+      await addTrackToPlaylistAPI(playlistId);
+      setDrawerOpen(false);
+    } catch (error) {
+      console.error("Error checking playlist contents:", error);
+    }
+  };
+
+  const addTrackToPlaylistAPI = async (playlistId) => {
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            uris: [`spotify:track:${currentTrack.id}`],
+          }),
+        }
+      );
+
+      if (response.ok) {
+        console.log("Track added to playlist");
+      } else {
+        console.error("Error adding track to playlist:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error adding track to playlist:", error);
+    }
+  };
+
+  const handleAddAnyway = () => {
+    setOpen(false);
+    if (selectedPlaylistId) {
+      addTrackToPlaylistAPI(selectedPlaylistId);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-6 min-h-screen w-full">
-      <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
-        <div className="min-w-[280px] mr-8">
-          <img
-            src={albumArt || "/not-playing.webp"}
-            alt="Album Cover"
-            className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-          />
-        </div>
-        <div className="flex-1 text-center md:text-left">
-          <h4 className="text-[32px] font-medium text-white truncate tracking-tight max-w-[400px]">
-            {trackName}
-          </h4>
-          <h4 className="text-[24px] font-normal text-white/60 truncate tracking-tight max-w-[400px]">
-            {artistName}
-          </h4>
-        </div>
-      </div>
-
-      <div className="w-full px-12">
-        <div className="w-full bg-white/20 h-2 rounded-full mt-4">
-          <div
-            className="progress-bar bg-white h-2 rounded-full"
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center w-full px-12 mt-4">
+    <>
+      {open && (
         <div
-          className="flex-shrink-0"
-          onClick={() => toggleLikeTrack(currentTrack.id)}
-        >
-          {isLiked ? (
-            <StarIconFilled className="w-10 h-10" />
-          ) : (
-            <StarIcon className="w-10 h-10" />
-          )}
-        </div>
-
-        <div className="flex justify-center gap-12 flex-1">
-          <div onClick={skipToPrevious}>
-            <BackIcon className="w-10 h-10" />
-          </div>
-          <div>
-            <div onClick={togglePlayPause}>
-              <PlayPauseButton />
+          className="fixed inset-0 bg-transparent z-30"
+          onClick={() => setOpen(false)}
+        />
+      )}
+      <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <div className="flex flex-col gap-6 min-h-screen w-full z-10">
+          <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
+            <div className="min-w-[280px] mr-8">
+              <img
+                src={albumArt || "/not-playing.webp"}
+                alt="/not-playing.webp"
+                className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+              />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h4 className="text-[32px] font-medium text-white truncate tracking-tight max-w-[400px]">
+                {trackName}
+              </h4>
+              <h4 className="text-[24px] font-normal text-white/60 truncate tracking-tight max-w-[400px]">
+                {artistName}
+              </h4>
             </div>
           </div>
-          <div onClick={skipToNext}>
-            <ForwardIcon className="w-10 h-10" />
+
+          <div className="w-full px-12 overflow-hidden">
+            <div className="w-full bg-white/20 h-2 rounded-full mt-4 overflow-hidden">
+              <div
+                className="progress-bar bg-white h-2"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex-shrink-0">
-          <MenuIcon className="w-10 h-10 fill-white/60" />
-        </div>
-      </div>
+          <div className="flex justify-between items-center w-full px-12 mt-4">
+            <div
+              className="flex-shrink-0"
+              onClick={() => toggleLikeTrack(currentTrack.id)}
+            >
+              {isLiked ? (
+                <StarIconFilled className="w-10 h-10" />
+              ) : (
+                <StarIcon className="w-10 h-10" />
+              )}
+            </div>
 
-      <div
-        className={classNames(
-          "fixed right-0 top-[70px] transform transition-opacity duration-300 backdrop-blur-md",
-          {
-            "opacity-0 volumeOutScale": !isVolumeVisible,
-            "opacity-100 volumeInScale": isVolumeVisible,
-          }
-        )}
-      >
-        <div className="w-14 h-44 bg-black/20 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+            <div className="flex justify-center gap-12 flex-1">
+              <div onClick={skipToPrevious}>
+                <BackIcon className="w-10 h-10" />
+              </div>
+              <div>
+                <div onClick={togglePlayPause}>
+                  <PlayPauseButton />
+                </div>
+              </div>
+              <div onClick={skipToNext}>
+                <ForwardIcon className="w-10 h-10" />
+              </div>
+            </div>
+
+            <div className="flex-shrink-0">
+              <Menu as="div" className="relative inline-block text-left">
+                <div>
+                  <MenuButton>
+                    <MenuIcon className="w-10 h-10 fill-white/60" />
+                  </MenuButton>
+                </div>
+
+                <MenuItems
+                  transition
+                  className="absolute right-0 bottom-full z-10 mb-2 w-56 origin-bottom-right divide-y divide-slate-100/25 bg-black/35 backdrop-blur-md rounded-[13px] drop-shadow-xl shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+                >
+                  <div className="py-1">
+                    <Drawer.Trigger asChild>
+                      <MenuItem>
+                        <div className="group flex items-center justify-between px-4 py-2 text-sm text-white font-normal">
+                          <span>Add to a Playlist</span>
+                          <PlaylistAddIcon
+                            aria-hidden="true"
+                            className="h-5 w-5 text-white"
+                          />
+                        </div>
+                      </MenuItem>
+                    </Drawer.Trigger>
+                  </div>
+                  <div className="py-1">
+                    <Link
+                      href={`/album/${currentTrack?.album?.id}?accessToken=${accessToken}`}
+                    >
+                      <MenuItem>
+                        <div className="group flex items-center justify-between px-4 py-2 text-sm text-white">
+                          <span>Go to Album</span>
+                          <GoToAlbumIcon
+                            aria-hidden="true"
+                            className="h-5 w-5 text-white"
+                          />
+                        </div>
+                      </MenuItem>
+                    </Link>
+                  </div>
+                </MenuItems>
+              </Menu>
+            </div>
+          </div>
           <div
             className={classNames(
-              "bg-white w-full transition-height duration-300",
+              "fixed right-0 top-[70px] transform transition-opacity duration-300 backdrop-blur-md",
               {
-                "rounded-b-[13px]": volume < 100,
-                "rounded-[13px]": volume === 100,
+                "opacity-0 volumeOutScale": !isVolumeVisible,
+                "opacity-100 volumeInScale": isVolumeVisible,
               }
             )}
-            style={{ height: `${volume}%` }}
           >
-            <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
-              {volume === 0 && <VolumeOffIcon className="w-7 h-7" />}
-              {volume > 0 && volume <= 60 && (
-                <VolumeLowIcon className="w-7 h-7 ml-1.5" />
-              )}
-              {volume > 60 && <VolumeLoudIcon className="w-7 h-7" />}
+            <div className="w-14 h-44 bg-black/20 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+              <div
+                className={classNames(
+                  "bg-white w-full transition-height duration-300",
+                  {
+                    "rounded-b-[13px]": volume < 100,
+                    "rounded-[13px]": volume === 100,
+                  }
+                )}
+                style={{ height: `${volume}%` }}
+              >
+                <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+                  {volume === 0 && <VolumeOffIcon className="w-7 h-7" />}
+                  {volume > 0 && volume <= 60 && (
+                    <VolumeLowIcon className="w-7 h-7 ml-1.5" />
+                  )}
+                  {volume > 60 && <VolumeLoudIcon className="w-7 h-7" />}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 bg-black/10 z-20" />
+          <Drawer.Content className="flex flex-col rounded-t-[17px] h-auto mt-24 fixed bottom-0 left-0 right-0 z-30">
+            <div className="pt-4 pb-4 bg-black/40 backdrop-blur-2xl rounded-t-[17px] flex-1">
+              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300" />
+              <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
+                {Array.isArray(playlists) &&
+                  playlists.map((item) => (
+                    <div
+                      className="min-w-[280px] mr-10 mb-4"
+                      onClick={() => addTrackToPlaylist(item.id)}
+                    >
+                      <img
+                        src={item.images[0]?.url}
+                        alt="Playlist Cover"
+                        className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                      />
+                      <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                        {item.name}
+                      </h4>
+                      <h4 className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
+                        {item.tracks.total.toLocaleString()} Songs
+                      </h4>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+
+        <Dialog open={open} onClose={setOpen} className="relative z-50">
+          <DialogBackdrop
+            transition
+            className="fixed inset-0 bg-black/40 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+          />
+
+          <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+              <DialogPanel
+                transition
+                className="relative transform overflow-hidden rounded-[17px] bg-black/40 backdrop-blur-2xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-sm data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+              >
+                <div>
+                  <div className="text-center">
+                    <DialogTitle
+                      as="h3"
+                      className="text-base font-normal leading-6 text-white"
+                    >
+                      Already Added
+                    </DialogTitle>
+                    <div className="mt-2">
+                      <p className="text-sm text-white/60">
+                        This track is already in the playlist.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-0 border-t border-slate-100/25">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="inline-flex w-full justify-center px-3 py-3 text-sm font-normal text-[#6c8bd5] shadow-sm sm:col-start-2"
+                  >
+                    Don't Add
+                  </button>
+                  <button
+                    type="button"
+                    data-autofocus
+                    onClick={handleAddAnyway}
+                    className="mt-3 inline-flex w-full justify-center px-3 py-3 text-sm font-normal text-[#6c8bd5] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
+                  >
+                    Add Anyway
+                  </button>
+                </div>
+              </DialogPanel>
+            </div>
+          </div>
+        </Dialog>
+      </Drawer.Root>
+    </>
   );
 };
 
