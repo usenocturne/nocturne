@@ -63,11 +63,17 @@ const NowPlaying = ({ accessToken, playlists }) => {
   };
 
   useEffect(() => {
-    window.addEventListener("wheel", handleWheelScroll);
-    return () => {
-      window.removeEventListener("wheel", handleWheelScroll);
+    const scrollHandler = (event) => {
+      if (!drawerOpen) {
+        handleWheelScroll(event);
+      }
     };
-  }, [volume, accessToken]);
+
+    window.addEventListener("wheel", scrollHandler);
+    return () => {
+      window.removeEventListener("wheel", scrollHandler);
+    };
+  }, [volume, accessToken, drawerOpen]);
 
   useEffect(() => {
     const fetchCurrentTrack = async () => {
