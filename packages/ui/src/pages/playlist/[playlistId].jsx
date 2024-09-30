@@ -137,7 +137,7 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
                 </div>
 
                 <div>
-                  <p className="text-[20px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                  <p className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
                     {track.track.name}
                   </p>
                   <p className="text-[16px] font-light text-white/60 truncate tracking-tight max-w-[280px]">

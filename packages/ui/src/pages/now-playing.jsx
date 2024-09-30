@@ -10,8 +10,9 @@ import {
   DialogPanel,
   DialogTitle,
 } from "@headlessui/react";
+import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
 
-const NowPlaying = ({ accessToken, playlists }) => {
+const NowPlaying = ({ accessToken }) => {
   const router = useRouter();
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -25,6 +26,22 @@ const NowPlaying = ({ accessToken, playlists }) => {
   const requestRef = useRef();
   const [open, setOpen] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+  const [playlists, setPlaylists] = useState([]);
+
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      if (accessToken) {
+        try {
+          const userPlaylists = await fetchUserOwnedPlaylists(accessToken);
+          setPlaylists(userPlaylists);
+        } catch (error) {
+          console.error("Error fetching user playlists:", error);
+        }
+      }
+    };
+
+    fetchPlaylists();
+  }, [accessToken]);
 
   const changeVolume = async (newVolume) => {
     if (!accessToken) return;
@@ -702,7 +719,7 @@ const NowPlaying = ({ accessToken, playlists }) => {
 
                 <MenuItems
                   transition
-                  className="absolute right-0 bottom-full z-10 mb-2 w-56 origin-bottom-right divide-y divide-slate-100/25 bg-black/35 backdrop-blur-md rounded-[13px] drop-shadow-xl shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+                  className="absolute right-0 bottom-full z-10 mb-2 w-56 origin-bottom-right divide-y divide-slate-100/25 bg-black/30 backdrop-blur-md rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
                 >
                   <div className="py-1">
                     <Drawer.Trigger asChild>
@@ -774,25 +791,25 @@ const NowPlaying = ({ accessToken, playlists }) => {
             <div className="pt-4 pb-4 bg-black/40 backdrop-blur-2xl rounded-t-[17px] flex-1">
               <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300" />
               <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
-                {Array.isArray(playlists) &&
-                  playlists.map((item) => (
-                    <div
-                      className="min-w-[280px] mr-10 mb-4"
-                      onClick={() => addTrackToPlaylist(item.id)}
-                    >
-                      <img
-                        src={item.images[0]?.url}
-                        alt="Playlist Cover"
-                        className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                      />
-                      <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
-                        {item.name}
-                      </h4>
-                      <h4 className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
-                        {item.tracks.total.toLocaleString()} Songs
-                      </h4>
-                    </div>
-                  ))}
+                {playlists.map((item) => (
+                  <div
+                    key={item.id}
+                    className="min-w-[280px] mr-10 mb-4"
+                    onClick={() => addTrackToPlaylist(item.id)}
+                  >
+                    <img
+                      src={item.images[0]?.url || "/not-playing.webp"}
+                      alt="Playlist Cover"
+                      className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                    />
+                    <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                      {item.name}
+                    </h4>
+                    <h4 className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
+                      {item.tracks.total.toLocaleString()} Songs
+                    </h4>
+                  </div>
+                ))}
               </div>
             </div>
           </Drawer.Content>
@@ -801,14 +818,14 @@ const NowPlaying = ({ accessToken, playlists }) => {
         <Dialog open={open} onClose={setOpen} className="relative z-50">
           <DialogBackdrop
             transition
-            className="fixed inset-0 bg-black/40 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+            className="fixed inset-0 bg-black/10 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
           />
 
           <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
             <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
               <DialogPanel
                 transition
-                className="relative transform overflow-hidden rounded-[17px] bg-black/40 backdrop-blur-2xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-sm data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+                className="relative transform overflow-hidden rounded-[17px] bg-black/35 backdrop-blur-xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[24rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
               >
                 <div>
                   <div className="text-center">
@@ -837,7 +854,7 @@ const NowPlaying = ({ accessToken, playlists }) => {
                     type="button"
                     data-autofocus
                     onClick={handleAddAnyway}
-                    className="mt-3 inline-flex w-full justify-center px-3 py-3 text-sm font-normal text-[#6c8bd5] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
+                    className="mt-3 inline-flex w-full justify-center px-3 py-3 text-sm font-normal text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
                   >
                     Add Anyway
                   </button>
