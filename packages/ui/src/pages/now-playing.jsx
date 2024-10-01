@@ -564,9 +564,9 @@ const NowPlaying = ({ accessToken }) => {
 
   const PlayPauseButton = () => {
     if (isPlaying) {
-      return <PauseIcon className="w-10 h-10" />;
+      return <PauseIcon className="w-14 h-14" />;
     } else {
-      return <PlayIcon className="w-10 h-10" />;
+      return <PlayIcon className="w-14 h-14" />;
     }
   };
 
@@ -655,7 +655,7 @@ const NowPlaying = ({ accessToken }) => {
         />
       )}
       <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <div className="flex flex-col gap-6 min-h-screen w-full z-10">
+        <div className="flex flex-col gap-4 min-h-screen w-full z-10">
           <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
             <div className="min-w-[280px] mr-8">
               <img
@@ -665,10 +665,10 @@ const NowPlaying = ({ accessToken }) => {
               />
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h4 className="text-[32px] font-medium text-white truncate tracking-tight max-w-[400px]">
+              <h4 className="text-[48px] font-medium text-white truncate tracking-tight max-w-[400px]">
                 {trackName}
               </h4>
-              <h4 className="text-[24px] font-normal text-white/60 truncate tracking-tight max-w-[400px]">
+              <h4 className="text-[40px] font-normal text-white/60 truncate tracking-tight max-w-[400px]">
                 {artistName}
               </h4>
             </div>
@@ -689,15 +689,15 @@ const NowPlaying = ({ accessToken }) => {
               onClick={() => toggleLikeTrack(currentTrack.id)}
             >
               {isLiked ? (
-                <StarIconFilled className="w-10 h-10" />
+                <StarIconFilled className="w-14 h-14" />
               ) : (
-                <StarIcon className="w-10 h-10" />
+                <StarIcon className="w-14 h-14" />
               )}
             </div>
 
             <div className="flex justify-center gap-12 flex-1">
               <div onClick={skipToPrevious}>
-                <BackIcon className="w-10 h-10" />
+                <BackIcon className="w-14 h-14" />
               </div>
               <div>
                 <div onClick={togglePlayPause}>
@@ -705,7 +705,7 @@ const NowPlaying = ({ accessToken }) => {
                 </div>
               </div>
               <div onClick={skipToNext}>
-                <ForwardIcon className="w-10 h-10" />
+                <ForwardIcon className="w-14 h-14" />
               </div>
             </div>
 
@@ -713,22 +713,22 @@ const NowPlaying = ({ accessToken }) => {
               <Menu as="div" className="relative inline-block text-left">
                 <div>
                   <MenuButton>
-                    <MenuIcon className="w-10 h-10 fill-white/60" />
+                    <MenuIcon className="w-14 h-14 fill-white/60" />
                   </MenuButton>
                 </div>
 
                 <MenuItems
                   transition
-                  className="absolute right-0 bottom-full z-10 mb-2 w-56 origin-bottom-right divide-y divide-slate-100/25 bg-black/30 backdrop-blur-md rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+                  className="absolute right-0 bottom-full z-10 mb-2 w-80 origin-bottom-right divide-y divide-slate-100/25 bg-black/30 backdrop-blur-md rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
                 >
                   <div className="py-1">
                     <Drawer.Trigger asChild>
                       <MenuItem>
-                        <div className="group flex items-center justify-between px-4 py-2 text-sm text-white font-normal">
-                          <span>Add to a Playlist</span>
+                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-normal">
+                          <span className="text-[28px]">Add to a Playlist</span>
                           <PlaylistAddIcon
                             aria-hidden="true"
-                            className="h-5 w-5 text-white"
+                            className="h-8 w-8 text-white"
                           />
                         </div>
                       </MenuItem>
@@ -739,11 +739,11 @@ const NowPlaying = ({ accessToken }) => {
                       href={`/album/${currentTrack?.album?.id}?accessToken=${accessToken}`}
                     >
                       <MenuItem>
-                        <div className="group flex items-center justify-between px-4 py-2 text-sm text-white">
-                          <span>Go to Album</span>
+                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white">
+                          <span className="text-[28px]">Go to Album</span>
                           <GoToAlbumIcon
                             aria-hidden="true"
-                            className="h-5 w-5 text-white"
+                            className="h-8 w-8 text-white"
                           />
                         </div>
                       </MenuItem>
@@ -802,10 +802,10 @@ const NowPlaying = ({ accessToken }) => {
                       alt="Playlist Cover"
                       className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                     />
-                    <h4 className="mt-2 text-[24px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="mt-2 text-[40px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {item.name}
                     </h4>
-                    <h4 className="text-[20px] font-normal text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="text-[32px] font-normal text-white truncate tracking-tight max-w-[280px]">
                       {item.tracks.total.toLocaleString()} Songs
                     </h4>
                   </div>
