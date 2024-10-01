@@ -665,10 +665,10 @@ const NowPlaying = ({ accessToken }) => {
               />
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h4 className="text-[48px] font-medium text-white truncate tracking-tight max-w-[400px]">
+              <h4 className="text-[40px] font-medium text-white truncate tracking-tight max-w-[400px]">
                 {trackName}
               </h4>
-              <h4 className="text-[40px] font-normal text-white/60 truncate tracking-tight max-w-[400px]">
+              <h4 className="text-[36px] font-normal text-white/60 truncate tracking-tight max-w-[400px]">
                 {artistName}
               </h4>
             </div>
@@ -802,7 +802,7 @@ const NowPlaying = ({ accessToken }) => {
                       alt="Playlist Cover"
                       className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                     />
-                    <h4 className="mt-2 text-[40px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="mt-2 text-[36px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {item.name}
                     </h4>
                     <h4 className="text-[32px] font-normal text-white truncate tracking-tight max-w-[280px]">

@@ -94,7 +94,7 @@ const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
                 alt="Album Cover"
                 className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
               />
-              <h4 className="mt-2 text-[40px] font-medium text-white truncate tracking-tight max-w-[280px]">
+              <h4 className="mt-2 text-[36px] font-medium text-white truncate tracking-tight max-w-[280px]">
                 {album.name}
               </h4>
               <h4 className="text-[28px] font-normal text-white/60 truncate tracking-tight max-w-[280px]">
@@ -115,11 +115,11 @@ const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
                 <div
                   key={track.id}
                   onClick={() => playTrack(track.uri, index)}
-                  className="flex gap-8 items-start mb-2"
+                  className="flex gap-6 items-start mb-4"
                 >
-                  <div className="text-[40px] font-medium text-white/60 w-6 mt-3">
+                  <div className="text-[32px] font-medium text-white/60 w-6 mt-3">
                     {track.uri === currentlyPlayingTrackUri ? (
-                      <div className="w-5.5">
+                      <div className="w-5">
                         <section>
                           <div className="wave0"></div>
                           <div className="wave1"></div>
@@ -133,7 +133,7 @@ const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
                   </div>
 
                   <div>
-                    <p className="text-[40px] font-normal text-white truncate tracking-tight max-w-[280px]">
+                    <p className="text-[32px] font-normal text-white truncate tracking-tight max-w-[280px]">
                       {track.name}
                     </p>
                     <p className="text-[28px] font-light text-white/60 truncate tracking-tight max-w-[280px]">

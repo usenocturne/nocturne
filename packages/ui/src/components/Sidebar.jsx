@@ -152,16 +152,16 @@ export default function Sidebar({ activeSection, setActiveSection }) {
   );
 
   return (
-    <div className="space-y-6 pt-12">
+    <div className="space-y-7 pt-12">
       <Link href={`/now-playing`}>
         <div className="relative flex items-center">
           <div className="mr-4 flex-shrink-0">
-            <div className="h-20 w-20 bg-white/25 rounded-[12px] flex items-center justify-center">
-              <NowPlayingIcon className="h-12 w-12" />
+            <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
+              <NowPlayingIcon className="h-10 w-10" />
             </div>
           </div>
           <div>
-            <h4 className="ml-1 text-[40px] font-medium text-white tracking-tight">
+            <h4 className="ml-1 text-[36px] font-medium text-white tracking-tight">
               Now Playing
             </h4>
           </div>
@@ -175,12 +175,12 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
         )}
         <div className="mr-4 flex-shrink-0">
-          <div className="h-20 w-20 bg-white/25 rounded-[12px] flex items-center justify-center">
-            <RecentsIcon className="h-12 w-12" />
+          <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
+            <RecentsIcon className="h-10 w-10" />
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[40px] font-medium text-white tracking-tight">
+          <h4 className="ml-1 text-[36px] font-medium text-white tracking-tight">
             Recents
           </h4>
         </div>
@@ -193,12 +193,12 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
         )}
         <div className="mr-4 flex-shrink-0">
-          <div className="h-20 w-20 bg-white/25 rounded-[12px] flex items-center justify-center">
-            <LibraryIcon className="h-12 w-12" />
+          <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
+            <LibraryIcon className="h-10 w-10" />
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[40px] font-medium text-white tracking-tight">
+          <h4 className="ml-1 text-[36px] font-medium text-white tracking-tight">
             Library
           </h4>
         </div>
@@ -211,12 +211,12 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
         )}
         <div className="mr-4 flex-shrink-0">
-          <div className="h-20 w-20 bg-white/25 rounded-[12px] flex items-center justify-center">
-            <ArtistsIcon className="h-12 w-12" />
+          <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
+            <ArtistsIcon className="h-10 w-10" />
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[40px] font-medium text-white tracking-tight">
+          <h4 className="ml-1 text-[36px] font-medium text-white tracking-tight">
             Artists
           </h4>
         </div>
@@ -229,12 +229,12 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
         )}
         <div className="mr-4 flex-shrink-0">
-          <div className="h-20 w-20 bg-white/25 rounded-[12px] flex items-center justify-center">
-            <RadioIcon className="h-12 w-12" />
+          <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
+            <RadioIcon className="h-10 w-10" />
           </div>
         </div>
         <div>
-          <h4 className="ml-1 text-[40px] font-medium text-white tracking-tight">
+          <h4 className="ml-1 text-[36px] font-medium text-white tracking-tight">
             Radio
           </h4>
         </div>

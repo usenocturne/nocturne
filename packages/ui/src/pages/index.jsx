@@ -14,7 +14,7 @@ export default function Home({
   return (
     <div className="relative min-h-screen">
       {!loading && (
-        <div className="relative z-10 pl-8 grid grid-cols-[2.8fr_3fr] fadeIn-animation">
+        <div className="relative z-10 pl-8 grid grid-cols-[2.4fr_3fr] fadeIn-animation">
           <div className="h-screen overflow-y-auto pr-4 pb-12">
             <Sidebar
               activeSection={activeSection}
@@ -33,7 +33,7 @@ export default function Home({
                         alt="Currently Playing Album Cover"
                         className="mt-10 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                       />
-                      <h4 className="mt-2 text-[40px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                      <h4 className="mt-2 text-[36px] font-medium text-white truncate tracking-tight max-w-[280px]">
                         {album.name}
                       </h4>
                       <h4 className="text-[32px] font-normal text-white truncate tracking-tight max-w-[280px]">
@@ -56,7 +56,7 @@ export default function Home({
                       alt="Playlist Cover"
                       className="mt-10 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                     />
-                    <h4 className="mt-2 text-[40px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="mt-2 text-[36px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {item.name}
                     </h4>
                     <h4 className="text-[28px] font-normal text-white truncate tracking-tight max-w-[280px]">
@@ -77,7 +77,7 @@ export default function Home({
                       alt="Artist"
                       className="mt-10 w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
                     />
-                    <h4 className="mt-2 text-[40px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="mt-2 text-[36px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {artist.name}
                     </h4>
                     <h4 className="text-[28px] font-normal text-white truncate tracking-tight max-w-[280px]">
@@ -98,7 +98,7 @@ export default function Home({
                       alt="Playlist Cover"
                       className="mt-10 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                     />
-                    <h4 className="mt-2 text-[40px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="mt-2 text-[36px] font-medium text-white truncate tracking-tight max-w-[280px]">
                       {playlist.name}
                     </h4>
                     <h4 className="text-[28px] font-normal text-white truncate tracking-tight max-w-[280px]">
