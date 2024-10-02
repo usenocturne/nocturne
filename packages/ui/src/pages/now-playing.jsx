@@ -28,6 +28,8 @@ const NowPlaying = ({ accessToken }) => {
   const [open, setOpen] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
   const [playlists, setPlaylists] = useState([]);
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [repeatMode, setRepeatMode] = useState("off");
 
   useEffect(() => {
     const fetchPlaylists = async () => {
@@ -593,6 +595,62 @@ const NowPlaying = ({ accessToken }) => {
     </svg>
   );
 
+  const RepeatIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+    >
+      <path d="m17 2 4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+      <path d="m7 22-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+    </svg>
+  );
+
+  const RepeatOneIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+    >
+      <path d="m17 2 4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+      <path d="m7 22-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+      <path d="M11 10h1v4" />
+    </svg>
+  );
+
+  const ShuffleIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+    >
+      <path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22" />
+      <path d="m18 2 4 4-4 4" />
+      <path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2" />
+      <path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8" />
+      <path d="m18 14 4 4-4 4" />
+    </svg>
+  );
+
   const PlayPauseButton = () => {
     if (isPlaying) {
       return <PauseIcon className="w-14 h-14" />;
@@ -677,6 +735,56 @@ const NowPlaying = ({ accessToken }) => {
     }
   };
 
+  const toggleShuffle = async () => {
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/shuffle?state=${!isShuffled}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        setIsShuffled(!isShuffled);
+      } else {
+        console.error("Error toggling shuffle:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error toggling shuffle:", error);
+    }
+  };
+
+  const toggleRepeat = async () => {
+    const nextMode =
+      repeatMode === "off"
+        ? "context"
+        : repeatMode === "context"
+        ? "track"
+        : "off";
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${nextMode}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        setRepeatMode(nextMode);
+      } else {
+        console.error("Error toggling repeat:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error toggling repeat:", error);
+    }
+  };
+
   return (
     <>
       {open && (
@@ -750,7 +858,7 @@ const NowPlaying = ({ accessToken }) => {
 
                 <MenuItems
                   transition
-                  className="absolute right-0 bottom-full z-10 mb-2 w-80 origin-bottom-right divide-y divide-slate-100/25 bg-black/30 backdrop-blur-md rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+                  className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-black/30 backdrop-blur-md rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
                 >
                   <div className="py-1">
                     <Drawer.Trigger asChild>
@@ -759,7 +867,7 @@ const NowPlaying = ({ accessToken }) => {
                           <span className="text-[28px]">Add to a Playlist</span>
                           <PlaylistAddIcon
                             aria-hidden="true"
-                            className="h-8 w-8 text-white"
+                            className="h-8 w-8 text-white/60"
                           />
                         </div>
                       </MenuItem>
@@ -774,11 +882,60 @@ const NowPlaying = ({ accessToken }) => {
                           <span className="text-[28px]">Go to Album</span>
                           <GoToAlbumIcon
                             aria-hidden="true"
-                            className="h-8 w-8 text-white"
+                            className="h-8 w-8 text-white/60"
                           />
                         </div>
                       </MenuItem>
                     </Link>
+                  </div>
+                  <div className="py-1">
+                    <MenuItem onClick={toggleRepeat}>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">
+                          {repeatMode === "off"
+                            ? "Enable Repeat"
+                            : repeatMode === "context"
+                            ? "Enable Repeat One"
+                            : "Disable Repeat"}
+                        </span>
+                        {repeatMode === "off" ? (
+                          <RepeatIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white/60"
+                          />
+                        ) : repeatMode === "context" ? (
+                          <RepeatIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white"
+                          />
+                        ) : (
+                          <RepeatOneIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white"
+                          />
+                        )}
+                      </div>
+                    </MenuItem>
+                  </div>
+                  <div className="py-1">
+                    <MenuItem onClick={toggleShuffle}>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">
+                          {isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
+                        </span>
+                        {isShuffled ? (
+                          <ShuffleIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white"
+                          />
+                        ) : (
+                          <ShuffleIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white/60"
+                          />
+                        )}
+                      </div>
+                    </MenuItem>
                   </div>
                 </MenuItems>
               </Menu>
