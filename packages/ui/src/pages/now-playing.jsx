@@ -665,10 +665,10 @@ const NowPlaying = ({ accessToken }) => {
               />
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h4 className="text-[40px] font-medium text-white truncate tracking-tight max-w-[400px]">
+              <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
                 {trackName}
               </h4>
-              <h4 className="text-[36px] font-normal text-white/60 truncate tracking-tight max-w-[400px]">
+              <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[400px]">
                 {artistName}
               </h4>
             </div>
@@ -724,7 +724,7 @@ const NowPlaying = ({ accessToken }) => {
                   <div className="py-1">
                     <Drawer.Trigger asChild>
                       <MenuItem>
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-normal">
+                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                           <span className="text-[28px]">Add to a Playlist</span>
                           <PlaylistAddIcon
                             aria-hidden="true"
@@ -739,7 +739,7 @@ const NowPlaying = ({ accessToken }) => {
                       href={`/album/${currentTrack?.album?.id}?accessToken=${accessToken}`}
                     >
                       <MenuItem>
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white">
+                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white tracking-tight">
                           <span className="text-[28px]">Go to Album</span>
                           <GoToAlbumIcon
                             aria-hidden="true"
@@ -802,10 +802,10 @@ const NowPlaying = ({ accessToken }) => {
                       alt="Playlist Cover"
                       className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                     />
-                    <h4 className="mt-2 text-[36px] font-medium text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                       {item.name}
                     </h4>
-                    <h4 className="text-[32px] font-normal text-white truncate tracking-tight max-w-[280px]">
+                    <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
                       {item.tracks.total.toLocaleString()} Songs
                     </h4>
                   </div>
@@ -831,7 +831,7 @@ const NowPlaying = ({ accessToken }) => {
                   <div className="text-center">
                     <DialogTitle
                       as="h3"
-                      className="text-base font-normal leading-6 text-white"
+                      className="text-base font-[560] leading-6 text-white"
                     >
                       Already Added
                     </DialogTitle>
@@ -846,7 +846,7 @@ const NowPlaying = ({ accessToken }) => {
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="inline-flex w-full justify-center px-3 py-3 text-sm font-normal text-[#6c8bd5] shadow-sm sm:col-start-2"
+                    className="inline-flex w-full justify-center px-3 py-3 text-sm font-[560] text-[#6c8bd5] shadow-sm sm:col-start-2"
                   >
                     Don't Add
                   </button>
@@ -854,7 +854,7 @@ const NowPlaying = ({ accessToken }) => {
                     type="button"
                     data-autofocus
                     onClick={handleAddAnyway}
-                    className="mt-3 inline-flex w-full justify-center px-3 py-3 text-sm font-normal text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
+                    className="mt-3 inline-flex w-full justify-center px-3 py-3 text-sm font-[560] text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
                   >
                     Add Anyway
                   </button>

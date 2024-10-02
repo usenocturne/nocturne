@@ -100,10 +100,10 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
                 alt="Playlist Cover"
                 className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
               />
-              <h4 className="mt-2 text-[36px] font-medium text-white truncate tracking-tight max-w-[280px]">
+              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                 {playlist.name}
               </h4>
-              <h4 className="text-[28px] font-normal text-white/60 truncate tracking-tight max-w-[280px]">
+              <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
                 {playlist.tracks.total.toLocaleString()} Songs
               </h4>
             </div>
@@ -121,7 +121,7 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
                 onClick={() => playTrack(track.track.uri, index)}
                 className="flex gap-6 items-start mb-4"
               >
-                <div className="text-[32px] font-medium text-white/60 w-6 mt-3">
+                <div className="text-[32px] font-[580] text-white/60 w-6 mt-3">
                   {track.track.uri === currentlyPlayingTrackUri ? (
                     <div className="w-5">
                       <section>
@@ -137,10 +137,10 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
                 </div>
 
                 <div>
-                  <p className="text-[32px] font-normal text-white truncate tracking-tight max-w-[280px]">
+                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                     {track.track.name}
                   </p>
-                  <p className="text-[28px] font-light text-white/60 truncate tracking-tight max-w-[280px]">
+                  <p className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
                     {track.track.artists
                       .map((artist) => artist.name)
                       .join(", ")}
