@@ -30,6 +30,8 @@ const NowPlaying = ({ accessToken }) => {
   const [playlists, setPlaylists] = useState([]);
   const [isShuffled, setIsShuffled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
+  const trackNameScrollingEnabled =
+    localStorage.getItem("trackNameScrollingEnabled") === "true" ? true : false;
 
   useEffect(() => {
     const fetchPlaylists = async () => {
@@ -45,6 +47,12 @@ const NowPlaying = ({ accessToken }) => {
 
     fetchPlaylists();
   }, [accessToken]);
+
+  useEffect(() => {
+    if (localStorage.getItem("trackNameScrollingEnabled") === null) {
+      localStorage.setItem("trackNameScrollingEnabled", "true");
+    }
+  }, []);
 
   useEffect(() => {
     const syncVolume = async () => {
@@ -813,23 +821,31 @@ const NowPlaying = ({ accessToken }) => {
               />
             </div>
             <div className="flex-1 text-center md:text-left">
-              <div className="track-name-container overflow-hidden relative max-w-[380px]">
-                <h4
-                  className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                    trackName.length > 20 ? "animate-scroll" : "truncate"
-                  }`}
-                  key={trackName} // Use trackName as a key
-                  style={
-                    trackName.length > 20
-                      ? {
-                          animationDuration: `${getScrollDuration(trackName)}s`,
-                        }
-                      : {}
-                  }
-                >
+              {trackNameScrollingEnabled ? ( // Conditional rendering based on trackNameScrollingEnabled
+                <div className="track-name-container overflow-hidden relative max-w-[380px]">
+                  <h4
+                    className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
+                      trackName.length > 20 ? "animate-scroll" : "truncate"
+                    }`}
+                    key={trackName} // Use trackName as a key
+                    style={
+                      trackName.length > 20
+                        ? {
+                            animationDuration: `${getScrollDuration(
+                              trackName
+                            )}s`,
+                          }
+                        : {}
+                    }
+                  >
+                    {trackName}
+                  </h4>
+                </div>
+              ) : (
+                <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
                   {trackName}
                 </h4>
-              </div>
+              )}
               <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
                 {artistName}
               </h4>

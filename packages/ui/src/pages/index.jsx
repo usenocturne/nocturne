@@ -1,4 +1,5 @@
 import Sidebar from "../components/Sidebar";
+import Settings from "../components/Settings";
 import Link from "next/link";
 
 export default function Home({
@@ -107,6 +108,9 @@ export default function Home({
                   </div>
                 </Link>
               ))}
+            {activeSection === "settings" && (
+              <Settings accessToken={accessToken} />
+            )}
           </div>
         </div>
       )}
