@@ -165,3 +165,28 @@ section {
 .wave6 {
   --wavefreq: calc(700ms * var(--m));
 }
+
+@keyframes scroll {
+  0%, 20% {
+    transform: translateX(0);
+  }
+  40%, 60% {
+    transform: translateX(calc(-100% + 380px));
+  }
+  80%, 100% {
+    transform: translateX(0);
+  }
+}
+
+.track-name-container {
+  width: 380px;
+}
+
+.track-name {
+  display: inline-block;
+}
+
+.animate-scroll {
+  animation: scroll 10s linear infinite;
+  animation-delay: 0.5s;
+}

@@ -785,6 +785,15 @@ const NowPlaying = ({ accessToken }) => {
     }
   };
 
+  const getScrollDuration = (trackName) => {
+    const speed = 8;
+    const textLength = trackName.length * 20;
+    const visibleWidth = 380;
+    const scrollDistance = textLength - visibleWidth;
+
+    return scrollDistance > 0 ? scrollDistance / speed : 10;
+  };
+
   return (
     <>
       {open && (
@@ -804,10 +813,24 @@ const NowPlaying = ({ accessToken }) => {
               />
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
-                {trackName}
-              </h4>
-              <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[400px]">
+              <div className="track-name-container overflow-hidden relative max-w-[380px]">
+                <h4
+                  className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
+                    trackName.length > 20 ? "animate-scroll" : "truncate"
+                  }`}
+                  key={trackName} // Use trackName as a key
+                  style={
+                    trackName.length > 20
+                      ? {
+                          animationDuration: `${getScrollDuration(trackName)}s`,
+                        }
+                      : {}
+                  }
+                >
+                  {trackName}
+                </h4>
+              </div>
+              <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
                 {artistName}
               </h4>
             </div>
