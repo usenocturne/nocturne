@@ -21,8 +21,9 @@ const NowPlaying = ({ accessToken }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [volume, setVolume] = useState(100);
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const volumeTimeoutRef = useRef(null);
+  const volumeSyncIntervalRef = useRef(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const requestRef = useRef();
   const [open, setOpen] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
@@ -43,11 +44,42 @@ const NowPlaying = ({ accessToken }) => {
     fetchPlaylists();
   }, [accessToken]);
 
+  useEffect(() => {
+    const syncVolume = async () => {
+      if (!accessToken) return;
+      try {
+        const response = await fetch("https://api.spotify.com/v1/me/player", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const currentVolume = data.device.volume_percent;
+          setVolume(currentVolume);
+        }
+      } catch (error) {
+        console.error("Error syncing volume:", error);
+      }
+    };
+
+    syncVolume();
+    volumeSyncIntervalRef.current = setInterval(syncVolume, 5000);
+
+    return () => {
+      if (volumeSyncIntervalRef.current) {
+        clearInterval(volumeSyncIntervalRef.current);
+      }
+    };
+  }, [accessToken]);
+
   const changeVolume = async (newVolume) => {
     if (!accessToken) return;
     try {
+      const actualNewVolume = Math.max(0, Math.min(100, newVolume));
+
       await fetch(
-        `https://api.spotify.com/v1/me/player/volume?volume_percent=${newVolume}`,
+        `https://api.spotify.com/v1/me/player/volume?volume_percent=${actualNewVolume}`,
         {
           method: "PUT",
           headers: {
@@ -55,7 +87,8 @@ const NowPlaying = ({ accessToken }) => {
           },
         }
       );
-      setVolume(newVolume);
+
+      setVolume(actualNewVolume);
       setIsVolumeVisible(true);
 
       if (volumeTimeoutRef.current) {
@@ -71,11 +104,9 @@ const NowPlaying = ({ accessToken }) => {
 
   const handleWheelScroll = (event) => {
     if (event.deltaX > 0) {
-      const newVolume = Math.min(volume + 7, 100);
-      changeVolume(newVolume);
+      changeVolume(volume + 7);
     } else if (event.deltaX < 0) {
-      const newVolume = Math.max(volume - 7, 0);
-      changeVolume(newVolume);
+      changeVolume(volume - 7);
     }
   };
 
