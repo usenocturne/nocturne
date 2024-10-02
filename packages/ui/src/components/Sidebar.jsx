@@ -151,6 +151,30 @@ export default function Sidebar({ activeSection, setActiveSection }) {
     </svg>
   );
 
+  const SidebarItem = ({ section, icon: Icon, label }) => (
+    <div
+      className="relative flex items-center cursor-pointer group"
+      onClick={() => handleSectionClick(section)}
+    >
+      {activeSection === section && (
+        <div
+          className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full"
+          aria-hidden="true"
+        />
+      )}
+      <div className="mr-4 flex-shrink-0">
+        <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
+          <Icon className="h-10 w-10" />
+        </div>
+      </div>
+      <div>
+        <h4 className="ml-1 text-[32px] font-[580] text-white tracking-tight">
+          {label}
+        </h4>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-7 pt-12">
       <Link href={`/now-playing`}>
@@ -167,78 +191,11 @@ export default function Sidebar({ activeSection, setActiveSection }) {
           </div>
         </div>
       </Link>
-      <div
-        className="relative flex items-center"
-        onClick={() => handleSectionClick("recents")}
-      >
-        {activeSection === "recents" && (
-          <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
-        )}
-        <div className="mr-4 flex-shrink-0">
-          <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
-            <RecentsIcon className="h-10 w-10" />
-          </div>
-        </div>
-        <div>
-          <h4 className="ml-1 text-[32px] font-[580] text-white tracking-tight">
-            Recents
-          </h4>
-        </div>
-      </div>
-      <div
-        className="relative flex items-center"
-        onClick={() => handleSectionClick("library")}
-      >
-        {activeSection === "library" && (
-          <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
-        )}
-        <div className="mr-4 flex-shrink-0">
-          <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
-            <LibraryIcon className="h-10 w-10" />
-          </div>
-        </div>
-        <div>
-          <h4 className="ml-1 text-[32px] font-[580] text-white tracking-tight">
-            Library
-          </h4>
-        </div>
-      </div>
-      <div
-        className="relative flex items-center"
-        onClick={() => handleSectionClick("artists")}
-      >
-        {activeSection === "artists" && (
-          <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
-        )}
-        <div className="mr-4 flex-shrink-0">
-          <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
-            <ArtistsIcon className="h-10 w-10" />
-          </div>
-        </div>
-        <div>
-          <h4 className="ml-1 text-[32px] font-[580] text-white tracking-tight">
-            Artists
-          </h4>
-        </div>
-      </div>
-      <div
-        className="relative flex items-center"
-        onClick={() => handleSectionClick("radio")}
-      >
-        {activeSection === "radio" && (
-          <div className="absolute left-[-19px] top-1/2 transform -translate-y-1/2 h-8 w-1.5 bg-white rounded-full" />
-        )}
-        <div className="mr-4 flex-shrink-0">
-          <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
-            <RadioIcon className="h-10 w-10" />
-          </div>
-        </div>
-        <div>
-          <h4 className="ml-1 text-[32px] font-[580] text-white tracking-tight">
-            Radio
-          </h4>
-        </div>
-      </div>
+
+      <SidebarItem section="recents" icon={RecentsIcon} label="Recents" />
+      <SidebarItem section="library" icon={LibraryIcon} label="Library" />
+      <SidebarItem section="artists" icon={ArtistsIcon} label="Artists" />
+      <SidebarItem section="radio" icon={RadioIcon} label="Radio" />
     </div>
   );
 }
