@@ -770,7 +770,7 @@ const NowPlaying = ({ accessToken }) => {
                       href={`/album/${currentTrack?.album?.id}?accessToken=${accessToken}`}
                     >
                       <MenuItem>
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white tracking-tight">
+                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                           <span className="text-[28px]">Go to Album</span>
                           <GoToAlbumIcon
                             aria-hidden="true"
