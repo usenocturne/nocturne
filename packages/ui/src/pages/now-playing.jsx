@@ -30,8 +30,19 @@ const NowPlaying = ({ accessToken }) => {
   const [playlists, setPlaylists] = useState([]);
   const [isShuffled, setIsShuffled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
-  const trackNameScrollingEnabled =
-    localStorage.getItem("trackNameScrollingEnabled") === "true" ? true : false;
+  const [trackNameScrollingEnabled, setTrackNameScrollingEnabled] =
+    useState(false);
+
+  useEffect(() => {
+    const scrollingEnabled = localStorage.getItem("trackNameScrollingEnabled");
+
+    if (scrollingEnabled === null) {
+      localStorage.setItem("trackNameScrollingEnabled", "true");
+      setTrackNameScrollingEnabled(true);
+    } else {
+      setTrackNameScrollingEnabled(scrollingEnabled === "true");
+    }
+  }, []);
 
   useEffect(() => {
     const fetchPlaylists = async () => {
@@ -47,12 +58,6 @@ const NowPlaying = ({ accessToken }) => {
 
     fetchPlaylists();
   }, [accessToken]);
-
-  useEffect(() => {
-    if (localStorage.getItem("trackNameScrollingEnabled") === null) {
-      localStorage.setItem("trackNameScrollingEnabled", "true");
-    }
-  }, []);
 
   useEffect(() => {
     const syncVolume = async () => {
