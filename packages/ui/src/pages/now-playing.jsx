@@ -93,9 +93,9 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
   };
 
   const handleWheelScroll = (event) => {
-    if (event.key === "ArrowRight") {
+    if (event.deltaX > 0) {
       changeVolume(volume + 7);
-    } else if (event.key === "ArrowLeft") {
+    } else if (event.deltaX < 0) {
       changeVolume(volume - 7);
     }
   };
@@ -107,7 +107,7 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
       }
     };
 
-    window.addEventListener("keydown", scrollHandler);
+    window.addEventListener("wheel", scrollHandler);
     return () => {
       window.removeEventListener("wheel", scrollHandler);
     };
