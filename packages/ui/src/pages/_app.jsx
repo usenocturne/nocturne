@@ -12,6 +12,10 @@ import {
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
+const CLIENT_ID = "";
+const CLIENT_SECRET = "";
+const REDIRECT_URI = "";
+
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const [accessToken, setAccessToken] = useState(null);
@@ -45,6 +49,7 @@ export default function App({ Component, pageProps }) {
     artists: null,
     radio: null,
   });
+  const [currentPlayback, setCurrentPlayback] = useState(null);
 
   const handleEscapePress = (event) => {
     if (event.key === "Escape") {
@@ -78,54 +83,68 @@ export default function App({ Component, pageProps }) {
       }, 3000 * 1000);
 
       setLoading(false);
+
       fetchRecentlyPlayedAlbums(accessToken, setAlbums, setAlbumsQueue);
       fetchUserPlaylists(accessToken, setPlaylists, updateGradientColors);
       fetchTopArtists(accessToken, setArtists, updateGradientColors);
       fetchUserRadio(accessToken, setRadio, updateGradientColors);
+
+      const playbackInterval = setInterval(() => {
+        fetchCurrentPlayback();
+      }, 1000);
+
+      const recentlyPlayedInterval = setInterval(() => {
+        fetchRecentlyPlayedAlbums(accessToken, setAlbums, setAlbumsQueue);
+      }, 5 * 60 * 1000);
+
       window.addEventListener("keydown", handleEscapePress);
 
       return () => {
         clearInterval(tokenRefreshInterval);
+        clearInterval(playbackInterval);
+        clearInterval(recentlyPlayedInterval);
         window.removeEventListener("keydown", handleEscapePress);
       };
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    const fetchCurrentPlayback = async () => {
-      if (accessToken) {
-        try {
-          const response = await fetch("https://api.spotify.com/v1/me/player", {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
+  const fetchCurrentPlayback = async () => {
+    if (accessToken) {
+      try {
+        const response = await fetch("https://api.spotify.com/v1/me/player", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentPlayback({
+            ...data,
+            device: {
+              ...data.device,
+              volume_percent: data.device?.volume_percent,
             },
           });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.is_playing) {
-              const currentAlbum = data.item.album;
-              const currentTrackUri = data.item.uri;
-              setCurrentlyPlayingTrackUri(currentTrackUri);
-              if (
-                !currentlyPlayingAlbum ||
-                currentlyPlayingAlbum.id !== currentAlbum.id
-              ) {
-                if (!router.pathname.includes("album")) {
-                  setCurrentlyPlayingAlbum(currentAlbum);
-                  setAlbumsQueue((prevQueue) => {
-                    const updatedQueue = prevQueue.filter(
-                      (album) => album.id !== currentAlbum.id
-                    );
-                    return [currentAlbum, ...updatedQueue];
-                  });
-                  await fetchRecentlyPlayedAlbums(
-                    accessToken,
-                    setAlbums,
-                    setAlbumsQueue
+          if (data && data.item) {
+            const currentAlbum = data.item.album;
+            const currentTrackUri = data.item.uri;
+            setCurrentlyPlayingTrackUri(currentTrackUri);
+            if (
+              !currentlyPlayingAlbum ||
+              currentlyPlayingAlbum.id !== currentAlbum.id
+            ) {
+              if (!router.pathname.includes("album")) {
+                setCurrentlyPlayingAlbum(currentAlbum);
+                setAlbumsQueue((prevQueue) => {
+                  const updatedQueue = prevQueue.filter(
+                    (album) => album.id !== currentAlbum.id
                   );
+                  return [currentAlbum, ...updatedQueue];
+                });
 
-                  const imageUrl = currentAlbum.images[0].url;
+                const imageUrl = currentAlbum.images[0].url;
+                if (imageUrl !== albumImage) {
                   localStorage.setItem("albumImage", imageUrl);
                   setAlbumImage(imageUrl);
                   setAlbumName(currentAlbum.name);
@@ -138,92 +157,62 @@ export default function App({ Component, pageProps }) {
                   }
                 }
               }
-            } else {
-              console.log("No album is currently playing.");
-              setCurrentlyPlayingAlbum(null);
-              setCurrentlyPlayingTrackUri(null);
             }
-          } else {
-            console.error("Error fetching current playback:", response.status);
+          } else if (currentlyPlayingAlbum !== null) {
+            setCurrentlyPlayingAlbum(null);
+            setCurrentlyPlayingTrackUri(null);
             const imageUrl = "/not-playing.webp";
+            if (imageUrl !== albumImage) {
+              localStorage.setItem("albumImage", imageUrl);
+              setAlbumImage(imageUrl);
+
+              if (activeSection === "recents") {
+                updateGradientColors(imageUrl);
+              }
+            }
+          }
+        } else {
+          console.error("Error fetching current playback:", response.status);
+          if (currentPlayback !== null) {
+            setCurrentPlayback(null);
+            setCurrentlyPlayingAlbum(null);
+            setCurrentlyPlayingTrackUri(null);
+            const imageUrl = "/not-playing.webp";
+            if (imageUrl !== albumImage) {
+              localStorage.setItem("albumImage", imageUrl);
+              setAlbumImage(imageUrl);
+
+              if (activeSection === "recents") {
+                updateGradientColors(imageUrl);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching current playback:", error);
+        if (currentPlayback !== null) {
+          setCurrentPlayback(null);
+          setCurrentlyPlayingAlbum(null);
+          setCurrentlyPlayingTrackUri(null);
+          const imageUrl = "/not-playing.webp";
+          if (imageUrl !== albumImage) {
             localStorage.setItem("albumImage", imageUrl);
             setAlbumImage(imageUrl);
-            setCurrentlyPlayingTrackUri(null);
 
             if (activeSection === "recents") {
               updateGradientColors(imageUrl);
             }
           }
-        } catch (error) {
-          console.error("Error fetching current playback:", error);
-          const imageUrl = "/not-playing.webp";
-          localStorage.setItem("albumImage", imageUrl);
-          setAlbumImage(imageUrl);
-          setCurrentlyPlayingTrackUri(null);
-
-          if (activeSection === "recents") {
-            updateGradientColors(imageUrl);
-          }
         }
       }
-    };
-
-    if (accessToken) {
-      fetchCurrentPlayback();
-      const intervalId = setInterval(fetchCurrentPlayback, 1000);
-
-      return () => clearInterval(intervalId);
     }
-  }, [router.pathname, accessToken, currentlyPlayingAlbum, activeSection]);
-
-  useEffect(() => {
-    const updateGradientForSection = (imageKey, section) => {
-      const imageSrc = localStorage.getItem(imageKey);
-      if (imageSrc) {
-        updateGradientColors(imageSrc, section);
-      }
-    };
-
-    switch (true) {
-      case router.pathname.includes("album"):
-        updateGradientForSection("albumPageImage");
-        break;
-      case router.pathname.includes("playlist"):
-        updateGradientForSection("playlistPageImage");
-        break;
-      case router.pathname.includes("artist"):
-        updateGradientForSection("artistPageImage");
-        break;
-      case router.pathname === "/now-playing":
-        updateGradientForSection("albumImage");
-        break;
-      case activeSection === "recents":
-        updateGradientForSection("albumImage");
-        break;
-      case activeSection === "library":
-        updateGradientForSection("libraryImage", "library");
-        break;
-      case activeSection === "artists":
-        updateGradientForSection("artistsImage", "artists");
-        break;
-      case activeSection === "radio":
-        setTargetColor1("#21305e");
-        setTargetColor2("#1d2238");
-        setTargetColor3("#e468b9");
-        setTargetColor4("#933e8e");
-        break;
-      default:
-        break;
-    }
-  }, [router.pathname, activeSection]);
+  };
 
   const redirectToSpotify = () => {
-    const clientId = "";
-    const redirectUri = "http://localhost:3000";
     const scopes =
       "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
 
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}`;
+    window.location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=${scopes}`;
   };
 
   const fetchAccessToken = async (code) => {
@@ -232,12 +221,12 @@ export default function App({ Component, pageProps }) {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: "Basic " + btoa(":"),
+          Authorization: "Basic " + btoa(`${CLIENT_ID}:${CLIENT_SECRET}`),
         },
         body: new URLSearchParams({
           grant_type: "authorization_code",
           code: code,
-          redirect_uri: "http://localhost:3000",
+          redirect_uri: REDIRECT_URI,
         }),
       });
 
@@ -255,7 +244,7 @@ export default function App({ Component, pageProps }) {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: "Basic " + btoa(":"),
+          Authorization: "Basic " + btoa(`${CLIENT_ID}:${CLIENT_SECRET}`),
         },
         body: new URLSearchParams({
           grant_type: "refresh_token",
@@ -509,6 +498,8 @@ export default function App({ Component, pageProps }) {
           loading={loading}
           albumsQueue={albumsQueue}
           currentlyPlayingTrackUri={currentlyPlayingTrackUri}
+          currentPlayback={currentPlayback}
+          fetchCurrentPlayback={fetchCurrentPlayback}
         />
       </div>
     </main>

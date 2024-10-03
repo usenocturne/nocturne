@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import classNames from "classnames";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
@@ -12,19 +12,14 @@ import {
 } from "@headlessui/react";
 import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
 
-const NowPlaying = ({ accessToken }) => {
+const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
   const router = useRouter();
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [lastBackwardPress, setLastBackwardPress] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [volume, setVolume] = useState(100);
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
   const volumeTimeoutRef = useRef(null);
   const volumeSyncIntervalRef = useRef(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const requestRef = useRef();
   const [open, setOpen] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
   const [playlists, setPlaylists] = useState([]);
@@ -32,6 +27,7 @@ const NowPlaying = ({ accessToken }) => {
   const [repeatMode, setRepeatMode] = useState("off");
   const [trackNameScrollingEnabled, setTrackNameScrollingEnabled] =
     useState(false);
+  const previousTrackId = useRef(null);
 
   useEffect(() => {
     const scrollingEnabled = localStorage.getItem("trackNameScrollingEnabled");
@@ -60,33 +56,10 @@ const NowPlaying = ({ accessToken }) => {
   }, [accessToken]);
 
   useEffect(() => {
-    const syncVolume = async () => {
-      if (!accessToken) return;
-      try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const currentVolume = data.device.volume_percent;
-          setVolume(currentVolume);
-        }
-      } catch (error) {
-        console.error("Error syncing volume:", error);
-      }
-    };
-
-    syncVolume();
-    volumeSyncIntervalRef.current = setInterval(syncVolume, 5000);
-
-    return () => {
-      if (volumeSyncIntervalRef.current) {
-        clearInterval(volumeSyncIntervalRef.current);
-      }
-    };
-  }, [accessToken]);
+    if (currentPlayback && currentPlayback.device) {
+      setVolume(currentPlayback.device.volume_percent);
+    }
+  }, [currentPlayback]);
 
   const changeVolume = async (newVolume) => {
     if (!accessToken) return;
@@ -112,15 +85,17 @@ const NowPlaying = ({ accessToken }) => {
       volumeTimeoutRef.current = setTimeout(() => {
         setIsVolumeVisible(false);
       }, 2000);
+
+      fetchCurrentPlayback();
     } catch (error) {
       console.error("Error changing volume:", error);
     }
   };
 
   const handleWheelScroll = (event) => {
-    if (event.deltaX > 0) {
+    if (event.key === "ArrowRight") {
       changeVolume(volume + 7);
-    } else if (event.deltaX < 0) {
+    } else if (event.key === "ArrowLeft") {
       changeVolume(volume - 7);
     }
   };
@@ -132,19 +107,19 @@ const NowPlaying = ({ accessToken }) => {
       }
     };
 
-    window.addEventListener("wheel", scrollHandler);
+    window.addEventListener("keydown", scrollHandler);
     return () => {
       window.removeEventListener("wheel", scrollHandler);
     };
   }, [volume, accessToken, drawerOpen]);
 
-  useEffect(() => {
-    const fetchCurrentTrack = async () => {
+  const checkIfTrackIsLiked = useCallback(
+    async (trackId) => {
       if (!accessToken) return;
 
       try {
         const response = await fetch(
-          "https://api.spotify.com/v1/me/player/currently-playing",
+          `https://api.spotify.com/v1/me/tracks/contains?ids=${trackId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -153,60 +128,32 @@ const NowPlaying = ({ accessToken }) => {
         );
 
         if (response.ok) {
-          const data = await response.json();
-          setCurrentTrack(data.item);
-          setIsPlaying(data.is_playing);
-
-          const initialProgress =
-            (data.progress_ms / data.item.duration_ms) * 100;
-          setProgress(initialProgress);
+          const likedArray = await response.json();
+          setIsLiked(likedArray[0]);
         } else {
-          setCurrentTrack({
-            name: "Not Playing",
-            artists: [],
-            album: { images: [{ url: "/not-playing.webp" }] },
-          });
-          setIsPlaying(false);
-          setProgress(0);
+          console.error("Error checking liked tracks:", await response.json());
         }
       } catch (error) {
-        console.error("Error with fetchCurrentTrack:", error);
+        console.error("Error with checkIfTrackIsLiked:", error);
       }
-    };
+    },
+    [accessToken]
+  );
 
-    fetchCurrentTrack();
-
-    const interval = setInterval(fetchCurrentTrack, 1000);
-    return () => clearInterval(interval);
-  }, [accessToken]);
-
-  const checkIfTrackIsLiked = async (trackId) => {
-    if (!accessToken) return;
-
-    try {
-      const response = await fetch(
-        `https://api.spotify.com/v1/me/tracks/contains?ids=${trackId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const likedArray = await response.json();
-        setIsLiked(likedArray[0]);
-      } else {
-        console.error("Error checking liked tracks:", await response.json());
+  useEffect(() => {
+    if (currentPlayback && currentPlayback.item) {
+      const currentTrackId = currentPlayback.item.id;
+      if (currentTrackId !== previousTrackId.current) {
+        checkIfTrackIsLiked(currentTrackId);
+        previousTrackId.current = currentTrackId;
       }
-    } catch (error) {
-      console.error("Error with checkIfTrackIsLiked:", error);
     }
-  };
+  }, [currentPlayback, checkIfTrackIsLiked]);
 
-  const toggleLikeTrack = async (trackId) => {
-    if (!accessToken) return;
+  const toggleLikeTrack = async () => {
+    if (!accessToken || !currentPlayback || !currentPlayback.item) return;
 
+    const trackId = currentPlayback.item.id;
     const endpoint = isLiked
       ? `https://api.spotify.com/v1/me/tracks?ids=${trackId}`
       : `https://api.spotify.com/v1/me/tracks?ids=${trackId}`;
@@ -230,45 +177,6 @@ const NowPlaying = ({ accessToken }) => {
       console.error("Error with toggleLikeTrack:", error);
     }
   };
-
-  useEffect(() => {
-    if (currentTrack) {
-      checkIfTrackIsLiked(currentTrack.id);
-    }
-  }, [currentTrack]);
-
-  const animateProgress = (start, end, duration) => {
-    const startTime = performance.now();
-
-    const step = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const percentage = Math.min(elapsed / duration, 1);
-      const newProgress = start + (end - start) * percentage;
-
-      setProgress(newProgress);
-      requestRef.current = requestAnimationFrame(step);
-    };
-
-    requestRef.current = requestAnimationFrame(step);
-  };
-
-  useEffect(() => {
-    if (currentTrack && isPlaying) {
-      const durationMs = currentTrack.duration_ms;
-      const initialProgressMs = currentTrack.progress_ms;
-      const remainingMs = durationMs - initialProgressMs;
-
-      animateProgress(remainingMs, progress);
-
-      return () => cancelAnimationFrame(requestRef.current);
-    }
-  }, [currentTrack, progress, isPlaying]);
-
-  const trackName = currentTrack ? currentTrack.name : "Not Playing";
-  const artistName = currentTrack
-    ? currentTrack.artists.map((artist) => artist.name).join(", ")
-    : "";
-  const albumArt = currentTrack ? currentTrack.album.images[0]?.url : "";
 
   const togglePlayPause = async () => {
     try {
@@ -304,19 +212,14 @@ const NowPlaying = ({ accessToken }) => {
             }),
           });
         } else {
-          setCurrentTrack({
-            name: "Not Playing",
-            artists: [],
-            album: { images: [{ url: "/not-playing.webp" }] },
-          });
-          setIsPlaying(false);
-          setProgress(0);
+          console.log("No available devices");
           return;
         }
       } else {
-        const endpoint = isPlaying
-          ? "https://api.spotify.com/v1/me/player/pause"
-          : "https://api.spotify.com/v1/me/player/play";
+        const endpoint =
+          currentPlayback && currentPlayback.is_playing
+            ? "https://api.spotify.com/v1/me/player/pause"
+            : "https://api.spotify.com/v1/me/player/play";
 
         await fetch(endpoint, {
           method: "PUT",
@@ -324,9 +227,9 @@ const NowPlaying = ({ accessToken }) => {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-
-        setIsPlaying(!isPlaying);
       }
+
+      fetchCurrentPlayback();
     } catch (error) {
       console.error("Error toggling play/pause:", error);
     }
@@ -353,41 +256,197 @@ const NowPlaying = ({ accessToken }) => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
+      fetchCurrentPlayback();
     } catch (error) {
       console.error("Error skipping to next track:", error);
     }
   };
 
   const skipToPrevious = async () => {
-    const currentTime = Date.now();
-    const timeSinceLastPress = currentTime - lastBackwardPress;
-
-    if (timeSinceLastPress < 2000) {
-      try {
+    try {
+      if (currentPlayback && currentPlayback.progress_ms > 3000) {
+        await fetch("https://api.spotify.com/v1/me/player/seek?position_ms=0", {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      } else {
         await fetch("https://api.spotify.com/v1/me/player/previous", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-      } catch (error) {
-        console.error("Error skipping to previous track:", error);
       }
+      fetchCurrentPlayback();
+    } catch (error) {
+      console.error("Error with skipToPrevious:", error);
+    }
+  };
+
+  const PlayPauseButton = () => {
+    if (currentPlayback && currentPlayback.is_playing) {
+      return <PauseIcon className="w-14 h-14" />;
     } else {
-      try {
-        await fetch(`https://api.spotify.com/v1/me/player/seek?position_ms=0`, {
-          method: "PUT",
+      return <PlayIcon className="w-14 h-14" />;
+    }
+  };
+
+  const addTrackToPlaylist = async (playlistId) => {
+    if (!accessToken || !currentPlayback || !currentPlayback.item) return;
+
+    setSelectedPlaylistId(playlistId);
+
+    try {
+      let allTracks = [];
+      let nextURL = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
+
+      while (nextURL) {
+        const response = await fetch(nextURL, {
+          method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-      } catch (error) {
-        console.error("Error restarting the current track:", error);
-      }
-    }
 
-    setLastBackwardPress(currentTime);
+        if (!response.ok) {
+          throw new Error(
+            "Error fetching tracks in playlist: " + (await response.json())
+          );
+        }
+
+        const data = await response.json();
+        allTracks = allTracks.concat(data.items);
+        nextURL = data.next;
+      }
+
+      const currentTrackIds = allTracks.map((item) => item.track.id);
+
+      if (currentTrackIds.includes(currentPlayback.item.id)) {
+        setDrawerOpen(false);
+        setOpen(true);
+        return;
+      }
+
+      await addTrackToPlaylistAPI(playlistId);
+      setDrawerOpen(false);
+    } catch (error) {
+      console.error("Error checking playlist contents:", error);
+    }
   };
+
+  const addTrackToPlaylistAPI = async (playlistId) => {
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            uris: [`spotify:track:${currentPlayback.item.id}`],
+          }),
+        }
+      );
+
+      if (response.ok) {
+        console.log("Track added to playlist");
+      } else {
+        console.error("Error adding track to playlist:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error adding track to playlist:", error);
+    }
+  };
+
+  const handleAddAnyway = () => {
+    setOpen(false);
+    if (selectedPlaylistId) {
+      addTrackToPlaylistAPI(selectedPlaylistId);
+    }
+  };
+
+  const toggleShuffle = async () => {
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/shuffle?state=${!isShuffled}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        setIsShuffled(!isShuffled);
+        fetchCurrentPlayback();
+      } else {
+        console.error("Error toggling shuffle:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error toggling shuffle:", error);
+    }
+  };
+
+  const toggleRepeat = async () => {
+    const nextMode =
+      repeatMode === "off"
+        ? "context"
+        : repeatMode === "context"
+        ? "track"
+        : "off";
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${nextMode}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        setRepeatMode(nextMode);
+        fetchCurrentPlayback();
+      } else {
+        console.error("Error toggling repeat:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error toggling repeat:", error);
+    }
+  };
+
+  const getScrollDuration = (trackName) => {
+    const speed = 8;
+    const textLength = trackName.length * 20;
+    const visibleWidth = 380;
+    const scrollDistance = textLength - visibleWidth;
+
+    return scrollDistance > 0 ? scrollDistance / speed : 10;
+  };
+
+  const trackName =
+    currentPlayback && currentPlayback.item
+      ? currentPlayback.item.name
+      : "Not Playing";
+  const artistName =
+    currentPlayback && currentPlayback.item
+      ? currentPlayback.item.artists.map((artist) => artist.name).join(", ")
+      : "";
+  const albumArt =
+    currentPlayback && currentPlayback.item
+      ? currentPlayback.item.album.images[0]?.url
+      : "/not-playing.webp";
+  const isPlaying = currentPlayback ? currentPlayback.is_playing : false;
+  const progress =
+    currentPlayback && currentPlayback.item
+      ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
+      : 0;
 
   const StarIcon = ({ className }) => (
     <svg
@@ -664,149 +723,6 @@ const NowPlaying = ({ accessToken }) => {
     </svg>
   );
 
-  const PlayPauseButton = () => {
-    if (isPlaying) {
-      return <PauseIcon className="w-14 h-14" />;
-    } else {
-      return <PlayIcon className="w-14 h-14" />;
-    }
-  };
-
-  const addTrackToPlaylist = async (playlistId) => {
-    if (!accessToken || !currentTrack) return;
-
-    setSelectedPlaylistId(playlistId);
-
-    try {
-      let allTracks = [];
-      let nextURL = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
-
-      while (nextURL) {
-        const response = await fetch(nextURL, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            "Error fetching tracks in playlist: " + (await response.json())
-          );
-        }
-
-        const data = await response.json();
-        allTracks = allTracks.concat(data.items);
-        nextURL = data.next;
-      }
-
-      const currentTrackIds = allTracks.map((item) => item.track.id);
-
-      if (currentTrackIds.includes(currentTrack.id)) {
-        setDrawerOpen(false);
-        setOpen(true);
-        return;
-      }
-
-      await addTrackToPlaylistAPI(playlistId);
-      setDrawerOpen(false);
-    } catch (error) {
-      console.error("Error checking playlist contents:", error);
-    }
-  };
-
-  const addTrackToPlaylistAPI = async (playlistId) => {
-    try {
-      const response = await fetch(
-        `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            uris: [`spotify:track:${currentTrack.id}`],
-          }),
-        }
-      );
-
-      if (response.ok) {
-        console.log("Track added to playlist");
-      } else {
-        console.error("Error adding track to playlist:", await response.json());
-      }
-    } catch (error) {
-      console.error("Error adding track to playlist:", error);
-    }
-  };
-
-  const handleAddAnyway = () => {
-    setOpen(false);
-    if (selectedPlaylistId) {
-      addTrackToPlaylistAPI(selectedPlaylistId);
-    }
-  };
-
-  const toggleShuffle = async () => {
-    try {
-      const response = await fetch(
-        `https://api.spotify.com/v1/me/player/shuffle?state=${!isShuffled}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        setIsShuffled(!isShuffled);
-      } else {
-        console.error("Error toggling shuffle:", await response.json());
-      }
-    } catch (error) {
-      console.error("Error toggling shuffle:", error);
-    }
-  };
-
-  const toggleRepeat = async () => {
-    const nextMode =
-      repeatMode === "off"
-        ? "context"
-        : repeatMode === "context"
-        ? "track"
-        : "off";
-    try {
-      const response = await fetch(
-        `https://api.spotify.com/v1/me/player/repeat?state=${nextMode}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        setRepeatMode(nextMode);
-      } else {
-        console.error("Error toggling repeat:", await response.json());
-      }
-    } catch (error) {
-      console.error("Error toggling repeat:", error);
-    }
-  };
-
-  const getScrollDuration = (trackName) => {
-    const speed = 8;
-    const textLength = trackName.length * 20;
-    const visibleWidth = 380;
-    const scrollDistance = textLength - visibleWidth;
-
-    return scrollDistance > 0 ? scrollDistance / speed : 10;
-  };
-
   return (
     <>
       {open && (
@@ -820,19 +736,19 @@ const NowPlaying = ({ accessToken }) => {
           <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
             <div className="min-w-[280px] mr-8">
               <img
-                src={albumArt || "/not-playing.webp"}
-                alt="/not-playing.webp"
+                src={albumArt}
+                alt="Album Art"
                 className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
               />
             </div>
             <div className="flex-1 text-center md:text-left">
-              {trackNameScrollingEnabled ? ( // Conditional rendering based on trackNameScrollingEnabled
+              {trackNameScrollingEnabled ? (
                 <div className="track-name-container overflow-hidden relative max-w-[380px]">
                   <h4
                     className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
                       trackName.length > 20 ? "animate-scroll" : "truncate"
                     }`}
-                    key={trackName} // Use trackName as a key
+                    key={trackName}
                     style={
                       trackName.length > 20
                         ? {
@@ -867,10 +783,7 @@ const NowPlaying = ({ accessToken }) => {
           </div>
 
           <div className="flex justify-between items-center w-full px-12 mt-4">
-            <div
-              className="flex-shrink-0"
-              onClick={() => toggleLikeTrack(currentTrack.id)}
-            >
+            <div className="flex-shrink-0" onClick={toggleLikeTrack}>
               {isLiked ? (
                 <StarIconFilled className="w-14 h-14" />
               ) : (
@@ -919,7 +832,7 @@ const NowPlaying = ({ accessToken }) => {
                   </div>
                   <div className="py-1">
                     <Link
-                      href={`/album/${currentTrack?.album?.id}?accessToken=${accessToken}`}
+                      href={`/album/${currentPlayback?.item?.album?.id}?accessToken=${accessToken}`}
                     >
                       <MenuItem>
                         <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
