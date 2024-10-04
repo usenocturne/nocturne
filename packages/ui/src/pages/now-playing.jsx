@@ -28,6 +28,123 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
   const [trackNameScrollingEnabled, setTrackNameScrollingEnabled] =
     useState(false);
   const previousTrackId = useRef(null);
+  const [showLyrics, setShowLyrics] = useState(false);
+  const [parsedLyrics, setParsedLyrics] = useState([]);
+  const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
+  const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
+  const currentTrackId = useRef(null);
+  const lyricsContainerRef = useRef(null);
+  const [lyricsUnavailable, setLyricsUnavailable] = useState(false);
+  const fetchedTracks = useRef(new Set());
+
+  const parseLRC = (lrc) => {
+    const lines = lrc.split("\n");
+    return lines
+      .map((line) => {
+        const match = line.match(/\[(\d{2}):(\d{2}\.\d{2})\](.*)/);
+        if (match) {
+          const [, minutes, seconds, text] = match;
+          const time = parseInt(minutes) * 60 + parseFloat(seconds);
+          return {
+            time: Math.max(0, time - 0.5),
+            text: text.trim(),
+          };
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.time - b.time);
+  };
+
+  const fetchLyrics = useCallback(async () => {
+    if (!currentPlayback || !currentPlayback.item) return;
+
+    const trackId = currentPlayback.item.id;
+    if (fetchedTracks.current.has(trackId)) return;
+
+    setIsLoadingLyrics(true);
+    setLyricsUnavailable(false);
+    const trackName = currentPlayback.item.name;
+    const artistName = currentPlayback.item.artists[0].name;
+
+    try {
+      const response = await fetch(
+        `/api/lyrics?name=${encodeURIComponent(
+          trackName
+        )}&artist=${encodeURIComponent(artistName)}`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      const parsed = parseLRC(data.lyrics);
+      setParsedLyrics(parsed);
+      currentTrackId.current = trackId;
+    } catch (error) {
+      console.error("Error fetching lyrics:", error);
+      setParsedLyrics([]);
+      setLyricsUnavailable(true);
+    } finally {
+      setIsLoadingLyrics(false);
+      fetchedTracks.current.add(trackId);
+    }
+  }, [currentPlayback]);
+
+  useEffect(() => {
+    if (currentPlayback && currentPlayback.item) {
+      const newTrackId = currentPlayback.item.id;
+      if (newTrackId !== currentTrackId.current) {
+        setParsedLyrics([]);
+        setCurrentLyricIndex(-1);
+        setLyricsUnavailable(false);
+        if (showLyrics && !fetchedTracks.current.has(newTrackId)) {
+          fetchLyrics();
+        }
+      }
+    }
+  }, [currentPlayback, fetchLyrics, showLyrics]);
+
+  const handleToggleLyrics = useCallback(() => {
+    setShowLyrics((prev) => {
+      if (
+        !prev &&
+        !lyricsUnavailable &&
+        !fetchedTracks.current.has(currentPlayback?.item?.id)
+      ) {
+        fetchLyrics();
+      }
+      return !prev;
+    });
+  }, [fetchLyrics, lyricsUnavailable, currentPlayback]);
+
+  useEffect(() => {
+    if (!showLyrics || !currentPlayback || parsedLyrics.length === 0) return;
+
+    const updateCurrentLyric = () => {
+      const currentTime = currentPlayback.progress_ms / 1000;
+      const newIndex = parsedLyrics.findIndex(
+        (lyric) => lyric.time > currentTime
+      );
+      setCurrentLyricIndex(
+        newIndex === -1 ? parsedLyrics.length - 1 : Math.max(0, newIndex - 1)
+      );
+    };
+
+    updateCurrentLyric();
+    const intervalId = setInterval(updateCurrentLyric, 100);
+
+    return () => clearInterval(intervalId);
+  }, [showLyrics, currentPlayback, parsedLyrics]);
+
+  useEffect(() => {
+    if (currentLyricIndex >= 0 && lyricsContainerRef.current) {
+      const container = lyricsContainerRef.current;
+      const lyricElement = container.children[currentLyricIndex];
+      if (lyricElement) {
+        lyricElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  }, [currentLyricIndex]);
 
   useEffect(() => {
     const scrollingEnabled = localStorage.getItem("trackNameScrollingEnabled");
@@ -747,7 +864,7 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
         />
       )}
       <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <div className="flex flex-col gap-4 min-h-screen w-full z-10">
+        <div className="flex flex-col gap-4 h-screen w-full z-10">
           <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
             <div className="min-w-[280px] mr-8">
               <img
@@ -756,36 +873,68 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
                 className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
               />
             </div>
-            <div className="flex-1 text-center md:text-left">
-              {trackNameScrollingEnabled ? (
-                <div className="track-name-container overflow-hidden relative max-w-[380px]">
-                  <h4
-                    className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                      trackName.length > 20 ? "animate-scroll" : "truncate"
-                    }`}
-                    key={trackName}
-                    style={
-                      trackName.length > 20
-                        ? {
-                            animationDuration: `${getScrollDuration(
-                              trackName
-                            )}s`,
-                          }
-                        : {}
-                    }
-                  >
+            {!showLyrics ? (
+              <div className="flex-1 text-center md:text-left">
+                {trackNameScrollingEnabled ? (
+                  <div className="track-name-container overflow-hidden relative max-w-[380px]">
+                    <h4
+                      className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
+                        trackName.length > 20 ? "animate-scroll" : "truncate"
+                      }`}
+                      key={trackName}
+                      style={
+                        trackName.length > 20
+                          ? {
+                              animationDuration: `${getScrollDuration(
+                                trackName
+                              )}s`,
+                            }
+                          : {}
+                      }
+                    >
+                      {trackName}
+                    </h4>
+                  </div>
+                ) : (
+                  <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
                     {trackName}
                   </h4>
-                </div>
-              ) : (
-                <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
-                  {trackName}
+                )}
+                <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
+                  {artistName}
                 </h4>
-              )}
-              <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
-                {artistName}
-              </h4>
-            </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col h-[280px]">
+                <div
+                  className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
+                  ref={lyricsContainerRef}
+                >
+                  {isLoadingLyrics ? (
+                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                      Loading lyrics...
+                    </p>
+                  ) : parsedLyrics.length > 0 ? (
+                    parsedLyrics.map((lyric, index) => (
+                      <p
+                        key={index}
+                        className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
+                          index === currentLyricIndex
+                            ? "text-white"
+                            : "text-white/60"
+                        }`}
+                      >
+                        {lyric.text}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                      Lyrics not available
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="w-full px-12 overflow-hidden">
@@ -906,6 +1055,19 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
                             className="h-8 w-8 text-white/60"
                           />
                         )}
+                      </div>
+                    </MenuItem>
+                  </div>
+                  <div className="py-1">
+                    <MenuItem onClick={handleToggleLyrics}>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">
+                          {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
+                        </span>
+                        <GoToAlbumIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
                       </div>
                     </MenuItem>
                   </div>
