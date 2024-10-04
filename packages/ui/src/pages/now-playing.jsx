@@ -56,10 +56,27 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
   }, [accessToken]);
 
   useEffect(() => {
-    if (currentPlayback && currentPlayback.device) {
-      setVolume(currentPlayback.device.volume_percent);
-    }
-  }, [currentPlayback]);
+    const syncVolume = async () => {
+      if (!accessToken) return;
+      try {
+        const response = currentPlayback.device.volume_percent;
+        if (response.ok) {
+          const data = await response.json();
+          const currentVolume = data.device.volume_percent;
+          setVolume(currentVolume);
+        }
+      } catch (error) {
+        console.error("Error syncing volume:", error);
+      }
+    };
+    syncVolume();
+    volumeSyncIntervalRef.current = setInterval(syncVolume, 5000);
+    return () => {
+      if (volumeSyncIntervalRef.current) {
+        clearInterval(volumeSyncIntervalRef.current);
+      }
+    };
+  }, [accessToken]);
 
   const changeVolume = async (newVolume) => {
     if (!accessToken) return;
@@ -85,8 +102,6 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
       volumeTimeoutRef.current = setTimeout(() => {
         setIsVolumeVisible(false);
       }, 2000);
-
-      fetchCurrentPlayback();
     } catch (error) {
       console.error("Error changing volume:", error);
     }
