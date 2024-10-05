@@ -119,9 +119,9 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
             <Link key={track.track.id} href={`/now-playing`}>
               <div
                 onClick={() => playTrack(track.track.uri, index)}
-                className="flex gap-6 items-start mb-4"
+                className="flex gap-12 items-start mb-4"
               >
-                <div className="text-[32px] font-[580] text-white/60 w-6 mt-3">
+                <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
                   {track.track.uri === currentlyPlayingTrackUri ? (
                     <div className="w-5">
                       <section>
@@ -180,17 +180,47 @@ export async function getServerSideProps(context) {
 
   const playlistData = await res.json();
 
-  const tracksRes = await fetch(playlistData.tracks.href, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  // Function to fetch tracks with pagination
+  async function fetchAllTracks(url) {
+    let allTracks = [];
+    let nextUrl = url;
 
-  const tracksData = await tracksRes.json();
+    while (nextUrl) {
+      const response = await fetch(nextUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Error fetching tracks:", await response.json());
+        break;
+      }
+
+      const data = await response.json();
+      allTracks = allTracks.concat(data.items);
+      nextUrl = data.next;
+    }
+
+    return allTracks;
+  }
+
+  // Fetch all tracks
+  const allTracks = await fetchAllTracks(playlistData.tracks.href);
+
+  // Update the playlist object with all tracks
+  const updatedPlaylist = {
+    ...playlistData,
+    tracks: {
+      ...playlistData.tracks,
+      items: allTracks,
+      total: allTracks.length,
+    },
+  };
 
   return {
     props: {
-      playlist: { ...playlistData, tracks: tracksData },
+      playlist: updatedPlaylist,
     },
   };
 }

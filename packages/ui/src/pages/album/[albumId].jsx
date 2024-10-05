@@ -115,9 +115,9 @@ const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
                 <div
                   key={track.id}
                   onClick={() => playTrack(track.uri, index)}
-                  className="flex gap-6 items-start mb-4"
+                  className="flex gap-12 items-start mb-4"
                 >
-                  <div className="text-[32px] font-[580] text-white/60 w-6 mt-3">
+                  <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
                     {track.uri === currentlyPlayingTrackUri ? (
                       <div className="w-5">
                         <section>
