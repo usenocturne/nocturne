@@ -125,6 +125,8 @@ export default function App({ Component, pageProps }) {
               ...data.device,
               volume_percent: data.device?.volume_percent,
             },
+            shuffle_state: data.shuffle_state,
+            repeat_state: data.repeat_state,
           });
           if (data && data.item) {
             const currentAlbum = data.item.album;

@@ -510,6 +510,13 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
     }
   };
 
+  useEffect(() => {
+    if (currentPlayback) {
+      setIsShuffled(currentPlayback.shuffle_state);
+      setRepeatMode(currentPlayback.repeat_state);
+    }
+  }, [currentPlayback]);
+
   const toggleShuffle = async () => {
     try {
       const response = await fetch(
@@ -913,7 +920,7 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
                           ? {
                               animationDuration: `${getScrollDuration(
                                 trackName
-                              )}s`,
+                              )}`,
                             }
                           : {}
                       }
