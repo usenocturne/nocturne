@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import classNames from "classnames";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import Link from "next/link";
-import { Drawer } from "vaul";
+import Drawer, { DrawerTrigger, DrawerContent } from "../components/Drawer";
 import {
   Dialog,
   DialogBackdrop,
@@ -12,14 +12,19 @@ import {
 } from "@headlessui/react";
 import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
 
-const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
+const NowPlaying = ({
+  accessToken,
+  currentPlayback,
+  fetchCurrentPlayback,
+  drawerOpen,
+  setDrawerOpen,
+}) => {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
   const [volume, setVolume] = useState(100);
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
   const volumeTimeoutRef = useRef(null);
   const volumeSyncIntervalRef = useRef(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
   const [playlists, setPlaylists] = useState([]);
@@ -37,6 +42,20 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
   const [lyricsUnavailable, setLyricsUnavailable] = useState(false);
   const fetchedTracks = useRef(new Set());
   const [lyricsMenuOptionEnabled, setlyricsMenuOptionEnabled] = useState(false);
+
+  useEffect(() => {
+    const handleAppEscape = () => {
+      if (drawerOpen) {
+        setDrawerOpen(false);
+      }
+    };
+
+    window.addEventListener("app-escape-pressed", handleAppEscape);
+
+    return () => {
+      window.removeEventListener("app-escape-pressed", handleAppEscape);
+    };
+  }, [drawerOpen, setDrawerOpen]);
 
   const parseLRC = (lrc) => {
     const lines = lrc.split("\n");
@@ -465,13 +484,11 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
       const currentTrackIds = allTracks.map((item) => item.track.id);
 
       if (currentTrackIds.includes(currentPlayback.item.id)) {
-        setDrawerOpen(false);
         setOpen(true);
         return;
       }
 
       await addTrackToPlaylistAPI(playlistId);
-      setDrawerOpen(false);
     } catch (error) {
       console.error("Error checking playlist contents:", error);
     }
@@ -589,7 +606,7 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
   const albumArt =
     currentPlayback && currentPlayback.item
       ? currentPlayback.item.album.images[0]?.url
-      : "/not-playing.webp";
+      : "/images/not-playing.webp";
   const isPlaying = currentPlayback ? currentPlayback.is_playing : false;
   const progress =
     currentPlayback && currentPlayback.item
@@ -896,338 +913,332 @@ const NowPlaying = ({ accessToken, currentPlayback, fetchCurrentPlayback }) => {
           onClick={() => setOpen(false)}
         />
       )}
-      <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <div className="flex flex-col gap-4 h-screen w-full z-10">
-          <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
-            <div className="min-w-[280px] mr-8">
-              <img
-                src={albumArt}
-                alt="Album Art"
-                className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-              />
-            </div>
-            {!showLyrics ? (
-              <div className="flex-1 text-center md:text-left">
-                {trackNameScrollingEnabled ? (
-                  <div className="track-name-container overflow-hidden relative max-w-[380px]">
-                    <h4
-                      className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                        trackName.length > 20 ? "animate-scroll" : "truncate"
-                      }`}
-                      key={trackName}
-                      style={
-                        trackName.length > 20
-                          ? {
-                              animationDuration: `${getScrollDuration(
-                                trackName
-                              )}`,
-                            }
-                          : {}
-                      }
-                    >
-                      {trackName}
-                    </h4>
-                  </div>
-                ) : (
-                  <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
+      <div className="flex flex-col gap-4 h-screen w-full z-10">
+        <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
+          <div className="min-w-[280px] mr-8">
+            <img
+              src={albumArt}
+              alt="/images/not-playing.webp"
+              className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+            />
+          </div>
+          {!showLyrics ? (
+            <div className="flex-1 text-center md:text-left">
+              {trackNameScrollingEnabled ? (
+                <div className="track-name-container overflow-hidden relative max-w-[380px]">
+                  <h4
+                    className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
+                      trackName.length > 20 ? "animate-scroll" : "truncate"
+                    }`}
+                    key={trackName}
+                    style={
+                      trackName.length > 20
+                        ? {
+                            animationDuration: `${getScrollDuration(
+                              trackName
+                            )}`,
+                          }
+                        : {}
+                    }
+                  >
                     {trackName}
                   </h4>
-                )}
-                <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
-                  {artistName}
-                </h4>
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col h-[280px]">
-                <div
-                  className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
-                  ref={lyricsContainerRef}
-                >
-                  {isLoadingLyrics ? (
-                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
-                      Loading lyrics...
-                    </p>
-                  ) : parsedLyrics.length > 0 ? (
-                    parsedLyrics.map((lyric, index) => (
-                      <p
-                        key={index}
-                        className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
-                          index === currentLyricIndex
-                            ? "text-white"
-                            : "text-white/60"
-                        }`}
-                      >
-                        {lyric.text}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
-                      Lyrics not available
-                    </p>
-                  )}
                 </div>
-              </div>
-            )}
-          </div>
-
-          <div className="w-full px-12 overflow-hidden">
-            <div className="w-full bg-white/20 h-2 rounded-full mt-4 overflow-hidden">
-              <div
-                className="progress-bar bg-white h-2"
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center w-full px-12 mt-4">
-            <div className="flex-shrink-0" onClick={toggleLikeTrack}>
-              {isLiked ? (
-                <StarIconFilled className="w-14 h-14" />
               ) : (
-                <StarIcon className="w-14 h-14" />
+                <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
+                  {trackName}
+                </h4>
               )}
+              <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
+                {artistName}
+              </h4>
             </div>
-
-            <div className="flex justify-center gap-12 flex-1">
-              <div onClick={skipToPrevious}>
-                <BackIcon className="w-14 h-14" />
-              </div>
-              <div>
-                <div onClick={togglePlayPause}>
-                  <PlayPauseButton />
-                </div>
-              </div>
-              <div onClick={skipToNext}>
-                <ForwardIcon className="w-14 h-14" />
-              </div>
-            </div>
-
-            <div className="flex-shrink-0">
-              <Menu as="div" className="relative inline-block text-left">
-                <div>
-                  <MenuButton>
-                    <MenuIcon className="w-14 h-14 fill-white/60" />
-                  </MenuButton>
-                </div>
-
-                <MenuItems
-                  transition
-                  className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-black/30 backdrop-blur-md rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
-                >
-                  <div className="py-1">
-                    <Drawer.Trigger asChild>
-                      <MenuItem>
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                          <span className="text-[28px]">Add to a Playlist</span>
-                          <PlaylistAddIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-white/60"
-                          />
-                        </div>
-                      </MenuItem>
-                    </Drawer.Trigger>
-                  </div>
-                  <div className="py-1">
-                    <Link
-                      href={`/album/${currentPlayback?.item?.album?.id}?accessToken=${accessToken}`}
+          ) : (
+            <div className="flex-1 flex flex-col h-[280px]">
+              <div
+                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
+                ref={lyricsContainerRef}
+              >
+                {isLoadingLyrics ? (
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                    Loading lyrics...
+                  </p>
+                ) : parsedLyrics.length > 0 ? (
+                  parsedLyrics.map((lyric, index) => (
+                    <p
+                      key={index}
+                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
+                        index === currentLyricIndex
+                          ? "text-white"
+                          : "text-white/60"
+                      }`}
                     >
-                      <MenuItem>
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                          <span className="text-[28px]">Go to Album</span>
-                          <GoToAlbumIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-white/60"
-                          />
-                        </div>
-                      </MenuItem>
-                    </Link>
-                  </div>
-                  <div className="py-1">
-                    <MenuItem onClick={toggleRepeat}>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                        <span className="text-[28px]">
-                          {repeatMode === "off"
-                            ? "Enable Repeat"
-                            : repeatMode === "context"
-                            ? "Enable Repeat One"
-                            : "Disable Repeat"}
-                        </span>
-                        {repeatMode === "off" ? (
-                          <RepeatIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-white/60"
-                          />
-                        ) : repeatMode === "context" ? (
-                          <RepeatIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-white"
-                          />
-                        ) : (
-                          <RepeatOneIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-white"
-                          />
-                        )}
-                      </div>
-                    </MenuItem>
-                  </div>
-                  <div className="py-1">
-                    <MenuItem onClick={toggleShuffle}>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                        <span className="text-[28px]">
-                          {isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
-                        </span>
-                        {isShuffled ? (
-                          <ShuffleIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-white"
-                          />
-                        ) : (
-                          <ShuffleIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-white/60"
-                          />
-                        )}
-                      </div>
-                    </MenuItem>
-                  </div>
-                  {lyricsMenuOptionEnabled ? (
-                    <div className="py-1">
-                      <MenuItem onClick={handleToggleLyrics}>
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                          <span className="text-[28px]">
-                            {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
-                          </span>
-                          {showLyrics ? (
-                            <LyricsIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white"
-                            />
-                          ) : (
-                            <LyricsIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white/60"
-                            />
-                          )}
-                        </div>
-                      </MenuItem>
-                    </div>
-                  ) : null}
-                </MenuItems>
-              </Menu>
+                      {lyric.text}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                    Lyrics not available
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="w-full px-12 overflow-hidden">
+          <div className="w-full bg-white/20 h-2 rounded-full mt-4 overflow-hidden">
+            <div
+              className="progress-bar bg-white h-2"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center w-full px-12 mt-4">
+          <div className="flex-shrink-0" onClick={toggleLikeTrack}>
+            {isLiked ? (
+              <StarIconFilled className="w-14 h-14" />
+            ) : (
+              <StarIcon className="w-14 h-14" />
+            )}
+          </div>
+
+          <div className="flex justify-center gap-12 flex-1">
+            <div onClick={skipToPrevious}>
+              <BackIcon className="w-14 h-14" />
+            </div>
+            <div>
+              <div onClick={togglePlayPause}>
+                <PlayPauseButton />
+              </div>
+            </div>
+            <div onClick={skipToNext}>
+              <ForwardIcon className="w-14 h-14" />
             </div>
           </div>
-          <div
-            className={classNames(
-              "fixed right-0 top-[70px] transform transition-opacity duration-300 backdrop-blur-md",
-              {
-                "opacity-0 volumeOutScale": !isVolumeVisible,
-                "opacity-100 volumeInScale": isVolumeVisible,
-              }
-            )}
-          >
-            <div className="w-14 h-44 bg-black/20 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
-              <div
-                className={classNames(
-                  "bg-white w-full transition-height duration-300",
-                  {
-                    "rounded-b-[13px]": volume < 100,
-                    "rounded-[13px]": volume === 100,
-                  }
-                )}
-                style={{ height: `${volume}%` }}
+
+          <div className="flex-shrink-0">
+            <Menu as="div" className="relative inline-block text-left">
+              <div>
+                <MenuButton>
+                  <MenuIcon className="w-14 h-14 fill-white/60" />
+                </MenuButton>
+              </div>
+
+              <MenuItems
+                transition
+                className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-black/30 backdrop-blur-md rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
               >
-                <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
-                  {volume === 0 && <VolumeOffIcon className="w-7 h-7" />}
-                  {volume > 0 && volume <= 60 && (
-                    <VolumeLowIcon className="w-7 h-7 ml-1.5" />
-                  )}
-                  {volume > 60 && <VolumeLoudIcon className="w-7 h-7" />}
+                <div className="py-1">
+                  <DrawerTrigger onClick={() => setDrawerOpen(true)}>
+                    <MenuItem>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">Add to a Playlist</span>
+                        <PlaylistAddIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
+                      </div>
+                    </MenuItem>
+                  </DrawerTrigger>
                 </div>
+                <div className="py-1">
+                  <Link
+                    href={`/album/${currentPlayback?.item?.album?.id}?accessToken=${accessToken}`}
+                  >
+                    <MenuItem>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">Go to Album</span>
+                        <GoToAlbumIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
+                      </div>
+                    </MenuItem>
+                  </Link>
+                </div>
+                <div className="py-1">
+                  <MenuItem onClick={toggleRepeat}>
+                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <span className="text-[28px]">
+                        {repeatMode === "off"
+                          ? "Enable Repeat"
+                          : repeatMode === "context"
+                          ? "Enable Repeat One"
+                          : "Disable Repeat"}
+                      </span>
+                      {repeatMode === "off" ? (
+                        <RepeatIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
+                      ) : repeatMode === "context" ? (
+                        <RepeatIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white"
+                        />
+                      ) : (
+                        <RepeatOneIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white"
+                        />
+                      )}
+                    </div>
+                  </MenuItem>
+                </div>
+                <div className="py-1">
+                  <MenuItem onClick={toggleShuffle}>
+                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <span className="text-[28px]">
+                        {isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
+                      </span>
+                      {isShuffled ? (
+                        <ShuffleIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white"
+                        />
+                      ) : (
+                        <ShuffleIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
+                      )}
+                    </div>
+                  </MenuItem>
+                </div>
+                {lyricsMenuOptionEnabled ? (
+                  <div className="py-1">
+                    <MenuItem onClick={handleToggleLyrics}>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">
+                          {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
+                        </span>
+                        {showLyrics ? (
+                          <LyricsIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white"
+                          />
+                        ) : (
+                          <LyricsIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white/60"
+                          />
+                        )}
+                      </div>
+                    </MenuItem>
+                  </div>
+                ) : null}
+              </MenuItems>
+            </Menu>
+          </div>
+        </div>
+        <div
+          className={classNames(
+            "fixed right-0 top-[70px] transform transition-opacity duration-300 backdrop-blur-md",
+            {
+              "opacity-0 volumeOutScale": !isVolumeVisible,
+              "opacity-100 volumeInScale": isVolumeVisible,
+            }
+          )}
+        >
+          <div className="w-14 h-44 bg-black/20 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+            <div
+              className={classNames(
+                "bg-white w-full transition-height duration-300",
+                {
+                  "rounded-b-[13px]": volume < 100,
+                  "rounded-[13px]": volume === 100,
+                }
+              )}
+              style={{ height: `${volume}%` }}
+            >
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+                {volume === 0 && <VolumeOffIcon className="w-7 h-7" />}
+                {volume > 0 && volume <= 60 && (
+                  <VolumeLowIcon className="w-7 h-7 ml-1.5" />
+                )}
+                {volume > 60 && <VolumeLoudIcon className="w-7 h-7" />}
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-black/10 z-20" />
-          <Drawer.Content className="flex flex-col rounded-t-[17px] h-auto mt-24 fixed bottom-0 left-0 right-0 z-30">
-            <div className="pt-4 pb-4 bg-black/40 backdrop-blur-2xl rounded-t-[17px] flex-1">
-              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300" />
-              <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
-                {playlists.map((item) => (
-                  <div
-                    key={item.id}
-                    className="min-w-[280px] mr-10 mb-4"
-                    onClick={() => addTrackToPlaylist(item.id)}
-                  >
-                    <img
-                      src={item.images[0]?.url || "/not-playing.webp"}
-                      alt="Playlist Cover"
-                      className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                    />
-                    <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                      {item.name}
-                    </h4>
-                    <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                      {item.tracks.total.toLocaleString()} Songs
-                    </h4>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Drawer.Content>
-        </Drawer.Portal>
-
-        <Dialog open={open} onClose={setOpen} className="relative z-50">
-          <DialogBackdrop
-            transition
-            className="fixed inset-0 bg-black/10 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
-          />
-
-          <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
-            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-              <DialogPanel
-                transition
-                className="relative transform overflow-hidden rounded-[17px] bg-black/35 backdrop-blur-xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[24rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        <DrawerContent>
+          <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
+            {playlists.map((item) => (
+              <div
+                key={item.id}
+                className="min-w-[280px] mr-10 mb-4"
+                onClick={async () => {
+                  await addTrackToPlaylist(item.id);
+                  setDrawerOpen(false);
+                }}
               >
-                <div>
-                  <div className="text-center">
-                    <DialogTitle
-                      as="h3"
-                      className="text-base font-[560] leading-6 text-white"
-                    >
-                      Already Added
-                    </DialogTitle>
-                    <div className="mt-2">
-                      <p className="text-sm text-white/60">
-                        This track is already in the playlist.
-                      </p>
-                    </div>
+                <img
+                  src={item.images[0]?.url || "/images/not-playing.webp"}
+                  alt="Playlist Cover"
+                  className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                />
+                <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  {item.name}
+                </h4>
+              </div>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Dialog open={open} onClose={setOpen} className="relative z-50">
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-black/10 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+        />
+
+        <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-[17px] bg-black/35 backdrop-blur-xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[24rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+            >
+              <div>
+                <div className="text-center">
+                  <DialogTitle
+                    as="h3"
+                    className="text-base font-[560] leading-6 text-white"
+                  >
+                    Already Added
+                  </DialogTitle>
+                  <div className="mt-2">
+                    <p className="text-sm text-white/60">
+                      This track is already in the playlist.
+                    </p>
                   </div>
                 </div>
-                <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-0 border-t border-slate-100/25">
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className="inline-flex w-full justify-center px-3 py-3 text-sm font-[560] text-[#6c8bd5] shadow-sm sm:col-start-2"
-                  >
-                    Don't Add
-                  </button>
-                  <button
-                    type="button"
-                    data-autofocus
-                    onClick={handleAddAnyway}
-                    className="mt-3 inline-flex w-full justify-center px-3 py-3 text-sm font-[560] text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
-                  >
-                    Add Anyway
-                  </button>
-                </div>
-              </DialogPanel>
-            </div>
+              </div>
+              <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-0 border-t border-slate-100/25">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex w-full justify-center px-3 py-3 text-sm font-[560] text-[#6c8bd5] shadow-sm sm:col-start-2"
+                >
+                  Don't Add
+                </button>
+                <button
+                  type="button"
+                  data-autofocus
+                  onClick={handleAddAnyway}
+                  className="mt-3 inline-flex w-full justify-center px-3 py-3 text-sm font-[560] text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
+                >
+                  Add Anyway
+                </button>
+              </div>
+            </DialogPanel>
           </div>
-        </Dialog>
-      </Drawer.Root>
+        </div>
+      </Dialog>
     </>
   );
 };

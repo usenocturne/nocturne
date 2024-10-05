@@ -50,13 +50,33 @@ export default function App({ Component, pageProps }) {
     radio: null,
   });
   const [currentPlayback, setCurrentPlayback] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleEscapePress = (event) => {
     if (event.key === "Escape") {
-      router.push("/");
-      setActiveSection("recents");
+      window.dispatchEvent(new CustomEvent("app-escape-pressed"));
     }
   };
+
+  useEffect(() => {
+    const handleAppEscape = () => {
+      if (!drawerOpen) {
+        const currentPath = router.pathname;
+        if (currentPath === "/") {
+          router.push("/now-playing");
+        } else if (currentPath !== "/now-playing") {
+          router.push("/");
+          setActiveSection("recents");
+        }
+      }
+    };
+
+    window.addEventListener("app-escape-pressed", handleAppEscape);
+
+    return () => {
+      window.removeEventListener("app-escape-pressed", handleAppEscape);
+    };
+  }, [drawerOpen, router, setActiveSection]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -163,7 +183,7 @@ export default function App({ Component, pageProps }) {
           } else if (currentlyPlayingAlbum !== null) {
             setCurrentlyPlayingAlbum(null);
             setCurrentlyPlayingTrackUri(null);
-            const imageUrl = "/not-playing.webp";
+            const imageUrl = "/images/not-playing.webp";
             if (imageUrl !== albumImage) {
               localStorage.setItem("albumImage", imageUrl);
               setAlbumImage(imageUrl);
@@ -179,7 +199,7 @@ export default function App({ Component, pageProps }) {
             setCurrentPlayback(null);
             setCurrentlyPlayingAlbum(null);
             setCurrentlyPlayingTrackUri(null);
-            const imageUrl = "/not-playing.webp";
+            const imageUrl = "/images/not-playing.webp";
             if (imageUrl !== albumImage) {
               localStorage.setItem("albumImage", imageUrl);
               setAlbumImage(imageUrl);
@@ -196,7 +216,7 @@ export default function App({ Component, pageProps }) {
           setCurrentPlayback(null);
           setCurrentlyPlayingAlbum(null);
           setCurrentlyPlayingTrackUri(null);
-          const imageUrl = "/not-playing.webp";
+          const imageUrl = "/images/not-playing.webp";
           if (imageUrl !== albumImage) {
             localStorage.setItem("albumImage", imageUrl);
             setAlbumImage(imageUrl);
@@ -502,6 +522,8 @@ export default function App({ Component, pageProps }) {
           currentlyPlayingTrackUri={currentlyPlayingTrackUri}
           currentPlayback={currentPlayback}
           fetchCurrentPlayback={fetchCurrentPlayback}
+          drawerOpen={drawerOpen}
+          setDrawerOpen={setDrawerOpen}
         />
       </div>
     </main>
