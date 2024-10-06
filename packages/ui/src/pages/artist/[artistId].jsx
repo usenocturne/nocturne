@@ -1,9 +1,10 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import Link from "next/link";
+import LongPressLink from "../../components/LongPressLink";
 
 const ArtistPage = ({ artist, currentlyPlayingTrackUri }) => {
   const router = useRouter();
+  const accessToken = router.query.accessToken;
 
   useEffect(() => {
     const artistImage =
@@ -89,21 +90,31 @@ const ArtistPage = ({ artist, currentlyPlayingTrackUri }) => {
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen">
       <div className="md:w-1/3 h-screen sticky top-0">
         {artist.images && artist.images.length > 0 ? (
-          <>
-            <div className="min-w-[280px] mr-10">
+          <div className="min-w-[280px] mr-10">
+            <LongPressLink
+              href={`/`}
+              spotifyUrl={artist.external_urls.spotify}
+              accessToken={accessToken}
+            >
               <img
                 src={artist.images[0].url}
                 alt="Artist"
                 className="w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
               />
+            </LongPressLink>
+            <LongPressLink
+              href={`/`}
+              spotifyUrl={artist.external_urls.spotify}
+              accessToken={accessToken}
+            >
               <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                 {artist.name}
               </h4>
-              <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                {artist.followers.total.toLocaleString()} Followers
-              </h4>
-            </div>
-          </>
+            </LongPressLink>
+            <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+              {artist.followers.total.toLocaleString()} Followers
+            </h4>
+          </div>
         ) : (
           <p>No image available</p>
         )}
@@ -112,36 +123,56 @@ const ArtistPage = ({ artist, currentlyPlayingTrackUri }) => {
       <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
         {artist.topTracks && artist.topTracks.length > 0 ? (
           artist.topTracks.map((track, index) => (
-            <Link key={track.id} href={`/now-playing`}>
-              <div
-                onClick={() => playTrack(track.uri, index)}
-                className="flex gap-12 items-start mb-4"
-              >
-                <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
-                  {track.uri === currentlyPlayingTrackUri ? (
-                    <div className="w-5">
-                      <section>
-                        <div className="wave0"></div>
-                        <div className="wave1"></div>
-                        <div className="wave2"></div>
-                        <div className="wave3"></div>
-                      </section>
-                    </div>
-                  ) : (
-                    <p>{index + 1}</p>
-                  )}
-                </div>
+            <div key={track.id} className="flex gap-12 items-start mb-4">
+              <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
+                {track.uri === currentlyPlayingTrackUri ? (
+                  <div className="w-5">
+                    <section>
+                      <div className="wave0"></div>
+                      <div className="wave1"></div>
+                      <div className="wave2"></div>
+                      <div className="wave3"></div>
+                    </section>
+                  </div>
+                ) : (
+                  <p>{index + 1}</p>
+                )}
+              </div>
 
-                <div>
-                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {track.name}
-                  </p>
-                  <p className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                    {track.artists.map((artist) => artist.name).join(", ")}
-                  </p>
+              <div className="flex-grow">
+                <LongPressLink
+                  href="/now-playing"
+                  spotifyUrl={track.external_urls.spotify}
+                  accessToken={accessToken}
+                >
+                  <div onClick={() => playTrack(track.uri, index)}>
+                    <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                      {track.name}
+                    </p>
+                  </div>
+                </LongPressLink>
+                <div className="flex flex-wrap">
+                  {track.artists.map((artist, artistIndex) => (
+                    <LongPressLink
+                      key={artist.id}
+                      href={`/artist/${artist.id}`}
+                      spotifyUrl={artist.external_urls.spotify}
+                      accessToken={accessToken}
+                    >
+                      <p
+                        className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${
+                          artistIndex < track.artists.length - 1
+                            ? 'mr-2 after:content-[","]'
+                            : ""
+                        }`}
+                      >
+                        {artist.name}
+                      </p>
+                    </LongPressLink>
+                  ))}
                 </div>
               </div>
-            </Link>
+            </div>
           ))
         ) : (
           <p>No tracks available</p>
@@ -185,6 +216,7 @@ export async function getServerSideProps(context) {
   return {
     props: {
       artist: { ...artistData, topTracks: topTracksData.tracks },
+      accessToken,
     },
   };
 }

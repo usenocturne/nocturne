@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@headlessui/react";
 import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
+import LongPressLink from "../components/LongPressLink";
 
 const NowPlaying = ({
   accessToken,
@@ -916,42 +917,62 @@ const NowPlaying = ({
       <div className="flex flex-col gap-4 h-screen w-full z-10">
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div className="min-w-[280px] mr-8">
-            <img
-              src={albumArt}
-              alt="/images/not-playing.webp"
-              className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-            />
+            <LongPressLink
+              href={`/album/${currentPlayback?.item?.album?.id}`}
+              spotifyUrl={currentPlayback?.item?.album?.external_urls?.spotify}
+              accessToken={accessToken}
+            >
+              <img
+                src={albumArt}
+                alt="/images/not-playing.webp"
+                className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+              />
+            </LongPressLink>
           </div>
           {!showLyrics ? (
             <div className="flex-1 text-center md:text-left">
-              {trackNameScrollingEnabled ? (
-                <div className="track-name-container overflow-hidden relative max-w-[380px]">
-                  <h4
-                    className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                      trackName.length > 20 ? "animate-scroll" : "truncate"
-                    }`}
-                    key={trackName}
-                    style={
-                      trackName.length > 20
-                        ? {
-                            animationDuration: `${getScrollDuration(
-                              trackName
-                            )}`,
-                          }
-                        : {}
-                    }
-                  >
+              <LongPressLink
+                href={`/track/${currentPlayback?.item?.id}`}
+                spotifyUrl={currentPlayback?.item?.external_urls?.spotify}
+                accessToken={accessToken}
+              >
+                {trackNameScrollingEnabled ? (
+                  <div className="track-name-container overflow-hidden relative max-w-[380px]">
+                    <h4
+                      className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
+                        trackName.length > 20 ? "animate-scroll" : "truncate"
+                      }`}
+                      key={trackName}
+                      style={
+                        trackName.length > 20
+                          ? {
+                              animationDuration: `${getScrollDuration(
+                                trackName
+                              )}`,
+                            }
+                          : {}
+                      }
+                    >
+                      {trackName}
+                    </h4>
+                  </div>
+                ) : (
+                  <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
                     {trackName}
                   </h4>
-                </div>
-              ) : (
-                <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
-                  {trackName}
+                )}
+              </LongPressLink>
+              <LongPressLink
+                href={`/artist/${currentPlayback?.item?.artists[0]?.id}`}
+                spotifyUrl={
+                  currentPlayback?.item?.artists[0]?.external_urls?.spotify
+                }
+                accessToken={accessToken}
+              >
+                <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
+                  {artistName}
                 </h4>
-              )}
-              <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
-                {artistName}
-              </h4>
+              </LongPressLink>
             </div>
           ) : (
             <div className="flex-1 flex flex-col h-[280px]">
@@ -1169,22 +1190,29 @@ const NowPlaying = ({
         <DrawerContent>
           <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
             {playlists.map((item) => (
-              <div
-                key={item.id}
-                className="min-w-[280px] mr-10 mb-4"
-                onClick={async () => {
-                  await addTrackToPlaylist(item.id);
-                  setDrawerOpen(false);
-                }}
-              >
-                <img
-                  src={item.images[0]?.url || "/images/not-playing.webp"}
-                  alt="Playlist Cover"
-                  className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
-                />
-                <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                  {item.name}
-                </h4>
+              <div key={item.id} className="min-w-[280px] mr-10 mb-4">
+                <LongPressLink
+                  href={`/playlist/${item.id}`}
+                  spotifyUrl={item.external_urls.spotify}
+                  accessToken={accessToken}
+                >
+                  <div
+                    onClick={async (e) => {
+                      e.preventDefault(); // Prevent navigation on normal click
+                      await addTrackToPlaylist(item.id);
+                      setDrawerOpen(false);
+                    }}
+                  >
+                    <img
+                      src={item.images[0]?.url || "/images/not-playing.webp"}
+                      alt="Playlist Cover"
+                      className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                    />
+                    <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                      {item.name}
+                    </h4>
+                  </div>
+                </LongPressLink>
               </div>
             ))}
           </div>
@@ -1201,18 +1229,18 @@ const NowPlaying = ({
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <DialogPanel
               transition
-              className="relative transform overflow-hidden rounded-[17px] bg-black/35 backdrop-blur-xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[24rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+              className="relative transform overflow-hidden rounded-[17px] bg-black/30 backdrop-blur-xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[36rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
             >
               <div>
                 <div className="text-center">
                   <DialogTitle
                     as="h3"
-                    className="text-base font-[560] leading-6 text-white"
+                    className="text-[36px] font-[560] tracking-tight text-white font-sans"
                   >
                     Already Added
                   </DialogTitle>
                   <div className="mt-2">
-                    <p className="text-sm text-white/60">
+                    <p className="text-[28px] font-[560] tracking-tight text-white/60">
                       This track is already in the playlist.
                     </p>
                   </div>
@@ -1222,7 +1250,7 @@ const NowPlaying = ({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="inline-flex w-full justify-center px-3 py-3 text-sm font-[560] text-[#6c8bd5] shadow-sm sm:col-start-2"
+                  className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm sm:col-start-2"
                 >
                   Don't Add
                 </button>
@@ -1230,7 +1258,7 @@ const NowPlaying = ({
                   type="button"
                   data-autofocus
                   onClick={handleAddAnyway}
-                  className="mt-3 inline-flex w-full justify-center px-3 py-3 text-sm font-[560] text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
+                  className="mt-3 inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
                 >
                   Add Anyway
                 </button>

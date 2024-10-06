@@ -1,9 +1,10 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import Link from "next/link";
+import LongPressLink from "../../components/LongPressLink";
 
 const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
   const router = useRouter();
+  const accessToken = router.query.accessToken;
 
   useEffect(() => {
     const albumImage =
@@ -67,8 +68,8 @@ const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            context_uri: album.uri, // Use the album URI as context
-            offset: { position: trackIndex }, // Start from the selected track
+            context_uri: album.uri,
+            offset: { position: trackIndex },
             device_id: activeDeviceId,
           }),
         }
@@ -87,21 +88,37 @@ const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen">
       <div className="md:w-1/3 h-screen sticky top-0">
         {album.images && album.images.length > 0 ? (
-          <>
-            <div className="min-w-[280px] mr-10">
+          <div className="min-w-[280px] mr-10">
+            <LongPressLink
+              href={`/`}
+              spotifyUrl={album.external_urls.spotify}
+              accessToken={accessToken}
+            >
               <img
                 src={album.images[0].url}
                 alt="Album Cover"
                 className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
               />
+            </LongPressLink>
+            <LongPressLink
+              href={`/`}
+              spotifyUrl={album.external_urls.spotify}
+              accessToken={accessToken}
+            >
               <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                 {album.name}
               </h4>
+            </LongPressLink>
+            <LongPressLink
+              href={`/artist/${album.artists[0].id}`}
+              spotifyUrl={album.artists[0].external_urls.spotify}
+              accessToken={accessToken}
+            >
               <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
                 {album.artists.map((artist) => artist.name).join(", ")}
               </h4>
-            </div>
-          </>
+            </LongPressLink>
+          </div>
         ) : (
           <p>No image available</p>
         )}
@@ -110,39 +127,45 @@ const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
       <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
         {album.tracks && album.tracks.items ? (
           album.tracks.items.map((track, index) => (
-            <>
-              <Link href={`/now-playing`}>
-                <div
-                  key={track.id}
-                  onClick={() => playTrack(track.uri, index)}
-                  className="flex gap-12 items-start mb-4"
-                >
-                  <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
-                    {track.uri === currentlyPlayingTrackUri ? (
-                      <div className="w-5">
-                        <section>
-                          <div className="wave0"></div>
-                          <div className="wave1"></div>
-                          <div className="wave2"></div>
-                          <div className="wave3"></div>
-                        </section>
-                      </div>
-                    ) : (
-                      <p>{index + 1}</p>
-                    )}
+            <div key={track.id} className="flex gap-12 items-start mb-4">
+              <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
+                {track.uri === currentlyPlayingTrackUri ? (
+                  <div className="w-5">
+                    <section>
+                      <div className="wave0"></div>
+                      <div className="wave1"></div>
+                      <div className="wave2"></div>
+                      <div className="wave3"></div>
+                    </section>
                   </div>
+                ) : (
+                  <p>{index + 1}</p>
+                )}
+              </div>
 
-                  <div>
+              <div className="flex-grow">
+                <LongPressLink
+                  href="/now-playing"
+                  spotifyUrl={track.external_urls.spotify}
+                  accessToken={accessToken}
+                >
+                  <div onClick={() => playTrack(track.uri, index)}>
                     <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                       {track.name}
                     </p>
-                    <p className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                      {track.artists.map((artist) => artist.name).join(", ")}
-                    </p>
                   </div>
-                </div>
-              </Link>
-            </>
+                </LongPressLink>
+                <LongPressLink
+                  href={`/artist/${track.artists[0].id}`}
+                  spotifyUrl={track.artists[0].external_urls.spotify}
+                  accessToken={accessToken}
+                >
+                  <p className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                    {track.artists.map((artist) => artist.name).join(", ")}
+                  </p>
+                </LongPressLink>
+              </div>
+            </div>
           ))
         ) : (
           <p>No tracks available</p>
@@ -170,7 +193,7 @@ export async function getServerSideProps(context) {
 
   const album = await res.json();
   return {
-    props: { album },
+    props: { album, accessToken },
   };
 }
 
