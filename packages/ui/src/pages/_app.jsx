@@ -12,10 +12,6 @@ import {
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
-const CLIENT_ID = "";
-const CLIENT_SECRET = "";
-const REDIRECT_URI = "";
-
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const [accessToken, setAccessToken] = useState(null);
@@ -254,23 +250,22 @@ export default function App({ Component, pageProps }) {
     const scopes =
       "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
 
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=${scopes}`;
+    window.location.href = `https://accounts.spotify.com/authorize?client_id=${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&scope=${scopes}`;
   };
 
   const fetchAccessToken = async (code) => {
     try {
-      const response = await fetch("https://accounts.spotify.com/api/token", {
+      const response = await fetch("/api/token", {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: "Basic " + btoa(`${CLIENT_ID}:${CLIENT_SECRET}`),
+          "Content-Type": "application/json",
         },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code: code,
-          redirect_uri: REDIRECT_URI,
-        }),
+        body: JSON.stringify({ code }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       setAccessToken(data.access_token);
@@ -282,20 +277,23 @@ export default function App({ Component, pageProps }) {
 
   const refreshAccessToken = async () => {
     try {
-      const response = await fetch("https://accounts.spotify.com/api/token", {
+      const response = await fetch("/api/refresh-token", {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: "Basic " + btoa(`${CLIENT_ID}:${CLIENT_SECRET}`),
+          "Content-Type": "application/json",
         },
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          refresh_token: refreshToken,
-        }),
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       setAccessToken(data.access_token);
+      if (data.refresh_token) {
+        setRefreshToken(data.refresh_token);
+      }
     } catch (error) {
       console.error("Error refreshing access token:", error);
     }
