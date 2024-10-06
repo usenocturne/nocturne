@@ -15,7 +15,7 @@ export default function Home({
   return (
     <div className="relative min-h-screen">
       {!loading && (
-        <div className="relative z-10 grid grid-cols-[2.21fr_3fr] fadeIn-animation">
+        <div className="relative z-10 grid grid-cols-[2.21fr_3fr] fadeIn-animation scroll-container">
           <div className="h-screen overflow-y-auto pb-12 pl-8 relative">
             <Sidebar
               activeSection={activeSection}
