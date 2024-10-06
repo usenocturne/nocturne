@@ -79,6 +79,26 @@ export default function App({ Component, pageProps }) {
   }, [drawerOpen, router, setActiveSection]);
 
   useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === "m" || event.key === "M") {
+        if (router.pathname !== "/") {
+          router.push("/").then(() => {
+            setActiveSection("settings");
+          });
+        } else {
+          setActiveSection("settings");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [router]);
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const code = new URLSearchParams(window.location.search).get("code");
       setAuthCode(code);
