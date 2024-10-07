@@ -56,15 +56,9 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     const handleAppEscape = () => {
-      if (!drawerOpen) {
-        const currentPath = router.pathname;
-        if (currentPath === "/") {
-          router.push("/now-playing");
-        } else if (currentPath !== "/now-playing") {
-          router.push("/");
-          setActiveSection("recents");
-        }
-      }
+      router.push("/").then(() => {
+        setActiveSection("recents");
+      });
     };
 
     window.addEventListener("app-escape-pressed", handleAppEscape);
