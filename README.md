@@ -33,7 +33,7 @@ Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager
 
 #### Flashing Process
 
-If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
+If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
 
 Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
@@ -87,7 +87,7 @@ Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager
 
 #### Flashing Process
 
-If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
+If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
 
 Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
@@ -137,7 +137,7 @@ Login to Spotify on the Car Thing using VNC Viewer.
 
 #### Flashing Process
 
-If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
+If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
 
 Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
