@@ -1,162 +1,205 @@
-# Wall Thing: Debian Chromium Kiosk on Spotify Car Thing (superbird)
 
-This is a prebuilt image of Debian 13 (Trixie) for the Spotify Car Thing, aka superbird.
-It combines the stock kernel with a debian rootfs, and launches a fullscreen Chromium kiosk. I like to use it with Home Assistant.
+<h1 align="center">
+  <br>
+  <a href="http://www.amitmerchant.com/electron-markdownify"><img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-logo.png" alt="Markdownify" width="200"></a>
+  <br>
+  nocturne-image
+  <br>
+</h1>
 
-<img src="pictures/superbird_ha_portrait.jpg" alt="Home Assistant on Car Thing" style="height: 300px;"/>
-<img src="pictures/superbird_wall_mount.jpg" alt="Home Assistant on Car Thing" style="height: 300px;"/>
+<h4 align="center">A pre-built Debian 13 image for the <a href="https://carthing.spotify.com/" target="_blank">Spotify Car Thing</a>.</h4>
 
+<p align="center">
+  <a href="#how-to-use">How To Use</a> •
+  <a href="#download">Download</a> •
+  <a href="#credits">Credits</a> •
+  <a href="#related">Related</a> •
+  <a href="#license">License</a>
+</p>
 
-This image will remove the default Spotify functionality. You should definitely [make a full backup](https://github.com/bishopdynamics/superbird-tool) before proceeding!
+![screenshot](https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-1.png)
 
-Default user and password are both `superbird`
+## How To Use
 
-![Latest Release](https://img.shields.io/github/v/release/bishopdynamics/superbird-debian-kiosk?logo=github)
+Unless receiving power through a Linux computer, running Nocturne on your Car Thing requires a host device such as a Raspberry Pi, a microSD card, a microUSB to USB-C cable, and a microUSB/your power source's connector. You will also need [superbird-tool](https://github.com/bishopdynamics/superbird-tool) to flash the image regardless of your computer's operating system.
 
-## Features
+### Windows
 
-Working:
-* Debian 13 (Trixie) aarch64
-* Framebuffer display working with X11, in portrait or landscape, with touch input
-* Networking via USB RNDIS (requires a host device)
-* Automatic blacklight on/off with display wake/sleep
-* VNC and SSH (forwarded through host device)
-* Chromium browser, fullscreen kiosk mode
-* Buttons and dial used to control a light and recall scenes/automations/scripts on Home Assistant
-* 256MB `settings` partition used for Chromium user profile
+#### Raspberry Pi Setup
 
-Available, but not used in this image:
+Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager/imager_latest.dmg), select Raspberry Pi OS Lite (64-bit), select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
 
-* Bluetooth
-* Backlight brightness control (currently fixed at 100)
-* Audio (mic array, DSP)
+#### Flashing Process
 
-Not working: 
-* Wifi
-* GPU acceleration
+If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
 
-WiFi is technically possible on this hardware, but the stock bootloaders and kernel disable it.
-It might be possible to cherry-pick the wifi information from the Radxa Zero device tree (practically the same SoC), but I think you would need to rebuild one or more of the bootloader stages to make it work.
-
-GPU: the hardware has a Mali GPU, but the stock OS uses it via DirectFB QT library, and does not include necessary libraries to make it work with X11. It may be possible to grab the needed files from Radxa Zero.
-
-
-## Boot Modes
-
-After installation, you will have 3 different boot options, depending on what buttons are held:
-
-* Debian Mode - default, no buttons held
-  * bootlogo says Debian Trixie
-  * kernel is `boot_a` root is `data`
-
-* Utility Mode - hold button 1
-  * bootlogo says Utility Mode
-  * kernel is `boot_a` root is `system_a`
-  * adb and already configured
-  * scripts to install debian
-
-* USB Burn Mode - hold button 4
-  * bootlogo says USB Burn Mode
-
-
-## Installation
-
-### Requirements:
-* Spotify Car Thing
-* another device to act as host, such as Radxa Zero, Rockpi S, Raspberry Pi 4, etc
-* a USB cable to connect the two
-* power supply for the host device
-* a desktop/laptop for flashing the image to the Car Thing
-
-
-### Setup:
-1. Download and extract the latest image from [Releases](https://github.com/bishopdynamics/superbird-debian-kiosk/releases)
-2. Put your device in burn mode by holding buttons 1 & 4 while plugging into usb port
-   1. avoid using a USB hub, you will have issues flashing the image
-3. Use the latest version of [superbird-tool](https://github.com/bishopdynamics/superbird-tool) to flash the extracted image folder:
+Download and unzip [debian_v1.0_2024-10-08.tar.gz](TBD), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
 ```bash
-# root may be needed, check superbird-tool readme for platform-specific usage
-# make sure your device is found
-python3 superbird_tool.py --find_device
-# restore the entire folder to your device
-python3 superbird_tool.py --restore_device ~/Downloads/debian_v1.2_2023-12-19
+# Go into the superbird-tool repository
+$ cd C:/path/to/superbird-tool-main
+
+# Find device
+$ python superbird_tool.py --find_device
+
+# Flash Nocturne image
+$ python superbird_tool.py --restore_device C:/path/to/debian_v1.0_2024-10-08
+
+# Disable charger check
+$ python superbird_tool.py --disable_charger_check
 ```
 
-4. Configure a host system
-   1. Select a host device. I have tested:
-      1. [Radxa Zero](pictures/superbird_wall_mount.jpg) with [Armbian](https://www.armbian.com/radxa-zero/) Jammy Minimal CLI
-         1. The Armbian Bookworm release did not work with USB burn mode, but works fine as a host just for networking
-      2. [Radxa Rockpi S](pictures/superbird_landscape_back.jpg) ([with a PoE hat!](pictures/superbird_poe.jpg)), also with Armbian Jammy
-      3. Raspberry Pi 4B, with Raspi OS Bookworm Lite
-   2. Copy and run `setup_host.sh` on the host device (as root), and reboot
-   3. Connect the Car Thing into the host device and power it up
-5. ssh to the host device, and then you should be able to ssh to the Car Thing (user and password are both `superbird`) :
+Connect your Raspberry Pi to your computer and run the following from your command line:
+
 ```bash
-# script added entry in /etc/hosts, use hostname "superbird" from host device
-ssh superbird@superbird
-# or by ip (host device is 192.168.7.1, superbird is 192.168.7.2)
-ssh superbird@192.168.7.2
+# Clone this repository
+$ git clone https://github.com/brandonsaldan/nocturne-image
+
+# Transfer setup_host.sh to Raspberry Pi
+$ scp /path/to/nocturne-image/setup_config.sh pi@raspberrypi.local:/home/pi/
+
+# Transfer image_config.sh to Raspberry Pi
+$ scp /path/to/nocturne-image/image_config.sh pi@pi@raspberrypi.local:/home/pi/
+
+# Ssh into Raspberry Pi
+$ ssh pi@pi@raspberrypi.local
+
+# Make setup_host.sh executable
+$ chmod +x /home/pi/setup_host.sh
+
+# Execute setup_host.sh
+$ sudo ./setup_host.sh
+
+# Reboot Raspberry Pi
+$ reboot
 ```
-1. From another device on the same network, you should be able to ssh directly to the Car Thing using port 2022:
+
+Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. Input `superbird` as the password.
+
+Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
+
+Login to Spotify on the Car Thing using VNC Viewer.
+
+### macOS
+
+#### Raspberry Pi Setup
+
+Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager/imager_latest.dmg), select Raspberry Pi OS Lite (64-bit), select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
+
+#### Flashing Process
+
+If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
+
+Download and unzip [debian_v1.0_2024-10-08.tar.gz](TBD), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
+
 ```bash
-# where "host-device" is the hostname or ip of your host device
-ssh -p 2022 superbird@host-device
+# Go into the superbird-tool repository
+$ cd /path/to/superbird-tool-main
+
+# Find device
+$ /opt/homebrew/bin/python3 superbird_tool.py --find_device
+
+# Flash Nocturne image
+$ /opt/homebrew/bin/python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08
+
+# Disable charger check
+$ /opt/homebrew/bin/python3 superbird_tool.py --disable_charger_check
 ```
-1. Once you have ssh access to the Car Thing, edit some things:
-   1. Probably change password
-   2. Edit `/scripts/chromium_settings.sh` to change what URL to launch in the kiosk
-      1. Restart X11 and Chromium with: `sudo systemctl restart chromium.service`
-   3. Edit `/scripts/buttons_settings.py` to change Home Assistant URL and add long-lived token for access
-      1. assign scenes/automations/scripts to buttons, assign a light entity to the knob
-      2. Restart buttons script with: `sudo systemctl restart buttons.service`
-   4. Edit `/etc/X11/xorg.conf` to adjust screen timeout (default 10 mins), orientation (default portrait)
-      1. for landscape, un-comment lines `38` and `71`
-   5. Edit `/scripts/setup_display.sh` and `/scripts/setup_backlight.sh` to adjust backlight brightness (default 100)
-      1. Restart backlight script with: `sudo systemctl restart backlight.service`
-   6. Change vnc password: `sudo vncpasswd /scripts/vnc_passwd`
-      1. Restart vnc server with: `sudo systemctl restart vnc.service`
-2. Using your favorite VNC client, connect by VNC to the host device's address, port 5900, if you need to interact with a page (sign in)
-3. ?
-4.  Profit
 
+Connect your Raspberry Pi to your computer and run the following from your command line:
 
-## How to build the image
+```bash
+# Clone this repository
+$ git clone https://github.com/brandonsaldan/nocturne-image
 
-1. using [superbird-tool](https://github.com/bishopdynamics/superbird-tool), use `--dump_device` to dump a stock device into `./dumps/debian_current/`
-2. run `./build_image.sh`, which will:
-   1. replace `env.txt` with switchable version (see [`files/env/env_switchable.txt`](files/env/env_switchable.txt))
-   2. modify `system_a` partition for Utility Mode:
-      1. install usb gadget for ADB (see [`files/system_a/etc/init.d/S49usbgadget`](files/system_a/etc/init.d/S49usbgadget))
-      2. modify `/etc/fstab` and `/etc/inittab` to not mount `data` or `settings` partitions (see [`files/system_a/etc/`](files/system_a/etc))
-   3. format `settings` partition
-   4. format `data` partition, and:
-      1. use debootstrap to create a minimal debian root filesystem, plus a few extra packages
-         1. `systemd systemd-sysv dbus kmod usbutils htop nano tree file less locales sudo dialog apt wget curl iputils-ping iputils-tracepath iputils-arping iproute2 net-tools openssh-server ntp xserver-xorg-core xserver-xorg-video-fbdev xterm xinit x11-xserver-utils shared-mime-info xserver-xorg-input-evdev libinput-bin xserver-xorg-input-libinput xinput fbset x11vnc chromium python3-minimal python3-pip`
-         2. python packages from [`requirements.txt`](files/data/scripts/requirements.txt)
-      2. copy `/lib/modules/4.9.113` from `system_a`
-      3. configure X11 via [`/etc/X11/xorg.conf`](files/data/etc/X11/xorg.conf.portrait)
-      4. set hostname to `superbird` (configure in [`image_config.sh`](image_config.sh))
-      5.  add entry to `/etc/hosts` to resolve `host` as `192.168.7.1` (host device)
-      6.  create regular user `superbird`, password: `superbird`, with passwordless sudo (configure in [`image_config.sh`](image_config.sh))
-      7.  install scripts to `/scripts/` (see [`files/data/scripts/`](files/data/scripts))
-      8.  install services to `/lib/systemd/system/` (see [`files/data/lib/systemd/system/`](files/data/lib/systemd/system))
-      9.  set locale to `en_US.UTF-8`
-      10. set timezone to `America/Los_Angeles`
-      11. add entry to `/etc/fstab` to mount `settings` partition at `/config` (for chromium profile) (see [`files/data/etc/fstab`](files/data/etc/fstab))
-      12. add entry to `/etc/inittab` to enable serial console at 115200 baud (see [`files/data/etc/inittab`](files/data/etc/inittab))
-      13. generate new image for `logo` partition using [`files/logo/*.bmp`](files/logo)
-3.  You now have an image at `./dumps/debian_current/` ready to flash to device using [superbird-tool](https://github.com/bishopdynamics/superbird-tool)
+# Transfer setup_host.sh to Raspberry Pi
+$ scp /path/to/nocturne-image/setup_config.sh pi@pi@raspberrypi.local:/home/pi/
 
+# Transfer image_config.sh to Raspberry Pi
+$ scp /path/to/nocturne-image/image_config.sh pi@pi@raspberrypi.local:/home/pi/
 
-Hint: Install `apt-cacher-ng` and then run `./build_image.sh --local_proxy` to use locally cached packages (avoid re-downloading packages every time, much faster)
+# Ssh into Raspberry Pi
+$ ssh pi@pi@raspberrypi.local
 
+# Make setup_host.sh executable
+$ chmod +x /home/pi/setup_host.sh
 
-## Warranty and Liability
+# Execute setup_host.sh
+$ sudo ./setup_host.sh
 
-None. You definitely can mess up your device in ways that are difficult to recover. I cannot promise a bug in this script will not brick your device.
-By using this tool, you accept responsibility for the outcome. 
+# Reboot Raspberry Pi
+$ reboot
+```
 
-I highly recommend connecting to the UART console, [frederic's repo](https://github.com/frederic/superbird-bulkcmd) has some good pictures showing where the pads are.
+Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. Input `superbird` as the password.
 
-Make backups.
+Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
+
+Login to Spotify on the Car Thing using VNC Viewer.
+
+### Linux
+
+#### Flashing Process
+
+If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
+
+Download and unzip [debian_v1.0_2024-10-08.tar.gz](TBD), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
+
+```bash
+# Go into the superbird-tool repository
+$ cd /path/to/superbird-tool-main
+
+# Find device
+$ sudo python3 superbird_tool.py --find_device
+
+# Flash Nocturne image
+$ sudo python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08
+
+# Disable charger check
+$ sudo python3 superbird_tool.py --disable_charger_check
+
+# Clone this repository
+$ git clone https://github.com/brandonsaldan/nocturne-image
+
+# Go into the nocturne-image repository
+$ cd /path/to/nocturne-image
+
+# Make setup_host.sh executable
+$ chmod +x /home/pi/setup_host.sh
+
+# Execute setup_host.sh
+$ sudo ./setup_host.sh
+```
+
+Connect Car Thing to your computer, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. Input `superbird` as the password.
+
+Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
+
+Login to Spotify on the Car Thing using VNC Viewer.
+
+## Download
+
+You can [download](https://github.com/brandonsaldan/releases/TBD) the latest flashable version of Nocturne for Windows, macOS and Linux.
+
+## Credits
+
+This software was made possible only through the following individuals and open source programs:
+
+- [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/)
+- [shadow](https://github.com/68p)
+- [bishopdynamics & superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
+
+## Related
+
+[nocturne](https://github.com/brandonsaldan/nocturne) - The web application that this Debian image runs
+
+## License
+
+MIT
+
+---
+
+> [brandons.place](https://brandons.place/) &nbsp;&middot;&nbsp;
+> GitHub [@brandonsaldan](https://github.com/brandonsaldan) &nbsp;&middot;&nbsp;
+> Twitter [@brandonsaldan](https://twitter.com/brandonsaldan)
+
