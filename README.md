@@ -35,7 +35,7 @@ Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager
 
 If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
 
-Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
+Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
 ```bash
 # Go into the superbird-tool repository
@@ -54,13 +54,10 @@ $ python superbird_tool.py --disable_charger_check
 Connect your Raspberry Pi to your computer and run the following from your command line:
 
 ```bash
-# Clone this repository
-$ git clone https://github.com/brandonsaldan/nocturne-image
-
 # Transfer setup_host.sh to Raspberry Pi
 $ scp \path\to\nocturne-image\setup_host.sh pi@raspberrypi.local:/home/pi/
 
-# Ssh into Raspberry Pi
+# SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
 
 # Make setup_host.sh executable
@@ -89,7 +86,7 @@ Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager
 
 If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
 
-Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
+Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
 ```bash
 # Go into the superbird-tool repository
@@ -108,13 +105,10 @@ $ /opt/homebrew/bin/python3 superbird_tool.py --disable_charger_check
 Connect your Raspberry Pi to your computer and run the following from your command line:
 
 ```bash
-# Clone this repository
-$ git clone https://github.com/brandonsaldan/nocturne-image
-
 # Transfer setup_host.sh to Raspberry Pi
 $ scp /path/to/nocturne-image/setup_host.sh pi@raspberrypi.local:/home/pi/
 
-# Ssh into Raspberry Pi
+# SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
 
 # Make setup_host.sh executable
@@ -139,7 +133,7 @@ Login to Spotify on the Car Thing using VNC Viewer.
 
 If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
 
-Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
+Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
 ```bash
 # Go into the superbird-tool repository
@@ -153,9 +147,6 @@ $ sudo python3 ./superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10
 
 # Disable charger check
 $ sudo python3 ./superbird_tool.py --disable_charger_check
-
-# Clone this repository
-$ git clone https://github.com/brandonsaldan/nocturne-image
 
 # Go into the nocturne-image repository
 $ cd /path/to/nocturne-image
@@ -175,7 +166,7 @@ Login to Spotify on the Car Thing using VNC Viewer.
 
 ## Download
 
-You can [download](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0) the latest flashable version of Nocturne for Windows, macOS and Linux.
+You can [download](https://github.com/brandonsaldan/nocturne-image/releases/latest) the latest flashable version of Nocturne for Windows, macOS and Linux.
 
 ## Credits
 
