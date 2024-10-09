@@ -61,7 +61,7 @@ $ git clone https://github.com/brandonsaldan/nocturne-image
 $ scp /path/to/nocturne-image/setup_config.sh pi@raspberrypi.local:/home/pi/
 
 # Ssh into Raspberry Pi
-$ ssh pi@pi@raspberrypi.local
+$ ssh pi@raspberrypi.local
 
 # Make setup_host.sh executable
 $ chmod +x /home/pi/setup_host.sh
