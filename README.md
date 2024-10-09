@@ -58,7 +58,7 @@ Connect your Raspberry Pi to your computer and run the following from your comma
 $ git clone https://github.com/brandonsaldan/nocturne-image
 
 # Transfer setup_host.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_config.sh pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup_host.sh pi@raspberrypi.local:/home/pi/
 
 # Ssh into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -112,7 +112,7 @@ Connect your Raspberry Pi to your computer and run the following from your comma
 $ git clone https://github.com/brandonsaldan/nocturne-image
 
 # Transfer setup_host.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_config.sh pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup_host.sh pi@raspberrypi.local:/home/pi/
 
 # Ssh into Raspberry Pi
 $ ssh pi@raspberrypi.local
