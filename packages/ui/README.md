@@ -30,9 +30,10 @@ Flash the image to your Car Thing using [nocturne-image](https://github.com/bran
 
 This software was made possible only through the following individuals and open source programs:
 
-- [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/)
-- [shadow](https://github.com/68p)
-- [bishopdynamics & superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
+- [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for giving me a Car Thing to develop with
+- [shadow](https://github.com/68p), for testing, troubleshooting, and crazy good repo maintainence
+- [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), and [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
+- [Car Thing Hax Community's fork of superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool), for their contributions on the original superbird-tool
 
 ## Related
 
