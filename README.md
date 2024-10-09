@@ -29,7 +29,7 @@ Unless receiving power through a Linux computer, running Nocturne on your Car Th
 
 #### Raspberry Pi Setup
 
-Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager/imager_latest.dmg), select Raspberry Pi OS Lite (64-bit), select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
+Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager/imager_latest.exe), select Raspberry Pi OS Lite (64-bit), select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
 
 #### Flashing Process
 
@@ -45,7 +45,7 @@ $ cd C:/path/to/superbird-tool-main
 $ python superbird_tool.py --find_device
 
 # Flash Nocturne image
-$ python superbird_tool.py --restore_device C:/path/to/debian_v1.0_2024-10-08
+$ python superbird_tool.py --restore_device C:/path/to/debian_v1.0_2024-10-08 --dont_reset
 
 # Disable charger check
 $ python superbird_tool.py --disable_charger_check
@@ -99,7 +99,7 @@ $ cd /path/to/superbird-tool-main
 $ /opt/homebrew/bin/python3 superbird_tool.py --find_device
 
 # Flash Nocturne image
-$ /opt/homebrew/bin/python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08
+$ /opt/homebrew/bin/python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08 --dont_reset
 
 # Disable charger check
 $ /opt/homebrew/bin/python3 superbird_tool.py --disable_charger_check
@@ -112,10 +112,10 @@ Connect your Raspberry Pi to your computer and run the following from your comma
 $ git clone https://github.com/brandonsaldan/nocturne-image
 
 # Transfer setup_host.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_config.sh pi@pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup_config.sh pi@raspberrypi.local:/home/pi/
 
 # Ssh into Raspberry Pi
-$ ssh pi@pi@raspberrypi.local
+$ ssh pi@raspberrypi.local
 
 # Make setup_host.sh executable
 $ chmod +x /home/pi/setup_host.sh
@@ -149,7 +149,7 @@ $ cd /path/to/superbird-tool-main
 $ sudo python3 superbird_tool.py --find_device
 
 # Flash Nocturne image
-$ sudo python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08
+$ sudo python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08 --dont_reset
 
 # Disable charger check
 $ sudo python3 superbird_tool.py --disable_charger_check
