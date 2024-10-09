@@ -39,13 +39,13 @@ Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsal
 
 ```bash
 # Go into the superbird-tool repository
-$ cd C:/path/to/superbird-tool-main
+$ cd C:\path\to\superbird-tool-main
 
 # Find device
 $ python superbird_tool.py --find_device
 
-# Flash Nocturne image
-$ python superbird_tool.py --restore_device C:/path/to/debian_v1.0_2024-10-08 --dont_reset
+# Flash Nocturne image, without resetting the data partition 
+$ python superbird_tool.py --restore_device C:\path\to\debian_v1.0_2024-10-08 --dont_reset
 
 # Disable charger check
 $ python superbird_tool.py --disable_charger_check
@@ -58,7 +58,7 @@ Connect your Raspberry Pi to your computer and run the following from your comma
 $ git clone https://github.com/brandonsaldan/nocturne-image
 
 # Transfer setup_host.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_host.sh pi@raspberrypi.local:/home/pi/
+$ scp \path\to\nocturne-image\setup_host.sh pi@raspberrypi.local:/home/pi/
 
 # Ssh into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -98,7 +98,7 @@ $ cd /path/to/superbird-tool-main
 # Find device
 $ /opt/homebrew/bin/python3 superbird_tool.py --find_device
 
-# Flash Nocturne image
+# Flash Nocturne image, without resetting the data partition 
 $ /opt/homebrew/bin/python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08 --dont_reset
 
 # Disable charger check
@@ -146,13 +146,13 @@ Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsal
 $ cd /path/to/superbird-tool-main
 
 # Find device
-$ sudo python3 superbird_tool.py --find_device
+$ sudo python3 ./superbird_tool.py --find_device
 
-# Flash Nocturne image
-$ sudo python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08 --dont_reset
+# Flash Nocturne image, without resetting the data partition 
+$ sudo python3 ./superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08 --dont_reset
 
 # Disable charger check
-$ sudo python3 superbird_tool.py --disable_charger_check
+$ sudo python3 ./superbird_tool.py --disable_charger_check
 
 # Clone this repository
 $ git clone https://github.com/brandonsaldan/nocturne-image
