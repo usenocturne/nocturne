@@ -24,6 +24,8 @@
 
 Flash the image to your Car Thing using [nocturne-image](https://github.com/brandonsaldan/nocturne-image/).
 
+**Note: The Debian image used to run this software on the Spotify Car Thing hardware currently does not support GPU acceleration. Some animations within the program may appear as laggy on-device, but we're working on a fix!**
+
 ## Credits
 
 This software was made possible only through the following individuals and open source programs:
