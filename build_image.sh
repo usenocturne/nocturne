@@ -1,6 +1,11 @@
 #!/bin/bash
 # shellcheck disable=SC2129
 
+# IMPORTANT!! 
+# this script doesnt work, it makes the data partition too big causing the car thing to bootloop
+# however, it does still have most of the changes made to the image for nocturne
+
+
 # build debian image, intended to run on a debian 11 arm64 host
 # expects an existing dump at ./dumps/debian_current/
 #   ./dumps is ignored by git
@@ -161,9 +166,6 @@ in_target apt update
 in_target apt install -y --no-install-recommends --no-install-suggests $STAGE2_PACKAGES
 
 mkdir -p "${INSTALL_PATH}/scripts"
-cp "${FILES_DATA}/scripts/requirements.txt" "${INSTALL_PATH}/scripts/requirements.txt"
-in_target python3 -m pip install -r /scripts/requirements.txt --break-system-packages
-
 
 ################################################ Configure partition mountpoints and serial console ##############################
 
@@ -194,13 +196,17 @@ rmdir "$SYS_PATH"
 
 echo "creating xorg.conf"
 mkdir -p "${INSTALL_PATH}/etc/X11"
-cp ${FILES_DATA}/etc/X11/xorg.conf.portrait "${INSTALL_PATH}/etc/X11/xorg.conf"
+cp ${FILES_DATA}/etc/X11/xorg.conf "${INSTALL_PATH}/etc/X11/xorg.conf"
 
 # need to disable the scripts that try to autodetect input devices, they cause double input
 # 	this is particularly evident when in landscape mode, as only one of the two inputs is correctly transformed for the rotation
 # 	these files were installed by xserver-xorg-input-libinput
 in_target mv /usr/share/X11/xorg.conf.d /usr/share/X11/xorg.conf.d.bak
 
+################################################ Setup max journal size ################################################
+echo "creating journald.conf"
+mkdir -p "${INSTALL_PATH}/etc/systemd"
+cp ${FILES_DATA}/etc/systemd/journald.conf "${INSTALL_PATH}/etc/systemd/journald.conf"
 
 ################################################ Setup Hostname and Hosts ################################################
 
@@ -262,11 +268,6 @@ install_script clear_display.sh
 install_script vnc_passwd
 install_script setup_vnc.sh
 install_service vnc.service
-
-install_script start_buttons.sh
-install_script buttons_app.py
-install_script buttons_settings.py
-install_service buttons.service
 
 install_script setup_backlight.sh
 install_service backlight.service
