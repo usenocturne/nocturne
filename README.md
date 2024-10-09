@@ -58,9 +58,6 @@ $ git clone https://github.com/brandonsaldan/nocturne-image
 # Transfer setup_host.sh to Raspberry Pi
 $ scp /path/to/nocturne-image/setup_config.sh pi@raspberrypi.local:/home/pi/
 
-# Transfer image_config.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/image_config.sh pi@pi@raspberrypi.local:/home/pi/
-
 # Ssh into Raspberry Pi
 $ ssh pi@pi@raspberrypi.local
 
@@ -114,9 +111,6 @@ $ git clone https://github.com/brandonsaldan/nocturne-image
 
 # Transfer setup_host.sh to Raspberry Pi
 $ scp /path/to/nocturne-image/setup_config.sh pi@pi@raspberrypi.local:/home/pi/
-
-# Transfer image_config.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/image_config.sh pi@pi@raspberrypi.local:/home/pi/
 
 # Ssh into Raspberry Pi
 $ ssh pi@pi@raspberrypi.local
