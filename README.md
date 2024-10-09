@@ -33,7 +33,7 @@ Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager
 
 If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
 
-Download and unzip [debian_v1.0_2024-10-08.tar.gz](TBD), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
+Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
 ```bash
 # Go into the superbird-tool repository
@@ -87,7 +87,7 @@ Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager
 
 If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
 
-Download and unzip [debian_v1.0_2024-10-08.tar.gz](TBD), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
+Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
 ```bash
 # Go into the superbird-tool repository
@@ -137,7 +137,7 @@ Login to Spotify on the Car Thing using VNC Viewer.
 
 If you haven't already, download [superbird-tool](https://github.com/bishopdynamics/superbird-tool) and run the setup process detailed [here](https://github.com/bishopdynamics/superbird-tool?tab=readme-ov-file#supported-platforms).
 
-Download and unzip [debian_v1.0_2024-10-08.tar.gz](TBD), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
+Download and unzip [debian_v1.0_2024-10-08.tar.gz](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
 ```bash
 # Go into the superbird-tool repository
@@ -173,7 +173,7 @@ Login to Spotify on the Car Thing using VNC Viewer.
 
 ## Download
 
-You can [download](https://github.com/brandonsaldan/releases/TBD) the latest flashable version of Nocturne for Windows, macOS and Linux.
+You can [download](https://github.com/brandonsaldan/nocturne-image/releases/tag/v1.0) the latest flashable version of Nocturne for Windows, macOS and Linux.
 
 ## Credits
 
@@ -189,7 +189,7 @@ This software was made possible only through the following individuals and open 
 
 ## License
 
-MIT
+This project is licensed under the **MIT** license.
 
 ---
 
