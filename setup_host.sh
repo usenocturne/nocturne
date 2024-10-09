@@ -3,8 +3,8 @@
 # setup a debian/ubuntu host machine to provide internet for USB device connected
 #   this should be run ONCE on the host machine
 
-# all config lives in image_config.sh
-source ./image_config.sh
+HOST_NAME="superbird"
+USBNET_PREFIX="192.168.7"  # usb network will use .1 as host device, and .2 for superbird
 
 # need to be root
 if [ "$(id -u)" != "0" ]; then
