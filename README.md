@@ -21,7 +21,7 @@
 
 ## How To Use
 
-Unless receiving power through a Linux computer, running Nocturne on your Car Thing requires a host device such as a Raspberry Pi, a microSD card, a microUSB to USB-C cable, and a microUSB/your power source's connector. You will also need [superbird-tool](https://github.com/bishopdynamics/superbird-tool) to flash the image regardless of your computer's operating system.
+Unless receiving power through a Linux computer, running Nocturne on your Car Thing requires a host device such as a Raspberry Pi, a microSD card, a microUSB to USB-C cable, and a microUSB/your power source's connector. You will also need [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) to flash the image regardless of your computer's operating system.
 
 **Note: The Debian image used to run this software on the Spotify Car Thing hardware currently does not support GPU acceleration. Some animations within the program may appear as laggy on-device, but we're working on a fix!**
 
