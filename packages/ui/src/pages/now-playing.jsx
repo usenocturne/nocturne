@@ -944,7 +944,7 @@ const NowPlaying = ({
           {!showLyrics ? (
             <div className="flex-1 text-center md:text-left">
               <LongPressLink
-                href={`/track/${currentPlayback?.item?.id}`}
+                href={`/album/${currentPlayback?.item?.album?.id}`}
                 spotifyUrl={currentPlayback?.item?.external_urls?.spotify}
                 accessToken={accessToken}
               >
