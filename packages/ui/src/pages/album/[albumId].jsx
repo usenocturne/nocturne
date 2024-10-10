@@ -182,6 +182,7 @@ const AlbumPage = ({ album, currentlyPlayingTrackUri }) => {
         const errorData = await playResponse.json();
         console.error("Error playing track:", errorData);
       }
+      router.push("/now-playing");
     } catch (error) {
       console.error("Error with playTrack request:", error);
     }

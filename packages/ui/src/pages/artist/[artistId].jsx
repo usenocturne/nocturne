@@ -112,6 +112,7 @@ const ArtistPage = ({ artist, currentlyPlayingTrackUri }) => {
           offset: offset,
         }),
       });
+      router.push("/now-playing");
     } catch (error) {
       console.error("Error playing artist top tracks:", error);
     }

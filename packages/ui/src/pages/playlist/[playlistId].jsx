@@ -114,6 +114,7 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
           offset: offset,
         }),
       });
+      router.push("/now-playing");
     } catch (error) {
       console.error("Error playing playlist:", error);
     }
