@@ -1,11 +1,32 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/LongPressLink";
 
-const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
+const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [playlist, setPlaylist] = useState(initialPlaylist);
+  const [tracks, setTracks] = useState(initialPlaylist.tracks.items);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(
+    initialPlaylist.tracks.total > initialPlaylist.tracks.items.length
+  );
+  const observer = useRef();
+
+  const lastTrackElementRef = useCallback(
+    (node) => {
+      if (isLoading) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMoreTracks();
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [isLoading, hasMore]
+  );
 
   useEffect(() => {
     const playlistImage =
@@ -47,6 +68,40 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
 
     fetchPlaybackState();
   }, [accessToken]);
+
+  const loadMoreTracks = async () => {
+    if (isLoading || !hasMore) return;
+    setIsLoading(true);
+    const offset = tracks.length;
+    const limit = 25;
+
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/playlists/${playlist.id}/tracks?offset=${offset}&limit=${limit}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch more tracks");
+      }
+
+      const data = await response.json();
+      if (data.items.length === 0) {
+        setHasMore(false);
+      } else {
+        setTracks((prevTracks) => [...prevTracks, ...data.items]);
+        setHasMore(tracks.length + data.items.length < playlist.tracks.total);
+      }
+    } catch (error) {
+      console.error("Error loading more tracks:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const playPlaylist = async () => {
     try {
@@ -121,8 +176,6 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
   };
 
   const playTrack = async (trackUri, trackIndex) => {
-    const accessToken = router.query.accessToken;
-
     try {
       const devicesResponse = await fetch(
         "https://api.spotify.com/v1/me/player/devices",
@@ -167,8 +220,6 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
         }
       }
 
-      const trackUris = playlist.tracks.items.map((item) => item.track.uri);
-
       const playResponse = await fetch(
         "https://api.spotify.com/v1/me/player/play",
         {
@@ -178,7 +229,7 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            uris: trackUris,
+            context_uri: `spotify:playlist:${playlist.id}`,
             offset: {
               position: trackIndex,
             },
@@ -231,61 +282,64 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
       </div>
 
       <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
-        {playlist.tracks && playlist.tracks.items ? (
-          playlist.tracks.items.map((item, index) => (
-            <div key={item.track.id} className="flex gap-12 items-start mb-4">
-              <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
-                {item.track.uri === currentlyPlayingTrackUri ? (
-                  <div className="w-5">
-                    <section>
-                      <div className="wave0"></div>
-                      <div className="wave1"></div>
-                      <div className="wave2"></div>
-                      <div className="wave3"></div>
-                    </section>
-                  </div>
-                ) : (
-                  <p>{index + 1}</p>
-                )}
-              </div>
-
-              <div className="flex-grow">
-                <LongPressLink
-                  href="/now-playing"
-                  spotifyUrl={item.track.external_urls.spotify}
-                  accessToken={accessToken}
-                >
-                  <div onClick={() => playTrack(item.track.uri, index)}>
-                    <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                      {item.track.name}
-                    </p>
-                  </div>
-                </LongPressLink>
-                <div className="flex flex-wrap">
-                  {item.track.artists.map((artist, artistIndex) => (
-                    <LongPressLink
-                      key={artist.id}
-                      href={`/artist/${artist.id}`}
-                      spotifyUrl={artist.external_urls.spotify}
-                      accessToken={accessToken}
-                    >
-                      <p
-                        className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${
-                          artistIndex < item.track.artists.length - 1
-                            ? 'mr-2 after:content-[","]'
-                            : ""
-                        }`}
-                      >
-                        {artist.name}
-                      </p>
-                    </LongPressLink>
-                  ))}
+        {tracks.map((item, index) => (
+          <div
+            key={item.track.id}
+            className="flex gap-12 items-start mb-4"
+            ref={index === tracks.length - 1 ? lastTrackElementRef : null}
+          >
+            <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
+              {item.track.uri === currentlyPlayingTrackUri ? (
+                <div className="w-5">
+                  <section>
+                    <div className="wave0"></div>
+                    <div className="wave1"></div>
+                    <div className="wave2"></div>
+                    <div className="wave3"></div>
+                  </section>
                 </div>
+              ) : (
+                <p>{index + 1}</p>
+              )}
+            </div>
+
+            <div className="flex-grow">
+              <LongPressLink
+                href="/now-playing"
+                spotifyUrl={item.track.external_urls.spotify}
+                accessToken={accessToken}
+              >
+                <div onClick={() => playTrack(item.track.uri, index)}>
+                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                    {item.track.name}
+                  </p>
+                </div>
+              </LongPressLink>
+              <div className="flex flex-wrap">
+                {item.track.artists.map((artist, artistIndex) => (
+                  <LongPressLink
+                    key={artist.id}
+                    href={`/artist/${artist.id}`}
+                    spotifyUrl={artist.external_urls.spotify}
+                    accessToken={accessToken}
+                  >
+                    <p
+                      className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${
+                        artistIndex < item.track.artists.length - 1
+                          ? 'mr-2 after:content-[","]'
+                          : ""
+                      }`}
+                    >
+                      {artist.name}
+                    </p>
+                  </LongPressLink>
+                ))}
               </div>
             </div>
-          ))
-        ) : (
-          <p>No tracks available</p>
+          </div>
+        ))}
+        {isLoading && (
+          <p className="text-white text-center">Loading more tracks...</p>
         )}
       </div>
     </div>
@@ -315,44 +369,28 @@ export async function getServerSideProps(context) {
 
   const playlistData = await res.json();
 
-  async function fetchAllTracks(url) {
-    let allTracks = [];
-    let nextUrl = url;
-
-    while (nextUrl) {
-      const response = await fetch(nextUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        console.error("Error fetching tracks:", await response.json());
-        break;
-      }
-
-      const data = await response.json();
-      allTracks = allTracks.concat(data.items);
-      nextUrl = data.next;
+  const tracksRes = await fetch(
+    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=25`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     }
+  );
 
-    return allTracks;
-  }
+  const tracksData = await tracksRes.json();
 
-  const allTracks = await fetchAllTracks(playlistData.tracks.href);
-
-  const updatedPlaylist = {
+  const initialPlaylist = {
     ...playlistData,
     tracks: {
       ...playlistData.tracks,
-      items: allTracks,
-      total: allTracks.length,
+      items: tracksData.items,
     },
   };
 
   return {
     props: {
-      playlist: updatedPlaylist,
+      initialPlaylist,
       accessToken,
     },
   };
