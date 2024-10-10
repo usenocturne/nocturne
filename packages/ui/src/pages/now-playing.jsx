@@ -79,7 +79,7 @@ const NowPlaying = ({
           const [, minutes, seconds, text] = match;
           const time = parseInt(minutes) * 60 + parseFloat(seconds);
           return {
-            time: Math.max(0, time - 0.5),
+            time: Math.max(0, time - 1.0),
             text: text.trim(),
           };
         }
