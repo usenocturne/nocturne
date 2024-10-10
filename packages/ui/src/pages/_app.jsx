@@ -1,5 +1,5 @@
 import "../styles/globals.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
 import { Inter } from "next/font/google";
@@ -41,6 +41,7 @@ export default function App({ Component, pageProps }) {
   const [currentlyPlayingTrackUri, setCurrentlyPlayingTrackUri] =
     useState(null);
   const [sectionGradients, setSectionGradients] = useState({
+    recents: null,
     library: null,
     artists: null,
     radio: null,
@@ -378,30 +379,69 @@ export default function App({ Component, pageProps }) {
     };
   };
 
-  const updateGradientColors = (imageUrl, section = null) => {
-    const colorThief = new ColorThief();
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = imageUrl;
-    img.onload = () => {
-      const dominantColors = colorThief.getPalette(img, 4);
-      const hexColors = dominantColors.map((color) =>
-        rgbToHex({ r: color[0], g: color[1], b: color[2] })
-      );
+  const updateGradientColors = useCallback(
+    (imageUrl, section = null) => {
+      if (!imageUrl) {
+        if (section === "radio") {
+          const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
+          setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
+          if (activeSection === "radio" || activeSection === "nowPlaying") {
+            setTargetColor1(radioColors[0]);
+            setTargetColor2(radioColors[1]);
+            setTargetColor3(radioColors[2]);
+            setTargetColor4(radioColors[3]);
+          }
+        } else if (section === "settings") {
+          const settingsColors = ["#191414", "#191414", "#191414", "#191414"];
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: settingsColors,
+          }));
+          if (activeSection === "settings" || activeSection === "nowPlaying") {
+            setTargetColor1(settingsColors[0]);
+            setTargetColor2(settingsColors[1]);
+            setTargetColor3(settingsColors[2]);
+            setTargetColor4(settingsColors[3]);
+          }
+        }
+        return;
+      }
 
-      if (section) {
+      const colorThief = new ColorThief();
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = imageUrl;
+      img.onload = () => {
+        const dominantColors = colorThief.getPalette(img, 4);
+        const hexColors = dominantColors.map((color) =>
+          rgbToHex({ r: color[0], g: color[1], b: color[2] })
+        );
+
         setSectionGradients((prev) => ({
           ...prev,
           [section]: hexColors,
         }));
-      }
 
-      setTargetColor1(hexColors[0]);
-      setTargetColor2(hexColors[1]);
-      setTargetColor3(hexColors[2]);
-      setTargetColor4(hexColors[3]);
-    };
-  };
+        if (
+          section === activeSection ||
+          section === "nowPlaying" ||
+          activeSection === "nowPlaying"
+        ) {
+          setTargetColor1(hexColors[0]);
+          setTargetColor2(hexColors[1]);
+          setTargetColor3(hexColors[2]);
+          setTargetColor4(hexColors[3]);
+        }
+      };
+    },
+    [
+      activeSection,
+      setTargetColor1,
+      setTargetColor2,
+      setTargetColor3,
+      setTargetColor4,
+    ]
+  );
 
   useEffect(() => {
     const current1 = hexToRgb(currentColor1);
@@ -536,6 +576,7 @@ export default function App({ Component, pageProps }) {
           fetchCurrentPlayback={fetchCurrentPlayback}
           drawerOpen={drawerOpen}
           setDrawerOpen={setDrawerOpen}
+          updateGradientColors={updateGradientColors}
         />
       </div>
     </main>

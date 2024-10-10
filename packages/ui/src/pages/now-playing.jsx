@@ -19,6 +19,8 @@ const NowPlaying = ({
   fetchCurrentPlayback,
   drawerOpen,
   setDrawerOpen,
+  setActiveSection,
+  updateGradientColors,
 }) => {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
@@ -43,6 +45,16 @@ const NowPlaying = ({
   const [lyricsUnavailable, setLyricsUnavailable] = useState(false);
   const fetchedTracks = useRef(new Set());
   const [lyricsMenuOptionEnabled, setlyricsMenuOptionEnabled] = useState(false);
+
+  useEffect(() => {
+    if (currentPlayback && currentPlayback.item) {
+      setActiveSection("nowPlaying");
+      updateGradientColors(
+        currentPlayback.item.album.images[0].url,
+        "nowPlaying"
+      );
+    }
+  }, [currentPlayback, updateGradientColors, setActiveSection]);
 
   useEffect(() => {
     const handleAppEscape = () => {
@@ -1198,7 +1210,7 @@ const NowPlaying = ({
                 >
                   <div
                     onClick={async (e) => {
-                      e.preventDefault(); // Prevent navigation on normal click
+                      e.preventDefault();
                       await addTrackToPlaylist(item.id);
                       setDrawerOpen(false);
                     }}

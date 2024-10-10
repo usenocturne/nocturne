@@ -1,6 +1,7 @@
 import Sidebar from "../components/Sidebar";
 import Settings from "../components/Settings";
 import LongPressLink from "../components/LongPressLink";
+import { useEffect } from "react";
 
 export default function Home({
   accessToken,
@@ -11,7 +12,22 @@ export default function Home({
   setActiveSection,
   loading,
   albumsQueue,
+  updateGradientColors,
 }) {
+  useEffect(() => {
+    if (activeSection === "radio") {
+      updateGradientColors(null, "radio");
+    } else if (activeSection === "library" && playlists.length > 0) {
+      updateGradientColors(playlists[0].images[0]?.url, "library");
+    } else if (activeSection === "artists" && artists.length > 0) {
+      updateGradientColors(artists[0].images[0]?.url, "artists");
+    } else if (activeSection === "recents" && albumsQueue.length > 0) {
+      updateGradientColors(albumsQueue[0].images[0]?.url, "recents");
+    } else if (activeSection === "settings") {
+      updateGradientColors(null, "settings");
+    }
+  }, [activeSection, updateGradientColors, playlists, artists, albumsQueue]);
+
   return (
     <div className="relative min-h-screen">
       {!loading && (
