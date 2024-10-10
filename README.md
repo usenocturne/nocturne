@@ -45,7 +45,7 @@ $ cd C:\path\to\superbird-tool-main
 $ python superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
-$ python superbird_tool.py --restore_device C:\path\to\debian_v1.0_2024-10-08 --dont_reset
+$ python superbird_tool.py --restore_device C:\path\to\Nocturne_v1.0_2024-10-09 --dont_reset
 
 # Disable charger check
 $ python superbird_tool.py --disable_charger_check
@@ -96,7 +96,7 @@ $ cd /path/to/superbird-tool-main
 $ /opt/homebrew/bin/python3 superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
-$ /opt/homebrew/bin/python3 superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08 --dont_reset
+$ /opt/homebrew/bin/python3 superbird_tool.py --restore_device /path/to/Nocturne_v1.0_2024-10-09 --dont_reset
 
 # Disable charger check
 $ /opt/homebrew/bin/python3 superbird_tool.py --disable_charger_check
@@ -143,7 +143,7 @@ $ cd /path/to/superbird-tool-main
 $ sudo python3 ./superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
-$ sudo python3 ./superbird_tool.py --restore_device /path/to/debian_v1.0_2024-10-08 --dont_reset
+$ sudo python3 ./superbird_tool.py --restore_device /path/to/Nocturne_v1.0_2024-10-09 --dont_reset
 
 # Disable charger check
 $ sudo python3 ./superbird_tool.py --disable_charger_check
