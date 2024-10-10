@@ -379,6 +379,24 @@ export default function App({ Component, pageProps }) {
     };
   };
 
+  useEffect(() => {
+    if (router.pathname === "/now-playing") {
+      if (!currentPlayback || !currentPlayback.is_playing) {
+        setTargetColor1("#191414");
+        setTargetColor2("#191414");
+        setTargetColor3("#191414");
+        setTargetColor4("#191414");
+      } else {
+        if (currentPlayback.item && currentPlayback.item.album.images[0]) {
+          updateGradientColors(
+            currentPlayback.item.album.images[0].url,
+            "nowPlaying"
+          );
+        }
+      }
+    }
+  }, [router.pathname, currentPlayback]);
+
   const updateGradientColors = useCallback(
     (imageUrl, section = null) => {
       if (!imageUrl) {
@@ -391,7 +409,10 @@ export default function App({ Component, pageProps }) {
             setTargetColor3(radioColors[2]);
             setTargetColor4(radioColors[3]);
           }
-        } else if (section === "settings") {
+        } else if (
+          section === "settings" ||
+          router.pathname === "/now-playing"
+        ) {
           const settingsColors = ["#191414", "#191414", "#191414", "#191414"];
           setSectionGradients((prev) => ({
             ...prev,
@@ -399,7 +420,7 @@ export default function App({ Component, pageProps }) {
           }));
           if (
             activeSection === "settings" ||
-            router.pathway === "/now-playing"
+            router.pathname === "/now-playing"
           ) {
             setTargetColor1(settingsColors[0]);
             setTargetColor2(settingsColors[1]);
@@ -439,6 +460,7 @@ export default function App({ Component, pageProps }) {
     },
     [
       activeSection,
+      router.pathname,
       setTargetColor1,
       setTargetColor2,
       setTargetColor3,
