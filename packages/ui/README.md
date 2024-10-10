@@ -37,7 +37,7 @@ This software was made possible only through the following individuals and open 
 
 ## Related
 
-[nocturne-image](https://github.com/brandonsaldan/nocturne-image) - The Debian image runs this web application
+[nocturne-image](https://github.com/brandonsaldan/nocturne-image) - The Debian image that runs this web application
 
 ## License
 
