@@ -397,7 +397,10 @@ export default function App({ Component, pageProps }) {
             ...prev,
             [section]: settingsColors,
           }));
-          if (activeSection === "settings" || activeSection === "nowPlaying") {
+          if (
+            activeSection === "settings" ||
+            router.pathway === "/now-playing"
+          ) {
             setTargetColor1(settingsColors[0]);
             setTargetColor2(settingsColors[1]);
             setTargetColor3(settingsColors[2]);
