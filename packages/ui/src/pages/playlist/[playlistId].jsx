@@ -1,10 +1,11 @@
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import LongPressLink from "../../components/LongPressLink";
 
 const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
 
   useEffect(() => {
     const playlistImage =
@@ -13,6 +14,110 @@ const PlaylistPage = ({ playlist, currentlyPlayingTrackUri }) => {
         : "";
     localStorage.setItem("playlistPageImage", playlistImage);
   }, [playlist]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Enter") {
+        playPlaylist();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isShuffleEnabled]);
+
+  useEffect(() => {
+    const fetchPlaybackState = async () => {
+      try {
+        const response = await fetch("https://api.spotify.com/v1/me/player", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setIsShuffleEnabled(data.shuffle_state);
+        }
+      } catch (error) {
+        console.error("Error fetching playback state:", error);
+      }
+    };
+
+    fetchPlaybackState();
+  }, [accessToken]);
+
+  const playPlaylist = async () => {
+    try {
+      const devicesResponse = await fetch(
+        "https://api.spotify.com/v1/me/player/devices",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const devicesData = await devicesResponse.json();
+
+      if (devicesData.devices.length === 0) {
+        console.error("No devices available for playback");
+        return;
+      }
+
+      const device = devicesData.devices[0];
+      const activeDeviceId = device.id;
+
+      if (!device.is_active) {
+        await fetch("https://api.spotify.com/v1/me/player", {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            device_ids: [activeDeviceId],
+            play: false,
+          }),
+        });
+      }
+
+      await fetch(
+        `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      let offset;
+      if (isShuffleEnabled) {
+        const randomPosition = Math.floor(
+          Math.random() * playlist.tracks.total
+        );
+        offset = { position: randomPosition };
+      } else {
+        offset = { position: 0 };
+      }
+
+      await fetch("https://api.spotify.com/v1/me/player/play", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          context_uri: `spotify:playlist:${playlist.id}`,
+          offset: offset,
+        }),
+      });
+    } catch (error) {
+      console.error("Error playing playlist:", error);
+    }
+  };
 
   const playTrack = async (trackUri, trackIndex) => {
     const accessToken = router.query.accessToken;
