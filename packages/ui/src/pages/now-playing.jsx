@@ -45,6 +45,9 @@ const NowPlaying = ({
   const [lyricsUnavailable, setLyricsUnavailable] = useState(false);
   const fetchedTracks = useRef(new Set());
   const [lyricsMenuOptionEnabled, setlyricsMenuOptionEnabled] = useState(false);
+  const trackNameRef = useRef(null);
+  const containerWidth = 380;
+  const scrollSpeed = 40;
 
   useEffect(() => {
     if (currentPlayback && currentPlayback.item) {
@@ -599,15 +602,6 @@ const NowPlaying = ({
     }
   };
 
-  const getScrollDuration = (trackName) => {
-    const speed = 8;
-    const textLength = trackName.length * 20;
-    const visibleWidth = 380;
-    const scrollDistance = textLength - visibleWidth;
-
-    return scrollDistance > 0 ? scrollDistance / speed : 10;
-  };
-
   const trackName =
     currentPlayback && currentPlayback.item
       ? currentPlayback.item.name
@@ -625,6 +619,23 @@ const NowPlaying = ({
     currentPlayback && currentPlayback.item
       ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
       : 0;
+
+  useEffect(() => {
+    if (trackNameRef.current && currentPlayback?.item?.name) {
+      const trackNameWidth = trackNameRef.current.offsetWidth;
+      const scrollDistance = Math.max(0, trackNameWidth - containerWidth);
+      const scrollDuration = (scrollDistance / scrollSpeed) * 2;
+
+      trackNameRef.current.style.setProperty(
+        "--scroll-duration",
+        `${scrollDuration}s`
+      );
+      trackNameRef.current.style.setProperty(
+        "--final-position",
+        `-${scrollDistance}px`
+      );
+    }
+  }, [trackName, containerWidth]);
 
   const StarIcon = ({ className }) => (
     <svg
@@ -949,21 +960,15 @@ const NowPlaying = ({
                 accessToken={accessToken}
               >
                 {trackNameScrollingEnabled ? (
-                  <div className="track-name-container overflow-hidden relative max-w-[380px]">
+                  <div className="track-name-container">
                     <h4
+                      ref={trackNameRef}
+                      key={currentPlayback?.item?.id}
                       className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                        trackName.length > 20 ? "animate-scroll" : "truncate"
+                        trackNameScrollingEnabled && trackName.length > 20
+                          ? "animate-scroll"
+                          : ""
                       }`}
-                      key={trackName}
-                      style={
-                        trackName.length > 20
-                          ? {
-                              animationDuration: `${getScrollDuration(
-                                trackName
-                              )}`,
-                            }
-                          : {}
-                      }
                     >
                       {trackName}
                     </h4>

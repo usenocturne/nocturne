@@ -166,27 +166,32 @@ section {
   --wavefreq: calc(700ms * var(--m));
 }
 
-@keyframes scroll {
-  0%, 20% {
-    transform: translateX(0);
-  }
-  40%, 60% {
-    transform: translateX(calc(-100% + 380px));
-  }
-  80%, 100% {
-    transform: translateX(0);
-  }
-}
-
 .track-name-container {
+  position: relative;
   width: 380px;
+  overflow: hidden;
 }
 
 .track-name {
   display: inline-block;
+  position: relative;
+  left: 0;
+  white-space: nowrap;
 }
 
 .animate-scroll {
-  animation: scroll 10s linear infinite;
-  animation-delay: 0.5s;
+  animation: marquee calc(var(--scroll-duration) * 2 + 4s) linear infinite;
+  animation-delay: 2s;
+}
+
+@keyframes marquee {
+  0%, 2.5% {
+    transform: translateX(0);
+  }
+  47.5%, 52.5% {
+    transform: translateX(var(--final-position));
+  }
+  97.5%, 100% {
+    transform: translateX(0);
+  }
 }
