@@ -48,6 +48,7 @@ const NowPlaying = ({
   const trackNameRef = useRef(null);
   const containerWidth = 380;
   const scrollSpeed = 40;
+  const [shouldScroll, setShouldScroll] = useState(false);
 
   useEffect(() => {
     if (currentPlayback && currentPlayback.item) {
@@ -634,6 +635,8 @@ const NowPlaying = ({
         "--final-position",
         `-${scrollDistance}px`
       );
+
+      setShouldScroll(trackNameWidth > containerWidth);
     }
   }, [trackName, containerWidth]);
 
@@ -965,7 +968,7 @@ const NowPlaying = ({
                       ref={trackNameRef}
                       key={currentPlayback?.item?.id}
                       className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                        trackNameScrollingEnabled && trackName.length > 20
+                        trackNameScrollingEnabled && shouldScroll
                           ? "animate-scroll"
                           : ""
                       }`}
