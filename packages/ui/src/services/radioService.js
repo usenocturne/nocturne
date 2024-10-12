@@ -1,4 +1,4 @@
-export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors) => {
+export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors, handleError) => {
     try {
       const response = await fetch(
         "https://api.spotify.com/v1/browse/categories/0JQ5DAt0tbjZptfcdMSKl3/playlists",
@@ -39,11 +39,11 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
 
         return sortedPlaylists.length > 0 ? sortedPlaylists[0].name : null;
       } else {
-        console.error("Error fetching user radio:", response.status);
+        handleError("FETCH_USER_RADIO_ERROR", response.status.toString());
         return null;
       }
     } catch (error) {
-      console.error("Error fetching user radio:", error);
+      handleError("FETCH_USER_RADIO_ERROR", error.message);
       return null;
     }
   };

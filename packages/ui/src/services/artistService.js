@@ -1,4 +1,4 @@
-export const fetchTopArtists = async (accessToken, setArtists, updateGradientColors) => {
+export const fetchTopArtists = async (accessToken, setArtists, updateGradientColors, handleError) => {
     try {
       const response = await fetch(
         "https://api.spotify.com/v1/me/top/artists",
@@ -19,9 +19,9 @@ export const fetchTopArtists = async (accessToken, setArtists, updateGradientCol
         }
         setArtists(data.items);
       } else {
-        console.error("Error fetching top artists:", response.status);
+        handleError("FETCH_TOP_ARTISTS_ERROR", response.status.toString());
       }
     } catch (error) {
-      console.error("Error fetching top artists:", error);
+      handleError("FETCH_TOP_ARTISTS_ERROR", error.message);
     }
   };

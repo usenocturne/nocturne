@@ -1,4 +1,4 @@
-export const fetchUserOwnedPlaylists = async (accessToken) => {
+export const fetchUserOwnedPlaylists = async (accessToken, handleError) => {
     try {
       const userResponse = await fetch("https://api.spotify.com/v1/me", {
         headers: {
@@ -6,7 +6,7 @@ export const fetchUserOwnedPlaylists = async (accessToken) => {
         },
       });
       if (!userResponse.ok) {
-        console.error("Error fetching user profile:", userResponse.status);
+        handleError("FETCH_USER_PROFILE_ERROR", userResponse.status);
         return [];
       }
       const userData = await userResponse.json();
@@ -29,11 +29,11 @@ export const fetchUserOwnedPlaylists = async (accessToken) => {
         }
         return userOwnedPlaylists;
       } else {
-        console.error("Error fetching user playlists:", playlistsResponse.status);
+        handleError("FETCH_USER_PLAYLISTS_ERROR", playlistsResponse.status);
         return [];
       }
     } catch (error) {
-      console.error("Error fetching user playlists:", error);
+      handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
       return [];
     }
   };

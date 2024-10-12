@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+export default async function handler(req, res, handleError) {
     const { name, artist } = req.query;
   
     if (!name || !artist) {
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         res.status(404).json({ error: 'Lyrics not found' });
       }
     } catch (error) {
-      console.error('Error fetching lyrics:', error);
+      handleError("FETCH_LYRICS_ERROR", error.message);
       res.status(500).json({ error: 'Failed to fetch lyrics' });
     }
 }

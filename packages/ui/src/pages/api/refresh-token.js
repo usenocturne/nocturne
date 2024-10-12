@@ -1,6 +1,6 @@
 import { URLSearchParams } from "url";
 
-export default async function handler(req, res) {
+export default async function handler(req, res, handleError) {
   if (req.method === 'POST') {
     const { refresh_token } = req.body;
 
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       const data = await response.json();
       res.status(200).json(data);
     } catch (error) {
-      console.error("Error refreshing access token:", error);
+      handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
       res.status(500).json({ error: "Failed to refresh access token" });
     }
   } else {

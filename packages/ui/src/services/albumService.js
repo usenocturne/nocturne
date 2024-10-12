@@ -1,4 +1,4 @@
-export const fetchRecentlyPlayedAlbums = async (accessToken, setAlbums, setAlbumsQueue) => {
+export const fetchRecentlyPlayedAlbums = async (accessToken, setAlbums, setAlbumsQueue, handleError) => {
     if (accessToken) {
       try {
         const response = await fetch(
@@ -24,13 +24,10 @@ export const fetchRecentlyPlayedAlbums = async (accessToken, setAlbums, setAlbum
             return uniqueAlbums;
           });
         } else {
-          console.error(
-            "Error fetching recently played albums:",
-            response.status
-          );
+          handleError("FETCH_RECENTLY_PLAYED_ALBUMS_ERROR", response.status.toString());
         }
       } catch (error) {
-        console.error("Error fetching recently played albums:", error);
+        handleError("FETCH_RECENTLY_PLAYED_ALBUMS_ERROR", error.message);
       }
     }
   };

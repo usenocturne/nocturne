@@ -1,4 +1,4 @@
-export const fetchUserPlaylists = async (accessToken, setPlaylists, updateGradientColors) => {
+export const fetchUserPlaylists = async (accessToken, setPlaylists, updateGradientColors, handleError) => {
     try {
       const response = await fetch("https://api.spotify.com/v1/me/playlists", {
         headers: {
@@ -16,9 +16,9 @@ export const fetchUserPlaylists = async (accessToken, setPlaylists, updateGradie
         }
         setPlaylists(data.items);
       } else {
-        console.error("Error fetching user playlists:", response.status);
+        handleError("FETCH_USER_PLAYLISTS_ERROR", response.status.toString());
       }
     } catch (error) {
-      console.error("Error fetching user playlists:", error);
+      handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
     }
   };

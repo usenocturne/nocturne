@@ -2,7 +2,11 @@ import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/LongPressLink";
 
-const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
+const PlaylistPage = ({
+  initialPlaylist,
+  currentlyPlayingTrackUri,
+  handleError,
+}) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
@@ -62,7 +66,7 @@ const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
           setIsShuffleEnabled(data.shuffle_state);
         }
       } catch (error) {
-        console.error("Error fetching playback state:", error);
+        handleError("FETCH_PLAYBACK_STATE_ERROR", error.message);
       }
     };
 
@@ -97,7 +101,7 @@ const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
         setHasMore(tracks.length + data.items.length < playlist.tracks.total);
       }
     } catch (error) {
-      console.error("Error loading more tracks:", error);
+      handleError("LOAD_MORE_TRACKS_ERROR", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +121,10 @@ const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
       const devicesData = await devicesResponse.json();
 
       if (devicesData.devices.length === 0) {
-        console.error("No devices available for playback");
+        handleError(
+          "NO_DEVICES_AVAILABLE",
+          "No devices available for playback"
+        );
         return;
       }
 
@@ -171,7 +178,7 @@ const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
       });
       router.push("/now-playing");
     } catch (error) {
-      console.error("Error playing playlist:", error);
+      handleError("PLAY_PLAYLIST_ERROR", error.message);
     }
   };
 
@@ -190,7 +197,10 @@ const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
       const devicesData = await devicesResponse.json();
 
       if (devicesData.devices.length === 0) {
-        console.error("No devices available for playback");
+        handleError(
+          "NO_DEVICES_AVAILABLE",
+          "No devices available for playback"
+        );
         return;
       }
 
@@ -215,7 +225,7 @@ const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
 
         if (!transferResponse.ok) {
           const errorData = await transferResponse.json();
-          console.error("Error transferring playback:", errorData);
+          handleError("TRANSFER_PLAYBACK_ERROR", errorData.error.message);
           return;
         }
       }
@@ -240,10 +250,10 @@ const PlaylistPage = ({ initialPlaylist, currentlyPlayingTrackUri }) => {
 
       if (!playResponse.ok) {
         const errorData = await playResponse.json();
-        console.error("Error playing track:", errorData);
+        handleError("PLAY_TRACK_ERROR", errorData.error.message);
       }
     } catch (error) {
-      console.error("Error with playTrack request:", error);
+      handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
     }
   };
 
@@ -361,7 +371,7 @@ export async function getServerSideProps(context) {
 
   if (!res.ok) {
     const errorData = await res.json();
-    console.error("Error fetching playlist:", errorData);
+    handleError("FETCH_PLAYLIST_ERROR", errorData.error.message);
     return {
       notFound: true,
     };

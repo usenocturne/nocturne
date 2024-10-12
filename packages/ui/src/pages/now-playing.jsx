@@ -21,6 +21,7 @@ const NowPlaying = ({
   setDrawerOpen,
   setActiveSection,
   updateGradientColors,
+  handleError,
 }) => {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
@@ -118,7 +119,7 @@ const NowPlaying = ({
       setParsedLyrics(parsed);
       currentTrackId.current = trackId;
     } catch (error) {
-      console.error("Error fetching lyrics:", error);
+      handleError("FETCH_LYRICS_ERROR", error.message);
       setParsedLyrics([]);
       setLyricsUnavailable(true);
     } finally {
@@ -209,7 +210,7 @@ const NowPlaying = ({
           const userPlaylists = await fetchUserOwnedPlaylists(accessToken);
           setPlaylists(userPlaylists);
         } catch (error) {
-          console.error("Error fetching user playlists:", error);
+          handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
         }
       }
     };
@@ -228,7 +229,7 @@ const NowPlaying = ({
           setVolume(currentVolume);
         }
       } catch (error) {
-        console.error("Error syncing volume:", error);
+        handleError("SYNC_VOLUME_ERROR", error.message);
       }
     };
     syncVolume();
@@ -265,7 +266,7 @@ const NowPlaying = ({
         setIsVolumeVisible(false);
       }, 2000);
     } catch (error) {
-      console.error("Error changing volume:", error);
+      handleError("CHANGE_VOLUME_ERROR", error.message);
     }
   };
 
@@ -308,10 +309,10 @@ const NowPlaying = ({
           const likedArray = await response.json();
           setIsLiked(likedArray[0]);
         } else {
-          console.error("Error checking liked tracks:", await response.json());
+          handleError("CHECK_LIKED_TRACKS_ERROR", response.status.toString());
         }
       } catch (error) {
-        console.error("Error with checkIfTrackIsLiked:", error);
+        handleError("CHECK_IF_TRACK_IS_LIKED_ERROR", error.message);
       }
     },
     [accessToken]
@@ -348,10 +349,10 @@ const NowPlaying = ({
       if (response.ok) {
         setIsLiked(!isLiked);
       } else {
-        console.error("Error toggling liked track:", await response.json());
+        handleError("TOGGLE_LIKED_TRACK_ERROR", response.status.toString());
       }
     } catch (error) {
-      console.error("Error with toggleLikeTrack:", error);
+      handleError("TOGGLE_LIKE_TRACK_ERROR", error.message);
     }
   };
 
@@ -389,7 +390,10 @@ const NowPlaying = ({
             }),
           });
         } else {
-          console.log("No available devices");
+          handleError(
+            "NO_DEVICES_AVAILABLE",
+            "No devices available for playback"
+          );
           return;
         }
       } else {
@@ -408,7 +412,7 @@ const NowPlaying = ({
 
       fetchCurrentPlayback();
     } catch (error) {
-      console.error("Error toggling play/pause:", error);
+      handleError("TOGGLE_PLAY_PAUSE_ERROR", error.message);
     }
   };
 
@@ -435,7 +439,7 @@ const NowPlaying = ({
       });
       fetchCurrentPlayback();
     } catch (error) {
-      console.error("Error skipping to next track:", error);
+      handleError("SKIP_TO_NEXT_TRACK_ERROR", error.message);
     }
   };
 
@@ -458,7 +462,7 @@ const NowPlaying = ({
       }
       fetchCurrentPlayback();
     } catch (error) {
-      console.error("Error with skipToPrevious:", error);
+      handleError("SKIP_TO_PREVIOUS_ERROR", error.message);
     }
   };
 
@@ -507,7 +511,7 @@ const NowPlaying = ({
 
       await addTrackToPlaylistAPI(playlistId);
     } catch (error) {
-      console.error("Error checking playlist contents:", error);
+      handleError("CHECK_PLAYLIST_CONTENTS_ERROR", error.message);
     }
   };
 
@@ -527,13 +531,11 @@ const NowPlaying = ({
         }
       );
 
-      if (response.ok) {
-        console.log("Track added to playlist");
-      } else {
-        console.error("Error adding track to playlist:", await response.json());
+      if (!response.ok) {
+        handleError("ADD_TRACK_TO_PLAYLIST_ERROR", response.status.toString());
       }
     } catch (error) {
-      console.error("Error adding track to playlist:", error);
+      handleError("ADD_TRACK_TO_PLAYLIST_ERROR", error.message);
     }
   };
 
@@ -567,10 +569,10 @@ const NowPlaying = ({
         setIsShuffled(!isShuffled);
         fetchCurrentPlayback();
       } else {
-        console.error("Error toggling shuffle:", await response.json());
+        handleError("TOGGLE_SHUFFLE_ERROR", response.status.toString());
       }
     } catch (error) {
-      console.error("Error toggling shuffle:", error);
+      handleError("TOGGLE_SHUFFLE_ERROR", error.message);
     }
   };
 
@@ -596,10 +598,10 @@ const NowPlaying = ({
         setRepeatMode(nextMode);
         fetchCurrentPlayback();
       } else {
-        console.error("Error toggling repeat:", await response.json());
+        handleError("TOGGLE_REPEAT_ERROR", response.status.toString());
       }
     } catch (error) {
-      console.error("Error toggling repeat:", error);
+      handleError("TOGGLE_REPEAT_ERROR", error.message);
     }
   };
 
@@ -1239,13 +1241,13 @@ const NowPlaying = ({
         </DrawerContent>
       </Drawer>
 
-      <Dialog open={open} onClose={setOpen} className="relative z-50">
+      <Dialog open={open} onClose={setOpen} className="relative z-40">
         <DialogBackdrop
           transition
           className="fixed inset-0 bg-black/10 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
         />
 
-        <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+        <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <DialogPanel
               transition
