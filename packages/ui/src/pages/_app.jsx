@@ -199,8 +199,22 @@ export default function App({ Component, pageProps }) {
           },
         });
 
+        if (response.status === 204) {
+          setCurrentPlayback(null);
+          setCurrentlyPlayingAlbum(null);
+          setCurrentlyPlayingTrackUri(null);
+          return;
+        }
+
         if (response.ok) {
           const data = await response.json();
+          if (data === null || Object.keys(data).length === 0) {
+            setCurrentPlayback(null);
+            setCurrentlyPlayingAlbum(null);
+            setCurrentlyPlayingTrackUri(null);
+            return;
+          }
+
           setCurrentPlayback({
             ...data,
             device: {
@@ -210,6 +224,7 @@ export default function App({ Component, pageProps }) {
             shuffle_state: data.shuffle_state,
             repeat_state: data.repeat_state,
           });
+
           if (data && data.item) {
             const currentAlbum = data.item.album;
             const currentTrackUri = data.item.uri;
@@ -242,54 +257,20 @@ export default function App({ Component, pageProps }) {
                 }
               }
             }
-          } else if (currentlyPlayingAlbum !== null) {
-            setCurrentlyPlayingAlbum(null);
-            setCurrentlyPlayingTrackUri(null);
-            const imageUrl = "/images/not-playing.webp";
-            if (imageUrl !== albumImage) {
-              localStorage.setItem("albumImage", imageUrl);
-              setAlbumImage(imageUrl);
-
-              if (activeSection === "recents") {
-                updateGradientColors(imageUrl);
-              }
-            }
           }
-        } else {
+        } else if (response.status !== 401 && response.status !== 403) {
           handleError(
             "FETCH_CURRENT_PLAYBACK_ERROR",
-            response.status.toString()
+            `HTTP error! status: ${response.status}`
           );
-          if (currentPlayback !== null) {
-            setCurrentPlayback(null);
-            setCurrentlyPlayingAlbum(null);
-            setCurrentlyPlayingTrackUri(null);
-            const imageUrl = "/images/not-playing.webp";
-            if (imageUrl !== albumImage) {
-              localStorage.setItem("albumImage", imageUrl);
-              setAlbumImage(imageUrl);
-
-              if (activeSection === "recents") {
-                updateGradientColors(imageUrl);
-              }
-            }
-          }
         }
       } catch (error) {
-        handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
-        if (currentPlayback !== null) {
+        if (!error.message.includes("Unexpected end of JSON input")) {
+          handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
+        } else {
           setCurrentPlayback(null);
           setCurrentlyPlayingAlbum(null);
           setCurrentlyPlayingTrackUri(null);
-          const imageUrl = "/images/not-playing.webp";
-          if (imageUrl !== albumImage) {
-            localStorage.setItem("albumImage", imageUrl);
-            setAlbumImage(imageUrl);
-
-            if (activeSection === "recents") {
-              updateGradientColors(imageUrl);
-            }
-          }
         }
       }
     }
