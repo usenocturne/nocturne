@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 const XIcon = ({ className }) => (
   <svg
@@ -6,9 +6,9 @@ const XIcon = ({ className }) => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
   >
     <path d="M18 6 6 18" />
@@ -17,6 +17,16 @@ const XIcon = ({ className }) => (
 );
 
 export default function ErrorAlert({ error, onClose }) {
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error, onClose]);
+
   if (!error) return null;
 
   return (
