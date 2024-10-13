@@ -139,6 +139,11 @@ const NowPlaying = ({
           fetchLyrics();
         }
       }
+    } else {
+      setShowLyrics(false);
+      setParsedLyrics([]);
+      setCurrentLyricIndex(-1);
+      setLyricsUnavailable(false);
     }
   }, [currentPlayback, fetchLyrics, showLyrics]);
 
@@ -957,7 +962,7 @@ const NowPlaying = ({
               />
             </LongPressLink>
           </div>
-          {!showLyrics ? (
+          {!showLyrics || !currentPlayback?.item ? (
             <div className="flex-1 text-center md:text-left">
               <LongPressLink
                 href={`/album/${currentPlayback?.item?.album?.id}`}
@@ -968,7 +973,7 @@ const NowPlaying = ({
                   <div className="track-name-container">
                     <h4
                       ref={trackNameRef}
-                      key={currentPlayback?.item?.id}
+                      key={currentPlayback?.item?.id || "not-playing"}
                       className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
                         trackNameScrollingEnabled && shouldScroll
                           ? "animate-scroll"
