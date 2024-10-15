@@ -60,6 +60,21 @@ function forward_port() {
 
 set -e  # bail on any errors
 
+# detect if car thing is plugged in
+if [lsusb | grep "Google Inc."]
+then
+    echo "Car Thing detected, proceeding with setup"
+else
+    echo "Car Thing not detected. Please plug in the Car Thing and try again"
+    exit 1
+fi
+
+# check if script was already run before by searching for netplan config file
+if [ -f /etc/netplan/01-carthing.yaml ]; then
+    echo "Network already setup, exiting"
+    exit 0
+fi
+
 # install needed packages
 #   NOTE: the flag "--break-system-packages" only exists on recent debian/ubuntu versions,
 #   so we have to try with, and if there is an error try again without the flag
