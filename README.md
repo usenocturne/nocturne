@@ -152,7 +152,7 @@ $ sudo python3 ./superbird_tool.py --disable_charger_check
 $ cd /path/to/nocturne-image
 
 # Make setup_host_linux.sh executable
-$ chmod +x /home/pi/setup_host_linux.sh
+$ chmod +x setup_host_linux.sh
 
 # Execute setup_host_linux.sh
 $ sudo ./setup_host_linux.sh
