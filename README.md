@@ -54,17 +54,17 @@ $ python superbird_tool.py --disable_charger_check
 Connect your Raspberry Pi to your computer and run the following from your command line:
 
 ```bash
-# Transfer setup_host.sh to Raspberry Pi
-$ scp \path\to\nocturne-image\setup_host.sh pi@raspberrypi.local:/home/pi/
+# Transfer setup_host_rpi.sh to Raspberry Pi
+$ scp \path\to\nocturne-image\setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
 
-# Make setup_host.sh executable
-$ chmod +x /home/pi/setup_host.sh
+# Make setup_host_rpi.sh executable
+$ chmod +x /home/pi/setup_host_rpi.sh
 
-# Execute setup_host.sh
-$ sudo ./setup_host.sh
+# Execute setup_host_rpi.sh
+$ sudo ./setup_host_rpi.sh
 
 # Reboot Raspberry Pi
 $ reboot
@@ -105,17 +105,17 @@ $ /opt/homebrew/bin/python3 superbird_tool.py --disable_charger_check
 Connect your Raspberry Pi to your computer and run the following from your command line:
 
 ```bash
-# Transfer setup_host.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_host.sh pi@raspberrypi.local:/home/pi/
+# Transfer setup_host_rpi.sh to Raspberry Pi
+$ scp /path/to/nocturne-image/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
 
-# Make setup_host.sh executable
-$ chmod +x /home/pi/setup_host.sh
+# Make setup_host_rpi.sh executable
+$ chmod +x /home/pi/setup_host_rpi.sh
 
-# Execute setup_host.sh
-$ sudo ./setup_host.sh
+# Execute setup_host_rpi.sh
+$ sudo ./setup_host_rpi.sh
 
 # Reboot Raspberry Pi
 $ reboot
@@ -151,11 +151,11 @@ $ sudo python3 ./superbird_tool.py --disable_charger_check
 # Go into the nocturne-image repository
 $ cd /path/to/nocturne-image
 
-# Make setup_host.sh executable
-$ chmod +x /home/pi/setup_host.sh
+# Make setup_host_linux.sh executable
+$ chmod +x /home/pi/setup_host_linux.sh
 
-# Execute setup_host.sh
-$ sudo ./setup_host.sh
+# Execute setup_host_linux.sh
+$ sudo ./setup_host_linux.sh
 ```
 
 Connect Car Thing to your computer, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. Input `superbird` as the password.
