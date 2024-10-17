@@ -66,7 +66,7 @@ function forward_port() {
 set -e  # bail on any errors
 
 # detect if car thing is plugged in
-if lsusb | grep "Google Inc."
+if lsusb | grep -q "Google Inc."
 then
     echo "Car Thing detected, proceeding with setup"
 else
