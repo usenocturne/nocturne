@@ -21,7 +21,7 @@
 
 ## How To Use
 
-Unless receiving power through a Linux computer, running Nocturne on your Car Thing requires a host device such as a Raspberry Pi, a microSD card, a microUSB to USB-C cable, and a microUSB/your power source's connector. You will also need [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) to flash the image regardless of your computer's operating system.
+Unless receiving power through a Linux computer, running Nocturne on your Car Thing requires a host device such as a Raspberry Pi, a microSD card, a microUSB to USB-C cable, and a microUSB/your power source's connector. You will also need [superbird-tool](https://github.com/thinglabsoss/superbird-tool) to flash the image regardless of your computer's operating system.
 
 **Note: The Debian image used to run this software on the Spotify Car Thing hardware currently does not support GPU acceleration. Some animations within the program may appear as laggy on-device, but we're working on a fix!**
 
@@ -33,7 +33,7 @@ Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager
 
 #### Flashing Process
 
-If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
+If you haven't already, download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and run the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
 
 Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
@@ -84,7 +84,7 @@ Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager
 
 #### Flashing Process
 
-If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
+If you haven't already, download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and run the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
 
 Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
@@ -131,7 +131,7 @@ Login to Spotify on the Car Thing using VNC Viewer.
 
 #### Flashing Process
 
-If you haven't already, download [superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool) and run the setup process detailed [here](https://github.com/Car-Thing-Hax-Community/superbird-tool?tab=readme-ov-file#supported-platforms).
+If you haven't already, download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and run the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
 
 Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
 
@@ -175,7 +175,7 @@ This software was made possible only through the following individuals and open 
 - [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for giving me a Car Thing to develop with
 - [shadow](https://github.com/68p), for testing, troubleshooting, and crazy good repo maintainence
 - [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), and [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
-- [Car Thing Hax Community's fork of superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool), for their contributions on the original superbird-tool
+- [Thing Labs' fork of superbird-tool](https://github.com/thinglabsoss/superbird-tool), for their contributions on the original superbird-tool
 
 
 ## Related
