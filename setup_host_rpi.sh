@@ -5,6 +5,7 @@
 
 HOST_NAME="superbird"
 USBNET_PREFIX="192.168.7"  # usb network will use .1 as host device, and .2 for superbird
+INACTIVE_INTERFACE="usb0"
 
 # need to be root
 if [ "$(id -u)" != "0" ]; then
@@ -14,6 +15,11 @@ fi
 
 if [ "$(uname -s)" != "Linux" ]; then
     echo "Only works on Linux!"
+    exit 1
+fi
+
+if ! ip addr show usb0 | grep -q "inet "; then
+    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
     exit 1
 fi
 
@@ -54,6 +60,15 @@ function forward_port() {
 }
 
 set -e  # bail on any errors
+
+# detect if car thing is plugged in
+if lsusb | grep -q "Google Inc."
+then
+    echo "Car Thing detected, proceeding with setup"
+else
+    echo "Car Thing not detected. Please plug in the Car Thing and try again"
+    exit 1
+fi
 
 # install needed packages
 #   NOTE: the flag "--break-system-packages" only exists on recent debian/ubuntu versions,
@@ -126,5 +141,5 @@ EOF
 # add superbird to /etc/hosts
 append_if_missing "${USBNET_PREFIX}.2  ${HOST_NAME}"  "/etc/hosts"
 
-echo "Need to reboot for all changes to take effect"
+echo "Need to reboot for all changes to take effect!"
 
