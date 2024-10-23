@@ -3,6 +3,20 @@
 # setup a debian/ubuntu host machine to provide internet for USB device connected
 #   this should be run ONCE on the host machine
 
+set -e  # bail on any errors
+
+# install needed packages
+#   NOTE: the flag "--break-system-packages" only exists on recent debian/ubuntu versions,
+#   so we have to try with, and if there is an error try again without the flag
+export DEBIAN_FRONTEND=noninteractive
+apt install -y net-tools git htop build-essential cmake python3 python3-dev python3-pip iptables adb android-sdk-platform-tools-common iptables-persistent
+python3 -m pip install --break-system-packages virtualenv nuitka ordered-set || {
+    python3 -m pip install virtualenv nuitka ordered-set
+}
+python3 -m pip install --break-system-packages git+https://github.com/superna9999/pyamlboot || {
+    python3 -m pip install git+https://github.com/superna9999/pyamlboot
+}
+
 HOST_NAME="superbird"
 USBNET_PREFIX="192.168.7"  # usb network will use .1 as host device, and .2 for superbird
 INACTIVE_INTERFACE="usb0"
@@ -59,8 +73,6 @@ function forward_port() {
     iptables -A FORWARD -p tcp -d "${USBNET_PREFIX}.2" --dport "$DEST" -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 }
 
-set -e  # bail on any errors
-
 # detect if car thing is plugged in
 if lsusb | grep -q "Google Inc."
 then
@@ -69,18 +81,6 @@ else
     echo "Car Thing not detected. Please plug in the Car Thing and try again"
     exit 1
 fi
-
-# install needed packages
-#   NOTE: the flag "--break-system-packages" only exists on recent debian/ubuntu versions,
-#   so we have to try with, and if there is an error try again without the flag
-export DEBIAN_FRONTEND=noninteractive
-apt install -y git htop build-essential cmake python3 python3-dev python3-pip iptables adb android-sdk-platform-tools-common iptables-persistent
-python3 -m pip install --break-system-packages virtualenv nuitka ordered-set || {
-    python3 -m pip install virtualenv nuitka ordered-set
-}
-python3 -m pip install --break-system-packages git+https://github.com/superna9999/pyamlboot || {
-    python3 -m pip install git+https://github.com/superna9999/pyamlboot
-}
 
 # fix usb enumeration when connecting superbird in maskroom mode
 echo '# Amlogic S905 series can be booted up in Maskrom Mode, and it needs a rule to show up correctly' > /etc/udev/rules.d/70-carthing-maskrom-mode.rules
