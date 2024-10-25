@@ -32,10 +32,10 @@ if [ "$(uname -s)" != "Linux" ]; then
     exit 1
 fi
 
-if ! ip addr show usb0 | grep -q "inet "; then
-    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
-    exit 1
-fi
+#if ! ip addr show usb0 | grep -q "inet "; then
+#    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
+#    exit 1
+#fi
 
 function remove_if_exists() {
     # remove a file if it exists
