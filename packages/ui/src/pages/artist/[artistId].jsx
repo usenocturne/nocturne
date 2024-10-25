@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import LongPressLink from "../../components/LongPressLink";
+import Image from "next/image";
 
 const ArtistPage = ({ artist, currentlyPlayingTrackUri, handleError }) => {
   const router = useRouter();
@@ -206,10 +207,11 @@ const ArtistPage = ({ artist, currentlyPlayingTrackUri, handleError }) => {
               spotifyUrl={artist.external_urls.spotify}
               accessToken={accessToken}
             >
-              <img
-                src={artist.images[0].url}
-                alt="Artist"
-                className="w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
+              <Image
+                src={artist.images[0].url || "/images/not-playing.webp"}
+                width={280}
+                height={280}
+                className="aspect-square rounded-full drop-shadow-xl"
               />
             </LongPressLink>
             <LongPressLink

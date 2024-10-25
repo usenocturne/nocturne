@@ -12,6 +12,7 @@ import {
 } from "@headlessui/react";
 import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
 import LongPressLink from "../components/LongPressLink";
+import Image from "next/image";
 
 const NowPlaying = ({
   accessToken,
@@ -317,7 +318,7 @@ const NowPlaying = ({
           handleError("CHECK_LIKED_TRACKS_ERROR", response.status.toString());
         }
       } catch (error) {
-        handleError("CHECK_IF_TRACK_IS_LIKED_ERROR", error.message);
+        return;
       }
     },
     [accessToken]
@@ -955,10 +956,11 @@ const NowPlaying = ({
               spotifyUrl={currentPlayback?.item?.album?.external_urls?.spotify}
               accessToken={accessToken}
             >
-              <img
-                src={albumArt}
-                alt="/images/not-playing.webp"
-                className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+              <Image
+                src={albumArt || "/images/not-playing.webp"}
+                width={280}
+                height={280}
+                className="aspect-square rounded-[12px] drop-shadow-xl"
               />
             </LongPressLink>
           </div>
@@ -1230,10 +1232,11 @@ const NowPlaying = ({
                       setDrawerOpen(false);
                     }}
                   >
-                    <img
+                    <Image
                       src={item.images[0]?.url || "/images/not-playing.webp"}
-                      alt="Playlist Cover"
-                      className="mt-8 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                      width={280}
+                      height={280}
+                      className="mt-8 aspect-square rounded-[12px] drop-shadow-xl"
                     />
                     <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                       {item.name}

@@ -2,6 +2,7 @@ import Sidebar from "../components/Sidebar";
 import Settings from "../components/Settings";
 import LongPressLink from "../components/LongPressLink";
 import { useEffect } from "react";
+import Image from "next/image";
 
 export default function Home({
   accessToken,
@@ -50,10 +51,13 @@ export default function Home({
                         spotifyUrl={album.external_urls.spotify}
                         accessToken={accessToken}
                       >
-                        <img
-                          src={album.images[0]?.url}
-                          alt="Currently Playing Album Cover"
-                          className="mt-10 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                        <Image
+                          src={
+                            album.images[0]?.url || "/images/not-playing.webp"
+                          }
+                          width={280}
+                          height={280}
+                          className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
                         />
                       </LongPressLink>
                       <LongPressLink
@@ -88,9 +92,8 @@ export default function Home({
                       spotifyUrl={item.external_urls.spotify}
                       accessToken={accessToken}
                     >
-                      <img
-                        src={item.images[0]?.url}
-                        alt="Playlist Cover"
+                      <Image
+                        src={item.images[0]?.url || "/images/not-playing.webp"}
                         className="mt-10 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
                       />
                     </LongPressLink>
@@ -116,10 +119,13 @@ export default function Home({
                       spotifyUrl={artist.external_urls.spotify}
                       accessToken={accessToken}
                     >
-                      <img
-                        src={artist.images[0]?.url}
-                        alt="Artist"
-                        className="mt-10 w-[280px] h-[280px] aspect-square rounded-full drop-shadow-xl"
+                      <Image
+                        src={
+                          artist.images[0]?.url || "/images/not-playing.webp"
+                        }
+                        width={280}
+                        height={280}
+                        className="mt-10 aspect-square rounded-full drop-shadow-xl"
                       />
                     </LongPressLink>
                     <LongPressLink
@@ -144,10 +150,13 @@ export default function Home({
                       spotifyUrl={playlist.external_urls.spotify}
                       accessToken={accessToken}
                     >
-                      <img
-                        src={playlist.images[0]?.url}
-                        alt="Playlist Cover"
-                        className="mt-10 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                      <Image
+                        src={
+                          playlist.images[0]?.url || "/images/not-playing.webp"
+                        }
+                        width={280}
+                        height={280}
+                        className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
                       />
                     </LongPressLink>
                     <LongPressLink

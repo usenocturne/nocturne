@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/LongPressLink";
+import Image from "next/image";
 
 const PlaylistPage = ({
   initialPlaylist,
@@ -267,10 +268,11 @@ const PlaylistPage = ({
               spotifyUrl={playlist.external_urls.spotify}
               accessToken={accessToken}
             >
-              <img
-                src={playlist.images[0].url}
-                alt="Playlist Cover"
-                className="w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+              <Image
+                src={playlist.images[0].url || "/images/not-playing.webp"}
+                width={280}
+                height={280}
+                className="aspect-square rounded-[12px] drop-shadow-xl"
               />
             </LongPressLink>
             <LongPressLink

@@ -266,7 +266,7 @@ export default function App({ Component, pageProps }) {
         }
       } catch (error) {
         if (!error.message.includes("Unexpected end of JSON input")) {
-          handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
+          return;
         } else {
           setCurrentPlayback(null);
           setCurrentlyPlayingAlbum(null);
