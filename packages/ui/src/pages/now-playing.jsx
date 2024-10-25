@@ -234,7 +234,7 @@ const NowPlaying = ({
           setVolume(currentVolume);
         }
       } catch (error) {
-        handleError("SYNC_VOLUME_ERROR", error.message);
+        return;
       }
     };
     syncVolume();
