@@ -55,6 +55,7 @@ export default function Home({
                           src={
                             album.images[0]?.url || "/images/not-playing.webp"
                           }
+                          alt="Album Cover"
                           width={280}
                           height={280}
                           className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
@@ -94,7 +95,10 @@ export default function Home({
                     >
                       <Image
                         src={item.images[0]?.url || "/images/not-playing.webp"}
-                        className="mt-10 w-[280px] h-[280px] aspect-square rounded-[12px] drop-shadow-xl"
+                        alt="Playlist Cover"
+                        width={280}
+                        height={280}
+                        className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
                       />
                     </LongPressLink>
                     <LongPressLink
@@ -123,6 +127,7 @@ export default function Home({
                         src={
                           artist.images[0]?.url || "/images/not-playing.webp"
                         }
+                        alt="Artist Cover"
                         width={280}
                         height={280}
                         className="mt-10 aspect-square rounded-full drop-shadow-xl"
@@ -154,6 +159,7 @@ export default function Home({
                         src={
                           playlist.images[0]?.url || "/images/not-playing.webp"
                         }
+                        alt="Radio Cover"
                         width={280}
                         height={280}
                         className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"

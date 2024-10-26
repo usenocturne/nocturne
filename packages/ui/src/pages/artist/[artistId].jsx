@@ -209,6 +209,7 @@ const ArtistPage = ({ artist, currentlyPlayingTrackUri, handleError }) => {
             >
               <Image
                 src={artist.images[0].url || "/images/not-playing.webp"}
+                alt="Artist Image"
                 width={280}
                 height={280}
                 className="aspect-square rounded-full drop-shadow-xl"

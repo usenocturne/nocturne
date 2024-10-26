@@ -26,7 +26,7 @@ const NowPlaying = ({
 }) => {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
-  const [volume, setVolume] = useState(100);
+  const [volume, setVolume] = useState(null);
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
   const volumeTimeoutRef = useRef(null);
   const volumeSyncIntervalRef = useRef(null);
@@ -225,27 +225,20 @@ const NowPlaying = ({
   }, [accessToken]);
 
   useEffect(() => {
-    const syncVolume = async () => {
-      if (!accessToken) return;
-      try {
-        const response = currentPlayback.device.volume_percent;
-        if (response.ok) {
-          const data = await response.json();
-          const currentVolume = data.device.volume_percent;
-          setVolume(currentVolume);
-        }
-      } catch (error) {
-        return;
-      }
+    const syncVolume = () => {
+      if (!currentPlayback?.device?.volume_percent) return;
+      setVolume(currentPlayback.device.volume_percent);
     };
+
     syncVolume();
     volumeSyncIntervalRef.current = setInterval(syncVolume, 5000);
+
     return () => {
       if (volumeSyncIntervalRef.current) {
         clearInterval(volumeSyncIntervalRef.current);
       }
     };
-  }, [accessToken]);
+  }, [currentPlayback?.device?.volume_percent]);
 
   const changeVolume = async (newVolume) => {
     if (!accessToken) return;
@@ -958,6 +951,7 @@ const NowPlaying = ({
             >
               <Image
                 src={albumArt || "/images/not-playing.webp"}
+                alt="Album Art"
                 width={280}
                 height={280}
                 className="aspect-square rounded-[12px] drop-shadow-xl"
@@ -1201,7 +1195,7 @@ const NowPlaying = ({
                   "rounded-[13px]": volume === 100,
                 }
               )}
-              style={{ height: `${volume}%` }}
+              style={{ height: `${volume ?? 100}%` }}
             >
               <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
                 {volume === 0 && <VolumeOffIcon className="w-7 h-7" />}
@@ -1234,6 +1228,7 @@ const NowPlaying = ({
                   >
                     <Image
                       src={item.images[0]?.url || "/images/not-playing.webp"}
+                      alt="Playlist Art"
                       width={280}
                       height={280}
                       className="mt-8 aspect-square rounded-[12px] drop-shadow-xl"

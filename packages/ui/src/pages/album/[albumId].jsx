@@ -261,6 +261,7 @@ const AlbumPage = ({ initialAlbum, currentlyPlayingTrackUri, handleError }) => {
             >
               <Image
                 src={album.images[0].url || "/images/not-playing.webp"}
+                alt="Album Cover"
                 width={280}
                 height={280}
                 className="aspect-square rounded-[12px] drop-shadow-xl"
