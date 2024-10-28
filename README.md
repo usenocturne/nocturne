@@ -46,9 +46,6 @@ $ python superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
 $ python superbird_tool.py --restore_device C:\path\to\Nocturne_v1.0_2024-10-09 --dont_reset
-
-# Disable charger check
-$ python superbird_tool.py --disable_charger_check
 ```
 
 Connect your Raspberry Pi to your computer and run the following from your command line:
@@ -70,7 +67,7 @@ $ sudo ./setup_host_rpi.sh
 $ reboot
 ```
 
-Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. Input `superbird` as the password.
+Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. This should look like `raspberrypi.local:5900`. Input `superbird` as the password.
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
@@ -97,9 +94,6 @@ $ /opt/homebrew/bin/python3 superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
 $ /opt/homebrew/bin/python3 superbird_tool.py --restore_device /path/to/Nocturne_v1.0_2024-10-09 --dont_reset
-
-# Disable charger check
-$ /opt/homebrew/bin/python3 superbird_tool.py --disable_charger_check
 ```
 
 Connect your Raspberry Pi to your computer and run the following from your command line:
@@ -121,7 +115,7 @@ $ sudo ./setup_host_rpi.sh
 $ reboot
 ```
 
-Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. Input `superbird` as the password.
+Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. This should look like `raspberrypi.local:5900`. Input `superbird` as the password.
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
@@ -144,10 +138,10 @@ $ sudo python3 ./superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
 $ sudo python3 ./superbird_tool.py --restore_device /path/to/Nocturne_v1.0_2024-10-09 --dont_reset
+```
+After the flashing completes, unplug and replug your Car Thing into your computer to boot into Nocturne. 
 
-# Disable charger check
-$ sudo python3 ./superbird_tool.py --disable_charger_check
-
+```bash
 # Go into the nocturne-image repository
 $ cd /path/to/nocturne-image
 
@@ -158,7 +152,7 @@ $ chmod +x setup_host_linux.sh
 $ sudo ./setup_host_linux.sh
 ```
 
-Connect Car Thing to your computer, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. Input `superbird` as the password.
+Connect Car Thing to your computer, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), and open the app. Find the IP Address of your device and create a new connection with the VNC Server Address with the port `5900`. This should look something like `raspberrypi.local:5900`. Input `superbird` as the password.
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
