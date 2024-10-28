@@ -601,6 +601,49 @@ export default function App({ Component, pageProps }) {
     }
   }, [activeSection, sectionGradients]);
 
+  useEffect(() => {
+    const keyPressStartTimes = {};
+
+    const handleKeyDown = (event) => {
+      if (["1", "2", "3", "4"].includes(event.key)) {
+        keyPressStartTimes[event.key] = Date.now();
+      }
+
+      if (event.key === "m" || event.key === "M") {
+        if (router.pathname !== "/") {
+          router.push("/").then(() => {
+            setActiveSection("settings");
+          });
+        } else {
+          setActiveSection("settings");
+        }
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      if (["1", "2", "3", "4"].includes(event.key)) {
+        const pressDuration = Date.now() - (keyPressStartTimes[event.key] || 0);
+
+        if (pressDuration < 2000) {
+          const savedUrl = localStorage.getItem(`buttonMap${event.key}`);
+          if (savedUrl) {
+            const urlWithToken = `${savedUrl}?accessToken=${accessToken}`;
+            router.push(urlWithToken);
+          }
+        }
+        delete keyPressStartTimes[event.key];
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [router, accessToken]);
+
   return (
     <main
       className={`overflow-hidden relative min-h-screen ${inter.className}`}

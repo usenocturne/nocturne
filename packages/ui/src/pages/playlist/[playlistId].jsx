@@ -18,6 +18,56 @@ const PlaylistPage = ({
     initialPlaylist.tracks.total > initialPlaylist.tracks.items.length
   );
   const observer = useRef();
+  const keyPressStartTime = useRef({});
+  const keyHoldTimeout = useRef({});
+
+  useEffect(() => {
+    const fetchPlaylist = async () => {
+      try {
+        const res = await fetch(
+          `https://api.spotify.com/v1/playlists/${router.query.playlistId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch playlist");
+        }
+
+        const playlistData = await res.json();
+
+        const tracksRes = await fetch(
+          `https://api.spotify.com/v1/playlists/${router.query.playlistId}/tracks?limit=25`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        const tracksData = await tracksRes.json();
+
+        setPlaylist({
+          ...playlistData,
+          tracks: {
+            ...playlistData.tracks,
+            items: tracksData.items,
+          },
+        });
+        setTracks(tracksData.items);
+        setHasMore(playlistData.tracks.total > tracksData.items.length);
+      } catch (error) {
+        handleError("FETCH_PLAYLIST_ERROR", error.message);
+      }
+    };
+
+    if (router.query.playlistId && accessToken) {
+      fetchPlaylist();
+    }
+  }, [router.query.playlistId, accessToken]);
 
   const lastTrackElementRef = useCallback(
     (node) => {
@@ -46,11 +96,43 @@ const PlaylistPage = ({
       if (event.key === "Enter") {
         playPlaylist();
       }
+
+      const validKeys = ["1", "2", "3", "4"];
+      if (
+        validKeys.includes(event.key) &&
+        !keyPressStartTime.current[event.key]
+      ) {
+        keyPressStartTime.current[event.key] = Date.now();
+
+        keyHoldTimeout.current[event.key] = setTimeout(() => {
+          const currentUrl = window.location.pathname;
+          localStorage.setItem(`buttonMap${event.key}`, currentUrl);
+          keyPressStartTime.current[event.key] = null;
+        }, 2000);
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      const validKeys = ["1", "2", "3", "4"];
+      if (validKeys.includes(event.key)) {
+        if (keyHoldTimeout.current[event.key]) {
+          clearTimeout(keyHoldTimeout.current[event.key]);
+        }
+        keyPressStartTime.current[event.key] = null;
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      ["1", "2", "3", "4"].forEach((key) => {
+        if (keyHoldTimeout.current[key]) {
+          clearTimeout(keyHoldTimeout.current[key]);
+        }
+      });
     };
   }, [isShuffleEnabled]);
 
