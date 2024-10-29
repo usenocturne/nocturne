@@ -37,6 +37,10 @@ const nextConfig = {
         {
           protocol: 'https',
           hostname: 'pickasso.spotifycdn.com',
+        },
+        {
+          protocol: 'https',
+          hostname: 'blend-playlist-covers.spotifycdn.com',
         }
       ],
     },

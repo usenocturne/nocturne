@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-const XIcon = ({ className }) => (
+const CheckIcon = ({ className }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
@@ -11,19 +11,18 @@ const XIcon = ({ className }) => (
     strokeLinejoin="round"
     className={className}
   >
-    <path d="M18 6 6 18" />
-    <path d="m6 6 12 12" />
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
-export default function ErrorAlert({ error, onClose }) {
+export default function SuccessAlert({ message, onClose, show }) {
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     let timeoutId;
 
-    if (error) {
+    if (show) {
       setShouldRender(true);
       requestAnimationFrame(() => {
         setIsVisible(true);
@@ -35,7 +34,7 @@ export default function ErrorAlert({ error, onClose }) {
           setShouldRender(false);
           onClose();
         }, 300);
-      }, 5000);
+      }, 3000);
     }
 
     return () => {
@@ -43,9 +42,9 @@ export default function ErrorAlert({ error, onClose }) {
         window.clearTimeout(timeoutId);
       }
     };
-  }, [error, onClose]);
+  }, [show, onClose]);
 
-  if (!shouldRender || !error) return null;
+  if (!shouldRender) return null;
 
   return (
     <div
@@ -53,9 +52,9 @@ export default function ErrorAlert({ error, onClose }) {
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
       }`}
     >
-      <div className="pointer-events-auto flex items-center justify-between gap-x-6 bg-[#fe3b30]/70 backdrop-blur-xl px-6 py-2.5 sm:rounded-xl sm:py-3 sm:pl-4 sm:pr-3.5">
+      <div className="pointer-events-auto flex items-center justify-between gap-x-6 bg-emerald-600/70 backdrop-blur-xl px-6 py-2.5 sm:rounded-xl sm:py-3 sm:pl-4 sm:pr-3.5">
         <p className="text-[28px] font-[560] text-white tracking-tight">
-          {error.message}
+          {message || "Shortcut saved successfully"}
         </p>
         <button
           type="button"
@@ -69,7 +68,7 @@ export default function ErrorAlert({ error, onClose }) {
           }}
         >
           <span className="sr-only">Dismiss</span>
-          <XIcon className="h-12 w-12 text-white" />
+          <CheckIcon className="h-12 w-12 text-white" />
         </button>
       </div>
     </div>

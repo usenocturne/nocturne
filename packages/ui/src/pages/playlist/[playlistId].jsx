@@ -2,6 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
+import SuccessAlert from "../../components/SuccessAlert";
 
 const PlaylistPage = ({
   initialPlaylist,
@@ -20,6 +21,8 @@ const PlaylistPage = ({
   const observer = useRef();
   const keyPressStartTime = useRef({});
   const keyHoldTimeout = useRef({});
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [pressedButton, setPressedButton] = useState(null);
 
   useEffect(() => {
     const fetchPlaylist = async () => {
@@ -107,6 +110,8 @@ const PlaylistPage = ({
         keyHoldTimeout.current[event.key] = setTimeout(() => {
           const currentUrl = window.location.pathname;
           localStorage.setItem(`buttonMap${event.key}`, currentUrl);
+          setPressedButton(event.key);
+          setShowSuccess(true);
           keyPressStartTime.current[event.key] = null;
         }, 2000);
       }
@@ -340,6 +345,11 @@ const PlaylistPage = ({
     }
   };
 
+  const onCloseAlert = useCallback(() => {
+    setShowSuccess(false);
+    setPressedButton(null);
+  }, []);
+
   return (
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen">
       <div className="md:w-1/3 h-screen sticky top-0">
@@ -437,6 +447,11 @@ const PlaylistPage = ({
           <p className="text-white text-center">Loading more tracks...</p>
         )}
       </div>
+      <SuccessAlert
+        show={showSuccess}
+        onClose={onCloseAlert}
+        message={`Playlist mapped to Button ${pressedButton}`}
+      />
     </div>
   );
 };
