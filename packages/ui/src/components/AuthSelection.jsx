@@ -1,18 +1,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import ErrorAlert from "./ErrorAlert";
 
 const AuthMethodSelector = ({ onSelect }) => {
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
-  const [error, setError] = useState("");
+  const [alert, setAlert] = useState(null);
   const [buttonsVisible, setButtonsVisible] = useState(true);
   const [formVisible, setFormVisible] = useState(false);
-
-  useEffect(() => {
-    localStorage.removeItem("spotifyAuthType");
-    localStorage.removeItem("spotifyTempId");
-  }, []);
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     if (showCustomForm) {
@@ -24,22 +21,57 @@ const AuthMethodSelector = ({ onSelect }) => {
     }
   }, [showCustomForm]);
 
-  const handleDefaultSubmit = (e) => {
-    e.preventDefault();
-    localStorage.setItem("spotifyAuthType", "default");
-    setTimeout(() => {
-      onSelect({ type: "default" });
-    }, 100);
+  const validateSpotifyCredentials = async (clientId, clientSecret) => {
+    try {
+      const response = await fetch("/api/validate-credentials", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clientId,
+          clientSecret,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to validate credentials");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Validation error:", error);
+      setAlert({
+        message:
+          error.message ||
+          "Invalid credentials. Please check your Client ID and Client Secret.",
+      });
+      return false;
+    }
   };
 
   const handleCustomSubmit = async (e) => {
     e.preventDefault();
     if (!clientId.trim() || !clientSecret.trim()) {
-      setError("Please enter both Client ID and Client Secret");
+      setAlert({
+        message: "Please enter both Client ID and Client Secret",
+      });
       return;
     }
 
     try {
+      setIsValidating(true);
+
+      const isValid = await validateSpotifyCredentials(
+        clientId.trim(),
+        clientSecret.trim()
+      );
+
+      if (!isValid) {
+        return;
+      }
+
       const tempId = Math.random().toString(36).substring(7);
 
       const { error: insertError } = await supabase
@@ -55,13 +87,22 @@ const AuthMethodSelector = ({ onSelect }) => {
 
       localStorage.setItem("spotifyAuthType", "custom");
       localStorage.setItem("spotifyTempId", tempId);
-      setTimeout(() => {
-        onSelect({ type: "custom", tempId });
-      }, 100);
+      onSelect({ type: "custom", tempId });
     } catch (err) {
-      console.error("Error storing credentials:", err);
-      setError("Failed to store credentials. Please try again.");
+      setAlert({
+        message: "Failed to store credentials. Please try again.",
+      });
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+    } finally {
+      setIsValidating(false);
     }
+  };
+
+  const handleDefaultSubmit = (e) => {
+    e.preventDefault();
+    localStorage.setItem("spotifyAuthType", "default");
+    onSelect({ type: "default" });
   };
 
   const handleBackClick = () => {
@@ -151,6 +192,7 @@ const AuthMethodSelector = ({ onSelect }) => {
                     onChange={(e) => setClientId(e.target.value)}
                     required
                     placeholder="Client ID"
+                    disabled={isValidating}
                     className="block w-full rounded-2xl border-0 bg-black/10 py-4 px-6 text-white shadow-sm ring-1 ring-inset focus:ring-2 focus:ring-white/20 ring-white/10 text-[32px] sm:leading-6"
                   />
                 </div>
@@ -166,23 +208,26 @@ const AuthMethodSelector = ({ onSelect }) => {
                     onChange={(e) => setClientSecret(e.target.value)}
                     required
                     placeholder="Client Secret"
+                    disabled={isValidating}
                     className="block w-full rounded-2xl border-0 bg-black/10 py-4 px-6 text-white shadow-sm ring-1 ring-inset focus:ring-2 focus:ring-white/20 ring-white/10 text-[32px] sm:leading-6"
                   />
                 </div>
-                {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+                <ErrorAlert error={alert} onClose={() => setAlert(null)} />
               </div>
 
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleBackClick}
-                  className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[580] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
+                  disabled={isValidating}
+                  className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[580] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors disabled:opacity-50"
                 >
                   Back
                 </button>
                 <button
                   type="submit"
-                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[580] text-white tracking-tight shadow-sm"
+                  disabled={isValidating}
+                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[580] text-white tracking-tight shadow-sm disabled:opacity-50"
                 >
                   Continue
                 </button>
