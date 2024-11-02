@@ -10,6 +10,8 @@ import {
   fetchUserRadio,
 } from "../services";
 import ErrorAlert from "../components/ErrorAlert";
+import AuthSelection from "../components/AuthSelection";
+import { supabase } from "../lib/supabaseClient";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -89,6 +91,27 @@ export default function App({ Component, pageProps }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState(null);
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [authSelectionMade, setAuthSelectionMade] = useState(false);
+  const [authType, setAuthType] = useState(null);
+  const [tempId, setTempId] = useState(null);
+
+  const handleAuthSelection = async (selection) => {
+    if (selection.type === "custom") {
+      setTempId(selection.tempId);
+      setAuthType("custom");
+    } else {
+      setAuthType("default");
+    }
+    setAuthSelectionMade(true);
+  };
+
+  useEffect(() => {
+    const savedAuthType = localStorage.getItem("spotifyAuthType");
+    if (savedAuthType) {
+      setAuthType(savedAuthType);
+      setAuthSelectionMade(true);
+    }
+  }, []);
 
   const handleError = (errorType, errorMessage) => {
     setError({
@@ -142,22 +165,23 @@ export default function App({ Component, pageProps }) {
   }, [router]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && authSelectionMade) {
       const code = new URLSearchParams(window.location.search).get("code");
       setAuthCode(code);
     }
-  }, []);
+  }, [authSelectionMade]);
 
   useEffect(() => {
-    if (authCode) {
+    if (authCode && authSelectionMade) {
       fetchAccessToken(authCode);
     } else if (
       typeof window !== "undefined" &&
-      !window.location.search.includes("code")
+      !window.location.search.includes("code") &&
+      authSelectionMade
     ) {
       redirectToSpotify();
     }
-  }, [authCode]);
+  }, [authCode, authSelectionMade]);
 
   useEffect(() => {
     if (accessToken) {
@@ -279,11 +303,28 @@ export default function App({ Component, pageProps }) {
     }
   };
 
-  const redirectToSpotify = () => {
+  const redirectToSpotify = async () => {
     const scopes =
       "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
 
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&scope=${scopes}`;
+    let clientId;
+    if (authType === "custom" && tempId) {
+      const { data, error } = await supabase
+        .from("spotify_credentials")
+        .select("client_id")
+        .eq("temp_id", tempId)
+        .single();
+
+      if (error) {
+        handleError("AUTH_ERROR", "Failed to get custom credentials");
+        return;
+      }
+      clientId = data.client_id;
+    } else {
+      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+    }
+
+    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&scope=${scopes}`;
   };
 
   const fetchAccessToken = async (code) => {
@@ -293,14 +334,19 @@ export default function App({ Component, pageProps }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({
+          code,
+          tempId: authType === "custom" ? tempId : null,
+          isCustomAuth: authType === "custom",
+        }),
       });
+
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
       setAccessToken(data.access_token);
       setRefreshToken(data.refresh_token);
     } catch (error) {
@@ -315,7 +361,10 @@ export default function App({ Component, pageProps }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+          isCustomAuth: authType === "custom",
+        }),
       });
 
       if (!response.ok) {
@@ -728,6 +777,14 @@ export default function App({ Component, pageProps }) {
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [router, accessToken, isShuffleEnabled, handleError]);
+
+  if (!authSelectionMade) {
+    return (
+      <div className={inter.className}>
+        <AuthSelection onSelect={handleAuthSelection} />
+      </div>
+    );
+  }
 
   return (
     <main
