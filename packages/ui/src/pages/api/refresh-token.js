@@ -1,35 +1,90 @@
 import { URLSearchParams } from "url";
+import { supabase } from '../../lib/supabaseClient';
 
-export default async function handler(req, res, handleError) {
-  if (req.method === 'POST') {
-    const { refresh_token } = req.body;
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(Method `${req.method} Not Allowed`);
+  }
 
-    const params = new URLSearchParams();
-    params.append("grant_type", "refresh_token");
-    params.append("refresh_token", refresh_token);
+  const { refresh_token, isCustomAuth } = req.body;
+  if (!refresh_token) {
+    return res.status(400).json({ error: 'Refresh token is required' });
+  }
 
-    try {
-      const response = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: "Basic " + Buffer.from(`${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64'),
-        },
-        body: params,
-      });
+  const params = new URLSearchParams();
+  params.append("grant_type", "refresh_token");
+  params.append("refresh_token", refresh_token);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  try {
+    let clientId, clientSecret;
+
+    if (isCustomAuth) {
+      const { data: credentials, error: fetchError } = await supabase
+        .from('spotify_credentials')
+        .select('client_id, client_secret')
+        .eq('refresh_token', refresh_token)
+        .single();
+
+      if (fetchError || !credentials) {
+        return res.status(400).json({ error: 'Custom credentials not found' });
       }
 
-      const data = await response.json();
-      res.status(200).json(data);
-    } catch (error) {
-      handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
-      res.status(500).json({ error: "Failed to refresh access token" });
+      clientId = credentials.client_id;
+      clientSecret = credentials.client_secret;
+    } else {
+      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
     }
-  } else {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+
+    const response = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: "Basic " + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
+      },
+      body: params,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+
+    if (isCustomAuth && data.refresh_token) {
+      const { error: updateError } = await supabase
+        .from('spotify_credentials')
+        .delete()
+        .eq('refresh_token', refresh_token);
+
+      if (updateError) {
+        console.error('Error deleting old credentials:', updateError);
+      }
+
+      const { error: insertError } = await supabase
+        .from('spotify_credentials')
+        .insert({
+          refresh_token: data.refresh_token,
+          client_id: clientId,
+          client_secret: clientSecret,
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        });
+
+      if (insertError) {
+        console.error('Error storing new credentials:', insertError);
+      }
+    }
+
+    return res.status(200).json({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_in: data.expires_in
+    });
+
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    return res.status(500).json({ error: 'Failed to refresh access token' });
   }
 }

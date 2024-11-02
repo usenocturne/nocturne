@@ -1,36 +1,92 @@
 import { URLSearchParams } from "url";
+import { supabase } from '../../lib/supabaseClient';
 
-export default async function handler(req, res, handleError) {
-  if (req.method === 'POST') {
-    const { code } = req.body;
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(Method `${req.method} Not Allowed`);
+  }
+
+  const { code, tempId, isCustomAuth } = req.body;
+
+  if (!code) {
+    return res.status(400).json({ error: 'Authorization code is required' });
+  }
+
+  let useClientId, useClientSecret;
+
+  try {
+    if (isCustomAuth && tempId) {
+      const { data: credentials, error } = await supabase
+        .from('spotify_credentials')
+        .select('client_id, client_secret')
+        .eq('temp_id', tempId)
+        .single();
+
+      if (error || !credentials) {
+        console.error('Error fetching credentials:', error);
+        return res.status(400).json({ error: 'Failed to get custom credentials' });
+      }
+
+      useClientId = credentials.client_id;
+      useClientSecret = credentials.client_secret;
+
+    } else {
+      useClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      useClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    }
+
+    if (!useClientId || !useClientSecret) {
+      console.error('Missing credentials:', { 
+        hasClientId: !!useClientId, 
+        hasClientSecret: !!useClientSecret 
+      });
+      return res.status(400).json({ error: 'Missing credentials' });
+    }
 
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("code", code);
     params.append("redirect_uri", process.env.NEXT_PUBLIC_REDIRECT_URI);
 
-    try {
-      const response = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: "Basic " + Buffer.from(`${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64'),
-        },
-        body: params,
-      });
+    const response = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: "Basic " + Buffer.from(`${useClientId}:${useClientSecret}`).toString('base64'),
+      },
+      body: params,
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    const data = await response.json();
 
-      const data = await response.json();
-      res.status(200).json(data);
-    } catch (error) {
-      handleError("FETCH_ACCESS_TOKEN_ERROR", error.message);
-      res.status(500).json({ error: "Failed to fetch access token" });
+    if (!response.ok) {
+      return res.status(response.status).json(data);
     }
-  } else {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+
+    if (isCustomAuth) {
+      const { error: updateError } = await supabase
+        .from('spotify_credentials')
+        .update({
+          refresh_token: data.refresh_token,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        })
+        .eq('temp_id', tempId);
+
+      if (updateError) {
+        console.error('Error updating credentials:', updateError);
+      }
+    }
+
+    return res.status(200).json({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_in: data.expires_in,
+      isCustomAuth
+    });
+
+  } catch (error) {
+    console.error('Token exchange error:', error);
+    return res.status(500).json({ error: 'Failed to fetch access token' });
   }
 }
