@@ -10,6 +10,11 @@ const AuthMethodSelector = ({ onSelect }) => {
   const [formVisible, setFormVisible] = useState(false);
 
   useEffect(() => {
+    localStorage.removeItem("spotifyAuthType");
+    localStorage.removeItem("spotifyTempId");
+  }, []);
+
+  useEffect(() => {
     if (showCustomForm) {
       setButtonsVisible(false);
       setTimeout(() => setFormVisible(true), 250);
@@ -18,6 +23,14 @@ const AuthMethodSelector = ({ onSelect }) => {
       setTimeout(() => setButtonsVisible(true), 250);
     }
   }, [showCustomForm]);
+
+  const handleDefaultSubmit = (e) => {
+    e.preventDefault();
+    localStorage.setItem("spotifyAuthType", "default");
+    setTimeout(() => {
+      onSelect({ type: "default" });
+    }, 100);
+  };
 
   const handleCustomSubmit = async (e) => {
     e.preventDefault();
@@ -42,17 +55,13 @@ const AuthMethodSelector = ({ onSelect }) => {
 
       localStorage.setItem("spotifyAuthType", "custom");
       localStorage.setItem("spotifyTempId", tempId);
-      onSelect({ type: "custom", tempId });
+      setTimeout(() => {
+        onSelect({ type: "custom", tempId });
+      }, 100);
     } catch (err) {
       console.error("Error storing credentials:", err);
       setError("Failed to store credentials. Please try again.");
     }
-  };
-
-  const handleDefaultSubmit = (e) => {
-    e.preventDefault();
-    localStorage.setItem("spotifyAuthType", "default");
-    onSelect({ type: "default" });
   };
 
   const handleBackClick = () => {
