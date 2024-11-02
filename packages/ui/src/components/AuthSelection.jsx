@@ -109,7 +109,7 @@ const AuthMethodSelector = ({ onSelect }) => {
     setShowCustomForm(false);
     setClientId("");
     setClientSecret("");
-    setError("");
+    setAlert(null);
   };
 
   const NocturneIcon = ({ className }) => (
