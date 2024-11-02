@@ -41,6 +41,7 @@ const AuthMethodSelector = ({ onSelect }) => {
       if (insertError) throw insertError;
 
       localStorage.setItem("spotifyAuthType", "custom");
+      localStorage.setItem("spotifyTempId", tempId);
       onSelect({ type: "custom", tempId });
     } catch (err) {
       console.error("Error storing credentials:", err);

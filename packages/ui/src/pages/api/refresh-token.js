@@ -12,10 +12,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Refresh token is required' });
   }
 
-  const params = new URLSearchParams();
-  params.append("grant_type", "refresh_token");
-  params.append("refresh_token", refresh_token);
-
   try {
     let clientId, clientSecret;
 
@@ -27,6 +23,7 @@ export default async function handler(req, res) {
         .single();
 
       if (fetchError || !credentials) {
+        console.error('Error fetching custom credentials:', fetchError);
         return res.status(400).json({ error: 'Custom credentials not found' });
       }
 

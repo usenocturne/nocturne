@@ -107,8 +107,12 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     const savedAuthType = localStorage.getItem("spotifyAuthType");
+    const savedTempId = localStorage.getItem("spotifyTempId");
     if (savedAuthType) {
       setAuthType(savedAuthType);
+      if (savedAuthType === "custom" && savedTempId) {
+        setTempId(savedTempId);
+      }
       setAuthSelectionMade(true);
     }
   }, []);
@@ -336,7 +340,7 @@ export default function App({ Component, pageProps }) {
         },
         body: JSON.stringify({
           code,
-          tempId: authType === "custom" ? tempId : null,
+          tempId,
           isCustomAuth: authType === "custom",
         }),
       });
