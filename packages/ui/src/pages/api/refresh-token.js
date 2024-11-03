@@ -50,15 +50,12 @@ export default async function handler(req, res) {
     }
 
     if (isCustomAuth && data.refresh_token) {
-      const { error: updateError } = await supabase
+      const { data: oldRecord } = await supabase
         .from('spotify_credentials')
-        .delete()
-        .eq('refresh_token', refresh_token);
-
-      if (updateError) {
-        console.error('Error deleting old credentials:', updateError);
-      }
-
+        .select('token_refresh_count, first_used_at')
+        .eq('refresh_token', refresh_token)
+        .single();
+    
       const { error: insertError } = await supabase
         .from('spotify_credentials')
         .insert({
@@ -66,7 +63,11 @@ export default async function handler(req, res) {
           client_id: clientId,
           client_secret: clientSecret,
           created_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          last_used: new Date().toISOString(),
+          first_used_at: oldRecord?.first_used_at || new Date().toISOString(),
+          token_refresh_count: (oldRecord?.token_refresh_count || 0) + 1,
+          user_agent: req.headers['user-agent'] || null
         });
 
       if (insertError) {

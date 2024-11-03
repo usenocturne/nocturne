@@ -51,6 +51,14 @@ const AuthMethodSelector = ({ onSelect }) => {
     }
   };
 
+  const generateSecureTempId = () => {
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+      ""
+    );
+  };
+
   const handleCustomSubmit = async (e) => {
     e.preventDefault();
     if (!clientId.trim() || !clientSecret.trim()) {
@@ -72,7 +80,7 @@ const AuthMethodSelector = ({ onSelect }) => {
         return;
       }
 
-      const tempId = Math.random().toString(36).substring(7);
+      const tempId = generateSecureTempId();
 
       const { error: insertError } = await supabase
         .from("spotify_credentials")

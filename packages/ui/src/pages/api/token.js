@@ -21,11 +21,18 @@ export default async function handler(req, res) {
         .from('spotify_credentials')
         .select('client_id, client_secret')
         .eq('temp_id', tempId)
-        .single();
-
-      if (error || !credentials) {
+        .maybeSingle();
+        
+      if (error) {
+        if (error.message.includes('rate limit exceeded')) {
+          return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        }
         console.error('Error fetching credentials:', error);
         return res.status(400).json({ error: 'Failed to get custom credentials' });
+      }
+    
+      if (!credentials) {
+        return res.status(404).json({ error: 'Credentials not found or expired' });
       }
 
       useClientId = credentials.client_id;
@@ -69,7 +76,10 @@ export default async function handler(req, res) {
         .from('spotify_credentials')
         .update({
           refresh_token: data.refresh_token,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          last_used: new Date().toISOString(),
+          first_used_at: new Date().toISOString(),
+          user_agent: req.headers['user-agent'] || null
         })
         .eq('temp_id', tempId);
 
