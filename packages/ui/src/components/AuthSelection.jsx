@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import ErrorAlert from "./ErrorAlert";
+import packageInfo from "../../package.json";
 
 const AuthMethodSelector = ({ onSelect }) => {
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -164,23 +165,28 @@ const AuthMethodSelector = ({ onSelect }) => {
             }`}
           >
             <div
-              className={`space-y-6 mt-2 absolute top-0 left-0 w-full transition-opacity duration-250 ${
+              className={`space-y-28 mt-2 absolute top-0 left-0 w-full transition-opacity duration-250 ${
                 buttonsVisible ? "opacity-100" : "opacity-0"
               }`}
               style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
             >
+              {/*
               <button
                 onClick={handleDefaultSubmit}
                 className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
               >
-                Use Default Credentials
+                Use Default Credentials (Beta)
               </button>
+              */}
               <button
                 onClick={() => setShowCustomForm(true)}
                 className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
               >
                 Use Custom Credentials
               </button>
+              <p className="text-center text-white/30 text-[16px]">
+                {packageInfo.version}
+              </p>
             </div>
 
             <form
