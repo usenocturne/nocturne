@@ -143,7 +143,7 @@ const AuthMethodSelector = ({ onSelect }) => {
   );
 
   return (
-    <div className="bg-black min-h-screen flex items-center justify-center">
+    <div className="bg-black h-screen flex items-center justify-center overflow-hidden fixed inset-0">
       <div className="w-full flex flex-col items-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-xl">
           <NocturneIcon className="mx-auto h-14 w-auto" />
