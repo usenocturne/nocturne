@@ -1,3 +1,9 @@
+
+# python script to setup hotspot connection on raspberry pi
+# run setup_host script first, then this script with python
+# the pi will prefer connecting to your phones hotspot over your main network
+
+
 # required imports
 import getpass
 import os

@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 
-# setup a debian/ubuntu host machine to provide internet for USB device connected
-# script should be run ONCE on the host machine
-
-# this script has not been tested thoroughly, so stuff may not work as intended 
-# also it will only work on distros that use apt (probably), unless you edit the script to use a different package manager
+# setup a linux host machine with apt package manager to provide internet for USB device connected
+# this should be run ONCE on the host machine
 
 set -e  # bail on any errors
 
 # install needed packages
 #   NOTE: the flag "--break-system-packages" only exists on recent debian/ubuntu versions,
 #   so we have to try with, and if there is an error try again without the flag
+
 export DEBIAN_FRONTEND=noninteractive
 apt install -y net-tools git htop build-essential cmake python3 python3-dev python3-pip iptables adb android-sdk-platform-tools-common iptables-persistent
 python3 -m pip install --break-system-packages virtualenv nuitka ordered-set || {
@@ -152,4 +150,3 @@ echo "4. Click on Apply to save the settings. More detailed instructions with sc
 append_if_missing "${USBNET_PREFIX}.2  ${HOST_NAME}"  "/etc/hosts"
 
 echo "Need to reboot for all changes to take effect!"
-
