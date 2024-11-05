@@ -70,7 +70,10 @@ export default function Home({
     <div className="relative min-h-screen">
       {!loading && (
         <div className="relative z-10 grid grid-cols-[2.21fr_3fr] fadeIn-animation">
-          <div className="h-screen overflow-y-auto pb-12 pl-8 relative scroll-container">
+          <div
+            className="h-screen overflow-y-auto pb-12 pl-8 relative scroll-container scroll-smooth"
+            style={{ willChange: "transform" }}
+          >
             <Sidebar
               activeSection={activeSection}
               setActiveSection={setActiveSection}
