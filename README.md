@@ -145,11 +145,15 @@ After the flashing completes, unplug and replug your Car Thing into your compute
 # Go into the nocturne-image repository
 $ cd /path/to/nocturne-image
 
-# Make setup_host_linux.sh executable
-$ chmod +x setup_host_linux.sh
+```
+At this point, there are two different scripts that you can use. The first one, `setup_host_apt.sh`, is used on Linux distros that utilize apt as it's package manager. The second one, `setup_host_pacman.sh`, is used on Linux distros that utilize Pacman as it's package manager. If you use Pacman, replace `setup_host_apt.sh` in the following commands with `setup_host_pacman.sh` to continue with setup.
 
-# Execute setup_host_linux.sh
-$ sudo ./setup_host_linux.sh
+``` bash
+# Make setup_host_apt.sh executable
+$ chmod +x setup_host_apt.sh
+
+# Execute setup_host_apt.sh
+$ sudo ./setup_host_apt.sh
 ```
 
 Connect Car Thing to your computer, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), and open the app. Find the IP Address of your device and create a new connection with the VNC Server Address with the port `5900`. This should look something like `raspberrypi.local:5900`. Input `superbird` as the password.
