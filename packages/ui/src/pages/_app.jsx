@@ -149,7 +149,7 @@ export default function App({ Component, pageProps }) {
   }, [drawerOpen, router, setActiveSection]);
 
   useEffect(() => {
-    const handleKeyPress = (event) => {
+    const handleKeyDown = (event) => {
       if (event.key === "m" || event.key === "M") {
         if (router.pathname !== "/") {
           router.push("/").then(() => {
@@ -161,10 +161,10 @@ export default function App({ Component, pageProps }) {
       }
     };
 
-    window.addEventListener("keydown", handleKeyPress);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyPress);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [router]);
 
@@ -656,131 +656,6 @@ export default function App({ Component, pageProps }) {
       setTargetColor4(color4);
     }
   }, [activeSection, sectionGradients]);
-
-  useEffect(() => {
-    const keyPressStartTimes = {};
-
-    const handleKeyDown = (event) => {
-      if (["1", "2", "3", "4"].includes(event.key)) {
-        keyPressStartTimes[event.key] = Date.now();
-      }
-
-      if (event.key === "m" || event.key === "M") {
-        if (router.pathname !== "/") {
-          router.push("/").then(() => {
-            setActiveSection("settings");
-          });
-        } else {
-          setActiveSection("settings");
-        }
-      }
-    };
-
-    const handleKeyUp = async (event) => {
-      if (["1", "2", "3", "4"].includes(event.key)) {
-        const pressDuration = Date.now() - (keyPressStartTimes[event.key] || 0);
-
-        if (pressDuration < 2000) {
-          const savedUrl = localStorage.getItem(`buttonMap${event.key}`);
-          if (savedUrl) {
-            const playlistId = savedUrl.split("/").pop();
-
-            try {
-              const devicesResponse = await fetch(
-                "https://api.spotify.com/v1/me/player/devices",
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                }
-              );
-
-              const devicesData = await devicesResponse.json();
-
-              if (devicesData.devices.length === 0) {
-                handleError(
-                  "NO_DEVICES_AVAILABLE",
-                  "No devices available for playback"
-                );
-                return;
-              }
-
-              const device = devicesData.devices[0];
-              const activeDeviceId = device.id;
-
-              if (!device.is_active) {
-                await fetch("https://api.spotify.com/v1/me/player", {
-                  method: "PUT",
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    device_ids: [activeDeviceId],
-                    play: false,
-                  }),
-                });
-              }
-
-              await fetch(
-                `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
-                {
-                  method: "PUT",
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                }
-              );
-
-              let offset;
-              if (isShuffleEnabled) {
-                const playlistResponse = await fetch(
-                  `https://api.spotify.com/v1/playlists/${playlistId}`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${accessToken}`,
-                    },
-                  }
-                );
-                const playlistData = await playlistResponse.json();
-                const randomPosition = Math.floor(
-                  Math.random() * playlistData.tracks.total
-                );
-                offset = { position: randomPosition };
-              } else {
-                offset = { position: 0 };
-              }
-
-              await fetch("https://api.spotify.com/v1/me/player/play", {
-                method: "PUT",
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  context_uri: `spotify:playlist:${playlistId}`,
-                  offset: offset,
-                }),
-              });
-
-              router.push("/now-playing");
-            } catch (error) {
-              handleError("PLAY_PLAYLIST_ERROR", error.message);
-            }
-          }
-        }
-        delete keyPressStartTimes[event.key];
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, [router, accessToken, isShuffleEnabled, handleError]);
 
   if (!authSelectionMade) {
     return (

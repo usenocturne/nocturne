@@ -1,7 +1,7 @@
 import Sidebar from "../components/Sidebar";
 import Settings from "../components/Settings";
 import LongPressLink from "../components/LongPressLink";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
 export default function Home({
@@ -29,6 +29,43 @@ export default function Home({
     }
   }, [activeSection, updateGradientColors, playlists, artists, albumsQueue]);
 
+  const scrollContainerRef = useRef(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef(null);
+
+  const handleScroll = () => {
+    setIsScrolling(true);
+
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 150);
+  };
+
+  useEffect(() => {
+    if (
+      scrollContainerRef.current &&
+      !isScrolling &&
+      activeSection === "recents"
+    ) {
+      scrollContainerRef.current.scrollTo({
+        left: 0,
+        behavior: "smooth",
+      });
+    }
+  }, [albumsQueue, isScrolling, activeSection]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="relative min-h-screen">
       {!loading && (
@@ -41,11 +78,19 @@ export default function Home({
           </div>
 
           <div className="h-screen overflow-y-auto">
-            <div className="flex overflow-x-auto scroll-container p-2">
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="flex overflow-x-auto scroll-container p-2 scroll-smooth snap-x snap-mandatory"
+              style={{ willChange: "transform" }}
+            >
               {activeSection === "recents" && (
                 <>
                   {albumsQueue.map((album) => (
-                    <div key={album.id} className="min-w-[280px] mr-10">
+                    <div
+                      key={album.id}
+                      className="min-w-[280px] mr-10 snap-start"
+                    >
                       <LongPressLink
                         href={`/album/${album.id}`}
                         spotifyUrl={album.external_urls.spotify}
@@ -87,7 +132,7 @@ export default function Home({
               )}
               {activeSection === "library" &&
                 playlists.map((item) => (
-                  <div key={item.id} className="min-w-[280px] mr-10">
+                  <div key={item.id} className="min-w-[280px] mr-10 snap-start">
                     <LongPressLink
                       href={`/playlist/${item.id}`}
                       spotifyUrl={item.external_urls.spotify}
@@ -117,7 +162,10 @@ export default function Home({
                 ))}
               {activeSection === "artists" &&
                 artists.map((artist) => (
-                  <div key={artist.id} className="min-w-[280px] mr-10">
+                  <div
+                    key={artist.id}
+                    className="min-w-[280px] mr-10 snap-start"
+                  >
                     <LongPressLink
                       href={`/artist/${artist.id}`}
                       spotifyUrl={artist.external_urls.spotify}
@@ -149,7 +197,10 @@ export default function Home({
                 ))}
               {activeSection === "radio" &&
                 radio.map((playlist) => (
-                  <div key={playlist.id} className="min-w-[280px] mr-10">
+                  <div
+                    key={playlist.id}
+                    className="min-w-[280px] mr-10 snap-start"
+                  >
                     <LongPressLink
                       href={`/playlist/${playlist.id}`}
                       spotifyUrl={playlist.external_urls.spotify}
