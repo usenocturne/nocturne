@@ -11,7 +11,7 @@ set -e  # bail on any errors
 #   so we have to try with, and if there is an error try again without the flag
 
 export DEBIAN_FRONTEND=noninteractive
-pacman -S net-tools git htop cmake python3 python-devtools python-pip iptables android-tools
+pacman -S net-tools git htop cmake python3 python-pip iptables android-tools
 python3 -m pip install --break-system-packages virtualenv nuitka ordered-set || {
     python3 -m pip install virtualenv nuitka ordered-set
 }
