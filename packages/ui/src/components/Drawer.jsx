@@ -109,7 +109,7 @@ const Drawer = ({ isOpen, onClose, children }) => {
 
       <div
         ref={drawerRef}
-        className={`fixed left-0 right-0 bottom-0 bg-black bg-opacity-40 backdrop-blur-2xl rounded-t-[17px] transition-transform duration-300 ease-out`}
+        className={`fixed left-0 right-0 bottom-0 bg-[#161616] rounded-t-[17px] transition-transform duration-300 ease-out`}
         style={{
           zIndex: 50,
           maxHeight: "90vh",
