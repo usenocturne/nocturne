@@ -1,7 +1,7 @@
 # Logos
 
 These were extracted using [`aml-imgpack`](../../aml-imgpack.py), and then modified using GIMP.
-The script `build_image.sh` will rebuild `logo.dump` using these images.
+Using `aml-imgpack`, they can be repacked into a logo.dump file.
 
 Images must be 16bit BMP. 
 
