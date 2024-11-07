@@ -1,5 +1,5 @@
 import "../styles/globals.css";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
 import { Inter } from "next/font/google";
@@ -12,6 +12,8 @@ import {
 import ErrorAlert from "../components/ErrorAlert";
 import AuthSelection from "../components/AuthSelection";
 import { supabase } from "../lib/supabaseClient";
+import SuccessAlert from "../components/SuccessAlert";
+import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -94,6 +96,9 @@ export default function App({ Component, pageProps }) {
   const [authSelectionMade, setAuthSelectionMade] = useState(false);
   const [authType, setAuthType] = useState(null);
   const [tempId, setTempId] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [pressedButton, setPressedButton] = useState(null);
+  const [showMappingOverlay, setShowMappingOverlay] = useState(false);
 
   const handleAuthSelection = async (selection) => {
     if (selection.type === "custom") {
@@ -167,6 +172,159 @@ export default function App({ Component, pageProps }) {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [router]);
+
+  useEffect(() => {
+    const validKeys = ["1", "2", "3", "4"];
+    const holdDuration = 2000;
+    let holdTimeouts = {};
+
+    const handleKeyDown = (event) => {
+      if (!validKeys.includes(event.key)) return;
+
+      if (event.repeat) return;
+
+      holdTimeouts[event.key] = setTimeout(() => {
+        const currentUrl = window.location.pathname;
+        const currentImage = localStorage.getItem("playlistPageImage");
+
+        localStorage.setItem(`button${event.key}Map`, currentUrl);
+        if (currentImage) {
+          localStorage.setItem(`button${event.key}Image`, currentImage);
+        }
+
+        setPressedButton(event.key);
+        setShowSuccess(true);
+        holdTimeouts[event.key] = null;
+      }, holdDuration);
+    };
+
+    const handleKeyUp = (event) => {
+      if (!validKeys.includes(event.key)) return;
+
+      if (holdTimeouts[event.key]) {
+        clearTimeout(holdTimeouts[event.key]);
+        setPressedButton(event.key);
+        setShowMappingOverlay(true);
+
+        const mappedRoute = localStorage.getItem(`button${event.key}Map`);
+        if (mappedRoute) {
+          const playRequest = async () => {
+            try {
+              if (!accessToken) {
+                if (!refreshToken) {
+                  throw new Error("No refresh token available");
+                }
+                await refreshAccessToken();
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              }
+
+              if (!accessToken) {
+                throw new Error("Failed to obtain access token");
+              }
+
+              const playlistId = mappedRoute.split("/").pop();
+
+              const devicesResponse = await fetch(
+                "https://api.spotify.com/v1/me/player/devices",
+                {
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              );
+
+              if (!devicesResponse.ok) {
+                throw new Error(
+                  `Devices fetch error! status: ${devicesResponse.status}`
+                );
+              }
+
+              const devicesData = await devicesResponse.json();
+
+              if (!devicesData?.devices || devicesData.devices.length === 0) {
+                handleError(
+                  "NO_DEVICES_AVAILABLE",
+                  "No devices available for playback"
+                );
+                return;
+              }
+
+              const device = devicesData.devices[0];
+              const activeDeviceId = device.id;
+
+              if (!device.is_active) {
+                await fetch("https://api.spotify.com/v1/me/player", {
+                  method: "PUT",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    device_ids: [activeDeviceId],
+                    play: false,
+                  }),
+                });
+
+                await new Promise((resolve) => setTimeout(resolve, 500));
+              }
+
+              const playResponse = await fetch(
+                "https://api.spotify.com/v1/me/player/play",
+                {
+                  method: "PUT",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    context_uri: `spotify:playlist:${playlistId}`,
+                    offset: {
+                      position: 0,
+                    },
+                    device_id: activeDeviceId,
+                  }),
+                }
+              );
+
+              if (!playResponse.ok) {
+                throw new Error(`Play error! status: ${playResponse.status}`);
+              }
+
+              router.push({
+                pathname: "/now-playing",
+                query: { accessToken },
+              });
+            } catch (error) {
+              console.error("Error in playRequest:", error);
+              handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
+            }
+          };
+
+          playRequest();
+        }
+
+        setTimeout(() => {
+          setShowMappingOverlay(false);
+        }, 2000);
+      }
+
+      holdTimeouts[event.key] = null;
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      Object.values(holdTimeouts).forEach((id) => id && clearTimeout(id));
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [accessToken, refreshToken, router]);
+
+  const handleSuccessClose = useCallback(() => {
+    setShowSuccess(false);
+    setPressedButton(null);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && authSelectionMade) {
@@ -296,12 +454,13 @@ export default function App({ Component, pageProps }) {
           );
         }
       } catch (error) {
-        if (!error.message.includes("Unexpected end of JSON input")) {
-          return;
-        } else {
+        if (error.message.includes("Unexpected end of JSON input")) {
           setCurrentPlayback(null);
           setCurrentlyPlayingAlbum(null);
           setCurrentlyPlayingTrackUri(null);
+          return;
+        } else {
+          handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
         }
       }
     }
@@ -380,8 +539,10 @@ export default function App({ Component, pageProps }) {
       if (data.refresh_token) {
         setRefreshToken(data.refresh_token);
       }
+      return data;
     } catch (error) {
       handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
+      throw error;
     }
   };
 
@@ -705,6 +866,16 @@ export default function App({ Component, pageProps }) {
         />
         <ErrorAlert error={error} onClose={clearError} />
       </div>
+      <SuccessAlert
+        show={showSuccess}
+        onClose={handleSuccessClose}
+        message={`Playlist mapped to Button ${pressedButton}`}
+      />
+      <ButtonMappingOverlay
+        show={showMappingOverlay}
+        onClose={() => setShowMappingOverlay(false)}
+        activeButton={pressedButton}
+      />
     </main>
   );
 }

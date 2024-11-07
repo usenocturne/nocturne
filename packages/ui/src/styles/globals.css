@@ -41,8 +41,25 @@ body {
   }
 }
 
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .fadeIn-animation {
   animation: 1.5s fadeIn;
+}
+
+.overlay-fadeIn {
+  animation: fadeIn 0.1s ease-in forwards;
+}
+
+.overlay-fadeOut {
+  animation: fadeOut 0.1s ease-out forwards;
 }
 
 .progress-bar {
