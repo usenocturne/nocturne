@@ -175,7 +175,7 @@ const NowPlaying = ({
     };
 
     updateCurrentLyric();
-    const intervalId = setInterval(updateCurrentLyric, 100);
+    const intervalId = setInterval(updateCurrentLyric, 50);
 
     return () => clearInterval(intervalId);
   }, [showLyrics, currentPlayback, parsedLyrics]);
@@ -185,7 +185,16 @@ const NowPlaying = ({
       const container = lyricsContainerRef.current;
       const lyricElement = container.children[currentLyricIndex];
       if (lyricElement) {
-        lyricElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        const containerHeight = container.clientHeight;
+        const lyricHeight = lyricElement.clientHeight;
+        const containerScrollTop = container.scrollTop;
+        const lyricTop = lyricElement.offsetTop;
+        const targetScroll = lyricTop - containerHeight / 2 + lyricHeight / 2;
+
+        container.scrollTo({
+          top: targetScroll,
+          behavior: "smooth",
+        });
       }
     }
   }, [currentLyricIndex]);
@@ -1000,7 +1009,7 @@ const NowPlaying = ({
           ) : (
             <div className="flex-1 flex flex-col h-[280px]">
               <div
-                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
+                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px] scroll-smooth"
                 ref={lyricsContainerRef}
               >
                 {isLoadingLyrics ? (
@@ -1014,7 +1023,7 @@ const NowPlaying = ({
                       className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
                         index === currentLyricIndex
                           ? "text-white"
-                          : "text-white/60"
+                          : "text-white/40"
                       }`}
                     >
                       {lyric.text}
@@ -1179,7 +1188,7 @@ const NowPlaying = ({
         </div>
         <div
           className={classNames(
-            "fixed right-0 top-[70px] transform transition-opacity duration-300 backdrop-blur-md",
+            "fixed right-0 top-[70px] transform transition-opacity duration-300",
             {
               "opacity-0 volumeOutScale": !isVolumeVisible,
               "opacity-100 volumeInScale": isVolumeVisible,
