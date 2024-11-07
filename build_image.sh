@@ -31,12 +31,12 @@ PACKAGES="$PACKAGES xserver-xorg-core xserver-xorg-video-fbdev xterm xinit x11-x
 # xorg input
 PACKAGES="$PACKAGES xserver-xorg-input-evdev libinput-bin xserver-xorg-input-libinput xinput"
 # additional required tools
-PACKAGES="$PACKAGES fbset tigervnc-scraping-server"
+PACKAGES="$PACKAGES fbset libglx-mesa0 tigervnc-scraping-server"
 
 # NOTE: we cannot install chromium at at the debootstrap stage
 #   so we install chromium and other packages in a separate stage using chroot
 
-STAGE2_PACKAGES="chromium python3-minimal python3-pip $EXTRA_PACKAGES"
+STAGE2_PACKAGES="chromium python3-minimal mesa-utils $EXTRA_PACKAGES"
 
 
 ################################################ Running Variables ################################################
@@ -207,6 +207,18 @@ in_target mv /usr/share/X11/xorg.conf.d /usr/share/X11/xorg.conf.d.bak
 echo "creating journald.conf"
 mkdir -p "${INSTALL_PATH}/etc/systemd"
 cp ${FILES_DATA}/etc/systemd/journald.conf "${INSTALL_PATH}/etc/systemd/journald.conf"
+
+################################################ Setup swapfile ################################################
+
+# this is needed since webpages will run out of memory and will not load 
+
+echo "enabling swap"
+in_target fallocate -l 300M /swapfile
+in_target chmod 600 /swapfile
+in_target mkswap /swapfile
+in_target swapon /swapfile
+in_target echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
 
 ################################################ Setup Hostname and Hosts ################################################
 
