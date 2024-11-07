@@ -54,7 +54,7 @@ CHROMIUM_CMD="xinit $CHROMIUM_BINARY \
 	--window-size=$DISP_REZ \
 	--window-position=0,0 \
 	--force-device-scale-factor=$SCALE \
-	--pull-to-refresh=1 \
+	--pull-to-refresh=0 \
 	--disable-smooth-scrolling \
 	--disable-login-animations \
 	--disable-modal-animations \
@@ -64,12 +64,13 @@ CHROMIUM_CMD="xinit $CHROMIUM_BINARY \
 	--fast \
 	--fast-start \
 	--disable-pinch \
-	--overscroll-history-navigation=0 \
 	--disable-translate \
+	--overscroll-history-navigation=0 \ 
 	--hide-scrollbars \
 	--disable-overlay-scrollbar \
 	--disable-features=OverlayScrollbar \
 	--disable-features=TranslateUI \
+	--disable-features=TouchpadOverscrollHistoryNavigation,OverscrollHistoryNavigation \
 	--disk-cache-dir=$DISK_CACHE_DIR \
 	--password-store=basic \
 	--touch-events=enabled \
