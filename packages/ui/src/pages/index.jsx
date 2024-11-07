@@ -32,6 +32,38 @@ export default function Home({
   const scrollContainerRef = useRef(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeoutRef = useRef(null);
+  const prevQueueLengthRef = useRef(albumsQueue.length);
+  const itemWidth = 290;
+
+  const handleWheel = (e) => {
+    e.preventDefault();
+
+    if (scrollContainerRef.current) {
+      const scrollAmount = itemWidth;
+
+      const direction = Math.sign(e.deltaX);
+
+      scrollContainerRef.current.scrollBy({
+        left: scrollAmount * direction,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener("wheel", handleWheel, {
+        passive: false,
+      });
+    }
+
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener("wheel", handleWheel);
+      }
+    };
+  }, []);
 
   const handleScroll = () => {
     setIsScrolling(true);
@@ -49,13 +81,16 @@ export default function Home({
     if (
       scrollContainerRef.current &&
       !isScrolling &&
-      activeSection === "recents"
+      activeSection === "recents" &&
+      albumsQueue.length !== prevQueueLengthRef.current
     ) {
       scrollContainerRef.current.scrollTo({
         left: 0,
         behavior: "smooth",
       });
     }
+
+    prevQueueLengthRef.current = albumsQueue.length;
   }, [albumsQueue, isScrolling, activeSection]);
 
   useEffect(() => {
@@ -84,7 +119,7 @@ export default function Home({
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
-              className="flex overflow-x-auto scroll-container p-2 scroll-smooth snap-x snap-mandatory"
+              className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
               style={{ willChange: "transform" }}
             >
               {activeSection === "recents" && (
