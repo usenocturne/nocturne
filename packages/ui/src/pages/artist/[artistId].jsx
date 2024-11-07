@@ -3,10 +3,21 @@ import { useEffect, useState } from "react";
 import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 
-const ArtistPage = ({ artist, currentlyPlayingTrackUri, handleError }) => {
+const ArtistPage = ({
+  artist,
+  currentlyPlayingTrackUri,
+  handleError,
+  error,
+}) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      handleError(error.type, error.message);
+    }
+  }, [error, handleError]);
 
   useEffect(() => {
     const artistImage =
@@ -203,7 +214,6 @@ const ArtistPage = ({ artist, currentlyPlayingTrackUri, handleError }) => {
         {artist.images && artist.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
             <LongPressLink
-              href={`/`}
               spotifyUrl={artist.external_urls.spotify}
               accessToken={accessToken}
             >
@@ -216,7 +226,6 @@ const ArtistPage = ({ artist, currentlyPlayingTrackUri, handleError }) => {
               />
             </LongPressLink>
             <LongPressLink
-              href={`/`}
               spotifyUrl={artist.external_urls.spotify}
               accessToken={accessToken}
             >
@@ -268,7 +277,6 @@ const ArtistPage = ({ artist, currentlyPlayingTrackUri, handleError }) => {
                   {track.artists.map((artist, artistIndex) => (
                     <LongPressLink
                       key={artist.id}
-                      href={`/artist/${artist.id}`}
                       spotifyUrl={artist.external_urls.spotify}
                       accessToken={accessToken}
                     >
@@ -299,39 +307,59 @@ export async function getServerSideProps(context) {
   const { artistId } = context.params;
   const accessToken = context.query.accessToken;
 
-  const res = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    handleError("FETCH_ARTIST_ERROR", errorData);
-    return {
-      notFound: true,
-    };
-  }
-
-  const artistData = await res.json();
-
-  const topTracksRes = await fetch(
-    `https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=US`,
-    {
+  try {
+    const res = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      return {
+        props: {
+          error: {
+            type: "FETCH_ARTIST_ERROR",
+            message: errorData.error.message,
+          },
+          artist: null,
+          accessToken,
+        },
+      };
     }
-  );
 
-  const topTracksData = await topTracksRes.json();
+    const artistData = await res.json();
 
-  return {
-    props: {
-      artist: { ...artistData, topTracks: topTracksData.tracks },
-      accessToken,
-    },
-  };
+    const topTracksRes = await fetch(
+      `https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=US`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const topTracksData = await topTracksRes.json();
+
+    return {
+      props: {
+        artist: { ...artistData, topTracks: topTracksData.tracks },
+        accessToken,
+        error: null,
+      },
+    };
+  } catch (error) {
+    return {
+      props: {
+        error: {
+          type: "FETCH_ARTIST_ERROR",
+          message: error.message,
+        },
+        artist: null,
+        accessToken,
+      },
+    };
+  }
 }
 
 export default ArtistPage;

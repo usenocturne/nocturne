@@ -8,6 +8,7 @@ const PlaylistPage = ({
   initialPlaylist,
   currentlyPlayingTrackUri,
   handleError,
+  error,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -23,6 +24,12 @@ const PlaylistPage = ({
   const keyHoldTimeout = useRef({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [pressedButton, setPressedButton] = useState(null);
+
+  useEffect(() => {
+    if (error) {
+      handleError(error.type, error.message);
+    }
+  }, [error, handleError]);
 
   useEffect(() => {
     const fetchPlaylist = async () => {
@@ -356,7 +363,6 @@ const PlaylistPage = ({
         {playlist.images && playlist.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
             <LongPressLink
-              href={`/`}
               spotifyUrl={playlist.external_urls.spotify}
               accessToken={accessToken}
             >
@@ -369,7 +375,6 @@ const PlaylistPage = ({
               />
             </LongPressLink>
             <LongPressLink
-              href={`/`}
               spotifyUrl={playlist.external_urls.spotify}
               accessToken={accessToken}
             >
@@ -424,7 +429,6 @@ const PlaylistPage = ({
                 {item.track.artists.map((artist, artistIndex) => (
                   <LongPressLink
                     key={artist.id}
-                    href={`/artist/${artist.id}`}
                     spotifyUrl={artist.external_urls.spotify}
                     accessToken={accessToken}
                   >
@@ -460,50 +464,70 @@ export async function getServerSideProps(context) {
   const { playlistId } = context.params;
   const accessToken = context.query.accessToken;
 
-  const res = await fetch(
-    `https://api.spotify.com/v1/playlists/${playlistId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
+  try {
+    const res = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlistId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-  if (!res.ok) {
-    const errorData = await res.json();
-    handleError("FETCH_PLAYLIST_ERROR", errorData.error.message);
+    if (!res.ok) {
+      const errorData = await res.json();
+      return {
+        props: {
+          error: {
+            type: "FETCH_PLAYLIST_ERROR",
+            message: errorData.error.message,
+          },
+          initialPlaylist: null,
+          accessToken,
+        },
+      };
+    }
+
+    const playlistData = await res.json();
+
+    const tracksRes = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=25`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const tracksData = await tracksRes.json();
+
+    const initialPlaylist = {
+      ...playlistData,
+      tracks: {
+        ...playlistData.tracks,
+        items: tracksData.items,
+      },
+    };
+
     return {
-      notFound: true,
+      props: {
+        initialPlaylist,
+        accessToken,
+        error: null,
+      },
+    };
+  } catch (error) {
+    return {
+      props: {
+        error: {
+          type: "FETCH_PLAYLIST_ERROR",
+          message: error.message,
+        },
+        initialPlaylist: null,
+        accessToken,
+      },
     };
   }
-
-  const playlistData = await res.json();
-
-  const tracksRes = await fetch(
-    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=25`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-
-  const tracksData = await tracksRes.json();
-
-  const initialPlaylist = {
-    ...playlistData,
-    tracks: {
-      ...playlistData.tracks,
-      items: tracksData.items,
-    },
-  };
-
-  return {
-    props: {
-      initialPlaylist,
-      accessToken,
-    },
-  };
 }
 
 export default PlaylistPage;

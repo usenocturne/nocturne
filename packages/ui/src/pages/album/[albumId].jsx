@@ -3,7 +3,12 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 
-const AlbumPage = ({ initialAlbum, currentlyPlayingTrackUri, handleError }) => {
+const AlbumPage = ({
+  initialAlbum,
+  currentlyPlayingTrackUri,
+  handleError,
+  error,
+}) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
@@ -14,6 +19,12 @@ const AlbumPage = ({ initialAlbum, currentlyPlayingTrackUri, handleError }) => {
     initialAlbum.tracks.total > initialAlbum.tracks.items.length
   );
   const observer = useRef();
+
+  useEffect(() => {
+    if (error) {
+      handleError(error.type, error.message);
+    }
+  }, [error, handleError]);
 
   const lastTrackElementRef = useCallback(
     (node) => {
@@ -255,7 +266,6 @@ const AlbumPage = ({ initialAlbum, currentlyPlayingTrackUri, handleError }) => {
         {album.images && album.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
             <LongPressLink
-              href={`/`}
               spotifyUrl={album.external_urls.spotify}
               accessToken={accessToken}
             >
@@ -268,7 +278,6 @@ const AlbumPage = ({ initialAlbum, currentlyPlayingTrackUri, handleError }) => {
               />
             </LongPressLink>
             <LongPressLink
-              href={`/`}
               spotifyUrl={album.external_urls.spotify}
               accessToken={accessToken}
             >
@@ -277,7 +286,6 @@ const AlbumPage = ({ initialAlbum, currentlyPlayingTrackUri, handleError }) => {
               </h4>
             </LongPressLink>
             <LongPressLink
-              href={`/artist/${album.artists[0].id}`}
               spotifyUrl={album.artists[0].external_urls.spotify}
               accessToken={accessToken}
             >
@@ -326,7 +334,6 @@ const AlbumPage = ({ initialAlbum, currentlyPlayingTrackUri, handleError }) => {
                 </div>
               </LongPressLink>
               <LongPressLink
-                href={`/artist/${track.artists[0].id}`}
                 spotifyUrl={track.artists[0].external_urls.spotify}
                 accessToken={accessToken}
               >
@@ -349,42 +356,62 @@ export async function getServerSideProps(context) {
   const { albumId } = context.params;
   const accessToken = context.query.accessToken;
 
-  const res = await fetch(`https://api.spotify.com/v1/albums/${albumId}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    handleError("FETCH_ALBUM_ERROR", errorData.error.message);
-    return { notFound: true };
-  }
-
-  const albumData = await res.json();
-
-  const tracksRes = await fetch(
-    `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=25`,
-    {
+  try {
+    const res = await fetch(`https://api.spotify.com/v1/albums/${albumId}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      return {
+        props: {
+          error: {
+            type: "FETCH_ALBUM_ERROR",
+            message: errorData.error.message,
+          },
+          initialAlbum: null,
+          accessToken,
+        },
+      };
     }
-  );
 
-  const tracksData = await tracksRes.json();
+    const albumData = await res.json();
+    const tracksRes = await fetch(
+      `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=25`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-  const initialAlbum = {
-    ...albumData,
-    tracks: {
-      ...albumData.tracks,
-      items: tracksData.items,
-    },
-  };
+    const tracksData = await tracksRes.json();
 
-  return {
-    props: { initialAlbum, accessToken },
-  };
+    const initialAlbum = {
+      ...albumData,
+      tracks: {
+        ...albumData.tracks,
+        items: tracksData.items,
+      },
+    };
+
+    return {
+      props: { initialAlbum, accessToken, error: null },
+    };
+  } catch (error) {
+    return {
+      props: {
+        error: {
+          type: "FETCH_ALBUM_ERROR",
+          message: error.message,
+        },
+        initialAlbum: null,
+        accessToken,
+      },
+    };
+  }
 }
 
 export default AlbumPage;

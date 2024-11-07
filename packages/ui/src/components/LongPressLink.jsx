@@ -22,6 +22,20 @@ const LongPressLink = ({ href, children, spotifyUrl, accessToken }) => {
     };
   }, [pressTimer]);
 
+  if (!href) {
+    return (
+      <div
+        onTouchStart={startPress}
+        onTouchEnd={endPress}
+        onMouseDown={startPress}
+        onMouseUp={endPress}
+        onMouseLeave={endPress}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <Link href={`${href}?accessToken=${accessToken}`}>
       <div
