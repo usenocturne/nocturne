@@ -102,53 +102,6 @@ const PlaylistPage = ({
   }, [playlist]);
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "Enter") {
-        playPlaylist();
-      }
-
-      const validKeys = ["1", "2", "3", "4"];
-      if (
-        validKeys.includes(event.key) &&
-        !keyPressStartTime.current[event.key]
-      ) {
-        keyPressStartTime.current[event.key] = Date.now();
-
-        keyHoldTimeout.current[event.key] = setTimeout(() => {
-          const currentUrl = window.location.pathname;
-          localStorage.setItem(`buttonMap${event.key}`, currentUrl);
-          setPressedButton(event.key);
-          setShowSuccess(true);
-          keyPressStartTime.current[event.key] = null;
-        }, 2000);
-      }
-    };
-
-    const handleKeyUp = (event) => {
-      const validKeys = ["1", "2", "3", "4"];
-      if (validKeys.includes(event.key)) {
-        if (keyHoldTimeout.current[event.key]) {
-          clearTimeout(keyHoldTimeout.current[event.key]);
-        }
-        keyPressStartTime.current[event.key] = null;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      ["1", "2", "3", "4"].forEach((key) => {
-        if (keyHoldTimeout.current[key]) {
-          clearTimeout(keyHoldTimeout.current[key]);
-        }
-      });
-    };
-  }, [isShuffleEnabled]);
-
-  useEffect(() => {
     const fetchPlaybackState = async () => {
       try {
         const response = await fetch("https://api.spotify.com/v1/me/player", {
@@ -369,6 +322,7 @@ const PlaylistPage = ({
               <Image
                 src={playlist.images[0].url || "/images/not-playing.webp"}
                 alt="Playlist Cover"
+                data-main-image
                 width={280}
                 height={280}
                 className="aspect-square rounded-[12px] drop-shadow-xl"
@@ -391,7 +345,7 @@ const PlaylistPage = ({
         )}
       </div>
 
-      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
+      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container scroll-smooth pb-12">
         {tracks.map((item, index) => (
           <div
             key={item.track.id}

@@ -299,7 +299,7 @@ const AlbumPage = ({
         )}
       </div>
 
-      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
+      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container scroll-smooth pb-12">
         {tracks.map((track, index) => (
           <div
             key={track.id}

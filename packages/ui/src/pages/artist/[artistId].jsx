@@ -242,7 +242,7 @@ const ArtistPage = ({
         )}
       </div>
 
-      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container pb-12">
+      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container scroll-smooth pb-12">
         {artist.topTracks && artist.topTracks.length > 0 ? (
           artist.topTracks.map((track, index) => (
             <div key={track.id} className="flex gap-12 items-start mb-4">
