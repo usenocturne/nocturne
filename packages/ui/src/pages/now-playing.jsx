@@ -175,7 +175,7 @@ const NowPlaying = ({
     };
 
     updateCurrentLyric();
-    const intervalId = setInterval(updateCurrentLyric, 50);
+    const intervalId = setInterval(updateCurrentLyric, 100);
 
     return () => clearInterval(intervalId);
   }, [showLyrics, currentPlayback, parsedLyrics]);
@@ -185,16 +185,7 @@ const NowPlaying = ({
       const container = lyricsContainerRef.current;
       const lyricElement = container.children[currentLyricIndex];
       if (lyricElement) {
-        const containerHeight = container.clientHeight;
-        const lyricHeight = lyricElement.clientHeight;
-        const containerScrollTop = container.scrollTop;
-        const lyricTop = lyricElement.offsetTop;
-        const targetScroll = lyricTop - containerHeight / 2 + lyricHeight / 2;
-
-        container.scrollTo({
-          top: targetScroll,
-          behavior: "smooth",
-        });
+        lyricElement.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
   }, [currentLyricIndex]);
@@ -1009,7 +1000,7 @@ const NowPlaying = ({
           ) : (
             <div className="flex-1 flex flex-col h-[280px]">
               <div
-                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px] scroll-smooth"
+                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
                 ref={lyricsContainerRef}
               >
                 {isLoadingLyrics ? (
@@ -1023,7 +1014,7 @@ const NowPlaying = ({
                       className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
                         index === currentLyricIndex
                           ? "text-white"
-                          : "text-white/40"
+                          : "text-white/60"
                       }`}
                     >
                       {lyric.text}
