@@ -13,6 +13,7 @@ import ErrorAlert from "../components/ErrorAlert";
 import AuthSelection from "../components/AuthSelection";
 import { supabase } from "../lib/supabaseClient";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
+import BrightnessControl from "../components/BrightnessControl";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -97,6 +98,7 @@ export default function App({ Component, pageProps }) {
   const [tempId, setTempId] = useState(null);
   const [pressedButton, setPressedButton] = useState(null);
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
+  const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
 
   const handleAuthSelection = async (selection) => {
     if (selection.type === "custom") {
@@ -155,21 +157,47 @@ export default function App({ Component, pageProps }) {
     const holdDuration = 2000;
     let holdTimer = null;
     let hasTriggered = false;
+    let lastMPressTime = 0;
+    let mPressCount = 0;
+    let brightnessOverlayTimer = null;
 
     const handleKeyDown = (event) => {
-      if (event.key === "m" || (event.key === "M" && !hasTriggered)) {
-        pressStartTime = Date.now();
+      if (event.key === "m" || event.key === "M") {
+        const now = Date.now();
 
-        holdTimer = setTimeout(() => {
-          if (router.pathname !== "/") {
-            router.push("/").then(() => {
-              setActiveSection("settings");
-            });
-          } else {
-            setActiveSection("settings");
+        if (now - lastMPressTime < 500) {
+          mPressCount++;
+          if (mPressCount === 3) {
+            if (brightnessOverlayTimer) {
+              clearTimeout(brightnessOverlayTimer);
+            }
+
+            setShowBrightnessOverlay(true);
+
+            brightnessOverlayTimer = setTimeout(() => {
+              setShowBrightnessOverlay(false);
+            }, 300000);
+
+            mPressCount = 0;
+            return;
           }
-          hasTriggered = true;
-        }, holdDuration);
+        } else {
+          mPressCount = 1;
+        }
+        lastMPressTime = now;
+
+        if (!hasTriggered) {
+          holdTimer = setTimeout(() => {
+            if (router.pathname !== "/") {
+              router.push("/").then(() => {
+                setActiveSection("settings");
+              });
+            } else {
+              setActiveSection("settings");
+            }
+            hasTriggered = true;
+          }, holdDuration);
+        }
       }
     };
 
@@ -178,7 +206,6 @@ export default function App({ Component, pageProps }) {
         if (holdTimer) {
           clearTimeout(holdTimer);
         }
-        pressStartTime = null;
         hasTriggered = false;
       }
     };
@@ -192,8 +219,11 @@ export default function App({ Component, pageProps }) {
       if (holdTimer) {
         clearTimeout(holdTimer);
       }
+      if (brightnessOverlayTimer) {
+        clearTimeout(brightnessOverlayTimer);
+      }
     };
-  }, [router]);
+  }, [router, setShowBrightnessOverlay, setActiveSection]);
 
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
@@ -977,6 +1007,7 @@ export default function App({ Component, pageProps }) {
         onClose={() => setShowMappingOverlay(false)}
         activeButton={pressedButton}
       />
+      <BrightnessControl show={showBrightnessOverlay} />
     </main>
   );
 }
