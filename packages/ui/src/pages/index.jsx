@@ -15,6 +15,7 @@ export default function Home({
   albumsQueue,
   updateGradientColors,
   currentlyPlayingAlbum,
+  showBrightnessOverlay,
 }) {
   useEffect(() => {
     if (activeSection === "radio") {
@@ -37,17 +38,18 @@ export default function Home({
   const itemWidth = 290;
 
   const handleWheel = (e) => {
-    e.preventDefault();
+    if (!showBrightnessOverlay) {
+      e.preventDefault();
 
-    if (scrollContainerRef.current) {
-      const scrollAmount = itemWidth;
+      if (scrollContainerRef.current) {
+        const scrollAmount = itemWidth;
+        const direction = Math.sign(e.deltaX);
 
-      const direction = Math.sign(e.deltaX);
-
-      scrollContainerRef.current.scrollBy({
-        left: scrollAmount * direction,
-        behavior: "smooth",
-      });
+        scrollContainerRef.current.scrollBy({
+          left: scrollAmount * direction,
+          behavior: "smooth",
+        });
+      }
     }
   };
 

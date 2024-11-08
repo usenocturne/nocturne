@@ -13,7 +13,7 @@ import ErrorAlert from "../components/ErrorAlert";
 import AuthSelection from "../components/AuthSelection";
 import { supabase } from "../lib/supabaseClient";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
-import BrightnessControl from "../components/BrightnessControl";
+import classNames from "classnames";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -98,6 +98,7 @@ export default function App({ Component, pageProps }) {
   const [tempId, setTempId] = useState(null);
   const [pressedButton, setPressedButton] = useState(null);
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
+  const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
 
   const handleAuthSelection = async (selection) => {
@@ -224,6 +225,66 @@ export default function App({ Component, pageProps }) {
       }
     };
   }, [router, setShowBrightnessOverlay, setActiveSection]);
+
+  useEffect(() => {
+    const handleWheel = (event) => {
+      if (showBrightnessOverlay) {
+        event.stopPropagation();
+        event.preventDefault();
+        setBrightness((prev) => {
+          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
+          return Math.max(5, Math.min(250, newValue));
+        });
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (
+        showBrightnessOverlay &&
+        ["1", "2", "3", "4", "Escape", "Enter"].includes(event.key)
+      ) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const existingTimeout = window.brightnessOverlayTimer;
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+        setShowBrightnessOverlay(false);
+      }
+    };
+
+    const handleTouchMove = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleTouchStart = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener("wheel", handleWheel, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel, { capture: true });
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [showBrightnessOverlay]);
 
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
@@ -962,6 +1023,78 @@ export default function App({ Component, pageProps }) {
     );
   }
 
+  const BrightnessLowIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      stroke="rgba(0, 0, 0)"
+      fill="rgba(0, 0, 0)"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+      opacity="0.5"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 4h.01" />
+      <path d="M20 12h.01" />
+      <path d="M12 20h.01" />
+      <path d="M4 12h.01" />
+      <path d="M17.657 6.343h.01" />
+      <path d="M17.657 17.657h.01" />
+      <path d="M6.343 17.657h.01" />
+      <path d="M6.343 6.343h.01" />
+    </svg>
+  );
+
+  const BrightnessMidIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      stroke="rgba(0, 0, 0)"
+      fill="rgba(0, 0, 0)"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+      opacity="0.5"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v1" />
+      <path d="M12 20v1" />
+      <path d="M3 12h1" />
+      <path d="M20 12h1" />
+      <path d="m18.364 5.636-.707.707" />
+      <path d="m6.343 17.657-.707.707" />
+      <path d="m5.636 5.636.707.707" />
+      <path d="m17.657 17.657.707.707" />
+    </svg>
+  );
+
+  const BrightnessHighIcon = ({ className }) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      stroke="rgba(0, 0, 0)"
+      fill="rgba(0, 0, 0)"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className={className}
+      opacity="0.5"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </svg>
+  );
+
   return (
     <main
       className={`overflow-hidden relative min-h-screen ${inter.className}`}
@@ -999,15 +1132,51 @@ export default function App({ Component, pageProps }) {
           setDrawerOpen={setDrawerOpen}
           updateGradientColors={updateGradientColors}
           handleError={handleError}
+          showBrightnessOverlay={showBrightnessOverlay}
         />
         <ErrorAlert error={error} onClose={clearError} />
       </div>
+      {(showBrightnessOverlay || brightness) && (
+        <div
+          className={classNames(
+            "fixed right-0 top-[70px] transform transition-opacity duration-300 z-50",
+            {
+              "opacity-0 volumeOutScale": !showBrightnessOverlay,
+              "opacity-100 volumeInScale": showBrightnessOverlay,
+            }
+          )}
+        >
+          <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+            <div
+              className={classNames(
+                "bg-white w-full transition-all duration-200 ease-out",
+                {
+                  "rounded-b-[13px]": brightness < 250,
+                  "rounded-[13px]": brightness === 250,
+                }
+              )}
+              style={{ height: `${((brightness - 5) / (250 - 5)) * 100}%` }}
+            >
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+                {(() => {
+                  const brightnessPercent =
+                    ((brightness - 5) / (250 - 5)) * 100;
+                  if (brightnessPercent >= 60)
+                    return <BrightnessHighIcon className="w-7 h-7" />;
+                  if (brightnessPercent >= 30)
+                    return <BrightnessMidIcon className="w-7 h-7" />;
+                  return <BrightnessLowIcon className="w-7 h-7" />;
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <ButtonMappingOverlay
         show={showMappingOverlay}
         onClose={() => setShowMappingOverlay(false)}
         activeButton={pressedButton}
       />
-      <BrightnessControl show={showBrightnessOverlay} />
     </main>
   );
 }

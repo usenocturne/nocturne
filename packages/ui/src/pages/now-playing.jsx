@@ -23,6 +23,7 @@ const NowPlaying = ({
   setActiveSection,
   updateGradientColors,
   handleError,
+  showBrightnessOverlay,
 }) => {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
@@ -270,10 +271,12 @@ const NowPlaying = ({
   };
 
   const handleWheelScroll = (event) => {
-    if (event.deltaX > 0) {
-      changeVolume(volume + 7);
-    } else if (event.deltaX < 0) {
-      changeVolume(volume - 7);
+    if (!showBrightnessOverlay && !drawerOpen) {
+      if (event.deltaX > 0) {
+        changeVolume(volume + 7);
+      } else if (event.deltaX < 0) {
+        changeVolume(volume - 7);
+      }
     }
   };
 
@@ -1186,7 +1189,7 @@ const NowPlaying = ({
             }
           )}
         >
-          <div className="w-14 h-44 bg-black/20 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+          <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
             <div
               className={classNames(
                 "bg-white w-full transition-height duration-300",
