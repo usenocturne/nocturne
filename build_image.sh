@@ -1,21 +1,15 @@
 #!/bin/bash
 # shellcheck disable=SC2129
 
-# IMPORTANT!! 
-# this script doesnt work, it makes the data partition too big causing the car thing to bootloop
-# however, it does still have most of the changes made to the image for nocturne
+# script originally created by bishopdynamics, edited by shadow (68p) to make changes in order to run Nocturne
+# builds custom debian image using debootstrap, intended to run on Spotify Car Thing
 
-
-# build debian image, intended to run on a debian 11 arm64 host
-# expects an existing dump at ./dumps/debian_current/
-#   ./dumps is ignored by git
 # add --local_proxy flag argument to try to use local instance of apt-cacher-ng at localhost:3142
 
 set -e
 
 # all config lives in image_config.sh
 source ./image_config.sh
-
 
 ################################################ Additional Packages ################################################
 
@@ -37,7 +31,6 @@ PACKAGES="$PACKAGES fbset libglx-mesa0 tigervnc-scraping-server"
 #   so we install chromium and other packages in a separate stage using chroot
 
 STAGE2_PACKAGES="chromium python3-minimal mesa-utils $EXTRA_PACKAGES"
-
 
 ################################################ Running Variables ################################################
 
@@ -78,7 +71,6 @@ install_service() {
 	in_target chown "$USER_NAME" "/lib/systemd/system/$SVC_NAME"
 	in_target ln -s "/lib/systemd/system/$SVC_NAME" "/etc/systemd/system/multi-user.target.wants/$SVC_NAME"
 }
-
 
 ################################################ Entrypoint ################################################
 
@@ -147,6 +139,7 @@ mount -o loop "${EXISTING_DUMP}/system_a.ext2" "$SYS_PATH"
 
 
 ################################################ Install Packages ################################################
+
 echo "Installing packages: $CSV_PACKAGES"
 echo ""
 
@@ -177,7 +170,6 @@ cp ${FILES_DATA}/etc/inittab "${INSTALL_PATH}/etc/inittab"
 mkdir -p "${INSTALL_PATH}/lib/modules"
 cp -r "${SYS_PATH}/lib/modules/${KERNEL_VERSION}" "${INSTALL_PATH}/lib/modules/"
 
-
 ################################################ Modify system_a for Utility Mode ################################################
 
 cp ${FILES_SYS}/etc/fstab ${SYS_PATH}/etc/
@@ -185,12 +177,10 @@ cp ${FILES_SYS}/etc/inittab ${SYS_PATH}/etc/
 cp ${FILES_SYS}/etc/init.d/S49usbgadget ${SYS_PATH}/etc/init.d/
 chmod +x ${SYS_PATH}/etc/init.d/S49usbgadget
 
-
 ################################################ Done with system_a, unmount it ################################################
 
 umount "$SYS_PATH"
 rmdir "$SYS_PATH"
-
 
 ################################################ Setup Xorg ################################################
 
@@ -204,9 +194,21 @@ cp ${FILES_DATA}/etc/X11/xorg.conf "${INSTALL_PATH}/etc/X11/xorg.conf"
 in_target mv /usr/share/X11/xorg.conf.d /usr/share/X11/xorg.conf.d.bak
 
 ################################################ Setup max journal size ################################################
+
 echo "creating journald.conf"
 mkdir -p "${INSTALL_PATH}/etc/systemd"
 cp ${FILES_DATA}/etc/systemd/journald.conf "${INSTALL_PATH}/etc/systemd/journald.conf"
+
+################################################ Setup Chrome Enterprise Policy on chromium ################################################
+
+# allows spotify and nocturne to save login cookies
+
+mkdir -p "${INSTALL_PATH}/etc/chromium"
+mkdir -p "${INSTALL_PATH}/etc/chromium/policies"
+mkdir -p "${INSTALL_PATH}/etc/chromium/policies/managed"
+mkdir -p "${INSTALL_PATH}/etc/chromium/policies/recommended"
+
+cp ${FILES_DATA}/etc/chromium/policies/managed/managed_policies.json "${INSTALL_PATH}/etc/chromium/policies/managed/managed_policies.json"
 
 ################################################ Setup swapfile ################################################
 
@@ -218,7 +220,6 @@ in_target chmod 600 /swapfile
 in_target mkswap /swapfile
 in_target swapon /swapfile
 in_target echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-
 
 ################################################ Setup Hostname and Hosts ################################################
 
@@ -268,7 +269,6 @@ in_target usermod -aG plugdev "$USER_NAME"
 # in_target usermod -aG ssh "$USER_NAME"
 set -e
 
-
 ################################################ Setup scripts and services ################################################
 
 install_script setup_usbgadget.sh
@@ -281,6 +281,11 @@ install_script vnc_passwd
 install_script setup_vnc.sh
 install_service vnc.service
 
+install_script start_brightness-control.sh
+install_script brightness-control.py
+install_script brightness_settings.py
+install_service brightness-control.service
+
 install_script setup_backlight.sh
 install_service backlight.service
 
@@ -289,7 +294,6 @@ install_script chromium_settings.sh
 install_service chromium.service
 
 in_target chown -R "$USER_NAME" /scripts
-
 
 ################################################ Cleanup systemd and timezone stuff ################################################
 
@@ -309,14 +313,15 @@ in_target dpkg-reconfigure --frontend=noninteractive tzdata
 
 ################################################ Done! ################################################
 
-echo "synching disk changes"
+echo "syncing disk changes"
 sync
 
 echo "Filesystem      Size  Used Avail Use% Mounted on"
 df -h |grep "$INSTALL_PATH"
 
+# using lazy unmount here since swap file makes it unable to be unmounted normally
 echo "Un-mounting $INSTALL_PATH"
-umount "$INSTALL_PATH"
+umount -l "$INSTALL_PATH"
 
 set +e  # ok if cleanup fails
 # cleanup temp
