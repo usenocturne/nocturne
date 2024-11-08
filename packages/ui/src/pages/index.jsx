@@ -14,6 +14,7 @@ export default function Home({
   loading,
   albumsQueue,
   updateGradientColors,
+  currentlyPlayingAlbum,
 }) {
   useEffect(() => {
     if (activeSection === "radio") {
@@ -100,6 +101,26 @@ export default function Home({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      scrollContainerRef.current &&
+      !isScrolling &&
+      activeSection === "recents" &&
+      currentlyPlayingAlbum
+    ) {
+      const currentAlbumIndex = albumsQueue.findIndex(
+        (album) => album.id === currentlyPlayingAlbum.id
+      );
+
+      if (currentAlbumIndex !== -1) {
+        scrollContainerRef.current.scrollTo({
+          left: currentAlbumIndex * (itemWidth + 40),
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [currentlyPlayingAlbum, isScrolling, activeSection, albumsQueue]);
 
   return (
     <div className="relative min-h-screen">

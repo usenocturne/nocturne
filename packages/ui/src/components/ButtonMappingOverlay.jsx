@@ -1,44 +1,61 @@
 import { useEffect, useState } from "react";
 
 export default function ButtonMappingOverlay({ show, onClose, activeButton }) {
-  const [isVisible, setIsVisible] = useState(false);
+  const [preloadedImages, setPreloadedImages] = useState({});
   const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const preloadImages = () => {
+      const images = {};
+      [1, 2, 3, 4].forEach((buttonNum) => {
+        const imageUrl = localStorage.getItem(`button${buttonNum}Image`);
+        if (imageUrl) {
+          const img = new Image();
+          img.src = imageUrl;
+          images[buttonNum] = imageUrl;
+        }
+      });
+      setPreloadedImages(images);
+    };
+
+    preloadImages();
+    const intervalId = setInterval(preloadImages, 1000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (show) {
       setShouldRender(true);
-      setIsVisible(true);
-
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-      }, 2000);
-
-      return () => clearTimeout(timer);
+      const fadeInTimer = setTimeout(() => {
+        setIsVisible(true);
+      }, 10);
+      return () => clearTimeout(fadeInTimer);
+    } else {
+      setIsVisible(false);
+      const unmountTimer = setTimeout(() => {
+        setShouldRender(false);
+      }, 300);
+      return () => clearTimeout(unmountTimer);
     }
   }, [show]);
-
-  useEffect(() => {
-    if (!isVisible && shouldRender) {
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-        onClose();
-      }, 300);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isVisible, shouldRender, onClose]);
 
   if (!shouldRender) return null;
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-start justify-center bg-black/80 ${
-        isVisible ? "overlay-fadeIn" : "overlay-fadeOut"
+      className={`fixed inset-0 z-50 flex items-start justify-center transition-all duration-300 ease-in-out ${
+        isVisible ? "opacity-100" : "opacity-0"
       }`}
     >
-      <div className="grid grid-cols-4 gap-4 w-full max-w-7xl px-8 pt-8">
+      <div className="absolute inset-0 bg-black/80" />
+      <div
+        className={`relative grid grid-cols-4 gap-4 w-full max-w-7xl px-8 pt-8 transition-all duration-300 delay-[50ms] ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+        }`}
+      >
         {[1, 2, 3, 4].map((buttonNum) => {
-          const image = localStorage.getItem(`button${buttonNum}Image`);
+          const image = preloadedImages[buttonNum];
           if (!image) return <div key={buttonNum} className="aspect-square" />;
 
           const isActive = String(buttonNum) === activeButton;

@@ -12,7 +12,6 @@ import {
 import ErrorAlert from "../components/ErrorAlert";
 import AuthSelection from "../components/AuthSelection";
 import { supabase } from "../lib/supabaseClient";
-import SuccessAlert from "../components/SuccessAlert";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
@@ -96,7 +95,6 @@ export default function App({ Component, pageProps }) {
   const [authSelectionMade, setAuthSelectionMade] = useState(false);
   const [authType, setAuthType] = useState(null);
   const [tempId, setTempId] = useState(null);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [pressedButton, setPressedButton] = useState(null);
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
 
@@ -175,38 +173,45 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
+    const pressStartTimes = {};
     const holdDuration = 2000;
-    let holdTimeouts = {};
 
     const handleKeyDown = (event) => {
       if (!validKeys.includes(event.key)) return;
-
-      if (event.repeat) return;
-
-      holdTimeouts[event.key] = setTimeout(() => {
-        const currentUrl = window.location.pathname;
-        const currentImage = localStorage.getItem("playlistPageImage");
-
-        localStorage.setItem(`button${event.key}Map`, currentUrl);
-        if (currentImage) {
-          localStorage.setItem(`button${event.key}Image`, currentImage);
-        }
-
-        setPressedButton(event.key);
-        setShowSuccess(true);
-        holdTimeouts[event.key] = null;
-      }, holdDuration);
+      pressStartTimes[event.key] = Date.now();
+      pressStartTimes[`${event.key}_path`] = window.location.pathname;
     };
 
     const handleKeyUp = (event) => {
       if (!validKeys.includes(event.key)) return;
 
-      if (holdTimeouts[event.key]) {
-        clearTimeout(holdTimeouts[event.key]);
+      const pressDuration = Date.now() - (pressStartTimes[event.key] || 0);
+      const pressStartPath = pressStartTimes[`${event.key}_path`];
+      delete pressStartTimes[event.key];
+      delete pressStartTimes[`${event.key}_path`];
+
+      if (
+        pressDuration < holdDuration &&
+        !pressStartPath?.includes("/playlist/")
+      ) {
+        const hasAnyMappings = validKeys.some(
+          (key) => localStorage.getItem(`button${key}Map`) !== null
+        );
+
+        if (!hasAnyMappings) {
+          return;
+        }
+
+        const mappedRoute = localStorage.getItem(`button${event.key}Map`);
+
         setPressedButton(event.key);
         setShowMappingOverlay(true);
 
-        const mappedRoute = localStorage.getItem(`button${event.key}Map`);
+        const hideTimer = setTimeout(() => {
+          setShowMappingOverlay(false);
+          setPressedButton(null);
+        }, 2000);
+
         if (mappedRoute) {
           const playRequest = async () => {
             try {
@@ -278,9 +283,7 @@ export default function App({ Component, pageProps }) {
                   },
                   body: JSON.stringify({
                     context_uri: `spotify:playlist:${playlistId}`,
-                    offset: {
-                      position: 0,
-                    },
+                    offset: { position: 0 },
                     device_id: activeDeviceId,
                   }),
                 }
@@ -289,11 +292,6 @@ export default function App({ Component, pageProps }) {
               if (!playResponse.ok) {
                 throw new Error(`Play error! status: ${playResponse.status}`);
               }
-
-              router.push({
-                pathname: "/now-playing",
-                query: { accessToken },
-              });
             } catch (error) {
               console.error("Error in playRequest:", error);
               handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
@@ -302,29 +300,17 @@ export default function App({ Component, pageProps }) {
 
           playRequest();
         }
-
-        setTimeout(() => {
-          setShowMappingOverlay(false);
-        }, 2000);
       }
-
-      holdTimeouts[event.key] = null;
     };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      Object.values(holdTimeouts).forEach((id) => id && clearTimeout(id));
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [accessToken, refreshToken, router]);
-
-  const handleSuccessClose = useCallback(() => {
-    setShowSuccess(false);
-    setPressedButton(null);
-  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && authSelectionMade) {
@@ -866,11 +852,6 @@ export default function App({ Component, pageProps }) {
         />
         <ErrorAlert error={error} onClose={clearError} />
       </div>
-      <SuccessAlert
-        show={showSuccess}
-        onClose={handleSuccessClose}
-        message={`Playlist mapped to Button ${pressedButton}`}
-      />
       <ButtonMappingOverlay
         show={showMappingOverlay}
         onClose={() => setShowMappingOverlay(false)}

@@ -20,10 +20,61 @@ const PlaylistPage = ({
     initialPlaylist.tracks.total > initialPlaylist.tracks.items.length
   );
   const observer = useRef();
-  const keyPressStartTime = useRef({});
-  const keyHoldTimeout = useRef({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [pressedButton, setPressedButton] = useState(null);
+
+  useEffect(() => {
+    const validKeys = ["1", "2", "3", "4"];
+    const holdDuration = 2000;
+    const holdTimeouts = {};
+    const pressStartTimes = {};
+
+    const handleKeyDown = (event) => {
+      if (!validKeys.includes(event.key) || event.repeat) return;
+
+      pressStartTimes[event.key] = Date.now();
+
+      holdTimeouts[event.key] = setTimeout(() => {
+        const currentUrl = window.location.pathname;
+        const currentImage = localStorage.getItem("playlistPageImage");
+
+        localStorage.setItem(`button${event.key}Map`, currentUrl);
+        if (currentImage) {
+          localStorage.setItem(`button${event.key}Image`, currentImage);
+        }
+
+        setPressedButton(event.key);
+        setShowSuccess(true);
+      }, holdDuration);
+    };
+
+    const handleKeyUp = (event) => {
+      if (!validKeys.includes(event.key)) return;
+
+      if (holdTimeouts[event.key]) {
+        clearTimeout(holdTimeouts[event.key]);
+        delete holdTimeouts[event.key];
+      }
+
+      delete pressStartTimes[event.key];
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      Object.values(holdTimeouts).forEach(
+        (timeout) => timeout && clearTimeout(timeout)
+      );
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  const handleSuccessClose = useCallback(() => {
+    setShowSuccess(false);
+    setPressedButton(null);
+  }, []);
 
   useEffect(() => {
     if (error) {

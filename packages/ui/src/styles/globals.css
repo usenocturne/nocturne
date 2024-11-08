@@ -54,14 +54,6 @@ body {
   animation: 1.5s fadeIn;
 }
 
-.overlay-fadeIn {
-  animation: fadeIn 0.1s ease-in forwards;
-}
-
-.overlay-fadeOut {
-  animation: fadeOut 0.1s ease-out forwards;
-}
-
 .progress-bar {
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
