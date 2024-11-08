@@ -247,24 +247,6 @@ export default function App({ Component, pageProps }) {
                 currentRepeat = playbackData.repeat_state;
               }
 
-              let startPosition = 0;
-              if (currentShuffle) {
-                const playlistResponse = await fetch(
-                  `https://api.spotify.com/v1/playlists/${playlistId}`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${accessToken}`,
-                    },
-                  }
-                );
-
-                if (playlistResponse.ok) {
-                  const playlistData = await playlistResponse.json();
-                  const totalTracks = playlistData.tracks.total;
-                  startPosition = Math.floor(Math.random() * totalTracks);
-                }
-              }
-
               const devicesResponse = await fetch(
                 "https://api.spotify.com/v1/me/player/devices",
                 {
@@ -309,7 +291,25 @@ export default function App({ Component, pageProps }) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
               }
 
-              await fetch(
+              let startPosition = 0;
+              if (currentShuffle) {
+                const playlistResponse = await fetch(
+                  `https://api.spotify.com/v1/playlists/${playlistId}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                    },
+                  }
+                );
+
+                if (playlistResponse.ok) {
+                  const playlistData = await playlistResponse.json();
+                  const totalTracks = playlistData.tracks.total;
+                  startPosition = Math.floor(Math.random() * totalTracks);
+                }
+              }
+
+              const shuffleResponse = await fetch(
                 `https://api.spotify.com/v1/me/player/shuffle?state=${currentShuffle}`,
                 {
                   method: "PUT",
@@ -318,6 +318,10 @@ export default function App({ Component, pageProps }) {
                   },
                 }
               );
+
+              if (!shuffleResponse.ok) {
+                console.error("Failed to set shuffle state");
+              }
 
               const playResponse = await fetch(
                 "https://api.spotify.com/v1/me/player/play",
@@ -339,7 +343,7 @@ export default function App({ Component, pageProps }) {
                 throw new Error(`Play error! status: ${playResponse.status}`);
               }
 
-              await fetch(
+              const repeatResponse = await fetch(
                 `https://api.spotify.com/v1/me/player/repeat?state=${currentRepeat}`,
                 {
                   method: "PUT",
@@ -348,6 +352,13 @@ export default function App({ Component, pageProps }) {
                   },
                 }
               );
+
+              if (!repeatResponse.ok) {
+                console.error("Failed to set repeat state");
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              fetchCurrentPlayback();
             } catch (error) {
               console.error("Error in playRequest:", error);
               handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
