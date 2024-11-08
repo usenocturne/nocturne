@@ -152,22 +152,46 @@ export default function App({ Component, pageProps }) {
   }, [drawerOpen, router, setActiveSection]);
 
   useEffect(() => {
+    const holdDuration = 2000;
+    let holdTimer = null;
+    let hasTriggered = false;
+
     const handleKeyDown = (event) => {
-      if (event.key === "m" || event.key === "M") {
-        if (router.pathname !== "/") {
-          router.push("/").then(() => {
+      if (event.key === "m" || (event.key === "M" && !hasTriggered)) {
+        pressStartTime = Date.now();
+
+        holdTimer = setTimeout(() => {
+          if (router.pathname !== "/") {
+            router.push("/").then(() => {
+              setActiveSection("settings");
+            });
+          } else {
             setActiveSection("settings");
-          });
-        } else {
-          setActiveSection("settings");
+          }
+          hasTriggered = true;
+        }, holdDuration);
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      if (event.key === "m" || event.key === "M") {
+        if (holdTimer) {
+          clearTimeout(holdTimer);
         }
+        pressStartTime = null;
+        hasTriggered = false;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+      }
     };
   }, [router]);
 
