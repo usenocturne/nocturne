@@ -36,6 +36,7 @@ export default function Home({
   const scrollTimeoutRef = useRef(null);
   const prevQueueLengthRef = useRef(albumsQueue.length);
   const itemWidth = 290;
+  const hasScrolledToCurrentAlbumRef = useRef(false);
 
   const handleWheel = (e) => {
     if (!showBrightnessOverlay) {
@@ -83,7 +84,6 @@ export default function Home({
   useEffect(() => {
     if (
       scrollContainerRef.current &&
-      !isScrolling &&
       activeSection === "recents" &&
       albumsQueue.length !== prevQueueLengthRef.current
     ) {
@@ -94,7 +94,7 @@ export default function Home({
     }
 
     prevQueueLengthRef.current = albumsQueue.length;
-  }, [albumsQueue, isScrolling, activeSection]);
+  }, [albumsQueue, activeSection]);
 
   useEffect(() => {
     return () => {
@@ -107,9 +107,9 @@ export default function Home({
   useEffect(() => {
     if (
       scrollContainerRef.current &&
-      !isScrolling &&
       activeSection === "recents" &&
-      currentlyPlayingAlbum
+      currentlyPlayingAlbum &&
+      !hasScrolledToCurrentAlbumRef.current
     ) {
       const currentAlbumIndex = albumsQueue.findIndex(
         (album) => album.id === currentlyPlayingAlbum.id
@@ -120,9 +120,14 @@ export default function Home({
           left: currentAlbumIndex * (itemWidth + 40),
           behavior: "smooth",
         });
+        hasScrolledToCurrentAlbumRef.current = true;
       }
     }
-  }, [currentlyPlayingAlbum, isScrolling, activeSection, albumsQueue]);
+  }, [currentlyPlayingAlbum, activeSection, albumsQueue]);
+
+  useEffect(() => {
+    hasScrolledToCurrentAlbumRef.current = false;
+  }, [activeSection]);
 
   return (
     <div className="relative min-h-screen">
