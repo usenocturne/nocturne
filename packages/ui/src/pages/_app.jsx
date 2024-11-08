@@ -229,6 +229,42 @@ export default function App({ Component, pageProps }) {
 
               const playlistId = mappedRoute.split("/").pop();
 
+              const playbackResponse = await fetch(
+                "https://api.spotify.com/v1/me/player",
+                {
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              );
+
+              let currentShuffle = false;
+              let currentRepeat = "off";
+
+              if (playbackResponse.ok && playbackResponse.status !== 204) {
+                const playbackData = await playbackResponse.json();
+                currentShuffle = playbackData.shuffle_state;
+                currentRepeat = playbackData.repeat_state;
+              }
+
+              let startPosition = 0;
+              if (currentShuffle) {
+                const playlistResponse = await fetch(
+                  `https://api.spotify.com/v1/playlists/${playlistId}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                    },
+                  }
+                );
+
+                if (playlistResponse.ok) {
+                  const playlistData = await playlistResponse.json();
+                  const totalTracks = playlistData.tracks.total;
+                  startPosition = Math.floor(Math.random() * totalTracks);
+                }
+              }
+
               const devicesResponse = await fetch(
                 "https://api.spotify.com/v1/me/player/devices",
                 {
@@ -273,6 +309,16 @@ export default function App({ Component, pageProps }) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
               }
 
+              await fetch(
+                `https://api.spotify.com/v1/me/player/shuffle?state=${currentShuffle}`,
+                {
+                  method: "PUT",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              );
+
               const playResponse = await fetch(
                 "https://api.spotify.com/v1/me/player/play",
                 {
@@ -283,7 +329,7 @@ export default function App({ Component, pageProps }) {
                   },
                   body: JSON.stringify({
                     context_uri: `spotify:playlist:${playlistId}`,
-                    offset: { position: 0 },
+                    offset: { position: startPosition },
                     device_id: activeDeviceId,
                   }),
                 }
@@ -292,6 +338,16 @@ export default function App({ Component, pageProps }) {
               if (!playResponse.ok) {
                 throw new Error(`Play error! status: ${playResponse.status}`);
               }
+
+              await fetch(
+                `https://api.spotify.com/v1/me/player/repeat?state=${currentRepeat}`,
+                {
+                  method: "PUT",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              );
             } catch (error) {
               console.error("Error in playRequest:", error);
               handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
@@ -339,17 +395,37 @@ export default function App({ Component, pageProps }) {
 
       setLoading(false);
 
-      fetchRecentlyPlayedAlbums(accessToken, setAlbums, setAlbumsQueue);
-      fetchUserPlaylists(accessToken, setPlaylists, updateGradientColors);
-      fetchTopArtists(accessToken, setArtists, updateGradientColors);
-      fetchUserRadio(accessToken, setRadio, updateGradientColors);
+      fetchRecentlyPlayedAlbums(
+        accessToken,
+        setAlbums,
+        setAlbumsQueue,
+        handleError
+      );
+      fetchUserPlaylists(
+        accessToken,
+        setPlaylists,
+        updateGradientColors,
+        handleError
+      );
+      fetchTopArtists(
+        accessToken,
+        setArtists,
+        updateGradientColors,
+        handleError
+      );
+      fetchUserRadio(accessToken, setRadio, updateGradientColors, handleError);
 
       const playbackInterval = setInterval(() => {
         fetchCurrentPlayback();
       }, 1000);
 
       const recentlyPlayedInterval = setInterval(() => {
-        fetchRecentlyPlayedAlbums(accessToken, setAlbums, setAlbumsQueue);
+        fetchRecentlyPlayedAlbums(
+          accessToken,
+          setAlbums,
+          setAlbumsQueue,
+          handleError
+        );
       }, 5 * 60 * 1000);
 
       window.addEventListener("keydown", handleEscapePress);
