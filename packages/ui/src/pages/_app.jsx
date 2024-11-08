@@ -156,17 +156,26 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     const holdDuration = 2000;
+    const quickPressDuration = 200;
     let holdTimer = null;
     let hasTriggered = false;
     let lastMPressTime = 0;
     let mPressCount = 0;
     let brightnessOverlayTimer = null;
+    let keyPressStartTime = null;
 
     const handleKeyDown = (event) => {
       if (event.key === "m" || event.key === "M") {
+        if (!keyPressStartTime) {
+          keyPressStartTime = Date.now();
+        }
+
         const now = Date.now();
 
-        if (now - lastMPressTime < 500) {
+        if (
+          now - lastMPressTime < 500 &&
+          now - keyPressStartTime < quickPressDuration
+        ) {
           mPressCount++;
           if (mPressCount === 3) {
             if (brightnessOverlayTimer) {
@@ -180,6 +189,7 @@ export default function App({ Component, pageProps }) {
             }, 300000);
 
             mPressCount = 0;
+            lastMPressTime = 0;
             return;
           }
         } else {
@@ -187,7 +197,7 @@ export default function App({ Component, pageProps }) {
         }
         lastMPressTime = now;
 
-        if (!hasTriggered) {
+        if (!hasTriggered && mPressCount < 2) {
           holdTimer = setTimeout(() => {
             if (router.pathname !== "/") {
               router.push("/").then(() => {
@@ -204,6 +214,7 @@ export default function App({ Component, pageProps }) {
 
     const handleKeyUp = (event) => {
       if (event.key === "m" || event.key === "M") {
+        keyPressStartTime = null;
         if (holdTimer) {
           clearTimeout(holdTimer);
         }
