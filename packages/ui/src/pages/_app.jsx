@@ -175,6 +175,7 @@ export default function App({ Component, pageProps }) {
     const validKeys = ["1", "2", "3", "4"];
     const pressStartTimes = {};
     const holdDuration = 2000;
+    let hideTimerRef = null;
 
     const handleKeyDown = (event) => {
       if (!validKeys.includes(event.key)) return;
@@ -204,12 +205,17 @@ export default function App({ Component, pageProps }) {
 
         const mappedRoute = localStorage.getItem(`button${event.key}Map`);
 
+        if (hideTimerRef) {
+          clearTimeout(hideTimerRef);
+        }
+
         setPressedButton(event.key);
         setShowMappingOverlay(true);
 
-        const hideTimer = setTimeout(() => {
+        hideTimerRef = setTimeout(() => {
           setShowMappingOverlay(false);
           setPressedButton(null);
+          hideTimerRef = null;
         }, 2000);
 
         if (mappedRoute) {
@@ -376,6 +382,9 @@ export default function App({ Component, pageProps }) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      if (hideTimerRef) {
+        clearTimeout(hideTimerRef);
+      }
     };
   }, [accessToken, refreshToken, router]);
 
