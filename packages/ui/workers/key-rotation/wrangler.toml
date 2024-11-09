@@ -1,0 +1,10 @@
+name = "nocturne-key-rotation"
+main = "src/worker.js"
+compatibility_date = "2024-09-23"
+
+kv_namespaces = [
+  { binding = "ENCRYPTION_KEYS", id = "424d991036864e89ba94649e912c1c5a" }
+]
+
+[triggers]
+crons = ["0 0 */7 * *"]
