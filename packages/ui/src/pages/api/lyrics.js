@@ -1,4 +1,4 @@
-export const runtime = 'nodejs';
+export const runtime = 'experimental-edge';
 export default async function handler(req, res, handleError) {
     const { name, artist } = req.query;
   

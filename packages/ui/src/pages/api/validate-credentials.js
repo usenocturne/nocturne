@@ -1,5 +1,5 @@
 import { URLSearchParams } from "url";
-export const runtime = 'nodejs';
+export const runtime = 'experimental-edge';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
