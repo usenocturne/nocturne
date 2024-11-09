@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabaseClient';
-export const runtime = 'experimental-edge';
+export const runtime = 'nodejs';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {

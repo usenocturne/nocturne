@@ -680,6 +680,10 @@ export default function App({ Component, pageProps }) {
 
     let clientId;
     if (authType === "custom" && tempId) {
+      if (!supabase) {
+        handleError("AUTH_ERROR", "Supabase client not initialized");
+        return;
+      }
       const { data, error } = await supabase
         .from("spotify_credentials")
         .select("client_id")

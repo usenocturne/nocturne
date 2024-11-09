@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 import SuccessAlert from "../../components/SuccessAlert";
-export const runtime = "experimental-edge";
+export const runtime = "nodejs";
 
 const PlaylistPage = ({
   initialPlaylist,
