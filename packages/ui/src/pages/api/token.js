@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { encrypt, decrypt } from '../../lib/cryptoUtils';
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 export default async function handler(req) {
   if (req.method !== 'POST') {

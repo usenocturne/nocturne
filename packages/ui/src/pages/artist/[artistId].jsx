@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
-export const runtime = "edge";
+export const runtime = "experimental-edge";
 
 const ArtistPage = ({
   artist,
