@@ -1,6 +1,6 @@
 import { URLSearchParams } from "url";
 import { supabase } from '../../lib/supabaseClient';
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
