@@ -22,7 +22,7 @@ const AuthMethodSelector = ({ onSelect }) => {
     }
   }, [showCustomForm]);
 
-  const validateSpotifyCredentials = async (clientId, clientSecret) => {
+  const validateSpotifyCredentials = async (clientId, clientSecret, tempId) => {
     try {
       const response = await fetch("/api/validate-credentials", {
         method: "POST",
@@ -32,6 +32,7 @@ const AuthMethodSelector = ({ onSelect }) => {
         body: JSON.stringify({
           clientId,
           clientSecret,
+          tempId,
         }),
       });
 
@@ -72,27 +73,16 @@ const AuthMethodSelector = ({ onSelect }) => {
     try {
       setIsValidating(true);
 
+      const tempId = generateSecureTempId();
       const isValid = await validateSpotifyCredentials(
         clientId.trim(),
-        clientSecret.trim()
+        clientSecret.trim(),
+        tempId
       );
 
       if (!isValid) {
         return;
       }
-
-      const tempId = generateSecureTempId();
-
-      const { error: insertError } = await supabase
-        .from("spotify_credentials")
-        .insert({
-          temp_id: tempId,
-          client_id: clientId.trim(),
-          client_secret: clientSecret.trim(),
-          created_at: new Date().toISOString(),
-        });
-
-      if (insertError) throw insertError;
 
       localStorage.setItem("spotifyAuthType", "custom");
       localStorage.setItem("spotifyTempId", tempId);

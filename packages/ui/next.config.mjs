@@ -17,7 +17,11 @@ const nextConfig = {
 };
 
 if (process.env.NODE_ENV === 'development') {
-  await setupDevPlatform();
+  try {
+    await setupDevPlatform();
+  } catch (e) {
+    console.warn('Failed to setup dev platform:', e);
+  }
 }
 
 export default nextConfig;

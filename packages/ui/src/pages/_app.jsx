@@ -11,7 +11,7 @@ import {
 } from "../services";
 import ErrorAlert from "../components/ErrorAlert";
 import AuthSelection from "../components/AuthSelection";
-import { supabase } from "../lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 
@@ -53,6 +53,7 @@ const ErrorCodes = {
   FETCH_TOP_ARTISTS_ERROR: "E033",
   FETCH_USER_RADIO_ERROR: "E034",
   FETCH_USER_PROFILE_ERROR: "E035",
+  AUTH_ERROR: "E036",
 };
 
 export default function App({ Component, pageProps }) {
@@ -680,23 +681,45 @@ export default function App({ Component, pageProps }) {
 
     let clientId;
     if (authType === "custom" && tempId) {
-      if (!supabase) {
-        handleError("AUTH_ERROR", "Supabase client not initialized");
-        return;
-      }
-      const { data, error } = await supabase
-        .from("spotify_credentials")
-        .select("client_id")
-        .eq("temp_id", tempId)
-        .single();
+      try {
+        const supabaseInstance = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
 
-      if (error) {
-        handleError("AUTH_ERROR", "Failed to get custom credentials");
+        const { data, error } = await supabaseInstance
+          .from("spotify_credentials")
+          .select("client_id")
+          .eq("temp_id", tempId)
+          .single();
+
+        if (error) {
+          console.error("Supabase error:", error);
+          handleError("AUTH_ERROR", "Failed to get custom credentials");
+          return;
+        }
+
+        if (!data) {
+          handleError("AUTH_ERROR", "No credentials found for the provided ID");
+          return;
+        }
+
+        clientId = data.client_id;
+        localStorage.setItem("spotifyAuthType", "custom");
+        localStorage.setItem("spotifyTempId", tempId);
+      } catch (error) {
+        console.error("Error getting custom credentials:", error);
+        handleError("AUTH_ERROR", error.message);
         return;
       }
-      clientId = data.client_id;
     } else {
       clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      localStorage.setItem("spotifyAuthType", "default");
+    }
+
+    if (!clientId) {
+      handleError("AUTH_ERROR", "No client ID available");
+      return;
     }
 
     window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&scope=${scopes}`;
@@ -1044,9 +1067,9 @@ export default function App({ Component, pageProps }) {
       viewBox="0 0 24 24"
       stroke="rgba(0, 0, 0)"
       fill="rgba(0, 0, 0)"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       opacity="0.5"
     >
@@ -1068,9 +1091,9 @@ export default function App({ Component, pageProps }) {
       viewBox="0 0 24 24"
       stroke="rgba(0, 0, 0)"
       fill="rgba(0, 0, 0)"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       opacity="0.5"
     >
@@ -1092,9 +1115,9 @@ export default function App({ Component, pageProps }) {
       viewBox="0 0 24 24"
       stroke="rgba(0, 0, 0)"
       fill="rgba(0, 0, 0)"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       opacity="0.5"
     >

@@ -1,16 +1,28 @@
 import { supabase } from '../../lib/supabaseClient';
 export const runtime = 'experimental-edge';
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return new Response('Method Not Allowed', {
+      status: 405,
+      headers: { 
+        'Allow': ['GET'],
+        'Content-Type': 'application/json'
+      }
+    });
   }
 
-  const { temp_id } = req.query;
+  const url = new URL(req.url);
+  const temp_id = url.searchParams.get('temp_id');
 
   if (!temp_id) {
-    return res.status(400).json({ error: 'temp_id is required' });
+    return new Response(
+      JSON.stringify({ error: 'temp_id is required' }), 
+      { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 
   try {
@@ -48,14 +60,28 @@ export default async function handler(req, res) {
         )) : 0,
     };
 
-    return res.status(200).json({
+    const formattedStats = {
       ...stats,
       avgUptimeHours: Math.round(stats.avgUptimeHours * 100) / 100,
       longestOfflineDevice: Math.round(stats.longestOfflineDevice * 100) / 100
-    });
+    };
+
+    return new Response(
+      JSON.stringify(formattedStats), 
+      { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
 
   } catch (error) {
     console.error('Stats error:', error);
-    return res.status(500).json({ error: 'Failed to fetch stats' });
+    return new Response(
+      JSON.stringify({ error: 'Failed to fetch stats' }), 
+      { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }
