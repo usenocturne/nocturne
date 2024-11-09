@@ -14,14 +14,17 @@
     "@supabase/supabase-js": "^2.46.1",
     "@vercel/kv": "^3.0.0",
     "classnames": "^2.5.1",
+    "clsx": "^2.1.1",
     "color-thief-browser": "^2.0.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.441.0",
     "next": "14.2.7",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.5",
     "autoprefixer": "^10.4.20",
     "eslint": "^8",
     "eslint-config-next": "14.2.7",
