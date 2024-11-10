@@ -11,6 +11,54 @@ const AuthMethodSelector = ({ onSelect }) => {
   const [buttonsVisible, setButtonsVisible] = useState(true);
   const [formVisible, setFormVisible] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [showDefaultButton, setShowDefaultButton] = useState(false);
+  const [defaultButtonVisible, setDefaultButtonVisible] = useState(false);
+  const [escapeKeyTimer, setEscapeKeyTimer] = useState(null);
+
+  useEffect(() => {
+    if (showCustomForm) {
+      setButtonsVisible(false);
+      setTimeout(() => setFormVisible(true), 250);
+    } else {
+      setFormVisible(false);
+      setTimeout(() => setButtonsVisible(true), 250);
+    }
+  }, [showCustomForm]);
+
+  useEffect(() => {
+    if (showDefaultButton) {
+      setTimeout(() => setDefaultButtonVisible(true), 50);
+    }
+  }, [showDefaultButton]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && !escapeKeyTimer) {
+        const timer = setTimeout(() => {
+          setShowDefaultButton(true);
+        }, 2000);
+        setEscapeKeyTimer(timer);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === "Escape" && escapeKeyTimer) {
+        clearTimeout(escapeKeyTimer);
+        setEscapeKeyTimer(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      if (escapeKeyTimer) {
+        clearTimeout(escapeKeyTimer);
+      }
+    };
+  }, [escapeKeyTimer]);
 
   useEffect(() => {
     if (showCustomForm) {
@@ -148,31 +196,45 @@ const AuthMethodSelector = ({ onSelect }) => {
           </div>
         </div>
 
-        <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-xl">
+        <div className="sm:mx-auto sm:w-full sm:max-w-xl">
           <div
             className={`relative transition-all duration-250 ${
-              formVisible ? "h-[300px]" : "h-[200px]"
+              formVisible
+                ? "h-[300px]"
+                : showDefaultButton
+                ? "h-[260px]"
+                : "h-[150px]"
             }`}
           >
             <div
-              className={`space-y-6 mt-2 absolute top-0 left-0 w-full transition-opacity duration-250 ${
+              className={`absolute top-0 left-0 w-full transition-opacity duration-250 ${
                 buttonsVisible ? "opacity-100" : "opacity-0"
-              }`}
+              } ${showDefaultButton ? "space-y-6 mt-2" : "mt-6"}`}
               style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
             >
-              <button
-                onClick={handleDefaultSubmit}
-                className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
+              <div
+                className={`transition-all duration-250 overflow-hidden ${
+                  showDefaultButton
+                    ? defaultButtonVisible
+                      ? "h-[80px] opacity-100"
+                      : "h-0 opacity-0"
+                    : "h-0 opacity-0"
+                }`}
               >
-                Use Default Credentials (Beta)
-              </button>
+                <button
+                  onClick={handleDefaultSubmit}
+                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
+                >
+                  Use Default Credentials (Beta)
+                </button>
+              </div>
               <button
                 onClick={() => setShowCustomForm(true)}
                 className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
               >
                 Use Custom Credentials
               </button>
-              <p className="text-center text-white/30 text-[16px]">
+              <p className="mt-6 text-center text-white/30 text-[16px]">
                 {packageInfo.version}
               </p>
             </div>
