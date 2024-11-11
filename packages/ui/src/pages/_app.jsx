@@ -56,8 +56,42 @@ const ErrorCodes = {
   AUTH_ERROR: "E036",
 };
 
+const initialAuthState = () => {
+  if (typeof window === "undefined") {
+    return {
+      authSelectionMade: false,
+      authType: null,
+      tempId: null,
+    };
+  }
+
+  try {
+    const savedAuthType = localStorage.getItem("spotifyAuthType");
+    const savedTempId = localStorage.getItem("spotifyTempId");
+
+    if (savedAuthType) {
+      return {
+        authSelectionMade: true,
+        authType: savedAuthType,
+        tempId: savedAuthType === "custom" ? savedTempId : null,
+      };
+    }
+  } catch (e) {
+    console.error("Error accessing localStorage:", e);
+  }
+
+  return {
+    authSelectionMade: false,
+    authType: null,
+    tempId: null,
+  };
+};
+
 export default function App({ Component, pageProps }) {
   const router = useRouter();
+
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [authState, setAuthState] = useState(initialAuthState);
   const [accessToken, setAccessToken] = useState(null);
   const [refreshToken, setRefreshToken] = useState(null);
   const [authCode, setAuthCode] = useState(null);
@@ -94,35 +128,20 @@ export default function App({ Component, pageProps }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState(null);
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
-  const [authSelectionMade, setAuthSelectionMade] = useState(false);
-  const [authType, setAuthType] = useState(null);
-  const [tempId, setTempId] = useState(null);
   const [pressedButton, setPressedButton] = useState(null);
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
+  const { authSelectionMade, authType, tempId } = authState;
 
   const handleAuthSelection = async (selection) => {
-    if (selection.type === "custom") {
-      setTempId(selection.tempId);
-      setAuthType("custom");
-    } else {
-      setAuthType("default");
-    }
-    setAuthSelectionMade(true);
+    const newState = {
+      authSelectionMade: true,
+      authType: selection.type,
+      tempId: selection.type === "custom" ? selection.tempId : null,
+    };
+    setAuthState(newState);
   };
-
-  useEffect(() => {
-    const savedAuthType = localStorage.getItem("spotifyAuthType");
-    const savedTempId = localStorage.getItem("spotifyTempId");
-    if (savedAuthType) {
-      setAuthType(savedAuthType);
-      if (savedAuthType === "custom" && savedTempId) {
-        setTempId(savedTempId);
-      }
-      setAuthSelectionMade(true);
-    }
-  }, []);
 
   const handleError = (errorType, errorMessage) => {
     setError({
@@ -141,6 +160,303 @@ export default function App({ Component, pageProps }) {
     }
   };
 
+  const calculateBrightness = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  };
+
+  const calculateHue = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h;
+
+    if (max === min) {
+      h = 0;
+    } else {
+      const d = max - min;
+      switch (max) {
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0);
+          break;
+        case g:
+          h = (b - r) / d + 2;
+          break;
+        case b:
+          h = (r - g) / d + 4;
+          break;
+      }
+      h /= 6;
+    }
+    return h * 360;
+  };
+
+  const extractColors = (imageUrl) => {
+    const colorThief = new ColorThief();
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = imageUrl;
+    img.onload = () => {
+      const palette = colorThief.getPalette(img, 8);
+      const filteredColors = palette
+        .map(
+          (color) =>
+            `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}`
+        )
+        .filter((color) => {
+          const brightness = calculateBrightness(color);
+          return brightness > 120 || brightness < 10;
+        })
+        .sort((a, b) => calculateHue(a) - calculateHue(b));
+
+      setColors(filteredColors);
+    };
+  };
+
+  const hexToRgb = (hex) => {
+    const bigint = parseInt(hex.slice(1), 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return { r, g, b };
+  };
+
+  const rgbToHex = ({ r, g, b }) => {
+    const toHex = (n) => n.toString(16).padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+
+  const getNextColor = (current, target) => {
+    const step = (start, end) => {
+      if (start === end) return start;
+      const diff = end - start;
+      return start + (diff > 0 ? Math.min(1, diff) : Math.max(-1, diff));
+    };
+
+    return {
+      r: step(current.r, target.r),
+      g: step(current.g, target.g),
+      b: step(current.b, target.b),
+    };
+  };
+
+  const generateMeshGradient = (colors) => {
+    if (colors.length === 0) return "#191414";
+
+    const positions = ["at 0% 25%", "at 25% 0%", "at 100% 75%", "at 75% 100%"];
+
+    const radialGradients = positions.map((position, index) => {
+      const color = colors[index % colors.length];
+      return `radial-gradient(${position}, ${color} 0%, transparent 80%)`;
+    });
+
+    return `${radialGradients.join(", ")}`;
+  };
+
+  const fetchCurrentPlayback = async () => {
+    if (accessToken) {
+      try {
+        const response = await fetch("https://api.spotify.com/v1/me/player", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.status === 204) {
+          setCurrentPlayback(null);
+          setCurrentlyPlayingAlbum(null);
+          setCurrentlyPlayingTrackUri(null);
+          return;
+        }
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data === null || Object.keys(data).length === 0) {
+            setCurrentPlayback(null);
+            setCurrentlyPlayingAlbum(null);
+            setCurrentlyPlayingTrackUri(null);
+            return;
+          }
+
+          setCurrentPlayback({
+            ...data,
+            device: {
+              ...data.device,
+              volume_percent: data.device?.volume_percent,
+            },
+            shuffle_state: data.shuffle_state,
+            repeat_state: data.repeat_state,
+          });
+
+          setIsShuffleEnabled(data.shuffle_state);
+
+          if (data && data.item) {
+            const currentAlbum = data.item.album;
+            const currentTrackUri = data.item.uri;
+            setCurrentlyPlayingTrackUri(currentTrackUri);
+            if (
+              !currentlyPlayingAlbum ||
+              currentlyPlayingAlbum.id !== currentAlbum.id
+            ) {
+              if (!router.pathname.includes("album")) {
+                setCurrentlyPlayingAlbum(currentAlbum);
+                setAlbumsQueue((prevQueue) => {
+                  const updatedQueue = prevQueue.filter(
+                    (album) => album.id !== currentAlbum.id
+                  );
+                  return [currentAlbum, ...updatedQueue];
+                });
+
+                const imageUrl = currentAlbum.images[0].url;
+                if (imageUrl !== albumImage) {
+                  localStorage.setItem("albumImage", imageUrl);
+                  setAlbumImage(imageUrl);
+                  setAlbumName(currentAlbum.name);
+                  setArtistName(
+                    currentAlbum.artists.map((artist) => artist.name).join(", ")
+                  );
+
+                  if (activeSection === "recents") {
+                    updateGradientColors(imageUrl);
+                  }
+                }
+              }
+            }
+          }
+        } else if (response.status !== 401 && response.status !== 403) {
+          handleError(
+            "FETCH_CURRENT_PLAYBACK_ERROR",
+            `HTTP error! status: ${response.status}`
+          );
+        }
+      } catch (error) {
+        if (error.message.includes("Unexpected end of JSON input")) {
+          setCurrentPlayback(null);
+          setCurrentlyPlayingAlbum(null);
+          setCurrentlyPlayingTrackUri(null);
+          return;
+        } else {
+          handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
+        }
+      }
+    }
+  };
+
+  const redirectToSpotify = async () => {
+    const scopes =
+      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
+
+    let clientId;
+    if (authType === "custom" && tempId) {
+      try {
+        const supabaseInstance = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+
+        const { data, error } = await supabaseInstance
+          .from("spotify_credentials")
+          .select("client_id")
+          .eq("temp_id", tempId)
+          .single();
+
+        if (error) {
+          console.error("Supabase error:", error);
+          handleError("AUTH_ERROR", "Failed to get custom credentials");
+          return;
+        }
+
+        if (!data) {
+          handleError("AUTH_ERROR", "No credentials found for the provided ID");
+          return;
+        }
+
+        clientId = data.client_id;
+        localStorage.setItem("spotifyAuthType", "custom");
+        localStorage.setItem("spotifyTempId", tempId);
+      } catch (error) {
+        console.error("Error getting custom credentials:", error);
+        handleError("AUTH_ERROR", error.message);
+        return;
+      }
+    } else {
+      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      localStorage.setItem("spotifyAuthType", "default");
+    }
+
+    if (!clientId) {
+      handleError("AUTH_ERROR", "No client ID available");
+      return;
+    }
+
+    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&scope=${scopes}`;
+  };
+
+  const fetchAccessToken = async (code) => {
+    try {
+      const response = await fetch("/api/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code,
+          tempId,
+          isCustomAuth: authType === "custom",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      setAccessToken(data.access_token);
+      setRefreshToken(data.refresh_token);
+    } catch (error) {
+      handleError("FETCH_ACCESS_TOKEN_ERROR", error.message);
+    }
+  };
+
+  const refreshAccessToken = async () => {
+    try {
+      const response = await fetch("/api/refresh-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+          isCustomAuth: authType === "custom",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setAccessToken(data.access_token);
+      if (data.refresh_token) {
+        setRefreshToken(data.refresh_token);
+      }
+      return data;
+    } catch (error) {
+      handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   useEffect(() => {
     const handleAppEscape = () => {
       router.push("/").then(() => {
@@ -153,7 +469,67 @@ export default function App({ Component, pageProps }) {
     return () => {
       window.removeEventListener("app-escape-pressed", handleAppEscape);
     };
-  }, [drawerOpen, router, setActiveSection]);
+  }, [router, setActiveSection]);
+
+  useEffect(() => {
+    const handleWheel = (event) => {
+      if (showBrightnessOverlay) {
+        event.stopPropagation();
+        event.preventDefault();
+        setBrightness((prev) => {
+          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
+          return Math.max(5, Math.min(250, newValue));
+        });
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (
+        showBrightnessOverlay &&
+        ["1", "2", "3", "4", "Escape", "Enter"].includes(event.key)
+      ) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const existingTimeout = window.brightnessOverlayTimer;
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+        setShowBrightnessOverlay(false);
+      }
+    };
+
+    const handleTouchMove = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleTouchStart = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener("wheel", handleWheel, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel, { capture: true });
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [showBrightnessOverlay]);
 
   useEffect(() => {
     const holdDuration = 2000;
@@ -237,66 +613,6 @@ export default function App({ Component, pageProps }) {
       }
     };
   }, [router, setShowBrightnessOverlay, setActiveSection]);
-
-  useEffect(() => {
-    const handleWheel = (event) => {
-      if (showBrightnessOverlay) {
-        event.stopPropagation();
-        event.preventDefault();
-        setBrightness((prev) => {
-          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
-          return Math.max(5, Math.min(250, newValue));
-        });
-      }
-    };
-
-    const handleKeyDown = (event) => {
-      if (
-        showBrightnessOverlay &&
-        ["1", "2", "3", "4", "Escape", "Enter"].includes(event.key)
-      ) {
-        event.stopPropagation();
-        event.preventDefault();
-
-        const existingTimeout = window.brightnessOverlayTimer;
-        if (existingTimeout) {
-          clearTimeout(existingTimeout);
-        }
-        setShowBrightnessOverlay(false);
-      }
-    };
-
-    const handleTouchMove = (event) => {
-      if (showBrightnessOverlay) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-
-    const handleTouchStart = (event) => {
-      if (showBrightnessOverlay) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-
-    document.addEventListener("wheel", handleWheel, {
-      passive: false,
-      capture: true,
-    });
-    document.addEventListener("keydown", handleKeyDown, { capture: true });
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
-    document.addEventListener("touchstart", handleTouchStart, {
-      passive: false,
-    });
-
-    return () => {
-      document.removeEventListener("wheel", handleWheel, { capture: true });
-      document.removeEventListener("keydown", handleKeyDown, { capture: true });
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.removeEventListener("touchstart", handleTouchStart);
-    };
-  }, [showBrightnessOverlay]);
 
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
@@ -586,286 +902,6 @@ export default function App({ Component, pageProps }) {
     }
   }, [accessToken]);
 
-  const fetchCurrentPlayback = async () => {
-    if (accessToken) {
-      try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (response.status === 204) {
-          setCurrentPlayback(null);
-          setCurrentlyPlayingAlbum(null);
-          setCurrentlyPlayingTrackUri(null);
-          return;
-        }
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data === null || Object.keys(data).length === 0) {
-            setCurrentPlayback(null);
-            setCurrentlyPlayingAlbum(null);
-            setCurrentlyPlayingTrackUri(null);
-            return;
-          }
-
-          setCurrentPlayback({
-            ...data,
-            device: {
-              ...data.device,
-              volume_percent: data.device?.volume_percent,
-            },
-            shuffle_state: data.shuffle_state,
-            repeat_state: data.repeat_state,
-          });
-
-          setIsShuffleEnabled(data.shuffle_state);
-
-          if (data && data.item) {
-            const currentAlbum = data.item.album;
-            const currentTrackUri = data.item.uri;
-            setCurrentlyPlayingTrackUri(currentTrackUri);
-            if (
-              !currentlyPlayingAlbum ||
-              currentlyPlayingAlbum.id !== currentAlbum.id
-            ) {
-              if (!router.pathname.includes("album")) {
-                setCurrentlyPlayingAlbum(currentAlbum);
-                setAlbumsQueue((prevQueue) => {
-                  const updatedQueue = prevQueue.filter(
-                    (album) => album.id !== currentAlbum.id
-                  );
-                  return [currentAlbum, ...updatedQueue];
-                });
-
-                const imageUrl = currentAlbum.images[0].url;
-                if (imageUrl !== albumImage) {
-                  localStorage.setItem("albumImage", imageUrl);
-                  setAlbumImage(imageUrl);
-                  setAlbumName(currentAlbum.name);
-                  setArtistName(
-                    currentAlbum.artists.map((artist) => artist.name).join(", ")
-                  );
-
-                  if (activeSection === "recents") {
-                    updateGradientColors(imageUrl);
-                  }
-                }
-              }
-            }
-          }
-        } else if (response.status !== 401 && response.status !== 403) {
-          handleError(
-            "FETCH_CURRENT_PLAYBACK_ERROR",
-            `HTTP error! status: ${response.status}`
-          );
-        }
-      } catch (error) {
-        if (error.message.includes("Unexpected end of JSON input")) {
-          setCurrentPlayback(null);
-          setCurrentlyPlayingAlbum(null);
-          setCurrentlyPlayingTrackUri(null);
-          return;
-        } else {
-          handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
-        }
-      }
-    }
-  };
-
-  const redirectToSpotify = async () => {
-    const scopes =
-      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
-
-    let clientId;
-    if (authType === "custom" && tempId) {
-      try {
-        const supabaseInstance = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        );
-
-        const { data, error } = await supabaseInstance
-          .from("spotify_credentials")
-          .select("client_id")
-          .eq("temp_id", tempId)
-          .single();
-
-        if (error) {
-          console.error("Supabase error:", error);
-          handleError("AUTH_ERROR", "Failed to get custom credentials");
-          return;
-        }
-
-        if (!data) {
-          handleError("AUTH_ERROR", "No credentials found for the provided ID");
-          return;
-        }
-
-        clientId = data.client_id;
-        localStorage.setItem("spotifyAuthType", "custom");
-        localStorage.setItem("spotifyTempId", tempId);
-      } catch (error) {
-        console.error("Error getting custom credentials:", error);
-        handleError("AUTH_ERROR", error.message);
-        return;
-      }
-    } else {
-      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-      localStorage.setItem("spotifyAuthType", "default");
-    }
-
-    if (!clientId) {
-      handleError("AUTH_ERROR", "No client ID available");
-      return;
-    }
-
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&scope=${scopes}`;
-  };
-
-  const fetchAccessToken = async (code) => {
-    try {
-      const response = await fetch("/api/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code,
-          tempId,
-          isCustomAuth: authType === "custom",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      setAccessToken(data.access_token);
-      setRefreshToken(data.refresh_token);
-    } catch (error) {
-      handleError("FETCH_ACCESS_TOKEN_ERROR", error.message);
-    }
-  };
-
-  const refreshAccessToken = async () => {
-    try {
-      const response = await fetch("/api/refresh-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          refresh_token: refreshToken,
-          isCustomAuth: authType === "custom",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setAccessToken(data.access_token);
-      if (data.refresh_token) {
-        setRefreshToken(data.refresh_token);
-      }
-      return data;
-    } catch (error) {
-      handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
-      throw error;
-    }
-  };
-
-  const calculateBrightness = (hex) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return 0.299 * r + 0.587 * g + 0.114 * b;
-  };
-
-  const calculateHue = (hex) => {
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h;
-
-    if (max === min) {
-      h = 0;
-    } else {
-      const d = max - min;
-      switch (max) {
-        case r:
-          h = (g - b) / d + (g < b ? 6 : 0);
-          break;
-        case g:
-          h = (b - r) / d + 2;
-          break;
-        case b:
-          h = (r - g) / d + 4;
-          break;
-      }
-      h /= 6;
-    }
-    return h * 360;
-  };
-
-  const extractColors = (imageUrl) => {
-    const colorThief = new ColorThief();
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = imageUrl;
-    img.onload = () => {
-      const palette = colorThief.getPalette(img, 8);
-      const filteredColors = palette
-        .map(
-          (color) =>
-            `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}`
-        )
-        .filter((color) => {
-          const brightness = calculateBrightness(color);
-          return brightness > 120 || brightness < 10;
-        })
-        .sort((a, b) => calculateHue(a) - calculateHue(b));
-
-      setColors(filteredColors);
-    };
-  };
-
-  const hexToRgb = (hex) => {
-    const bigint = parseInt(hex.slice(1), 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return { r, g, b };
-  };
-
-  const rgbToHex = ({ r, g, b }) => {
-    const toHex = (n) => n.toString(16).padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
-
-  const getNextColor = (current, target) => {
-    const step = (start, end) => {
-      if (start === end) return start;
-      const diff = end - start;
-      return start + (diff > 0 ? Math.min(1, diff) : Math.max(-1, diff));
-    };
-
-    return {
-      r: step(current.r, target.r),
-      g: step(current.g, target.g),
-      b: step(current.b, target.b),
-    };
-  };
-
   useEffect(() => {
     if (router.pathname === "/now-playing") {
       if (!currentPlayback || !currentPlayback.is_playing) {
@@ -1024,19 +1060,6 @@ export default function App({ Component, pageProps }) {
     transitionSpeed,
   ]);
 
-  const generateMeshGradient = (colors) => {
-    if (colors.length === 0) return "#191414";
-
-    const positions = ["at 0% 25%", "at 25% 0%", "at 100% 75%", "at 75% 100%"];
-
-    const radialGradients = positions.map((position, index) => {
-      const color = colors[index % colors.length];
-      return `radial-gradient(${position}, ${color} 0%, transparent 80%)`;
-    });
-
-    return `${radialGradients.join(", ")}`;
-  };
-
   useEffect(() => {
     if (albumImage) {
       extractColors(albumImage);
@@ -1053,12 +1076,8 @@ export default function App({ Component, pageProps }) {
     }
   }, [activeSection, sectionGradients]);
 
-  if (!authSelectionMade) {
-    return (
-      <div className={inter.className}>
-        <AuthSelection onSelect={handleAuthSelection} />
-      </div>
-    );
+  if (!isHydrated) {
+    return null;
   }
 
   const BrightnessLowIcon = ({ className }) => (
@@ -1137,84 +1156,90 @@ export default function App({ Component, pageProps }) {
     <main
       className={`overflow-hidden relative min-h-screen ${inter.className}`}
     >
-      <div
-        style={{
-          backgroundImage: generateMeshGradient([
-            currentColor1,
-            currentColor2,
-            currentColor3,
-            currentColor4,
-          ]),
-          transition: "background-image 0.5s linear",
-        }}
-        className="absolute inset-0"
-      ></div>
-      <div className="relative z-10">
-        <Component
-          {...pageProps}
-          accessToken={accessToken}
-          albums={albums}
-          playlists={playlists}
-          artists={artists}
-          radio={radio}
-          currentlyPlayingAlbum={currentlyPlayingAlbum}
-          setCurrentlyPlayingAlbum={setCurrentlyPlayingAlbum}
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-          loading={loading}
-          albumsQueue={albumsQueue}
-          currentlyPlayingTrackUri={currentlyPlayingTrackUri}
-          currentPlayback={currentPlayback}
-          fetchCurrentPlayback={fetchCurrentPlayback}
-          drawerOpen={drawerOpen}
-          setDrawerOpen={setDrawerOpen}
-          updateGradientColors={updateGradientColors}
-          handleError={handleError}
-          showBrightnessOverlay={showBrightnessOverlay}
-        />
-        <ErrorAlert error={error} onClose={clearError} />
-      </div>
-      {(showBrightnessOverlay || brightness) && (
-        <div
-          className={classNames(
-            "fixed right-0 top-[70px] transform transition-opacity duration-300 z-50",
-            {
-              "opacity-0 volumeOutScale": !showBrightnessOverlay,
-              "opacity-100 volumeInScale": showBrightnessOverlay,
-            }
-          )}
-        >
-          <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+      {!authState.authSelectionMade ? (
+        <AuthSelection onSelect={handleAuthSelection} />
+      ) : (
+        <>
+          <div
+            style={{
+              backgroundImage: generateMeshGradient([
+                currentColor1,
+                currentColor2,
+                currentColor3,
+                currentColor4,
+              ]),
+              transition: "background-image 0.5s linear",
+            }}
+            className="absolute inset-0"
+          />
+          <div className="relative z-10">
+            <Component
+              {...pageProps}
+              accessToken={accessToken}
+              albums={albums}
+              playlists={playlists}
+              artists={artists}
+              radio={radio}
+              currentlyPlayingAlbum={currentlyPlayingAlbum}
+              setCurrentlyPlayingAlbum={setCurrentlyPlayingAlbum}
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+              loading={loading}
+              albumsQueue={albumsQueue}
+              currentlyPlayingTrackUri={currentlyPlayingTrackUri}
+              currentPlayback={currentPlayback}
+              fetchCurrentPlayback={fetchCurrentPlayback}
+              drawerOpen={drawerOpen}
+              setDrawerOpen={setDrawerOpen}
+              updateGradientColors={updateGradientColors}
+              handleError={handleError}
+              showBrightnessOverlay={showBrightnessOverlay}
+            />
+            <ErrorAlert error={error} onClose={clearError} />
+          </div>
+          {(showBrightnessOverlay || brightness) && (
             <div
               className={classNames(
-                "bg-white w-full transition-all duration-200 ease-out",
+                "fixed right-0 top-[70px] transform transition-opacity duration-300 z-50",
                 {
-                  "rounded-b-[13px]": brightness < 250,
-                  "rounded-[13px]": brightness === 250,
+                  "opacity-0 volumeOutScale": !showBrightnessOverlay,
+                  "opacity-100 volumeInScale": showBrightnessOverlay,
                 }
               )}
-              style={{ height: `${((brightness - 5) / (250 - 5)) * 100}%` }}
             >
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
-                {(() => {
-                  const brightnessPercent =
-                    ((brightness - 5) / (250 - 5)) * 100;
-                  if (brightnessPercent >= 60)
-                    return <BrightnessHighIcon className="w-7 h-7" />;
-                  if (brightnessPercent >= 30)
-                    return <BrightnessMidIcon className="w-7 h-7" />;
-                  return <BrightnessLowIcon className="w-7 h-7" />;
-                })()}
+              <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+                <div
+                  className={classNames(
+                    "bg-white w-full transition-all duration-200 ease-out",
+                    {
+                      "rounded-b-[13px]": brightness < 250,
+                      "rounded-[13px]": brightness === 250,
+                    }
+                  )}
+                  style={{ height: `${((brightness - 5) / (250 - 5)) * 100}%` }}
+                >
+                  <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+                    {(() => {
+                      const brightnessPercent =
+                        ((brightness - 5) / (250 - 5)) * 100;
+                      if (brightnessPercent >= 60)
+                        return <BrightnessHighIcon className="w-7 h-7" />;
+                      if (brightnessPercent >= 30)
+                        return <BrightnessMidIcon className="w-7 h-7" />;
+                      return <BrightnessLowIcon className="w-7 h-7" />;
+                    })()}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+          <ButtonMappingOverlay
+            show={showMappingOverlay}
+            onClose={() => setShowMappingOverlay(false)}
+            activeButton={pressedButton}
+          />
+        </>
       )}
-      <ButtonMappingOverlay
-        show={showMappingOverlay}
-        onClose={() => setShowMappingOverlay(false)}
-        activeButton={pressedButton}
-      />
     </main>
   );
 }
