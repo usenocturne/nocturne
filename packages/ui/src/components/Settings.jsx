@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Field, Label, Switch } from "@headlessui/react";
+import { useRouter } from "next/router";
 
 export default function Settings() {
+  const router = useRouter();
   const [trackNameScrollingEnabled, setTrackNameScrollingEnabled] = useState(
     () => {
       const storedValue = localStorage.getItem("trackNameScrollingEnabled");
@@ -35,6 +37,12 @@ export default function Settings() {
       localStorage.setItem("lyricsMenuEnabled", "true");
     }
   }, []);
+
+  const handleSignOut = () => {
+    localStorage.removeItem("spotifyAuthType");
+    localStorage.removeItem("spotifyTempId");
+    window.location.reload();
+  };
 
   return (
     <div className="h-full overflow-y-auto">
@@ -82,6 +90,27 @@ export default function Settings() {
           </Field>
           <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
             Enable or disable the lyrics menu option in the player.
+          </p>
+        </div>
+        <div className="relative">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 flex items-center"
+          >
+            <div className="w-full border-t border-gray-300" />
+          </div>
+        </div>
+        <div>
+          <button
+            onClick={handleSignOut}
+            className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-[12px] px-6 py-3 mt-8"
+          >
+            <span className="text-[32px] font-[580] text-white tracking-tight">
+              Sign Out
+            </span>
+          </button>
+          <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
+            Sign out and reset authentication settings.
           </p>
         </div>
         <div className="relative">
