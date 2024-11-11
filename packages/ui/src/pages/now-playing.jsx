@@ -944,7 +944,7 @@ const NowPlaying = ({
           onClick={() => setOpen(false)}
         />
       )}
-      <div className="flex flex-col gap-4 h-screen w-full z-10">
+      <div className="flex flex-col gap-4 h-screen w-full z-10 fadeIn-animation">
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div className="min-w-[280px] mr-8">
             <LongPressLink

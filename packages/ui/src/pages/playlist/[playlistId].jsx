@@ -363,7 +363,7 @@ const PlaylistPage = ({
   }, []);
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen">
+    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen fadeIn-animation">
       <div className="md:w-1/3 h-screen sticky top-0">
         {playlist.images && playlist.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
