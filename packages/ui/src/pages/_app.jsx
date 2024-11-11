@@ -14,7 +14,6 @@ import AuthSelection from "../components/AuthSelection";
 import { createClient } from "@supabase/supabase-js";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
-import ResolutionCheck from "../components/ResolutionCheck";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -102,28 +101,6 @@ export default function App({ Component, pageProps }) {
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
-  const [isCorrectResolution, setIsCorrectResolution] = useState(false);
-  const [screenSize, setScreenSize] = useState({ width: 0, height: 0 });
-
-  useEffect(() => {
-    const checkResolution = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      setScreenSize({ width, height });
-      setIsCorrectResolution(width === 800 && height === 480);
-
-      const resolutionElement = document.getElementById("current-resolution");
-      if (resolutionElement) {
-        resolutionElement.textContent = `${width} x ${height}`;
-      }
-    };
-
-    checkResolution();
-
-    window.addEventListener("resize", checkResolution);
-
-    return () => window.removeEventListener("resize", checkResolution);
-  }, []);
 
   const handleAuthSelection = async (selection) => {
     if (selection.type === "custom") {
@@ -1075,10 +1052,6 @@ export default function App({ Component, pageProps }) {
       setTargetColor4(color4);
     }
   }, [activeSection, sectionGradients]);
-
-  if (!isCorrectResolution) {
-    return <ResolutionCheck />;
-  }
 
   if (!authSelectionMade) {
     return (
