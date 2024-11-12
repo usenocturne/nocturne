@@ -46,11 +46,11 @@ $ python superbird_tool.py --find_device
 # Flash Nocturne image, without resetting the data partition 
 $ python superbird_tool.py --dont_reset --restore_device C:\path\to\Nocturne.v2.0-beta_2024-11-11/image 
 ```
-After the flashing completes, change directories to the scripts folder.
+After the flashing completes, connect your Raspberry Pi to your computer, and change directories to the scripts folder.
 
 ```bash
 # Go into the setup-scripts folder
-$ cd /path/to/nocturne-image/setup-scripts
+$ cd \path\to\nocturne-image\setup-scripts
 ```
 
 There are two different ways to use Nocturne. You can either use it at your desk, or in your car. 
@@ -58,7 +58,7 @@ There are two different ways to use Nocturne. You can either use it at your desk
 <details>
 <summary>Using Nocturne at your desk</summary>
 <br>
-Connect your Raspberry Pi to your computer and run the following from your command line:
+Run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
@@ -81,11 +81,11 @@ $ reboot
 <details>
 <summary>Using Nocturne in your car</summary>
 <br>
-Connect your Raspberry Pi to your computer and run the following from your command line:
+Run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup-scripts/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -103,7 +103,7 @@ $ reboot
 After, you will need to run the `setup_hotspot.py` script: 
 ```bash
 # Transfer setup_hotspot.py to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_hotspot.py pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup-scripts/setup_hotspot.py pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -147,7 +147,7 @@ $ /opt/homebrew/bin/python3 superbird_tool.py --find_device
 # Flash Nocturne image, without resetting the data partition 
 $ /opt/homebrew/bin/python3 superbird_tool.py --dont_reset --restore_device /path/to/Nocturne.v2.0-beta_2024-11-11/image 
 ```
-After the flashing completes, change directories to the scripts folder.
+After the flashing completes, connect your Raspberry Pi to your computer, and change directories to the scripts folder.
 
 ```bash
 # Go into the setup-scripts folder
@@ -159,11 +159,11 @@ There are two different ways to use Nocturne. You can either use it at your desk
 <details>
 <summary>Using Nocturne at your desk</summary>
 <br>
-Connect your Raspberry Pi to your computer and run the following from your command line:
+Run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp \path\to\nocturne-image\setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup-scripts/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -182,11 +182,11 @@ $ reboot
 <details>
 <summary>Using Nocturne in your car</summary>
 <br>
-Connect your Raspberry Pi to your computer and run the following from your command line:
+Run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup-scripts/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -204,7 +204,7 @@ $ reboot
 After, you will need to run the `setup_hotspot.py` script: 
 ```bash
 # Transfer setup_hotspot.py to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_hotspot.py pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup-scripts/setup_hotspot.py pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -283,7 +283,7 @@ Connect your Raspberry Pi to your computer and run the following from your comma
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
+$ scp /path/to/nocturne-image/setup-scripts/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
