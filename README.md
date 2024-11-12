@@ -298,7 +298,7 @@ $ sudo ./setup_host_rpi.sh
 $ reboot
 ```
 </details>
-<br  >
+<br>
 
 Connect Car Thing to your computer or Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), and open the app. Find the IP Address of your device and create a new connection with the VNC Server Address with the port `5900`. This should look something like `raspberrypi.local:5900`. Input `superbird` as the password.
 
@@ -309,6 +309,7 @@ Login to Spotify on the Car Thing using VNC Viewer.
 ## Troubleshooting
 
 If you are having issues flashing Nocturne to your Car Thing, check out the guides below. 
+<br>
 
 <details>
 <summary>superbird-tool: USBTimeoutError</summary>
