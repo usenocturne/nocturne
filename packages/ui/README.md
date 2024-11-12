@@ -1,13 +1,13 @@
 
 <h1 align="center">
   <br>
-  <a href="http://www.amitmerchant.com/electron-markdownify"><img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-logo.png" alt="Markdownify" width="200"></a>
+  <img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-logo.png" alt="Nocturne" width="200">
   <br>
   nocturne
   <br>
 </h1>
 
-<h4 align="center">A web application for <a href="https://github.com/brandonsaldan/nocturne-image/" target="_blank">nocturne-image</a> and the <a href="https://carthing.spotify.com/" target="_blank">Spotify Car Thing</a>.</h4>
+<h4 align="center">A web application for <a href="https://github.com/usenocturne/image" target="_blank">nocturne-image</a> and the <a href="https://carthing.spotify.com/" target="_blank">Spotify Car Thing</a>.</h4>
 
 <p align="center">
   <a href="#how-to-use">How To Use</a> •
@@ -26,7 +26,7 @@
 
 ### Custom Credentials
 1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>
-2. Follow the steps for your operating system in <a href="https://github.com/brandonsaldan/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>
+2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/image?tab=readme-ov-file#how-to-use">the image's repo</a>
 2. Once running on your Car Thing, press "Use Custom Credentials" and enter your Spotify Client ID and Client Secret using VNC Viewer
 4. Your credentials will be encrypted and stored securely
 5. Authorize with Spotify
@@ -35,7 +35,7 @@
 ### Default Credentials (Beta)
 **It is not recommended to use default credentials at this point in time. Unless you know what you're doing, please use custom credentials**
 1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>
-2. Follow the steps for your operating system in <a href="https://github.com/brandonsaldan/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
+2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 3. Once running on your Car Thing, hold the back button (under the knob) until the "Use Default Credentials (Beta)" button appears
 4. Press the "Use Default Credentials (Beta)" butto
 5. Authorize with Spotify
@@ -85,7 +85,7 @@
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/nocturne.git
+git clone https://github.com/yourusername/nocturne-ui.git
 cd nocturne
 ```
 
@@ -370,7 +370,7 @@ This software was made possible only through the following individuals and open 
 
 ## Related
 
-[nocturne-image](https://github.com/brandonsaldan/nocturne-image) - The Debian image that runs this web application
+[nocturne-image](https://github.com/usenocturne/image) - The Debian image that runs this web application
 
 ## License
 
