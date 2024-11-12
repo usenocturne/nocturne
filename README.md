@@ -313,9 +313,8 @@ If you are having issues flashing Nocturne to your Car Thing, check out the guid
 <details>
 <summary>superbird-tool: USBTimeoutError</summary>
 <br>
-If you are running into this error while flashing your Car Thing, you will have to reduce the `MULTIPLIER` at line 161 in the `superbird_device.py` file in the `superbird-tool` folder.
 
-<br>
+If you are running into this error while flashing your Car Thing, you will have to reduce the `MULTIPLIER` at line 161 in the `superbird_device.py` file in the `superbird-tool` folder.
 
 If your flashing is failing at `executing bulkcmd: "amlmmc part 1"`, then try running the following command manually. This may take a few tries to succeed.
 
@@ -337,9 +336,8 @@ For Linux, it will be `python3`
 <details>
 <summary>superbird-tool: BulkcmdException</summary>
 <br>
-If you are running into this error while flashing your Car Thing, you must replace the `superbird_partitions.py` file in the `superbird-tool` folder with the one provided in this repo. 
 
-<br>
+If you are running into this error while flashing your Car Thing, you must replace the `superbird_partitions.py` file in the `superbird-tool` folder with the one provided in this repo. 
 
 This error occurs since some devices have a smaller data partition, causing the error when attempting to flash the data partition.
 </details>
