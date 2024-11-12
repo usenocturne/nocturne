@@ -44,7 +44,7 @@ $ cd C:\path\to\superbird-tool-main
 $ python superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
-$ python superbird_tool.py --dont_reset --restore_device C:\path\to\Nocturne.v2.0-beta_2024-11-11/image 
+$ python superbird_tool.py --dont_reset --restore_device C:\path\to\nocturne-image\image 
 ```
 After the flashing completes, connect your Raspberry Pi to your computer, and change directories to the scripts folder.
 
@@ -62,7 +62,7 @@ Run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp \path\to\nocturne-image\setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
+$ scp \path\to\nocturne-image\setup-scripts\setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -85,7 +85,7 @@ Run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup-scripts/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
+$ scp \path\to\nocturne-image\setup-scripts\setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -103,7 +103,7 @@ $ reboot
 After, you will need to run the `setup_hotspot.py` script: 
 ```bash
 # Transfer setup_hotspot.py to Raspberry Pi
-$ scp /path/to/nocturne-image/setup-scripts/setup_hotspot.py pi@raspberrypi.local:/home/pi/
+$ scp \path\to\nocturne-image\setup-scripts\setup_hotspot.py pi@raspberrypi.local:/home/pi/
 
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
@@ -145,7 +145,7 @@ $ cd /path/to/superbird-tool-main
 $ /opt/homebrew/bin/python3 superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
-$ /opt/homebrew/bin/python3 superbird_tool.py --dont_reset --restore_device /path/to/Nocturne.v2.0-beta_2024-11-11/image 
+$ /opt/homebrew/bin/python3 superbird_tool.py --dont_reset --restore_device /path/to/nocturne-image/image 
 ```
 After the flashing completes, connect your Raspberry Pi to your computer, and change directories to the scripts folder.
 
@@ -249,7 +249,7 @@ $ cd /path/to/superbird-tool-main
 $ sudo python3 ./superbird_tool.py --find_device
 
 # Flash Nocturne image, without resetting the data partition 
-$ sudo python3 ./superbird_tool.py --dont_reset --restore_device /path/to/Nocturne.v2.0-beta_2024-11-11/image
+$ sudo python3 ./superbird_tool.py --dont_reset --restore_device /path/to/nocturne-image/image
 ```
 After the flashing completes, change directories to the scripts folder.
 
