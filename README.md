@@ -308,6 +308,46 @@ Login to Spotify on the Car Thing using VNC Viewer.
 
 ## Troubleshooting
 
+If you are having issues flashing Nocturne to your Car Thing, check out the guides below. 
+
+<details>
+<summary>superbird-tool: USBTimeoutError</summary>
+<br>
+If you are running into this error while flashing your Car Thing, you will have to reduce the `MULTIPLIER` at line 161 in the `superbird_device.py` file in the `superbird-tool` folder.
+
+<br>
+
+If your flashing is failing at `executing bulkcmd: "amlmmc part 1"`, then try running the following command manually. This may take a few tries to succeed.
+
+```bash
+$ python ./superbird_tool.py --bulkcmd "amlmmc part 1"
+``` 
+
+ `python` in the above command depends on what OS you are running. 
+
+For Windows, it will be `python`. 
+
+For macOS, it will be `/opt/homebrew/bin/python3`. 
+
+For Linux, it will be `python3`
+
+
+</details>
+
+<details>
+<summary>superbird-tool: BulkcmdException</summary>
+<br>
+If you are running into this error while flashing your Car Thing, you must replace the `superbird_partitions.py` file in the `superbird-tool` folder with the one provided in this repo. 
+
+<br>
+
+This error occurs since some devices have a smaller data partition, causing the error when attempting to flash the data partition.
+</details>
+
+<br>
+
+If your issue is not listed here, or if you need help, join our Discord [here!](https://REPLACE_WITH_DISCORD_INVITE)
+
 ## Download
 
 You can download the latest flashable version of Nocturne for Windows, macOS and Linux [here](https://github.com/brandonsaldan/nocturne-image/releases/latest).
