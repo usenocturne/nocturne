@@ -175,7 +175,7 @@ $ chmod +x /home/pi/setup_host_rpi.sh
 $ sudo ./setup_host_rpi.sh
 
 # Reboot Raspberry Pi
-$ reboot
+$ sudo reboot
 ```
 </details>
 
@@ -198,7 +198,7 @@ $ chmod +x /home/pi/setup_host_rpi.sh
 $ sudo ./setup_host_rpi.sh
 
 # Reboot Raspberry Pi
-$ reboot
+$ sudo reboot
 ```
 
 After, you will need to run the `setup_hotspot.py` script: 
