@@ -74,7 +74,7 @@ $ chmod +x /home/pi/setup_host_rpi.sh
 $ sudo ./setup_host_rpi.sh
 
 # Reboot Raspberry Pi
-$ reboot
+$ sudo reboot
 ```
 </details>
 
@@ -97,7 +97,7 @@ $ chmod +x /home/pi/setup_host_rpi.sh
 $ sudo ./setup_host_rpi.sh
 
 # Reboot Raspberry Pi
-$ reboot
+$ sudo reboot
 ```
 
 After, you will need to run the `setup_hotspot.py` script: 
@@ -295,7 +295,7 @@ $ chmod +x /home/pi/setup_host_rpi.sh
 $ sudo ./setup_host_rpi.sh
 
 # Reboot Raspberry Pi
-$ reboot
+$ sudo reboot
 ```
 </details>
 <br>
@@ -348,7 +348,7 @@ This error occurs since some devices have a smaller data partition, causing the 
 
 <br>
 
-If your issue is not listed here, or if you need help, join our Discord [here!](https://REPLACE_WITH_DISCORD_INVITE)
+If your issue is not listed here, or if you need help, join our Discord [here!](https://discord.gg/KGq6acabJh)
 
 ## Download
 
