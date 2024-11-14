@@ -348,7 +348,7 @@ This error occurs since some devices have a smaller data partition, causing the 
 
 <br>
 
-If your issue is not listed here, or if you need help, join our Discord [here!](https://discord.gg/KGq6acabJh)
+If your issue is not listed here, or if you need help, join our Discord [here!](https://discord.gg/GTP9AawHPt)
 
 ## Download
 
