@@ -219,7 +219,6 @@ in_target fallocate -l 300M /swapfile
 in_target chmod 600 /swapfile
 in_target mkswap /swapfile
 in_target swapon /swapfile
-in_target echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ################################################ Setup Hostname and Hosts ################################################
 

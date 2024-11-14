@@ -5,6 +5,20 @@
 
 set -e  # bail on any errors
 
+# need to be root
+if [ "$(id -u)" != "0" ]; then
+    echo "Must be run as root"
+    exit 1
+fi
+
+if [ "$(uname -s)" != "Linux" ]; then
+    echo "Only works on Linux!"
+    exit 1
+fi
+
+# update system 
+apt update && apt upgrade -y
+
 # install needed packages
 #   NOTE: the flag "--break-system-packages" only exists on recent debian/ubuntu versions,
 #   so we have to try with, and if there is an error try again without the flag
@@ -22,16 +36,7 @@ HOST_NAME="superbird"
 USBNET_PREFIX="192.168.7"  # usb network will use .1 as host device, and .2 for superbird
 INACTIVE_INTERFACE="usb0"
 
-# need to be root
-if [ "$(id -u)" != "0" ]; then
-    echo "Must be run as root"
-    exit 1
-fi
 
-if [ "$(uname -s)" != "Linux" ]; then
-    echo "Only works on Linux!"
-    exit 1
-fi
 
 #if ! ip addr show usb0 | grep -q "inet "; then
 #    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."

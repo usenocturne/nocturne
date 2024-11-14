@@ -3,3 +3,4 @@
 
 # for chromium user profile
 /dev/settings       /config         ext4    rw               0       0
+/swapfile none swap sw 0 0
