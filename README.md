@@ -58,7 +58,7 @@ There are two different ways to use Nocturne. You can either use it at your desk
 <details>
 <summary>Using Nocturne at your desk</summary>
 <br>
-Run the following from your command line:
+Connect your Car Thing to the Raspberry Pi and run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
@@ -81,7 +81,7 @@ $ sudo reboot
 <details>
 <summary>Using Nocturne in your car</summary>
 <br>
-Run the following from your command line:
+Connect your Car Thing to the Raspberry Pi and run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
@@ -159,7 +159,7 @@ There are two different ways to use Nocturne. You can either use it at your desk
 <details>
 <summary>Using Nocturne at your desk</summary>
 <br>
-Run the following from your command line:
+Connect your Car Thing to the Raspberry Pi and run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
@@ -182,7 +182,7 @@ $ sudo reboot
 <details>
 <summary>Using Nocturne in your car</summary>
 <br>
-Run the following from your command line:
+Connect your Car Thing to the Raspberry Pi and run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
@@ -251,7 +251,7 @@ $ sudo python3 ./superbird_tool.py --find_device
 # Flash Nocturne image, without resetting the data partition 
 $ sudo python3 ./superbird_tool.py --dont_reset --restore_device /path/to/nocturne-image/image
 ```
-After the flashing completes, change directories to the scripts folder.
+After the flashing completes, unplug and replug your Car Thing, and change directories to the scripts folder.
 
 ```bash
 # Go into the setup-scripts folder
@@ -263,6 +263,7 @@ There are two different ways to use Nocturne. You can either use it at your desk
 <details>
 <summary>Using Nocturne at your desk</summary>
 <br>
+
 At this point, there are two different scripts that you can use. The first one, `setup_host_apt.sh`, is used on Linux distros that utilize apt as it's package manager. The second one, `setup_host_pacman.sh`, is used on Linux distros that utilize Pacman as it's package manager. If you use Pacman, replace `setup_host_apt.sh` in the following commands with `setup_host_pacman.sh` to continue with setup.
 
 ``` bash
@@ -279,7 +280,7 @@ $ sudo ./setup_host_apt.sh
 <br>
 To use Nocturne in your car, you will need to have a Raspberry Pi to provide network.  
 
-Connect your Raspberry Pi to your computer and run the following from your command line:
+Connect your Raspberry Pi to your computer, your Car Thing to the Raspberry Pi, and run the following from your command line:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
