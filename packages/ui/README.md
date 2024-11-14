@@ -363,8 +363,8 @@ The rotation schedule can be modified in `workers/key-rotation/wrangler.toml`.
 This software was made possible only through the following individuals and open source programs:
 
 - [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for giving me a Car Thing to develop with
-- [shadow](https://github.com/68p), for testing, troubleshooting, and crazy good repo maintainence
-- [Dominic Frye](https://x.com/itsnebulalol), for debugging, testing, and marketing
+- [shadow](https://github.com/68p), for OS development, testing, troubleshooting, and crazy good repo maintainence
+- [Dominic Frye](https://x.com/itsnebulalol), for OS development, debugging, testing, and marketing
 - [bbaovanc](https://x.com/bbaovanc), for OS development, debugging, and testing
 - [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), and [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
 - [Car Thing Hax Community's fork of superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool), for their contributions on the original superbird-tool
