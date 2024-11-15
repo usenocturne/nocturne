@@ -54,6 +54,8 @@ const ErrorCodes = {
   FETCH_USER_RADIO_ERROR: "E034",
   FETCH_USER_PROFILE_ERROR: "E035",
   AUTH_ERROR: "E036",
+  DEVICES_FETCH_ERROR: "E037",
+  FETCH_PLAYLIST_TRACKS_ERROR: "E038",
 };
 
 export default function App({ Component, pageProps }) {
