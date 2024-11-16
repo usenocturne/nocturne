@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { Eye, EyeOff } from "lucide-react";
 import ErrorAlert from "./ErrorAlert";
 import packageInfo from "../../package.json";
 
@@ -7,6 +8,7 @@ const AuthMethodSelector = ({ onSelect }) => {
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [showClientSecret, setShowClientSecret] = useState(false);
   const [alert, setAlert] = useState(null);
   const [buttonsVisible, setButtonsVisible] = useState(true);
   const [formVisible, setFormVisible] = useState(false);
@@ -263,11 +265,11 @@ const AuthMethodSelector = ({ onSelect }) => {
               </div>
 
               <div>
-                <div className="mt-2">
+                <div className="mt-2 relative">
                   <input
                     id="clientSecret"
                     name="clientSecret"
-                    type="password"
+                    type={showClientSecret ? "text" : "password"}
                     value={clientSecret}
                     onChange={(e) => setClientSecret(e.target.value)}
                     required
@@ -275,6 +277,18 @@ const AuthMethodSelector = ({ onSelect }) => {
                     disabled={isValidating}
                     className="block w-full rounded-2xl border-0 bg-black/10 py-4 px-6 text-white shadow-sm ring-1 ring-inset focus:ring-2 focus:ring-white/20 ring-white/10 text-[32px] sm:leading-6"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowClientSecret(!showClientSecret)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showClientSecret ? (
+                      <EyeOff size={24} />
+                    ) : (
+                      <Eye size={24} />
+                    )}
+                  </button>
                 </div>
                 <ErrorAlert error={alert} onClose={() => setAlert(null)} />
               </div>
