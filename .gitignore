@@ -1,0 +1,6 @@
+# Nix
+result
+out/
+
+# MacOS
+.DS_Store
