@@ -1,6 +1,6 @@
 {
   "name": "nocturne",
-  "version": "v0.1.0-beta.1",
+  "version": "v2.0.0-beta.1",
   "private": true,
   "scripts": {
     "dev": "node server.js",

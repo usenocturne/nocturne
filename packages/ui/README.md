@@ -1,13 +1,13 @@
 
 <h1 align="center">
   <br>
-  <a href="http://www.amitmerchant.com/electron-markdownify"><img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-logo.png" alt="Markdownify" width="200"></a>
+  <img src="https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/pictures/nocturne-logo.png" alt="Nocturne" width="200">
   <br>
   nocturne
   <br>
 </h1>
 
-<h4 align="center">A web application for <a href="https://github.com/brandonsaldan/nocturne-image/" target="_blank">nocturne-image</a> and the <a href="https://carthing.spotify.com/" target="_blank">Spotify Car Thing</a>.</h4>
+<h4 align="center">A web application for <a href="https://github.com/usenocturne/nocturne-image" target="_blank">nocturne-image</a> and the <a href="https://carthing.spotify.com/" target="_blank">Spotify Car Thing</a>.</h4>
 
 <p align="center">
   <a href="#how-to-use">How To Use</a> •
@@ -18,15 +18,15 @@
   <a href="#license">License</a>
 </p>
 
-![screenshot](https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-1.png)
-![screenshot](https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-2.png)
-![screenshot](https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-3.png)
+![screenshot](https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/pictures/nocturne-1.png)
+![screenshot](https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/pictures/nocturne-2.png)
+![screenshot](https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/pictures/nocturne-3.png)
 
 ## How To Use
 
 ### Custom Credentials
 1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>
-2. Follow the steps for your operating system in <a href="https://github.com/brandonsaldan/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>
+2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>
 2. Once running on your Car Thing, press "Use Custom Credentials" and enter your Spotify Client ID and Client Secret using VNC Viewer
 4. Your credentials will be encrypted and stored securely
 5. Authorize with Spotify
@@ -35,7 +35,7 @@
 ### Default Credentials (Beta)
 **It is not recommended to use default credentials at this point in time. Unless you know what you're doing, please use custom credentials**
 1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>
-2. Follow the steps for your operating system in <a href="https://github.com/brandonsaldan/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
+2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 3. Once running on your Car Thing, hold the back button (under the knob) until the "Use Default Credentials (Beta)" button appears
 4. Press the "Use Default Credentials (Beta)" butto
 5. Authorize with Spotify
@@ -85,7 +85,7 @@
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/nocturne.git
+git clone https://github.com/yourusername/nocturne-ui.git
 cd nocturne
 ```
 
@@ -363,14 +363,15 @@ The rotation schedule can be modified in `workers/key-rotation/wrangler.toml`.
 This software was made possible only through the following individuals and open source programs:
 
 - [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for giving me a Car Thing to develop with
-- [shadow](https://github.com/68p), for testing, troubleshooting, and crazy good repo maintainence
-- [Dominic Frye](https://x.com/itsnebulalol), for debugging, testing, and marketing
+- [shadow](https://github.com/68p), for OS development, testing, troubleshooting, and crazy good repo maintainence
+- [Dominic Frye](https://x.com/itsnebulalol), for OS development, debugging, testing, and marketing
+- [bbaovanc](https://x.com/bbaovanc), for OS development, debugging, and testing
 - [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), and [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
 - [Car Thing Hax Community's fork of superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool), for their contributions on the original superbird-tool
 
 ## Related
 
-[nocturne-image](https://github.com/brandonsaldan/nocturne-image) - The Debian image that runs this web application
+[nocturne-image](https://github.com/usenocturne/nocturne-image) - The Debian image that runs this web application
 
 ## License
 
