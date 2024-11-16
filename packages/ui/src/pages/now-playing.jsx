@@ -1357,6 +1357,12 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false };
   }
 
+  componentDidCatch(error, errorInfo) {
+    if (this.props.handleError) {
+      this.props.handleError("NowPlaying Error:", error, errorInfo);
+    }
+  }
+
   static getDerivedStateFromError(error) {
     return { hasError: true };
   }
@@ -1381,7 +1387,7 @@ class ErrorBoundary extends React.Component {
 }
 
 const NowPlayingWithErrorBoundary = (props) => (
-  <ErrorBoundary>
+  <ErrorBoundary handleError={props.handleError}>
     <NowPlaying {...props} />
   </ErrorBoundary>
 );
