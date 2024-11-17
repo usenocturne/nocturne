@@ -21,11 +21,14 @@ export default function Home({
     if (activeSection === "radio") {
       updateGradientColors(null, "radio");
     } else if (activeSection === "library" && playlists.length > 0) {
-      updateGradientColors(playlists[0].images[0]?.url, "library");
+      const firstPlaylistImage = playlists[0]?.images?.[0]?.url;
+      updateGradientColors(firstPlaylistImage || null, "library");
     } else if (activeSection === "artists" && artists.length > 0) {
-      updateGradientColors(artists[0].images[0]?.url, "artists");
+      const firstArtistImage = artists[0]?.images?.[0]?.url;
+      updateGradientColors(firstArtistImage || null, "artists");
     } else if (activeSection === "recents" && albumsQueue.length > 0) {
-      updateGradientColors(albumsQueue[0].images[0]?.url, "recents");
+      const firstAlbumImage = albumsQueue[0]?.images?.[0]?.url;
+      updateGradientColors(firstAlbumImage || null, "recents");
     } else if (activeSection === "settings") {
       updateGradientColors(null, "settings");
     }
@@ -159,12 +162,13 @@ export default function Home({
                     >
                       <LongPressLink
                         href={`/album/${album.id}`}
-                        spotifyUrl={album.external_urls.spotify}
+                        spotifyUrl={album?.external_urls?.spotify}
                         accessToken={accessToken}
                       >
                         <Image
                           src={
-                            album.images[0]?.url || "/images/not-playing.webp"
+                            album?.images?.[0]?.url ||
+                            "/images/not-playing.webp"
                           }
                           alt="Album Cover"
                           width={280}
@@ -174,7 +178,7 @@ export default function Home({
                       </LongPressLink>
                       <LongPressLink
                         href={`/album/${album.id}`}
-                        spotifyUrl={album.external_urls.spotify}
+                        spotifyUrl={album?.external_urls?.spotify}
                         accessToken={accessToken}
                       >
                         <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
@@ -183,7 +187,7 @@ export default function Home({
                       </LongPressLink>
                       <LongPressLink
                         href={`/artist/${album.artists[0].id}`}
-                        spotifyUrl={album.artists[0].external_urls.spotify}
+                        spotifyUrl={album.artists[0]?.external_urls?.spotify}
                         accessToken={accessToken}
                       >
                         <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
@@ -201,11 +205,13 @@ export default function Home({
                   <div key={item.id} className="min-w-[280px] mr-10 snap-start">
                     <LongPressLink
                       href={`/playlist/${item.id}`}
-                      spotifyUrl={item.external_urls.spotify}
+                      spotifyUrl={item?.external_urls?.spotify}
                       accessToken={accessToken}
                     >
                       <Image
-                        src={item.images[0]?.url || "/images/not-playing.webp"}
+                        src={
+                          item?.images?.[0]?.url || "/images/not-playing.webp"
+                        }
                         alt="Playlist Cover"
                         width={280}
                         height={280}
@@ -214,7 +220,7 @@ export default function Home({
                     </LongPressLink>
                     <LongPressLink
                       href={`/playlist/${item.id}`}
-                      spotifyUrl={item.external_urls.spotify}
+                      spotifyUrl={item?.external_urls?.spotify}
                       accessToken={accessToken}
                     >
                       <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
@@ -234,12 +240,12 @@ export default function Home({
                   >
                     <LongPressLink
                       href={`/artist/${artist.id}`}
-                      spotifyUrl={artist.external_urls.spotify}
+                      spotifyUrl={artist?.external_urls?.spotify}
                       accessToken={accessToken}
                     >
                       <Image
                         src={
-                          artist.images[0]?.url || "/images/not-playing.webp"
+                          artist?.images?.[0]?.url || "/images/not-playing.webp"
                         }
                         alt="Artist Cover"
                         width={280}
@@ -249,7 +255,7 @@ export default function Home({
                     </LongPressLink>
                     <LongPressLink
                       href={`/artist/${artist.id}`}
-                      spotifyUrl={artist.external_urls.spotify}
+                      spotifyUrl={artist?.external_urls?.spotify}
                       accessToken={accessToken}
                     >
                       <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
@@ -269,12 +275,13 @@ export default function Home({
                   >
                     <LongPressLink
                       href={`/playlist/${playlist.id}`}
-                      spotifyUrl={playlist.external_urls.spotify}
+                      spotifyUrl={playlist?.external_urls?.spotify}
                       accessToken={accessToken}
                     >
                       <Image
                         src={
-                          playlist.images[0]?.url || "/images/not-playing.webp"
+                          playlist?.images?.[0]?.url ||
+                          "/images/not-playing.webp"
                         }
                         alt="Radio Cover"
                         width={280}
@@ -284,7 +291,7 @@ export default function Home({
                     </LongPressLink>
                     <LongPressLink
                       href={`/playlist/${playlist.id}`}
-                      spotifyUrl={playlist.external_urls.spotify}
+                      spotifyUrl={playlist?.external_urls?.spotify}
                       accessToken={accessToken}
                     >
                       <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
