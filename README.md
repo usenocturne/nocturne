@@ -316,7 +316,7 @@ If you are having issues flashing Nocturne to your Car Thing, check out the guid
 <summary>superbird-tool: USBTimeoutError</summary>
 <br>
 
-If you are running into this error while flashing your Car Thing, you will have to reduce the `MULTIPLIER` at line 161 in the `superbird_device.py` file in the `superbird-tool` folder.
+If you are running into this error while flashing your Car Thing, you will have to reduce the `MULTIPLIER` at line 164 in the `superbird_device.py` file in the `superbird-tool` folder.
 
 <br>
 
