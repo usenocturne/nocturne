@@ -3,6 +3,8 @@
   ...
 }: {
   imports = [
+    ./bluetooth.nix
+    ./display.nix
     ./nocturne.nix
   ];
 
@@ -29,7 +31,6 @@
     gui = {
       enable = true;
       app = ''
-        ${pkgs.wayvnc}/bin/wayvnc & \
         ${pkgs.chromium}/bin/chromium \
           --ozone-platform-hint=auto \
           --ozone-platform=wayland \
@@ -60,6 +61,11 @@
           --ignore-certificate-errors \
           --app=https://nocturne.brandons.place
       '';
+    };
+
+    swap = {
+      enable = true;
+      size = 256;
     };
   };
 

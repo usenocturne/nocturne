@@ -32,3 +32,12 @@ zip-installer:
 
 push:
   nix run github:serokell/deploy-rs
+
+cache:
+  attic push nocturne $(nix build .#nixosConfigurations.superbird.config.system.build.toplevel --no-link --print-out-paths)
+
+docker-installer:
+  docker run --privileged --rm -it -v ./:/workdir -v nix-store:/nix -v nix-root:/root d10dcb4a9a66
+
+docker-cache:
+  docker run --privileged --rm -it -v ./:/workdir -v nix-store:/nix -v nix-root:/root d10dcb4a9a66 /usr/bin/env bash -c "just cache"
