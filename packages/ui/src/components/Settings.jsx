@@ -41,7 +41,9 @@ export default function Settings() {
   const handleSignOut = () => {
     localStorage.removeItem("spotifyAuthType");
     localStorage.removeItem("spotifyTempId");
-    window.location.reload();
+    router.push("/").then(() => {
+      window.location.reload();
+    });
   };
 
   return (
