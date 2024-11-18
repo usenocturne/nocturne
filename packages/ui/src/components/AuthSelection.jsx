@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { Eye, EyeOff } from "lucide-react";
 import ErrorAlert from "./ErrorAlert";
 import packageInfo from "../../package.json";
+import QRCodeDisplay from "./QRCodeDisplay";
 
 const AuthMethodSelector = ({ onSelect }) => {
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -16,6 +17,7 @@ const AuthMethodSelector = ({ onSelect }) => {
   const [showDefaultButton, setShowDefaultButton] = useState(false);
   const [defaultButtonVisible, setDefaultButtonVisible] = useState(false);
   const [escapeKeyTimer, setEscapeKeyTimer] = useState(null);
+  const [showQRCode, setShowQRCode] = useState(false);
 
   useEffect(() => {
     if (showCustomForm) {
@@ -62,19 +64,14 @@ const AuthMethodSelector = ({ onSelect }) => {
     };
   }, [escapeKeyTimer]);
 
-  useEffect(() => {
-    if (showCustomForm) {
-      setButtonsVisible(false);
-      setTimeout(() => setFormVisible(true), 250);
-    } else {
-      setFormVisible(false);
-      setTimeout(() => setButtonsVisible(true), 250);
-    }
-  }, [showCustomForm]);
-
-  const validateSpotifyCredentials = async (clientId, clientSecret, tempId) => {
+  const validateSpotifyCredentials = async (
+    clientId,
+    clientSecret,
+    tempId,
+    method = "manual"
+  ) => {
     try {
-      const response = await fetch("/api/validate-credentials", {
+      const response = await fetch("/api/v1/auth/validate-credentials", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -83,6 +80,7 @@ const AuthMethodSelector = ({ onSelect }) => {
           clientId,
           clientSecret,
           tempId,
+          method,
         }),
       });
 
@@ -127,7 +125,8 @@ const AuthMethodSelector = ({ onSelect }) => {
       const isValid = await validateSpotifyCredentials(
         clientId.trim(),
         clientSecret.trim(),
-        tempId
+        tempId,
+        "manual"
       );
 
       if (!isValid) {
@@ -152,6 +151,19 @@ const AuthMethodSelector = ({ onSelect }) => {
     e.preventDefault();
     localStorage.setItem("spotifyAuthType", "default");
     onSelect({ type: "default" });
+  };
+
+  const handlePhoneLogin = (e) => {
+    e.preventDefault();
+    setShowQRCode(true);
+  };
+
+  const handleQRBack = () => {
+    setShowQRCode(false);
+  };
+
+  const handleQRSuccess = (selection) => {
+    onSelect(selection);
   };
 
   const handleBackClick = () => {
@@ -204,8 +216,8 @@ const AuthMethodSelector = ({ onSelect }) => {
               formVisible
                 ? "h-[300px]"
                 : showDefaultButton
-                ? "h-[260px]"
-                : "h-[150px]"
+                ? "h-[340px]"
+                : "h-[230px]"
             }`}
           >
             <div
@@ -214,28 +226,28 @@ const AuthMethodSelector = ({ onSelect }) => {
               } ${showDefaultButton ? "space-y-6 mt-2" : "mt-6"}`}
               style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
             >
-              <div
-                className={`transition-all duration-250 overflow-hidden ${
-                  showDefaultButton
-                    ? defaultButtonVisible
-                      ? "h-[80px] opacity-100"
-                      : "h-0 opacity-0"
-                    : "h-0 opacity-0"
-                }`}
-              >
+              {showDefaultButton && defaultButtonVisible && (
                 <button
                   onClick={handleDefaultSubmit}
                   className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
                 >
                   Use Default Credentials (Beta)
                 </button>
+              )}
+              <div className="space-y-6">
+                <button
+                  onClick={handlePhoneLogin}
+                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
+                >
+                  Login with Phone
+                </button>
+                <button
+                  onClick={() => setShowCustomForm(true)}
+                  className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
+                >
+                  Enter Credentials Manually
+                </button>
               </div>
-              <button
-                onClick={() => setShowCustomForm(true)}
-                className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
-              >
-                Use Custom Credentials
-              </button>
               <p className="mt-6 text-center text-white/30 text-[16px]">
                 {packageInfo.version}
               </p>
@@ -312,6 +324,9 @@ const AuthMethodSelector = ({ onSelect }) => {
               </div>
             </form>
           </div>
+          {showQRCode && (
+            <QRCodeDisplay onSuccess={handleQRSuccess} onBack={handleQRBack} />
+          )}
         </div>
       </div>
     </div>
