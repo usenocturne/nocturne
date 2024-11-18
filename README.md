@@ -318,8 +318,12 @@ If you are having issues flashing Nocturne to your Car Thing, check out the guid
 <summary>superbird-tool: USBTimeoutError</summary>
 <br>
 
-If you are running into this error while flashing your Car Thing, you will have to reduce the `MULTIPLIER` at line 164 in the `superbird_device.py` file in the `superbird-tool` folder.
+If you are running into this error while flashing your Car Thing, try using the option `--slow_burn` or `--slower_burn` in the command used to flash. 
 
+This will look like the following:
+```bash
+$ python ./superbird_tool.py --dont_reset --slow_burn --restore_device /path/to/nocturne/image
+``` 
 <br>
 
 If your flashing is failing at `executing bulkcmd: "amlmmc part 1"`, then try running the following command manually. This may take a few tries to succeed.
@@ -328,7 +332,7 @@ If your flashing is failing at `executing bulkcmd: "amlmmc part 1"`, then try ru
 $ python ./superbird_tool.py --bulkcmd "amlmmc part 1"
 ``` 
 
- `python` in the above command depends on what OS you are running. 
+ `python` in the above commands depends on what OS you are running. 
 
 For Windows, it will be `python`. 
 
