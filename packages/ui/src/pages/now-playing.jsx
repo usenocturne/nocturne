@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import classNames from "classnames";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
@@ -10,13 +10,13 @@ import {
   DialogPanel,
   DialogTitle,
 } from "@headlessui/react";
+import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
 import LongPressLink from "../components/LongPressLink";
 import Image from "next/image";
 
 const NowPlaying = ({
   accessToken,
   currentPlayback,
-  playlists,
   fetchCurrentPlayback,
   drawerOpen,
   setDrawerOpen,
@@ -25,7 +25,6 @@ const NowPlaying = ({
   handleError,
   showBrightnessOverlay,
 }) => {
-  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
   const [volume, setVolume] = useState(null);
@@ -34,6 +33,7 @@ const NowPlaying = ({
   const volumeSyncIntervalRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+  const [playlists, setPlaylists] = useState([]);
   const [isShuffled, setIsShuffled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
   const [trackNameScrollingEnabled, setTrackNameScrollingEnabled] =
@@ -54,24 +54,12 @@ const NowPlaying = ({
   const [shouldScroll, setShouldScroll] = useState(false);
 
   useEffect(() => {
-    setVolume(currentPlayback?.device?.volume_percent ?? null);
-  }, [currentPlayback?.device?.volume_percent]);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isClient) return;
-
-    if (currentPlayback?.item?.album?.images?.[0]?.url) {
+    if (currentPlayback && currentPlayback.item) {
       setActiveSection("nowPlaying");
-      updateGradientColors(
-        currentPlayback.item.album.images[0].url,
-        "nowPlaying"
-      );
+      const albumImage = currentPlayback.item.album?.images?.[0]?.url;
+      updateGradientColors(albumImage || null, "nowPlaying");
     }
-  }, [currentPlayback, updateGradientColors, setActiveSection, isClient]);
+  }, [currentPlayback, updateGradientColors, setActiveSection]);
 
   useEffect(() => {
     const handleAppEscape = () => {
@@ -107,7 +95,7 @@ const NowPlaying = ({
   };
 
   const fetchLyrics = useCallback(async () => {
-    if (!currentPlayback?.item) return;
+    if (!currentPlayback || !currentPlayback.item) return;
 
     const trackId = currentPlayback.item.id;
     if (fetchedTracks.current.has(trackId)) return;
@@ -115,13 +103,7 @@ const NowPlaying = ({
     setIsLoadingLyrics(true);
     setLyricsUnavailable(false);
     const trackName = currentPlayback.item.name;
-    const artistName = currentPlayback.item.artists?.[0]?.name;
-
-    if (!trackName || !artistName) {
-      setIsLoadingLyrics(false);
-      setLyricsUnavailable(true);
-      return;
-    }
+    const artistName = currentPlayback.item.artists[0].name;
 
     try {
       const response = await fetch(
@@ -130,10 +112,7 @@ const NowPlaying = ({
         )}&artist=${encodeURIComponent(artistName)}`
       );
       if (!response.ok) {
-        handleError(
-          "FETCH_LYRICS_ERROR",
-          `HTTP error! status: ${response.status}`
-        );
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       const parsed = parseLRC(data.lyrics);
@@ -147,12 +126,10 @@ const NowPlaying = ({
       setIsLoadingLyrics(false);
       fetchedTracks.current.add(trackId);
     }
-  }, [currentPlayback, handleError]);
+  }, [currentPlayback]);
 
   useEffect(() => {
-    if (!isClient) return;
-
-    if (currentPlayback?.item) {
+    if (currentPlayback && currentPlayback.item) {
       const newTrackId = currentPlayback.item.id;
       if (newTrackId !== currentTrackId.current) {
         setParsedLyrics([]);
@@ -168,7 +145,7 @@ const NowPlaying = ({
       setCurrentLyricIndex(-1);
       setLyricsUnavailable(false);
     }
-  }, [currentPlayback, fetchLyrics, showLyrics, isClient]);
+  }, [currentPlayback, fetchLyrics, showLyrics]);
 
   const handleToggleLyrics = useCallback(() => {
     setShowLyrics((prev) => {
@@ -203,8 +180,6 @@ const NowPlaying = ({
   }, [showLyrics, currentPlayback, parsedLyrics]);
 
   useEffect(() => {
-    if (!isClient) return;
-
     if (currentLyricIndex >= 0 && lyricsContainerRef.current) {
       const container = lyricsContainerRef.current;
       const lyricElement = container.children[currentLyricIndex];
@@ -212,11 +187,9 @@ const NowPlaying = ({
         lyricElement.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
-  }, [currentLyricIndex, isClient]);
+  }, [currentLyricIndex]);
 
   useEffect(() => {
-    if (!isClient) return;
-
     const scrollingEnabled = localStorage.getItem("trackNameScrollingEnabled");
     const lyricsMenuEnabled = localStorage.getItem("lyricsMenuEnabled");
 
@@ -233,7 +206,38 @@ const NowPlaying = ({
     } else {
       setlyricsMenuOptionEnabled(lyricsMenuEnabled === "true");
     }
-  }, [isClient]);
+  }, []);
+
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      if (accessToken) {
+        try {
+          const userPlaylists = await fetchUserOwnedPlaylists(accessToken);
+          setPlaylists(userPlaylists);
+        } catch (error) {
+          handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
+        }
+      }
+    };
+
+    fetchPlaylists();
+  }, [accessToken]);
+
+  useEffect(() => {
+    const syncVolume = () => {
+      if (!currentPlayback?.device?.volume_percent) return;
+      setVolume(currentPlayback.device.volume_percent);
+    };
+
+    syncVolume();
+    volumeSyncIntervalRef.current = setInterval(syncVolume, 5000);
+
+    return () => {
+      if (volumeSyncIntervalRef.current) {
+        clearInterval(volumeSyncIntervalRef.current);
+      }
+    };
+  }, [currentPlayback?.device?.volume_percent]);
 
   const changeVolume = async (newVolume) => {
     if (!accessToken) return;
@@ -267,16 +271,14 @@ const NowPlaying = ({
   const handleWheelScroll = (event) => {
     if (!showBrightnessOverlay && !drawerOpen) {
       if (event.deltaX > 0) {
-        changeVolume((volume || 0) + 7);
+        changeVolume(volume + 7);
       } else if (event.deltaX < 0) {
-        changeVolume((volume || 0) - 7);
+        changeVolume(volume - 7);
       }
     }
   };
 
   useEffect(() => {
-    if (!isClient) return;
-
     const scrollHandler = (event) => {
       if (!drawerOpen) {
         handleWheelScroll(event);
@@ -287,11 +289,11 @@ const NowPlaying = ({
     return () => {
       window.removeEventListener("wheel", scrollHandler);
     };
-  }, [volume, accessToken, drawerOpen, isClient]);
+  }, [volume, accessToken, drawerOpen]);
 
   const checkIfTrackIsLiked = useCallback(
     async (trackId) => {
-      if (!accessToken || !trackId) return;
+      if (!accessToken) return;
 
       try {
         const response = await fetch(
@@ -310,29 +312,30 @@ const NowPlaying = ({
           handleError("CHECK_LIKED_TRACKS_ERROR", response.status.toString());
         }
       } catch (error) {
-        handleError("CHECK_LIKED_TRACKS_ERROR", error.message);
+        return;
       }
     },
-    [accessToken, handleError]
+    [accessToken]
   );
 
   useEffect(() => {
-    if (!isClient) return;
-
-    if (currentPlayback?.item?.id) {
+    if (currentPlayback && currentPlayback.item) {
       const currentTrackId = currentPlayback.item.id;
       if (currentTrackId !== previousTrackId.current) {
         checkIfTrackIsLiked(currentTrackId);
         previousTrackId.current = currentTrackId;
       }
     }
-  }, [currentPlayback, checkIfTrackIsLiked, isClient]);
+  }, [currentPlayback, checkIfTrackIsLiked]);
 
   const toggleLikeTrack = async () => {
-    if (!accessToken || !currentPlayback?.item?.id) return;
+    if (!accessToken || !currentPlayback || !currentPlayback.item) return;
 
     const trackId = currentPlayback.item.id;
-    const endpoint = `https://api.spotify.com/v1/me/tracks?ids=${trackId}`;
+    const endpoint = isLiked
+      ? `https://api.spotify.com/v1/me/tracks?ids=${trackId}`
+      : `https://api.spotify.com/v1/me/tracks?ids=${trackId}`;
+
     const method = isLiked ? "DELETE" : "PUT";
 
     try {
@@ -354,8 +357,6 @@ const NowPlaying = ({
   };
 
   const togglePlayPause = async () => {
-    if (!accessToken) return;
-
     try {
       const response = await fetch("https://api.spotify.com/v1/me/player", {
         headers: {
@@ -373,17 +374,10 @@ const NowPlaying = ({
           }
         );
 
-        if (!devicesResponse.ok) {
-          handleError(
-            "DEVICES_FETCH_ERROR",
-            `Devices fetch error! status: ${devicesResponse.status}`
-          );
-        }
-
         const devicesData = await devicesResponse.json();
         const availableDevices = devicesData.devices;
 
-        if (availableDevices?.length > 0) {
+        if (availableDevices.length > 0) {
           await fetch("https://api.spotify.com/v1/me/player", {
             method: "PUT",
             headers: {
@@ -403,23 +397,17 @@ const NowPlaying = ({
           return;
         }
       } else {
-        const endpoint = currentPlayback?.is_playing
-          ? "https://api.spotify.com/v1/me/player/pause"
-          : "https://api.spotify.com/v1/me/player/play";
+        const endpoint =
+          currentPlayback && currentPlayback.is_playing
+            ? "https://api.spotify.com/v1/me/player/pause"
+            : "https://api.spotify.com/v1/me/player/play";
 
-        const playResponse = await fetch(endpoint, {
+        await fetch(endpoint, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-
-        if (!playResponse.ok) {
-          handleError(
-            "TOGGLE_PLAY_PAUSE_ERROR",
-            `Play/pause error! status: ${playResponse.status}`
-          );
-        }
       }
 
       fetchCurrentPlayback();
@@ -429,8 +417,6 @@ const NowPlaying = ({
   };
 
   useEffect(() => {
-    if (!isClient) return;
-
     const handleKeyDown = (event) => {
       if (event.key === "Enter") {
         togglePlayPause();
@@ -441,29 +427,16 @@ const NowPlaying = ({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [togglePlayPause, isClient]);
+  }, [togglePlayPause]);
 
   const skipToNext = async () => {
-    if (!accessToken) return;
-
     try {
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/player/next",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        handleError(
-          "SKIP_TO_NEXT_TRACK_ERROR",
-          `Skip next error! status: ${response.status}`
-        );
-      }
-
+      await fetch("https://api.spotify.com/v1/me/player/next", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       fetchCurrentPlayback();
     } catch (error) {
       handleError("SKIP_TO_NEXT_TRACK_ERROR", error.message);
@@ -471,8 +444,6 @@ const NowPlaying = ({
   };
 
   const skipToPrevious = async () => {
-    if (!accessToken) return;
-
     try {
       if (currentPlayback && currentPlayback.progress_ms > 3000) {
         await fetch("https://api.spotify.com/v1/me/player/seek?position_ms=0", {
@@ -496,15 +467,15 @@ const NowPlaying = ({
   };
 
   const PlayPauseButton = () => {
-    return currentPlayback?.is_playing ? (
-      <PauseIcon className="w-14 h-14" />
-    ) : (
-      <PlayIcon className="w-14 h-14" />
-    );
+    if (currentPlayback && currentPlayback.is_playing) {
+      return <PauseIcon className="w-14 h-14" />;
+    } else {
+      return <PlayIcon className="w-14 h-14" />;
+    }
   };
 
   const addTrackToPlaylist = async (playlistId) => {
-    if (!accessToken || !currentPlayback?.item?.id) return;
+    if (!accessToken || !currentPlayback || !currentPlayback.item) return;
 
     setSelectedPlaylistId(playlistId);
 
@@ -521,9 +492,8 @@ const NowPlaying = ({
         });
 
         if (!response.ok) {
-          handleError(
-            "FETCH_PLAYLIST_TRACKS_ERROR",
-            response.status.toString()
+          throw new Error(
+            "Error fetching tracks in playlist: " + (await response.json())
           );
         }
 
@@ -532,9 +502,7 @@ const NowPlaying = ({
         nextURL = data.next;
       }
 
-      const currentTrackIds = allTracks
-        .map((item) => item.track?.id)
-        .filter(Boolean);
+      const currentTrackIds = allTracks.map((item) => item.track.id);
 
       if (currentTrackIds.includes(currentPlayback.item.id)) {
         setOpen(true);
@@ -548,8 +516,6 @@ const NowPlaying = ({
   };
 
   const addTrackToPlaylistAPI = async (playlistId) => {
-    if (!accessToken || !currentPlayback?.item?.id) return;
-
     try {
       const response = await fetch(
         `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
@@ -582,14 +548,12 @@ const NowPlaying = ({
 
   useEffect(() => {
     if (currentPlayback) {
-      setIsShuffled(currentPlayback.shuffle_state || false);
-      setRepeatMode(currentPlayback.repeat_state || "off");
+      setIsShuffled(currentPlayback.shuffle_state);
+      setRepeatMode(currentPlayback.repeat_state);
     }
   }, [currentPlayback]);
 
   const toggleShuffle = async () => {
-    if (!accessToken) return;
-
     try {
       const response = await fetch(
         `https://api.spotify.com/v1/me/player/shuffle?state=${!isShuffled}`,
@@ -613,15 +577,12 @@ const NowPlaying = ({
   };
 
   const toggleRepeat = async () => {
-    if (!accessToken) return;
-
     const nextMode =
       repeatMode === "off"
         ? "context"
         : repeatMode === "context"
         ? "track"
         : "off";
-
     try {
       const response = await fetch(
         `https://api.spotify.com/v1/me/player/repeat?state=${nextMode}`,
@@ -644,39 +605,41 @@ const NowPlaying = ({
     }
   };
 
-  useEffect(() => {
-    if (!isClient || !trackNameRef.current || !currentPlayback?.item?.name)
-      return;
-
-    const trackNameWidth = trackNameRef.current.offsetWidth;
-    const scrollDistance = Math.max(0, trackNameWidth - containerWidth);
-    const scrollDuration = (scrollDistance / scrollSpeed) * 2;
-
-    trackNameRef.current.style.setProperty(
-      "--scroll-duration",
-      `${scrollDuration}s`
-    );
-    trackNameRef.current.style.setProperty(
-      "--final-position",
-      `-${scrollDistance}px`
-    );
-
-    setShouldScroll(trackNameWidth > containerWidth);
-  }, [currentPlayback?.item?.name, containerWidth, isClient]);
-
-  const trackName = currentPlayback?.item?.name || "Not Playing";
+  const trackName =
+    currentPlayback && currentPlayback.item
+      ? currentPlayback.item.name
+      : "Not Playing";
   const artistName =
-    currentPlayback?.item?.artists
-      ?.map((artist) => artist?.name)
-      .filter(Boolean)
-      .join(", ") || "";
+    currentPlayback && currentPlayback.item
+      ? currentPlayback.item.artists.map((artist) => artist.name).join(", ")
+      : "";
   const albumArt =
     currentPlayback?.item?.album?.images?.[0]?.url ||
     "/images/not-playing.webp";
-  const isPlaying = currentPlayback?.is_playing || false;
-  const progress = currentPlayback?.item
-    ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
-    : 0;
+  const isPlaying = currentPlayback ? currentPlayback.is_playing : false;
+  const progress =
+    currentPlayback && currentPlayback.item
+      ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
+      : 0;
+
+  useEffect(() => {
+    if (trackNameRef.current && currentPlayback?.item?.name) {
+      const trackNameWidth = trackNameRef.current.offsetWidth;
+      const scrollDistance = Math.max(0, trackNameWidth - containerWidth);
+      const scrollDuration = (scrollDistance / scrollSpeed) * 2;
+
+      trackNameRef.current.style.setProperty(
+        "--scroll-duration",
+        `${scrollDuration}s`
+      );
+      trackNameRef.current.style.setProperty(
+        "--final-position",
+        `-${scrollDistance}px`
+      );
+
+      setShouldScroll(trackNameWidth > containerWidth);
+    }
+  }, [trackName, containerWidth]);
 
   const StarIcon = ({ className }) => (
     <svg
@@ -972,418 +935,365 @@ const NowPlaying = ({
 
   return (
     <>
-      {isClient ? (
-        <>
-          {open && (
-            <div
-              className="fixed inset-0 bg-transparent z-30"
-              onClick={() => setOpen(false)}
-            />
-          )}
-          <div className="flex flex-col gap-4 h-screen w-full z-10 fadeIn-animation">
-            <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
-              <div className="min-w-[280px] mr-8">
-                <LongPressLink
-                  href={
-                    currentPlayback?.item?.album?.id
-                      ? `/album/${currentPlayback.item.album.id}`
-                      : "#"
-                  }
-                  spotifyUrl={
-                    currentPlayback?.item?.album?.external_urls?.spotify
-                  }
-                  accessToken={accessToken}
-                >
-                  <Image
-                    src={albumArt || "/images/not-playing.webp"}
-                    alt="Album Art"
-                    width={280}
-                    height={280}
-                    className="aspect-square rounded-[12px] drop-shadow-xl"
-                    priority
-                    onError={(e) => {
-                      e.target.src = "/images/not-playing.webp";
-                    }}
-                  />
-                </LongPressLink>
-              </div>
-              {!showLyrics || !currentPlayback?.item ? (
-                <div className="flex-1 text-center md:text-left">
-                  <LongPressLink
-                    href={`/album/${currentPlayback?.item?.album?.id}`}
-                    spotifyUrl={currentPlayback?.item?.external_urls?.spotify}
-                    accessToken={accessToken}
-                  >
-                    {trackNameScrollingEnabled ? (
-                      <div className="track-name-container">
-                        <h4
-                          ref={trackNameRef}
-                          key={currentPlayback?.item?.id || "not-playing"}
-                          className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                            trackNameScrollingEnabled && shouldScroll
-                              ? "animate-scroll"
-                              : ""
-                          }`}
-                        >
-                          {trackName}
-                        </h4>
-                      </div>
-                    ) : (
-                      <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
-                        {trackName}
-                      </h4>
-                    )}
-                  </LongPressLink>
-                  <LongPressLink
-                    href={`/artist/${currentPlayback?.item?.artists[0]?.id}`}
-                    spotifyUrl={
-                      currentPlayback?.item?.artists[0]?.external_urls?.spotify
-                    }
-                    accessToken={accessToken}
-                  >
-                    <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
-                      {artistName}
+      {open && (
+        <div
+          className="fixed inset-0 bg-transparent z-30"
+          onClick={() => setOpen(false)}
+        />
+      )}
+      <div className="flex flex-col gap-4 h-screen w-full z-10 fadeIn-animation">
+        <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
+          <div className="min-w-[280px] mr-8">
+            <LongPressLink
+              href={`/album/${currentPlayback?.item?.album?.id}`}
+              spotifyUrl={currentPlayback?.item?.album?.external_urls?.spotify}
+              accessToken={accessToken}
+            >
+              <Image
+                src={albumArt || "/images/not-playing.webp"}
+                alt="Album Art"
+                width={280}
+                height={280}
+                className="aspect-square rounded-[12px] drop-shadow-xl"
+              />
+            </LongPressLink>
+          </div>
+          {!showLyrics || !currentPlayback?.item ? (
+            <div className="flex-1 text-center md:text-left">
+              <LongPressLink
+                href={`/album/${currentPlayback?.item?.album?.id}`}
+                spotifyUrl={currentPlayback?.item?.external_urls?.spotify}
+                accessToken={accessToken}
+              >
+                {trackNameScrollingEnabled ? (
+                  <div className="track-name-container">
+                    <h4
+                      ref={trackNameRef}
+                      key={currentPlayback?.item?.id || "not-playing"}
+                      className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
+                        trackNameScrollingEnabled && shouldScroll
+                          ? "animate-scroll"
+                          : ""
+                      }`}
+                    >
+                      {trackName}
                     </h4>
-                  </LongPressLink>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col h-[280px]">
-                  <div
-                    className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
-                    ref={lyricsContainerRef}
-                  >
-                    {isLoadingLyrics ? (
-                      <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
-                        Loading lyrics...
-                      </p>
-                    ) : parsedLyrics.length > 0 ? (
-                      parsedLyrics.map((lyric, index) => (
-                        <p
-                          key={index}
-                          className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
-                            index === currentLyricIndex
-                              ? "text-white"
-                              : "text-white/60"
-                          }`}
-                        >
-                          {lyric.text}
-                        </p>
-                      ))
-                    ) : (
-                      <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
-                        Lyrics not available
-                      </p>
-                    )}
                   </div>
-                </div>
-              )}
-            </div>
-
-            <div className="w-full px-12 overflow-hidden">
-              <div className="w-full bg-white/20 h-2 rounded-full mt-4 overflow-hidden">
-                <div
-                  className="progress-bar bg-white h-2"
-                  style={{ width: `${progress}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center w-full px-12 mt-4">
-              <div className="flex-shrink-0" onClick={toggleLikeTrack}>
-                {isLiked ? (
-                  <StarIconFilled className="w-14 h-14" />
                 ) : (
-                  <StarIcon className="w-14 h-14" />
+                  <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
+                    {trackName}
+                  </h4>
+                )}
+              </LongPressLink>
+              <LongPressLink
+                href={`/artist/${currentPlayback?.item?.artists[0]?.id}`}
+                spotifyUrl={
+                  currentPlayback?.item?.artists[0]?.external_urls?.spotify
+                }
+                accessToken={accessToken}
+              >
+                <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
+                  {artistName}
+                </h4>
+              </LongPressLink>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col h-[280px]">
+              <div
+                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
+                ref={lyricsContainerRef}
+              >
+                {isLoadingLyrics ? (
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                    Loading lyrics...
+                  </p>
+                ) : parsedLyrics.length > 0 ? (
+                  parsedLyrics.map((lyric, index) => (
+                    <p
+                      key={index}
+                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
+                        index === currentLyricIndex
+                          ? "text-white"
+                          : "text-white/60"
+                      }`}
+                    >
+                      {lyric.text}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                    Lyrics not available
+                  </p>
                 )}
               </div>
+            </div>
+          )}
+        </div>
 
-              <div className="flex justify-center gap-12 flex-1">
-                <div onClick={skipToPrevious}>
-                  <BackIcon className="w-14 h-14" />
-                </div>
-                <div>
-                  <div onClick={togglePlayPause}>
-                    <PlayPauseButton />
-                  </div>
-                </div>
-                <div onClick={skipToNext}>
-                  <ForwardIcon className="w-14 h-14" />
-                </div>
-              </div>
+        <div className="w-full px-12 overflow-hidden">
+          <div className="w-full bg-white/20 h-2 rounded-full mt-4 overflow-hidden">
+            <div
+              className="progress-bar bg-white h-2"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
 
-              <div className="flex-shrink-0">
-                <Menu as="div" className="relative inline-block text-left">
-                  <div>
-                    <MenuButton>
-                      <MenuIcon className="w-14 h-14 fill-white/60" />
-                    </MenuButton>
-                  </div>
+        <div className="flex justify-between items-center w-full px-12 mt-4">
+          <div className="flex-shrink-0" onClick={toggleLikeTrack}>
+            {isLiked ? (
+              <StarIconFilled className="w-14 h-14" />
+            ) : (
+              <StarIcon className="w-14 h-14" />
+            )}
+          </div>
 
-                  <MenuItems
-                    transition
-                    className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
-                  >
-                    <div className="py-1">
-                      <DrawerTrigger onClick={() => setDrawerOpen(true)}>
-                        <MenuItem>
-                          <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                            <span className="text-[28px]">
-                              Add to a Playlist
-                            </span>
-                            <PlaylistAddIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white/60"
-                            />
-                          </div>
-                        </MenuItem>
-                      </DrawerTrigger>
-                    </div>
-                    <div className="py-1">
-                      <Link
-                        href={`/album/${currentPlayback?.item?.album?.id}?accessToken=${accessToken}`}
-                      >
-                        <MenuItem>
-                          <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                            <span className="text-[28px]">Go to Album</span>
-                            <GoToAlbumIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white/60"
-                            />
-                          </div>
-                        </MenuItem>
-                      </Link>
-                    </div>
-                    <div className="py-1">
-                      <MenuItem onClick={toggleRepeat}>
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                          <span className="text-[28px]">
-                            {repeatMode === "off"
-                              ? "Enable Repeat"
-                              : repeatMode === "context"
-                              ? "Enable Repeat One"
-                              : "Disable Repeat"}
-                          </span>
-                          {repeatMode === "off" ? (
-                            <RepeatIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white/60"
-                            />
-                          ) : repeatMode === "context" ? (
-                            <RepeatIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white"
-                            />
-                          ) : (
-                            <RepeatOneIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white"
-                            />
-                          )}
-                        </div>
-                      </MenuItem>
-                    </div>
-                    <div className="py-1">
-                      <MenuItem onClick={toggleShuffle}>
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                          <span className="text-[28px]">
-                            {isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
-                          </span>
-                          {isShuffled ? (
-                            <ShuffleIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white"
-                            />
-                          ) : (
-                            <ShuffleIcon
-                              aria-hidden="true"
-                              className="h-8 w-8 text-white/60"
-                            />
-                          )}
-                        </div>
-                      </MenuItem>
-                    </div>
-                    {lyricsMenuOptionEnabled ? (
-                      <div className="py-1">
-                        <MenuItem onClick={handleToggleLyrics}>
-                          <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                            <span className="text-[28px]">
-                              {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
-                            </span>
-                            {showLyrics ? (
-                              <LyricsIcon
-                                aria-hidden="true"
-                                className="h-8 w-8 text-white"
-                              />
-                            ) : (
-                              <LyricsIcon
-                                aria-hidden="true"
-                                className="h-8 w-8 text-white/60"
-                              />
-                            )}
-                          </div>
-                        </MenuItem>
-                      </div>
-                    ) : null}
-                  </MenuItems>
-                </Menu>
+          <div className="flex justify-center gap-12 flex-1">
+            <div onClick={skipToPrevious}>
+              <BackIcon className="w-14 h-14" />
+            </div>
+            <div>
+              <div onClick={togglePlayPause}>
+                <PlayPauseButton />
               </div>
             </div>
-            <div
-              className={classNames(
-                "fixed right-0 top-[70px] transform transition-opacity duration-300",
-                {
-                  "opacity-0 volumeOutScale": !isVolumeVisible,
-                  "opacity-100 volumeInScale": isVolumeVisible,
-                }
-              )}
-            >
-              <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
-                <div
-                  className={classNames(
-                    "bg-white w-full transition-height duration-300",
-                    {
-                      "rounded-b-[13px]": volume < 100,
-                      "rounded-[13px]": volume === 100,
-                    }
-                  )}
-                  style={{ height: `${volume ?? 100}%` }}
-                >
-                  <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
-                    {volume === 0 && <VolumeOffIcon className="w-7 h-7" />}
-                    {volume > 0 && volume <= 60 && (
-                      <VolumeLowIcon className="w-7 h-7 ml-1.5" />
-                    )}
-                    {volume > 60 && <VolumeLoudIcon className="w-7 h-7" />}
-                  </div>
-                </div>
-              </div>
+            <div onClick={skipToNext}>
+              <ForwardIcon className="w-14 h-14" />
             </div>
           </div>
 
-          <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)}>
-            <DrawerContent>
-              <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
-                {playlists.map((item) => (
-                  <div key={item.id} className="min-w-[280px] mr-10 mb-4">
-                    <LongPressLink
-                      href={`/playlist/${item.id}`}
-                      spotifyUrl={item.external_urls.spotify}
-                      accessToken={accessToken}
-                    >
-                      <div
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          await addTrackToPlaylist(item.id);
-                          setDrawerOpen(false);
-                        }}
-                      >
-                        <Image
-                          src={
-                            item.images[0]?.url || "/images/not-playing.webp"
-                          }
-                          alt="Playlist Art"
-                          width={280}
-                          height={280}
-                          className="mt-8 aspect-square rounded-[12px] drop-shadow-xl"
-                        />
-                        <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                          {item.name}
-                        </h4>
-                      </div>
-                    </LongPressLink>
-                  </div>
-                ))}
+          <div className="flex-shrink-0">
+            <Menu as="div" className="relative inline-block text-left">
+              <div>
+                <MenuButton>
+                  <MenuIcon className="w-14 h-14 fill-white/60" />
+                </MenuButton>
               </div>
-            </DrawerContent>
-          </Drawer>
 
-          <Dialog open={open} onClose={setOpen} className="relative z-40">
-            <DialogBackdrop
-              transition
-              className="fixed inset-0 bg-black/10 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
-            />
-
-            <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
-              <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <DialogPanel
-                  transition
-                  className="relative transform overflow-hidden rounded-[17px] bg-black/30 backdrop-blur-xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[36rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
-                >
-                  <div>
-                    <div className="text-center">
-                      <DialogTitle
-                        as="h3"
-                        className="text-[36px] font-[560] tracking-tight text-white font-sans"
-                      >
-                        Already Added
-                      </DialogTitle>
-                      <div className="mt-2">
-                        <p className="text-[28px] font-[560] tracking-tight text-white/60">
-                          This track is already in the playlist.
-                        </p>
+              <MenuItems
+                transition
+                className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+              >
+                <div className="py-1">
+                  <DrawerTrigger onClick={() => setDrawerOpen(true)}>
+                    <MenuItem>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">Add to a Playlist</span>
+                        <PlaylistAddIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
                       </div>
+                    </MenuItem>
+                  </DrawerTrigger>
+                </div>
+                <div className="py-1">
+                  <Link
+                    href={`/album/${currentPlayback?.item?.album?.id}?accessToken=${accessToken}`}
+                  >
+                    <MenuItem>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">Go to Album</span>
+                        <GoToAlbumIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
+                      </div>
+                    </MenuItem>
+                  </Link>
+                </div>
+                <div className="py-1">
+                  <MenuItem onClick={toggleRepeat}>
+                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <span className="text-[28px]">
+                        {repeatMode === "off"
+                          ? "Enable Repeat"
+                          : repeatMode === "context"
+                          ? "Enable Repeat One"
+                          : "Disable Repeat"}
+                      </span>
+                      {repeatMode === "off" ? (
+                        <RepeatIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
+                      ) : repeatMode === "context" ? (
+                        <RepeatIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white"
+                        />
+                      ) : (
+                        <RepeatOneIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white"
+                        />
+                      )}
                     </div>
+                  </MenuItem>
+                </div>
+                <div className="py-1">
+                  <MenuItem onClick={toggleShuffle}>
+                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <span className="text-[28px]">
+                        {isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
+                      </span>
+                      {isShuffled ? (
+                        <ShuffleIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white"
+                        />
+                      ) : (
+                        <ShuffleIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
+                      )}
+                    </div>
+                  </MenuItem>
+                </div>
+                {lyricsMenuOptionEnabled ? (
+                  <div className="py-1">
+                    <MenuItem onClick={handleToggleLyrics}>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">
+                          {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
+                        </span>
+                        {showLyrics ? (
+                          <LyricsIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white"
+                          />
+                        ) : (
+                          <LyricsIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-white/60"
+                          />
+                        )}
+                      </div>
+                    </MenuItem>
                   </div>
-                  <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-0 border-t border-slate-100/25">
-                    <button
-                      type="button"
-                      onClick={() => setOpen(false)}
-                      className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm sm:col-start-2"
-                    >
-                      Don't Add
-                    </button>
-                    <button
-                      type="button"
-                      data-autofocus
-                      onClick={handleAddAnyway}
-                      className="mt-3 inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
-                    >
-                      Add Anyway
-                    </button>
-                  </div>
-                </DialogPanel>
+                ) : null}
+              </MenuItems>
+            </Menu>
+          </div>
+        </div>
+        <div
+          className={classNames(
+            "fixed right-0 top-[70px] transform transition-opacity duration-300",
+            {
+              "opacity-0 volumeOutScale": !isVolumeVisible,
+              "opacity-100 volumeInScale": isVolumeVisible,
+            }
+          )}
+        >
+          <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+            <div
+              className={classNames(
+                "bg-white w-full transition-height duration-300",
+                {
+                  "rounded-b-[13px]": volume < 100,
+                  "rounded-[13px]": volume === 100,
+                }
+              )}
+              style={{ height: `${volume ?? 100}%` }}
+            >
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+                {volume === 0 && <VolumeOffIcon className="w-7 h-7" />}
+                {volume > 0 && volume <= 60 && (
+                  <VolumeLowIcon className="w-7 h-7 ml-1.5" />
+                )}
+                {volume > 60 && <VolumeLoudIcon className="w-7 h-7" />}
               </div>
             </div>
-          </Dialog>
-        </>
-      ) : null}
+          </div>
+        </div>
+      </div>
+
+      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        <DrawerContent>
+          <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
+            {playlists.map((item) => (
+              <div key={item.id} className="min-w-[280px] mr-10 mb-4">
+                <LongPressLink
+                  href={`/playlist/${item.id}`}
+                  spotifyUrl={item?.external_urls?.spotify}
+                  accessToken={accessToken}
+                >
+                  <div
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      await addTrackToPlaylist(item.id);
+                      setDrawerOpen(false);
+                    }}
+                  >
+                    <Image
+                      src={item?.images?.[0]?.url || "/images/not-playing.webp"}
+                      alt="Playlist Art"
+                      width={280}
+                      height={280}
+                      className="mt-8 aspect-square rounded-[12px] drop-shadow-xl"
+                    />
+                    <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                      {item.name}
+                    </h4>
+                  </div>
+                </LongPressLink>
+              </div>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Dialog open={open} onClose={setOpen} className="relative z-40">
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-black/10 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+        />
+
+        <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-[17px] bg-black/30 backdrop-blur-xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[36rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+            >
+              <div>
+                <div className="text-center">
+                  <DialogTitle
+                    as="h3"
+                    className="text-[36px] font-[560] tracking-tight text-white font-sans"
+                  >
+                    Already Added
+                  </DialogTitle>
+                  <div className="mt-2">
+                    <p className="text-[28px] font-[560] tracking-tight text-white/60">
+                      This track is already in the playlist.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-0 border-t border-slate-100/25">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm sm:col-start-2"
+                >
+                  Don't Add
+                </button>
+                <button
+                  type="button"
+                  data-autofocus
+                  onClick={handleAddAnyway}
+                  className="mt-3 inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] shadow-sm sm:col-start-1 sm:mt-0 border-r border-slate-100/25"
+                >
+                  Add Anyway
+                </button>
+              </div>
+            </DialogPanel>
+          </div>
+        </div>
+      </Dialog>
     </>
   );
 };
 
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    handleError("NowPlaying Error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <h1 className="text-white text-2xl">
-            Something went wrong. Please try again.
-          </h1>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-const NowPlayingWithErrorBoundary = (props) => (
-  <ErrorBoundary>
-    <NowPlaying {...props} />
-  </ErrorBoundary>
-);
-
-export default NowPlayingWithErrorBoundary;
+export default NowPlaying;
