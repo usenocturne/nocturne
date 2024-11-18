@@ -266,6 +266,8 @@ There are two different ways to use Nocturne. You can either use it at your desk
 
 At this point, there are two different scripts that you can use. The first one, `setup_host_apt.sh`, is used on Linux distros that utilize apt as it's package manager. The second one, `setup_host_pacman.sh`, is used on Linux distros that utilize Pacman as it's package manager. If you use Pacman, replace `setup_host_apt.sh` in the following commands with `setup_host_pacman.sh` to continue with setup.
 
+It is important to note that `setup_host_pacman.sh` has not been tested very well, so it may not work as intended for setup. 
+
 ``` bash
 # Make setup_host_apt.sh executable
 $ chmod +x setup_host_apt.sh
