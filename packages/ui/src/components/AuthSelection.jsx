@@ -74,7 +74,7 @@ const AuthMethodSelector = ({ onSelect }) => {
 
   const validateSpotifyCredentials = async (clientId, clientSecret, tempId) => {
     try {
-      const response = await fetch("/api/validate-credentials", {
+      const response = await fetch("/api/v1/auth/validate-credentials", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

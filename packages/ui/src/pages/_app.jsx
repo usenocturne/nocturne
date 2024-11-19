@@ -401,7 +401,7 @@ export default function App({ Component, pageProps }) {
 
   const fetchAccessToken = async (code) => {
     try {
-      const response = await fetch("/api/token", {
+      const response = await fetch("/api/v1/auth/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -428,7 +428,7 @@ export default function App({ Component, pageProps }) {
 
   const refreshAccessToken = async () => {
     try {
-      const response = await fetch("/api/refresh-token", {
+      const response = await fetch("/api/v1/auth/refresh-token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
