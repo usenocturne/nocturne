@@ -324,6 +324,9 @@ This will look like the following:
 ```bash
 $ python ./superbird_tool.py --dont_reset --slow_burn --restore_device /path/to/nocturne/image
 ``` 
+
+If this still does not resolve the error, then you will have to edit line 164 (the one that says `MULTIPLIER = 8`) in `superbird_device.py` 
+
 <br>
 
 If your flashing is failing at `executing bulkcmd: "amlmmc part 1"`, then try running the following command manually. This may take a few tries to succeed.
