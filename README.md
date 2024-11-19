@@ -345,7 +345,7 @@ For Linux, it will be `python3`
 <br>
 
 <details>
-<summary>superbird-tool: BulkcmdException</summary>
+<summary>superbird-tool: "bulkcmd timed out or failed!" after system_b </summary>
 <br>
 
 If you are running into this error while flashing your Car Thing, you must replace the `superbird_partitions.py` file in the `superbird-tool` folder with the one provided in this repo. 
