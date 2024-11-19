@@ -358,6 +358,14 @@ This error occurs since some devices have a smaller data partition, causing the 
 
 <br>
 
+<details>
+<summary>superbird-tool: AssertionError </summary>
+<br>
+
+If you are running into this error while flashing your Car Thing, you must install the `libusbk` driver in Zadig. You can do this with the steps found [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#windows), and replacing `libusb-win32` with `libusbk` instead.
+
+<br>
+
 If your issue is not listed here, or if you need help, join our Discord [here!](https://discord.gg/GTP9AawHPt)
 
 ## Download
