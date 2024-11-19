@@ -107,7 +107,7 @@ const NowPlaying = ({
 
     try {
       const response = await fetch(
-        `/api/v1/lyrics?name=${encodeURIComponent(
+        `/api/lyrics?name=${encodeURIComponent(
           trackName
         )}&artist=${encodeURIComponent(artistName)}`
       );

@@ -135,7 +135,6 @@ export default function App({ Component, pageProps }) {
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
   const { authSelectionMade, authType, tempId } = authState;
-  const isPhoneAuthRoute = router.pathname.startsWith("/phone-auth/");
 
   const handleAuthSelection = async (selection) => {
     const newState = {
@@ -402,7 +401,7 @@ export default function App({ Component, pageProps }) {
 
   const fetchAccessToken = async (code) => {
     try {
-      const response = await fetch("/api/v1/auth/token", {
+      const response = await fetch("/api/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -429,7 +428,7 @@ export default function App({ Component, pageProps }) {
 
   const refreshAccessToken = async () => {
     try {
-      const response = await fetch("/api/v1/auth/refresh-token", {
+      const response = await fetch("/api/refresh-token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1159,7 +1158,7 @@ export default function App({ Component, pageProps }) {
     <main
       className={`overflow-hidden relative min-h-screen ${inter.className}`}
     >
-      {!authState.authSelectionMade && !isPhoneAuthRoute ? (
+      {!authState.authSelectionMade ? (
         <AuthSelection onSelect={handleAuthSelection} />
       ) : (
         <>

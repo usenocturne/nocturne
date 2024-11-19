@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 export const runtime = 'experimental-edge';
 
 export default async function handler(req) {

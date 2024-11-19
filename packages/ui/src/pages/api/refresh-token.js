@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabaseClient';
-import { encrypt, decrypt } from '@/lib/cryptoUtils';
+import { supabase } from '../../lib/supabaseClient';
+import { encrypt, decrypt } from '../../lib/cryptoUtils';
 export const runtime = 'experimental-edge';
 
 export default async function handler(req) {
