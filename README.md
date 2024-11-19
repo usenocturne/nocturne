@@ -123,7 +123,7 @@ Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https:
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
-Login to Spotify on the Car Thing using VNC Viewer.
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ### macOS
 
@@ -225,7 +225,7 @@ Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https:
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
-Login to Spotify on the Car Thing using VNC Viewer.
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ### Linux
 
@@ -266,6 +266,8 @@ There are two different ways to use Nocturne. You can either use it at your desk
 
 At this point, there are two different scripts that you can use. The first one, `setup_host_apt.sh`, is used on Linux distros that utilize apt as it's package manager. The second one, `setup_host_pacman.sh`, is used on Linux distros that utilize Pacman as it's package manager. If you use Pacman, replace `setup_host_apt.sh` in the following commands with `setup_host_pacman.sh` to continue with setup.
 
+It is important to note that `setup_host_pacman.sh` has not been tested very well, so it may not work as intended for setup. 
+
 ``` bash
 # Make setup_host_apt.sh executable
 $ chmod +x setup_host_apt.sh
@@ -305,7 +307,7 @@ Connect Car Thing to your computer or Raspberry Pi, download and install [VNC Vi
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
-Login to Spotify on the Car Thing using VNC Viewer.
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ## Troubleshooting
 
@@ -316,7 +318,14 @@ If you are having issues flashing Nocturne to your Car Thing, check out the guid
 <summary>superbird-tool: USBTimeoutError</summary>
 <br>
 
-If you are running into this error while flashing your Car Thing, you will have to reduce the `MULTIPLIER` at line 164 in the `superbird_device.py` file in the `superbird-tool` folder.
+If you are running into this error while flashing your Car Thing, try using the option `--slow_burn` or `--slower_burn` in the command used to flash. 
+
+This will look like the following:
+```bash
+$ python ./superbird_tool.py --dont_reset --slow_burn --restore_device /path/to/nocturne/image
+``` 
+
+If this still does not resolve the error, then you will have to edit line 164 (the one that says `MULTIPLIER = 8`) in `superbird_device.py` 
 
 <br>
 
@@ -326,7 +335,7 @@ If your flashing is failing at `executing bulkcmd: "amlmmc part 1"`, then try ru
 $ python ./superbird_tool.py --bulkcmd "amlmmc part 1"
 ``` 
 
- `python` in the above command depends on what OS you are running. 
+ `python` in the above commands depends on what OS you are running. 
 
 For Windows, it will be `python`. 
 
@@ -339,12 +348,21 @@ For Linux, it will be `python3`
 <br>
 
 <details>
-<summary>superbird-tool: BulkcmdException</summary>
+<summary>superbird-tool: "bulkcmd timed out or failed!" after system_b </summary>
 <br>
 
 If you are running into this error while flashing your Car Thing, you must replace the `superbird_partitions.py` file in the `superbird-tool` folder with the one provided in this repo. 
 
 This error occurs since some devices have a smaller data partition, causing the error when attempting to flash the data partition.
+</details>
+
+<br>
+
+<details>
+<summary>superbird-tool: AssertionError </summary>
+<br>
+
+If you are running into this error while flashing your Car Thing, you must install the `libusbk` driver in Zadig. You can do this with the steps found [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#windows), and replacing `libusb-win32` with `libusbk` instead.
 </details>
 
 <br>
@@ -363,7 +381,7 @@ This software was made possible only through the following individuals and open 
 - [shadow](https://github.com/68p), for testing, troubleshooting, and crazy good repo maintainence
 - [Dominic Frye](https://x.com/itsnebulalol), for debugging, testing, and marketing
 - [bbaovanc](https://x.com/bbaovanc), for OS development, debugging, and testing
-- [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), and [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
+- [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk), and modifying [aml-imgpack](https://github.com/bishopdynamics/aml-imgpack)
 - [Thing Labs' fork of superbird-tool](https://github.com/thinglabsoss/superbird-tool), for their contributions on the original superbird-tool
 
 
