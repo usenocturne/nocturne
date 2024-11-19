@@ -58,7 +58,7 @@
    - App name: Choose a name (e.g., "Nocturne")
    - App description: Brief description of your app
    - Redirect URI: Add `https://nocturne.brandons.place` for non-development usage, or `https://your.local.ip.address:port` for development usage
-   - Select "Web API" as the API you will be using
+   - Select "Web API" and "Web Playback SDK" as the API's you will be using
 
 4. After creating the app, you'll see your:
    - Client ID (shown on the dashboard)
