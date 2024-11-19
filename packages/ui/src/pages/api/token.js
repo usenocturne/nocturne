@@ -2,6 +2,43 @@ import { createClient } from '@supabase/supabase-js';
 import { encrypt, decrypt } from '../../lib/cryptoUtils';
 export const runtime = 'experimental-edge';
 
+async function ensureTempId(supabase, refreshToken, clientId) {
+  if (!refreshToken) return null;
+
+  const { data: credential, error: fetchError } = await supabase
+    .from('spotify_credentials')
+    .select('temp_id, id')
+    .eq('refresh_token', refreshToken)
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (fetchError && !fetchError.message.includes('No rows found')) {
+    console.error('Error fetching credential:', fetchError);
+    return null;
+  }
+
+  if (!credential) return null;
+
+  if (!credential.temp_id) {
+    const newTempId = crypto.randomUUID();
+    const { error: updateError } = await supabase
+      .from('spotify_credentials')
+      .update({ temp_id: newTempId })
+      .eq('id', credential.id);
+
+    if (updateError) {
+      console.error('Error updating temp_id:', updateError);
+      return null;
+    }
+
+    return newTempId;
+  }
+
+  return credential.temp_id;
+}
+
 export default async function handler(req) {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', {
@@ -85,20 +122,6 @@ export default async function handler(req) {
       useClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
     }
 
-    if (!useClientId || !useClientSecret) {
-      console.error('Missing credentials:', { 
-        hasClientId: !!useClientId, 
-        hasClientSecret: !!useClientSecret 
-      });
-      return new Response(
-        JSON.stringify({ error: 'Missing credentials' }), 
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("code", code);
@@ -138,10 +161,15 @@ export default async function handler(req) {
         console.error('Error cleaning up old records:', cleanupError);
       }
 
+      let finalTempId = tempId;
+      if (!finalTempId) {
+        finalTempId = await ensureTempId(supabase, data.refresh_token, useClientId);
+      }
+
       const { data: existingRecord, error: fetchError } = await supabase
         .from('spotify_credentials')
         .select('token_refresh_count, first_used_at, created_at')
-        .eq('temp_id', tempId)
+        .eq('temp_id', finalTempId)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -161,13 +189,18 @@ export default async function handler(req) {
           last_used: new Date().toISOString(),
           first_used_at: existingRecord?.first_used_at || new Date().toISOString(),
           token_refresh_count: (existingRecord?.token_refresh_count || 0) + 1,
-          user_agent: req.headers.get('user-agent') || null
+          user_agent: req.headers.get('user-agent') || null,
+          temp_id: finalTempId
         })
-        .eq('temp_id', tempId)
+        .eq('temp_id', finalTempId)
         .eq('created_at', existingRecord?.created_at);
     
       if (updateError) {
         console.error('Error updating credentials:', updateError);
+      }
+
+      if (finalTempId !== tempId) {
+        data.temp_id = finalTempId;
       }
     }
 
@@ -176,6 +209,7 @@ export default async function handler(req) {
         access_token: data.access_token,
         refresh_token: data.refresh_token,
         expires_in: data.expires_in,
+        temp_id: data.temp_id,
         isCustomAuth
       }), 
       { 
