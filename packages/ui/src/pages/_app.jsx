@@ -588,6 +588,92 @@ export default function App({ Component, pageProps }) {
     }
   }, [accessToken]);
 
+  useEffect(() => {
+    const checkStoredAuth = async () => {
+      const savedAuthType = localStorage.getItem("spotifyAuthType");
+      const savedTempId = localStorage.getItem("spotifyTempId");
+      const savedRefreshToken = localStorage.getItem("refreshToken");
+
+      if (savedAuthType === "custom") {
+        if (savedTempId || savedRefreshToken) {
+          try {
+            const supabaseInstance = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            );
+
+            let query = supabaseInstance
+              .from("spotify_credentials")
+              .select("client_id, temp_id, refresh_token")
+              .order("created_at", { ascending: false })
+              .limit(1);
+
+            if (savedTempId) {
+              query = query.eq("temp_id", savedTempId);
+            } else if (savedRefreshToken) {
+              query = query.eq("refresh_token", savedRefreshToken);
+            }
+
+            const { data, error } = await query.single();
+
+            if (error) {
+              console.error("Supabase error:", error);
+              if (error.code === "PGRST116") {
+                if (savedRefreshToken) {
+                  setAuthType("custom");
+                  setAuthSelectionMade(true);
+                  setRefreshToken(savedRefreshToken);
+                  return;
+                }
+              }
+              localStorage.removeItem("spotifyAuthType");
+              localStorage.removeItem("spotifyTempId");
+              localStorage.removeItem("refreshToken");
+              setAuthType(null);
+              setTempId(null);
+              setAuthSelectionMade(false);
+              return;
+            }
+
+            if (data) {
+              setAuthType("custom");
+              if (data.temp_id) {
+                setTempId(data.temp_id);
+                localStorage.setItem("spotifyTempId", data.temp_id);
+              }
+              if (data.refresh_token) {
+                setRefreshToken(data.refresh_token);
+                localStorage.setItem("refreshToken", data.refresh_token);
+              }
+              setAuthSelectionMade(true);
+              return;
+            }
+          } catch (error) {
+            console.error("Error checking stored auth:", error);
+          }
+        }
+      } else if (savedAuthType === "default") {
+        setAuthType("default");
+        if (savedRefreshToken) {
+          setRefreshToken(savedRefreshToken);
+        }
+        setAuthSelectionMade(true);
+        return;
+      }
+
+      if (savedAuthType) {
+        localStorage.removeItem("spotifyAuthType");
+        localStorage.removeItem("spotifyTempId");
+        localStorage.removeItem("refreshToken");
+        setAuthType(null);
+        setTempId(null);
+        setAuthSelectionMade(false);
+      }
+    };
+
+    checkStoredAuth();
+  }, []);
+
   const fetchCurrentPlayback = async () => {
     if (accessToken) {
       try {
@@ -689,11 +775,26 @@ export default function App({ Component, pageProps }) {
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         );
 
-        const { data, error } = await supabaseInstance
+        let { data, error } = await supabaseInstance
           .from("spotify_credentials")
-          .select("client_id")
+          .select("client_id, refresh_token")
           .eq("temp_id", tempId)
           .single();
+
+        if (!data && localStorage.getItem("refreshToken")) {
+          ({ data, error } = await supabaseInstance
+            .from("spotify_credentials")
+            .select("client_id, temp_id")
+            .eq("refresh_token", localStorage.getItem("refreshToken"))
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single());
+
+          if (data?.temp_id) {
+            setTempId(data.temp_id);
+            localStorage.setItem("spotifyTempId", data.temp_id);
+          }
+        }
 
         if (error) {
           console.error("Supabase error:", error);
@@ -708,7 +809,9 @@ export default function App({ Component, pageProps }) {
 
         clientId = data.client_id;
         localStorage.setItem("spotifyAuthType", "custom");
-        localStorage.setItem("spotifyTempId", tempId);
+        if (data.temp_id) {
+          localStorage.setItem("spotifyTempId", data.temp_id);
+        }
       } catch (error) {
         console.error("Error getting custom credentials:", error);
         handleError("AUTH_ERROR", error.message);
@@ -749,6 +852,14 @@ export default function App({ Component, pageProps }) {
 
       setAccessToken(data.access_token);
       setRefreshToken(data.refresh_token);
+      if (data.refresh_token) {
+        localStorage.setItem("refreshToken", data.refresh_token);
+      }
+
+      if (data.temp_id && authType === "custom") {
+        setTempId(data.temp_id);
+        localStorage.setItem("spotifyTempId", data.temp_id);
+      }
     } catch (error) {
       handleError("FETCH_ACCESS_TOKEN_ERROR", error.message);
     }
@@ -775,7 +886,14 @@ export default function App({ Component, pageProps }) {
       setAccessToken(data.access_token);
       if (data.refresh_token) {
         setRefreshToken(data.refresh_token);
+        localStorage.setItem("refreshToken", data.refresh_token);
       }
+
+      if (data.temp_id && authType === "custom") {
+        setTempId(data.temp_id);
+        localStorage.setItem("spotifyTempId", data.temp_id);
+      }
+
       return data;
     } catch (error) {
       handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);

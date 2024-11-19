@@ -2,6 +2,43 @@ import { supabase } from '../../lib/supabaseClient';
 import { encrypt, decrypt } from '../../lib/cryptoUtils';
 export const runtime = 'experimental-edge';
 
+async function ensureTempId(supabase, refreshToken, clientId) {
+  if (!refreshToken) return null;
+
+  const { data: credential, error: fetchError } = await supabase
+    .from('spotify_credentials')
+    .select('temp_id, id')
+    .eq('refresh_token', refreshToken)
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (fetchError && !fetchError.message.includes('No rows found')) {
+    console.error('Error fetching credential:', fetchError);
+    return null;
+  }
+
+  if (!credential) return null;
+
+  if (!credential.temp_id) {
+    const newTempId = crypto.randomUUID();
+    const { error: updateError } = await supabase
+      .from('spotify_credentials')
+      .update({ temp_id: newTempId })
+      .eq('id', credential.id);
+
+    if (updateError) {
+      console.error('Error updating temp_id:', updateError);
+      return null;
+    }
+
+    return newTempId;
+  }
+
+  return credential.temp_id;
+}
+
 export default async function handler(req) {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', {
@@ -68,9 +105,15 @@ export default async function handler(req) {
           }
         );
       }
-      
-      const tempId = credentials.temp_id;
-      req.tempId = tempId;
+
+      if (!credentials.temp_id) {
+        const newTempId = await ensureTempId(supabase, refresh_token, clientId);
+        if (newTempId) {
+          req.tempId = newTempId;
+        }
+      } else {
+        req.tempId = credentials.temp_id;
+      }
     } else {
       clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
       clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -118,7 +161,8 @@ export default async function handler(req) {
           last_used: new Date().toISOString(),
           first_used_at: oldRecord?.first_used_at || new Date().toISOString(),
           token_refresh_count: (oldRecord?.token_refresh_count || 0) + 1,
-          user_agent: req.headers.get('user-agent') || null
+          user_agent: req.headers.get('user-agent') || null,
+          temp_id: req.tempId
         })
         .eq('temp_id', req.tempId)
         .eq('refresh_token', refresh_token);
@@ -126,13 +170,18 @@ export default async function handler(req) {
       if (updateError) {
         console.error('Error updating credentials:', updateError);
       }
+
+      if (req.tempId) {
+        data.temp_id = req.tempId;
+      }
     }
 
     return new Response(
       JSON.stringify({
         access_token: data.access_token,
         refresh_token: data.refresh_token,
-        expires_in: data.expires_in
+        expires_in: data.expires_in,
+        temp_id: data.temp_id
       }), 
       { 
         status: 200,
