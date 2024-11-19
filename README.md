@@ -123,7 +123,7 @@ Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https:
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
-Login to Spotify on the Car Thing using VNC Viewer.
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ### macOS
 
@@ -225,7 +225,7 @@ Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https:
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
-Login to Spotify on the Car Thing using VNC Viewer.
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ### Linux
 
@@ -307,7 +307,7 @@ Connect Car Thing to your computer or Raspberry Pi, download and install [VNC Vi
 
 Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
 
-Login to Spotify on the Car Thing using VNC Viewer.
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ## Troubleshooting
 
@@ -363,6 +363,7 @@ This error occurs since some devices have a smaller data partition, causing the 
 <br>
 
 If you are running into this error while flashing your Car Thing, you must install the `libusbk` driver in Zadig. You can do this with the steps found [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#windows), and replacing `libusb-win32` with `libusbk` instead.
+</details>
 
 <br>
 
