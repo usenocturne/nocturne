@@ -102,7 +102,8 @@ export default async function handler(req) {
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("code", code);
-    params.append("redirect_uri", process.env.NEXT_PUBLIC_REDIRECT_URI);
+    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_REDIRECT_URI;
+    params.append("redirect_uri", origin);
 
     const response = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
