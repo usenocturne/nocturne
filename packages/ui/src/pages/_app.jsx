@@ -1431,7 +1431,7 @@ export default function App({ Component, pageProps }) {
 
   return (
     <main
-      className={`overflow-hidden relative min-h-screen ${inter.className}`}
+      className={`overflow-hidden relative min-h-screen rounded-2xl ${inter.className}`}
     >
       {!authState.authSelectionMade &&
       !router.pathname.includes("phone-auth") &&
