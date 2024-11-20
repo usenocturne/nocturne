@@ -14,7 +14,6 @@ import AuthSelection from "../components/AuthSelection";
 import { createClient } from "@supabase/supabase-js";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
-import { getRedirectUri } from "@/utils/getRedirectUri";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -410,12 +409,13 @@ export default function App({ Component, pageProps }) {
         )
       : undefined;
 
-    const redirectUri = getRedirectUri();
-
     const authUrl = new URL("https://accounts.spotify.com/authorize");
     authUrl.searchParams.append("client_id", clientId);
     authUrl.searchParams.append("response_type", "code");
-    authUrl.searchParams.append("redirect_uri", redirectUri);
+    authUrl.searchParams.append(
+      "redirect_uri",
+      process.env.NEXT_PUBLIC_REDIRECT_URI
+    );
     authUrl.searchParams.append("scope", scopes);
     if (state) {
       authUrl.searchParams.append("state", state);

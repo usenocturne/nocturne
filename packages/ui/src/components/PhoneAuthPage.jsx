@@ -53,14 +53,14 @@ const PhoneAuthPage = () => {
 
       const scopes =
         "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
-      const redirectUri = getRedirectUri();
+      const redirectUri = encodeURIComponent(
+        process.env.NEXT_PUBLIC_REDIRECT_URI
+      );
       const state = encodeURIComponent(
         JSON.stringify({ phoneAuth: true, sessionId })
       );
 
-      window.location.href = `https://accounts.spotify.com/authorize?client_id=${storedClientId}&response_type=code&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&scope=${scopes}&state=${state}`;
+      window.location.href = `https://accounts.spotify.com/authorize?client_id=${storedClientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}&state=${state}`;
     } catch (error) {
       setError(error.message);
       setIsSubmitting(false);
