@@ -3,6 +3,7 @@ import { encrypt, decrypt } from '@/lib/cryptoUtils';
 export const runtime = 'experimental-edge';
 
 export default async function handler(req) {
+  
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', {
       status: 405,
@@ -11,59 +12,54 @@ export default async function handler(req) {
   }
 
   try {
-    const { code, tempId, isCustomAuth } = await req.json();
+    const body = await req.json();
+
+    const { code, tempId, isCustomAuth, isPhoneAuth, sessionId } = body;
 
     if (!code) {
+      console.error('Missing authorization code');
       return new Response(
         JSON.stringify({ error: 'Authorization code is required' }), 
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     let useClientId, useClientSecret;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
 
-    if (isCustomAuth && tempId) {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      );
+    
+    const query = supabase
+      .from('spotify_credentials')
+      .select('client_id, encrypted_client_secret, temp_id');
 
-      const { data: credentials, error } = await supabase
-        .from('spotify_credentials')
-        .select('client_id, encrypted_client_secret')
-        .eq('temp_id', tempId)
-        .maybeSingle();
-        
-      if (error) {
-        if (error.message.includes('rate limit exceeded')) {
-          return new Response(
-            JSON.stringify({ error: 'Too many requests. Please try again later.' }), 
-            { 
-              status: 429,
-              headers: { 'Content-Type': 'application/json' }
-            }
-          );
-        }
-        console.error('Error fetching credentials:', error);
+    if (isPhoneAuth && sessionId) {
+      query.eq('session_id', sessionId);
+    } else if ((isCustomAuth || isPhoneAuth) && tempId) {
+      query.eq('temp_id', tempId);
+    } else {
+      useClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      useClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    }
+
+    if (!useClientId || !useClientSecret) {
+      const { data: credentials, error: credentialsError } = await query.maybeSingle();
+      
+      if (credentialsError) {
+        console.error('Database query error:', credentialsError);
         return new Response(
-          JSON.stringify({ error: 'Failed to get custom credentials' }), 
-          { 
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          }
+          JSON.stringify({ error: 'Failed to get credentials', details: credentialsError.message }), 
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
         );
       }
     
       if (!credentials) {
+        console.error('No credentials found in database');
         return new Response(
           JSON.stringify({ error: 'Credentials not found or expired' }), 
-          { 
-            status: 404,
-            headers: { 'Content-Type': 'application/json' }
-          }
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
         );
       }
 
@@ -74,28 +70,16 @@ export default async function handler(req) {
         console.error('Decryption error:', decryptError);
         return new Response(
           JSON.stringify({ error: 'Failed to decrypt credentials' }), 
-          { 
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          }
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
       }
-    } else {
-      useClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-      useClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
     }
 
     if (!useClientId || !useClientSecret) {
-      console.error('Missing credentials:', { 
-        hasClientId: !!useClientId, 
-        hasClientSecret: !!useClientSecret 
-      });
+      console.error('Missing credentials after retrieval');
       return new Response(
-        JSON.stringify({ error: 'Missing credentials' }), 
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Invalid credentials configuration' }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -116,58 +100,53 @@ export default async function handler(req) {
     const data = await response.json();
 
     if (!response.ok) {
-      return new Response(JSON.stringify(data), { 
-        status: response.status,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      console.error('Spotify token exchange failed:', data);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Token exchange failed', 
+          spotifyError: data.error,
+          spotifyErrorDescription: data.error_description 
+        }), 
+        { status: response.status, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    if (isCustomAuth && data.refresh_token) {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      );
-    
-      const { error: cleanupError } = await supabase
-        .from('spotify_credentials')
-        .delete()
-        .eq('temp_id', tempId)
-        .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
-      if (cleanupError) {
-        console.error('Error cleaning up old records:', cleanupError);
-      }
-
-      const { data: existingRecord, error: fetchError } = await supabase
-        .from('spotify_credentials')
-        .select('token_refresh_count, first_used_at, created_at')
-        .eq('temp_id', tempId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-    
-      if (fetchError && !fetchError.message.includes('No rows found')) {
-        console.error('Error fetching existing record:', fetchError);
-      }
-
-      const encryptedSecret = await encrypt(useClientSecret);
-
+    if (isPhoneAuth && sessionId) {
       const { error: updateError } = await supabase
         .from('spotify_credentials')
         .update({
+          access_token: data.access_token,
           refresh_token: data.refresh_token,
-          encrypted_client_secret: encryptedSecret,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          last_used: new Date().toISOString(),
-          first_used_at: existingRecord?.first_used_at || new Date().toISOString(),
-          token_refresh_count: (existingRecord?.token_refresh_count || 0) + 1,
-          user_agent: req.headers.get('user-agent') || null
+          token_expiry: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+          auth_completed: true,
+          first_used_at: new Date().toISOString(),
+          last_used: new Date().toISOString()
         })
-        .eq('temp_id', tempId)
-        .eq('created_at', existingRecord?.created_at);
-    
+        .eq('session_id', sessionId);
+
       if (updateError) {
-        console.error('Error updating credentials:', updateError);
+        console.error('Error updating tokens in database:', updateError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to store tokens', details: updateError.message }), 
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
+    }
+
+    if ((isCustomAuth || isPhoneAuth) && data.refresh_token) {
+      try {
+        const { error: cleanupError } = await supabase
+          .from('spotify_credentials')
+          .delete()
+          .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .is('auth_completed', true);
+
+        if (cleanupError) {
+          console.error('Error during cleanup:', cleanupError);
+        }
+      } catch (cleanupError) {
+        console.error('Error cleaning up old records:', cleanupError);
       }
     }
 
@@ -176,21 +155,31 @@ export default async function handler(req) {
         access_token: data.access_token,
         refresh_token: data.refresh_token,
         expires_in: data.expires_in,
-        isCustomAuth
+        token_type: data.token_type,
+        scope: data.scope,
+        isCustomAuth,
+        isPhoneAuth
       }), 
       { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        status: 200, 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, must-revalidate'
+        } 
       }
     );
 
   } catch (error) {
-    console.error('Token exchange error:', error);
+    console.error('Unhandled token exchange error:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch access token' }), 
+      JSON.stringify({ 
+        error: 'Failed to process token exchange',
+        details: error.message,
+        stack: error.stack
+      }), 
       { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        status: 500, 
+        headers: { 'Content-Type': 'application/json' } 
       }
     );
   }

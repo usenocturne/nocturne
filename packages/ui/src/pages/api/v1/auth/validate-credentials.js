@@ -11,28 +11,11 @@ export default async function handler(req) {
   }
 
   try {
-    console.log('Environment check:', {
-      hasEncryptionKey: !!process.env.ENCRYPTION_KEY,
-      hasEncryptionIv: !!process.env.ENCRYPTION_IV,
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    });
 
     const body = await req.json();
     const { clientId, clientSecret, tempId, isPhoneAuth } = body;
 
-    console.log('Request validation:', {
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      hasTempId: !!tempId,
-      isPhoneAuth: !!isPhoneAuth
-    });
-
     if (!clientId || !clientSecret) {
-      console.log('Missing required credentials:', {
-        missingClientId: !clientId,
-        missingClientSecret: !clientSecret
-      });
       return new Response(
         JSON.stringify({ error: 'Client ID and Client Secret are required' }), 
         { 
@@ -43,7 +26,6 @@ export default async function handler(req) {
     }
 
     if (!isPhoneAuth && !tempId) {
-      console.log('Missing tempId for non-phone auth');
       return new Response(
         JSON.stringify({ error: 'Temp ID is required for this authentication method' }), 
         { 
@@ -93,17 +75,14 @@ export default async function handler(req) {
       );
     }
 
-    console.log('Step: Initializing Supabase');
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     );
 
-    console.log('Step: Starting encryption');
     let encryptedSecret;
     try {
       encryptedSecret = await encrypt(clientSecret);
-      console.log('Encryption completed');
     } catch (encryptError) {
       console.error('Encryption failed:', {
         errorType: encryptError.constructor.name,
@@ -111,7 +90,6 @@ export default async function handler(req) {
       throw new Error('Failed to encrypt credentials');
     }
 
-    console.log('Step: Checking for existing tempId');
     const { data: existingRecord, error: checkError } = await supabase
       .from('spotify_credentials')
       .select('id')
@@ -125,7 +103,6 @@ export default async function handler(req) {
     }
 
     if (existingRecord) {
-      console.log('Found duplicate tempId');
       return new Response(
         JSON.stringify({ error: 'This ID is already in use' }), 
         { 
@@ -135,7 +112,6 @@ export default async function handler(req) {
       );
     }
 
-    console.log('Step: Storing credentials');
     const { error: insertError } = await supabase
       .from('spotify_credentials')
       .insert({
@@ -153,7 +129,6 @@ export default async function handler(req) {
       throw new Error('Failed to store credentials');
     }
 
-    console.log('Credentials stored successfully');
     return new Response(
       JSON.stringify({ success: true }), 
       { 

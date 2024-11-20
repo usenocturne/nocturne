@@ -35,12 +35,22 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
 
         if (!isMounted) return;
 
-        if (data.authCompleted && data.tempId) {
+        if (data.authCompleted && data.access_token && data.refresh_token) {
           clearInterval(pollInterval);
+
+          localStorage.setItem("spotifyAccessToken", data.access_token);
+          localStorage.setItem("spotifyRefreshToken", data.refresh_token);
+          localStorage.setItem("spotifyTokenExpiry", data.token_expiry);
+          localStorage.setItem("spotifyAuthType", "custom");
+          localStorage.setItem("spotifyTempId", data.tempId);
+
           onComplete({
             type: "custom",
             tempId: data.tempId,
+            skipSpotifyAuth: true,
           });
+        } else if (data.authCompleted) {
+          console.error("Auth completed but missing tokens");
         }
 
         if (error) setError(null);

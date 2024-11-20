@@ -27,7 +27,13 @@ export default async function handler(req) {
 
     const { data, error } = await supabase
       .from('spotify_credentials')
-      .select('temp_id, auth_completed')
+      .select(`
+        temp_id, 
+        auth_completed, 
+        access_token, 
+        refresh_token,
+        token_expiry
+      `)
       .eq('session_id', session_id)
       .maybeSingle();
 
@@ -50,13 +56,21 @@ export default async function handler(req) {
       );
     }
 
+    const response = {
+      status: data.auth_completed ? 'complete' : 'pending',
+      tempId: data.temp_id,
+      authCompleted: !!data.auth_completed,
+      exists: true
+    };
+
+    if (data.auth_completed) {
+      response.access_token = data.access_token;
+      response.refresh_token = data.refresh_token;
+      response.token_expiry = data.token_expiry;
+    }
+
     return new Response(
-      JSON.stringify({
-        status: data.auth_completed ? 'complete' : 'pending',
-        tempId: data.temp_id,
-        authCompleted: !!data.auth_completed,
-        exists: true
-      }), 
+      JSON.stringify(response), 
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
 

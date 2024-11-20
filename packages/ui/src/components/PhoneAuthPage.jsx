@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 const PhoneAuthPage = () => {
@@ -12,6 +12,15 @@ const PhoneAuthPage = () => {
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("session")
       : null;
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const state = urlParams.get("state");
+    if (code && state) {
+      return;
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,7 +58,7 @@ const PhoneAuthPage = () => {
         throw new Error("Failed to store credentials");
       }
 
-      const { clientId: storedClientId } = await storeResponse.json();
+      const { clientId: storedClientId, tempId } = await storeResponse.json();
 
       const scopes =
         "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
@@ -57,7 +66,11 @@ const PhoneAuthPage = () => {
         process.env.NEXT_PUBLIC_REDIRECT_URI
       );
       const state = encodeURIComponent(
-        JSON.stringify({ phoneAuth: true, sessionId })
+        JSON.stringify({
+          phoneAuth: true,
+          sessionId,
+          tempId,
+        })
       );
 
       window.location.href = `https://accounts.spotify.com/authorize?client_id=${storedClientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}&state=${state}`;

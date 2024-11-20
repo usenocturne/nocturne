@@ -14,8 +14,6 @@ export default {
   
         await env.ENCRYPTION_KEYS.put('current_key', Buffer.from(newKey).toString('hex'));
         await env.ENCRYPTION_KEYS.put('current_iv', Buffer.from(newIV).toString('hex'));
-  
-        console.log('Key rotation completed successfully');
       } catch (error) {
         console.error('Key rotation failed:', error);
         

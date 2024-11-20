@@ -68,18 +68,13 @@ const initialAuthState = () => {
   }
 
   try {
-    const savedAuthType = localStorage.getItem("spotifyAuthType");
-    const savedTempId = localStorage.getItem("spotifyTempId");
-
-    if (savedAuthType) {
-      return {
-        authSelectionMade: true,
-        authType: savedAuthType,
-        tempId: savedAuthType === "custom" ? savedTempId : null,
-      };
-    }
+    localStorage.removeItem("spotifyAuthType");
+    localStorage.removeItem("spotifyTempId");
+    localStorage.removeItem("spotifyAccessToken");
+    localStorage.removeItem("spotifyRefreshToken");
+    localStorage.removeItem("spotifyTokenExpiry");
   } catch (e) {
-    console.error("Error accessing localStorage:", e);
+    console.error("Error clearing localStorage:", e);
   }
 
   return {
@@ -143,6 +138,15 @@ export default function App({ Component, pageProps }) {
       tempId: selection.type === "custom" ? selection.tempId : null,
     };
     setAuthState(newState);
+
+    if (selection.skipSpotifyAuth && selection.type === "custom") {
+      const savedAccessToken = localStorage.getItem("spotifyAccessToken");
+      const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+      if (savedAccessToken && savedRefreshToken) {
+        setAccessToken(savedAccessToken);
+        setRefreshToken(savedRefreshToken);
+      }
+    }
   };
 
   const handleError = (errorType, errorMessage) => {
@@ -858,47 +862,6 @@ export default function App({ Component, pageProps }) {
     };
   }, [accessToken, refreshToken, router]);
 
-  const PhoneAuthSuccess = () => {
-    const NocturneIcon = ({ className }) => (
-      <svg
-        width="30"
-        height="30"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth="2"
-      >
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-    );
-
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        window.close();
-      }, 3000);
-      return () => clearTimeout(timer);
-    }, []);
-
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
-        <div className="text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-[#1DB954] flex items-center justify-center mx-auto">
-            <NocturneIcon />
-          </div>
-          <h1 className="text-2xl font-bold text-white">
-            Authentication Successful
-          </h1>
-          <p className="text-white/70">
-            You can close this window and return to your desktop browser.
-          </p>
-          <div className="animate-pulse text-white/50">
-            This window will close automatically...
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       const code = new URLSearchParams(window.location.search).get("code");
@@ -909,16 +872,51 @@ export default function App({ Component, pageProps }) {
           try {
             const stateData = JSON.parse(decodeURIComponent(state));
             if (stateData.phoneAuth) {
-              const supabase = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-              );
+              const exchangeTokens = async () => {
+                try {
+                  const tokenResponse = await fetch("/api/v1/auth/token", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      code,
+                      isPhoneAuth: true,
+                      sessionId: stateData.sessionId,
+                      tempId: stateData.tempId,
+                    }),
+                  });
 
-              supabase
-                .from("spotify_credentials")
-                .update({ auth_completed: true })
-                .eq("session_id", stateData.sessionId)
-                .then(() => {
+                  if (!tokenResponse.ok) {
+                    throw new Error("Token exchange failed");
+                  }
+
+                  const tokenData = await tokenResponse.json();
+
+                  const supabase = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                  );
+
+                  const { error: updateError } = await supabase
+                    .from("spotify_credentials")
+                    .update({
+                      access_token: tokenData.access_token,
+                      refresh_token: tokenData.refresh_token,
+                      token_expiry: new Date(
+                        Date.now() + tokenData.expires_in * 1000
+                      ).toISOString(),
+                      auth_completed: true,
+                      first_used_at: new Date().toISOString(),
+                      last_used: new Date().toISOString(),
+                    })
+                    .eq("session_id", stateData.sessionId);
+
+                  if (updateError) {
+                    console.error("Failed to update database:", updateError);
+                    throw new Error("Failed to store tokens");
+                  }
+
                   document.documentElement.innerHTML = `
                     <!DOCTYPE html>
                     <html>
@@ -937,51 +935,123 @@ export default function App({ Component, pageProps }) {
                             align-items: center;
                             justify-content: center;
                             text-align: center;
+                            padding: 20px;
                           }
                           .success-icon {
                             width: 60px;
                             height: 60px;
+                            border-radius: 50%;
+                            background: #1DB954;
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            margin-bottom: 20px;
+                            margin: 0 auto 24px;
                           }
-                          h1 { font-size: 24px; margin-bottom: 0px; }
-                          p { color: rgba(255,255,255,0.7); }
+                          h1 { 
+                            font-size: 24px; 
+                            margin: 0 0 12px;
+                            font-weight: bold;
+                          }
+                          p { 
+                            color: rgba(255,255,255,0.7);
+                            margin: 0;
+                            line-height: 1.5;
+                          }
+                          .countdown {
+                            margin-top: 24px;
+                            color: rgba(255,255,255,0.5);
+                            font-size: 14px;
+                          }
                         </style>
                       </head>
                       <body>
                         <div class="success-icon">
-                          <svg
-                            width="60"
-                            height="60"
-                            viewBox="0 0 457 452"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            className={className}
-                          >
-                            <path
-                              opacity="0.8"
-                              d="M337.506 24.9087C368.254 85.1957 385.594 153.463 385.594 225.78C385.594 298.098 368.254 366.366 337.506 426.654C408.686 387.945 457 312.505 457 225.781C457 139.057 408.686 63.6173 337.506 24.9087Z"
-                              fill="#CBCBCB"
-                            />
-                            <path
-                              d="M234.757 20.1171C224.421 5.47596 206.815 -2.40914 189.157 0.65516C81.708 19.3019 0 112.999 0 225.781C0 338.562 81.7075 432.259 189.156 450.906C206.814 453.97 224.42 446.085 234.756 431.444C275.797 373.304 299.906 302.358 299.906 225.78C299.906 149.203 275.797 78.2567 234.757 20.1171Z"
-                              fill="white"
-                            />
+                          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
                           </svg>
                         </div>
                         <h1>Authentication Successful</h1>
-                        <p>This window will automatically close.</p>
+                        <p>You can close this window and return to Nocturne.</p>
+                        <div class="countdown">This window will close automatically...</div>
                       </body>
                     </html>
                   `;
-                });
+
+                  setTimeout(() => {
+                    window.close();
+                  }, 3000);
+                } catch (error) {
+                  console.error("Token exchange error:", error);
+                  document.documentElement.innerHTML = `
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <title>Authentication Error</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                        <style>
+                          body {
+                            background: #000;
+                            color: #fff;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                            height: 100vh;
+                            margin: 0;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                            padding: 20px;
+                          }
+                          .error-icon {
+                            width: 60px;
+                            height: 60px;
+                            border-radius: 50%;
+                            background: #E34D4D;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin: 0 auto 24px;
+                          }
+                          h1 { 
+                            font-size: 24px; 
+                            margin: 0 0 12px;
+                            font-weight: bold;
+                          }
+                          p { 
+                            color: rgba(255,255,255,0.7);
+                            margin: 0;
+                            line-height: 1.5;
+                          }
+                          .error-message {
+                            margin-top: 12px;
+                            color: rgba(227, 77, 77, 0.8);
+                            font-size: 14px;
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="error-icon">
+                          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                          </svg>
+                        </div>
+                        <h1>Authentication Error</h1>
+                        <p>Something went wrong while authenticating.</p>
+                        <div class="error-message">${error.message}</div>
+                      </body>
+                    </html>
+                  `;
+                }
+              };
+
+              exchangeTokens();
             } else {
               setAuthCode(code);
               setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
             }
           } catch (e) {
+            console.error("Error parsing state:", e);
             setAuthCode(code);
             setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
           }
@@ -1002,18 +1072,69 @@ export default function App({ Component, pageProps }) {
       authState.authSelectionMade &&
       !router.pathname.includes("phone-auth")
     ) {
-      redirectToSpotify();
+      if (authState.authType === "custom") {
+        const savedAccessToken = localStorage.getItem("spotifyAccessToken");
+        const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+        const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+
+        if (savedAccessToken && savedRefreshToken) {
+          if (tokenExpiry && new Date(tokenExpiry) <= new Date()) {
+            refreshAccessToken();
+          } else {
+            setAccessToken(savedAccessToken);
+            setRefreshToken(savedRefreshToken);
+          }
+          return;
+        }
+      }
+
+      if (!authState.tempId) {
+        redirectToSpotify();
+      }
     }
   }, [authCode, authState.authSelectionMade]);
 
   useEffect(() => {
     if (accessToken) {
-      const tokenRefreshInterval = setInterval(() => {
-        refreshAccessToken();
-      }, 3000 * 1000);
+      const checkTokenExpiry = async () => {
+        const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+
+        if (tokenExpiry && new Date(tokenExpiry) <= new Date()) {
+          try {
+            const refreshData = await refreshAccessToken();
+            if (refreshData.access_token) {
+              setAccessToken(refreshData.access_token);
+              localStorage.setItem(
+                "spotifyAccessToken",
+                refreshData.access_token
+              );
+              localStorage.setItem(
+                "spotifyTokenExpiry",
+                new Date(
+                  Date.now() + refreshData.expires_in * 1000
+                ).toISOString()
+              );
+
+              if (refreshData.refresh_token) {
+                setRefreshToken(refreshData.refresh_token);
+                localStorage.setItem(
+                  "spotifyRefreshToken",
+                  refreshData.refresh_token
+                );
+              }
+            }
+          } catch (error) {
+            console.error("Token refresh failed:", error);
+            redirectToSpotify();
+          }
+        }
+      };
+
+      const tokenRefreshInterval = setInterval(checkTokenExpiry, 3000 * 1000);
 
       setLoading(false);
 
+      checkTokenExpiry();
       fetchRecentlyPlayedAlbums(
         accessToken,
         setAlbums,
