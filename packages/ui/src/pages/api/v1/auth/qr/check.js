@@ -1,14 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
+export const runtime = 'experimental-edge';
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }), 
+      { status: 405, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  const { session_id } = req.query;
+  const url = new URL(req.url);
+  const session_id = url.searchParams.get('session_id');
 
   if (!session_id) {
-    return res.status(400).json({ error: 'Missing session ID' });
+    return new Response(
+      JSON.stringify({ error: 'Missing session ID' }), 
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
@@ -25,30 +33,42 @@ export default async function handler(req, res) {
 
     if (error) {
       console.error('Database query error:', error);
-      return res.status(500).json({ error: 'Failed to check status' });
+      return new Response(
+        JSON.stringify({ error: 'Failed to check status' }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     if (!data) {
-      return res.status(200).json({ 
-        status: 'pending',
-        authCompleted: false,
-        exists: false
-      });
+      return new Response(
+        JSON.stringify({ 
+          status: 'pending',
+          authCompleted: false,
+          exists: false
+        }), 
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    return res.status(200).json({
-      status: data.auth_completed ? 'complete' : 'pending',
-      tempId: data.temp_id,
-      authCompleted: !!data.auth_completed,
-      exists: true
-    });
+    return new Response(
+      JSON.stringify({
+        status: data.auth_completed ? 'complete' : 'pending',
+        tempId: data.temp_id,
+        authCompleted: !!data.auth_completed,
+        exists: true
+      }), 
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Error checking status:', error);
-    return res.status(200).json({ 
-      status: 'pending',
-      authCompleted: false,
-      error: error.message 
-    });
+    return new Response(
+      JSON.stringify({ 
+        status: 'pending',
+        authCompleted: false,
+        error: error.message 
+      }), 
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }

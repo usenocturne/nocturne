@@ -1,16 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 import { encrypt } from '@/lib/cryptoUtils';
+export const runtime = 'experimental-edge';
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }), 
+      { status: 405, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
-    const { clientId, clientSecret, sessionId } = req.body;
+    const body = await req.json();
+    const { clientId, clientSecret, sessionId } = body;
 
     if (!clientId || !clientSecret || !sessionId) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const tempId = Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -22,7 +30,10 @@ export default async function handler(req, res) {
       encryptedSecret = await encrypt(clientSecret);
     } catch (encryptError) {
       console.error('Encryption failed:', encryptError);
-      return res.status(500).json({ error: 'Failed to encrypt credentials' });
+      return new Response(
+        JSON.stringify({ error: 'Failed to encrypt credentials' }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const supabase = createClient(
@@ -45,13 +56,22 @@ export default async function handler(req, res) {
 
     if (insertError) {
       console.error('Error storing credentials:', insertError);
-      return res.status(500).json({ error: 'Failed to store credentials' });
+      return new Response(
+        JSON.stringify({ error: 'Failed to store credentials' }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    return res.status(200).json({ tempId, clientId });
+    return new Response(
+      JSON.stringify({ tempId, clientId }), 
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Error storing credentials:', error);
-    return res.status(500).json({ error: 'Failed to store credentials' });
+    return new Response(
+      JSON.stringify({ error: 'Failed to store credentials' }), 
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
