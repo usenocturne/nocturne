@@ -354,6 +354,10 @@ export default function App({ Component, pageProps }) {
       "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
 
     let clientId;
+    const urlParams = new URLSearchParams(window.location.search);
+    const phoneSession = urlParams.get("session");
+    const isPhoneAuth = !!phoneSession;
+
     if (authType === "custom" && tempId) {
       try {
         const supabaseInstance = createClient(
@@ -396,7 +400,28 @@ export default function App({ Component, pageProps }) {
       return;
     }
 
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&scope=${scopes}`;
+    const state = isPhoneAuth
+      ? encodeURIComponent(
+          JSON.stringify({
+            phoneAuth: true,
+            sessionId: phoneSession,
+          })
+        )
+      : undefined;
+
+    const authUrl = new URL("https://accounts.spotify.com/authorize");
+    authUrl.searchParams.append("client_id", clientId);
+    authUrl.searchParams.append("response_type", "code");
+    authUrl.searchParams.append(
+      "redirect_uri",
+      process.env.NEXT_PUBLIC_REDIRECT_URI
+    );
+    authUrl.searchParams.append("scope", scopes);
+    if (state) {
+      authUrl.searchParams.append("state", state);
+    }
+
+    window.location.href = authUrl.toString();
   };
 
   const fetchAccessToken = async (code) => {
@@ -833,24 +858,153 @@ export default function App({ Component, pageProps }) {
     };
   }, [accessToken, refreshToken, router]);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && authSelectionMade) {
-      const code = new URLSearchParams(window.location.search).get("code");
-      setAuthCode(code);
-    }
-  }, [authSelectionMade]);
+  const PhoneAuthSuccess = () => {
+    const NocturneIcon = ({ className }) => (
+      <svg
+        width="30"
+        height="30"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="white"
+        strokeWidth="2"
+      >
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    );
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        window.close();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }, []);
+
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
+        <div className="text-center space-y-6">
+          <div className="w-16 h-16 rounded-full bg-[#1DB954] flex items-center justify-center mx-auto">
+            <NocturneIcon />
+          </div>
+          <h1 className="text-2xl font-bold text-white">
+            Authentication Successful
+          </h1>
+          <p className="text-white/70">
+            You can close this window and return to your desktop browser.
+          </p>
+          <div className="animate-pulse text-white/50">
+            This window will close automatically...
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
-    if (authCode && authSelectionMade) {
+    if (typeof window !== "undefined") {
+      const code = new URLSearchParams(window.location.search).get("code");
+      const state = new URLSearchParams(window.location.search).get("state");
+
+      if (code) {
+        if (state) {
+          try {
+            const stateData = JSON.parse(decodeURIComponent(state));
+            if (stateData.phoneAuth) {
+              const supabase = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+              );
+
+              supabase
+                .from("spotify_credentials")
+                .update({ auth_completed: true })
+                .eq("session_id", stateData.sessionId)
+                .then(() => {
+                  document.documentElement.innerHTML = `
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <title>Authentication Successful</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                        <style>
+                          body {
+                            background: #000;
+                            color: #fff;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                            height: 100vh;
+                            margin: 0;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                          }
+                          .success-icon {
+                            width: 60px;
+                            height: 60px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin-bottom: 20px;
+                          }
+                          h1 { font-size: 24px; margin-bottom: 0px; }
+                          p { color: rgba(255,255,255,0.7); }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="success-icon">
+                          <svg
+                            width="60"
+                            height="60"
+                            viewBox="0 0 457 452"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            className={className}
+                          >
+                            <path
+                              opacity="0.8"
+                              d="M337.506 24.9087C368.254 85.1957 385.594 153.463 385.594 225.78C385.594 298.098 368.254 366.366 337.506 426.654C408.686 387.945 457 312.505 457 225.781C457 139.057 408.686 63.6173 337.506 24.9087Z"
+                              fill="#CBCBCB"
+                            />
+                            <path
+                              d="M234.757 20.1171C224.421 5.47596 206.815 -2.40914 189.157 0.65516C81.708 19.3019 0 112.999 0 225.781C0 338.562 81.7075 432.259 189.156 450.906C206.814 453.97 224.42 446.085 234.756 431.444C275.797 373.304 299.906 302.358 299.906 225.78C299.906 149.203 275.797 78.2567 234.757 20.1171Z"
+                              fill="white"
+                            />
+                          </svg>
+                        </div>
+                        <h1>Authentication Successful</h1>
+                        <p>This window will automatically close.</p>
+                      </body>
+                    </html>
+                  `;
+                });
+            } else {
+              setAuthCode(code);
+              setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+            }
+          } catch (e) {
+            setAuthCode(code);
+            setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+          }
+        } else {
+          setAuthCode(code);
+          setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authCode) {
       fetchAccessToken(authCode);
     } else if (
       typeof window !== "undefined" &&
       !window.location.search.includes("code") &&
-      authSelectionMade
+      authState.authSelectionMade &&
+      !router.pathname.includes("phone-auth")
     ) {
       redirectToSpotify();
     }
-  }, [authCode, authSelectionMade]);
+  }, [authCode, authState.authSelectionMade]);
 
   useEffect(() => {
     if (accessToken) {
@@ -1158,7 +1312,9 @@ export default function App({ Component, pageProps }) {
     <main
       className={`overflow-hidden relative min-h-screen ${inter.className}`}
     >
-      {!authState.authSelectionMade ? (
+      {!authState.authSelectionMade &&
+      !router.pathname.includes("phone-auth") &&
+      !window.location.search.includes("code") ? (
         <AuthSelection onSelect={handleAuthSelection} />
       ) : (
         <>

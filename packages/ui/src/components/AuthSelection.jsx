@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Eye, EyeOff } from "lucide-react";
 import ErrorAlert from "./ErrorAlert";
+import QRAuthFlow from "./QRAuthFlow";
 import packageInfo from "../../package.json";
 
 const AuthMethodSelector = ({ onSelect }) => {
   const [showCustomForm, setShowCustomForm] = useState(false);
+  const [showQRFlow, setShowQRFlow] = useState(false);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [showClientSecret, setShowClientSecret] = useState(false);
@@ -205,13 +207,13 @@ const AuthMethodSelector = ({ onSelect }) => {
                 ? "h-[300px]"
                 : showDefaultButton
                 ? "h-[260px]"
-                : "h-[150px]"
+                : "h-[200px]"
             }`}
           >
             <div
               className={`absolute top-0 left-0 w-full transition-opacity duration-250 ${
                 buttonsVisible ? "opacity-100" : "opacity-0"
-              } ${showDefaultButton ? "space-y-6 mt-2" : "mt-6"}`}
+              } ${showDefaultButton ? "space-y-6 mt-2" : "mt-4"}`}
               style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
             >
               <div
@@ -230,13 +232,21 @@ const AuthMethodSelector = ({ onSelect }) => {
                   Use Default Credentials (Beta)
                 </button>
               </div>
-              <button
-                onClick={() => setShowCustomForm(true)}
-                className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
-              >
-                Use Custom Credentials
-              </button>
-              <p className="mt-6 text-center text-white/30 text-[16px]">
+              <div className="space-y-6">
+                <button
+                  onClick={() => setShowQRFlow(true)}
+                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
+                >
+                  Login with Phone
+                </button>
+                <button
+                  onClick={() => setShowCustomForm(true)}
+                  className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
+                >
+                  Use Custom Credentials
+                </button>
+              </div>
+              <p className="mt-4 text-center text-white/30 text-[16px]">
                 {packageInfo.version}
               </p>
             </div>
@@ -312,6 +322,12 @@ const AuthMethodSelector = ({ onSelect }) => {
               </div>
             </form>
           </div>
+          {showQRFlow && (
+            <QRAuthFlow
+              onBack={() => setShowQRFlow(false)}
+              onComplete={onSelect}
+            />
+          )}
         </div>
       </div>
     </div>

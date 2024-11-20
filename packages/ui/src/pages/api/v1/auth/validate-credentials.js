@@ -1,4 +1,4 @@
-import { encrypt } from '../../lib/cryptoUtils';
+import { encrypt } from '@/lib/cryptoUtils';
 import { createClient } from '@supabase/supabase-js';
 export const runtime = 'experimental-edge';
 
@@ -19,24 +19,75 @@ export default async function handler(req) {
     });
 
     const body = await req.json();
+    const { clientId, clientSecret, tempId, isPhoneAuth } = body;
+
     console.log('Request validation:', {
-      hasClientId: !!body.clientId,
-      hasClientSecret: !!body.clientSecret,
-      hasTempId: !!body.tempId
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      hasTempId: !!tempId,
+      isPhoneAuth: !!isPhoneAuth
     });
 
-    const { clientId, clientSecret, tempId } = body;
-
-    if (!clientId || !clientSecret || !tempId) {
-      console.log('Missing required fields:', {
+    if (!clientId || !clientSecret) {
+      console.log('Missing required credentials:', {
         missingClientId: !clientId,
-        missingClientSecret: !clientSecret,
-        missingTempId: !tempId
+        missingClientSecret: !clientSecret
       });
       return new Response(
-        JSON.stringify({ error: 'All fields are required' }), 
+        JSON.stringify({ error: 'Client ID and Client Secret are required' }), 
         { 
           status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    if (!isPhoneAuth && !tempId) {
+      console.log('Missing tempId for non-phone auth');
+      return new Response(
+        JSON.stringify({ error: 'Temp ID is required for this authentication method' }), 
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    try {
+      const spotifyResponse = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + btoa(clientId + ':' + clientSecret)
+        },
+        body: 'grant_type=client_credentials'
+      });
+
+      if (!spotifyResponse.ok) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid Spotify credentials' }), 
+          { 
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    } catch (spotifyError) {
+      console.error('Spotify validation error:', spotifyError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to validate with Spotify' }), 
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    if (isPhoneAuth) {
+      return new Response(
+        JSON.stringify({ success: true }), 
+        { 
+          status: 200,
           headers: { 'Content-Type': 'application/json' }
         }
       );
@@ -108,8 +159,8 @@ export default async function handler(req) {
       { 
         status: 200,
         headers: { 'Content-Type': 'application/json' }
-        }
-      );
+      }
+    );
 
   } catch (error) {
     console.error('Operation failed:', {
