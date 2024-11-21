@@ -131,6 +131,20 @@ const PlaylistPage = ({
     }
   }, [router.query.playlistId, accessToken]);
 
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === "Enter") {
+        playPlaylist();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [tracks, isShuffleEnabled]);
+
   const lastTrackElementRef = useCallback(
     (node) => {
       if (isLoading) return;

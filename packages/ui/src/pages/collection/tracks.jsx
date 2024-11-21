@@ -116,6 +116,20 @@ const LikedSongsPage = ({
     fetchPlaybackState();
   }, [accessToken]);
 
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === "Enter") {
+        playLikedSongs();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [tracks, isShuffleEnabled]);
+
   const loadMoreTracks = async () => {
     if (isLoading || !hasMore) return;
     setIsLoading(true);
