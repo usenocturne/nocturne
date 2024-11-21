@@ -133,7 +133,7 @@ const PhoneAuthPage = () => {
               value={clientSecret}
               onChange={(e) => setClientSecret(e.target.value)}
               placeholder="Client Secret"
-              className="w-full px-4 py-3 bg-black/10 ring-1 ring-inset focus:ring-2 focus:ring-white/20 ring-white/10 rounded-lg text-white placeholder-white/40"
+              className="w-full pr-12 px-4 py-3 bg-black/10 ring-1 ring-inset focus:ring-2 focus:ring-white/20 ring-white/10 rounded-lg text-white placeholder-white/40"
               required
             />
             <button
