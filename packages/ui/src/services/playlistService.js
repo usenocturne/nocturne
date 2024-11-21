@@ -22,3 +22,33 @@ export const fetchUserPlaylists = async (accessToken, setPlaylists, updateGradie
       handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
     }
   };
+
+  export const fetchLikedSongs = async (accessToken, handleError) => {
+    try {
+      const response = await fetch("https://api.spotify.com/v1/me/tracks?limit=1", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          id: 'liked-songs',
+          name: 'Liked Songs',
+          images: [{ url: '/images/liked-songs.webp' }],
+          tracks: { total: data.total },
+          external_urls: {
+            spotify: 'https://open.spotify.com/collection/tracks'
+          },
+          type: 'liked-songs'
+        };
+      } else {
+        handleError("FETCH_LIKED_SONGS_ERROR", response.status.toString());
+        return null;
+      }
+    } catch (error) {
+      handleError("FETCH_LIKED_SONGS_ERROR", error.message);
+      return null;
+    }
+  };

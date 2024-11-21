@@ -1202,6 +1202,18 @@ export default function App({ Component, pageProps }) {
             setTargetColor3(radioColors[2]);
             setTargetColor4(radioColors[3]);
           }
+        } else if (section === "library") {
+          const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: libraryColors,
+          }));
+          if (activeSection === "library") {
+            setTargetColor1(libraryColors[0]);
+            setTargetColor2(libraryColors[1]);
+            setTargetColor3(libraryColors[2]);
+            setTargetColor4(libraryColors[3]);
+          }
         } else if (
           section === "settings" ||
           router.pathname === "/now-playing"
