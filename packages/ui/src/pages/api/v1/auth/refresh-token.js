@@ -11,7 +11,7 @@ export default async function handler(req) {
   }
 
   try {
-    const { refresh_token, isCustomAuth } = await req.json();
+    const { refresh_token } = await req.json();
     
     if (!refresh_token) {
       return new Response(
@@ -25,36 +25,15 @@ export default async function handler(req) {
 
     let clientId, clientSecret;
 
-    if (isCustomAuth) {
-      const { error: cleanupError } = await supabase
-        .from('spotify_credentials')
-        .delete()
-        .eq('refresh_token', refresh_token)
-        .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    const { data: credentials, error: fetchError } = await supabase
+      .from('spotify_credentials')
+      .select('client_id, encrypted_client_secret')
+      .eq('refresh_token', refresh_token)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
-      if (cleanupError) {
-        console.error('Error cleaning up old records:', cleanupError);
-      }
-
-      const { data: credentials, error: fetchError } = await supabase
-        .from('spotify_credentials')
-        .select('client_id, encrypted_client_secret, temp_id')
-        .eq('refresh_token', refresh_token)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (fetchError || !credentials) {
-        console.error('Error fetching custom credentials:', fetchError);
-        return new Response(
-          JSON.stringify({ error: 'Custom credentials not found' }), 
-          { 
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
+    if (credentials) {
       clientId = credentials.client_id;
       try {
         clientSecret = await decrypt(credentials.encrypted_client_secret);
@@ -68,9 +47,6 @@ export default async function handler(req) {
           }
         );
       }
-      
-      const tempId = credentials.temp_id;
-      req.tempId = tempId;
     } else {
       clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
       clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -98,29 +74,13 @@ export default async function handler(req) {
       });
     }
 
-    if (isCustomAuth && data.refresh_token) {
-      const { data: oldRecord } = await supabase
-        .from('spotify_credentials')
-        .select('token_refresh_count, first_used_at')
-        .eq('refresh_token', refresh_token)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      const encryptedSecret = await encrypt(clientSecret);
-
+    if (credentials && data.refresh_token) {
       const { error: updateError } = await supabase
         .from('spotify_credentials')
         .update({
           refresh_token: data.refresh_token,
-          encrypted_client_secret: encryptedSecret,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           last_used: new Date().toISOString(),
-          first_used_at: oldRecord?.first_used_at || new Date().toISOString(),
-          token_refresh_count: (oldRecord?.token_refresh_count || 0) + 1,
-          user_agent: req.headers.get('user-agent') || null
         })
-        .eq('temp_id', req.tempId)
         .eq('refresh_token', refresh_token);
 
       if (updateError) {

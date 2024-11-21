@@ -3,7 +3,6 @@ import { encrypt, decrypt } from '@/lib/cryptoUtils';
 export const runtime = 'experimental-edge';
 
 export default async function handler(req) {
-  
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', {
       status: 405,
@@ -13,8 +12,7 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
-
-    const { code, tempId, isCustomAuth, isPhoneAuth, sessionId } = body;
+    const { code, isPhoneAuth, sessionId } = body;
 
     if (!code) {
       console.error('Missing authorization code');
@@ -30,22 +28,12 @@ export default async function handler(req) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     );
 
-    
-    const query = supabase
-      .from('spotify_credentials')
-      .select('client_id, encrypted_client_secret, temp_id');
-
     if (isPhoneAuth && sessionId) {
-      query.eq('session_id', sessionId);
-    } else if ((isCustomAuth || isPhoneAuth) && tempId) {
-      query.eq('temp_id', tempId);
-    } else {
-      useClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-      useClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    }
-
-    if (!useClientId || !useClientSecret) {
-      const { data: credentials, error: credentialsError } = await query.maybeSingle();
+      const { data: credentials, error: credentialsError } = await supabase
+        .from('spotify_credentials')
+        .select('client_id, encrypted_client_secret')
+        .eq('session_id', sessionId)
+        .maybeSingle();
       
       if (credentialsError) {
         console.error('Database query error:', credentialsError);
@@ -73,6 +61,9 @@ export default async function handler(req) {
           { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
       }
+    } else {
+      useClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      useClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
     }
 
     if (!useClientId || !useClientSecret) {
@@ -132,9 +123,6 @@ export default async function handler(req) {
         );
       }
       
-    }
-
-    if ((isCustomAuth || isPhoneAuth) && data.refresh_token) {
       try {
         const { error: cleanupError } = await supabase
           .from('spotify_credentials')
@@ -157,7 +145,6 @@ export default async function handler(req) {
         expires_in: data.expires_in,
         token_type: data.token_type,
         scope: data.scope,
-        isCustomAuth,
         isPhoneAuth
       }), 
       { 

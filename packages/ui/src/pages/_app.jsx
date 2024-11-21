@@ -63,13 +63,11 @@ const initialAuthState = () => {
     return {
       authSelectionMade: false,
       authType: null,
-      tempId: null,
     };
   }
 
   try {
     localStorage.removeItem("spotifyAuthType");
-    localStorage.removeItem("spotifyTempId");
     localStorage.removeItem("spotifyAccessToken");
     localStorage.removeItem("spotifyRefreshToken");
     localStorage.removeItem("spotifyTokenExpiry");
@@ -80,7 +78,6 @@ const initialAuthState = () => {
   return {
     authSelectionMade: false,
     authType: null,
-    tempId: null,
   };
 };
 
@@ -135,18 +132,8 @@ export default function App({ Component, pageProps }) {
     const newState = {
       authSelectionMade: true,
       authType: selection.type,
-      tempId: selection.type === "custom" ? selection.tempId : null,
     };
     setAuthState(newState);
-
-    if (selection.skipSpotifyAuth && selection.type === "custom") {
-      const savedAccessToken = localStorage.getItem("spotifyAccessToken");
-      const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-      if (savedAccessToken && savedRefreshToken) {
-        setAccessToken(savedAccessToken);
-        setRefreshToken(savedRefreshToken);
-      }
-    }
   };
 
   const handleError = (errorType, errorMessage) => {
@@ -357,47 +344,10 @@ export default function App({ Component, pageProps }) {
     const scopes =
       "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
 
-    let clientId;
+    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     const urlParams = new URLSearchParams(window.location.search);
     const phoneSession = urlParams.get("session");
     const isPhoneAuth = !!phoneSession;
-
-    if (authType === "custom" && tempId) {
-      try {
-        const supabaseInstance = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        );
-
-        const { data, error } = await supabaseInstance
-          .from("spotify_credentials")
-          .select("client_id")
-          .eq("temp_id", tempId)
-          .single();
-
-        if (error) {
-          console.error("Supabase error:", error);
-          handleError("AUTH_ERROR", "Failed to get custom credentials");
-          return;
-        }
-
-        if (!data) {
-          handleError("AUTH_ERROR", "No credentials found for the provided ID");
-          return;
-        }
-
-        clientId = data.client_id;
-        localStorage.setItem("spotifyAuthType", "custom");
-        localStorage.setItem("spotifyTempId", tempId);
-      } catch (error) {
-        console.error("Error getting custom credentials:", error);
-        handleError("AUTH_ERROR", error.message);
-        return;
-      }
-    } else {
-      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-      localStorage.setItem("spotifyAuthType", "default");
-    }
 
     if (!clientId) {
       handleError("AUTH_ERROR", "No client ID available");
