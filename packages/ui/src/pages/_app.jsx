@@ -1,6 +1,5 @@
 import "../styles/globals.css";
 import { useEffect, useState, useCallback, useRef } from "react";
-import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
 import { Inter } from "next/font/google";
 import {
@@ -14,49 +13,19 @@ import AuthSelection from "../components/AuthSelection";
 import { createClient } from "@supabase/supabase-js";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
+import { ErrorCodes } from "../constants/errorCodes";
+import {
+  calculateBrightness,
+  calculateHue,
+  hexToRgb,
+  rgbToHex,
+  generateMeshGradient,
+  getNextColor,
+  extractPaletteFromImage,
+  createPaletteFromImage,
+} from "../utils/colorUtils";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
-
-const ErrorCodes = {
-  FETCH_CURRENT_PLAYBACK_ERROR: "E001",
-  FETCH_ACCESS_TOKEN_ERROR: "E002",
-  REFRESH_ACCESS_TOKEN_ERROR: "E003",
-  FETCH_LYRICS_ERROR: "E004",
-  FETCH_USER_PLAYLISTS_ERROR: "E005",
-  SYNC_VOLUME_ERROR: "E006",
-  CHANGE_VOLUME_ERROR: "E007",
-  CHECK_LIKED_TRACKS_ERROR: "E008",
-  CHECK_IF_TRACK_IS_LIKED_ERROR: "E009",
-  TOGGLE_LIKED_TRACK_ERROR: "E010",
-  TOGGLE_LIKE_TRACK_ERROR: "E011",
-  TOGGLE_PLAY_PAUSE_ERROR: "E012",
-  SKIP_TO_NEXT_TRACK_ERROR: "E013",
-  SKIP_TO_PREVIOUS_ERROR: "E014",
-  CHECK_PLAYLIST_CONTENTS_ERROR: "E015",
-  ADD_TRACK_TO_PLAYLIST_ERROR: "E016",
-  TOGGLE_SHUFFLE_ERROR: "E017",
-  TOGGLE_REPEAT_ERROR: "E018",
-  FETCH_PLAYBACK_STATE_ERROR: "E019",
-  LOAD_MORE_TRACKS_ERROR: "E020",
-  NO_DEVICES_AVAILABLE: "E021",
-  PLAY_ALBUM_ERROR: "E022",
-  TRANSFER_PLAYBACK_ERROR: "E023",
-  PLAY_TRACK_ERROR: "E024",
-  PLAY_TRACK_REQUEST_ERROR: "E025",
-  FETCH_ALBUM_ERROR: "E026",
-  FETCH_PLAYBACK_STATE_ERROR: "E027",
-  PLAY_ARTIST_TOP_TRACKS_ERROR: "E028",
-  FETCH_ARTIST_ERROR: "E029",
-  PLAY_PLAYLIST_ERROR: "E030",
-  FETCH_PLAYLIST_ERROR: "E031",
-  FETCH_RECENTLY_PLAYED_ALBUMS_ERROR: "E032",
-  FETCH_TOP_ARTISTS_ERROR: "E033",
-  FETCH_USER_RADIO_ERROR: "E034",
-  FETCH_USER_PROFILE_ERROR: "E035",
-  AUTH_ERROR: "E036",
-  DEVICES_FETCH_ERROR: "E037",
-  FETCH_PLAYLIST_TRACKS_ERROR: "E038",
-};
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
@@ -182,49 +151,12 @@ export default function App({ Component, pageProps }) {
     }
   };
 
-  const calculateBrightness = (hex) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return 0.299 * r + 0.587 * g + 0.114 * b;
-  };
-
-  const calculateHue = (hex) => {
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h;
-
-    if (max === min) {
-      h = 0;
-    } else {
-      const d = max - min;
-      switch (max) {
-        case r:
-          h = (g - b) / d + (g < b ? 6 : 0);
-          break;
-        case g:
-          h = (b - r) / d + 2;
-          break;
-        case b:
-          h = (r - g) / d + 4;
-          break;
-      }
-      h /= 6;
-    }
-    return h * 360;
-  };
-
   const extractColors = (imageUrl) => {
-    const colorThief = new ColorThief();
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = imageUrl;
     img.onload = () => {
-      const palette = colorThief.getPalette(img, 8);
+      const palette = createPaletteFromImage(img);
       const filteredColors = palette
         .map(
           (color) =>
@@ -238,46 +170,6 @@ export default function App({ Component, pageProps }) {
 
       setColors(filteredColors);
     };
-  };
-
-  const hexToRgb = (hex) => {
-    const bigint = parseInt(hex.slice(1), 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return { r, g, b };
-  };
-
-  const rgbToHex = ({ r, g, b }) => {
-    const toHex = (n) => n.toString(16).padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
-
-  const getNextColor = (current, target) => {
-    const step = (start, end) => {
-      if (start === end) return start;
-      const diff = end - start;
-      return start + (diff > 0 ? Math.min(1, diff) : Math.max(-1, diff));
-    };
-
-    return {
-      r: step(current.r, target.r),
-      g: step(current.g, target.g),
-      b: step(current.b, target.b),
-    };
-  };
-
-  const generateMeshGradient = (colors) => {
-    if (colors.length === 0) return "#191414";
-
-    const positions = ["at 0% 25%", "at 25% 0%", "at 100% 75%", "at 75% 100%"];
-
-    const radialGradients = positions.map((position, index) => {
-      const color = colors[index % colors.length];
-      return `radial-gradient(${position}, ${color} 0%, transparent 80%)`;
-    });
-
-    return `${radialGradients.join(", ")}`;
   };
 
   const fetchCurrentPlayback = async () => {
@@ -1293,19 +1185,10 @@ export default function App({ Component, pageProps }) {
         return;
       }
 
-      const colorThief = new ColorThief();
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = imageUrl;
-      img.onload = () => {
-        const dominantColors = colorThief.getPalette(img, 4);
-        const hexColors = dominantColors.map((color) =>
-          rgbToHex({ r: color[0], g: color[1], b: color[2] })
-        );
-
+      extractPaletteFromImage(imageUrl).then((colors) => {
         setSectionGradients((prev) => ({
           ...prev,
-          [section]: hexColors,
+          [section]: colors,
         }));
 
         if (
@@ -1313,21 +1196,14 @@ export default function App({ Component, pageProps }) {
           section === "nowPlaying" ||
           activeSection === "nowPlaying"
         ) {
-          setTargetColor1(hexColors[0]);
-          setTargetColor2(hexColors[1]);
-          setTargetColor3(hexColors[2]);
-          setTargetColor4(hexColors[3]);
+          setTargetColor1(colors[0]);
+          setTargetColor2(colors[1]);
+          setTargetColor3(colors[2]);
+          setTargetColor4(colors[3]);
         }
-      };
+      });
     },
-    [
-      activeSection,
-      router.pathname,
-      setTargetColor1,
-      setTargetColor2,
-      setTargetColor3,
-      setTargetColor4,
-    ]
+    [activeSection, router.pathname]
   );
 
   useEffect(() => {
