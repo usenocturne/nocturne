@@ -56,11 +56,13 @@ export default async function handler(req) {
     params.append("grant_type", "refresh_token");
     params.append("refresh_token", refresh_token);
 
+    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
     const response = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: "Basic " + btoa(`${clientId}:${clientSecret}`),
+        "Authorization": `Basic ${authString}`,
       },
       body: params.toString(),
     });
