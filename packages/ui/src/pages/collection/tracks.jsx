@@ -388,9 +388,7 @@ const LikedSongsPage = ({
             </div>
           </div>
         ))}
-        {isLoading && (
-          <p className="text-white text-center">Loading more tracks...</p>
-        )}
+        {isLoading && <div className="flex justify-center mt-4" />}
       </div>
       <SuccessAlert
         show={showSuccess}
