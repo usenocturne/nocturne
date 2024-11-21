@@ -67,12 +67,19 @@ const initialAuthState = () => {
   }
 
   try {
-    localStorage.removeItem("spotifyAuthType");
-    localStorage.removeItem("spotifyAccessToken");
-    localStorage.removeItem("spotifyRefreshToken");
-    localStorage.removeItem("spotifyTokenExpiry");
+    const existingAuthType = localStorage.getItem("spotifyAuthType");
+    const existingAccessToken = localStorage.getItem("spotifyAccessToken");
+    const existingRefreshToken = localStorage.getItem("spotifyRefreshToken");
+    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+
+    if (existingAuthType && existingRefreshToken) {
+      return {
+        authSelectionMade: true,
+        authType: existingAuthType,
+      };
+    }
   } catch (e) {
-    console.error("Error clearing localStorage:", e);
+    console.error("Error accessing localStorage:", e);
   }
 
   return {
@@ -83,7 +90,6 @@ const initialAuthState = () => {
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
-
   const [isHydrated, setIsHydrated] = useState(false);
   const [authState, setAuthState] = useState(initialAuthState);
   const [accessToken, setAccessToken] = useState(null);
@@ -127,6 +133,23 @@ export default function App({ Component, pageProps }) {
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
   const { authSelectionMade, authType, tempId } = authState;
+
+  useEffect(() => {
+    if (accessToken) {
+      localStorage.setItem("spotifyAccessToken", accessToken);
+      localStorage.setItem(
+        "spotifyTokenExpiry",
+        new Date(Date.now() + 3600 * 1000).toISOString()
+      );
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (refreshToken) {
+      localStorage.setItem("spotifyRefreshToken", refreshToken);
+      localStorage.setItem("spotifyAuthType", authState.authType);
+    }
+  }, [refreshToken, authState.authType]);
 
   const handleAuthSelection = async (selection) => {
     const newState = {
@@ -1048,8 +1071,13 @@ export default function App({ Component, pageProps }) {
     if (accessToken) {
       const checkTokenExpiry = async () => {
         const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+        const currentTime = new Date();
+        const expiryTime = new Date(tokenExpiry);
 
-        if (tokenExpiry && new Date(tokenExpiry) <= new Date()) {
+        if (
+          !tokenExpiry ||
+          expiryTime <= new Date(currentTime.getTime() + 5 * 60000)
+        ) {
           try {
             const refreshData = await refreshAccessToken();
             if (refreshData.access_token) {
@@ -1075,16 +1103,22 @@ export default function App({ Component, pageProps }) {
             }
           } catch (error) {
             console.error("Token refresh failed:", error);
-            redirectToSpotify();
+            if (error.message.includes("invalid_grant")) {
+              clearSession();
+              redirectToSpotify();
+            }
           }
         }
       };
 
-      const tokenRefreshInterval = setInterval(checkTokenExpiry, 3000 * 1000);
+      checkTokenExpiry();
 
+      const tokenRefreshInterval = setInterval(checkTokenExpiry, 5 * 60 * 1000);
+      const playbackInterval = setInterval(() => {
+        fetchCurrentPlayback();
+      }, 1000);
       setLoading(false);
 
-      checkTokenExpiry();
       fetchRecentlyPlayedAlbums(
         accessToken,
         setAlbums,
@@ -1104,10 +1138,6 @@ export default function App({ Component, pageProps }) {
         handleError
       );
       fetchUserRadio(accessToken, setRadio, updateGradientColors, handleError);
-
-      const playbackInterval = setInterval(() => {
-        fetchCurrentPlayback();
-      }, 1000);
 
       const recentlyPlayedInterval = setInterval(() => {
         fetchRecentlyPlayedAlbums(
@@ -1146,6 +1176,19 @@ export default function App({ Component, pageProps }) {
       }
     }
   }, [router.pathname, currentPlayback]);
+
+  const clearSession = () => {
+    localStorage.removeItem("spotifyAccessToken");
+    localStorage.removeItem("spotifyRefreshToken");
+    localStorage.removeItem("spotifyTokenExpiry");
+    localStorage.removeItem("spotifyAuthType");
+    setAccessToken(null);
+    setRefreshToken(null);
+    setAuthState({
+      authSelectionMade: false,
+      authType: null,
+    });
+  };
 
   const updateGradientColors = useCallback(
     (imageUrl, section = null) => {
