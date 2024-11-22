@@ -23,7 +23,7 @@ import {
   getNextColor,
   extractPaletteFromImage,
   createPaletteFromImage,
-} from "../utils/colorUtils";
+} from "../lib/colorUtils";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -32,6 +32,7 @@ const initialAuthState = () => {
     return {
       authSelectionMade: false,
       authType: null,
+      tempId: null,
     };
   }
 
@@ -40,7 +41,6 @@ const initialAuthState = () => {
     const existingAccessToken = localStorage.getItem("spotifyAccessToken");
     const existingRefreshToken = localStorage.getItem("spotifyRefreshToken");
     const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
-
     if (existingAuthType && existingRefreshToken) {
       return {
         authSelectionMade: true,
@@ -54,6 +54,7 @@ const initialAuthState = () => {
   return {
     authSelectionMade: false,
     authType: null,
+    tempId: null,
   };
 };
 
@@ -130,8 +131,18 @@ export default function App({ Component, pageProps }) {
     const newState = {
       authSelectionMade: true,
       authType: selection.type,
+      tempId: selection.type === "custom" ? selection.tempId : null,
     };
     setAuthState(newState);
+
+    if (selection.skipSpotifyAuth && selection.type === "custom") {
+      const savedAccessToken = localStorage.getItem("spotifyAccessToken");
+      const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+      if (savedAccessToken && savedRefreshToken) {
+        setAccessToken(savedAccessToken);
+        setRefreshToken(savedRefreshToken);
+      }
+    }
   };
 
   const handleError = (errorType, errorMessage) => {
@@ -265,10 +276,47 @@ export default function App({ Component, pageProps }) {
     const scopes =
       "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
 
-    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+    let clientId;
     const urlParams = new URLSearchParams(window.location.search);
     const phoneSession = urlParams.get("session");
     const isPhoneAuth = !!phoneSession;
+
+    if (authType === "custom" && tempId) {
+      try {
+        const supabaseInstance = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+
+        const { data, error } = await supabaseInstance
+          .from("spotify_credentials")
+          .select("client_id")
+          .eq("temp_id", tempId)
+          .single();
+
+        if (error) {
+          console.error("Supabase error:", error);
+          handleError("AUTH_ERROR", "Failed to get custom credentials");
+          return;
+        }
+
+        if (!data) {
+          handleError("AUTH_ERROR", "No credentials found for the provided ID");
+          return;
+        }
+
+        clientId = data.client_id;
+        localStorage.setItem("spotifyAuthType", "custom");
+        localStorage.setItem("spotifyTempId", tempId);
+      } catch (error) {
+        console.error("Error getting custom credentials:", error);
+        handleError("AUTH_ERROR", error.message);
+        return;
+      }
+    } else {
+      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      localStorage.setItem("spotifyAuthType", "default");
+    }
 
     if (!clientId) {
       handleError("AUTH_ERROR", "No client ID available");
@@ -372,6 +420,66 @@ export default function App({ Component, pageProps }) {
       window.removeEventListener("app-escape-pressed", handleAppEscape);
     };
   }, [router, setActiveSection]);
+
+  useEffect(() => {
+    const handleWheel = (event) => {
+      if (showBrightnessOverlay) {
+        event.stopPropagation();
+        event.preventDefault();
+        setBrightness((prev) => {
+          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
+          return Math.max(5, Math.min(250, newValue));
+        });
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (
+        showBrightnessOverlay &&
+        ["1", "2", "3", "4", "Escape", "Enter"].includes(event.key)
+      ) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const existingTimeout = window.brightnessOverlayTimer;
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+        setShowBrightnessOverlay(false);
+      }
+    };
+
+    const handleTouchMove = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleTouchStart = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener("wheel", handleWheel, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel, { capture: true });
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [showBrightnessOverlay]);
 
   useEffect(() => {
     const handleWheel = (event) => {
@@ -879,11 +987,6 @@ export default function App({ Component, pageProps }) {
                             margin: 0;
                             line-height: 1.5;
                           }
-                          .countdown {
-                            margin-top: 24px;
-                            color: rgba(255,255,255,0.5);
-                            font-size: 14px;
-                          }
                         </style>
                       </head>
                       <body>
@@ -894,7 +997,6 @@ export default function App({ Component, pageProps }) {
                         </div>
                         <h1>Authentication Successful</h1>
                         <p>You can close this window and return to Nocturne.</p>
-                        <div class="countdown">This window will close automatically...</div>
                       </body>
                     </html>
                   `;
@@ -1020,13 +1122,8 @@ export default function App({ Component, pageProps }) {
     if (accessToken) {
       const checkTokenExpiry = async () => {
         const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
-        const currentTime = new Date();
-        const expiryTime = new Date(tokenExpiry);
 
-        if (
-          !tokenExpiry ||
-          expiryTime <= new Date(currentTime.getTime() + 5 * 60000)
-        ) {
+        if (tokenExpiry && new Date(tokenExpiry) <= new Date()) {
           try {
             const refreshData = await refreshAccessToken();
             if (refreshData.access_token) {
@@ -1060,14 +1157,11 @@ export default function App({ Component, pageProps }) {
         }
       };
 
-      checkTokenExpiry();
+      const tokenRefreshInterval = setInterval(checkTokenExpiry, 3000 * 1000);
 
-      const tokenRefreshInterval = setInterval(checkTokenExpiry, 5 * 60 * 1000);
-      const playbackInterval = setInterval(() => {
-        fetchCurrentPlayback();
-      }, 1000);
       setLoading(false);
 
+      checkTokenExpiry();
       fetchRecentlyPlayedAlbums(
         accessToken,
         setAlbums,
@@ -1087,6 +1181,10 @@ export default function App({ Component, pageProps }) {
         handleError
       );
       fetchUserRadio(accessToken, setRadio, updateGradientColors, handleError);
+
+      const playbackInterval = setInterval(() => {
+        fetchCurrentPlayback();
+      }, 1000);
 
       const recentlyPlayedInterval = setInterval(() => {
         fetchRecentlyPlayedAlbums(
@@ -1139,72 +1237,66 @@ export default function App({ Component, pageProps }) {
     });
   };
 
-  const updateGradientColors = useCallback(
-    (imageUrl, section = null) => {
-      if (!imageUrl) {
-        if (section === "radio") {
-          const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
-          setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
-          if (activeSection === "radio" || activeSection === "nowPlaying") {
-            setTargetColor1(radioColors[0]);
-            setTargetColor2(radioColors[1]);
-            setTargetColor3(radioColors[2]);
-            setTargetColor4(radioColors[3]);
-          }
-        } else if (section === "library") {
-          const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
-          setSectionGradients((prev) => ({
-            ...prev,
-            [section]: libraryColors,
-          }));
-          if (activeSection === "library") {
-            setTargetColor1(libraryColors[0]);
-            setTargetColor2(libraryColors[1]);
-            setTargetColor3(libraryColors[2]);
-            setTargetColor4(libraryColors[3]);
-          }
-        } else if (
-          section === "settings" ||
-          router.pathname === "/now-playing"
-        ) {
-          const settingsColors = ["#191414", "#191414", "#191414", "#191414"];
-          setSectionGradients((prev) => ({
-            ...prev,
-            [section]: settingsColors,
-          }));
-          if (
-            activeSection === "settings" ||
-            router.pathname === "/now-playing"
-          ) {
-            setTargetColor1(settingsColors[0]);
-            setTargetColor2(settingsColors[1]);
-            setTargetColor3(settingsColors[2]);
-            setTargetColor4(settingsColors[3]);
-          }
+  const updateGradientColors = useCallback((imageUrl, section = null) => {
+    if (!imageUrl) {
+      if (section === "radio") {
+        const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
+        setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
+        if (activeSection === "radio" || activeSection === "nowPlaying") {
+          setTargetColor1(radioColors[0]);
+          setTargetColor2(radioColors[1]);
+          setTargetColor3(radioColors[2]);
+          setTargetColor4(radioColors[3]);
         }
-        return;
-      }
-
-      extractPaletteFromImage(imageUrl).then((colors) => {
+      } else if (section === "library") {
+        const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
         setSectionGradients((prev) => ({
           ...prev,
-          [section]: colors,
+          [section]: libraryColors,
         }));
-
-        if (
-          section === activeSection ||
-          section === "nowPlaying" ||
-          activeSection === "nowPlaying"
-        ) {
-          setTargetColor1(colors[0]);
-          setTargetColor2(colors[1]);
-          setTargetColor3(colors[2]);
-          setTargetColor4(colors[3]);
+        if (activeSection === "library") {
+          setTargetColor1(libraryColors[0]);
+          setTargetColor2(libraryColors[1]);
+          setTargetColor3(libraryColors[2]);
+          setTargetColor4(libraryColors[3]);
         }
-      });
-    },
-    [activeSection, router.pathname]
-  );
+      } else if (section === "settings" || router.pathname === "/now-playing") {
+        const settingsColors = ["#191414", "#191414", "#191414", "#191414"];
+        setSectionGradients((prev) => ({
+          ...prev,
+          [section]: settingsColors,
+        }));
+        if (
+          activeSection === "settings" ||
+          router.pathname === "/now-playing"
+        ) {
+          setTargetColor1(settingsColors[0]);
+          setTargetColor2(settingsColors[1]);
+          setTargetColor3(settingsColors[2]);
+          setTargetColor4(settingsColors[3]);
+        }
+      }
+      return;
+    }
+
+    extractPaletteFromImage(imageUrl).then((colors) => {
+      setSectionGradients((prev) => ({
+        ...prev,
+        [section]: colors,
+      }));
+
+      if (
+        section === activeSection ||
+        section === "nowPlaying" ||
+        activeSection === "nowPlaying"
+      ) {
+        setTargetColor1(colors[0]);
+        setTargetColor2(colors[1]);
+        setTargetColor3(colors[2]);
+        setTargetColor4(colors[3]);
+      }
+    });
+  }, [activeSection, router.pathname, setTargetColor1, setTargetColor2, setTargetColor3, setTargetColor4][(activeSection, router.pathname)]);
 
   useEffect(() => {
     const current1 = hexToRgb(currentColor1);

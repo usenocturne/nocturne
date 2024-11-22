@@ -4,7 +4,6 @@ import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 import SuccessAlert from "../../components/SuccessAlert";
 export const runtime = "experimental-edge";
-
 const LikedSongsPage = ({
   initialTracks,
   currentlyPlayingTrackUri,
@@ -24,22 +23,17 @@ const LikedSongsPage = ({
   const observer = useRef();
   const [showSuccess, setShowSuccess] = useState(false);
   const [pressedButton, setPressedButton] = useState(null);
-
   useEffect(() => {
     updateGradientColors(null, "library");
   }, [updateGradientColors]);
-
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
     const holdDuration = 2000;
     const holdTimeouts = {};
     const pressStartTimes = {};
-
     const handleKeyDown = (event) => {
       if (!validKeys.includes(event.key) || event.repeat) return;
-
       pressStartTimes[event.key] = Date.now();
-
       holdTimeouts[event.key] = setTimeout(() => {
         const currentUrl = window.location.pathname;
         localStorage.setItem(`button${event.key}Map`, currentUrl);
@@ -47,26 +41,20 @@ const LikedSongsPage = ({
           `button${event.key}Image`,
           "https://misc.scdn.co/liked-songs/liked-songs-640.png"
         );
-
         setPressedButton(event.key);
         setShowSuccess(true);
       }, holdDuration);
     };
-
     const handleKeyUp = (event) => {
       if (!validKeys.includes(event.key)) return;
-
       if (holdTimeouts[event.key]) {
         clearTimeout(holdTimeouts[event.key]);
         delete holdTimeouts[event.key];
       }
-
       delete pressStartTimes[event.key];
     };
-
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-
     return () => {
       Object.values(holdTimeouts).forEach(
         (timeout) => timeout && clearTimeout(timeout)
@@ -75,13 +63,11 @@ const LikedSongsPage = ({
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
-
   useEffect(() => {
     if (error) {
       handleError(error.type, error.message);
     }
   }, [error, handleError]);
-
   const lastTrackElementRef = useCallback(
     (node) => {
       if (isLoading) return;
@@ -95,7 +81,6 @@ const LikedSongsPage = ({
     },
     [isLoading, hasMore]
   );
-
   useEffect(() => {
     const fetchPlaybackState = async () => {
       try {
@@ -112,7 +97,6 @@ const LikedSongsPage = ({
         handleError("FETCH_PLAYBACK_STATE_ERROR", error.message);
       }
     };
-
     fetchPlaybackState();
   }, [accessToken]);
 
@@ -122,9 +106,7 @@ const LikedSongsPage = ({
         playLikedSongs();
       }
     };
-
     window.addEventListener("keydown", handleKeyPress);
-
     return () => {
       window.removeEventListener("keydown", handleKeyPress);
     };
@@ -135,7 +117,6 @@ const LikedSongsPage = ({
     setIsLoading(true);
     const offset = tracks.length;
     const limit = 25;
-
     try {
       const response = await fetch(
         `https://api.spotify.com/v1/me/tracks?offset=${offset}&limit=${limit}`,
@@ -145,11 +126,9 @@ const LikedSongsPage = ({
           },
         }
       );
-
       if (!response.ok) {
         throw new Error("Failed to fetch more tracks");
       }
-
       const data = await response.json();
       if (data.items.length === 0) {
         setHasMore(false);
@@ -163,7 +142,6 @@ const LikedSongsPage = ({
       setIsLoading(false);
     }
   };
-
   const playLikedSongs = async () => {
     try {
       const devicesResponse = await fetch(
@@ -174,9 +152,7 @@ const LikedSongsPage = ({
           },
         }
       );
-
       const devicesData = await devicesResponse.json();
-
       if (devicesData.devices.length === 0) {
         handleError(
           "NO_DEVICES_AVAILABLE",
@@ -184,10 +160,8 @@ const LikedSongsPage = ({
         );
         return;
       }
-
       const device = devicesData.devices[0];
       const activeDeviceId = device.id;
-
       if (!device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
@@ -201,7 +175,6 @@ const LikedSongsPage = ({
           }),
         });
       }
-
       await fetch(
         `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
         {
@@ -211,7 +184,6 @@ const LikedSongsPage = ({
           },
         }
       );
-
       let offset;
       if (isShuffleEnabled) {
         const randomPosition = Math.floor(Math.random() * tracks.length);
@@ -219,7 +191,6 @@ const LikedSongsPage = ({
       } else {
         offset = { position: 0 };
       }
-
       await fetch("https://api.spotify.com/v1/me/player/play", {
         method: "PUT",
         headers: {
@@ -232,13 +203,11 @@ const LikedSongsPage = ({
           device_id: activeDeviceId,
         }),
       });
-
       router.push("/now-playing");
     } catch (error) {
       handleError("PLAY_LIKED_SONGS_ERROR", error.message);
     }
   };
-
   const playTrack = async (trackUri, trackIndex) => {
     try {
       const devicesResponse = await fetch(
@@ -249,9 +218,7 @@ const LikedSongsPage = ({
           },
         }
       );
-
       const devicesData = await devicesResponse.json();
-
       if (devicesData.devices.length === 0) {
         handleError(
           "NO_DEVICES_AVAILABLE",
@@ -259,10 +226,8 @@ const LikedSongsPage = ({
         );
         return;
       }
-
       const device = devicesData.devices[0];
       const activeDeviceId = device.id;
-
       if (!device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
@@ -276,7 +241,6 @@ const LikedSongsPage = ({
           }),
         });
       }
-
       await fetch(
         `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
         {
@@ -286,7 +250,6 @@ const LikedSongsPage = ({
           },
         }
       );
-
       await fetch("https://api.spotify.com/v1/me/player/play", {
         method: "PUT",
         headers: {
@@ -299,13 +262,11 @@ const LikedSongsPage = ({
           device_id: activeDeviceId,
         }),
       });
-
       router.push("/now-playing");
     } catch (error) {
       handleError("PLAY_TRACK_ERROR", error.message);
     }
   };
-
   return (
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen fadeIn-animation">
       <div className="md:w-1/3 h-screen sticky top-0">
@@ -331,7 +292,6 @@ const LikedSongsPage = ({
           </h4>
         </div>
       </div>
-
       <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container scroll-smooth pb-12">
         {tracks.map((item, index) => (
           <div
@@ -353,7 +313,6 @@ const LikedSongsPage = ({
                 <p>{index + 1}</p>
               )}
             </div>
-
             <div className="flex-grow">
               <LongPressLink
                 href="/now-playing"
@@ -401,23 +360,18 @@ const LikedSongsPage = ({
     </div>
   );
 };
-
 export async function getServerSideProps(context) {
   const accessToken = context.query.accessToken;
-
   try {
     const res = await fetch(`https://api.spotify.com/v1/me/tracks?limit=25`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-
     if (!res.ok) {
       throw new Error("Failed to fetch liked songs");
     }
-
     const tracksData = await res.json();
-
     return {
       props: {
         initialTracks: tracksData,
@@ -438,5 +392,4 @@ export async function getServerSideProps(context) {
     };
   }
 }
-
 export default LikedSongsPage;

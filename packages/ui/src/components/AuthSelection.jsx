@@ -1,13 +1,33 @@
 import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
+import { Eye, EyeOff } from "lucide-react";
+import ErrorAlert from "./ErrorAlert";
 import QRAuthFlow from "./QRAuthFlow";
 import packageInfo from "../../package.json";
 
 const AuthMethodSelector = ({ onSelect }) => {
+  const [showCustomForm, setShowCustomForm] = useState(false);
   const [showQRFlow, setShowQRFlow] = useState(false);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [showClientSecret, setShowClientSecret] = useState(false);
+  const [alert, setAlert] = useState(null);
   const [buttonsVisible, setButtonsVisible] = useState(true);
-  const [defaultButtonVisible, setDefaultButtonVisible] = useState(false);
+  const [formVisible, setFormVisible] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [showDefaultButton, setShowDefaultButton] = useState(false);
+  const [defaultButtonVisible, setDefaultButtonVisible] = useState(false);
   const [escapeKeyTimer, setEscapeKeyTimer] = useState(null);
+
+  useEffect(() => {
+    if (showCustomForm) {
+      setButtonsVisible(false);
+      setTimeout(() => setFormVisible(true), 250);
+    } else {
+      setFormVisible(false);
+      setTimeout(() => setButtonsVisible(true), 250);
+    }
+  }, [showCustomForm]);
 
   useEffect(() => {
     if (showDefaultButton) {
@@ -44,10 +64,103 @@ const AuthMethodSelector = ({ onSelect }) => {
     };
   }, [escapeKeyTimer]);
 
+  useEffect(() => {
+    if (showCustomForm) {
+      setButtonsVisible(false);
+      setTimeout(() => setFormVisible(true), 250);
+    } else {
+      setFormVisible(false);
+      setTimeout(() => setButtonsVisible(true), 250);
+    }
+  }, [showCustomForm]);
+
+  const validateSpotifyCredentials = async (clientId, clientSecret, tempId) => {
+    try {
+      const response = await fetch("/api/v1/auth/validate-credentials", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clientId,
+          clientSecret,
+          tempId,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to validate credentials");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Validation error:", error);
+      setAlert({
+        message:
+          error.message ||
+          "Invalid credentials. Please check your Client ID and Client Secret.",
+      });
+      return false;
+    }
+  };
+
+  const generateSecureTempId = () => {
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+      ""
+    );
+  };
+
+  const handleCustomSubmit = async (e) => {
+    e.preventDefault();
+    if (!clientId.trim() || !clientSecret.trim()) {
+      setAlert({
+        message: "Please enter both Client ID and Client Secret",
+      });
+      return;
+    }
+
+    try {
+      setIsValidating(true);
+
+      const tempId = generateSecureTempId();
+      const isValid = await validateSpotifyCredentials(
+        clientId.trim(),
+        clientSecret.trim(),
+        tempId
+      );
+
+      if (!isValid) {
+        return;
+      }
+
+      localStorage.setItem("spotifyAuthType", "custom");
+      localStorage.setItem("spotifyTempId", tempId);
+      onSelect({ type: "custom", tempId });
+    } catch (err) {
+      setAlert({
+        message: "Failed to store credentials. Please try again.",
+      });
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
   const handleDefaultSubmit = (e) => {
     e.preventDefault();
     localStorage.setItem("spotifyAuthType", "default");
     onSelect({ type: "default" });
+  };
+
+  const handleBackClick = () => {
+    setShowCustomForm(false);
+    setClientId("");
+    setClientSecret("");
+    setAlert(null);
   };
 
   const NocturneIcon = ({ className }) => (
@@ -90,23 +203,19 @@ const AuthMethodSelector = ({ onSelect }) => {
         <div className="sm:mx-auto sm:w-full sm:max-w-xl">
           <div
             className={`relative transition-all duration-250 ${
-              showDefaultButton ? "h-[260px]" : "h-[150px]"
+              formVisible
+                ? "h-[300px]"
+                : showDefaultButton
+                ? "h-[260px]"
+                : "h-[150px]"
             }`}
           >
             <div
               className={`absolute top-0 left-0 w-full transition-opacity duration-250 ${
                 buttonsVisible ? "opacity-100" : "opacity-0"
-              } ${showDefaultButton ? "space-y-6 mt-2" : "mt-6"}`}
+              } ${showDefaultButton ? "space-y-6 mt-2" : "mt-4"}`}
               style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
             >
-              <div>
-                <button
-                  onClick={() => setShowQRFlow(true)}
-                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
-                >
-                  Login with Phone
-                </button>
-              </div>
               <div
                 className={`transition-all duration-250 overflow-hidden ${
                   showDefaultButton
@@ -118,15 +227,100 @@ const AuthMethodSelector = ({ onSelect }) => {
               >
                 <button
                   onClick={handleDefaultSubmit}
-                  className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
+                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
                 >
                   Use Developer Credentials
                 </button>
+                <button
+                  onClick={() => setShowCustomForm(true)}
+                  className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
+                >
+                  Use Custom Credentials (Beta)
+                </button>
               </div>
-              <p className="mt-6 text-center text-white/30 text-[16px]">
+              <div className="space-y-6">
+                <button
+                  onClick={() => setShowQRFlow(true)}
+                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
+                >
+                  Login with Phone
+                </button>
+              </div>
+              <p className="mt-4 text-center text-white/30 text-[16px]">
                 {packageInfo.version}
               </p>
             </div>
+
+            <form
+              onSubmit={handleCustomSubmit}
+              className={`space-y-6 absolute top-0 left-0 w-full transition-opacity duration-250 ${
+                formVisible ? "opacity-100" : "opacity-0"
+              }`}
+              style={{ pointerEvents: formVisible ? "auto" : "none" }}
+            >
+              <div>
+                <div className="mt-2">
+                  <input
+                    id="clientId"
+                    name="clientId"
+                    type="text"
+                    value={clientId}
+                    onChange={(e) => setClientId(e.target.value)}
+                    required
+                    placeholder="Client ID"
+                    disabled={isValidating}
+                    className="block w-full rounded-2xl border-0 bg-black/10 py-4 px-6 text-white shadow-sm ring-1 ring-inset focus:ring-2 focus:ring-white/20 ring-white/10 text-[32px] sm:leading-6"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="mt-2 relative">
+                  <input
+                    id="clientSecret"
+                    name="clientSecret"
+                    type={showClientSecret ? "text" : "password"}
+                    value={clientSecret}
+                    onChange={(e) => setClientSecret(e.target.value)}
+                    required
+                    placeholder="Client Secret"
+                    disabled={isValidating}
+                    className="block w-full rounded-2xl border-0 bg-black/10 py-4 px-6 text-white shadow-sm ring-1 ring-inset focus:ring-2 focus:ring-white/20 ring-white/10 text-[32px] sm:leading-6"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowClientSecret(!showClientSecret)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showClientSecret ? (
+                      <EyeOff size={24} />
+                    ) : (
+                      <Eye size={24} />
+                    )}
+                  </button>
+                </div>
+                <ErrorAlert error={alert} onClose={() => setAlert(null)} />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleBackClick}
+                  disabled={isValidating}
+                  className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[580] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={isValidating}
+                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[580] text-white tracking-tight shadow-sm disabled:opacity-50"
+                >
+                  Continue
+                </button>
+              </div>
+            </form>
           </div>
           {showQRFlow && (
             <QRAuthFlow

@@ -137,9 +137,7 @@ const PlaylistPage = ({
         playPlaylist();
       }
     };
-
     window.addEventListener("keydown", handleKeyPress);
-
     return () => {
       window.removeEventListener("keydown", handleKeyPress);
     };
