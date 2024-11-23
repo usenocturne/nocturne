@@ -1265,7 +1265,7 @@ export default function App({ Component, pageProps }) {
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         );
 
-        const { error } = await supabaseInstance
+        let { error } = await supabaseInstance
           .from("spotify_credentials")
           .delete()
           .match({
