@@ -3,6 +3,8 @@ import Settings from "../components/Settings";
 import LongPressLink from "../components/LongPressLink";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { fetchLikedSongs } from "../services/playlistService";
+import DonationQRModal from "../components/DonationQRModal";
 
 export default function Home({
   accessToken,
@@ -16,13 +18,14 @@ export default function Home({
   updateGradientColors,
   currentlyPlayingAlbum,
   showBrightnessOverlay,
+  handleError,
 }) {
+  const [showDonationModal, setShowDonationModal] = useState(false);
   useEffect(() => {
     if (activeSection === "radio") {
       updateGradientColors(null, "radio");
     } else if (activeSection === "library" && playlists.length > 0) {
-      const firstPlaylistImage = playlists[0]?.images?.[0]?.url;
-      updateGradientColors(firstPlaylistImage || null, "library");
+      updateGradientColors(null, "library");
     } else if (activeSection === "artists" && artists.length > 0) {
       const firstArtistImage = artists[0]?.images?.[0]?.url;
       updateGradientColors(firstArtistImage || null, "artists");
@@ -40,6 +43,13 @@ export default function Home({
   const prevQueueLengthRef = useRef(albumsQueue.length);
   const itemWidth = 290;
   const hasScrolledToCurrentAlbumRef = useRef(false);
+  const [likedSongs, setLikedSongs] = useState({
+    name: "Liked Songs",
+    tracks: { total: 0 },
+    external_urls: {
+      spotify: "https://open.spotify.com/collection/tracks",
+    },
+  });
 
   const handleWheel = (e) => {
     if (!showBrightnessOverlay) {
@@ -132,6 +142,16 @@ export default function Home({
     hasScrolledToCurrentAlbumRef.current = false;
   }, [activeSection]);
 
+  useEffect(() => {
+    if (accessToken) {
+      fetchLikedSongs(accessToken, handleError).then((liked) => {
+        if (liked) {
+          setLikedSongs(liked);
+        }
+      });
+    }
+  }, [accessToken]);
+
   return (
     <div className="relative min-h-screen">
       {!loading && (
@@ -200,38 +220,73 @@ export default function Home({
                   ))}
                 </>
               )}
-              {activeSection === "library" &&
-                playlists.map((item) => (
-                  <div key={item.id} className="min-w-[280px] mr-10 snap-start">
-                    <LongPressLink
-                      href={`/playlist/${item.id}`}
-                      spotifyUrl={item?.external_urls?.spotify}
-                      accessToken={accessToken}
-                    >
-                      <Image
-                        src={
-                          item?.images?.[0]?.url || "/images/not-playing.webp"
-                        }
-                        alt="Playlist Cover"
-                        width={280}
-                        height={280}
-                        className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                      />
-                    </LongPressLink>
-                    <LongPressLink
-                      href={`/playlist/${item.id}`}
-                      spotifyUrl={item?.external_urls?.spotify}
-                      accessToken={accessToken}
-                    >
-                      <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                        {item.name}
+              {activeSection === "library" && (
+                <>
+                  {likedSongs && (
+                    <div className="min-w-[280px] mr-10 snap-start">
+                      <LongPressLink
+                        href="/collection/tracks"
+                        spotifyUrl={likedSongs.external_urls.spotify}
+                        accessToken={accessToken}
+                      >
+                        <Image
+                          src="https://misc.scdn.co/liked-songs/liked-songs-640.png"
+                          alt="Liked Songs"
+                          width={280}
+                          height={280}
+                          className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                        />
+                      </LongPressLink>
+                      <LongPressLink
+                        href="/collection/tracks"
+                        spotifyUrl={likedSongs.external_urls.spotify}
+                        accessToken={accessToken}
+                      >
+                        <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                          {likedSongs.name}
+                        </h4>
+                      </LongPressLink>
+                      <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                        {likedSongs.tracks.total.toLocaleString()} Songs
                       </h4>
-                    </LongPressLink>
-                    <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                      {item.tracks.total.toLocaleString()} Songs
-                    </h4>
-                  </div>
-                ))}
+                    </div>
+                  )}
+                  {playlists.map((item) => (
+                    <div
+                      key={item.id}
+                      className="min-w-[280px] mr-10 snap-start"
+                    >
+                      <LongPressLink
+                        href={`/playlist/${item.id}`}
+                        spotifyUrl={item?.external_urls?.spotify}
+                        accessToken={accessToken}
+                      >
+                        <Image
+                          src={
+                            item?.images?.[0]?.url || "/images/not-playing.webp"
+                          }
+                          alt="Playlist Cover"
+                          width={280}
+                          height={280}
+                          className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                        />
+                      </LongPressLink>
+                      <LongPressLink
+                        href={`/playlist/${item.id}`}
+                        spotifyUrl={item?.external_urls?.spotify}
+                        accessToken={accessToken}
+                      >
+                        <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                          {item.name}
+                        </h4>
+                      </LongPressLink>
+                      <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                        {item.tracks.total.toLocaleString()} Songs
+                      </h4>
+                    </div>
+                  ))}
+                </>
+              )}
               {activeSection === "artists" &&
                 artists.map((artist) => (
                   <div
@@ -305,12 +360,18 @@ export default function Home({
                 ))}
               {activeSection === "settings" && (
                 <div className="w-full h-full overflow-y-auto">
-                  <Settings accessToken={accessToken} />
+                  <Settings
+                    accessToken={accessToken}
+                    onOpenDonationModal={() => setShowDonationModal(true)}
+                  />
                 </div>
               )}
             </div>
           </div>
         </div>
+      )}
+      {showDonationModal && (
+        <DonationQRModal onClose={() => setShowDonationModal(false)} />
       )}
     </div>
   );

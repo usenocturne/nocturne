@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { Field, Label, Switch } from "@headlessui/react";
 import { useRouter } from "next/router";
+import { supabase } from "../lib/supabaseClient";
 
-export default function Settings() {
+export default function Settings({ onOpenDonationModal }) {
   const router = useRouter();
   const [trackNameScrollingEnabled, setTrackNameScrollingEnabled] = useState(
     () => {
@@ -38,12 +39,42 @@ export default function Settings() {
     }
   }, []);
 
-  const handleSignOut = () => {
-    localStorage.removeItem("spotifyAuthType");
-    localStorage.removeItem("spotifyTempId");
-    router.push("/").then(() => {
-      window.location.reload();
-    });
+  const handleSignOut = async () => {
+    try {
+      const refreshToken = localStorage.getItem("spotifyRefreshToken");
+      const tempId = localStorage.getItem("spotifyTempId");
+      const authType = localStorage.getItem("spotifyAuthType");
+
+      if (authType === "custom" && refreshToken && tempId) {
+        const { error } = await supabase
+          .from("spotify_credentials")
+          .delete()
+          .match({
+            temp_id: tempId,
+            refresh_token: refreshToken,
+          });
+
+        if (error) {
+          console.error("Error removing credentials from database:", error);
+        }
+      }
+
+      localStorage.removeItem("spotifyAccessToken");
+      localStorage.removeItem("spotifyRefreshToken");
+      localStorage.removeItem("spotifyTokenExpiry");
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+
+      router.push("/").then(() => {
+        window.location.reload();
+      });
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      localStorage.clear();
+      router.push("/").then(() => {
+        window.location.reload();
+      });
+    }
   };
 
   return (
@@ -102,10 +133,23 @@ export default function Settings() {
             <div className="w-full border-t border-gray-300" />
           </div>
         </div>
-        <div>
+        <div className="space-y-4">
+          <button
+            onClick={onOpenDonationModal}
+            className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-[12px] px-6 py-3 mt-10"
+          >
+            <span className="text-[32px] font-[580] text-white tracking-tight">
+              Donate
+            </span>
+          </button>
+          <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
+            Support Nocturne by donating to the project. Thank you!
+          </p>
+        </div>
+        <div className="space-y-4">
           <button
             onClick={handleSignOut}
-            className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-[12px] px-6 py-3 mt-8"
+            className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-[12px] px-6 py-3"
           >
             <span className="text-[32px] font-[580] text-white tracking-tight">
               Sign Out

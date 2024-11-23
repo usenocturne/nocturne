@@ -1,6 +1,5 @@
 import "../styles/globals.css";
 import { useEffect, useState, useCallback, useRef } from "react";
-import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
 import { Inter } from "next/font/google";
 import {
@@ -14,52 +13,56 @@ import AuthSelection from "../components/AuthSelection";
 import { createClient } from "@supabase/supabase-js";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
+import { ErrorCodes } from "../constants/errorCodes";
+import {
+  calculateBrightness,
+  calculateHue,
+  hexToRgb,
+  rgbToHex,
+  generateMeshGradient,
+  getNextColor,
+  extractPaletteFromImage,
+  createPaletteFromImage,
+} from "../lib/colorUtils";
+import ResetTimerOverlay from "../components/ResetTimerOverlay";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
-const ErrorCodes = {
-  FETCH_CURRENT_PLAYBACK_ERROR: "E001",
-  FETCH_ACCESS_TOKEN_ERROR: "E002",
-  REFRESH_ACCESS_TOKEN_ERROR: "E003",
-  FETCH_LYRICS_ERROR: "E004",
-  FETCH_USER_PLAYLISTS_ERROR: "E005",
-  SYNC_VOLUME_ERROR: "E006",
-  CHANGE_VOLUME_ERROR: "E007",
-  CHECK_LIKED_TRACKS_ERROR: "E008",
-  CHECK_IF_TRACK_IS_LIKED_ERROR: "E009",
-  TOGGLE_LIKED_TRACK_ERROR: "E010",
-  TOGGLE_LIKE_TRACK_ERROR: "E011",
-  TOGGLE_PLAY_PAUSE_ERROR: "E012",
-  SKIP_TO_NEXT_TRACK_ERROR: "E013",
-  SKIP_TO_PREVIOUS_ERROR: "E014",
-  CHECK_PLAYLIST_CONTENTS_ERROR: "E015",
-  ADD_TRACK_TO_PLAYLIST_ERROR: "E016",
-  TOGGLE_SHUFFLE_ERROR: "E017",
-  TOGGLE_REPEAT_ERROR: "E018",
-  FETCH_PLAYBACK_STATE_ERROR: "E019",
-  LOAD_MORE_TRACKS_ERROR: "E020",
-  NO_DEVICES_AVAILABLE: "E021",
-  PLAY_ALBUM_ERROR: "E022",
-  TRANSFER_PLAYBACK_ERROR: "E023",
-  PLAY_TRACK_ERROR: "E024",
-  PLAY_TRACK_REQUEST_ERROR: "E025",
-  FETCH_ALBUM_ERROR: "E026",
-  FETCH_PLAYBACK_STATE_ERROR: "E027",
-  PLAY_ARTIST_TOP_TRACKS_ERROR: "E028",
-  FETCH_ARTIST_ERROR: "E029",
-  PLAY_PLAYLIST_ERROR: "E030",
-  FETCH_PLAYLIST_ERROR: "E031",
-  FETCH_RECENTLY_PLAYED_ALBUMS_ERROR: "E032",
-  FETCH_TOP_ARTISTS_ERROR: "E033",
-  FETCH_USER_RADIO_ERROR: "E034",
-  FETCH_USER_PROFILE_ERROR: "E035",
-  AUTH_ERROR: "E036",
-  DEVICES_FETCH_ERROR: "E037",
-  FETCH_PLAYLIST_TRACKS_ERROR: "E038",
+const initialAuthState = () => {
+  if (typeof window === "undefined") {
+    return {
+      authSelectionMade: false,
+      authType: null,
+      tempId: null,
+    };
+  }
+
+  try {
+    const existingAuthType = localStorage.getItem("spotifyAuthType");
+    const existingAccessToken = localStorage.getItem("spotifyAccessToken");
+    const existingRefreshToken = localStorage.getItem("spotifyRefreshToken");
+    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+    if (existingAuthType && existingRefreshToken) {
+      return {
+        authSelectionMade: true,
+        authType: existingAuthType,
+      };
+    }
+  } catch (e) {
+    console.error("Error accessing localStorage:", e);
+  }
+
+  return {
+    authSelectionMade: false,
+    authType: null,
+    tempId: null,
+  };
 };
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [authState, setAuthState] = useState(initialAuthState);
   const [accessToken, setAccessToken] = useState(null);
   const [refreshToken, setRefreshToken] = useState(null);
   const [authCode, setAuthCode] = useState(null);
@@ -96,35 +99,51 @@ export default function App({ Component, pageProps }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState(null);
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
-  const [authSelectionMade, setAuthSelectionMade] = useState(false);
-  const [authType, setAuthType] = useState(null);
-  const [tempId, setTempId] = useState(null);
   const [pressedButton, setPressedButton] = useState(null);
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
-
-  const handleAuthSelection = async (selection) => {
-    if (selection.type === "custom") {
-      setTempId(selection.tempId);
-      setAuthType("custom");
-    } else {
-      setAuthType("default");
-    }
-    setAuthSelectionMade(true);
-  };
+  const { authSelectionMade, authType, tempId } = authState;
+  const [showResetTimer, setShowResetTimer] = useState(false);
+  const keysPressed = useRef({ 4: false, Escape: false });
+  const startTimeRef = useRef(null);
+  const timerRef = useRef(null);
+  const resetDuration = 5000;
 
   useEffect(() => {
-    const savedAuthType = localStorage.getItem("spotifyAuthType");
-    const savedTempId = localStorage.getItem("spotifyTempId");
-    if (savedAuthType) {
-      setAuthType(savedAuthType);
-      if (savedAuthType === "custom" && savedTempId) {
-        setTempId(savedTempId);
-      }
-      setAuthSelectionMade(true);
+    if (accessToken) {
+      localStorage.setItem("spotifyAccessToken", accessToken);
+      localStorage.setItem(
+        "spotifyTokenExpiry",
+        new Date(Date.now() + 3600 * 1000).toISOString()
+      );
     }
-  }, []);
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (refreshToken) {
+      localStorage.setItem("spotifyRefreshToken", refreshToken);
+      localStorage.setItem("spotifyAuthType", authState.authType);
+    }
+  }, [refreshToken, authState.authType]);
+
+  const handleAuthSelection = async (selection) => {
+    const newState = {
+      authSelectionMade: true,
+      authType: selection.type,
+      tempId: selection.type === "custom" ? selection.tempId : null,
+    };
+    setAuthState(newState);
+
+    if (selection.skipSpotifyAuth && selection.type === "custom") {
+      const savedAccessToken = localStorage.getItem("spotifyAccessToken");
+      const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+      if (savedAccessToken && savedRefreshToken) {
+        setAccessToken(savedAccessToken);
+        setRefreshToken(savedRefreshToken);
+      }
+    }
+  };
 
   const handleError = (errorType, errorMessage) => {
     setError({
@@ -143,6 +162,270 @@ export default function App({ Component, pageProps }) {
     }
   };
 
+  const extractColors = (imageUrl) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = imageUrl;
+    img.onload = () => {
+      const palette = createPaletteFromImage(img);
+      const filteredColors = palette
+        .map(
+          (color) =>
+            `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}`
+        )
+        .filter((color) => {
+          const brightness = calculateBrightness(color);
+          return brightness > 120 || brightness < 10;
+        })
+        .sort((a, b) => calculateHue(a) - calculateHue(b));
+
+      setColors(filteredColors);
+    };
+  };
+
+  const fetchCurrentPlayback = async () => {
+    if (accessToken) {
+      try {
+        const response = await fetch("https://api.spotify.com/v1/me/player", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.status === 204) {
+          setCurrentPlayback(null);
+          setCurrentlyPlayingAlbum(null);
+          setCurrentlyPlayingTrackUri(null);
+          return;
+        }
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data === null || Object.keys(data).length === 0) {
+            setCurrentPlayback(null);
+            setCurrentlyPlayingAlbum(null);
+            setCurrentlyPlayingTrackUri(null);
+            return;
+          }
+
+          setCurrentPlayback({
+            ...data,
+            device: {
+              ...data.device,
+              volume_percent: data.device?.volume_percent,
+            },
+            shuffle_state: data.shuffle_state,
+            repeat_state: data.repeat_state,
+          });
+
+          setIsShuffleEnabled(data.shuffle_state);
+
+          if (data && data.item) {
+            const currentAlbum = data.item.album;
+            const currentTrackUri = data.item.uri;
+            setCurrentlyPlayingTrackUri(currentTrackUri);
+            if (
+              !currentlyPlayingAlbum ||
+              currentlyPlayingAlbum.id !== currentAlbum.id
+            ) {
+              if (!router.pathname.includes("album")) {
+                setCurrentlyPlayingAlbum(currentAlbum);
+                setAlbumsQueue((prevQueue) => {
+                  const updatedQueue = prevQueue.filter(
+                    (album) => album.id !== currentAlbum.id
+                  );
+                  return [currentAlbum, ...updatedQueue];
+                });
+
+                const imageUrl = currentAlbum.images[0].url;
+                if (imageUrl !== albumImage) {
+                  localStorage.setItem("albumImage", imageUrl);
+                  setAlbumImage(imageUrl);
+                  setAlbumName(currentAlbum.name);
+                  setArtistName(
+                    currentAlbum.artists.map((artist) => artist.name).join(", ")
+                  );
+
+                  if (activeSection === "recents") {
+                    updateGradientColors(imageUrl);
+                  }
+                }
+              }
+            }
+          }
+        } else if (response.status !== 401 && response.status !== 403) {
+          handleError(
+            "FETCH_CURRENT_PLAYBACK_ERROR",
+            `HTTP error! status: ${response.status}`
+          );
+        }
+      } catch (error) {
+        if (error.message.includes("Unexpected end of JSON input")) {
+          setCurrentPlayback(null);
+          setCurrentlyPlayingAlbum(null);
+          setCurrentlyPlayingTrackUri(null);
+          return;
+        } else {
+          handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
+        }
+      }
+    }
+  };
+
+  const redirectToSpotify = async () => {
+    const scopes =
+      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
+
+    let clientId;
+    const urlParams = new URLSearchParams(window.location.search);
+    const phoneSession = urlParams.get("session");
+    const isPhoneAuth = !!phoneSession;
+
+    if (authType === "custom" && tempId) {
+      try {
+        const supabaseInstance = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+
+        const { data, error } = await supabaseInstance
+          .from("spotify_credentials")
+          .select("client_id")
+          .eq("temp_id", tempId)
+          .single();
+
+        if (error) {
+          console.error("Supabase error:", error);
+          handleError("AUTH_ERROR", "Failed to get custom credentials");
+          return;
+        }
+
+        if (!data) {
+          handleError("AUTH_ERROR", "No credentials found for the provided ID");
+          return;
+        }
+
+        clientId = data.client_id;
+        localStorage.setItem("spotifyAuthType", "custom");
+        localStorage.setItem("spotifyTempId", tempId);
+      } catch (error) {
+        console.error("Error getting custom credentials:", error);
+        handleError("AUTH_ERROR", error.message);
+        return;
+      }
+    } else {
+      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      localStorage.setItem("spotifyAuthType", "default");
+    }
+
+    if (!clientId) {
+      handleError("AUTH_ERROR", "No client ID available");
+      return;
+    }
+
+    const state = isPhoneAuth
+      ? encodeURIComponent(
+          JSON.stringify({
+            phoneAuth: true,
+            sessionId: phoneSession,
+          })
+        )
+      : undefined;
+
+    const authUrl = new URL("https://accounts.spotify.com/authorize");
+    authUrl.searchParams.append("client_id", clientId);
+    authUrl.searchParams.append("response_type", "code");
+    authUrl.searchParams.append(
+      "redirect_uri",
+      process.env.NEXT_PUBLIC_REDIRECT_URI
+    );
+    authUrl.searchParams.append("scope", scopes);
+    if (state) {
+      authUrl.searchParams.append("state", state);
+    }
+
+    window.location.href = authUrl.toString();
+  };
+
+  const fetchAccessToken = async (code) => {
+    try {
+      const response = await fetch("/api/v1/auth/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code,
+          tempId,
+          isCustomAuth: authType === "custom",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      setAccessToken(data.access_token);
+      setRefreshToken(data.refresh_token);
+    } catch (error) {
+      handleError("FETCH_ACCESS_TOKEN_ERROR", error.message);
+    }
+  };
+
+  const refreshAccessToken = async () => {
+    try {
+      const currentRefreshToken = localStorage.getItem("spotifyRefreshToken");
+      const currentAuthType = localStorage.getItem("spotifyAuthType");
+      const currentTempId = localStorage.getItem("spotifyTempId");
+
+      const response = await fetch("/api/v1/auth/refresh-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refresh_token: currentRefreshToken,
+          isCustomAuth: currentAuthType === "custom",
+          tempId: currentTempId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Refresh token error:", {
+          status: response.status,
+          data: errorData,
+        });
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      setAccessToken(data.access_token);
+      if (data.refresh_token) {
+        setRefreshToken(data.refresh_token);
+        localStorage.setItem("spotifyRefreshToken", data.refresh_token);
+      }
+
+      const newExpiry = new Date(
+        Date.now() + data.expires_in * 1000
+      ).toISOString();
+      localStorage.setItem("spotifyTokenExpiry", newExpiry);
+
+      return data;
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   useEffect(() => {
     const handleAppEscape = () => {
       router.push("/").then(() => {
@@ -155,90 +438,7 @@ export default function App({ Component, pageProps }) {
     return () => {
       window.removeEventListener("app-escape-pressed", handleAppEscape);
     };
-  }, [drawerOpen, router, setActiveSection]);
-
-  useEffect(() => {
-    const holdDuration = 2000;
-    const quickPressDuration = 200;
-    let holdTimer = null;
-    let hasTriggered = false;
-    let lastMPressTime = 0;
-    let mPressCount = 0;
-    let brightnessOverlayTimer = null;
-    let keyPressStartTime = null;
-
-    const handleKeyDown = (event) => {
-      if (event.key === "m" || event.key === "M") {
-        if (!keyPressStartTime) {
-          keyPressStartTime = Date.now();
-        }
-
-        const now = Date.now();
-
-        if (
-          now - lastMPressTime < 500 &&
-          now - keyPressStartTime < quickPressDuration
-        ) {
-          mPressCount++;
-          if (mPressCount === 3) {
-            if (brightnessOverlayTimer) {
-              clearTimeout(brightnessOverlayTimer);
-            }
-
-            setShowBrightnessOverlay(true);
-
-            brightnessOverlayTimer = setTimeout(() => {
-              setShowBrightnessOverlay(false);
-            }, 300000);
-
-            mPressCount = 0;
-            lastMPressTime = 0;
-            return;
-          }
-        } else {
-          mPressCount = 1;
-        }
-        lastMPressTime = now;
-
-        if (!hasTriggered && mPressCount < 2) {
-          holdTimer = setTimeout(() => {
-            if (router.pathname !== "/") {
-              router.push("/").then(() => {
-                setActiveSection("settings");
-              });
-            } else {
-              setActiveSection("settings");
-            }
-            hasTriggered = true;
-          }, holdDuration);
-        }
-      }
-    };
-
-    const handleKeyUp = (event) => {
-      if (event.key === "m" || event.key === "M") {
-        keyPressStartTime = null;
-        if (holdTimer) {
-          clearTimeout(holdTimer);
-        }
-        hasTriggered = false;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      if (holdTimer) {
-        clearTimeout(holdTimer);
-      }
-      if (brightnessOverlayTimer) {
-        clearTimeout(brightnessOverlayTimer);
-      }
-    };
-  }, [router, setShowBrightnessOverlay, setActiveSection]);
+  }, [router, setActiveSection]);
 
   useEffect(() => {
     const handleWheel = (event) => {
@@ -299,6 +499,211 @@ export default function App({ Component, pageProps }) {
       document.removeEventListener("touchstart", handleTouchStart);
     };
   }, [showBrightnessOverlay]);
+
+  useEffect(() => {
+    const handleWheel = (event) => {
+      if (showBrightnessOverlay) {
+        event.stopPropagation();
+        event.preventDefault();
+        setBrightness((prev) => {
+          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
+          return Math.max(5, Math.min(250, newValue));
+        });
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (
+        showBrightnessOverlay &&
+        ["1", "2", "3", "4", "Escape", "Enter"].includes(event.key)
+      ) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const existingTimeout = window.brightnessOverlayTimer;
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+        setShowBrightnessOverlay(false);
+      }
+    };
+
+    const handleTouchMove = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleTouchStart = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener("wheel", handleWheel, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel, { capture: true });
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [showBrightnessOverlay]);
+
+  useEffect(() => {
+    const handleWheel = (event) => {
+      if (showBrightnessOverlay) {
+        event.stopPropagation();
+        event.preventDefault();
+        setBrightness((prev) => {
+          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
+          return Math.max(5, Math.min(250, newValue));
+        });
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (
+        showBrightnessOverlay &&
+        ["1", "2", "3", "4", "Escape", "Enter"].includes(event.key)
+      ) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const existingTimeout = window.brightnessOverlayTimer;
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+        setShowBrightnessOverlay(false);
+      }
+    };
+
+    const handleTouchMove = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleTouchStart = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener("wheel", handleWheel, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel, { capture: true });
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [showBrightnessOverlay]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "4" || e.key === "Escape") {
+        keysPressed.current[e.key] = true;
+
+        if (keysPressed.current["4"] && keysPressed.current["Escape"]) {
+          if (!startTimeRef.current) {
+            startTimeRef.current = Date.now();
+            setShowResetTimer(true);
+
+            timerRef.current = setInterval(async () => {
+              const elapsed = Date.now() - startTimeRef.current;
+              if (elapsed >= resetDuration) {
+                try {
+                  const refreshToken = localStorage.getItem(
+                    "spotifyRefreshToken"
+                  );
+                  const tempId = localStorage.getItem("spotifyTempId");
+                  const authType = localStorage.getItem("spotifyAuthType");
+
+                  if (authType === "custom" && refreshToken && tempId) {
+                    const supabaseInstance = createClient(
+                      process.env.NEXT_PUBLIC_SUPABASE_URL,
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                    );
+
+                    const { error } = await supabaseInstance
+                      .from("spotify_credentials")
+                      .delete()
+                      .match({
+                        temp_id: tempId,
+                        refresh_token: refreshToken,
+                      });
+
+                    if (error) {
+                      console.error(
+                        "Error removing credentials from database:",
+                        error
+                      );
+                    }
+                  }
+
+                  localStorage.clear();
+                  router.push("/").then(() => {
+                    window.location.reload();
+                  });
+                } catch (error) {
+                  console.error("Error during reset:", error);
+                  localStorage.clear();
+                  router.push("/").then(() => {
+                    window.location.reload();
+                  });
+                }
+              }
+            }, 100);
+          }
+        }
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === "4" || e.key === "Escape") {
+        keysPressed.current[e.key] = false;
+        setShowResetTimer(false);
+
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        startTimeRef.current = null;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [router]);
 
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
@@ -518,32 +923,274 @@ export default function App({ Component, pageProps }) {
   }, [accessToken, refreshToken, router]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && authSelectionMade) {
+    if (typeof window !== "undefined") {
       const code = new URLSearchParams(window.location.search).get("code");
-      setAuthCode(code);
+      const state = new URLSearchParams(window.location.search).get("state");
+
+      if (code) {
+        if (state) {
+          try {
+            const stateData = JSON.parse(decodeURIComponent(state));
+            if (stateData.phoneAuth) {
+              localStorage.setItem("spotifySessionId", stateData.sessionId);
+              const exchangeTokens = async () => {
+                try {
+                  const tokenResponse = await fetch("/api/v1/auth/token", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      code,
+                      isPhoneAuth: true,
+                      sessionId: stateData.sessionId,
+                      tempId: stateData.tempId,
+                    }),
+                  });
+
+                  if (!tokenResponse.ok) {
+                    throw new Error("Token exchange failed");
+                  }
+
+                  const tokenData = await tokenResponse.json();
+
+                  const supabase = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                  );
+
+                  const { error: updateError } = await supabase
+                    .from("spotify_credentials")
+                    .update({
+                      access_token: tokenData.access_token,
+                      refresh_token: tokenData.refresh_token,
+                      token_expiry: new Date(
+                        Date.now() + tokenData.expires_in * 1000
+                      ).toISOString(),
+                      auth_completed: true,
+                      first_used_at: new Date().toISOString(),
+                      last_used: new Date().toISOString(),
+                    })
+                    .eq("session_id", stateData.sessionId);
+
+                  if (updateError) {
+                    console.error("Failed to update database:", updateError);
+                    throw new Error("Failed to store tokens");
+                  }
+
+                  document.documentElement.innerHTML = `
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <title>Authentication Successful</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                        <style>
+                          body {
+                            background: #000;
+                            color: #fff;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                            height: 100vh;
+                            margin: 0;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                            padding: 20px;
+                          }
+                          .success-icon {
+                            width: 60px;
+                            height: 60px;
+                            border-radius: 50%;
+                            background: #1DB954;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin: 0 auto 24px;
+                          }
+                          h1 { 
+                            font-size: 24px; 
+                            margin: 0 0 12px;
+                            font-weight: bold;
+                          }
+                          p { 
+                            color: rgba(255,255,255,0.7);
+                            margin: 0;
+                            line-height: 1.5;
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="success-icon">
+                          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        </div>
+                        <h1>Authentication Successful</h1>
+                        <p>You can close this window and return to Nocturne.</p>
+                      </body>
+                    </html>
+                  `;
+
+                  setTimeout(() => {
+                    window.close();
+                  }, 3000);
+                } catch (error) {
+                  console.error("Token exchange error:", error);
+                  document.documentElement.innerHTML = `
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <title>Authentication Error</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                        <style>
+                          body {
+                            background: #000;
+                            color: #fff;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                            height: 100vh;
+                            margin: 0;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                            padding: 20px;
+                          }
+                          .error-icon {
+                            width: 60px;
+                            height: 60px;
+                            border-radius: 50%;
+                            background: #E34D4D;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin: 0 auto 24px;
+                          }
+                          h1 { 
+                            font-size: 24px; 
+                            margin: 0 0 12px;
+                            font-weight: bold;
+                          }
+                          p { 
+                            color: rgba(255,255,255,0.7);
+                            margin: 0;
+                            line-height: 1.5;
+                          }
+                          .error-message {
+                            margin-top: 12px;
+                            color: rgba(227, 77, 77, 0.8);
+                            font-size: 14px;
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="error-icon">
+                          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                          </svg>
+                        </div>
+                        <h1>Authentication Error</h1>
+                        <p>Something went wrong while authenticating.</p>
+                        <div class="error-message">${error.message}</div>
+                      </body>
+                    </html>
+                  `;
+                }
+              };
+
+              exchangeTokens();
+            } else {
+              setAuthCode(code);
+              setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+            }
+          } catch (e) {
+            console.error("Error parsing state:", e);
+            setAuthCode(code);
+            setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+          }
+        } else {
+          setAuthCode(code);
+          setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+        }
+      }
     }
-  }, [authSelectionMade]);
+  }, []);
 
   useEffect(() => {
-    if (authCode && authSelectionMade) {
+    if (authCode) {
       fetchAccessToken(authCode);
     } else if (
       typeof window !== "undefined" &&
       !window.location.search.includes("code") &&
-      authSelectionMade
+      authState.authSelectionMade &&
+      !router.pathname.includes("phone-auth")
     ) {
-      redirectToSpotify();
+      if (authState.authType === "custom") {
+        const savedAccessToken = localStorage.getItem("spotifyAccessToken");
+        const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+        const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+
+        if (savedAccessToken && savedRefreshToken) {
+          if (tokenExpiry && new Date(tokenExpiry) <= new Date()) {
+            refreshAccessToken();
+          } else {
+            setAccessToken(savedAccessToken);
+            setRefreshToken(savedRefreshToken);
+          }
+          return;
+        }
+      }
+
+      if (!authState.tempId) {
+        redirectToSpotify();
+      }
     }
-  }, [authCode, authSelectionMade]);
+  }, [authCode, authState.authSelectionMade]);
 
   useEffect(() => {
     if (accessToken) {
-      const tokenRefreshInterval = setInterval(() => {
-        refreshAccessToken();
-      }, 3000 * 1000);
+      const checkTokenExpiry = async () => {
+        const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+
+        if (tokenExpiry && new Date(tokenExpiry) <= new Date()) {
+          try {
+            const refreshData = await refreshAccessToken();
+            if (refreshData.access_token) {
+              setAccessToken(refreshData.access_token);
+              localStorage.setItem(
+                "spotifyAccessToken",
+                refreshData.access_token
+              );
+              localStorage.setItem(
+                "spotifyTokenExpiry",
+                new Date(
+                  Date.now() + refreshData.expires_in * 1000
+                ).toISOString()
+              );
+
+              if (refreshData.refresh_token) {
+                setRefreshToken(refreshData.refresh_token);
+                localStorage.setItem(
+                  "spotifyRefreshToken",
+                  refreshData.refresh_token
+                );
+              }
+            }
+          } catch (error) {
+            console.error("Token refresh failed:", error);
+            clearSession();
+            redirectToSpotify();
+          }
+        }
+      };
+
+      const tokenRefreshInterval = setInterval(checkTokenExpiry, 3000 * 1000);
 
       setLoading(false);
 
+      checkTokenExpiry();
       fetchRecentlyPlayedAlbums(
         accessToken,
         setAlbums,
@@ -589,404 +1236,6 @@ export default function App({ Component, pageProps }) {
   }, [accessToken]);
 
   useEffect(() => {
-    const checkStoredAuth = async () => {
-      const savedAuthType = localStorage.getItem("spotifyAuthType");
-      const savedTempId = localStorage.getItem("spotifyTempId");
-      const savedRefreshToken = localStorage.getItem("refreshToken");
-
-      if (savedAuthType === "custom") {
-        if (savedTempId || savedRefreshToken) {
-          try {
-            const supabaseInstance = createClient(
-              process.env.NEXT_PUBLIC_SUPABASE_URL,
-              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-            );
-
-            let query = supabaseInstance
-              .from("spotify_credentials")
-              .select("client_id, temp_id, refresh_token")
-              .order("created_at", { ascending: false })
-              .limit(1);
-
-            if (savedTempId) {
-              query = query.eq("temp_id", savedTempId);
-            } else if (savedRefreshToken) {
-              query = query.eq("refresh_token", savedRefreshToken);
-            }
-
-            const { data, error } = await query.single();
-
-            if (error) {
-              console.error("Supabase error:", error);
-              if (error.code === "PGRST116") {
-                if (savedRefreshToken) {
-                  setAuthType("custom");
-                  setAuthSelectionMade(true);
-                  setRefreshToken(savedRefreshToken);
-                  return;
-                }
-              }
-              localStorage.removeItem("spotifyAuthType");
-              localStorage.removeItem("spotifyTempId");
-              localStorage.removeItem("refreshToken");
-              setAuthType(null);
-              setTempId(null);
-              setAuthSelectionMade(false);
-              return;
-            }
-
-            if (data) {
-              setAuthType("custom");
-              if (data.temp_id) {
-                setTempId(data.temp_id);
-                localStorage.setItem("spotifyTempId", data.temp_id);
-              }
-              if (data.refresh_token) {
-                setRefreshToken(data.refresh_token);
-                localStorage.setItem("refreshToken", data.refresh_token);
-              }
-              setAuthSelectionMade(true);
-              return;
-            }
-          } catch (error) {
-            console.error("Error checking stored auth:", error);
-          }
-        }
-      } else if (savedAuthType === "default") {
-        setAuthType("default");
-        if (savedRefreshToken) {
-          setRefreshToken(savedRefreshToken);
-        }
-        setAuthSelectionMade(true);
-        return;
-      }
-
-      if (savedAuthType) {
-        localStorage.removeItem("spotifyAuthType");
-        localStorage.removeItem("spotifyTempId");
-        localStorage.removeItem("refreshToken");
-        setAuthType(null);
-        setTempId(null);
-        setAuthSelectionMade(false);
-      }
-    };
-
-    checkStoredAuth();
-  }, []);
-
-  const fetchCurrentPlayback = async () => {
-    if (accessToken) {
-      try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (response.status === 204) {
-          setCurrentPlayback(null);
-          setCurrentlyPlayingAlbum(null);
-          setCurrentlyPlayingTrackUri(null);
-          return;
-        }
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data === null || Object.keys(data).length === 0) {
-            setCurrentPlayback(null);
-            setCurrentlyPlayingAlbum(null);
-            setCurrentlyPlayingTrackUri(null);
-            return;
-          }
-
-          setCurrentPlayback({
-            ...data,
-            device: {
-              ...data.device,
-              volume_percent: data.device?.volume_percent,
-            },
-            shuffle_state: data.shuffle_state,
-            repeat_state: data.repeat_state,
-          });
-
-          setIsShuffleEnabled(data.shuffle_state);
-
-          if (data && data.item) {
-            const currentAlbum = data.item.album;
-            const currentTrackUri = data.item.uri;
-            setCurrentlyPlayingTrackUri(currentTrackUri);
-            if (
-              !currentlyPlayingAlbum ||
-              currentlyPlayingAlbum.id !== currentAlbum.id
-            ) {
-              if (!router.pathname.includes("album")) {
-                setCurrentlyPlayingAlbum(currentAlbum);
-                setAlbumsQueue((prevQueue) => {
-                  const updatedQueue = prevQueue.filter(
-                    (album) => album.id !== currentAlbum.id
-                  );
-                  return [currentAlbum, ...updatedQueue];
-                });
-
-                const imageUrl = currentAlbum.images[0].url;
-                if (imageUrl !== albumImage) {
-                  localStorage.setItem("albumImage", imageUrl);
-                  setAlbumImage(imageUrl);
-                  setAlbumName(currentAlbum.name);
-                  setArtistName(
-                    currentAlbum.artists.map((artist) => artist.name).join(", ")
-                  );
-
-                  if (activeSection === "recents") {
-                    updateGradientColors(imageUrl);
-                  }
-                }
-              }
-            }
-          }
-        } else if (response.status !== 401 && response.status !== 403) {
-          handleError(
-            "FETCH_CURRENT_PLAYBACK_ERROR",
-            `HTTP error! status: ${response.status}`
-          );
-        }
-      } catch (error) {
-        if (error.message.includes("Unexpected end of JSON input")) {
-          setCurrentPlayback(null);
-          setCurrentlyPlayingAlbum(null);
-          setCurrentlyPlayingTrackUri(null);
-          return;
-        } else {
-          handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
-        }
-      }
-    }
-  };
-
-  const redirectToSpotify = async () => {
-    const scopes =
-      "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
-
-    let clientId;
-    if (authType === "custom" && tempId) {
-      try {
-        const supabaseInstance = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        );
-
-        let { data, error } = await supabaseInstance
-          .from("spotify_credentials")
-          .select("client_id, refresh_token")
-          .eq("temp_id", tempId)
-          .single();
-
-        if (!data && localStorage.getItem("refreshToken")) {
-          ({ data, error } = await supabaseInstance
-            .from("spotify_credentials")
-            .select("client_id, temp_id")
-            .eq("refresh_token", localStorage.getItem("refreshToken"))
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single());
-
-          if (data?.temp_id) {
-            setTempId(data.temp_id);
-            localStorage.setItem("spotifyTempId", data.temp_id);
-          }
-        }
-
-        if (error) {
-          console.error("Supabase error:", error);
-          handleError("AUTH_ERROR", "Failed to get custom credentials");
-          return;
-        }
-
-        if (!data) {
-          handleError("AUTH_ERROR", "No credentials found for the provided ID");
-          return;
-        }
-
-        clientId = data.client_id;
-        localStorage.setItem("spotifyAuthType", "custom");
-        if (data.temp_id) {
-          localStorage.setItem("spotifyTempId", data.temp_id);
-        }
-      } catch (error) {
-        console.error("Error getting custom credentials:", error);
-        handleError("AUTH_ERROR", error.message);
-        return;
-      }
-    } else {
-      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-      localStorage.setItem("spotifyAuthType", "default");
-    }
-
-    if (!clientId) {
-      handleError("AUTH_ERROR", "No client ID available");
-      return;
-    }
-
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${process.env.NEXT_PUBLIC_REDIRECT_URI}&scope=${scopes}`;
-  };
-
-  const fetchAccessToken = async (code) => {
-    try {
-      const response = await fetch("/api/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code,
-          tempId,
-          isCustomAuth: authType === "custom",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      setAccessToken(data.access_token);
-      setRefreshToken(data.refresh_token);
-      if (data.refresh_token) {
-        localStorage.setItem("refreshToken", data.refresh_token);
-      }
-
-      if (data.temp_id && authType === "custom") {
-        setTempId(data.temp_id);
-        localStorage.setItem("spotifyTempId", data.temp_id);
-      }
-    } catch (error) {
-      handleError("FETCH_ACCESS_TOKEN_ERROR", error.message);
-    }
-  };
-
-  const refreshAccessToken = async () => {
-    try {
-      const response = await fetch("/api/refresh-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          refresh_token: refreshToken,
-          isCustomAuth: authType === "custom",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setAccessToken(data.access_token);
-      if (data.refresh_token) {
-        setRefreshToken(data.refresh_token);
-        localStorage.setItem("refreshToken", data.refresh_token);
-      }
-
-      if (data.temp_id && authType === "custom") {
-        setTempId(data.temp_id);
-        localStorage.setItem("spotifyTempId", data.temp_id);
-      }
-
-      return data;
-    } catch (error) {
-      handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
-      throw error;
-    }
-  };
-
-  const calculateBrightness = (hex) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return 0.299 * r + 0.587 * g + 0.114 * b;
-  };
-
-  const calculateHue = (hex) => {
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h;
-
-    if (max === min) {
-      h = 0;
-    } else {
-      const d = max - min;
-      switch (max) {
-        case r:
-          h = (g - b) / d + (g < b ? 6 : 0);
-          break;
-        case g:
-          h = (b - r) / d + 2;
-          break;
-        case b:
-          h = (r - g) / d + 4;
-          break;
-      }
-      h /= 6;
-    }
-    return h * 360;
-  };
-
-  const extractColors = (imageUrl) => {
-    const colorThief = new ColorThief();
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = imageUrl;
-    img.onload = () => {
-      const palette = colorThief.getPalette(img, 8);
-      const filteredColors = palette
-        .map(
-          (color) =>
-            `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}`
-        )
-        .filter((color) => {
-          const brightness = calculateBrightness(color);
-          return brightness > 120 || brightness < 10;
-        })
-        .sort((a, b) => calculateHue(a) - calculateHue(b));
-
-      setColors(filteredColors);
-    };
-  };
-
-  const hexToRgb = (hex) => {
-    const bigint = parseInt(hex.slice(1), 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return { r, g, b };
-  };
-
-  const rgbToHex = ({ r, g, b }) => {
-    const toHex = (n) => n.toString(16).padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
-
-  const getNextColor = (current, target) => {
-    const step = (start, end) => {
-      if (start === end) return start;
-      const diff = end - start;
-      return start + (diff > 0 ? Math.min(1, diff) : Math.max(-1, diff));
-    };
-
-    return {
-      r: step(current.r, target.r),
-      g: step(current.g, target.g),
-      b: step(current.b, target.b),
-    };
-  };
-
-  useEffect(() => {
     if (router.pathname === "/now-playing") {
       if (!currentPlayback || !currentPlayback.is_playing) {
         setTargetColor1("#191414");
@@ -1004,76 +1253,130 @@ export default function App({ Component, pageProps }) {
     }
   }, [router.pathname, currentPlayback]);
 
-  const updateGradientColors = useCallback(
-    (imageUrl, section = null) => {
-      if (!imageUrl) {
-        if (section === "radio") {
-          const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
-          setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
-          if (activeSection === "radio" || activeSection === "nowPlaying") {
-            setTargetColor1(radioColors[0]);
-            setTargetColor2(radioColors[1]);
-            setTargetColor3(radioColors[2]);
-            setTargetColor4(radioColors[3]);
-          }
-        } else if (
-          section === "settings" ||
-          router.pathname === "/now-playing"
-        ) {
-          const settingsColors = ["#191414", "#191414", "#191414", "#191414"];
-          setSectionGradients((prev) => ({
-            ...prev,
-            [section]: settingsColors,
-          }));
-          if (
-            activeSection === "settings" ||
-            router.pathname === "/now-playing"
-          ) {
-            setTargetColor1(settingsColors[0]);
-            setTargetColor2(settingsColors[1]);
-            setTargetColor3(settingsColors[2]);
-            setTargetColor4(settingsColors[3]);
-          }
-        }
-        return;
-      }
+  const clearSession = async () => {
+    try {
+      const refreshToken = localStorage.getItem("spotifyRefreshToken");
+      const tempId = localStorage.getItem("spotifyTempId");
+      const authType = localStorage.getItem("spotifyAuthType");
 
-      const colorThief = new ColorThief();
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = imageUrl;
-      img.onload = () => {
-        const dominantColors = colorThief.getPalette(img, 4);
-        const hexColors = dominantColors.map((color) =>
-          rgbToHex({ r: color[0], g: color[1], b: color[2] })
+      if (authType === "custom" && refreshToken && tempId) {
+        const supabaseInstance = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         );
 
+        let { error } = await supabaseInstance
+          .from("spotify_credentials")
+          .delete()
+          .match({
+            temp_id: tempId,
+            refresh_token: refreshToken,
+          });
+
+        if (!data && localStorage.getItem("refreshToken")) {
+          ({ data, error } = await supabaseInstance
+            .from("spotify_credentials")
+            .select("client_id, temp_id")
+            .eq("refresh_token", localStorage.getItem("refreshToken"))
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single());
+
+          if (data?.temp_id) {
+            setTempId(data.temp_id);
+            localStorage.setItem("spotifyTempId", data.temp_id);
+          }
+        }
+
+        if (error) {
+          console.error("Error removing credentials from database:", error);
+        }
+      }
+
+      localStorage.removeItem("spotifyAccessToken");
+      localStorage.removeItem("spotifyRefreshToken");
+      localStorage.removeItem("spotifyTokenExpiry");
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+
+      setAccessToken(null);
+      setRefreshToken(null);
+      setAuthState({
+        authSelectionMade: false,
+        authType: null,
+      });
+    } catch (error) {
+      console.error("Error during session cleanup:", error);
+      localStorage.clear();
+      setAccessToken(null);
+      setRefreshToken(null);
+      setAuthState({
+        authSelectionMade: false,
+        authType: null,
+      });
+    }
+  };
+
+  const updateGradientColors = useCallback((imageUrl, section = null) => {
+    if (!imageUrl) {
+      if (section === "radio") {
+        const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
+        setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
+        if (activeSection === "radio" || activeSection === "nowPlaying") {
+          setTargetColor1(radioColors[0]);
+          setTargetColor2(radioColors[1]);
+          setTargetColor3(radioColors[2]);
+          setTargetColor4(radioColors[3]);
+        }
+      } else if (section === "library") {
+        const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
         setSectionGradients((prev) => ({
           ...prev,
-          [section]: hexColors,
+          [section]: libraryColors,
         }));
-
-        if (
-          section === activeSection ||
-          section === "nowPlaying" ||
-          activeSection === "nowPlaying"
-        ) {
-          setTargetColor1(hexColors[0]);
-          setTargetColor2(hexColors[1]);
-          setTargetColor3(hexColors[2]);
-          setTargetColor4(hexColors[3]);
+        if (activeSection === "library") {
+          setTargetColor1(libraryColors[0]);
+          setTargetColor2(libraryColors[1]);
+          setTargetColor3(libraryColors[2]);
+          setTargetColor4(libraryColors[3]);
         }
-      };
-    },
-    [
-      activeSection,
-      router.pathname,
-      setTargetColor1,
-      setTargetColor2,
-      setTargetColor3,
-      setTargetColor4,
-    ]
-  );
+      } else if (section === "settings" || router.pathname === "/now-playing") {
+        const settingsColors = ["#191414", "#191414", "#191414", "#191414"];
+        setSectionGradients((prev) => ({
+          ...prev,
+          [section]: settingsColors,
+        }));
+        if (
+          activeSection === "settings" ||
+          router.pathname === "/now-playing"
+        ) {
+          setTargetColor1(settingsColors[0]);
+          setTargetColor2(settingsColors[1]);
+          setTargetColor3(settingsColors[2]);
+          setTargetColor4(settingsColors[3]);
+        }
+      }
+      return;
+    }
+
+    extractPaletteFromImage(imageUrl).then((colors) => {
+      setSectionGradients((prev) => ({
+        ...prev,
+        [section]: colors,
+      }));
+
+      if (
+        section === activeSection ||
+        section === "nowPlaying" ||
+        activeSection === "nowPlaying"
+      ) {
+        setTargetColor1(colors[0]);
+        setTargetColor2(colors[1]);
+        setTargetColor3(colors[2]);
+        setTargetColor4(colors[3]);
+      }
+    });
+  }, [activeSection, router.pathname, setTargetColor1, setTargetColor2, setTargetColor3, setTargetColor4][(activeSection, router.pathname)]);
 
   useEffect(() => {
     const current1 = hexToRgb(currentColor1);
@@ -1144,19 +1447,6 @@ export default function App({ Component, pageProps }) {
     transitionSpeed,
   ]);
 
-  const generateMeshGradient = (colors) => {
-    if (colors.length === 0) return "#191414";
-
-    const positions = ["at 0% 25%", "at 25% 0%", "at 100% 75%", "at 75% 100%"];
-
-    const radialGradients = positions.map((position, index) => {
-      const color = colors[index % colors.length];
-      return `radial-gradient(${position}, ${color} 0%, transparent 80%)`;
-    });
-
-    return `${radialGradients.join(", ")}`;
-  };
-
   useEffect(() => {
     if (albumImage) {
       extractColors(albumImage);
@@ -1173,12 +1463,8 @@ export default function App({ Component, pageProps }) {
     }
   }, [activeSection, sectionGradients]);
 
-  if (!authSelectionMade) {
-    return (
-      <div className={inter.className}>
-        <AuthSelection onSelect={handleAuthSelection} />
-      </div>
-    );
+  if (!isHydrated) {
+    return null;
   }
 
   const BrightnessLowIcon = ({ className }) => (
@@ -1255,86 +1541,100 @@ export default function App({ Component, pageProps }) {
 
   return (
     <main
-      className={`overflow-hidden relative min-h-screen ${inter.className}`}
+      className={`overflow-hidden relative min-h-screen rounded-2xl ${inter.className}`}
     >
-      <div
-        style={{
-          backgroundImage: generateMeshGradient([
-            currentColor1,
-            currentColor2,
-            currentColor3,
-            currentColor4,
-          ]),
-          transition: "background-image 0.5s linear",
-        }}
-        className="absolute inset-0"
-      ></div>
-      <div className="relative z-10">
-        <Component
-          {...pageProps}
-          accessToken={accessToken}
-          albums={albums}
-          playlists={playlists}
-          artists={artists}
-          radio={radio}
-          currentlyPlayingAlbum={currentlyPlayingAlbum}
-          setCurrentlyPlayingAlbum={setCurrentlyPlayingAlbum}
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-          loading={loading}
-          albumsQueue={albumsQueue}
-          currentlyPlayingTrackUri={currentlyPlayingTrackUri}
-          currentPlayback={currentPlayback}
-          fetchCurrentPlayback={fetchCurrentPlayback}
-          drawerOpen={drawerOpen}
-          setDrawerOpen={setDrawerOpen}
-          updateGradientColors={updateGradientColors}
-          handleError={handleError}
-          showBrightnessOverlay={showBrightnessOverlay}
-        />
-        <ErrorAlert error={error} onClose={clearError} />
-      </div>
-      {(showBrightnessOverlay || brightness) && (
-        <div
-          className={classNames(
-            "fixed right-0 top-[70px] transform transition-opacity duration-300 z-50",
-            {
-              "opacity-0 volumeOutScale": !showBrightnessOverlay,
-              "opacity-100 volumeInScale": showBrightnessOverlay,
-            }
-          )}
-        >
-          <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+      {!authState.authSelectionMade &&
+      !router.pathname.includes("phone-auth") &&
+      !window.location.search.includes("code") ? (
+        <AuthSelection onSelect={handleAuthSelection} />
+      ) : (
+        <>
+          <div
+            style={{
+              backgroundImage: generateMeshGradient([
+                currentColor1,
+                currentColor2,
+                currentColor3,
+                currentColor4,
+              ]),
+              transition: "background-image 0.5s linear",
+            }}
+            className="absolute inset-0"
+          />
+          <div className="relative z-10">
+            <Component
+              {...pageProps}
+              accessToken={accessToken}
+              albums={albums}
+              playlists={playlists}
+              artists={artists}
+              radio={radio}
+              currentlyPlayingAlbum={currentlyPlayingAlbum}
+              setCurrentlyPlayingAlbum={setCurrentlyPlayingAlbum}
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+              loading={loading}
+              albumsQueue={albumsQueue}
+              currentlyPlayingTrackUri={currentlyPlayingTrackUri}
+              currentPlayback={currentPlayback}
+              fetchCurrentPlayback={fetchCurrentPlayback}
+              drawerOpen={drawerOpen}
+              setDrawerOpen={setDrawerOpen}
+              updateGradientColors={updateGradientColors}
+              handleError={handleError}
+              showBrightnessOverlay={showBrightnessOverlay}
+            />
+            <ErrorAlert error={error} onClose={clearError} />
+          </div>
+          {(showBrightnessOverlay || brightness) && (
             <div
               className={classNames(
-                "bg-white w-full transition-all duration-200 ease-out",
+                "fixed right-0 top-[70px] transform transition-opacity duration-300 z-50",
                 {
-                  "rounded-b-[13px]": brightness < 250,
-                  "rounded-[13px]": brightness === 250,
+                  "opacity-0 volumeOutScale": !showBrightnessOverlay,
+                  "opacity-100 volumeInScale": showBrightnessOverlay,
                 }
               )}
-              style={{ height: `${((brightness - 5) / (250 - 5)) * 100}%` }}
             >
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
-                {(() => {
-                  const brightnessPercent =
-                    ((brightness - 5) / (250 - 5)) * 100;
-                  if (brightnessPercent >= 60)
-                    return <BrightnessHighIcon className="w-7 h-7" />;
-                  if (brightnessPercent >= 30)
-                    return <BrightnessMidIcon className="w-7 h-7" />;
-                  return <BrightnessLowIcon className="w-7 h-7" />;
-                })()}
+              <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+                <div
+                  className={classNames(
+                    "bg-white w-full transition-all duration-200 ease-out",
+                    {
+                      "rounded-b-[13px]": brightness < 250,
+                      "rounded-[13px]": brightness === 250,
+                    }
+                  )}
+                  style={{ height: `${((brightness - 5) / (250 - 5)) * 100}%` }}
+                >
+                  <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+                    {(() => {
+                      const brightnessPercent =
+                        ((brightness - 5) / (250 - 5)) * 100;
+                      if (brightnessPercent >= 60)
+                        return <BrightnessHighIcon className="w-7 h-7" />;
+                      if (brightnessPercent >= 30)
+                        return <BrightnessMidIcon className="w-7 h-7" />;
+                      return <BrightnessLowIcon className="w-7 h-7" />;
+                    })()}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+          <ButtonMappingOverlay
+            show={showMappingOverlay}
+            onClose={() => setShowMappingOverlay(false)}
+            activeButton={pressedButton}
+          />
+          {showResetTimer && (
+            <ResetTimerOverlay
+              duration={resetDuration}
+              startTime={startTimeRef.current}
+            />
+          )}
+        </>
       )}
-      <ButtonMappingOverlay
-        show={showMappingOverlay}
-        onClose={() => setShowMappingOverlay(false)}
-        activeButton={pressedButton}
-      />
     </main>
   );
 }
