@@ -630,13 +630,49 @@ export default function App({ Component, pageProps }) {
             startTimeRef.current = Date.now();
             setShowResetTimer(true);
 
-            timerRef.current = setInterval(() => {
+            timerRef.current = setInterval(async () => {
               const elapsed = Date.now() - startTimeRef.current;
               if (elapsed >= resetDuration) {
-                localStorage.clear();
-                router.push("/").then(() => {
-                  window.location.reload();
-                });
+                try {
+                  const refreshToken = localStorage.getItem(
+                    "spotifyRefreshToken"
+                  );
+                  const tempId = localStorage.getItem("spotifyTempId");
+                  const authType = localStorage.getItem("spotifyAuthType");
+
+                  if (authType === "custom" && refreshToken && tempId) {
+                    const supabaseInstance = createClient(
+                      process.env.NEXT_PUBLIC_SUPABASE_URL,
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                    );
+
+                    const { error } = await supabaseInstance
+                      .from("spotify_credentials")
+                      .delete()
+                      .match({
+                        temp_id: tempId,
+                        refresh_token: refreshToken,
+                      });
+
+                    if (error) {
+                      console.error(
+                        "Error removing credentials from database:",
+                        error
+                      );
+                    }
+                  }
+
+                  localStorage.clear();
+                  router.push("/").then(() => {
+                    window.location.reload();
+                  });
+                } catch (error) {
+                  console.error("Error during reset:", error);
+                  localStorage.clear();
+                  router.push("/").then(() => {
+                    window.location.reload();
+                  });
+                }
               }
             }, 100);
           }
@@ -1144,10 +1180,8 @@ export default function App({ Component, pageProps }) {
             }
           } catch (error) {
             console.error("Token refresh failed:", error);
-            if (error.message.includes("invalid_grant")) {
-              clearSession();
-              redirectToSpotify();
-            }
+            clearSession();
+            redirectToSpotify();
           }
         }
       };
@@ -1219,17 +1253,53 @@ export default function App({ Component, pageProps }) {
     }
   }, [router.pathname, currentPlayback]);
 
-  const clearSession = () => {
-    localStorage.removeItem("spotifyAccessToken");
-    localStorage.removeItem("spotifyRefreshToken");
-    localStorage.removeItem("spotifyTokenExpiry");
-    localStorage.removeItem("spotifyAuthType");
-    setAccessToken(null);
-    setRefreshToken(null);
-    setAuthState({
-      authSelectionMade: false,
-      authType: null,
-    });
+  const clearSession = async () => {
+    try {
+      const refreshToken = localStorage.getItem("spotifyRefreshToken");
+      const tempId = localStorage.getItem("spotifyTempId");
+      const authType = localStorage.getItem("spotifyAuthType");
+
+      if (authType === "custom" && refreshToken && tempId) {
+        const supabaseInstance = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+
+        const { error } = await supabaseInstance
+          .from("spotify_credentials")
+          .delete()
+          .match({
+            temp_id: tempId,
+            refresh_token: refreshToken,
+          });
+
+        if (error) {
+          console.error("Error removing credentials from database:", error);
+        }
+      }
+
+      localStorage.removeItem("spotifyAccessToken");
+      localStorage.removeItem("spotifyRefreshToken");
+      localStorage.removeItem("spotifyTokenExpiry");
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+
+      setAccessToken(null);
+      setRefreshToken(null);
+      setAuthState({
+        authSelectionMade: false,
+        authType: null,
+      });
+    } catch (error) {
+      console.error("Error during session cleanup:", error);
+      localStorage.clear();
+      setAccessToken(null);
+      setRefreshToken(null);
+      setAuthState({
+        authSelectionMade: false,
+        authType: null,
+      });
+    }
   };
 
   const updateGradientColors = useCallback((imageUrl, section = null) => {
