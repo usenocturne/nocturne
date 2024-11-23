@@ -1273,6 +1273,21 @@ export default function App({ Component, pageProps }) {
             refresh_token: refreshToken,
           });
 
+        if (!data && localStorage.getItem("refreshToken")) {
+          ({ data, error } = await supabaseInstance
+            .from("spotify_credentials")
+            .select("client_id, temp_id")
+            .eq("refresh_token", localStorage.getItem("refreshToken"))
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single());
+
+          if (data?.temp_id) {
+            setTempId(data.temp_id);
+            localStorage.setItem("spotifyTempId", data.temp_id);
+          }
+        }
+
         if (error) {
           console.error("Error removing credentials from database:", error);
         }
