@@ -24,6 +24,7 @@ import {
   extractPaletteFromImage,
   createPaletteFromImage,
 } from "../lib/colorUtils";
+import ResetTimerOverlay from "../components/ResetTimerOverlay";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -103,12 +104,11 @@ export default function App({ Component, pageProps }) {
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
   const { authSelectionMade, authType, tempId } = authState;
-  const keyStatesRef = useRef({
-    4: false,
-    Escape: false,
-  });
-  const resetTimerRef = useRef(null);
+  const [showResetTimer, setShowResetTimer] = useState(false);
+  const keysPressed = useRef({ 4: false, Escape: false });
   const startTimeRef = useRef(null);
+  const timerRef = useRef(null);
+  const resetDuration = 5000;
 
   useEffect(() => {
     if (accessToken) {
@@ -621,48 +621,22 @@ export default function App({ Component, pageProps }) {
   }, [showBrightnessOverlay]);
 
   useEffect(() => {
-    const resetDuration = 5000;
+    const handleKeyDown = (e) => {
+      if (e.key === "4" || e.key === "Escape") {
+        keysPressed.current[e.key] = true;
 
-    const performReset = () => {
-      localStorage.removeItem("spotifyAuthType");
-      localStorage.removeItem("spotifyTempId");
-      localStorage.removeItem("spotifyAccessToken");
-      localStorage.removeItem("spotifyRefreshToken");
-      localStorage.removeItem("spotifyTokenExpiry");
-
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("button") && key.endsWith("Map")) {
-          localStorage.removeItem(key);
-        }
-      });
-
-      router.push("/").then(() => {
-        window.location.reload();
-      });
-    };
-
-    const handleKeyDown = (event) => {
-      if (event.key === "4" || event.key === "Escape") {
-        keyStatesRef.current[event.key] = true;
-
-        if (keyStatesRef.current["4"] && keyStatesRef.current["Escape"]) {
+        if (keysPressed.current["4"] && keysPressed.current["Escape"]) {
           if (!startTimeRef.current) {
             startTimeRef.current = Date.now();
+            setShowResetTimer(true);
 
-            if (resetTimerRef.current) {
-              clearInterval(resetTimerRef.current);
-            }
-
-            resetTimerRef.current = setInterval(() => {
-              const elapsedTime = Date.now() - startTimeRef.current;
-
-              if (
-                keyStatesRef.current["4"] &&
-                keyStatesRef.current["Escape"] &&
-                elapsedTime >= resetDuration
-              ) {
-                clearInterval(resetTimerRef.current);
-                performReset();
+            timerRef.current = setInterval(() => {
+              const elapsed = Date.now() - startTimeRef.current;
+              if (elapsed >= resetDuration) {
+                localStorage.clear();
+                router.push("/").then(() => {
+                  window.location.reload();
+                });
               }
             }, 100);
           }
@@ -670,26 +644,27 @@ export default function App({ Component, pageProps }) {
       }
     };
 
-    const handleKeyUp = (event) => {
-      if (event.key === "4" || event.key === "Escape") {
-        keyStatesRef.current[event.key] = false;
+    const handleKeyUp = (e) => {
+      if (e.key === "4" || e.key === "Escape") {
+        keysPressed.current[e.key] = false;
+        setShowResetTimer(false);
 
-        if (resetTimerRef.current) {
-          clearInterval(resetTimerRef.current);
-          resetTimerRef.current = null;
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
         }
         startTimeRef.current = null;
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown, { capture: true });
-    window.addEventListener("keyup", handleKeyUp, { capture: true });
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown, { capture: true });
-      window.removeEventListener("keyup", handleKeyUp, { capture: true });
-      if (resetTimerRef.current) {
-        clearInterval(resetTimerRef.current);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
       }
     };
   }, [router]);
@@ -1567,6 +1542,12 @@ export default function App({ Component, pageProps }) {
             onClose={() => setShowMappingOverlay(false)}
             activeButton={pressedButton}
           />
+          {showResetTimer && (
+            <ResetTimerOverlay
+              duration={resetDuration}
+              startTime={startTimeRef.current}
+            />
+          )}
         </>
       )}
     </main>
