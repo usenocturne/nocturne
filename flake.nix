@@ -2,7 +2,7 @@
   description = "Nocturne NixOS";
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixos-superbird.url = "github:joeyeamigh/nixos-superbird/main";
+    nixos-superbird.url = "github:joeyeamigh/nixos-superbird/9ba7d16b6a11c5fa987bb46e4992ab26f67d292f";
     deploy-rs.url = "github:serokell/deploy-rs";
 
     nocturned.url = "github:usenocturne/nocturned";
@@ -20,7 +20,22 @@
           specialArgs = { inherit inputs; };
           modules = [
             nixos-superbird.nixosModules.superbird
-            ./modules/configuration.nix
+            ./modules/default.nix
+          ];
+        };
+
+        superbird-qemu = nixosSystem {
+          system = "aarch64-linux";
+          specialArgs = { inherit inputs; };
+          modules = [
+            nixos-superbird.nixosModules.superbird
+            ./modules/default.nix
+            (
+              { ... }:
+              {
+                superbird.qemu = true;
+              }
+            )
           ];
         };
       };

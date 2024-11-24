@@ -1,6 +1,12 @@
 # Nix
-result
-out/
+/result
+/out
+
+# qemu
+/qemu/emmc.img
+/qemu/kernel
+/qemu/btrfs.img
+/qemu/initrd.img
 
 # MacOS
 .DS_Store
