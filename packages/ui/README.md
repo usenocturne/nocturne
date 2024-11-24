@@ -103,80 +103,7 @@ bun install
 cp .env.example .env.local
 ```
 
-4. Spotify authentication requires HTTPS, follow these steps to set up HTTPS locally for development:
-```bash
-# macOS
-brew install mkcert
-
-# Windows (using chocolatey)
-choco install mkcert
-
-# Linux
-apt install mkcert
-```
-
-```bash
-# Create and install local CA
-mkcert -install
-
-# Generate certificates for localhost and your local IP
-mkcert localhost 127.0.0.1 ::1 your.local.ip.address
-```
-
-```bash
-# Rename the generated certificates
-mv localhost+3.pem cert.crt
-mv localhost+3-key.pem cert.key
-
-# Copy CA certificates (locations vary by OS)
-# macOS
-cp "$(mkcert -CAROOT)/rootCA.pem" ca.crt
-cp "$(mkcert -CAROOT)/rootCA-key.pem" ca.key
-
-# Windows
-copy "%LOCALAPPDATA%\mkcert\rootCA.pem" ca.crt
-copy "%LOCALAPPDATA%\mkcert\rootCA-key.pem" ca.key
-
-# Linux
-cp "$(mkcert -CAROOT)/rootCA.pem" ca.crt
-cp "$(mkcert -CAROOT)/rootCA-key.pem" ca.key
-```
-
-```bash
-# Add to .gitignore
-*.crt
-*.key
-*.pem
-```
-
-Create custom server file:
-
-```js
-const { createServer } = require('https');
-const { parse } = require('url');
-const next = require('next');
-const fs = require('fs');
-
-const dev = process.env.NODE_ENV !== 'production';
-const app = next({ dev });
-const handle = app.getRequestHandler();
-
-const httpsOptions = {
-  key: fs.readFileSync('./cert.key'),
-  cert: fs.readFileSync('./cert.crt')
-};
-
-app.prepare().then(() => {
-  createServer(httpsOptions, (req, res) => {
-    const parsedUrl = parse(req.url, true);
-    handle(req, res, parsedUrl);
-  }).listen(3000, (err) => {
-    if (err) throw err;
-    console.log('> Ready on https://localhost:3000');
-    console.log('> Also available on https://your.local.ip.address:3000');
-  });
-});
-```
+4. Spotify authentication requires HTTPS. Follow the steps in [Setting up HTTPS locally](#setting-up-https-locally).
 
 5. Set up your Supabase project:
    - Create a new project at [Supabase](https://supabase.com)
@@ -275,6 +202,91 @@ npm run dev
 yarn dev
 # or
 bun dev
+```
+
+## Setting up HTTPS locally
+
+There are two ways to do this. One is using `mkcert` with a JS webserver, and the other is using [Caddy](https://caddyserver.com).
+
+### With Caddy
+
+There is a Caddyfile in the repo already. Install Caddy with your OS package manager, or download it at https://caddyserver.com/download. On the last step where you start the development server, use `npx next dev` and then, in another tab/window, `caddy run` to start. It will run on https://localhost:3443.
+
+
+### With `mkcert`
+
+```bash
+# macOS
+brew install mkcert
+
+# Windows (using chocolatey)
+choco install mkcert
+
+# Linux
+apt install mkcert
+```
+
+```bash
+# Create and install local CA
+mkcert -install
+
+# Generate certificates for localhost and your local IP
+mkcert localhost 127.0.0.1 ::1 your.local.ip.address
+```
+
+```bash
+# Rename the generated certificates
+mv localhost+3.pem cert.crt
+mv localhost+3-key.pem cert.key
+
+# Copy CA certificates (locations vary by OS)
+# macOS
+cp "$(mkcert -CAROOT)/rootCA.pem" ca.crt
+cp "$(mkcert -CAROOT)/rootCA-key.pem" ca.key
+
+# Windows
+copy "%LOCALAPPDATA%\mkcert\rootCA.pem" ca.crt
+copy "%LOCALAPPDATA%\mkcert\rootCA-key.pem" ca.key
+
+# Linux
+cp "$(mkcert -CAROOT)/rootCA.pem" ca.crt
+cp "$(mkcert -CAROOT)/rootCA-key.pem" ca.key
+```
+
+```bash
+# Add to .gitignore
+*.crt
+*.key
+*.pem
+```
+
+Create custom server file:
+
+```js
+const { createServer } = require('https');
+const { parse } = require('url');
+const next = require('next');
+const fs = require('fs');
+
+const dev = process.env.NODE_ENV !== 'production';
+const app = next({ dev });
+const handle = app.getRequestHandler();
+
+const httpsOptions = {
+  key: fs.readFileSync('./cert.key'),
+  cert: fs.readFileSync('./cert.crt')
+};
+
+app.prepare().then(() => {
+  createServer(httpsOptions, (req, res) => {
+    const parsedUrl = parse(req.url, true);
+    handle(req, res, parsedUrl);
+  }).listen(3000, (err) => {
+    if (err) throw err;
+    console.log('> Ready on https://localhost:3000');
+    console.log('> Also available on https://your.local.ip.address:3000');
+  });
+});
 ```
 
 ## Cloudflare Deployment Setup
