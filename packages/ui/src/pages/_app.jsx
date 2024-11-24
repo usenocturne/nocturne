@@ -133,6 +133,12 @@ export default function App({ Component, pageProps }) {
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
   const { authSelectionMade, authType, tempId } = authState;
+  const keyStatesRef = useRef({
+    4: false,
+    Escape: false,
+  });
+  const resetTimerRef = useRef(null);
+  const startTimeRef = useRef(null);
 
   useEffect(() => {
     if (accessToken) {
@@ -430,47 +436,28 @@ export default function App({ Component, pageProps }) {
 
   const refreshAccessToken = async () => {
     try {
-      const currentRefreshToken = localStorage.getItem("spotifyRefreshToken");
-      const currentAuthType = localStorage.getItem("spotifyAuthType");
-      const currentTempId = localStorage.getItem("spotifyTempId");
-
       const response = await fetch("/api/v1/auth/refresh-token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          refresh_token: currentRefreshToken,
-          isCustomAuth: currentAuthType === "custom",
-          tempId: currentTempId,
+          refresh_token: refreshToken,
+          isCustomAuth: authType === "custom",
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Refresh token error:", {
-          status: response.status,
-          data: errorData,
-        });
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-
       setAccessToken(data.access_token);
       if (data.refresh_token) {
         setRefreshToken(data.refresh_token);
-        localStorage.setItem("spotifyRefreshToken", data.refresh_token);
       }
-
-      const newExpiry = new Date(
-        Date.now() + data.expires_in * 1000
-      ).toISOString();
-      localStorage.setItem("spotifyTokenExpiry", newExpiry);
-
       return data;
     } catch (error) {
-      console.error("Token refresh failed:", error);
       handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
       throw error;
     }
@@ -555,87 +542,138 @@ export default function App({ Component, pageProps }) {
   }, [showBrightnessOverlay]);
 
   useEffect(() => {
-    const holdDuration = 2000;
-    const quickPressDuration = 200;
-    let holdTimer = null;
-    let hasTriggered = false;
-    let lastMPressTime = 0;
-    let mPressCount = 0;
-    let brightnessOverlayTimer = null;
-    let keyPressStartTime = null;
+    const handleWheel = (event) => {
+      if (showBrightnessOverlay) {
+        event.stopPropagation();
+        event.preventDefault();
+        setBrightness((prev) => {
+          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
+          return Math.max(5, Math.min(250, newValue));
+        });
+      }
+    };
 
     const handleKeyDown = (event) => {
-      if (event.key === "m" || event.key === "M") {
-        if (!keyPressStartTime) {
-          keyPressStartTime = Date.now();
+      if (
+        showBrightnessOverlay &&
+        ["1", "2", "3", "4", "Escape", "Enter"].includes(event.key)
+      ) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const existingTimeout = window.brightnessOverlayTimer;
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
         }
+        setShowBrightnessOverlay(false);
+      }
+    };
 
-        const now = Date.now();
+    const handleTouchMove = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
 
-        if (
-          now - lastMPressTime < 500 &&
-          now - keyPressStartTime < quickPressDuration
-        ) {
-          mPressCount++;
-          if (mPressCount === 3) {
-            if (brightnessOverlayTimer) {
-              clearTimeout(brightnessOverlayTimer);
+    const handleTouchStart = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener("wheel", handleWheel, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel, { capture: true });
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [showBrightnessOverlay]);
+
+  useEffect(() => {
+    const resetDuration = 5000;
+
+    const performReset = () => {
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+      localStorage.removeItem("spotifyAccessToken");
+      localStorage.removeItem("spotifyRefreshToken");
+      localStorage.removeItem("spotifyTokenExpiry");
+
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("button") && key.endsWith("Map")) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      router.push("/").then(() => {
+        window.location.reload();
+      });
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "4" || event.key === "Escape") {
+        keyStatesRef.current[event.key] = true;
+
+        if (keyStatesRef.current["4"] && keyStatesRef.current["Escape"]) {
+          if (!startTimeRef.current) {
+            startTimeRef.current = Date.now();
+
+            if (resetTimerRef.current) {
+              clearInterval(resetTimerRef.current);
             }
 
-            setShowBrightnessOverlay(true);
+            resetTimerRef.current = setInterval(() => {
+              const elapsedTime = Date.now() - startTimeRef.current;
 
-            brightnessOverlayTimer = setTimeout(() => {
-              setShowBrightnessOverlay(false);
-            }, 300000);
-
-            mPressCount = 0;
-            lastMPressTime = 0;
-            return;
+              if (
+                keyStatesRef.current["4"] &&
+                keyStatesRef.current["Escape"] &&
+                elapsedTime >= resetDuration
+              ) {
+                clearInterval(resetTimerRef.current);
+                performReset();
+              }
+            }, 100);
           }
-        } else {
-          mPressCount = 1;
-        }
-        lastMPressTime = now;
-
-        if (!hasTriggered && mPressCount < 2) {
-          holdTimer = setTimeout(() => {
-            if (router.pathname !== "/") {
-              router.push("/").then(() => {
-                setActiveSection("settings");
-              });
-            } else {
-              setActiveSection("settings");
-            }
-            hasTriggered = true;
-          }, holdDuration);
         }
       }
     };
 
     const handleKeyUp = (event) => {
-      if (event.key === "m" || event.key === "M") {
-        keyPressStartTime = null;
-        if (holdTimer) {
-          clearTimeout(holdTimer);
+      if (event.key === "4" || event.key === "Escape") {
+        keyStatesRef.current[event.key] = false;
+
+        if (resetTimerRef.current) {
+          clearInterval(resetTimerRef.current);
+          resetTimerRef.current = null;
         }
-        hasTriggered = false;
+        startTimeRef.current = null;
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    window.addEventListener("keyup", handleKeyUp, { capture: true });
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      if (holdTimer) {
-        clearTimeout(holdTimer);
-      }
-      if (brightnessOverlayTimer) {
-        clearTimeout(brightnessOverlayTimer);
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+      window.removeEventListener("keyup", handleKeyUp, { capture: true });
+      if (resetTimerRef.current) {
+        clearInterval(resetTimerRef.current);
       }
     };
-  }, [router, setShowBrightnessOverlay, setActiveSection]);
+  }, [router]);
 
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
@@ -864,7 +902,6 @@ export default function App({ Component, pageProps }) {
           try {
             const stateData = JSON.parse(decodeURIComponent(state));
             if (stateData.phoneAuth) {
-              localStorage.setItem("spotifySessionId", stateData.sessionId);
               const exchangeTokens = async () => {
                 try {
                   const tokenResponse = await fetch("/api/v1/auth/token", {
