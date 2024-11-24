@@ -68,14 +68,14 @@ const initialAuthState = () => {
 
   try {
     const existingAuthType = localStorage.getItem("spotifyAuthType");
-    const existingAccessToken = localStorage.getItem("spotifyAccessToken");
     const existingRefreshToken = localStorage.getItem("spotifyRefreshToken");
-    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+    const existingTempId = localStorage.getItem("spotifyTempId");
 
     if (existingAuthType && existingRefreshToken) {
       return {
         authSelectionMade: true,
         authType: existingAuthType,
+        tempId: existingTempId,
       };
     }
   } catch (e) {
@@ -140,6 +140,89 @@ export default function App({ Component, pageProps }) {
   });
   const resetTimerRef = useRef(null);
   const startTimeRef = useRef(null);
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      if (typeof window === "undefined") return;
+
+      if (window.location.search.includes("code")) return;
+
+      const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+      const savedAuthType = localStorage.getItem("spotifyAuthType");
+      const savedTempId = localStorage.getItem("spotifyTempId");
+
+      if (savedRefreshToken && savedAuthType) {
+        try {
+          const refreshData = await refreshAccessToken();
+
+          if (refreshData?.access_token) {
+            setAccessToken(refreshData.access_token);
+            localStorage.setItem(
+              "spotifyAccessToken",
+              refreshData.access_token
+            );
+
+            if (refreshData.refresh_token) {
+              setRefreshToken(refreshData.refresh_token);
+              localStorage.setItem(
+                "spotifyRefreshToken",
+                refreshData.refresh_token
+              );
+            }
+
+            const newExpiry = new Date(
+              Date.now() + refreshData.expires_in * 1000
+            ).toISOString();
+            localStorage.setItem("spotifyTokenExpiry", newExpiry);
+
+            setAuthState({
+              authSelectionMade: true,
+              authType: savedAuthType,
+              tempId: savedTempId,
+            });
+
+            if (savedAuthType === "custom") {
+              const supabase = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+              );
+
+              await supabase
+                .from("spotify_credentials")
+                .update({
+                  access_token: refreshData.access_token,
+                  refresh_token: refreshData.refresh_token || savedRefreshToken,
+                  token_expiry: newExpiry,
+                  last_used: new Date().toISOString(),
+                })
+                .match({
+                  temp_id: savedTempId,
+                  refresh_token: savedRefreshToken,
+                });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to restore session:", error);
+
+          if (error.message && error.message.includes("invalid_grant")) {
+            await clearSession();
+            if (!authState.tempId) {
+              redirectToSpotify();
+            }
+          }
+        }
+      } else if (
+        authState.authSelectionMade &&
+        !router.pathname.includes("phone-auth")
+      ) {
+        if (!authState.tempId) {
+          redirectToSpotify();
+        }
+      }
+    };
+
+    initializeAuth();
+  }, []);
 
   useEffect(() => {
     if (accessToken) {
@@ -1336,27 +1419,26 @@ export default function App({ Component, pageProps }) {
       const refreshToken = localStorage.getItem("spotifyRefreshToken");
       const tempId = localStorage.getItem("spotifyTempId");
       const authType = localStorage.getItem("spotifyAuthType");
+
       if (authType === "custom" && refreshToken && tempId) {
         const supabaseInstance = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         );
-        let { error } = await supabaseInstance
-          .from("spotify_credentials")
-          .delete()
-          .match({
-            temp_id: tempId,
-            refresh_token: refreshToken,
-          });
-        if (error) {
-          console.error("Error removing credentials from database:", error);
-        }
+
+        await supabaseInstance.from("spotify_credentials").delete().match({
+          temp_id: tempId,
+          refresh_token: refreshToken,
+        });
       }
+
       localStorage.removeItem("spotifyAccessToken");
       localStorage.removeItem("spotifyRefreshToken");
       localStorage.removeItem("spotifyTokenExpiry");
       localStorage.removeItem("spotifyAuthType");
       localStorage.removeItem("spotifyTempId");
+      localStorage.removeItem("spotifySessionId");
+
       setAccessToken(null);
       setRefreshToken(null);
       setAuthState({
@@ -1365,7 +1447,16 @@ export default function App({ Component, pageProps }) {
       });
     } catch (error) {
       console.error("Error during session cleanup:", error);
-      localStorage.clear();
+      const authItems = [
+        "spotifyAccessToken",
+        "spotifyRefreshToken",
+        "spotifyTokenExpiry",
+        "spotifyAuthType",
+        "spotifyTempId",
+        "spotifySessionId",
+      ];
+      authItems.forEach((item) => localStorage.removeItem(item));
+
       setAccessToken(null);
       setRefreshToken(null);
       setAuthState({
