@@ -4,7 +4,6 @@ import LongPressLink from "../components/LongPressLink";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { fetchLikedSongs } from "../services/playlistService";
-import DonationQRModal from "../components/DonationQRModal";
 
 export default function Home({
   accessToken,
@@ -20,7 +19,6 @@ export default function Home({
   showBrightnessOverlay,
   handleError,
 }) {
-  const [showDonationModal, setShowDonationModal] = useState(false);
   useEffect(() => {
     if (activeSection === "radio") {
       updateGradientColors(null, "radio");
@@ -360,18 +358,12 @@ export default function Home({
                 ))}
               {activeSection === "settings" && (
                 <div className="w-full h-full overflow-y-auto">
-                  <Settings
-                    accessToken={accessToken}
-                    onOpenDonationModal={() => setShowDonationModal(true)}
-                  />
+                  <Settings accessToken={accessToken} />
                 </div>
               )}
             </div>
           </div>
         </div>
-      )}
-      {showDonationModal && (
-        <DonationQRModal onClose={() => setShowDonationModal(false)} />
       )}
     </div>
   );

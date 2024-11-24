@@ -345,7 +345,9 @@ const AlbumPage = ({
             </div>
           </div>
         ))}
-        {isLoading && <div className="flex justify-center mt-4" />}
+        {isLoading && (
+          <p className="text-white text-center">Loading more tracks...</p>
+        )}
       </div>
     </div>
   );
