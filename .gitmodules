@@ -1,0 +1,3 @@
+[submodule "nixos-superbird"]
+	path = nixos-superbird
+	url = https://github.com/JoeyEamigh/nixos-superbird

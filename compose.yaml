@@ -1,0 +1,15 @@
+services:
+  nix:
+    build:
+      context: ./nixos-superbird/docker/
+      dockerfile: ./Dockerfile.nix
+    volumes:
+      - ./:/workdir
+      - nix-store:/nix
+      - nix-root:/root
+    stdin_open: true
+    tty: true
+
+volumes:
+  nix-store:
+  nix-root:
