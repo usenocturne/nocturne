@@ -178,7 +178,7 @@ const PlaylistPage = ({
           setIsShuffleEnabled(data.shuffle_state);
         }
       } catch (error) {
-        handleError("FETCH_PLAYBACK_STATE_ERROR", error.message);
+        return;
       }
     };
 

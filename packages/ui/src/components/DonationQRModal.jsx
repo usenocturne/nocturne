@@ -1,22 +1,18 @@
 import React, { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { X } from "lucide-react";
-
 const DonationQRModal = ({ onClose }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-
   React.useEffect(() => {
     setIsVisible(true);
   }, []);
-
   const handleClose = () => {
     setIsExiting(true);
     setTimeout(() => {
       onClose();
     }, 300);
   };
-
   return (
     <div
       className={`fixed inset-0 z-50 transition-opacity duration-300 ${
@@ -62,5 +58,4 @@ const DonationQRModal = ({ onClose }) => {
     </div>
   );
 };
-
 export default DonationQRModal;

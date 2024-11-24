@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import { useEffect, useState, useCallback, useRef } from "react";
+import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
 import { Inter } from "next/font/google";
 import {
@@ -13,27 +14,55 @@ import AuthSelection from "../components/AuthSelection";
 import { createClient } from "@supabase/supabase-js";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
-import { ErrorCodes } from "../constants/errorCodes";
-import {
-  calculateBrightness,
-  calculateHue,
-  hexToRgb,
-  rgbToHex,
-  generateMeshGradient,
-  getNextColor,
-  extractPaletteFromImage,
-  createPaletteFromImage,
-} from "../lib/colorUtils";
-import ResetTimerOverlay from "../components/ResetTimerOverlay";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
+
+const ErrorCodes = {
+  FETCH_CURRENT_PLAYBACK_ERROR: "E001",
+  FETCH_ACCESS_TOKEN_ERROR: "E002",
+  REFRESH_ACCESS_TOKEN_ERROR: "E003",
+  FETCH_LYRICS_ERROR: "E004",
+  FETCH_USER_PLAYLISTS_ERROR: "E005",
+  SYNC_VOLUME_ERROR: "E006",
+  CHANGE_VOLUME_ERROR: "E007",
+  CHECK_LIKED_TRACKS_ERROR: "E008",
+  CHECK_IF_TRACK_IS_LIKED_ERROR: "E009",
+  TOGGLE_LIKED_TRACK_ERROR: "E010",
+  TOGGLE_LIKE_TRACK_ERROR: "E011",
+  TOGGLE_PLAY_PAUSE_ERROR: "E012",
+  SKIP_TO_NEXT_TRACK_ERROR: "E013",
+  SKIP_TO_PREVIOUS_ERROR: "E014",
+  CHECK_PLAYLIST_CONTENTS_ERROR: "E015",
+  ADD_TRACK_TO_PLAYLIST_ERROR: "E016",
+  TOGGLE_SHUFFLE_ERROR: "E017",
+  TOGGLE_REPEAT_ERROR: "E018",
+  FETCH_PLAYBACK_STATE_ERROR: "E019",
+  LOAD_MORE_TRACKS_ERROR: "E020",
+  NO_DEVICES_AVAILABLE: "E021",
+  PLAY_ALBUM_ERROR: "E022",
+  TRANSFER_PLAYBACK_ERROR: "E023",
+  PLAY_TRACK_ERROR: "E024",
+  PLAY_TRACK_REQUEST_ERROR: "E025",
+  FETCH_ALBUM_ERROR: "E026",
+  FETCH_PLAYBACK_STATE_ERROR: "E027",
+  PLAY_ARTIST_TOP_TRACKS_ERROR: "E028",
+  FETCH_ARTIST_ERROR: "E029",
+  PLAY_PLAYLIST_ERROR: "E030",
+  FETCH_PLAYLIST_ERROR: "E031",
+  FETCH_RECENTLY_PLAYED_ALBUMS_ERROR: "E032",
+  FETCH_TOP_ARTISTS_ERROR: "E033",
+  FETCH_USER_RADIO_ERROR: "E034",
+  FETCH_USER_PROFILE_ERROR: "E035",
+  AUTH_ERROR: "E036",
+  DEVICES_FETCH_ERROR: "E037",
+  FETCH_PLAYLIST_TRACKS_ERROR: "E038",
+};
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
     return {
       authSelectionMade: false,
       authType: null,
-      tempId: null,
     };
   }
 
@@ -42,6 +71,7 @@ const initialAuthState = () => {
     const existingAccessToken = localStorage.getItem("spotifyAccessToken");
     const existingRefreshToken = localStorage.getItem("spotifyRefreshToken");
     const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+
     if (existingAuthType && existingRefreshToken) {
       return {
         authSelectionMade: true,
@@ -55,7 +85,6 @@ const initialAuthState = () => {
   return {
     authSelectionMade: false,
     authType: null,
-    tempId: null,
   };
 };
 
@@ -99,16 +128,18 @@ export default function App({ Component, pageProps }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState(null);
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [currentRepeat, setCurrentRepeat] = useState("off");
   const [pressedButton, setPressedButton] = useState(null);
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
   const { authSelectionMade, authType, tempId } = authState;
-  const [showResetTimer, setShowResetTimer] = useState(false);
-  const keysPressed = useRef({ 4: false, Escape: false });
+  const keyStatesRef = useRef({
+    4: false,
+    Escape: false,
+  });
+  const resetTimerRef = useRef(null);
   const startTimeRef = useRef(null);
-  const timerRef = useRef(null);
-  const resetDuration = 5000;
 
   useEffect(() => {
     if (accessToken) {
@@ -131,18 +162,8 @@ export default function App({ Component, pageProps }) {
     const newState = {
       authSelectionMade: true,
       authType: selection.type,
-      tempId: selection.type === "custom" ? selection.tempId : null,
     };
     setAuthState(newState);
-
-    if (selection.skipSpotifyAuth && selection.type === "custom") {
-      const savedAccessToken = localStorage.getItem("spotifyAccessToken");
-      const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-      if (savedAccessToken && savedRefreshToken) {
-        setAccessToken(savedAccessToken);
-        setRefreshToken(savedRefreshToken);
-      }
-    }
   };
 
   const handleError = (errorType, errorMessage) => {
@@ -162,12 +183,49 @@ export default function App({ Component, pageProps }) {
     }
   };
 
+  const calculateBrightness = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  };
+
+  const calculateHue = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h;
+
+    if (max === min) {
+      h = 0;
+    } else {
+      const d = max - min;
+      switch (max) {
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0);
+          break;
+        case g:
+          h = (b - r) / d + 2;
+          break;
+        case b:
+          h = (r - g) / d + 4;
+          break;
+      }
+      h /= 6;
+    }
+    return h * 360;
+  };
+
   const extractColors = (imageUrl) => {
+    const colorThief = new ColorThief();
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = imageUrl;
     img.onload = () => {
-      const palette = createPaletteFromImage(img);
+      const palette = colorThief.getPalette(img, 8);
       const filteredColors = palette
         .map(
           (color) =>
@@ -181,6 +239,46 @@ export default function App({ Component, pageProps }) {
 
       setColors(filteredColors);
     };
+  };
+
+  const hexToRgb = (hex) => {
+    const bigint = parseInt(hex.slice(1), 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return { r, g, b };
+  };
+
+  const rgbToHex = ({ r, g, b }) => {
+    const toHex = (n) => n.toString(16).padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+
+  const getNextColor = (current, target) => {
+    const step = (start, end) => {
+      if (start === end) return start;
+      const diff = end - start;
+      return start + (diff > 0 ? Math.min(1, diff) : Math.max(-1, diff));
+    };
+
+    return {
+      r: step(current.r, target.r),
+      g: step(current.g, target.g),
+      b: step(current.b, target.b),
+    };
+  };
+
+  const generateMeshGradient = (colors) => {
+    if (colors.length === 0) return "#191414";
+
+    const positions = ["at 0% 25%", "at 25% 0%", "at 100% 75%", "at 75% 100%"];
+
+    const radialGradients = positions.map((position, index) => {
+      const color = colors[index % colors.length];
+      return `radial-gradient(${position}, ${color} 0%, transparent 80%)`;
+    });
+
+    return `${radialGradients.join(", ")}`;
   };
 
   const fetchCurrentPlayback = async () => {
@@ -219,6 +317,7 @@ export default function App({ Component, pageProps }) {
           });
 
           setIsShuffleEnabled(data.shuffle_state);
+          setCurrentRepeat(data.repeat_state);
 
           if (data && data.item) {
             const currentAlbum = data.item.album;
@@ -254,10 +353,7 @@ export default function App({ Component, pageProps }) {
             }
           }
         } else if (response.status !== 401 && response.status !== 403) {
-          handleError(
-            "FETCH_CURRENT_PLAYBACK_ERROR",
-            `HTTP error! status: ${response.status}`
-          );
+          return;
         }
       } catch (error) {
         if (error.message.includes("Unexpected end of JSON input")) {
@@ -276,47 +372,10 @@ export default function App({ Component, pageProps }) {
     const scopes =
       "user-read-recently-played user-read-private user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private";
 
-    let clientId;
+    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     const urlParams = new URLSearchParams(window.location.search);
     const phoneSession = urlParams.get("session");
     const isPhoneAuth = !!phoneSession;
-
-    if (authType === "custom" && tempId) {
-      try {
-        const supabaseInstance = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        );
-
-        const { data, error } = await supabaseInstance
-          .from("spotify_credentials")
-          .select("client_id")
-          .eq("temp_id", tempId)
-          .single();
-
-        if (error) {
-          console.error("Supabase error:", error);
-          handleError("AUTH_ERROR", "Failed to get custom credentials");
-          return;
-        }
-
-        if (!data) {
-          handleError("AUTH_ERROR", "No credentials found for the provided ID");
-          return;
-        }
-
-        clientId = data.client_id;
-        localStorage.setItem("spotifyAuthType", "custom");
-        localStorage.setItem("spotifyTempId", tempId);
-      } catch (error) {
-        console.error("Error getting custom credentials:", error);
-        handleError("AUTH_ERROR", error.message);
-        return;
-      }
-    } else {
-      clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-      localStorage.setItem("spotifyAuthType", "default");
-    }
 
     if (!clientId) {
       handleError("AUTH_ERROR", "No client ID available");
@@ -416,7 +475,7 @@ export default function App({ Component, pageProps }) {
 
       return data;
     } catch (error) {
-      console.error("Token refresh failed:", error);
+      console.error("Token refresh error:", error);
       handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
       throw error;
     }
@@ -561,91 +620,52 @@ export default function App({ Component, pageProps }) {
   }, [showBrightnessOverlay]);
 
   useEffect(() => {
-    const handleWheel = (event) => {
-      if (showBrightnessOverlay) {
-        event.stopPropagation();
-        event.preventDefault();
-        setBrightness((prev) => {
-          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
-          return Math.max(5, Math.min(250, newValue));
-        });
-      }
+    const resetDuration = 5000;
+
+    const performReset = () => {
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+      localStorage.removeItem("spotifyAccessToken");
+      localStorage.removeItem("spotifyRefreshToken");
+      localStorage.removeItem("spotifyTokenExpiry");
+
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("button") && key.endsWith("Map")) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      router.push("/").then(() => {
+        window.location.reload();
+      });
     };
 
     const handleKeyDown = (event) => {
-      if (
-        showBrightnessOverlay &&
-        ["1", "2", "3", "4", "Escape", "Enter"].includes(event.key)
-      ) {
-        event.stopPropagation();
-        event.preventDefault();
+      if (event.key === "4" || event.key === "Escape") {
+        keyStatesRef.current[event.key] = true;
 
-        const existingTimeout = window.brightnessOverlayTimer;
-        if (existingTimeout) {
-          clearTimeout(existingTimeout);
-        }
-        setShowBrightnessOverlay(false);
-      }
-    };
-
-    const handleTouchMove = (event) => {
-      if (showBrightnessOverlay) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-
-    const handleTouchStart = (event) => {
-      if (showBrightnessOverlay) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-
-    document.addEventListener("wheel", handleWheel, {
-      passive: false,
-      capture: true,
-    });
-    document.addEventListener("keydown", handleKeyDown, { capture: true });
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
-    document.addEventListener("touchstart", handleTouchStart, {
-      passive: false,
-    });
-
-    return () => {
-      document.removeEventListener("wheel", handleWheel, { capture: true });
-      document.removeEventListener("keydown", handleKeyDown, { capture: true });
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.removeEventListener("touchstart", handleTouchStart);
-    };
-  }, [showBrightnessOverlay]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "4" || e.key === "Escape") {
-        keysPressed.current[e.key] = true;
-
-        if (keysPressed.current["4"] && keysPressed.current["Escape"]) {
+        if (keyStatesRef.current["4"] && keyStatesRef.current["Escape"]) {
           if (!startTimeRef.current) {
             startTimeRef.current = Date.now();
-            setShowResetTimer(true);
 
-            timerRef.current = setInterval(async () => {
-              const elapsed = Date.now() - startTimeRef.current;
-              if (elapsed >= resetDuration) {
+            if (resetTimerRef.current) {
+              clearInterval(resetTimerRef.current);
+            }
+
+            resetTimerRef.current = setInterval(async () => {
+              const elapsedTime = Date.now() - startTimeRef.current;
+              if (elapsedTime >= resetDuration) {
                 try {
                   const refreshToken = localStorage.getItem(
                     "spotifyRefreshToken"
                   );
                   const tempId = localStorage.getItem("spotifyTempId");
                   const authType = localStorage.getItem("spotifyAuthType");
-
                   if (authType === "custom" && refreshToken && tempId) {
                     const supabaseInstance = createClient(
                       process.env.NEXT_PUBLIC_SUPABASE_URL,
                       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
                     );
-
                     const { error } = await supabaseInstance
                       .from("spotify_credentials")
                       .delete()
@@ -653,7 +673,6 @@ export default function App({ Component, pageProps }) {
                         temp_id: tempId,
                         refresh_token: refreshToken,
                       });
-
                     if (error) {
                       console.error(
                         "Error removing credentials from database:",
@@ -661,7 +680,6 @@ export default function App({ Component, pageProps }) {
                       );
                     }
                   }
-
                   localStorage.clear();
                   router.push("/").then(() => {
                     window.location.reload();
@@ -674,33 +692,41 @@ export default function App({ Component, pageProps }) {
                   });
                 }
               }
+
+              if (
+                keyStatesRef.current["4"] &&
+                keyStatesRef.current["Escape"] &&
+                elapsedTime >= resetDuration
+              ) {
+                clearInterval(resetTimerRef.current);
+                performReset();
+              }
             }, 100);
           }
         }
       }
     };
 
-    const handleKeyUp = (e) => {
-      if (e.key === "4" || e.key === "Escape") {
-        keysPressed.current[e.key] = false;
-        setShowResetTimer(false);
+    const handleKeyUp = (event) => {
+      if (event.key === "4" || event.key === "Escape") {
+        keyStatesRef.current[event.key] = false;
 
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
+        if (resetTimerRef.current) {
+          clearInterval(resetTimerRef.current);
+          resetTimerRef.current = null;
         }
         startTimeRef.current = null;
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    window.addEventListener("keyup", handleKeyUp, { capture: true });
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+      window.removeEventListener("keyup", handleKeyUp, { capture: true });
+      if (resetTimerRef.current) {
+        clearInterval(resetTimerRef.current);
       }
     };
   }, [router]);
@@ -727,7 +753,8 @@ export default function App({ Component, pageProps }) {
 
       if (
         pressDuration < holdDuration &&
-        !pressStartPath?.includes("/playlist/")
+        !pressStartPath?.includes("/playlist/") &&
+        !pressStartPath?.includes("/collection/")
       ) {
         const hasAnyMappings = validKeys.some(
           (key) => localStorage.getItem(`button${key}Map`) !== null
@@ -765,26 +792,6 @@ export default function App({ Component, pageProps }) {
 
               if (!accessToken) {
                 throw new Error("Failed to obtain access token");
-              }
-
-              const playlistId = mappedRoute.split("/").pop();
-
-              const playbackResponse = await fetch(
-                "https://api.spotify.com/v1/me/player",
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                }
-              );
-
-              let currentShuffle = false;
-              let currentRepeat = "off";
-
-              if (playbackResponse.ok && playbackResponse.status !== 204) {
-                const playbackData = await playbackResponse.json();
-                currentShuffle = playbackData.shuffle_state;
-                currentRepeat = playbackData.repeat_state;
               }
 
               const devicesResponse = await fetch(
@@ -831,8 +838,67 @@ export default function App({ Component, pageProps }) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
               }
 
+              if (mappedRoute === "liked-songs") {
+                const tracksResponse = await fetch(
+                  "https://api.spotify.com/v1/me/tracks?limit=50",
+                  {
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                    },
+                  }
+                );
+
+                if (!tracksResponse.ok) {
+                  throw new Error("Failed to fetch liked songs");
+                }
+
+                const tracksData = await tracksResponse.json();
+                const trackUris = tracksData.items.map(
+                  (item) => item.track.uri
+                );
+
+                let startPosition = 0;
+                if (isShuffleEnabled) {
+                  startPosition = Math.floor(Math.random() * trackUris.length);
+                }
+
+                await fetch(
+                  `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+                  {
+                    method: "PUT",
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                    },
+                  }
+                );
+
+                const playResponse = await fetch(
+                  "https://api.spotify.com/v1/me/player/play",
+                  {
+                    method: "PUT",
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      uris: trackUris,
+                      offset: { position: startPosition },
+                      device_id: activeDeviceId,
+                    }),
+                  }
+                );
+
+                if (!playResponse.ok) {
+                  throw new Error(`Play error! status: ${playResponse.status}`);
+                }
+
+                return;
+              }
+
+              const playlistId = mappedRoute.split("/").pop();
+
               let startPosition = 0;
-              if (currentShuffle) {
+              if (isShuffleEnabled) {
                 const playlistResponse = await fetch(
                   `https://api.spotify.com/v1/playlists/${playlistId}`,
                   {
@@ -850,7 +916,7 @@ export default function App({ Component, pageProps }) {
               }
 
               const shuffleResponse = await fetch(
-                `https://api.spotify.com/v1/me/player/shuffle?state=${currentShuffle}`,
+                `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
                 {
                   method: "PUT",
                   headers: {
@@ -1018,6 +1084,11 @@ export default function App({ Component, pageProps }) {
                             margin: 0;
                             line-height: 1.5;
                           }
+                          .countdown {
+                            margin-top: 24px;
+                            color: rgba(255,255,255,0.5);
+                            font-size: 14px;
+                          }
                         </style>
                       </head>
                       <body>
@@ -1028,6 +1099,7 @@ export default function App({ Component, pageProps }) {
                         </div>
                         <h1>Authentication Successful</h1>
                         <p>You can close this window and return to Nocturne.</p>
+                        <div class="countdown">This window will close automatically...</div>
                       </body>
                     </html>
                   `;
@@ -1153,8 +1225,13 @@ export default function App({ Component, pageProps }) {
     if (accessToken) {
       const checkTokenExpiry = async () => {
         const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+        const currentTime = new Date();
+        const expiryTime = new Date(tokenExpiry);
 
-        if (tokenExpiry && new Date(tokenExpiry) <= new Date()) {
+        if (
+          !tokenExpiry ||
+          expiryTime <= new Date(currentTime.getTime() + 5 * 60000)
+        ) {
           try {
             const refreshData = await refreshAccessToken();
             if (refreshData.access_token) {
@@ -1180,17 +1257,22 @@ export default function App({ Component, pageProps }) {
             }
           } catch (error) {
             console.error("Token refresh failed:", error);
-            clearSession();
-            redirectToSpotify();
+            if (error.message.includes("invalid_grant")) {
+              clearSession();
+              redirectToSpotify();
+            }
           }
         }
       };
 
-      const tokenRefreshInterval = setInterval(checkTokenExpiry, 3000 * 1000);
+      checkTokenExpiry();
 
+      const tokenRefreshInterval = setInterval(checkTokenExpiry, 5 * 60 * 1000);
+      const playbackInterval = setInterval(() => {
+        fetchCurrentPlayback();
+      }, 1000);
       setLoading(false);
 
-      checkTokenExpiry();
       fetchRecentlyPlayedAlbums(
         accessToken,
         setAlbums,
@@ -1210,10 +1292,6 @@ export default function App({ Component, pageProps }) {
         handleError
       );
       fetchUserRadio(accessToken, setRadio, updateGradientColors, handleError);
-
-      const playbackInterval = setInterval(() => {
-        fetchCurrentPlayback();
-      }, 1000);
 
       const recentlyPlayedInterval = setInterval(() => {
         fetchRecentlyPlayedAlbums(
@@ -1258,13 +1336,11 @@ export default function App({ Component, pageProps }) {
       const refreshToken = localStorage.getItem("spotifyRefreshToken");
       const tempId = localStorage.getItem("spotifyTempId");
       const authType = localStorage.getItem("spotifyAuthType");
-
       if (authType === "custom" && refreshToken && tempId) {
         const supabaseInstance = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         );
-
         let { error } = await supabaseInstance
           .from("spotify_credentials")
           .delete()
@@ -1272,33 +1348,15 @@ export default function App({ Component, pageProps }) {
             temp_id: tempId,
             refresh_token: refreshToken,
           });
-
-        if (!data && localStorage.getItem("refreshToken")) {
-          ({ data, error } = await supabaseInstance
-            .from("spotify_credentials")
-            .select("client_id, temp_id")
-            .eq("refresh_token", localStorage.getItem("refreshToken"))
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single());
-
-          if (data?.temp_id) {
-            setTempId(data.temp_id);
-            localStorage.setItem("spotifyTempId", data.temp_id);
-          }
-        }
-
         if (error) {
           console.error("Error removing credentials from database:", error);
         }
       }
-
       localStorage.removeItem("spotifyAccessToken");
       localStorage.removeItem("spotifyRefreshToken");
       localStorage.removeItem("spotifyTokenExpiry");
       localStorage.removeItem("spotifyAuthType");
       localStorage.removeItem("spotifyTempId");
-
       setAccessToken(null);
       setRefreshToken(null);
       setAuthState({
@@ -1317,66 +1375,70 @@ export default function App({ Component, pageProps }) {
     }
   };
 
-  const updateGradientColors = useCallback((imageUrl, section = null) => {
-    if (!imageUrl) {
-      if (section === "radio") {
-        const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
-        setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
-        if (activeSection === "radio" || activeSection === "nowPlaying") {
-          setTargetColor1(radioColors[0]);
-          setTargetColor2(radioColors[1]);
-          setTargetColor3(radioColors[2]);
-          setTargetColor4(radioColors[3]);
+  const updateGradientColors = useCallback(
+    (imageUrl, section = null) => {
+      if (!imageUrl) {
+        if (section === "radio") {
+          const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
+          setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
+          if (activeSection === "radio" || activeSection === "nowPlaying") {
+            setTargetColor1(radioColors[0]);
+            setTargetColor2(radioColors[1]);
+            setTargetColor3(radioColors[2]);
+            setTargetColor4(radioColors[3]);
+          }
+        } else if (section === "library") {
+          const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: libraryColors,
+          }));
+          if (activeSection === "library") {
+            setTargetColor1(libraryColors[0]);
+            setTargetColor2(libraryColors[1]);
+            setTargetColor3(libraryColors[2]);
+            setTargetColor4(libraryColors[3]);
+          }
         }
-      } else if (section === "library") {
-        const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
+        return;
+      }
+
+      const colorThief = new ColorThief();
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = imageUrl;
+      img.onload = () => {
+        const dominantColors = colorThief.getPalette(img, 4);
+        const hexColors = dominantColors.map((color) =>
+          rgbToHex({ r: color[0], g: color[1], b: color[2] })
+        );
+
         setSectionGradients((prev) => ({
           ...prev,
-          [section]: libraryColors,
+          [section]: hexColors,
         }));
-        if (activeSection === "library") {
-          setTargetColor1(libraryColors[0]);
-          setTargetColor2(libraryColors[1]);
-          setTargetColor3(libraryColors[2]);
-          setTargetColor4(libraryColors[3]);
-        }
-      } else if (section === "settings" || router.pathname === "/now-playing") {
-        const settingsColors = ["#191414", "#191414", "#191414", "#191414"];
-        setSectionGradients((prev) => ({
-          ...prev,
-          [section]: settingsColors,
-        }));
+
         if (
-          activeSection === "settings" ||
-          router.pathname === "/now-playing"
+          section === activeSection ||
+          section === "nowPlaying" ||
+          activeSection === "nowPlaying"
         ) {
-          setTargetColor1(settingsColors[0]);
-          setTargetColor2(settingsColors[1]);
-          setTargetColor3(settingsColors[2]);
-          setTargetColor4(settingsColors[3]);
+          setTargetColor1(hexColors[0]);
+          setTargetColor2(hexColors[1]);
+          setTargetColor3(hexColors[2]);
+          setTargetColor4(hexColors[3]);
         }
-      }
-      return;
-    }
-
-    extractPaletteFromImage(imageUrl).then((colors) => {
-      setSectionGradients((prev) => ({
-        ...prev,
-        [section]: colors,
-      }));
-
-      if (
-        section === activeSection ||
-        section === "nowPlaying" ||
-        activeSection === "nowPlaying"
-      ) {
-        setTargetColor1(colors[0]);
-        setTargetColor2(colors[1]);
-        setTargetColor3(colors[2]);
-        setTargetColor4(colors[3]);
-      }
-    });
-  }, [activeSection, router.pathname, setTargetColor1, setTargetColor2, setTargetColor3, setTargetColor4][(activeSection, router.pathname)]);
+      };
+    },
+    [
+      activeSection,
+      router.pathname,
+      setTargetColor1,
+      setTargetColor2,
+      setTargetColor3,
+      setTargetColor4,
+    ]
+  );
 
   useEffect(() => {
     const current1 = hexToRgb(currentColor1);
@@ -1627,12 +1689,6 @@ export default function App({ Component, pageProps }) {
             onClose={() => setShowMappingOverlay(false)}
             activeButton={pressedButton}
           />
-          {showResetTimer && (
-            <ResetTimerOverlay
-              duration={resetDuration}
-              startTime={startTimeRef.current}
-            />
-          )}
         </>
       )}
     </main>
