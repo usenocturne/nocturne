@@ -1360,24 +1360,6 @@ export default function App({ Component, pageProps }) {
             setTargetColor3(libraryColors[2]);
             setTargetColor4(libraryColors[3]);
           }
-        } else if (
-          section === "settings" ||
-          router.pathname === "/now-playing"
-        ) {
-          const settingsColors = ["#191414", "#191414", "#191414", "#191414"];
-          setSectionGradients((prev) => ({
-            ...prev,
-            [section]: settingsColors,
-          }));
-          if (
-            activeSection === "settings" ||
-            router.pathname === "/now-playing"
-          ) {
-            setTargetColor1(settingsColors[0]);
-            setTargetColor2(settingsColors[1]);
-            setTargetColor3(settingsColors[2]);
-            setTargetColor4(settingsColors[3]);
-          }
         }
         return;
       }
