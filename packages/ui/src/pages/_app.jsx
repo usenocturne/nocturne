@@ -436,6 +436,10 @@ export default function App({ Component, pageProps }) {
 
   const refreshAccessToken = async () => {
     try {
+      const currentRefreshToken = localStorage.getItem("spotifyRefreshToken");
+      const currentAuthType = localStorage.getItem("spotifyAuthType");
+      const currentTempId = localStorage.getItem("spotifyTempId");
+
       const response = await fetch("/api/v1/auth/refresh-token", {
         method: "POST",
         headers: {
@@ -444,20 +448,35 @@ export default function App({ Component, pageProps }) {
         body: JSON.stringify({
           refresh_token: refreshToken,
           isCustomAuth: authType === "custom",
+          tempId: currentTempId,
         }),
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Refresh token error:", {
+          status: response.status,
+          data: errorData,
+        });
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+
       setAccessToken(data.access_token);
       if (data.refresh_token) {
         setRefreshToken(data.refresh_token);
+        localStorage.setItem("spotifyRefreshToken", data.refresh_token);
       }
+
+      const newExpiry = new Date(
+        Date.now() + data.expires_in * 1000
+      ).toISOString();
+      localStorage.setItem("spotifyTokenExpiry", newExpiry);
+
       return data;
     } catch (error) {
+      console.error("Token refresh error:", error);
       handleError("REFRESH_ACCESS_TOKEN_ERROR", error.message);
       throw error;
     }
@@ -902,6 +921,7 @@ export default function App({ Component, pageProps }) {
           try {
             const stateData = JSON.parse(decodeURIComponent(state));
             if (stateData.phoneAuth) {
+              localStorage.setItem("spotifySessionId", stateData.sessionId);
               const exchangeTokens = async () => {
                 try {
                   const tokenResponse = await fetch("/api/v1/auth/token", {
