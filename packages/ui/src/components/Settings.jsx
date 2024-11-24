@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Field, Label, Switch } from "@headlessui/react";
 import { useRouter } from "next/router";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Settings() {
   const router = useRouter();
@@ -38,12 +39,38 @@ export default function Settings() {
     }
   }, []);
 
-  const handleSignOut = () => {
-    localStorage.removeItem("spotifyAuthType");
-    localStorage.removeItem("spotifyTempId");
-    router.push("/").then(() => {
-      window.location.reload();
-    });
+  const handleSignOut = async () => {
+    try {
+      const refreshToken = localStorage.getItem("spotifyRefreshToken");
+      const tempId = localStorage.getItem("spotifyTempId");
+      const authType = localStorage.getItem("spotifyAuthType");
+      if (authType === "custom" && refreshToken && tempId) {
+        const { error } = await supabase
+          .from("spotify_credentials")
+          .delete()
+          .match({
+            temp_id: tempId,
+            refresh_token: refreshToken,
+          });
+        if (error) {
+          console.error("Error removing credentials from database:", error);
+        }
+      }
+      localStorage.removeItem("spotifyAccessToken");
+      localStorage.removeItem("spotifyRefreshToken");
+      localStorage.removeItem("spotifyTokenExpiry");
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+      router.push("/").then(() => {
+        window.location.reload();
+      });
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      localStorage.clear();
+      router.push("/").then(() => {
+        window.location.reload();
+      });
+    }
   };
 
   return (

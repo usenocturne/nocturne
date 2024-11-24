@@ -653,8 +653,46 @@ export default function App({ Component, pageProps }) {
               clearInterval(resetTimerRef.current);
             }
 
-            resetTimerRef.current = setInterval(() => {
+            resetTimerRef.current = setInterval(async () => {
               const elapsedTime = Date.now() - startTimeRef.current;
+              if (elapsedTime >= resetDuration) {
+                try {
+                  const refreshToken = localStorage.getItem(
+                    "spotifyRefreshToken"
+                  );
+                  const tempId = localStorage.getItem("spotifyTempId");
+                  const authType = localStorage.getItem("spotifyAuthType");
+                  if (authType === "custom" && refreshToken && tempId) {
+                    const supabaseInstance = createClient(
+                      process.env.NEXT_PUBLIC_SUPABASE_URL,
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                    );
+                    const { error } = await supabaseInstance
+                      .from("spotify_credentials")
+                      .delete()
+                      .match({
+                        temp_id: tempId,
+                        refresh_token: refreshToken,
+                      });
+                    if (error) {
+                      console.error(
+                        "Error removing credentials from database:",
+                        error
+                      );
+                    }
+                  }
+                  localStorage.clear();
+                  router.push("/").then(() => {
+                    window.location.reload();
+                  });
+                } catch (error) {
+                  console.error("Error during reset:", error);
+                  localStorage.clear();
+                  router.push("/").then(() => {
+                    window.location.reload();
+                  });
+                }
+              }
 
               if (
                 keyStatesRef.current["4"] &&
@@ -1254,17 +1292,48 @@ export default function App({ Component, pageProps }) {
     }
   }, [router.pathname, currentPlayback]);
 
-  const clearSession = () => {
-    localStorage.removeItem("spotifyAccessToken");
-    localStorage.removeItem("spotifyRefreshToken");
-    localStorage.removeItem("spotifyTokenExpiry");
-    localStorage.removeItem("spotifyAuthType");
-    setAccessToken(null);
-    setRefreshToken(null);
-    setAuthState({
-      authSelectionMade: false,
-      authType: null,
-    });
+  const clearSession = async () => {
+    try {
+      const refreshToken = localStorage.getItem("spotifyRefreshToken");
+      const tempId = localStorage.getItem("spotifyTempId");
+      const authType = localStorage.getItem("spotifyAuthType");
+      if (authType === "custom" && refreshToken && tempId) {
+        const supabaseInstance = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+        const { error } = await supabaseInstance
+          .from("spotify_credentials")
+          .delete()
+          .match({
+            temp_id: tempId,
+            refresh_token: refreshToken,
+          });
+        if (error) {
+          console.error("Error removing credentials from database:", error);
+        }
+      }
+      localStorage.removeItem("spotifyAccessToken");
+      localStorage.removeItem("spotifyRefreshToken");
+      localStorage.removeItem("spotifyTokenExpiry");
+      localStorage.removeItem("spotifyAuthType");
+      localStorage.removeItem("spotifyTempId");
+      setAccessToken(null);
+      setRefreshToken(null);
+      setAuthState({
+        authSelectionMade: false,
+        authType: null,
+      });
+    } catch (error) {
+      console.error("Error during session cleanup:", error);
+      localStorage.clear();
+      setAccessToken(null);
+      setRefreshToken(null);
+      setAuthState({
+        authSelectionMade: false,
+        authType: null,
+      });
+    }
   };
 
   const updateGradientColors = useCallback(
