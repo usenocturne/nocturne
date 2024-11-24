@@ -446,8 +446,8 @@ export default function App({ Component, pageProps }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          refresh_token: refreshToken,
-          isCustomAuth: authType === "custom",
+          refresh_token: currentRefreshToken,
+          isCustomAuth: currentAuthType === "custom",
           tempId: currentTempId,
         }),
       });
