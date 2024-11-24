@@ -128,6 +128,7 @@ export default function App({ Component, pageProps }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState(null);
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [currentRepeat, setCurrentRepeat] = useState("off");
   const [pressedButton, setPressedButton] = useState(null);
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [brightness, setBrightness] = useState(160);
@@ -316,6 +317,7 @@ export default function App({ Component, pageProps }) {
           });
 
           setIsShuffleEnabled(data.shuffle_state);
+          setCurrentRepeat(data.repeat_state);
 
           if (data && data.item) {
             const currentAlbum = data.item.album;
@@ -351,10 +353,7 @@ export default function App({ Component, pageProps }) {
             }
           }
         } else if (response.status !== 401 && response.status !== 403) {
-          handleError(
-            "FETCH_CURRENT_PLAYBACK_ERROR",
-            `HTTP error! status: ${response.status}`
-          );
+          return;
         }
       } catch (error) {
         if (error.message.includes("Unexpected end of JSON input")) {
@@ -754,7 +753,8 @@ export default function App({ Component, pageProps }) {
 
       if (
         pressDuration < holdDuration &&
-        !pressStartPath?.includes("/playlist/")
+        !pressStartPath?.includes("/playlist/") &&
+        !pressStartPath?.includes("/collection/")
       ) {
         const hasAnyMappings = validKeys.some(
           (key) => localStorage.getItem(`button${key}Map`) !== null
@@ -792,26 +792,6 @@ export default function App({ Component, pageProps }) {
 
               if (!accessToken) {
                 throw new Error("Failed to obtain access token");
-              }
-
-              const playlistId = mappedRoute.split("/").pop();
-
-              const playbackResponse = await fetch(
-                "https://api.spotify.com/v1/me/player",
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                }
-              );
-
-              let currentShuffle = false;
-              let currentRepeat = "off";
-
-              if (playbackResponse.ok && playbackResponse.status !== 204) {
-                const playbackData = await playbackResponse.json();
-                currentShuffle = playbackData.shuffle_state;
-                currentRepeat = playbackData.repeat_state;
               }
 
               const devicesResponse = await fetch(
@@ -858,8 +838,67 @@ export default function App({ Component, pageProps }) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
               }
 
+              if (mappedRoute === "liked-songs") {
+                const tracksResponse = await fetch(
+                  "https://api.spotify.com/v1/me/tracks?limit=50",
+                  {
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                    },
+                  }
+                );
+
+                if (!tracksResponse.ok) {
+                  throw new Error("Failed to fetch liked songs");
+                }
+
+                const tracksData = await tracksResponse.json();
+                const trackUris = tracksData.items.map(
+                  (item) => item.track.uri
+                );
+
+                let startPosition = 0;
+                if (isShuffleEnabled) {
+                  startPosition = Math.floor(Math.random() * trackUris.length);
+                }
+
+                await fetch(
+                  `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+                  {
+                    method: "PUT",
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                    },
+                  }
+                );
+
+                const playResponse = await fetch(
+                  "https://api.spotify.com/v1/me/player/play",
+                  {
+                    method: "PUT",
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      uris: trackUris,
+                      offset: { position: startPosition },
+                      device_id: activeDeviceId,
+                    }),
+                  }
+                );
+
+                if (!playResponse.ok) {
+                  throw new Error(`Play error! status: ${playResponse.status}`);
+                }
+
+                return;
+              }
+
+              const playlistId = mappedRoute.split("/").pop();
+
               let startPosition = 0;
-              if (currentShuffle) {
+              if (isShuffleEnabled) {
                 const playlistResponse = await fetch(
                   `https://api.spotify.com/v1/playlists/${playlistId}`,
                   {
@@ -877,7 +916,7 @@ export default function App({ Component, pageProps }) {
               }
 
               const shuffleResponse = await fetch(
-                `https://api.spotify.com/v1/me/player/shuffle?state=${currentShuffle}`,
+                `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
                 {
                   method: "PUT",
                   headers: {

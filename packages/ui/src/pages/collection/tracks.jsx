@@ -41,8 +41,7 @@ const LikedSongsPage = ({
       pressStartTimes[event.key] = Date.now();
 
       holdTimeouts[event.key] = setTimeout(() => {
-        const currentUrl = window.location.pathname;
-        localStorage.setItem(`button${event.key}Map`, currentUrl);
+        localStorage.setItem(`button${event.key}Map`, "liked-songs");
         localStorage.setItem(
           `button${event.key}Image`,
           "https://misc.scdn.co/liked-songs/liked-songs-640.png"
