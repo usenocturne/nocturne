@@ -81,7 +81,9 @@
    playlist-modify-private
    ```
 
-## Local Development Setup
+## Local Development Server
+
+First, set up the configuration and database:
 
 1. Clone the repository:
 ```bash
@@ -103,9 +105,7 @@ bun install
 cp .env.example .env.local
 ```
 
-4. Spotify authentication requires HTTPS. Follow the steps in [Setting up HTTPS locally](#setting-up-https-locally).
-
-5. Set up your Supabase project:
+4. Set up your Supabase project:
    - Create a new project at [Supabase](https://supabase.com)
    - Create a new table named `spotify_credentials` with the following schema:
 
@@ -170,7 +170,7 @@ with check (
 );
 ```
 
-6. Generate encryption keys:
+5. Generate encryption keys:
 ```bash
 # Generate 32-byte key for AES-256
 openssl rand -hex 32
@@ -179,7 +179,7 @@ openssl rand -hex 32
 openssl rand -hex 16
 ```
 
-7. Update your `.env.local` with the required values:
+6. Update your `.env.local` with the required values:
 ```env
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
@@ -195,25 +195,41 @@ ENCRYPTION_KEY=your_32_byte_hex_key
 ENCRYPTION_IV=your_16_byte_hex_key
 ```
 
-8. Start the development server:
+Now, it's time to:
+
+### Run the local dev server
+
+Nocturne requires HTTPS to make API requests, so you need to set up HTTPS on the local server. This makes two different ways to run the dev server:
+
+#### Using [Caddy][caddy-download]
+
+[caddy-download]: https://caddyserver.com
+
+This will use Caddy as a reverse proxy in front of Next.js's dev server.
+
+On the last step where you start the development server, use `npx next dev` and then, in another tab/
+window, `caddy run` to start. It will run on https://localhost:3443.
+
+1. Install Caddy: this can be done with your OS package manager, or by downloading the executable from https://caddyserver.com/download.
+
+2. Start the Next.js dev server:
+
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-bun dev
+npx next dev
 ```
 
-## Setting up HTTPS locally
+3. In a different tab/window, start Caddy. This will run at https://localhost:3443.
 
-There are two ways to do this. One is using `mkcert` with a JS webserver, and the other is using [Caddy](https://caddyserver.com).
+```bash
+caddy run
+```
 
-### With Caddy
-
-There is a Caddyfile in the repo already. Install Caddy with your OS package manager, or download it at https://caddyserver.com/download. On the last step where you start the development server, use `npx next dev` and then, in another tab/window, `caddy run` to start. It will run on https://localhost:3443.
+This may prompt you for a `sudo` password to install Caddy's certificate on your system, to make it automatically trusted.
 
 
-### With `mkcert`
+#### Using `mkcert` and JS webserver
+
+First, install `mkcert`.
 
 ```bash
 # macOS
@@ -226,13 +242,19 @@ choco install mkcert
 apt install mkcert
 ```
 
-```bash
-# Create and install local CA
-mkcert -install
+Trust the mkcert CA system-wide.
 
-# Generate certificates for localhost and your local IP
+```bash
+mkcert -install
+```
+
+Generate a certificate for localhost (and local IP addresses).
+
+```bash
 mkcert localhost 127.0.0.1 ::1 your.local.ip.address
 ```
+
+Copy the certificate to the current dir.
 
 ```bash
 # Rename the generated certificates
@@ -253,14 +275,7 @@ cp "$(mkcert -CAROOT)/rootCA.pem" ca.crt
 cp "$(mkcert -CAROOT)/rootCA-key.pem" ca.key
 ```
 
-```bash
-# Add to .gitignore
-*.crt
-*.key
-*.pem
-```
-
-Create custom server file:
+Create custom server file at `./server.js`:
 
 ```js
 const { createServer } = require('https');
@@ -287,6 +302,16 @@ app.prepare().then(() => {
     console.log('> Also available on https://your.local.ip.address:3000');
   });
 });
+```
+
+Run the server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+bun dev
 ```
 
 ## Cloudflare Deployment Setup
