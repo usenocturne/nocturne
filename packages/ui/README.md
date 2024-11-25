@@ -37,7 +37,7 @@
 1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>
 2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 3. Once running on your Car Thing, hold the back button (under the knob) until the "Use Default Credentials (Beta)" button appears
-4. Press the "Use Default Credentials (Beta)" butto
+4. Press the "Use Default Credentials (Beta)" button
 5. Authorize with Spotify
 6. Start using the app
 
