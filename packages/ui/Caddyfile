@@ -1,0 +1,8 @@
+{
+    # stop caddy from trying to bind 80 locally
+    auto_https disable_redirects
+}
+
+https://localhost:3443 {
+    reverse_proxy localhost:3000
+}
