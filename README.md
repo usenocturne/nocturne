@@ -119,11 +119,7 @@ After the script completes, Nocturne is almost ready to be used in your car!
 </details>
 <br  >
 
-Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. This should look like `raspberrypi.local:5900`. Input `superbird` as the password.
-
-Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
-
-Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Login with Phone`, scan the QR Code, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ### macOS
 
@@ -220,12 +216,7 @@ After the script completes, Nocturne is almost ready to be used in your car!
 </details>
 <br  >
 
-
-Connect Car Thing to your Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), open the app and create a new connection with the VNC Server Address of `raspberrypi.local` and the port `5900`. This should look like `raspberrypi.local:5900`. Input `superbird` as the password.
-
-Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
-
-Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Login with Phone`, scan the QR Code, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ### Linux
 
@@ -303,11 +294,7 @@ $ sudo reboot
 </details>
 <br>
 
-Connect Car Thing to your computer or Raspberry Pi, download and install [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/), and open the app. Find the IP Address of your device and create a new connection with the VNC Server Address with the port `5900`. This should look something like `raspberrypi.local:5900`. Input `superbird` as the password.
-
-Right click the connection, navigate to `Properties`, then `Expert`, and set `Quality` to `High`, and ensure that `RelativePtr` is set to `False`.
-
-Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Use Custom Credentials`, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
+Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Login with Phone`, scan the QR Code, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
 
 ## Troubleshooting
 
