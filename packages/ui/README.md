@@ -256,7 +256,7 @@ openssl rand -hex 16
 ```env
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_anon_key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 
 # Spotify
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your_client_id
