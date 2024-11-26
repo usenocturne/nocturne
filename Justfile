@@ -4,6 +4,9 @@ build:
 build-system:
   nix build '.#nixosConfigurations.superbird.config.system.build.toplevel' -j"$(nproc)" --show-trace
 
+docker-bash:
+  docker compose run --rm nix bash
+
 zip-system:
   #!/usr/bin/env bash
   set -euo pipefail
@@ -54,16 +57,3 @@ cache:
 
 cache-qemu:
   attic push nocturne $(nix build .#nixosConfigurations.superbird-qemu.config.system.build.toplevel --no-link --print-out-paths)
-
-# TODO: use normal images
-docker-installer:
-  docker run --privileged --rm -it -v ./:/workdir -v nix-store:/nix -v nix-root:/root d10dcb4a9a66
-
-docker-cache:
-  docker run --privileged --rm -it -v ./:/workdir -v nix-store:/nix -v nix-root:/root d10dcb4a9a66 /usr/bin/env bash -c "just cache"
-
-docker-cache-qemu:
-  docker run --privileged --rm -it -v ./:/workdir -v nix-store:/nix -v nix-root:/root d10dcb4a9a66 /usr/bin/env bash -c "just cache-qemu"
-
-docker-zip-system:
-  docker run --privileged --rm -it -v ./:/workdir -v nix-store:/nix -v nix-root:/root d10dcb4a9a66 /usr/bin/env bash -c "just zip-system"
