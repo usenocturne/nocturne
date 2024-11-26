@@ -13,6 +13,7 @@
   <a href="#how-to-use">How To Use</a> •
   <a href="#download">Download</a> •
   <a href="#troubleshooting">Troubleshooting</a> •
+  <a href="#donate">Donate</a> •
   <a href="#credits">Credits</a> •
   <a href="#related">Related</a> •
   <a href="#license">License</a>
@@ -359,6 +360,15 @@ If your issue is not listed here, or if you need help, join our Discord [here!](
 ## Download
 
 You can download the latest flashable version of Nocturne for Windows, macOS and Linux [here](https://github.com/brandonsaldan/nocturne-image/releases/latest).
+
+## Donate
+
+Nocturne is a massive endeavor, and the team have spent everyday over the last few months making it a reality out of our passion for creating something that people like you love to use.
+
+All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
+
+[Buy Me a Coffee](https://buymeacoffee.com/brandonsaldan)
+[Ko-Fi](https://ko-fi.com/brandonsaldan)
 
 ## Credits
 
