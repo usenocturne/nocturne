@@ -13,6 +13,7 @@
   <a href="#how-to-use">How To Use</a> •
   <a href="#spotify-developer-setup">Spotify Developer Setup</a> •
   <a href="#local-development-setup">Local Development Setup</a> •
+  <a href="#donate">Donate</a> •
   <a href="#credits">Credits</a> •
   <a href="#related">Related</a> •
   <a href="#license">License</a>
@@ -394,6 +395,12 @@ The rotation schedule can be modified in `workers/key-rotation/wrangler.toml`.
 - Credentials are stored with expiration dates
 - Unused credentials are automatically cleaned up
 - All sensitive operations happen server-side
+
+## Donate
+
+Nocturne is a massive endeavor, and the team have spent everyday over the last few months making it a reality out of our passion for creating something that people like you love to use.
+
+All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
 
 ## Credits
 
