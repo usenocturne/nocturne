@@ -5,21 +5,34 @@ export const fetchUserPlaylists = async (accessToken, setPlaylists, updateGradie
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    if (response.ok) {
-      const data = await response.json();
-      if (data.items.length > 0) {
-        const imageUrl = data.items[0].images[0]?.url;
-        if (imageUrl) {
-          localStorage.setItem("libraryImage", imageUrl);
-          updateGradientColors(imageUrl, "library");
-        }
-      }
-      setPlaylists(data.items);
-    } else {
-      handleError("FETCH_USER_PLAYLISTS_ERROR", response.status.toString());
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+    
+    const validPlaylists = data.items.filter(playlist => 
+      playlist && 
+      playlist.id && 
+      playlist.name && 
+      playlist.images && 
+      playlist.images.length > 0
+    );
+
+    if (validPlaylists.length > 0) {
+      const imageUrl = validPlaylists[0].images[0]?.url;
+      if (imageUrl) {
+        localStorage.setItem("libraryImage", imageUrl);
+        updateGradientColors(imageUrl, "library");
+      }
+    }
+
+    setPlaylists(validPlaylists);
   } catch (error) {
+    console.error("Playlist fetch error:", error);
     handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
+    setPlaylists([]);
   }
 };
 

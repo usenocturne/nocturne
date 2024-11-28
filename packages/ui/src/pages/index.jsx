@@ -252,40 +252,47 @@ export default function Home({
                       </h4>
                     </div>
                   )}
-                  {playlists.map((item) => (
-                    <div
-                      key={item.id}
-                      className="min-w-[280px] mr-10 snap-start"
-                    >
-                      <LongPressLink
-                        href={`/playlist/${item.id}`}
-                        spotifyUrl={item?.external_urls?.spotify}
-                        accessToken={accessToken}
-                      >
-                        <Image
-                          src={
-                            item?.images?.[0]?.url || "/images/not-playing.webp"
-                          }
-                          alt="Playlist Cover"
-                          width={280}
-                          height={280}
-                          className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                        />
-                      </LongPressLink>
-                      <LongPressLink
-                        href={`/playlist/${item.id}`}
-                        spotifyUrl={item?.external_urls?.spotify}
-                        accessToken={accessToken}
-                      >
-                        <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                          {item.name}
-                        </h4>
-                      </LongPressLink>
-                      <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                        {item.tracks.total.toLocaleString()} Songs
-                      </h4>
-                    </div>
-                  ))}
+                  {playlists &&
+                    playlists.length > 0 &&
+                    playlists.map((item) =>
+                      item && item.id ? (
+                        <div
+                          key={item.id}
+                          className="min-w-[280px] mr-10 snap-start"
+                        >
+                          <LongPressLink
+                            href={`/playlist/${item.id}`}
+                            spotifyUrl={item?.external_urls?.spotify}
+                            accessToken={accessToken}
+                          >
+                            <Image
+                              src={
+                                item?.images?.[0]?.url ||
+                                "/images/not-playing.webp"
+                              }
+                              alt="Playlist Cover"
+                              width={280}
+                              height={280}
+                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                            />
+                          </LongPressLink>
+                          <LongPressLink
+                            href={`/playlist/${item.id}`}
+                            spotifyUrl={item?.external_urls?.spotify}
+                            accessToken={accessToken}
+                          >
+                            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                              {item.name}
+                            </h4>
+                          </LongPressLink>
+                          {item.tracks && (
+                            <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                              {item.tracks.total.toLocaleString()} Songs
+                            </h4>
+                          )}
+                        </div>
+                      ) : null
+                    )}
                 </>
               )}
               {activeSection === "artists" &&
@@ -324,20 +331,15 @@ export default function Home({
                   </div>
                 ))}
               {activeSection === "radio" &&
-                radio.map((playlist) => (
-                  <div
-                    key={playlist.id}
-                    className="min-w-[280px] mr-10 snap-start"
-                  >
+                radio.map((mix) => (
+                  <div key={mix.id} className="min-w-[280px] mr-10 snap-start">
                     <LongPressLink
-                      href={`/playlist/${playlist.id}`}
-                      spotifyUrl={playlist?.external_urls?.spotify}
+                      href={`/radio/${mix.id}`}
                       accessToken={accessToken}
                     >
                       <Image
                         src={
-                          playlist?.images?.[0]?.url ||
-                          "/images/not-playing.webp"
+                          mix?.images?.[0]?.url || "/images/not-playing.webp"
                         }
                         alt="Radio Cover"
                         width={280}
@@ -346,16 +348,15 @@ export default function Home({
                       />
                     </LongPressLink>
                     <LongPressLink
-                      href={`/playlist/${playlist.id}`}
-                      spotifyUrl={playlist?.external_urls?.spotify}
+                      href={`/radio/${mix.id}`}
                       accessToken={accessToken}
                     >
                       <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                        {playlist.name}
+                        {mix.name}
                       </h4>
                     </LongPressLink>
-                    <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                      {playlist.owner.display_name}
+                    <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                      {mix.owner.display_name}
                     </h4>
                   </div>
                 ))}
