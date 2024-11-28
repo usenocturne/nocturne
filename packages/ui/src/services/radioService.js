@@ -75,7 +75,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
         spotify: `spotify:user:${recentlyPlayedData.items[0]?.track?.uri}`
       },
       owner: {
-        display_name: 'Nocturne Radio'
+        display_name: 'Nocturne'
       },
       type: 'playlist'
     };
@@ -97,7 +97,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
         spotify: `spotify:user:${topTracksData.items[0]?.uri}`
       },
       owner: {
-        display_name: 'Nocturne Radio'
+        display_name: 'Nocturne'
       },
       type: 'playlist'
     };
@@ -129,7 +129,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
         spotify: `spotify:user:${discoveries[0]?.track?.uri}`
       },
       owner: {
-        display_name: 'Nocturne Radio'
+        display_name: 'Nocturne'
       },
       type: 'playlist'
     };
@@ -198,7 +198,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
               spotify: tracks[0]?.external_urls?.spotify
             },
             owner: {
-              display_name: 'Nocturne Radio'
+              display_name: 'Nocturne'
             },
             type: 'playlist'
           };
@@ -261,7 +261,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
         spotify: upbeatTracks[0]?.external_urls?.spotify
       },
       owner: {
-        display_name: 'Nocturne Radio'
+        display_name: 'Nocturne'
       },
       type: 'playlist'
     } : null;
@@ -283,7 +283,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
         spotify: chillTracks[0]?.external_urls?.spotify
       },
       owner: {
-        display_name: 'Nocturne Radio'
+        display_name: 'Nocturne'
       },
       type: 'playlist'
     } : null;
@@ -304,7 +304,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
         external_urls: {
           spotify: savedTracksData.items[0]?.track?.external_urls?.spotify
         },
-        owner: { display_name: 'Nocturne Radio' },
+        owner: { display_name: 'Nocturne' },
         type: 'playlist'
       };
     } else if (hour >= 12 && hour < 17) {
@@ -320,7 +320,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
         external_urls: {
           spotify: topTracksData.items[0]?.external_urls?.spotify
         },
-        owner: { display_name: 'Nocturne Radio' },
+        owner: { display_name: 'Nocturne' },
         type: 'playlist'
       };
     } else {
@@ -336,7 +336,7 @@ export const fetchUserRadio = async (accessToken, setRadio, updateGradientColors
         external_urls: {
           spotify: recentlyPlayedData.items[0]?.track?.external_urls?.spotify
         },
-        owner: { display_name: 'Nocturne Radio' },
+        owner: { display_name: 'Nocturne' },
         type: 'playlist'
       };
     }
