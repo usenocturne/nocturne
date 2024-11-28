@@ -1306,29 +1306,32 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     if (accessToken) {
+      let isRefreshing = false;
+
       const checkTokenExpiry = async () => {
         const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
         const currentTime = new Date();
         const expiryTime = new Date(tokenExpiry);
 
         if (
-          !tokenExpiry ||
-          expiryTime <= new Date(currentTime.getTime() + 5 * 60000)
+          (!tokenExpiry ||
+            expiryTime <= new Date(currentTime.getTime() + 10 * 60000)) &&
+          !isRefreshing
         ) {
+          isRefreshing = true;
           try {
             const refreshData = await refreshAccessToken();
-            if (refreshData.access_token) {
+            if (refreshData?.access_token) {
               setAccessToken(refreshData.access_token);
               localStorage.setItem(
                 "spotifyAccessToken",
                 refreshData.access_token
               );
-              localStorage.setItem(
-                "spotifyTokenExpiry",
-                new Date(
-                  Date.now() + refreshData.expires_in * 1000
-                ).toISOString()
-              );
+
+              const newExpiry = new Date(
+                Date.now() + refreshData.expires_in * 1000
+              ).toISOString();
+              localStorage.setItem("spotifyTokenExpiry", newExpiry);
 
               if (refreshData.refresh_token) {
                 setRefreshToken(refreshData.refresh_token);
@@ -1337,23 +1340,41 @@ export default function App({ Component, pageProps }) {
                   refreshData.refresh_token
                 );
               }
+
+              const verificationExpiry = new Date(newExpiry);
+              if (verificationExpiry <= new Date()) {
+                throw new Error("New token already expired");
+              }
+            } else {
+              throw new Error("No access token in refresh response");
             }
           } catch (error) {
             console.error("Token refresh failed:", error);
-            if (error.message.includes("invalid_grant")) {
-              clearSession();
-              redirectToSpotify();
+            if (
+              error.message.includes("invalid_grant") ||
+              error.message.includes("Invalid refresh token")
+            ) {
+              await clearSession();
+              if (!authState.tempId) {
+                redirectToSpotify();
+              }
+            } else {
+              setTimeout(checkTokenExpiry, 30000);
             }
+          } finally {
+            isRefreshing = false;
           }
         }
       };
 
       checkTokenExpiry();
 
-      const tokenRefreshInterval = setInterval(checkTokenExpiry, 5 * 60 * 1000);
+      const tokenRefreshInterval = setInterval(checkTokenExpiry, 2 * 60 * 1000);
+
       const playbackInterval = setInterval(() => {
         fetchCurrentPlayback();
       }, 1000);
+
       setLoading(false);
 
       fetchRecentlyPlayedAlbums(
@@ -1470,7 +1491,7 @@ export default function App({ Component, pageProps }) {
     (imageUrl, section = null) => {
       if (!imageUrl) {
         if (section === "radio") {
-          const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
+          const radioColors = ["#618062", "#fec8ff", "#b7b6f7", "#e2fee3"];
           setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
           if (activeSection === "radio" || activeSection === "nowPlaying") {
             setTargetColor1(radioColors[0]);
