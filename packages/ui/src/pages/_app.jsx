@@ -1307,6 +1307,9 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     if (accessToken) {
       let isRefreshing = false;
+      const tokenCheckInterval = 15 * 60 * 1000;
+      const cleanupInterval = 24 * 60 * 60 * 1000;
+      let lastCleanupTime = 0;
 
       const checkTokenExpiry = async () => {
         const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
@@ -1315,7 +1318,7 @@ export default function App({ Component, pageProps }) {
 
         if (
           (!tokenExpiry ||
-            expiryTime <= new Date(currentTime.getTime() + 10 * 60000)) &&
+            expiryTime <= new Date(currentTime.getTime() + 15 * 60000)) &&
           !isRefreshing
         ) {
           isRefreshing = true;
@@ -1339,6 +1342,12 @@ export default function App({ Component, pageProps }) {
                   "spotifyRefreshToken",
                   refreshData.refresh_token
                 );
+              }
+
+              const now = Date.now();
+              if (now - lastCleanupTime >= cleanupInterval) {
+                await performCleanup();
+                lastCleanupTime = now;
               }
 
               const verificationExpiry = new Date(newExpiry);
@@ -1367,9 +1376,33 @@ export default function App({ Component, pageProps }) {
         }
       };
 
+      const performCleanup = async () => {
+        const authType = localStorage.getItem("spotifyAuthType");
+        const refreshToken = localStorage.getItem("spotifyRefreshToken");
+        const tempId = localStorage.getItem("spotifyTempId");
+
+        if (authType === "custom" && refreshToken && tempId) {
+          try {
+            await supabase
+              .from("spotify_credentials")
+              .delete()
+              .lt(
+                "created_at",
+                new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+              )
+              .is("auth_completed", true);
+          } catch (error) {
+            console.error("Cleanup error:", error);
+          }
+        }
+      };
+
       checkTokenExpiry();
 
-      const tokenRefreshInterval = setInterval(checkTokenExpiry, 2 * 60 * 1000);
+      const tokenRefreshInterval = setInterval(
+        checkTokenExpiry,
+        tokenCheckInterval
+      );
 
       const playbackInterval = setInterval(() => {
         fetchCurrentPlayback();
