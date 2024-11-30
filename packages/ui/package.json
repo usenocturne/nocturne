@@ -27,7 +27,7 @@
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.6",
+    "@cloudflare/next-on-pages": "^1.13.5",
     "autoprefixer": "^10.4.20",
     "eslint": "^8",
     "eslint-config-next": "14.2.7",
