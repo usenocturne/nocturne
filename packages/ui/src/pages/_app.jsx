@@ -1470,7 +1470,7 @@ export default function App({ Component, pageProps }) {
     (imageUrl, section = null) => {
       if (!imageUrl) {
         if (section === "radio") {
-          const radioColors = ["#223466", "#1f2d57", "#be54a6", "#1e2644"];
+          const radioColors = ["#da3eca", "#d485c0", "#ead6d9", "#d6f2c1"];
           setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
           if (activeSection === "radio" || activeSection === "nowPlaying") {
             setTargetColor1(radioColors[0]);
