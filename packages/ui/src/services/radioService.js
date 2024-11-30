@@ -2,6 +2,55 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
   try {
     const mixes = [];
     
+    const [
+      topTracksMediumTerm,
+      topTracksLongTerm,
+      recentlyPlayed,
+      topArtists
+    ] = await Promise.all([
+      fetch(
+        "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
+      ).then(res => res.ok ? res.json() : null),
+      fetch(
+        "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=long_term",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
+      ).then(res => res.ok ? res.json() : null),
+      fetch(
+        "https://api.spotify.com/v1/me/player/recently-played?limit=50",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
+      ).then(res => res.ok ? res.json() : null),
+      fetch(
+        "https://api.spotify.com/v1/me/top/artists?limit=10",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
+      ).then(res => res.ok ? res.json() : null)
+    ]);
+
+    const getUniqueTracksById = (tracks) => {
+      const uniqueMap = new Map();
+      tracks.forEach(track => {
+        if (!uniqueMap.has(track.id)) {
+          uniqueMap.set(track.id, track);
+        }
+      });
+      return Array.from(uniqueMap.values());
+    };
+
+    const addUniqueIds = (tracks, mixId) => {
+      return tracks.map(track => ({
+        ...track,
+        uniqueId: `${mixId}-${track.id}`
+      }));
+    };
+
     const getSeasonInfo = () => {
       const now = new Date();
       const month = now.getMonth();
@@ -54,51 +103,31 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
         };
       }
     };
-    
-    let topTracksData = null;
-    
-    const topTracksResponse = await fetch(
-      "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    
-    if (topTracksResponse.ok) {
-      topTracksData = await topTracksResponse.json();
+
+    if (topTracksMediumTerm) {
       mixes.push({
         id: 'top-mix',
         name: 'Your Top Mix',
         images: [{ url: '/images/radio-cover/top.webp' }],
-        tracks: topTracksData.items,
+        tracks: addUniqueIds(topTracksMediumTerm.items, 'top-mix'),
         type: 'static',
         sortOrder: 1
       });
     }
-    
-    const recentResponse = await fetch(
-      "https://api.spotify.com/v1/me/player/recently-played?limit=50",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    
-    if (recentResponse.ok) {
-      const recentData = await recentResponse.json();
+
+    if (recentlyPlayed) {
+      const recentTracks = recentlyPlayed.items.map(item => item.track);
+      const uniqueRecentTracks = getUniqueTracksById(recentTracks);
       mixes.push({
         id: 'recent-mix',
         name: 'Recent Mix',
         images: [{ url: '/images/radio-cover/recent.webp' }],
-        tracks: recentData.items.map(item => item.track),
+        tracks: addUniqueIds(uniqueRecentTracks, 'recent-mix'),
         type: 'static',
         sortOrder: 4
       });
     }
-    
+
     const hour = new Date().getHours();
     let timeMix;
     
@@ -131,39 +160,10 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
       };
     }
 
-    const [playHistoryResponse, mediumTermTracks, longTermTracks] = await Promise.all([
-      fetch(
-        "https://api.spotify.com/v1/me/player/recently-played?limit=50",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      ),
-      fetch(
-        "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      ).then(res => res.ok ? res.json() : null),
-      fetch(
-        "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=long_term",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      ).then(res => res.ok ? res.json() : null)
-    ]);
-
-    if (playHistoryResponse.ok && mediumTermTracks && longTermTracks) {
-      const playHistoryData = await playHistoryResponse.json();
-      
+    if (recentlyPlayed && topTracksMediumTerm && topTracksLongTerm) {
       const trackPlayMap = new Map();
       
-      playHistoryData.items.forEach(item => {
+      recentlyPlayed.items.forEach(item => {
         const playedHour = new Date(item.played_at).getHours();
         const trackId = item.track.id;
         
@@ -181,8 +181,8 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
       });
 
       const allTracks = [
-        ...mediumTermTracks.items.map(track => ({ ...track, weight: 0.6 })),
-        ...longTermTracks.items.map(track => ({ ...track, weight: 0.4 }))
+        ...topTracksMediumTerm.items.map(track => ({ ...track, weight: 0.6 })),
+        ...topTracksLongTerm.items.map(track => ({ ...track, weight: 0.4 }))
       ];
 
       const scoredTracks = allTracks.map(track => {
@@ -209,6 +209,9 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
 
       const timeSortedTracks = scoredTracks
         .sort((a, b) => b.timeScore - a.timeScore)
+        .filter((track, index, self) => 
+          index === self.findIndex(t => t.id === track.id)
+        )
         .slice(0, 50);
 
       if (timeSortedTracks.length < 50) {
@@ -220,19 +223,15 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
         timeSortedTracks.push(...remainingTracks);
       }
 
-      timeMix.tracks = timeSortedTracks;
+      timeMix.tracks = addUniqueIds(timeSortedTracks, timeMix.id);
       mixes.push(timeMix);
+    }
 
+    if (topTracksMediumTerm && topTracksLongTerm) {
       const seasonalInfo = getSeasonInfo();
       const weightedTracks = [
-        ...mediumTermTracks.items.map(track => ({
-          ...track,
-          weight: 0.6
-        })),
-        ...longTermTracks.items.map(track => ({
-          ...track,
-          weight: 0.4
-        }))
+        ...topTracksMediumTerm.items.map(track => ({ ...track, weight: 0.6 })),
+        ...topTracksLongTerm.items.map(track => ({ ...track, weight: 0.4 }))
       ];
 
       const uniqueTracks = Array.from(
@@ -251,24 +250,14 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
 
       mixes.push({
         ...seasonalInfo,
-        tracks: seasonalTracks,
+        tracks: addUniqueIds(seasonalTracks, seasonalInfo.id),
         type: 'seasonal'
       });
     }
 
-    const topArtistsResponse = await fetch(
-      "https://api.spotify.com/v1/me/top/artists?limit=10",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    
-    if (topArtistsResponse.ok) {
-      const topArtistsData = await topArtistsResponse.json();
-      const artistTracks = await Promise.all(
-        topArtistsData.items.map(artist =>
+    if (topArtists) {
+      const artistTracksResponses = await Promise.all(
+        topArtists.items.map(artist =>
           fetch(`https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=US`, {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -277,8 +266,10 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
         )
       );
       
-      const allArtistTracks = artistTracks
-        .flatMap(response => response.tracks)
+      const allArtistTracks = artistTracksResponses
+        .flatMap(response => response.tracks);
+        
+      const uniqueArtistTracks = getUniqueTracksById(allArtistTracks)
         .sort(() => Math.random() - 0.5)
         .slice(0, 50);
       
@@ -286,34 +277,22 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
         id: 'discoveries-mix',
         name: 'Discoveries',
         images: [{ url: '/images/radio-cover/discoveries.webp' }],
-        tracks: allArtistTracks,
+        tracks: addUniqueIds(uniqueArtistTracks, 'discoveries-mix'),
         type: 'static',
         sortOrder: 2
       });
     }
 
-    const throwbackResponse = await fetch(
-      "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=long_term",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    
-    if (throwbackResponse.ok) {
-      const throwbackData = await throwbackResponse.json();
-      const uniqueThrowbackTracks = topTracksData 
-        ? throwbackData.items.filter(
-            track => !topTracksData.items.some(topTrack => topTrack.id === track.id)
-          )
-        : throwbackData.items;
+    if (topTracksLongTerm && topTracksMediumTerm) {
+      const uniqueThrowbackTracks = topTracksLongTerm.items.filter(
+        track => !topTracksMediumTerm.items.some(topTrack => topTrack.id === track.id)
+      );
       
       mixes.push({
         id: 'throwback-mix',
         name: 'Throwbacks',
         images: [{ url: '/images/radio-cover/throwback.webp' }],
-        tracks: uniqueThrowbackTracks,
+        tracks: addUniqueIds(uniqueThrowbackTracks, 'throwback-mix'),
         type: 'static',
         sortOrder: 5
       });
