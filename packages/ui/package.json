@@ -1,6 +1,6 @@
 {
   "name": "nocturne",
-  "version": "v2.1.1-beta.2",
+  "version": "v2.1.1-beta.3",
   "private": true,
   "scripts": {
     "dev": "node server.js",
@@ -33,6 +33,10 @@
     "eslint-config-next": "14.2.7",
     "postcss": "^8.4.42",
     "tailwindcss": "^3.4.10",
-    "wrangler": "^3.86.0"
+    "wrangler": "^3.86.0",
+    "vercel": "39.1.1"
+  },
+  "overrides": {
+    "vercel": "$vercel"
   }
 }
