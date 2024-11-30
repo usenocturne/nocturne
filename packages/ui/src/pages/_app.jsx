@@ -15,6 +15,7 @@ import AuthSelection from "../components/AuthSelection";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
+import { tokenManager } from "../lib/tokenManager";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -104,7 +105,6 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     const initializeAuth = async () => {
       if (typeof window === "undefined") return;
-
       if (window.location.search.includes("code")) return;
 
       const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
@@ -113,7 +113,9 @@ export default function App({ Component, pageProps }) {
 
       if (savedRefreshToken && savedAuthType) {
         try {
-          const refreshData = await refreshAccessToken();
+          const refreshData = await tokenManager.refreshToken(() =>
+            refreshAccessToken()
+          );
 
           if (refreshData?.access_token) {
             setAccessToken(refreshData.access_token);
@@ -141,7 +143,7 @@ export default function App({ Component, pageProps }) {
               tempId: savedTempId,
             });
 
-            if (savedAuthType === "custom") {
+            if (savedAuthType === "custom" && tokenManager.shouldCleanup()) {
               await supabase
                 .from("spotify_credentials")
                 .update({
@@ -186,6 +188,17 @@ export default function App({ Component, pageProps }) {
         "spotifyTokenExpiry",
         new Date(Date.now() + 3600 * 1000).toISOString()
       );
+
+      const tokenCheckInterval = setInterval(async () => {
+        const refreshData = await tokenManager.refreshToken(() =>
+          refreshAccessToken()
+        );
+        if (refreshData?.access_token) {
+          setAccessToken(refreshData.access_token);
+        }
+      }, 5 * 60 * 1000);
+
+      return () => clearInterval(tokenCheckInterval);
     }
   }, [accessToken]);
 
@@ -1365,19 +1378,28 @@ export default function App({ Component, pageProps }) {
       const tempId = localStorage.getItem("spotifyTempId");
       const authType = localStorage.getItem("spotifyAuthType");
 
-      if (authType === "custom" && refreshToken && tempId) {
+      if (
+        authType === "custom" &&
+        refreshToken &&
+        tempId &&
+        tokenManager.shouldCleanup()
+      ) {
         await supabase.from("spotify_credentials").delete().match({
           temp_id: tempId,
           refresh_token: refreshToken,
         });
       }
 
-      localStorage.removeItem("spotifyAccessToken");
-      localStorage.removeItem("spotifyRefreshToken");
-      localStorage.removeItem("spotifyTokenExpiry");
-      localStorage.removeItem("spotifyAuthType");
-      localStorage.removeItem("spotifyTempId");
-      localStorage.removeItem("spotifySessionId");
+      const authItems = [
+        "spotifyAccessToken",
+        "spotifyRefreshToken",
+        "spotifyTokenExpiry",
+        "spotifyAuthType",
+        "spotifyTempId",
+        "spotifySessionId",
+      ];
+
+      authItems.forEach((item) => localStorage.removeItem(item));
 
       setAccessToken(null);
       setRefreshToken(null);
@@ -1387,16 +1409,7 @@ export default function App({ Component, pageProps }) {
       });
     } catch (error) {
       console.error("Error during session cleanup:", error);
-      const authItems = [
-        "spotifyAccessToken",
-        "spotifyRefreshToken",
-        "spotifyTokenExpiry",
-        "spotifyAuthType",
-        "spotifyTempId",
-        "spotifySessionId",
-      ];
-      authItems.forEach((item) => localStorage.removeItem(item));
-
+      localStorage.clear();
       setAccessToken(null);
       setRefreshToken(null);
       setAuthState({
