@@ -7,14 +7,15 @@ export const fetchUserPlaylists = async (accessToken, setPlaylists, updateGradie
     });
     if (response.ok) {
       const data = await response.json();
-      if (data.items.length > 0) {
-        const imageUrl = data.items[0].images[0]?.url;
+      const validPlaylists = data.items.filter(item => item && item.id);
+      if (validPlaylists.length > 0) {
+        const imageUrl = validPlaylists[0].images[0]?.url;
         if (imageUrl) {
           localStorage.setItem("libraryImage", imageUrl);
           updateGradientColors(imageUrl, "library");
         }
       }
-      setPlaylists(data.items);
+      setPlaylists(validPlaylists);
     } else {
       handleError("FETCH_USER_PLAYLISTS_ERROR", response.status.toString());
     }
