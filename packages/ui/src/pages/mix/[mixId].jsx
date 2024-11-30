@@ -80,6 +80,18 @@ const MixPage = ({
   }, [error, handleError]);
 
   useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === "Enter") {
+        playMix();
+      }
+    };
+    window.addEventListener("keydown", handleKeyPress);
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [tracks, isShuffleEnabled]);
+
+  useEffect(() => {
     const mixImage = mix?.images?.[0]?.url || "";
     localStorage.setItem("mixPageImage", mixImage);
   }, [mix]);
@@ -106,6 +118,45 @@ const MixPage = ({
 
   const playMix = async () => {
     try {
+      const userResponse = await fetch("https://api.spotify.com/v1/me", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const userData = await userResponse.json();
+
+      const createPlaylistResponse = await fetch(
+        `https://api.spotify.com/v1/users/${userData.id}/playlists`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: `Temp Mix Playlist ${Date.now()}`,
+            description: "Temporary playlist for mix playback",
+            public: false,
+          }),
+        }
+      );
+      const playlistData = await createPlaylistResponse.json();
+
+      const tracksToAdd = tracks.map((track) => track.uri);
+      await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            uris: tracksToAdd,
+          }),
+        }
+      );
+
       const devicesResponse = await fetch(
         "https://api.spotify.com/v1/me/player/devices",
         {
@@ -116,7 +167,6 @@ const MixPage = ({
       );
 
       const devicesData = await devicesResponse.json();
-
       if (devicesData.devices.length === 0) {
         handleError(
           "NO_DEVICES_AVAILABLE",
@@ -152,11 +202,6 @@ const MixPage = ({
         }
       );
 
-      const trackUris = tracks.map((track) => track.uri);
-      const offset = isShuffleEnabled
-        ? { position: Math.floor(Math.random() * tracks.length) }
-        : { position: 0 };
-
       await fetch("https://api.spotify.com/v1/me/player/play", {
         method: "PUT",
         headers: {
@@ -164,18 +209,74 @@ const MixPage = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          uris: trackUris,
-          offset: offset,
+          context_uri: `spotify:playlist:${playlistData.id}`,
+          device_id: activeDeviceId,
         }),
       });
+
+      setTimeout(async () => {
+        try {
+          await fetch(
+            `https://api.spotify.com/v1/playlists/${playlistData.id}/followers`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Failed to delete temporary playlist:", error);
+        }
+      }, 200);
+
       router.push("/now-playing");
     } catch (error) {
       handleError("PLAY_MIX_ERROR", error.message);
     }
   };
 
-  const playTrack = async (trackUri, trackIndex) => {
+  const playTrack = async (trackIndex) => {
     try {
+      const userResponse = await fetch("https://api.spotify.com/v1/me", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const userData = await userResponse.json();
+
+      const createPlaylistResponse = await fetch(
+        `https://api.spotify.com/v1/users/${userData.id}/playlists`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: `Temp Mix Playlist ${Date.now()}`,
+            description: "Temporary playlist for mix playback",
+            public: false,
+          }),
+        }
+      );
+      const playlistData = await createPlaylistResponse.json();
+
+      const tracksToAdd = tracks.slice(trackIndex).map((track) => track.uri);
+      await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            uris: tracksToAdd,
+          }),
+        }
+      );
+
       const devicesResponse = await fetch(
         "https://api.spotify.com/v1/me/player/devices",
         {
@@ -187,7 +288,6 @@ const MixPage = ({
       );
 
       const devicesData = await devicesResponse.json();
-
       if (devicesData.devices.length === 0) {
         handleError(
           "NO_DEVICES_AVAILABLE",
@@ -200,52 +300,58 @@ const MixPage = ({
       const activeDeviceId = device.id;
 
       if (!device.is_active) {
-        const transferResponse = await fetch(
-          "https://api.spotify.com/v1/me/player",
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              device_ids: [activeDeviceId],
-              play: false,
-            }),
-          }
-        );
-
-        if (!transferResponse.ok) {
-          const errorData = await transferResponse.json();
-          handleError("TRANSFER_PLAYBACK_ERROR", errorData.error.message);
-          return;
-        }
-      }
-
-      const trackUris = tracks.map((track) => track.uri);
-
-      const playResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/play",
-        {
+        await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            uris: trackUris,
-            offset: {
-              position: trackIndex,
-            },
-            device_id: activeDeviceId,
+            device_ids: [activeDeviceId],
+            play: false,
           }),
+        });
+      }
+
+      await fetch(
+        `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
       );
 
-      if (!playResponse.ok) {
-        const errorData = await playResponse.json();
-        handleError("PLAY_TRACK_ERROR", errorData.error.message);
-      }
+      await fetch("https://api.spotify.com/v1/me/player/play", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          context_uri: `spotify:playlist:${playlistData.id}`,
+          device_id: activeDeviceId,
+        }),
+      });
+
+      setTimeout(async () => {
+        try {
+          await fetch(
+            `https://api.spotify.com/v1/playlists/${playlistData.id}/followers`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Failed to delete temporary playlist:", error);
+        }
+      }, 200);
+
+      router.push("/now-playing");
     } catch (error) {
       handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
     }
