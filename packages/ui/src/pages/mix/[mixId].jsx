@@ -3,31 +3,22 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 import SuccessAlert from "../../components/SuccessAlert";
+import { fetchUserRadio } from "../../services";
 export const runtime = "experimental-edge";
 
-const LikedSongsPage = ({
-  initialTracks,
+const MixPage = ({
+  initialMix,
   currentlyPlayingTrackUri,
   handleError,
   error,
-  updateGradientColors,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
-  const [tracks, setTracks] = useState(initialTracks?.items || []);
-  const [totalTracks, setTotalTracks] = useState(initialTracks?.total || 0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(
-    initialTracks?.total > initialTracks?.items?.length
-  );
-  const observer = useRef();
+  const [mix, setMix] = useState(initialMix);
+  const [tracks, setTracks] = useState(initialMix?.tracks || []);
   const [showSuccess, setShowSuccess] = useState(false);
   const [pressedButton, setPressedButton] = useState(null);
-
-  useEffect(() => {
-    updateGradientColors(null, "library");
-  }, [updateGradientColors]);
 
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
@@ -41,11 +32,13 @@ const LikedSongsPage = ({
       pressStartTimes[event.key] = Date.now();
 
       holdTimeouts[event.key] = setTimeout(() => {
-        localStorage.setItem(`button${event.key}Map`, "liked-songs");
-        localStorage.setItem(
-          `button${event.key}Image`,
-          "https://misc.scdn.co/liked-songs/liked-songs-640.png"
-        );
+        const currentUrl = window.location.pathname;
+        const currentImage = localStorage.getItem("mixPageImage");
+
+        localStorage.setItem(`button${event.key}Map`, currentUrl);
+        if (currentImage) {
+          localStorage.setItem(`button${event.key}Image`, currentImage);
+        }
 
         setPressedButton(event.key);
         setShowSuccess(true);
@@ -75,25 +68,33 @@ const LikedSongsPage = ({
     };
   }, []);
 
+  const handleSuccessClose = useCallback(() => {
+    setShowSuccess(false);
+    setPressedButton(null);
+  }, []);
+
   useEffect(() => {
     if (error) {
       handleError(error.type, error.message);
     }
   }, [error, handleError]);
 
-  const lastTrackElementRef = useCallback(
-    (node) => {
-      if (isLoading) return;
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMoreTracks();
-        }
-      });
-      if (node) observer.current.observe(node);
-    },
-    [isLoading, hasMore]
-  );
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === "Enter") {
+        playMix();
+      }
+    };
+    window.addEventListener("keydown", handleKeyPress);
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [tracks, isShuffleEnabled]);
+
+  useEffect(() => {
+    const mixImage = mix?.images?.[0]?.url || "";
+    localStorage.setItem("mixPageImage", mixImage);
+  }, [mix]);
 
   useEffect(() => {
     const fetchPlaybackState = async () => {
@@ -108,61 +109,54 @@ const LikedSongsPage = ({
           setIsShuffleEnabled(data.shuffle_state);
         }
       } catch (error) {
-        handleError("FETCH_PLAYBACK_STATE_ERROR", error.message);
+        return;
       }
     };
 
     fetchPlaybackState();
   }, [accessToken]);
 
-  useEffect(() => {
-    const handleKeyPress = (event) => {
-      if (event.key === "Enter") {
-        playLikedSongs();
-      }
-    };
-    window.addEventListener("keydown", handleKeyPress);
-    return () => {
-      window.removeEventListener("keydown", handleKeyPress);
-    };
-  }, [tracks, isShuffleEnabled]);
-
-  const loadMoreTracks = async () => {
-    if (isLoading || !hasMore) return;
-    setIsLoading(true);
-    const offset = tracks.length;
-    const limit = 25;
-
+  const playMix = async () => {
     try {
-      const response = await fetch(
-        `https://api.spotify.com/v1/me/tracks?offset=${offset}&limit=${limit}`,
+      const userResponse = await fetch("https://api.spotify.com/v1/me", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const userData = await userResponse.json();
+
+      const createPlaylistResponse = await fetch(
+        `https://api.spotify.com/v1/users/${userData.id}/playlists`,
         {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            name: `Temp Mix Playlist ${Date.now()}`,
+            description: "Temporary playlist for mix playback",
+            public: false,
+          }),
+        }
+      );
+      const playlistData = await createPlaylistResponse.json();
+
+      const tracksToAdd = tracks.map((track) => track.uri);
+      await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            uris: tracksToAdd,
+          }),
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch more tracks");
-      }
-
-      const data = await response.json();
-      if (data.items.length === 0) {
-        setHasMore(false);
-      } else {
-        setTracks((prevTracks) => [...prevTracks, ...data.items]);
-        setHasMore(tracks.length + data.items.length < totalTracks);
-      }
-    } catch (error) {
-      console.error("Error fetching more tracks:", error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const playLikedSongs = async () => {
-    try {
       const devicesResponse = await fetch(
         "https://api.spotify.com/v1/me/player/devices",
         {
@@ -173,7 +167,6 @@ const LikedSongsPage = ({
       );
 
       const devicesData = await devicesResponse.json();
-
       if (devicesData.devices.length === 0) {
         handleError(
           "NO_DEVICES_AVAILABLE",
@@ -209,14 +202,6 @@ const LikedSongsPage = ({
         }
       );
 
-      let offset;
-      if (isShuffleEnabled) {
-        const randomPosition = Math.floor(Math.random() * tracks.length);
-        offset = { position: randomPosition };
-      } else {
-        offset = { position: 0 };
-      }
-
       await fetch("https://api.spotify.com/v1/me/player/play", {
         method: "PUT",
         headers: {
@@ -224,23 +209,78 @@ const LikedSongsPage = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          uris: tracks.map((item) => item.track.uri),
-          offset: offset,
+          context_uri: `spotify:playlist:${playlistData.id}`,
           device_id: activeDeviceId,
         }),
       });
+
+      setTimeout(async () => {
+        try {
+          await fetch(
+            `https://api.spotify.com/v1/playlists/${playlistData.id}/followers`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Failed to delete temporary playlist:", error);
+        }
+      }, 200);
 
       router.push("/now-playing");
     } catch (error) {
-      handleError("PLAY_LIKED_SONGS_ERROR", error.message);
+      handleError("PLAY_MIX_ERROR", error.message);
     }
   };
 
-  const playTrack = async (trackUri, trackIndex) => {
+  const playTrack = async (trackIndex) => {
     try {
+      const userResponse = await fetch("https://api.spotify.com/v1/me", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const userData = await userResponse.json();
+
+      const createPlaylistResponse = await fetch(
+        `https://api.spotify.com/v1/users/${userData.id}/playlists`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: `Temp Mix Playlist ${Date.now()}`,
+            description: "Temporary playlist for mix playback",
+            public: false,
+          }),
+        }
+      );
+      const playlistData = await createPlaylistResponse.json();
+
+      const tracksToAdd = tracks.slice(trackIndex).map((track) => track.uri);
+      await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            uris: tracksToAdd,
+          }),
+        }
+      );
+
       const devicesResponse = await fetch(
         "https://api.spotify.com/v1/me/player/devices",
         {
+          method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -248,7 +288,6 @@ const LikedSongsPage = ({
       );
 
       const devicesData = await devicesResponse.json();
-
       if (devicesData.devices.length === 0) {
         handleError(
           "NO_DEVICES_AVAILABLE",
@@ -291,11 +330,26 @@ const LikedSongsPage = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          uris: tracks.map((item) => item.track.uri),
-          offset: { position: trackIndex },
+          context_uri: `spotify:playlist:${playlistData.id}`,
           device_id: activeDeviceId,
         }),
       });
+
+      setTimeout(async () => {
+        try {
+          await fetch(
+            `https://api.spotify.com/v1/playlists/${playlistData.id}/followers`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Failed to delete temporary playlist:", error);
+        }
+      }, 200);
 
       router.push("/now-playing");
     } catch (error) {
@@ -303,41 +357,41 @@ const LikedSongsPage = ({
     }
   };
 
+  const onCloseAlert = useCallback(() => {
+    setShowSuccess(false);
+    setPressedButton(null);
+  }, []);
+
   return (
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen fadeIn-animation">
       <div className="md:w-1/3 h-screen sticky top-0">
-        <div className="min-w-[280px] mr-10">
-          <LongPressLink
-            href="/now-playing"
-            onClick={playLikedSongs}
-            accessToken={accessToken}
-          >
+        {mix?.images && mix.images.length > 0 ? (
+          <div className="min-w-[280px] mr-10">
             <Image
-              src="https://misc.scdn.co/liked-songs/liked-songs-640.png"
-              alt="Liked Songs"
+              src={mix.images[0].url || "/images/not-playing.webp"}
+              alt="Mix Cover"
+              data-main-image
               width={280}
               height={280}
               className="aspect-square rounded-[12px] drop-shadow-xl"
             />
-          </LongPressLink>
-          <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-            Liked Songs
-          </h4>
-          <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-            {totalTracks.toLocaleString()} Songs
-          </h4>
-        </div>
+            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+              {mix.name}
+            </h4>
+            <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+              {mix.tracks.length} Songs
+            </h4>
+          </div>
+        ) : (
+          <p>No image available</p>
+        )}
       </div>
 
       <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container scroll-smooth pb-12">
-        {tracks.map((item, index) => (
-          <div
-            key={item.track.id}
-            className="flex gap-12 items-start mb-4"
-            ref={index === tracks.length - 1 ? lastTrackElementRef : null}
-          >
+        {tracks.map((track, index) => (
+          <div key={track.id} className="flex gap-12 items-start mb-4">
             <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
-              {item.track.uri === currentlyPlayingTrackUri ? (
+              {track.uri === currentlyPlayingTrackUri ? (
                 <div className="w-5">
                   <section>
                     <div className="wave0"></div>
@@ -354,17 +408,17 @@ const LikedSongsPage = ({
             <div className="flex-grow">
               <LongPressLink
                 href="/now-playing"
-                spotifyUrl={item.track.external_urls.spotify}
+                spotifyUrl={track.external_urls.spotify}
                 accessToken={accessToken}
               >
-                <div onClick={() => playTrack(item.track.uri, index)}>
+                <div onClick={() => playTrack(track.uri, index)}>
                   <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {item.track.name}
+                    {track.name}
                   </p>
                 </div>
               </LongPressLink>
               <div className="flex flex-wrap">
-                {item.track.artists.map((artist, artistIndex) => (
+                {track.artists.map((artist, artistIndex) => (
                   <LongPressLink
                     key={artist.id}
                     spotifyUrl={artist.external_urls.spotify}
@@ -372,7 +426,7 @@ const LikedSongsPage = ({
                   >
                     <p
                       className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${
-                        artistIndex < item.track.artists.length - 1
+                        artistIndex < track.artists.length - 1
                           ? 'mr-2 after:content-[","]'
                           : ""
                       }`}
@@ -385,39 +439,40 @@ const LikedSongsPage = ({
             </div>
           </div>
         ))}
-        {isLoading && <div className="flex justify-center mt-4" />}
       </div>
       <SuccessAlert
         show={showSuccess}
-        onClose={() => {
-          setShowSuccess(false);
-          setPressedButton(null);
-        }}
-        message={`Liked Songs mapped to Button ${pressedButton}`}
+        onClose={onCloseAlert}
+        message={`Mix mapped to Button ${pressedButton}`}
       />
     </div>
   );
 };
 
 export async function getServerSideProps(context) {
-  const accessToken = context.query.accessToken;
+  const { mixId } = context.params;
+  const { accessToken } = context.query;
 
   try {
-    const res = await fetch(`https://api.spotify.com/v1/me/tracks?limit=25`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    let storedMixes = [];
+    const setRadio = (mixes) => {
+      storedMixes = mixes;
+    };
 
-    if (!res.ok) {
-      throw new Error("Failed to fetch liked songs");
+    const handleError = (type, message) => {
+      throw new Error(message);
+    };
+
+    await fetchUserRadio(accessToken, setRadio, handleError);
+    const initialMix = storedMixes.find((mix) => mix.id === mixId);
+
+    if (!initialMix) {
+      throw new Error("Mix not found");
     }
-
-    const tracksData = await res.json();
 
     return {
       props: {
-        initialTracks: tracksData,
+        initialMix,
         accessToken,
         error: null,
       },
@@ -426,14 +481,14 @@ export async function getServerSideProps(context) {
     return {
       props: {
         error: {
-          type: "FETCH_LIKED_SONGS_ERROR",
+          type: "FETCH_MIX_ERROR",
           message: error.message,
         },
-        initialTracks: null,
+        initialMix: null,
         accessToken,
       },
     };
   }
 }
 
-export default LikedSongsPage;
+export default MixPage;

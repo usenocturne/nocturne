@@ -130,7 +130,7 @@ const ArtistPage = ({
       });
       router.push("/now-playing");
     } catch (error) {
-      handleError("PLAY_ARTIST_TOP_TRACKS_ERROR", error.message);
+      console.error("Error playing artist top tracks:", error.message);
     }
   };
 
@@ -202,10 +202,10 @@ const ArtistPage = ({
 
       if (!playResponse.ok) {
         const errorData = await playResponse.json();
-        handleError("PLAY_TRACK_ERROR", errorData);
+        console.error("Error playing track:", errorData);
       }
     } catch (error) {
-      handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
+      console.error("Error playing track:", error.message);
     }
   };
 
