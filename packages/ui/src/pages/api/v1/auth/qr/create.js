@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { encrypt } from '@/lib/cryptoUtils';
 export const runtime = 'experimental-edge';
+import packageInfo from '../../../../../package.json';
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
@@ -50,7 +51,8 @@ export default async function handler(req) {
           session_id: sessionId,
           temp_id: tempId,
           created_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          version: packageInfo.version
         }
       ]);
 
