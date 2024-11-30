@@ -39,32 +39,43 @@ const Drawer = ({ isOpen, onClose, children }) => {
     };
   }, [isRendered]);
 
-  const handleTouchStart = (e) => {
-    dragStartY.current = e.touches[0].clientY;
-  };
+  useEffect(() => {
+    const drawer = drawerRef.current;
+    if (!drawer) return;
 
-  const handleTouchMove = (e) => {
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - dragStartY.current;
-    if (diff > 0) {
-      e.preventDefault();
-      setDragPosition(diff);
-    } else if (
-      drawerRef.current &&
-      drawerRef.current.scrollTop === 0 &&
-      diff < 0
-    ) {
-      e.preventDefault();
-    }
-  };
+    const touchStart = (e) => {
+      dragStartY.current = e.touches[0].clientY;
+    };
 
-  const handleTouchEnd = () => {
-    if (dragPosition > 100) {
-      handleClose();
-    } else {
-      setDragPosition(0);
-    }
-  };
+    const touchMove = (e) => {
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - dragStartY.current;
+      if (diff > 0) {
+        e.preventDefault();
+        setDragPosition(diff);
+      } else if (drawer.scrollTop === 0 && diff < 0) {
+        e.preventDefault();
+      }
+    };
+
+    const touchEnd = () => {
+      if (dragPosition > 100) {
+        handleClose();
+      } else {
+        setDragPosition(0);
+      }
+    };
+
+    drawer.addEventListener("touchstart", touchStart, { passive: false });
+    drawer.addEventListener("touchmove", touchMove, { passive: false });
+    drawer.addEventListener("touchend", touchEnd, { passive: false });
+
+    return () => {
+      drawer.removeEventListener("touchstart", touchStart);
+      drawer.removeEventListener("touchmove", touchMove);
+      drawer.removeEventListener("touchend", touchEnd);
+    };
+  }, [dragPosition, handleClose]);
 
   const handleMouseDown = (e) => {
     dragStartY.current = e.clientY;
@@ -119,9 +130,6 @@ const Drawer = ({ isOpen, onClose, children }) => {
           }%)`,
           overscrollBehavior: "contain",
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
         <div
           className="w-full cursor-grab active:cursor-grabbing"
