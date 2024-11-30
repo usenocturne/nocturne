@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 import { encrypt, decrypt } from '@/lib/cryptoUtils';
 export const runtime = 'experimental-edge';
-import packageInfo from '../../../../../package.json';
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
@@ -151,8 +150,7 @@ export default async function handler(req) {
         last_used: now.toISOString(),
         first_used_at: oldRecord?.first_used_at || now.toISOString(),
         token_refresh_count: (oldRecord?.token_refresh_count || 0) + 1,
-        user_agent: req.headers.get('user-agent') || null,
-        version: packageInfo.version
+        user_agent: req.headers.get('user-agent') || null
       };
 
       const { data: updatedRecord, error: updateError } = await supabase
