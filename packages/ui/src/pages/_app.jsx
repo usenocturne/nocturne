@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
 import { Inter } from "next/font/google";
@@ -11,7 +12,6 @@ import {
 } from "../services";
 import ErrorAlert from "../components/ErrorAlert";
 import AuthSelection from "../components/AuthSelection";
-import { createClient } from "@supabase/supabase-js";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
@@ -142,11 +142,6 @@ export default function App({ Component, pageProps }) {
             });
 
             if (savedAuthType === "custom") {
-              const supabase = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-              );
-
               await supabase
                 .from("spotify_credentials")
                 .update({
@@ -705,11 +700,7 @@ export default function App({ Component, pageProps }) {
                   const tempId = localStorage.getItem("spotifyTempId");
                   const authType = localStorage.getItem("spotifyAuthType");
                   if (authType === "custom" && refreshToken && tempId) {
-                    const supabaseInstance = createClient(
-                      process.env.NEXT_PUBLIC_SUPABASE_URL,
-                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-                    );
-                    const { error } = await supabaseInstance
+                    const { error } = await supabase
                       .from("spotify_credentials")
                       .delete()
                       .match({
@@ -1062,11 +1053,6 @@ export default function App({ Component, pageProps }) {
 
                   const tokenData = await tokenResponse.json();
 
-                  const supabase = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-                  );
-
                   const { error: updateError } = await supabase
                     .from("spotify_credentials")
                     .update({
@@ -1380,12 +1366,7 @@ export default function App({ Component, pageProps }) {
       const authType = localStorage.getItem("spotifyAuthType");
 
       if (authType === "custom" && refreshToken && tempId) {
-        const supabaseInstance = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        );
-
-        await supabaseInstance.from("spotify_credentials").delete().match({
+        await supabase.from("spotify_credentials").delete().match({
           temp_id: tempId,
           refresh_token: refreshToken,
         });

@@ -954,6 +954,7 @@ const NowPlaying = ({
                 alt="Album Art"
                 width={280}
                 height={280}
+                priority
                 className="aspect-square rounded-[12px] drop-shadow-xl"
               />
             </LongPressLink>

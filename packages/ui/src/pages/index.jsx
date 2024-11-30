@@ -194,6 +194,7 @@ export default function Home({
                           alt="Album Cover"
                           width={280}
                           height={280}
+                          priority
                           className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
                         />
                       </LongPressLink>
