@@ -17,6 +17,9 @@ export const getSupabaseClient = () => {
   supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false
+    },
+    headers: {
+      'Accept': 'application/json'
     }
   });
 
