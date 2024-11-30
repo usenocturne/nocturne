@@ -208,7 +208,7 @@ Nocturne requires HTTPS to make API requests, so you need to set up HTTPS on the
 
 This will use Caddy as a reverse proxy in front of Next.js's dev server.
 
-On the last step where you start the development server, use `npx next dev` and then, in another tab/
+On the last step where you start the development server, use `npx next dev` and then in another tab/
 window, `caddy run` to start. It will run on https://localhost:3443.
 
 1. Install Caddy: this can be done with your OS package manager, or by downloading the executable from https://caddyserver.com/download.
