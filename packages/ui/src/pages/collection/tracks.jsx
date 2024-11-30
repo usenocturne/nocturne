@@ -155,7 +155,7 @@ const LikedSongsPage = ({
         setHasMore(tracks.length + data.items.length < totalTracks);
       }
     } catch (error) {
-      handleError("LOAD_MORE_TRACKS_ERROR", error.message);
+      console.error("Error fetching more tracks:", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -299,7 +299,7 @@ const LikedSongsPage = ({
 
       router.push("/now-playing");
     } catch (error) {
-      handleError("PLAY_TRACK_ERROR", error.message);
+      console.error("Error playing track:", error.message);
     }
   };
 

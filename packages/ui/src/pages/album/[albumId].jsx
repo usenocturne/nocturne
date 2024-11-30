@@ -108,7 +108,7 @@ const AlbumPage = ({
         setHasMore(tracks.length + data.items.length < album.tracks.total);
       }
     } catch (error) {
-      handleError("LOAD_MORE_TRACKS_ERROR", error.message);
+      console.error("Error fetching more tracks:", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +183,7 @@ const AlbumPage = ({
       });
       router.push("/now-playing");
     } catch (error) {
-      handleError("PLAY_ALBUM_ERROR", error.message);
+      console.error("Error playing album:", error.message);
     }
   };
 
@@ -253,11 +253,11 @@ const AlbumPage = ({
 
       if (!playResponse.ok) {
         const errorData = await playResponse.json();
-        handleError("PLAY_TRACK_ERROR", errorData.error.message);
+        console.error("Error playing track:", errorData.error.message);
       }
       router.push("/now-playing");
     } catch (error) {
-      handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
+      console.error("Error playing track:", error.message);
     }
   };
 

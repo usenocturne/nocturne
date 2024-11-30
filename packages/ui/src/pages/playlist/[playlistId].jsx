@@ -122,7 +122,7 @@ const PlaylistPage = ({
         setTracks(tracksData.items);
         setHasMore(playlistData.tracks.total > tracksData.items.length);
       } catch (error) {
-        handleError("FETCH_PLAYLIST_ERROR", error.message);
+        console.error("Error fetching playlist:", error.message);
       }
     };
 
@@ -213,7 +213,7 @@ const PlaylistPage = ({
         setHasMore(tracks.length + data.items.length < playlist.tracks.total);
       }
     } catch (error) {
-      handleError("LOAD_MORE_TRACKS_ERROR", error.message);
+      console.error("Error fetching more tracks:", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -290,7 +290,7 @@ const PlaylistPage = ({
       });
       router.push("/now-playing");
     } catch (error) {
-      handleError("PLAY_PLAYLIST_ERROR", error.message);
+      console.error("Error playing playlist:", error.message);
     }
   };
 
@@ -362,10 +362,10 @@ const PlaylistPage = ({
 
       if (!playResponse.ok) {
         const errorData = await playResponse.json();
-        handleError("PLAY_TRACK_ERROR", errorData.error.message);
+        console.error("Error playing track:", errorData.error.message);
       }
     } catch (error) {
-      handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
+      console.error("Error playing track:", error.message);
     }
   };
 

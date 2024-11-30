@@ -119,7 +119,7 @@ const NowPlaying = ({
       setParsedLyrics(parsed);
       currentTrackId.current = trackId;
     } catch (error) {
-      handleError("FETCH_LYRICS_ERROR", error.message);
+      console.error("Error fetching lyrics:", error);
       setParsedLyrics([]);
       setLyricsUnavailable(true);
     } finally {
@@ -215,7 +215,7 @@ const NowPlaying = ({
           const userPlaylists = await fetchUserOwnedPlaylists(accessToken);
           setPlaylists(userPlaylists);
         } catch (error) {
-          handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
+          console.error("Error fetching user playlists:", error);
         }
       }
     };
@@ -264,7 +264,7 @@ const NowPlaying = ({
         setIsVolumeVisible(false);
       }, 2000);
     } catch (error) {
-      handleError("CHANGE_VOLUME_ERROR", error.message);
+      console.error("Error changing volume:", error);
     }
   };
 
@@ -309,7 +309,7 @@ const NowPlaying = ({
           const likedArray = await response.json();
           setIsLiked(likedArray[0]);
         } else {
-          handleError("CHECK_LIKED_TRACKS_ERROR", response.status.toString());
+          console.error("Error checking if track is liked:", response.status);
         }
       } catch (error) {
         return;
@@ -349,10 +349,10 @@ const NowPlaying = ({
       if (response.ok) {
         setIsLiked(!isLiked);
       } else {
-        handleError("TOGGLE_LIKED_TRACK_ERROR", response.status.toString());
+        console.error("Error toggling like track:", response.status);
       }
     } catch (error) {
-      handleError("TOGGLE_LIKE_TRACK_ERROR", error.message);
+      console.error("Error toggling like track:", error);
     }
   };
 
@@ -412,7 +412,7 @@ const NowPlaying = ({
 
       fetchCurrentPlayback();
     } catch (error) {
-      handleError("TOGGLE_PLAY_PAUSE_ERROR", error.message);
+      console.error("Error toggling play/pause:", error);
     }
   };
 
@@ -439,7 +439,7 @@ const NowPlaying = ({
       });
       fetchCurrentPlayback();
     } catch (error) {
-      handleError("SKIP_TO_NEXT_TRACK_ERROR", error.message);
+      console.error("Error skipping to next track:", error);
     }
   };
 
@@ -462,7 +462,7 @@ const NowPlaying = ({
       }
       fetchCurrentPlayback();
     } catch (error) {
-      handleError("SKIP_TO_PREVIOUS_ERROR", error.message);
+      console.error("Error skipping to previous track:", error);
     }
   };
 
@@ -511,7 +511,7 @@ const NowPlaying = ({
 
       await addTrackToPlaylistAPI(playlistId);
     } catch (error) {
-      handleError("CHECK_PLAYLIST_CONTENTS_ERROR", error.message);
+      console.error("Error checking playlist contents:", error);
     }
   };
 
@@ -532,10 +532,10 @@ const NowPlaying = ({
       );
 
       if (!response.ok) {
-        handleError("ADD_TRACK_TO_PLAYLIST_ERROR", response.status.toString());
+        console.error("Error adding track to playlist:", response.status);
       }
     } catch (error) {
-      handleError("ADD_TRACK_TO_PLAYLIST_ERROR", error.message);
+      console.error("Error adding track to playlist:", error);
     }
   };
 
@@ -569,10 +569,10 @@ const NowPlaying = ({
         setIsShuffled(!isShuffled);
         fetchCurrentPlayback();
       } else {
-        handleError("TOGGLE_SHUFFLE_ERROR", response.status.toString());
+        console.error("Error toggling shuffle:", response.status);
       }
     } catch (error) {
-      handleError("TOGGLE_SHUFFLE_ERROR", error.message);
+      console.error("Error toggling shuffle:", error);
     }
   };
 
@@ -598,10 +598,10 @@ const NowPlaying = ({
         setRepeatMode(nextMode);
         fetchCurrentPlayback();
       } else {
-        handleError("TOGGLE_REPEAT_ERROR", response.status.toString());
+        console.error("Error toggling repeat:", response.status);
       }
     } catch (error) {
-      handleError("TOGGLE_REPEAT_ERROR", error.message);
+      console.error("Error toggling repeat:", error);
     }
   };
 

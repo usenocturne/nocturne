@@ -6,7 +6,7 @@ export const fetchUserOwnedPlaylists = async (accessToken, handleError = (code, 
       },
     });
     if (!userResponse.ok) {
-      handleError("FETCH_USER_PROFILE_ERROR", userResponse.status);
+      console.error("Error fetching user data:", userResponse.status);
       return [];
     }
     const userData = await userResponse.json();
@@ -31,11 +31,11 @@ export const fetchUserOwnedPlaylists = async (accessToken, handleError = (code, 
       }
       return userOwnedPlaylists;
     } else {
-      handleError("FETCH_USER_PLAYLISTS_ERROR", playlistsResponse.status);
+      console.error("Error fetching user playlists:", playlistsResponse.status);
       return [];
     }
   } catch (error) {
-    handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
+    console.error("Error fetching user playlists:", error.message);
     return [];
   }
 };

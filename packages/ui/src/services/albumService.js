@@ -24,10 +24,10 @@ export const fetchRecentlyPlayedAlbums = async (accessToken, setAlbums, setAlbum
             return uniqueAlbums;
           });
         } else {
-          handleError("FETCH_RECENTLY_PLAYED_ALBUMS_ERROR", response.status.toString());
+          console.error("Error fetching recently played albums:", response.status);
         }
       } catch (error) {
-        handleError("FETCH_RECENTLY_PLAYED_ALBUMS_ERROR", error.message);
+        console.error("Error fetching recently played albums:", error.message);
       }
     }
   };

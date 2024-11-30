@@ -353,7 +353,7 @@ const MixPage = ({
 
       router.push("/now-playing");
     } catch (error) {
-      handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
+      console.error("Error playing track:", error.message);
     }
   };
 

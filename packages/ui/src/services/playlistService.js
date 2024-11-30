@@ -17,10 +17,10 @@ export const fetchUserPlaylists = async (accessToken, setPlaylists, updateGradie
       }
       setPlaylists(validPlaylists);
     } else {
-      handleError("FETCH_USER_PLAYLISTS_ERROR", response.status.toString());
+      console.error("Error fetching user playlists:", response.status);
     }
   } catch (error) {
-    handleError("FETCH_USER_PLAYLISTS_ERROR", error.message);
+    console.error("Error fetching user playlists:", error.message);
   }
 };
 

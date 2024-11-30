@@ -14,49 +14,9 @@ import AuthSelection from "../components/AuthSelection";
 import { createClient } from "@supabase/supabase-js";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
+import { ErrorCodes } from "../constants/errorCodes";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
-
-const ErrorCodes = {
-  FETCH_CURRENT_PLAYBACK_ERROR: "E001",
-  FETCH_ACCESS_TOKEN_ERROR: "E002",
-  REFRESH_ACCESS_TOKEN_ERROR: "E003",
-  FETCH_LYRICS_ERROR: "E004",
-  FETCH_USER_PLAYLISTS_ERROR: "E005",
-  SYNC_VOLUME_ERROR: "E006",
-  CHANGE_VOLUME_ERROR: "E007",
-  CHECK_LIKED_TRACKS_ERROR: "E008",
-  CHECK_IF_TRACK_IS_LIKED_ERROR: "E009",
-  TOGGLE_LIKED_TRACK_ERROR: "E010",
-  TOGGLE_LIKE_TRACK_ERROR: "E011",
-  TOGGLE_PLAY_PAUSE_ERROR: "E012",
-  SKIP_TO_NEXT_TRACK_ERROR: "E013",
-  SKIP_TO_PREVIOUS_ERROR: "E014",
-  CHECK_PLAYLIST_CONTENTS_ERROR: "E015",
-  ADD_TRACK_TO_PLAYLIST_ERROR: "E016",
-  TOGGLE_SHUFFLE_ERROR: "E017",
-  TOGGLE_REPEAT_ERROR: "E018",
-  FETCH_PLAYBACK_STATE_ERROR: "E019",
-  LOAD_MORE_TRACKS_ERROR: "E020",
-  NO_DEVICES_AVAILABLE: "E021",
-  PLAY_ALBUM_ERROR: "E022",
-  TRANSFER_PLAYBACK_ERROR: "E023",
-  PLAY_TRACK_ERROR: "E024",
-  PLAY_TRACK_REQUEST_ERROR: "E025",
-  FETCH_ALBUM_ERROR: "E026",
-  FETCH_PLAYBACK_STATE_ERROR: "E027",
-  PLAY_ARTIST_TOP_TRACKS_ERROR: "E028",
-  FETCH_ARTIST_ERROR: "E029",
-  PLAY_PLAYLIST_ERROR: "E030",
-  FETCH_PLAYLIST_ERROR: "E031",
-  FETCH_RECENTLY_PLAYED_ALBUMS_ERROR: "E032",
-  FETCH_TOP_ARTISTS_ERROR: "E033",
-  FETCH_USER_RADIO_ERROR: "E034",
-  FETCH_USER_PROFILE_ERROR: "E035",
-  AUTH_ERROR: "E036",
-  DEVICES_FETCH_ERROR: "E037",
-  FETCH_PLAYLIST_TRACKS_ERROR: "E038",
-};
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
@@ -445,7 +405,7 @@ export default function App({ Component, pageProps }) {
           setCurrentlyPlayingTrackUri(null);
           return;
         } else {
-          handleError("FETCH_CURRENT_PLAYBACK_ERROR", error.message);
+          console.error("Error fetching current playback:", error);
         }
       }
     }
@@ -1050,7 +1010,6 @@ export default function App({ Component, pageProps }) {
               fetchCurrentPlayback();
             } catch (error) {
               console.error("Error in playRequest:", error);
-              handleError("PLAY_TRACK_REQUEST_ERROR", error.message);
             }
           };
 

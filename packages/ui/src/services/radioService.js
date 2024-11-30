@@ -304,7 +304,7 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
     return mixes.length > 0 ? mixes[0].name : null;
     
   } catch (error) {
-    handleError("FETCH_USER_RADIO_ERROR", error.message);
+    console.error("Error fetching user radio:", error.message);
     return null;
   }
 };

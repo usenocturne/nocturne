@@ -19,9 +19,9 @@ export const fetchTopArtists = async (accessToken, setArtists, updateGradientCol
         }
         setArtists(data.items);
       } else {
-        handleError("FETCH_TOP_ARTISTS_ERROR", response.status.toString());
+        console.error("Error fetching top artists:", response.status);
       }
     } catch (error) {
-      handleError("FETCH_TOP_ARTISTS_ERROR", error.message);
+      console.error("Error fetching top artists:", error.message);
     }
   };
