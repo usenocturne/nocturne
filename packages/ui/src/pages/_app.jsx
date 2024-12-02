@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
-import { Inter } from "next/font/google";
+import localFont from 'next/font/local'
 import {
   fetchRecentlyPlayedAlbums,
   fetchUserPlaylists,
@@ -16,7 +16,10 @@ import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
 
-const inter = Inter({ subsets: ["latin", "latin-ext"] });
+const inter = localFont({
+  src: '../../public/fonts/InterVariable.ttf',
+  variable: '--font-inter'
+})
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
@@ -1102,12 +1105,12 @@ export default function App({ Component, pageProps }) {
                             justify-content: center;
                             margin: 0 auto 24px;
                           }
-                          h1 { 
-                            font-size: 24px; 
+                          h1 {
+                            font-size: 24px;
                             margin: 0 0 12px;
                             font-weight: bold;
                           }
-                          p { 
+                          p {
                             color: rgba(255,255,255,0.7);
                             margin: 0;
                             line-height: 1.5;
@@ -1167,12 +1170,12 @@ export default function App({ Component, pageProps }) {
                             justify-content: center;
                             margin: 0 auto 24px;
                           }
-                          h1 { 
-                            font-size: 24px; 
+                          h1 {
+                            font-size: 24px;
                             margin: 0 0 12px;
                             font-weight: bold;
                           }
-                          p { 
+                          p {
                             color: rgba(255,255,255,0.7);
                             margin: 0;
                             line-height: 1.5;

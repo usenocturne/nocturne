@@ -19,10 +19,10 @@ export const fetchUserOwnedPlaylists = async (accessToken, handleError = (code, 
     });
     if (playlistsResponse.ok) {
       const data = await playlistsResponse.json();
-      const userOwnedPlaylists = data.items.filter(playlist => 
+      const userOwnedPlaylists = data.items.filter(playlist =>
         playlist && playlist.owner && playlist.owner.id === userId
       );
-      
+
       if (userOwnedPlaylists.length > 0) {
         const imageUrl = userOwnedPlaylists[0].images[0]?.url;
         if (imageUrl) {
