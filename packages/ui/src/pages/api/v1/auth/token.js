@@ -18,7 +18,7 @@ export default async function handler(req) {
     if (!code) {
       console.error('Missing authorization code');
       return new Response(
-        JSON.stringify({ error: 'Authorization code is required' }), 
+        JSON.stringify({ error: 'Authorization code is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -35,19 +35,19 @@ export default async function handler(req) {
         .select('client_id, encrypted_client_secret')
         .eq('session_id', sessionId)
         .maybeSingle();
-      
+
       if (credentialsError) {
         console.error('Database query error:', credentialsError);
         return new Response(
-          JSON.stringify({ error: 'Failed to get credentials', details: credentialsError.message }), 
+          JSON.stringify({ error: 'Failed to get credentials', details: credentialsError.message }),
           { status: 400, headers: { 'Content-Type': 'application/json' } }
         );
       }
-    
+
       if (!credentials) {
         console.error('No credentials found in database');
         return new Response(
-          JSON.stringify({ error: 'Credentials not found or expired' }), 
+          JSON.stringify({ error: 'Credentials not found or expired' }),
           { status: 404, headers: { 'Content-Type': 'application/json' } }
         );
       }
@@ -58,7 +58,7 @@ export default async function handler(req) {
       } catch (decryptError) {
         console.error('Decryption error:', decryptError);
         return new Response(
-          JSON.stringify({ error: 'Failed to decrypt credentials' }), 
+          JSON.stringify({ error: 'Failed to decrypt credentials' }),
           { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
       }
@@ -70,7 +70,7 @@ export default async function handler(req) {
     if (!useClientId || !useClientSecret) {
       console.error('Missing credentials after retrieval');
       return new Response(
-        JSON.stringify({ error: 'Invalid credentials configuration' }), 
+        JSON.stringify({ error: 'Invalid credentials configuration' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -94,11 +94,11 @@ export default async function handler(req) {
     if (!response.ok) {
       console.error('Spotify token exchange failed:', data);
       return new Response(
-        JSON.stringify({ 
-          error: 'Token exchange failed', 
+        JSON.stringify({
+          error: 'Token exchange failed',
           spotifyError: data.error,
-          spotifyErrorDescription: data.error_description 
-        }), 
+          spotifyErrorDescription: data.error_description
+        }),
         { status: response.status, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -120,23 +120,9 @@ export default async function handler(req) {
       if (updateError) {
         console.error('Error updating tokens in database:', updateError);
         return new Response(
-          JSON.stringify({ error: 'Failed to store tokens', details: updateError.message }), 
+          JSON.stringify({ error: 'Failed to store tokens', details: updateError.message }),
           { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
-      }
-      
-      try {
-        const { error: cleanupError } = await supabase
-          .from('spotify_credentials')
-          .delete()
-          .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .is('auth_completed', true);
-
-        if (cleanupError) {
-          console.error('Error during cleanup:', cleanupError);
-        }
-      } catch (cleanupError) {
-        console.error('Error cleaning up old records:', cleanupError);
       }
     }
 
@@ -148,27 +134,27 @@ export default async function handler(req) {
         token_type: data.token_type,
         scope: data.scope,
         isPhoneAuth
-      }), 
-      { 
-        status: 200, 
-        headers: { 
+      }),
+      {
+        status: 200,
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store, must-revalidate'
-        } 
+        }
       }
     );
 
   } catch (error) {
     console.error('Unhandled token exchange error:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Failed to process token exchange',
         details: error.message,
         stack: error.stack
-      }), 
-      { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json' } 
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
       }
     );
   }
