@@ -9,7 +9,7 @@ export const fetchUserPlaylists = async (accessToken, setPlaylists, updateGradie
       const data = await response.json();
       const validPlaylists = data.items.filter(item => item && item.id);
       if (validPlaylists.length > 0) {
-        const imageUrl = validPlaylists[0].images[0]?.url;
+        const imageUrl = validPlaylists[0].images !== null ?? validPlaylists[0].images[0]?.url;
         if (imageUrl) {
           localStorage.setItem("libraryImage", imageUrl);
           updateGradientColors(imageUrl, "library");
