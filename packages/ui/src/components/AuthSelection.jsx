@@ -1,8 +1,128 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import QRAuthFlow from "./QRAuthFlow";
 import packageInfo from "../../package.json";
+import NetworkScreen from "../components/bluetooth/NetworkScreen";
+import PairingScreen from "../components/bluetooth/PairingScreen";
+import EnableTetheringScreen from "../components/bluetooth/EnableTetheringScreen";
 
-const AuthMethodSelector = ({ onSelect }) => {
+const ConnectionScreen = () => {
+  const [isBluetoothDiscovering, setIsBluetoothDiscovering] = useState(false);
+  const [isPairing, setIsPairing] = useState(false);
+  const [pairingKey, setPairingKey] = useState(null);
+  const [showTethering, setShowTethering] = useState(false);
+  const [deviceType, setDeviceType] = useState(null);
+
+  const checkNetworkConnectivity = async () => {
+    try {
+      const response = await fetch("https://httpbin.org/get");
+      return response.ok;
+    } catch (error) {
+      console.error("Network connectivity check failed:", error);
+      return false;
+    }
+  };
+
+  const enableBluetoothDiscovery = async () => {
+    try {
+      setIsBluetoothDiscovering(true);
+      const response = await fetch(
+        "http://localhost:5000/bluetooth/discover/on",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to enable bluetooth discovery");
+      }
+
+      setTimeout(() => {
+        setIsBluetoothDiscovering(false);
+        fetch("http://localhost:5000/bluetooth/discover/off", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }).catch(console.error);
+      }, 120000);
+    } catch (error) {
+      console.error("Error enabling bluetooth discovery:", error);
+      setIsBluetoothDiscovering(false);
+    }
+  };
+
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    setDeviceType(isIOS ? "ios" : "other");
+
+    const ws = new WebSocket("ws://localhost:5000/ws");
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "bluetooth/pairing") {
+        const { pairingKey } = data.payload;
+        setIsPairing(true);
+        setPairingKey(pairingKey);
+        console.log("paired", pairingKey);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    enableBluetoothDiscovery();
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  const handlePairingAccept = async () => {
+    const hasNetwork = await checkNetworkConnectivity();
+    if (hasNetwork) {
+      setShowTethering(true);
+      setIsPairing(false);
+    } else {
+      console.log("No network connectivity");
+    }
+  };
+
+  if (showTethering) {
+    return (
+      <EnableTetheringScreen
+        deviceType={deviceType}
+        message={
+          deviceType === "ios"
+            ? "Please turn on your Personal Hotspot in Settings"
+            : "Please enable Bluetooth tethering in your phone's settings"
+        }
+      />
+    );
+  }
+
+  if (isPairing) {
+    return (
+      <PairingScreen
+        pin={pairingKey}
+        onAccept={handlePairingAccept}
+        onReject={() => {
+          setIsPairing(false);
+          setPairingKey(null);
+          enableBluetoothDiscovery();
+        }}
+      />
+    );
+  }
+
+  return <NetworkScreen />;
+};
+
+const AuthMethodSelector = ({ onSelect, networkStatus }) => {
   const [showQRFlow, setShowQRFlow] = useState(false);
   const [buttonsVisible, setButtonsVisible] = useState(true);
   const [defaultButtonVisible, setDefaultButtonVisible] = useState(false);
@@ -70,6 +190,10 @@ const AuthMethodSelector = ({ onSelect }) => {
       />
     </svg>
   );
+
+  if (networkStatus?.isConnected) {
+    return <ConnectionScreen />;
+  }
 
   return (
     <div className="bg-black h-screen flex items-center justify-center overflow-hidden fixed inset-0">
