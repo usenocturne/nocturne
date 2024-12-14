@@ -13,6 +13,7 @@ import {
 import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
 import LongPressLink from "../components/LongPressLink";
 import Image from "next/image";
+import { getCurrentDevice } from "@/lib/device";
 
 const NowPlaying = ({
   accessToken,
@@ -365,19 +366,9 @@ const NowPlaying = ({
       });
 
       if (response.status === 204 || response.status === 404) {
-        const devicesResponse = await fetch(
-          "https://api.spotify.com/v1/me/player/devices",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
+        const device = getCurrentDevice(accessToken);
 
-        const devicesData = await devicesResponse.json();
-        const availableDevices = devicesData.devices;
-
-        if (availableDevices.length > 0) {
+        if (device) {
           await fetch("https://api.spotify.com/v1/me/player", {
             method: "PUT",
             headers: {
@@ -385,7 +376,7 @@ const NowPlaying = ({
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              device_ids: [availableDevices[0].id],
+              device_ids: [device.id],
               play: true,
             }),
           });

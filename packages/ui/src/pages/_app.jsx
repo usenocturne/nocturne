@@ -15,6 +15,7 @@ import AuthSelection from "../components/AuthSelection";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
+import { getCurrentDevice } from "@/lib/device";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -828,32 +829,7 @@ export default function App({ Component, pageProps }) {
                 throw new Error("Failed to obtain access token");
               }
 
-              const devicesResponse = await fetch(
-                "https://api.spotify.com/v1/me/player/devices",
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                }
-              );
-
-              if (!devicesResponse.ok) {
-                throw new Error(
-                  `Devices fetch error! status: ${devicesResponse.status}`
-                );
-              }
-
-              const devicesData = await devicesResponse.json();
-
-              if (!devicesData?.devices || devicesData.devices.length === 0) {
-                handleError(
-                  "NO_DEVICES_AVAILABLE",
-                  "No devices available for playback"
-                );
-                return;
-              }
-
-              const device = devicesData.devices[0];
+              const device = getCurrentDevice(accessToken);
               const activeDeviceId = device.id;
 
               if (!device.is_active) {

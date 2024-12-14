@@ -4,6 +4,7 @@ import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 import SuccessAlert from "../../components/SuccessAlert";
 import { fetchUserRadio } from "../../services";
+import { getCurrentDevice } from "@/lib/device";
 export const runtime = "experimental-edge";
 
 const MixPage = ({
@@ -157,25 +158,7 @@ const MixPage = ({
         }
       );
 
-      const devicesResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const devicesData = await devicesResponse.json();
-      if (devicesData.devices.length === 0) {
-        handleError(
-          "NO_DEVICES_AVAILABLE",
-          "No devices available for playback"
-        );
-        return;
-      }
-
-      const device = devicesData.devices[0];
+      const device = getCurrentDevice(accessToken);
       const activeDeviceId = device.id;
 
       if (!device.is_active) {
@@ -277,26 +260,7 @@ const MixPage = ({
         }
       );
 
-      const devicesResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const devicesData = await devicesResponse.json();
-      if (devicesData.devices.length === 0) {
-        handleError(
-          "NO_DEVICES_AVAILABLE",
-          "No devices available for playback"
-        );
-        return;
-      }
-
-      const device = devicesData.devices[0];
+      const device = getCurrentDevice(accessToken);
       const activeDeviceId = device.id;
 
       if (!device.is_active) {
