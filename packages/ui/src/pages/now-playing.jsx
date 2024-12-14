@@ -366,7 +366,7 @@ const NowPlaying = ({
       });
 
       if (response.status === 204 || response.status === 404) {
-        const device = getCurrentDevice(accessToken);
+        const device = await getCurrentDevice(accessToken, handleError);
 
         if (device) {
           await fetch("https://api.spotify.com/v1/me/player", {

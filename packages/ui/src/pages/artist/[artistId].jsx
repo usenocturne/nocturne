@@ -63,10 +63,10 @@ const ArtistPage = ({
 
   const playArtistTopTracks = async () => {
     try {
-      const device = getCurrentDevice(accessToken);
-      const activeDeviceId = device.id;
+      const device = await getCurrentDevice(accessToken, handleError);
+      const activeDeviceId = device == null ? null : device.id;
 
-      if (!device.is_active) {
+      if (device && !device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: {
@@ -119,10 +119,10 @@ const ArtistPage = ({
 
   const playTrack = async (trackUri, trackIndex) => {
     try {
-      const device = getCurrentDevice(accessToken);
-      const activeDeviceId = device.id;
+      const device = await getCurrentDevice(accessToken, handleError);
+      const activeDeviceId = device == null ? null : device.id;
 
-      if (!device.is_active) {
+      if (device && !device.is_active) {
         const transferResponse = await fetch(
           "https://api.spotify.com/v1/me/player",
           {
