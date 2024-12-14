@@ -15,7 +15,7 @@ import AuthSelection from "../components/AuthSelection";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
-import { getCurrentDevice } from "@/lib/device";
+import { getCurrentDevice } from "@/services/deviceService";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 

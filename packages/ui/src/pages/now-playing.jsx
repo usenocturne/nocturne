@@ -13,7 +13,7 @@ import {
 import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
 import LongPressLink from "../components/LongPressLink";
 import Image from "next/image";
-import { getCurrentDevice } from "@/lib/device";
+import { getCurrentDevice } from "@/services/deviceService";
 
 const NowPlaying = ({
   accessToken,

@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
-import { getCurrentDevice } from "@/lib/device";
+import { getCurrentDevice } from "@/services/deviceService";
 
 export const runtime = "experimental-edge";
 

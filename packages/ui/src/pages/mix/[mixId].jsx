@@ -4,7 +4,7 @@ import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 import SuccessAlert from "../../components/SuccessAlert";
 import { fetchUserRadio } from "../../services";
-import { getCurrentDevice } from "@/lib/device";
+import { getCurrentDevice } from "@/services/deviceService";
 export const runtime = "experimental-edge";
 
 const MixPage = ({
