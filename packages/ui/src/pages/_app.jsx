@@ -3,7 +3,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
-import { Inter } from "next/font/google";
+import {
+  Inter,
+  Noto_Sans_SC,
+  Noto_Sans_JP,
+  Noto_Sans_KR,
+} from "next/font/google";
 import {
   fetchRecentlyPlayedAlbums,
   fetchUserPlaylists,
@@ -18,6 +23,10 @@ import { ErrorCodes } from "../constants/errorCodes";
 import { getCurrentDevice } from "@/services/deviceService";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
+const notoSansSC = Noto_Sans_SC({ subsets: ["latin"] });
+const notoSansJP = Noto_Sans_JP({ subsets: ["latin"] });
+const notoSansKR = Noto_Sans_KR({ subsets: ["latin"] });
+const notoSansCyrillic = Noto_Sans_SC({ subsets: ["cyrillic"] });
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
@@ -1611,6 +1620,9 @@ export default function App({ Component, pageProps }) {
   return (
     <main
       className={`overflow-hidden relative min-h-screen rounded-2xl ${inter.className}`}
+      style={{
+        fontFamily: `${inter.style.fontFamily}, ${notoSansSC.style.fontFamily}, ${notoSansJP.style.fontFamily}, ${notoSansKR.style.fontFamily}, ${notoSansCyrillic.style.fontFamily}, sans-serif`,
+      }}
     >
       {!authState.authSelectionMade &&
       !router.pathname.includes("phone-auth") &&
