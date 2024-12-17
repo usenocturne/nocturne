@@ -1,7 +1,7 @@
 export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
   try {
     const mixes = [];
-    
+
     const [
       topTracksMediumTerm,
       topTracksLongTerm,
@@ -56,7 +56,7 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
       const month = now.getMonth();
       const currentYear = now.getFullYear();
       const lastYear = currentYear - 1;
-      
+
       if (month >= 2 && month <= 4) {
         return {
           id: 'spring-mix',
@@ -130,7 +130,7 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
 
     const hour = new Date().getHours();
     let timeMix;
-    
+
     if (hour >= 5 && hour < 12) {
       timeMix = {
         id: 'morning-mix',
@@ -162,11 +162,11 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
 
     if (recentlyPlayed && topTracksMediumTerm && topTracksLongTerm) {
       const trackPlayMap = new Map();
-      
+
       recentlyPlayed.items.forEach(item => {
         const playedHour = new Date(item.played_at).getHours();
         const trackId = item.track.id;
-        
+
         if (!trackPlayMap.has(trackId)) {
           trackPlayMap.set(trackId, {
             track: item.track,
@@ -174,7 +174,7 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
             count: 0
           });
         }
-        
+
         const trackData = trackPlayMap.get(trackId);
         trackData.playTimes.add(playedHour);
         trackData.count++;
@@ -188,7 +188,7 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
       const scoredTracks = allTracks.map(track => {
         const playData = trackPlayMap.get(track.id);
         let timeScore = 0;
-        
+
         if (playData) {
           const relevantHours = Array.from(playData.playTimes).filter(hour => {
             if (timeMix.timeRange.start < timeMix.timeRange.end) {
@@ -197,10 +197,10 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
               return hour >= timeMix.timeRange.start || hour < timeMix.timeRange.end;
             }
           });
-          
+
           timeScore = (relevantHours.length / playData.playTimes.size) * playData.count;
         }
-        
+
         return {
           ...track,
           timeScore: timeScore * (track.weight || 1)
@@ -209,7 +209,7 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
 
       const timeSortedTracks = scoredTracks
         .sort((a, b) => b.timeScore - a.timeScore)
-        .filter((track, index, self) => 
+        .filter((track, index, self) =>
           index === self.findIndex(t => t.id === track.id)
         )
         .slice(0, 50);
@@ -219,7 +219,7 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
           .filter(track => !timeSortedTracks.some(t => t.id === track.id))
           .sort(() => Math.random() - 0.5)
           .slice(0, 50 - timeSortedTracks.length);
-        
+
         timeSortedTracks.push(...remainingTracks);
       }
 
@@ -265,14 +265,14 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
           }).then(res => res.json())
         )
       );
-      
+
       const allArtistTracks = artistTracksResponses
         .flatMap(response => response.tracks);
-        
+
       const uniqueArtistTracks = getUniqueTracksById(allArtistTracks)
         .sort(() => Math.random() - 0.5)
         .slice(0, 50);
-      
+
       mixes.push({
         id: 'discoveries-mix',
         name: 'Discoveries',
@@ -287,7 +287,7 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
       const uniqueThrowbackTracks = topTracksLongTerm.items.filter(
         track => !topTracksMediumTerm.items.some(topTrack => topTrack.id === track.id)
       );
-      
+
       mixes.push({
         id: 'throwback-mix',
         name: 'Throwbacks',
@@ -299,10 +299,10 @@ export const fetchUserRadio = async (accessToken, setRadio, handleError) => {
     }
 
     const sortedMixes = mixes.sort((a, b) => a.sortOrder - b.sortOrder);
-    
+
     setRadio(sortedMixes);
     return mixes.length > 0 ? mixes[0].name : null;
-    
+
   } catch (error) {
     console.error("Error fetching user radio:", error.message);
     return null;

@@ -21,6 +21,7 @@ import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
 import { getCurrentDevice } from "@/services/deviceService";
+import { checkNetworkConnectivity, startNetworkMonitoring } from "../lib/networkChecker";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 const notoSansSC = Noto_Sans_SC({ subsets: ["latin"] });
@@ -110,6 +111,26 @@ export default function App({ Component, pageProps }) {
   });
   const resetTimerRef = useRef(null);
   const startTimeRef = useRef(null);
+  const [networkStatus, setNetworkStatus] = useState({ isConnected: false });
+
+  useEffect(() => {
+    const checkInitialConnectivity = async () => {
+      try {
+        const savedAccessToken = localStorage.getItem("spotifyAccessToken");
+        if (savedAccessToken) {
+          await checkNetworkConnectivity(savedAccessToken);
+        } else {
+          await fetch('https://httpbin.org/get');
+        }
+        setNetworkStatus({ isConnected: true });
+      } catch (error) {
+        setNetworkStatus({ isConnected: false });
+        handleError("NETWORK_ERROR", "Unable to connect to Spotify");
+      }
+    };
+
+    checkInitialConnectivity();
+  }, []);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -1087,12 +1108,12 @@ export default function App({ Component, pageProps }) {
                             justify-content: center;
                             margin: 0 auto 24px;
                           }
-                          h1 { 
-                            font-size: 24px; 
+                          h1 {
+                            font-size: 24px;
                             margin: 0 0 12px;
                             font-weight: bold;
                           }
-                          p { 
+                          p {
                             color: rgba(255,255,255,0.7);
                             margin: 0;
                             line-height: 1.5;
@@ -1152,12 +1173,12 @@ export default function App({ Component, pageProps }) {
                             justify-content: center;
                             margin: 0 auto 24px;
                           }
-                          h1 { 
-                            font-size: 24px; 
+                          h1 {
+                            font-size: 24px;
                             margin: 0 0 12px;
                             font-weight: bold;
                           }
-                          p { 
+                          p {
                             color: rgba(255,255,255,0.7);
                             margin: 0;
                             line-height: 1.5;
@@ -1284,6 +1305,22 @@ export default function App({ Component, pageProps }) {
       const playbackInterval = setInterval(() => {
         fetchCurrentPlayback();
       }, 1000);
+
+      const networkCleanup = startNetworkMonitoring(accessToken, async (isConnected) => {
+        try {
+          if (isConnected) {
+            const status = await checkNetworkConnectivity(accessToken);
+            setNetworkStatus({ isConnected: true });
+          } else {
+            setNetworkStatus({ isConnected: false });
+            handleError("NETWORK_ERROR", "Lost connection to Spotify");
+          }
+        } catch (error) {
+          setNetworkStatus({ isConnected: false });
+          handleError("NETWORK_ERROR", error.message);
+        }
+      });
+
       setLoading(false);
 
       fetchRecentlyPlayedAlbums(
@@ -1322,6 +1359,7 @@ export default function App({ Component, pageProps }) {
         clearInterval(playbackInterval);
         clearInterval(recentlyPlayedInterval);
         window.removeEventListener("keydown", handleEscapePress);
+        networkCleanup();
       };
     }
   }, [accessToken]);
@@ -1627,7 +1665,10 @@ export default function App({ Component, pageProps }) {
       {!authState.authSelectionMade &&
       !router.pathname.includes("phone-auth") &&
       !window.location.search.includes("code") ? (
-        <AuthSelection onSelect={handleAuthSelection} />
+        <AuthSelection
+          onSelect={handleAuthSelection}
+          networkStatus={networkStatus}
+        />
       ) : (
         <>
           <div
@@ -1664,6 +1705,7 @@ export default function App({ Component, pageProps }) {
               updateGradientColors={updateGradientColors}
               handleError={handleError}
               showBrightnessOverlay={showBrightnessOverlay}
+              networkStatus={networkStatus}
             />
             <ErrorAlert error={error} onClose={clearError} />
           </div>
