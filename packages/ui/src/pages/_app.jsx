@@ -3,7 +3,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
-import localFont from 'next/font/local'
+import {
+  Inter,
+  Noto_Sans_SC,
+  Noto_Sans_JP,
+  Noto_Sans_KR,
+} from "next/font/google";
 import {
   fetchRecentlyPlayedAlbums,
   fetchUserPlaylists,
@@ -15,12 +20,14 @@ import AuthSelection from "../components/AuthSelection";
 import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
+import { getCurrentDevice } from "@/services/deviceService";
 import { checkNetworkConnectivity, startNetworkMonitoring } from "../lib/networkChecker";
 
-const inter = localFont({
-  src: '../../public/fonts/InterVariable.ttf',
-  variable: '--font-inter'
-})
+const inter = Inter({ subsets: ["latin", "latin-ext"] });
+const notoSansSC = Noto_Sans_SC({ subsets: ["latin"] });
+const notoSansJP = Noto_Sans_JP({ subsets: ["latin"] });
+const notoSansKR = Noto_Sans_KR({ subsets: ["latin"] });
+const notoSansCyrillic = Noto_Sans_SC({ subsets: ["cyrillic"] });
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
@@ -852,35 +859,10 @@ export default function App({ Component, pageProps }) {
                 throw new Error("Failed to obtain access token");
               }
 
-              const devicesResponse = await fetch(
-                "https://api.spotify.com/v1/me/player/devices",
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                }
-              );
+              const device = await getCurrentDevice(accessToken, handleError);
+              const activeDeviceId = device == null ? null : device.id;
 
-              if (!devicesResponse.ok) {
-                throw new Error(
-                  `Devices fetch error! status: ${devicesResponse.status}`
-                );
-              }
-
-              const devicesData = await devicesResponse.json();
-
-              if (!devicesData?.devices || devicesData.devices.length === 0) {
-                handleError(
-                  "NO_DEVICES_AVAILABLE",
-                  "No devices available for playback"
-                );
-                return;
-              }
-
-              const device = devicesData.devices[0];
-              const activeDeviceId = device.id;
-
-              if (!device.is_active) {
+              if (device && !device.is_active) {
                 await fetch("https://api.spotify.com/v1/me/player", {
                   method: "PUT",
                   headers: {
@@ -1676,6 +1658,9 @@ export default function App({ Component, pageProps }) {
   return (
     <main
       className={`overflow-hidden relative min-h-screen rounded-2xl ${inter.className}`}
+      style={{
+        fontFamily: `${inter.style.fontFamily}, ${notoSansSC.style.fontFamily}, ${notoSansJP.style.fontFamily}, ${notoSansKR.style.fontFamily}, ${notoSansCyrillic.style.fontFamily}, sans-serif`,
+      }}
     >
       {!authState.authSelectionMade &&
       !router.pathname.includes("phone-auth") &&

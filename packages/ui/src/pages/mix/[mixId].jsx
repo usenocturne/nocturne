@@ -4,6 +4,7 @@ import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 import SuccessAlert from "../../components/SuccessAlert";
 import { fetchUserRadio } from "../../services";
+import { getCurrentDevice } from "@/services/deviceService";
 export const runtime = "experimental-edge";
 
 const MixPage = ({
@@ -157,28 +158,10 @@ const MixPage = ({
         }
       );
 
-      const devicesResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const device = await getCurrentDevice(accessToken, handleError);
+      const activeDeviceId = device == null ? null : device.id;
 
-      const devicesData = await devicesResponse.json();
-      if (devicesData.devices.length === 0) {
-        handleError(
-          "NO_DEVICES_AVAILABLE",
-          "No devices available for playback"
-        );
-        return;
-      }
-
-      const device = devicesData.devices[0];
-      const activeDeviceId = device.id;
-
-      if (!device.is_active) {
+      if (device && !device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: {
@@ -277,29 +260,10 @@ const MixPage = ({
         }
       );
 
-      const devicesResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const device = await getCurrentDevice(accessToken, handleError);
+      const activeDeviceId = device == null ? null : device.id;
 
-      const devicesData = await devicesResponse.json();
-      if (devicesData.devices.length === 0) {
-        handleError(
-          "NO_DEVICES_AVAILABLE",
-          "No devices available for playback"
-        );
-        return;
-      }
-
-      const device = devicesData.devices[0];
-      const activeDeviceId = device.id;
-
-      if (!device.is_active) {
+      if (device && !device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: {

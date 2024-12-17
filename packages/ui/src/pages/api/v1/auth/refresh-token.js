@@ -13,12 +13,12 @@ export default async function handler(req) {
 
   try {
     const { refresh_token, isCustomAuth } = await req.json();
-    
+
     if (!refresh_token) {
       console.error('Missing refresh token');
       return new Response(
-        JSON.stringify({ error: 'Refresh token is required' }), 
-        { 
+        JSON.stringify({ error: 'Refresh token is required' }),
+        {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
         }
@@ -31,8 +31,8 @@ export default async function handler(req) {
       if (!supabase) {
         console.error('Supabase client not initialized');
         return new Response(
-          JSON.stringify({ error: 'Database connection error' }), 
-          { 
+          JSON.stringify({ error: 'Database connection error' }),
+          {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
           }
@@ -40,16 +40,6 @@ export default async function handler(req) {
       }
 
       try {
-        const { error: cleanupError } = await supabase
-          .from('spotify_credentials')
-          .delete()
-          .eq('refresh_token', refresh_token)
-          .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
-        if (cleanupError) {
-          console.error('Error cleaning up old records:', cleanupError);
-        }
-
         const { data: credentials, error: fetchError } = await supabase
           .from('spotify_credentials')
           .select('*')
@@ -65,8 +55,8 @@ export default async function handler(req) {
             refreshToken: refresh_token.substring(0, 10) + '...'
           });
           return new Response(
-            JSON.stringify({ error: 'Custom credentials not found' }), 
-            { 
+            JSON.stringify({ error: 'Custom credentials not found' }),
+            {
               status: 400,
               headers: { 'Content-Type': 'application/json' }
             }
@@ -81,8 +71,8 @@ export default async function handler(req) {
         } catch (decryptError) {
           console.error('Decryption error:', decryptError);
           return new Response(
-            JSON.stringify({ error: 'Failed to decrypt credentials' }), 
-            { 
+            JSON.stringify({ error: 'Failed to decrypt credentials' }),
+            {
               status: 500,
               headers: { 'Content-Type': 'application/json' }
             }
@@ -91,8 +81,8 @@ export default async function handler(req) {
       } catch (dbError) {
         console.error('Database operation error:', dbError);
         return new Response(
-          JSON.stringify({ error: 'Database operation failed' }), 
-          { 
+          JSON.stringify({ error: 'Database operation failed' }),
+          {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
           }
@@ -124,7 +114,7 @@ export default async function handler(req) {
         error: data,
         clientIdPrefix: clientId.substring(0, 10) + '...'
       });
-      return new Response(JSON.stringify(data), { 
+      return new Response(JSON.stringify(data), {
         status: response.status,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -177,8 +167,8 @@ export default async function handler(req) {
         access_token: data.access_token,
         refresh_token: data.refresh_token,
         expires_in: data.expires_in
-      }), 
-      { 
+      }),
+      {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       }
@@ -187,12 +177,12 @@ export default async function handler(req) {
   } catch (error) {
     console.error('Unhandled error:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Failed to refresh access token',
         details: error.message,
-        stack: error.stack 
-      }), 
-      { 
+        stack: error.stack
+      }),
+      {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       }

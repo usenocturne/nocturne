@@ -122,7 +122,12 @@ create table spotify_credentials (
   last_used timestamp with time zone,
   first_used_at timestamp with time zone,
   token_refresh_count integer default 0,
-  user_agent text
+  user_agent text,
+  auth_completed text,
+  session_id text,
+  access_token text,
+  version text,
+  token_expiry text
 );
 
 -- Add policies for Row Level Security (RLS)
