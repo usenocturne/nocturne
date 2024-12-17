@@ -15,8 +15,12 @@ const ConnectionScreen = () => {
 
   const checkNetworkConnectivity = async () => {
     try {
-      // todo: make this do a simple options req to the spotify api
-      const response = await fetch("https://httpbin.org/get");
+      const response = await fetch("https://api.spotify.com/v1", {
+        method: "OPTIONS",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       return response.ok;
     } catch (error) {
       console.error("Network connectivity check failed:", error);
@@ -60,19 +64,25 @@ const ConnectionScreen = () => {
     try {
       const intervalId = setInterval(async () => {
         try {
-          const response = await fetch(`http://localhost:5000/bluetooth/network/${address}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await fetch(
+            `http://localhost:5000/bluetooth/network/${address}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
 
           const data = await response.json();
-          
+
           if (data.status === "success") {
             clearInterval(intervalId);
-            
-            // todo: switch to login screen here
+            setIsBluetoothDiscovering(false);
+            setPairingKey(null);
+            setIsPairing(false);
+            setShowTethering(false);
+            onSelect({ type: "custom" });
           }
         } catch (error) {
           console.error("Error enabling bluetooth networking:", error);
