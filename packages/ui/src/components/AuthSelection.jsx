@@ -6,7 +6,7 @@ import NetworkScreen from "../components/bluetooth/NetworkScreen";
 import PairingScreen from "../components/bluetooth/PairingScreen";
 import EnableTetheringScreen from "../components/bluetooth/EnableTetheringScreen";
 
-const ConnectionScreen = () => {
+const ConnectionScreen = ({ onSelect }) => {
   const [isBluetoothDiscovering, setIsBluetoothDiscovering] = useState(false);
   const [isPairing, setIsPairing] = useState(false);
   const [pairingKey, setPairingKey] = useState(null);
