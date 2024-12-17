@@ -407,6 +407,10 @@ Nocturne is a massive endeavor, and the team have spent everyday over the last f
 
 All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
 
+[Buy Me a Coffee](https://buymeacoffee.com/brandonsaldan) |
+[Ko-Fi](https://ko-fi.com/brandonsaldan)
+
+
 ## Credits
 
 This software was made possible only through the following individuals and open source programs:
