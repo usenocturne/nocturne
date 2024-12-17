@@ -15,6 +15,7 @@ const ConnectionScreen = () => {
 
   const checkNetworkConnectivity = async () => {
     try {
+      // todo: make this do a simple options req to the spotify api
       const response = await fetch("https://httpbin.org/get");
       return response.ok;
     } catch (error) {
@@ -55,6 +56,33 @@ const ConnectionScreen = () => {
     }
   };
 
+  const enableBluetoothNetwork = (address) => {
+    try {
+      const intervalId = setInterval(async () => {
+        try {
+          const response = await fetch(`http://localhost:5000/bluetooth/network/${address}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const data = await response.json();
+          
+          if (data.status === "success") {
+            clearInterval(intervalId);
+            
+            // todo: switch to login screen here
+          }
+        } catch (error) {
+          console.error("Error enabling bluetooth networking:", error);
+        }
+      }, 7000);
+    } catch (error) {
+      console.error("Error enabling bluetooth networking:", error);
+    }
+  };
+
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setDeviceType(isIOS ? "ios" : "other");
@@ -64,10 +92,14 @@ const ConnectionScreen = () => {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === "bluetooth/pairing") {
-        const { pairingKey } = data.payload;
+        const { address, pairingKey } = data.payload;
         setIsPairing(true);
         setPairingKey(pairingKey);
-        console.log("paired", pairingKey);
+        console.log("pairing", address, pairingKey);
+      } else if (data.type === "bluetooth/paired") {
+        const { address } = data.payload.device;
+        console.log("paired", address);
+        enableBluetoothNetwork(address);
       }
     };
 
@@ -83,12 +115,25 @@ const ConnectionScreen = () => {
   }, []);
 
   const handlePairingAccept = async () => {
-    const hasNetwork = await checkNetworkConnectivity();
-    if (hasNetwork) {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/bluetooth/pairing/accept",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to accept bluetooth pairing");
+      }
+
       setShowTethering(true);
       setIsPairing(false);
-    } else {
-      console.log("No network connectivity");
+    } catch (error) {
+      console.error("Error accepting bluetooth pairing:", error);
     }
   };
 
@@ -191,7 +236,7 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
     </svg>
   );
 
-  if (networkStatus?.isConnected) {
+  if (!networkStatus?.isConnected) {
     return <ConnectionScreen />;
   }
 
