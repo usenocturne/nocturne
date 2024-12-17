@@ -2,8 +2,11 @@
   pkgs,
   ...
 }: {
-  services.cage.environment = {
-    WLR_LIBINPUT_NO_DEVICES = "1";
+  programs.chromium = {
+    enable = true;
+    extraOpts = {
+      "BlockThirdPartyCookies" = false;
+    };
   };
 
   superbird.gui = {
@@ -21,9 +24,6 @@
         --remote-debugging-port=9222 \
         --force-device-scale-factor=1.0 \
         --pull-to-refresh=0 \
-        --disable-smooth-scrolling \
-        --disable-login-animations \
-        --disable-modal-animations \
         --noerrdialogs \
         --no-first-run \
         --disable-infobars \
@@ -40,9 +40,18 @@
         --password-store=basic \
         --touch-events=enabled \
         --ignore-certificate-errors \
+        --disable-extensions \
+        --disable-gesture-typing \
         --kiosk \
-        --app=https://nocturne.brandons.place
+        --app=https://127.0.0.1:3500
     '';
+  };
+
+  services.cage = {
+    extraArguments = [ "-c" ];
+    environment = {
+      WLR_LIBINPUT_NO_DEVICES = "1";
+    };
   };
 
   services.udev.extraRules = ''

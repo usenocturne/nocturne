@@ -1,12 +1,15 @@
 {
-  description = "Nocturne NixOS";
+  description = "Nocturne NixOS image";
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixos-superbird.url = "github:joeyeamigh/nixos-superbird/9ba7d16b6a11c5fa987bb46e4992ab26f67d292f";
+    nixos-superbird.url = "github:joeyeamigh/nixos-superbird";
+    #nixos-superbird.url = "git+file:///nixos-superbird";
     deploy-rs.url = "github:serokell/deploy-rs";
 
     nocturned.url = "github:usenocturne/nocturned";
-    #nocturne-ui.url = "github:usenocturne/nocturne-ui/standalone";
+    nocturne-ui.url = "github:usenocturne/nocturne-ui/v3.0.0-beta.1";
+    #nocturne-ui.url = "git+file:///home/nebula/nocturne-ui";
   };
 
   outputs = inputs@{ self, nixpkgs, nixos-superbird, deploy-rs, ... }:

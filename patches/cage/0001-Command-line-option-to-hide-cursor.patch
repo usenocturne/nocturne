@@ -1,0 +1,74 @@
+From 218428c31448c95a3be5c8eb7062620caa161a29 Mon Sep 17 00:00:00 2001
+From: Hiers <dvmap@protonmail.com>
+Date: Sun, 5 May 2024 21:24:48 +0100
+Subject: [PATCH] Command line option to hide cursor.
+
+Co-authored-by: bbaovanc <bbaovanc@bbaovanc.com>.
+---
+ cage.c   | 6 +++++-
+ seat.c   | 4 ++--
+ server.h | 1 +
+ 3 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/cage.c b/cage.c
+index 26ab9ef..0c325f3 100644
+--- a/cage.c
++++ b/cage.c
+@@ -226,6 +226,7 @@ usage(FILE *file, const char *cage)
+ 	fprintf(file,
+ 		"Usage: %s [OPTIONS] [--] APPLICATION\n"
+ 		"\n"
++		" -c\t Hide cursor\n"
+ 		" -d\t Don't draw client side decorations, when possible\n"
+ 		" -h\t Display this help message\n"
+ 		" -m extend Extend the display across all connected outputs (default)\n"
+@@ -241,8 +242,11 @@ static bool
+ parse_args(struct cg_server *server, int argc, char *argv[])
+ {
+ 	int c;
+-	while ((c = getopt(argc, argv, "dhm:sv")) != -1) {
++	while ((c = getopt(argc, argv, "cdhm:sv")) != -1) {
+ 		switch (c) {
++		case 'c':
++			server->hide_cursor = true;
++			break;
+ 		case 'd':
+ 			server->xdg_decoration = true;
+ 			break;
+diff --git a/seat.c b/seat.c
+index cdf8798..fe0ab2f 100644
+--- a/seat.c
++++ b/seat.c
+@@ -127,7 +127,7 @@ update_capabilities(struct cg_seat *seat)
+ 	wlr_seat_set_capabilities(seat->seat, caps);
+ 
+ 	/* Hide cursor if the seat doesn't have pointer capability. */
+-	if ((caps & WL_SEAT_CAPABILITY_POINTER) == 0) {
++	if ((caps & WL_SEAT_CAPABILITY_POINTER) == 0 || seat->server->hide_cursor == true) {
+ 		wlr_cursor_unset_image(seat->cursor);
+ 	} else {
+ 		wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, DEFAULT_XCURSOR);
+@@ -482,7 +482,7 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
+ 
+ 	/* This can be sent by any client, so we check to make sure
+ 	 * this one actually has pointer focus first. */
+-	if (focused_client == event->seat_client->client) {
++	if (focused_client == event->seat_client->client && seat->server->hide_cursor == false) {
+ 		wlr_cursor_set_surface(seat->cursor, event->surface, event->hotspot_x, event->hotspot_y);
+ 	}
+ }
+diff --git a/server.h b/server.h
+index f7d70d7..673d16f 100644
+--- a/server.h
++++ b/server.h
+@@ -63,6 +63,7 @@ struct cg_server {
+ 	bool allow_vt_switch;
+ 	bool return_app_code;
+ 	bool terminated;
++	bool hide_cursor;
+ };
+ 
+ void server_terminate(struct cg_server *server);
+-- 
+2.47.0
+
