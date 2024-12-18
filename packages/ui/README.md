@@ -19,9 +19,12 @@
   <a href="#license">License</a>
 </p>
 
-![screenshot](https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/pictures/nocturne-1.png)
-![screenshot](https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/pictures/nocturne-2.png)
-![screenshot](https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/pictures/nocturne-3.png)
+<br>
+<img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-1.png" alt="screenshot">
+<br>
+<img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-2.png" alt="screenshot">
+<br>
+<img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-3.png" alt="screenshot">
 
 ## How To Use
 
