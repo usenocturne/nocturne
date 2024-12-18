@@ -4,6 +4,7 @@ import LongPressLink from "../../components/LongPressLink";
 import Image from "next/image";
 import SuccessAlert from "../../components/SuccessAlert";
 import { getCurrentDevice } from "@/services/deviceService";
+import {setPlaybackShuffleState} from "@/services/playerService";
 export const runtime = "experimental-edge";
 
 const LikedSongsPage = ({
@@ -97,23 +98,7 @@ const LikedSongsPage = ({
   );
 
   useEffect(() => {
-    const fetchPlaybackState = async () => {
-      try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setIsShuffleEnabled(data.shuffle_state);
-        }
-      } catch (error) {
-        handleError("FETCH_PLAYBACK_STATE_ERROR", error.message);
-      }
-    };
-
-    fetchPlaybackState();
+    void setPlaybackShuffleState(accessToken, handleError, setIsShuffleEnabled);
   }, [accessToken]);
 
   useEffect(() => {

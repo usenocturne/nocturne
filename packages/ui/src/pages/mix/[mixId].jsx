@@ -5,6 +5,7 @@ import Image from "next/image";
 import SuccessAlert from "../../components/SuccessAlert";
 import { fetchUserRadio } from "../../services";
 import { getCurrentDevice } from "@/services/deviceService";
+import {setPlaybackShuffleState} from "@/services/playerService";
 export const runtime = "experimental-edge";
 
 const MixPage = ({
@@ -98,23 +99,7 @@ const MixPage = ({
   }, [mix]);
 
   useEffect(() => {
-    const fetchPlaybackState = async () => {
-      try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setIsShuffleEnabled(data.shuffle_state);
-        }
-      } catch (error) {
-        return;
-      }
-    };
-
-    fetchPlaybackState();
+    void setPlaybackShuffleState(accessToken, handleError, setIsShuffleEnabled);
   }, [accessToken]);
 
   const playMix = async () => {
