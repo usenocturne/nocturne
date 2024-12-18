@@ -6,7 +6,7 @@ import NetworkScreen from "../components/bluetooth/NetworkScreen";
 import PairingScreen from "../components/bluetooth/PairingScreen";
 import EnableTetheringScreen from "../components/bluetooth/EnableTetheringScreen";
 
-const ConnectionScreen = ({ onSelect }) => {
+const ConnectionScreen = () => {
   const [isBluetoothDiscovering, setIsBluetoothDiscovering] = useState(false);
   const [isPairing, setIsPairing] = useState(false);
   const [pairingKey, setPairingKey] = useState(null);
@@ -82,7 +82,6 @@ const ConnectionScreen = ({ onSelect }) => {
             setPairingKey(null);
             setIsPairing(false);
             setShowTethering(false);
-            onSelect({ type: "custom" });
           }
         } catch (error) {
           console.error("Error enabling bluetooth networking:", error);
