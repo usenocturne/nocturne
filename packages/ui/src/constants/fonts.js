@@ -112,6 +112,15 @@ export const notoSansBN = localFont({
   unicode: ["\u0980-\u09FF"],
 });
 
+export const notoSansTA = localFont({
+  src: "../fonts/NotoSansTA-VF.woff2",
+  variable: "--font-noto-sans-ta",
+  preload: false,
+  display: "swap",
+  fallback: ["system-ui", "sans-serif"],
+  unicode: ["\u0B80-\u0BFF"],
+});
+
 export function detectTextScript(text) {
   if (!text) return "latin";
 
@@ -124,6 +133,7 @@ export function detectTextScript(text) {
     hebrew: /[\u0590-\u05FF]/,
     bengali: /[\u0980-\u09FF]/,
     traditionalChinese: /[\u4E00-\u9FFF]/,
+    tamil: /[\u0B80-\u0BFF]/,
   };
 
   for (const [script, regex] of Object.entries(scripts)) {
@@ -165,6 +175,7 @@ export const fontFamilyForScript = {
   devanagari: `var(--font-noto-sans-dv), var(--font-inter)`,
   hebrew: `var(--font-noto-sans-he), var(--font-inter)`,
   bengali: `var(--font-noto-sans-bn), var(--font-inter)`,
+  tamil: `var(--font-noto-sans-ta), var(--font-inter)`,
 };
 
 export function useDynamicFont(text) {
