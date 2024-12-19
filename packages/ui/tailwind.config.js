@@ -11,6 +11,7 @@ module.exports = {
         sans: [
           "var(--font-inter)",
           "var(--font-noto-sans-sc)",
+          "var(--font-noto-sans-tc)",
           "var(--font-noto-sans-jp)",
           "var(--font-noto-sans-kr)",
           "var(--font-noto-naskh-ar)",

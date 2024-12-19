@@ -43,6 +43,15 @@ export const notoSansSC = localFont({
   ],
 });
 
+export const notoSansTC = localFont({
+  src: "../fonts/NotoSansTC-VF.woff2",
+  variable: "--font-noto-sans-tc",
+  preload: false,
+  display: "swap",
+  fallback: ["system-ui", "sans-serif"],
+  unicode: ["\u4E00-\u9FFF"],
+});
+
 export const notoSerifJP = localFont({
   src: "../fonts/NotoSerifJP-VF.woff2",
   variable: "--font-noto-serif-jp",
@@ -114,6 +123,7 @@ export function detectTextScript(text) {
     devanagari: /[\u0900-\u097F]/,
     hebrew: /[\u0590-\u05FF]/,
     bengali: /[\u0980-\u09FF]/,
+    traditionalChinese: /[\u4E00-\u9FFF]/,
   };
 
   for (const [script, regex] of Object.entries(scripts)) {
@@ -148,6 +158,7 @@ export function getTextDirection(text) {
 export const fontFamilyForScript = {
   latin: `var(--font-inter)`,
   chinese: `var(--font-noto-sans-sc), var(--font-inter)`,
+  traditionalChinese: `var(--font-noto-sans-tc), var(--font-inter)`,
   japanese: `var(--font-noto-serif-jp), var(--font-inter)`,
   korean: `var(--font-noto-sans-kr), var(--font-inter)`,
   arabic: `var(--font-noto-naskh-ar), var(--font-inter)`,

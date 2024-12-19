@@ -22,6 +22,7 @@ import {
 import {
   inter,
   notoSansSC,
+  notoSansTC,
   notoSerifJP,
   notoSansKR,
   notoNaskhAR,
@@ -115,7 +116,7 @@ export default function App({ Component, pageProps }) {
   const [networkStatus, setNetworkStatus] = useState({ isConnected: false });
   const inactivityTimeoutRef = useRef(null);
   const lastActivityTimeRef = useRef(Date.now());
-  const mainFontClasses = `${inter.variable} ${notoSansSC.variable} ${notoSerifJP.variable} ${notoSansKR.variable} ${notoNaskhAR.variable} ${notoSansDV.variable} ${notoSansHE.variable} ${notoSansBN.variable}`;
+  const mainFontClasses = `${inter.variable} ${notoSansSC.variable} ${notoSansTC.variable} ${notoSerifJP.variable} ${notoSansKR.variable} ${notoNaskhAR.variable} ${notoSansDV.variable} ${notoSansHE.variable} ${notoSansBN.variable}`;
 
   useEffect(() => {
     const checkInitialConnectivity = async () => {
