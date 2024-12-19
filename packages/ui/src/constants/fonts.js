@@ -85,6 +85,15 @@ export const notoSansDV = localFont({
   unicode: ["\u0900-\u097F"],
 });
 
+export const notoSansHE = localFont({
+  src: "../fonts/NotoSansHE-VF.woff2",
+  variable: "--font-noto-sans-he",
+  preload: false,
+  display: "swap",
+  fallback: ["system-ui", "sans-serif"],
+  unicode: ["\u0590-\u05FF"],
+});
+
 export function detectTextScript(text) {
   if (!text) return "latin";
 
@@ -94,6 +103,7 @@ export function detectTextScript(text) {
     korean: /[\uAC00-\uD7AF\u1100-\u11FF]/,
     arabic: /[\u0600-\u06FF\u0750-\u077F]/,
     devanagari: /[\u0900-\u097F]/,
+    hebrew: /[\u0590-\u05FF]/,
   };
 
   for (const [script, regex] of Object.entries(scripts)) {
@@ -107,6 +117,7 @@ export function getTextDirection(text) {
   const rtlScripts = {
     arabic:
       /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/,
+    hebrew: /[\u0590-\u05FF]/,
   };
 
   for (const [script, regex] of Object.entries(rtlScripts)) {
@@ -131,6 +142,7 @@ export const fontFamilyForScript = {
   korean: `var(--font-noto-sans-kr), var(--font-inter)`,
   arabic: `var(--font-noto-naskh-ar), var(--font-inter)`,
   devanagari: `var(--font-noto-sans-dv), var(--font-inter)`,
+  hebrew: `var(--font-noto-sans-he), var(--font-inter)`,
 };
 
 export function useDynamicFont(text) {

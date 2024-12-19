@@ -936,6 +936,7 @@ const NowPlaying = ({
 
     const fontClasses = {
       arabic: "font-noto-naskh-ar",
+      hebrew: "font-noto-sans-he",
     };
 
     return {
