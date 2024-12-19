@@ -104,6 +104,8 @@ export default function App({ Component, pageProps }) {
   const resetTimerRef = useRef(null);
   const startTimeRef = useRef(null);
   const [networkStatus, setNetworkStatus] = useState({ isConnected: false });
+  const inactivityTimeoutRef = useRef(null);
+  const lastActivityTimeRef = useRef(Date.now());
 
   useEffect(() => {
     const checkInitialConnectivity = async () => {
@@ -221,6 +223,74 @@ export default function App({ Component, pageProps }) {
       localStorage.setItem("spotifyAuthType", authState.authType);
     }
   }, [refreshToken, authState.authType]);
+
+  useEffect(() => {
+    const handleActivity = () => {
+      lastActivityTimeRef.current = Date.now();
+    };
+
+    const checkInactivity = () => {
+      const currentTime = Date.now();
+      const inactiveTime = currentTime - lastActivityTimeRef.current;
+      const isAutoRedirectEnabled =
+        localStorage.getItem("autoRedirectEnabled") === "true";
+
+      if (inactiveTime >= 60000) {
+        if (
+          isAutoRedirectEnabled &&
+          currentPlayback?.is_playing &&
+          router.pathname !== "/now-playing" &&
+          !showBrightnessOverlay &&
+          !showMappingOverlay &&
+          !drawerOpen &&
+          authState.authSelectionMade &&
+          accessToken &&
+          !router.pathname.includes("phone-auth") &&
+          !window.location.search.includes("code")
+        ) {
+          router.push("/now-playing");
+        }
+      }
+    };
+
+    lastActivityTimeRef.current = Date.now();
+
+    const events = [
+      "mousemove",
+      "mousedown",
+      "click",
+      "touchstart",
+      "touchmove",
+      "keydown",
+      "wheel",
+      "scroll",
+      "input",
+      "focus",
+    ];
+
+    events.forEach((event) => {
+      window.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    inactivityTimeoutRef.current = setInterval(checkInactivity, 1000);
+
+    return () => {
+      events.forEach((event) => {
+        window.removeEventListener(event, handleActivity);
+      });
+      if (inactivityTimeoutRef.current) {
+        clearInterval(inactivityTimeoutRef.current);
+      }
+    };
+  }, [
+    router.pathname,
+    currentPlayback?.is_playing,
+    showBrightnessOverlay,
+    showMappingOverlay,
+    drawerOpen,
+    authState.authSelectionMade,
+    accessToken,
+  ]);
 
   const handleAuthSelection = async (selection) => {
     const newState = {

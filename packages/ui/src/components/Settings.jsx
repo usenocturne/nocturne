@@ -19,6 +19,11 @@ export default function Settings({ onOpenDonationModal }) {
     return storedValue !== null ? storedValue === "true" : true;
   });
 
+  const [autoRedirectEnabled, setAutoRedirectEnabled] = useState(() => {
+    const storedValue = localStorage.getItem("autoRedirectEnabled");
+    return storedValue !== null ? storedValue === "true" : false;
+  });
+
   useEffect(() => {
     localStorage.setItem(
       "trackNameScrollingEnabled",
@@ -31,11 +36,18 @@ export default function Settings({ onOpenDonationModal }) {
   }, [lyricsMenuEnabled]);
 
   useEffect(() => {
+    localStorage.setItem("autoRedirectEnabled", autoRedirectEnabled.toString());
+  }, [autoRedirectEnabled]);
+
+  useEffect(() => {
     if (localStorage.getItem("trackNameScrollingEnabled") === null) {
       localStorage.setItem("trackNameScrollingEnabled", "true");
     }
     if (localStorage.getItem("lyricsMenuEnabled") === null) {
       localStorage.setItem("lyricsMenuEnabled", "true");
+    }
+    if (localStorage.getItem("autoRedirectEnabled") === null) {
+      localStorage.setItem("autoRedirectEnabled", "false");
     }
   }, []);
 
@@ -125,6 +137,29 @@ export default function Settings({ onOpenDonationModal }) {
             Enable or disable the lyrics menu option in the player.
           </p>
         </div>
+        <div>
+          <Field className="flex items-center">
+            <Switch
+              checked={autoRedirectEnabled}
+              onChange={setAutoRedirectEnabled}
+              className="group relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out focus:outline-none data-[checked]:bg-white/40"
+            >
+              <span
+                aria-hidden="true"
+                className="pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out group-data-[checked]:translate-x-9"
+              />
+            </Switch>
+            <Label as="span" className="ml-3 text-sm">
+              <span className="text-[32px] font-[580] text-white tracking-tight leading-normal">
+                Idle Redirect
+              </span>
+            </Label>
+          </Field>
+          <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
+            Automatically redirect to the Now Playing screen after one minute of
+            inactivity.
+          </p>
+        </div>
         <div className="relative">
           <div
             aria-hidden="true"
@@ -136,26 +171,26 @@ export default function Settings({ onOpenDonationModal }) {
         <div className="space-y-4">
           <button
             onClick={onOpenDonationModal}
-            className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-[12px] px-6 py-3 mt-10"
+            className="bg-white/10 hover:bg-white/20 w-80 transition-colors duration-200 rounded-[12px] px-6 py-3 mt-10"
           >
             <span className="text-[32px] font-[580] text-white tracking-tight">
-              Donate
+              Support Nocturne
             </span>
           </button>
-          <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
-            Support Nocturne by donating to the project. Thank you!
+          <p className="text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
+            Help keep Nocturne running through donations. Thank you!
           </p>
         </div>
         <div className="space-y-4">
           <button
             onClick={handleSignOut}
-            className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-[12px] px-6 py-3"
+            className="bg-white/10 hover:bg-white/20 w-80 transition-colors duration-200 rounded-[12px] px-6 py-3"
           >
             <span className="text-[32px] font-[580] text-white tracking-tight">
               Sign Out
             </span>
           </button>
-          <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
+          <p className="text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
             Sign out and reset authentication settings.
           </p>
         </div>
