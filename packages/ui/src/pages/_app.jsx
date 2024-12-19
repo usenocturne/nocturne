@@ -107,18 +107,21 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     const checkInitialConnectivity = async () => {
-      try {
-        const savedAccessToken = localStorage.getItem("spotifyAccessToken");
-        if (savedAccessToken) {
-          await checkNetworkConnectivity(savedAccessToken);
-        } else {
-          await fetch("https://httpbin.org/get");
+      const intervalId = setInterval(async () => {
+        try {
+          const savedAccessToken = localStorage.getItem("spotifyAccessToken");
+          if (savedAccessToken) {
+            await checkNetworkConnectivity(savedAccessToken);
+          } else {
+            await fetch("https://api.spotify.com/v1", { method: "OPTIONS" });
+          }
+          clearInterval(intervalId);
+          setNetworkStatus({ isConnected: true });
+        } catch (error) {
+          setNetworkStatus({ isConnected: false });
+          handleError("NETWORK_ERROR", "Unable to connect to Spotify");
         }
-        setNetworkStatus({ isConnected: true });
-      } catch (error) {
-        setNetworkStatus({ isConnected: false });
-        handleError("NETWORK_ERROR", "Unable to connect to Spotify");
-      }
+      }, 3000);
     };
 
     checkInitialConnectivity();
