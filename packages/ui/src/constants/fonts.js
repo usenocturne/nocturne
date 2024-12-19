@@ -32,7 +32,7 @@ export const notoSansSC = localFont({
   variable: "--font-noto-sans-sc",
 });
 
-export const notoSansJP = localFont({
+export const notoSerifJP = localFont({
   src: "../fonts/NotoSerifJP-VF.woff2",
   variable: "--font-noto-sans-jp",
 });
@@ -40,4 +40,14 @@ export const notoSansJP = localFont({
 export const notoSansKR = localFont({
   src: "../fonts/NotoSerifKR-VF.woff2",
   variable: "--font-noto-sans-kr",
+});
+
+export const notoSerifKR = localFont({
+  src: "../fonts/NotoSerifKR-VF.woff2",
+  variable: "--font-noto-sans-kr",
+});
+
+export const notoNaskhAR = localFont({
+  src: "../fonts/NotoNaskhAR-VF.woff2",
+  variable: "--font-noto-naskh-ar",
 });

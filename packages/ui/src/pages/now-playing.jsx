@@ -930,6 +930,12 @@ const NowPlaying = ({
     </svg>
   );
 
+  const isArabicText = (text) => {
+    const arabicRegex =
+      /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    return arabicRegex.test(text);
+  };
+
   return (
     <>
       {open && (
@@ -1041,6 +1047,10 @@ const NowPlaying = ({
                         index === currentLyricIndex
                           ? "text-white"
                           : "text-white/60"
+                      } ${
+                        isArabicText(lyric.text)
+                          ? "text-right font-noto-naskh-ar"
+                          : ""
                       }`}
                     >
                       {lyric.text}

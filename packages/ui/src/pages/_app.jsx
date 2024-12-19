@@ -19,7 +19,13 @@ import {
   checkNetworkConnectivity,
   startNetworkMonitoring,
 } from "../lib/networkChecker";
-import { inter, notoSansSC, notoSansJP, notoSansKR } from "../constants/fonts";
+import {
+  inter,
+  notoSansSC,
+  notoSerifJP,
+  notoSerifKR,
+  notoNaskhAR,
+} from "../constants/fonts";
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
@@ -1778,7 +1784,7 @@ export default function App({ Component, pageProps }) {
     <main
       className={`overflow-hidden relative min-h-screen rounded-2xl ${inter.className}`}
       style={{
-        fontFamily: `${inter.style.fontFamily}, ${notoSansSC.style.fontFamily}, ${notoSansJP.style.fontFamily}, ${notoSansKR.style.fontFamily}, sans-serif`,
+        fontFamily: `${inter.style.fontFamily}, ${notoSansSC.style.fontFamily}, ${notoSerifJP.style.fontFamily}, ${notoSerifKR.style.fontFamily}, ${notoNaskhAR.style.fontFamily}, sans-serif`,
         fontOpticalSizing: "auto",
       }}
     >
