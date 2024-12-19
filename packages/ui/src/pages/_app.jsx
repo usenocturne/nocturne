@@ -4,12 +4,6 @@ import { supabase } from "@/lib/supabaseClient";
 import ColorThief from "color-thief-browser";
 import { useRouter } from "next/router";
 import {
-  Inter,
-  Noto_Sans_SC,
-  Noto_Sans_JP,
-  Noto_Sans_KR,
-} from "next/font/google";
-import {
   fetchRecentlyPlayedAlbums,
   fetchUserPlaylists,
   fetchTopArtists,
@@ -21,13 +15,11 @@ import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
 import { getCurrentDevice } from "@/services/deviceService";
-import { checkNetworkConnectivity, startNetworkMonitoring } from "../lib/networkChecker";
-
-const inter = Inter({ subsets: ["latin", "latin-ext"] });
-const notoSansSC = Noto_Sans_SC({ subsets: ["latin"] });
-const notoSansJP = Noto_Sans_JP({ subsets: ["latin"] });
-const notoSansKR = Noto_Sans_KR({ subsets: ["latin"] });
-const notoSansCyrillic = Noto_Sans_SC({ subsets: ["cyrillic"] });
+import {
+  checkNetworkConnectivity,
+  startNetworkMonitoring,
+} from "../lib/networkChecker";
+import { inter, notoSansSC, notoSansJP, notoSansKR } from "../constants/fonts";
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
@@ -120,7 +112,7 @@ export default function App({ Component, pageProps }) {
         if (savedAccessToken) {
           await checkNetworkConnectivity(savedAccessToken);
         } else {
-          await fetch('https://httpbin.org/get');
+          await fetch("https://httpbin.org/get");
         }
         setNetworkStatus({ isConnected: true });
       } catch (error) {
@@ -1306,20 +1298,23 @@ export default function App({ Component, pageProps }) {
         fetchCurrentPlayback();
       }, 1000);
 
-      const networkCleanup = startNetworkMonitoring(accessToken, async (isConnected) => {
-        try {
-          if (isConnected) {
-            const status = await checkNetworkConnectivity(accessToken);
-            setNetworkStatus({ isConnected: true });
-          } else {
+      const networkCleanup = startNetworkMonitoring(
+        accessToken,
+        async (isConnected) => {
+          try {
+            if (isConnected) {
+              const status = await checkNetworkConnectivity(accessToken);
+              setNetworkStatus({ isConnected: true });
+            } else {
+              setNetworkStatus({ isConnected: false });
+              handleError("NETWORK_ERROR", "Lost connection to Spotify");
+            }
+          } catch (error) {
             setNetworkStatus({ isConnected: false });
-            handleError("NETWORK_ERROR", "Lost connection to Spotify");
+            handleError("NETWORK_ERROR", error.message);
           }
-        } catch (error) {
-          setNetworkStatus({ isConnected: false });
-          handleError("NETWORK_ERROR", error.message);
         }
-      });
+      );
 
       setLoading(false);
 
@@ -1659,7 +1654,8 @@ export default function App({ Component, pageProps }) {
     <main
       className={`overflow-hidden relative min-h-screen rounded-2xl ${inter.className}`}
       style={{
-        fontFamily: `${inter.style.fontFamily}, ${notoSansSC.style.fontFamily}, ${notoSansJP.style.fontFamily}, ${notoSansKR.style.fontFamily}, ${notoSansCyrillic.style.fontFamily}, sans-serif`,
+        fontFamily: `${inter.style.fontFamily}, ${notoSansSC.style.fontFamily}, ${notoSansJP.style.fontFamily}, ${notoSansKR.style.fontFamily}, sans-serif`,
+        fontOpticalSizing: "auto",
       }}
     >
       {!authState.authSelectionMade &&

@@ -1,7 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import './fonts.css';
 
 body {
   background-color: #000000;
@@ -117,32 +116,30 @@ section {
   padding-top: 8px;
 }
 
-[class*='wave'] {
-  aspect-ratio: .125/1;
-  background-color: #FFFFFF;
+[class*="wave"] {
+  aspect-ratio: 0.125/1;
+  background-color: #ffffff;
   border-radius: 15px;
-  width: .1vw;
+  width: 0.1vw;
 }
 
 @keyframes waveform {
   0% {
-    transform: scaleY(.5);
+    transform: scaleY(0.5);
   }
   50% {
     transform: scaleY(1.5);
   }
   100% {
-    transform: scaleY(.5);
+    transform: scaleY(0.5);
   }
 }
 
-[class*='wave'] {
-  aspect-ratio: .125/1;
+[class*="wave"] {
+  aspect-ratio: 0.125/1;
   /*This can all be written on one line:*/
-  animation: waveform var(--wavefreq)
-             ease-in-out 0.1s infinite
-             forwards;
-  background-color: #FFFFFF;
+  animation: waveform var(--wavefreq) ease-in-out 0.1s infinite forwards;
+  background-color: #ffffff;
   border-radius: 15px;
   width: 1vw;
 }
@@ -195,13 +192,16 @@ section {
 }
 
 @keyframes marquee {
-  0%, 2.5% {
+  0%,
+  2.5% {
     transform: translateX(0);
   }
-  47.5%, 52.5% {
+  47.5%,
+  52.5% {
     transform: translateX(var(--final-position));
   }
-  97.5%, 100% {
+  97.5%,
+  100% {
     transform: translateX(0);
   }
 }
