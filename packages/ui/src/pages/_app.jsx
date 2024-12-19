@@ -1038,7 +1038,11 @@ export default function App({ Component, pageProps }) {
             }
           };
 
-          playRequest();
+          playRequest().then(() => {
+            setShowMappingOverlay(false);
+            setPressedButton(null);
+            router.push("/now-playing");
+          });
         }
       }
     };
