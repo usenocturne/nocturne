@@ -207,17 +207,23 @@ export default function Home({
                           {album.name}
                         </h4>
                       </LongPressLink>
-                      <LongPressLink
-                        href={`/artist/${album.artists[0].id}`}
-                        spotifyUrl={album.artists[0]?.external_urls?.spotify}
-                        accessToken={accessToken}
-                      >
+                      {album.artists?.[0] ? (
+                        <LongPressLink
+                          href={`/artist/${album.artists[0].id}`}
+                          spotifyUrl={album.artists[0]?.external_urls?.spotify}
+                          accessToken={accessToken}
+                        >
+                          <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                            {album.artists
+                              .map((artist) => artist.name)
+                              .join(", ")}
+                          </h4>
+                        </LongPressLink>
+                      ) : album.type === "show" && album.name ? (
                         <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                          {album.artists
-                            .map((artist) => artist.name)
-                            .join(", ")}
+                          {album.publisher}
                         </h4>
-                      </LongPressLink>
+                      ) : null}
                     </div>
                   ))}
                 </>

@@ -598,15 +598,21 @@ const NowPlaying = ({
 
   const trackName =
     currentPlayback && currentPlayback.item
-      ? currentPlayback.item.name
+      ? currentPlayback.item.type === "episode"
+        ? currentPlayback.item.name
+        : currentPlayback.item.name || "Not Playing"
       : "Not Playing";
   const artistName =
     currentPlayback && currentPlayback.item
-      ? currentPlayback.item.artists.map((artist) => artist.name).join(", ")
+      ? currentPlayback.item.type === "episode"
+        ? currentPlayback.item.show.name
+        : currentPlayback.item.artists.map((artist) => artist.name).join(", ")
       : "";
-  const albumArt =
-    currentPlayback?.item?.album?.images?.[0]?.url ||
-    "/images/not-playing.webp";
+  const albumArt = currentPlayback?.item
+    ? currentPlayback.item.type === "episode"
+      ? currentPlayback.item.show.images[0]?.url
+      : currentPlayback.item?.album?.images?.[0]?.url
+    : "/images/not-playing.webp";
   const isPlaying = currentPlayback ? currentPlayback.is_playing : false;
   const progress =
     currentPlayback && currentPlayback.item
@@ -936,13 +942,25 @@ const NowPlaying = ({
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div className="min-w-[280px] mr-8">
             <LongPressLink
-              href={`/album/${currentPlayback?.item?.album?.id}`}
-              spotifyUrl={currentPlayback?.item?.album?.external_urls?.spotify}
+              href={
+                currentPlayback?.item?.type === "episode"
+                  ? `/show/${currentPlayback.item.show.id}`
+                  : `/album/${currentPlayback?.item?.album?.id}`
+              }
+              spotifyUrl={
+                currentPlayback?.item?.type === "episode"
+                  ? currentPlayback.item.show.external_urls?.spotify
+                  : currentPlayback?.item?.album?.external_urls?.spotify
+              }
               accessToken={accessToken}
             >
               <Image
-                src={albumArt || "/images/not-playing.webp"}
-                alt="Album Art"
+                src={albumArt}
+                alt={
+                  currentPlayback?.item?.type === "episode"
+                    ? "Podcast Cover"
+                    : "Album Art"
+                }
                 width={280}
                 height={280}
                 priority
@@ -953,8 +971,16 @@ const NowPlaying = ({
           {!showLyrics || !currentPlayback?.item ? (
             <div className="flex-1 text-center md:text-left">
               <LongPressLink
-                href={`/album/${currentPlayback?.item?.album?.id}`}
-                spotifyUrl={currentPlayback?.item?.external_urls?.spotify}
+                href={
+                  currentPlayback?.item?.type === "episode"
+                    ? `/show/${currentPlayback.item.show.id}`
+                    : `/album/${currentPlayback?.item?.album?.id}`
+                }
+                spotifyUrl={
+                  currentPlayback?.item?.type === "episode"
+                    ? currentPlayback.item.show.external_urls?.spotify
+                    : currentPlayback?.item?.album?.external_urls?.spotify
+                }
                 accessToken={accessToken}
               >
                 {trackNameScrollingEnabled ? (
@@ -978,14 +1004,22 @@ const NowPlaying = ({
                 )}
               </LongPressLink>
               <LongPressLink
-                href={`/artist/${currentPlayback?.item?.artists[0]?.id}`}
+                href={
+                  currentPlayback?.item?.type === "episode"
+                    ? `/show/${currentPlayback.item.show.id}`
+                    : `/artist/${currentPlayback?.item?.artists[0]?.id}`
+                }
                 spotifyUrl={
-                  currentPlayback?.item?.artists[0]?.external_urls?.spotify
+                  currentPlayback?.item?.type === "episode"
+                    ? currentPlayback.item.show.external_urls?.spotify
+                    : currentPlayback?.item?.artists[0]?.external_urls?.spotify
                 }
                 accessToken={accessToken}
               >
                 <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
-                  {artistName}
+                  {currentPlayback?.item?.type === "episode"
+                    ? currentPlayback.item.show.name
+                    : artistName}
                 </h4>
               </LongPressLink>
             </div>

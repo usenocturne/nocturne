@@ -345,11 +345,14 @@ export default function App({ Component, pageProps }) {
   const fetchCurrentPlayback = async () => {
     if (accessToken) {
       try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        const response = await fetch(
+          "https://api.spotify.com/v1/me/player?type=episode,track",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
 
         if (response.status === 204) {
           setCurrentPlayback(null);
@@ -381,33 +384,66 @@ export default function App({ Component, pageProps }) {
           setCurrentRepeat(data.repeat_state);
 
           if (data && data.item) {
-            const currentAlbum = data.item.album;
-            const currentTrackUri = data.item.uri;
-            setCurrentlyPlayingTrackUri(currentTrackUri);
-            if (
-              !currentlyPlayingAlbum ||
-              currentlyPlayingAlbum.id !== currentAlbum.id
-            ) {
-              if (!router.pathname.includes("album")) {
-                setCurrentlyPlayingAlbum(currentAlbum);
-                setAlbumsQueue((prevQueue) => {
-                  const updatedQueue = prevQueue.filter(
-                    (album) => album.id !== currentAlbum.id
-                  );
-                  return [currentAlbum, ...updatedQueue];
-                });
+            if (data && data.item) {
+              const currentTrackUri = data.item.uri;
+              setCurrentlyPlayingTrackUri(currentTrackUri);
 
-                const imageUrl = currentAlbum.images[0].url;
-                if (imageUrl !== albumImage) {
-                  localStorage.setItem("albumImage", imageUrl);
-                  setAlbumImage(imageUrl);
-                  setAlbumName(currentAlbum.name);
-                  setArtistName(
-                    currentAlbum.artists.map((artist) => artist.name).join(", ")
-                  );
+              if (data.item.type === "track") {
+                const currentAlbum = data.item.album;
+                if (
+                  !currentlyPlayingAlbum ||
+                  currentlyPlayingAlbum.id !== currentAlbum.id
+                ) {
+                  if (!router.pathname.includes("album")) {
+                    setCurrentlyPlayingAlbum(currentAlbum);
+                    setAlbumsQueue((prevQueue) => {
+                      const updatedQueue = prevQueue.filter(
+                        (album) => album.id !== currentAlbum.id
+                      );
+                      return [currentAlbum, ...updatedQueue];
+                    });
 
-                  if (activeSection === "recents") {
-                    updateGradientColors(imageUrl);
+                    const imageUrl = currentAlbum.images[0]?.url;
+                    if (imageUrl !== albumImage) {
+                      localStorage.setItem("albumImage", imageUrl);
+                      setAlbumImage(imageUrl);
+                      setAlbumName(currentAlbum.name);
+                      setArtistName(
+                        currentAlbum.artists
+                          .map((artist) => artist.name)
+                          .join(", ")
+                      );
+
+                      if (activeSection === "recents") {
+                        updateGradientColors(imageUrl);
+                      }
+                    }
+                  }
+                }
+              } else if (data.item.type === "episode") {
+                const currentShow = data.item.show;
+                if (
+                  !currentlyPlayingAlbum ||
+                  currentlyPlayingAlbum.id !== currentShow.id
+                ) {
+                  setCurrentlyPlayingAlbum(currentShow);
+                  setAlbumsQueue((prevQueue) => {
+                    const updatedQueue = prevQueue.filter(
+                      (album) => album.id !== currentShow.id
+                    );
+                    return [currentShow, ...updatedQueue];
+                  });
+
+                  const imageUrl = currentShow.images[0]?.url;
+                  if (imageUrl !== albumImage) {
+                    localStorage.setItem("albumImage", imageUrl);
+                    setAlbumImage(imageUrl);
+                    setAlbumName(currentShow.name);
+                    setArtistName(currentShow.publisher);
+
+                    if (activeSection === "recents") {
+                      updateGradientColors(imageUrl);
+                    }
                   }
                 }
               }
@@ -1367,11 +1403,22 @@ export default function App({ Component, pageProps }) {
         setTargetColor3("#191414");
         setTargetColor4("#191414");
       } else {
-        if (currentPlayback.item && currentPlayback.item.album.images[0]) {
-          updateGradientColors(
-            currentPlayback.item.album.images[0].url,
-            "nowPlaying"
-          );
+        const albumImages = currentPlayback?.item?.album?.images;
+        const podcastImages = currentPlayback?.item?.images;
+
+        if (albumImages && albumImages.length > 0 && albumImages[0]?.url) {
+          updateGradientColors(albumImages[0].url, "nowPlaying");
+        } else if (
+          podcastImages &&
+          podcastImages.length > 0 &&
+          podcastImages[0]?.url
+        ) {
+          updateGradientColors(podcastImages[0].url, "nowPlaying");
+        } else {
+          setTargetColor1("#191414");
+          setTargetColor2("#191414");
+          setTargetColor3("#191414");
+          setTargetColor4("#191414");
         }
       }
     }
