@@ -939,7 +939,7 @@ const NowPlaying = ({
     };
 
     return {
-      className: `text-[40px] font-[580] tracking-tight transition-colors duration-300 
+      className: `text-[40px] font-[580] tracking-tight transition-colors duration-1000 ease-in-out
         ${direction === "rtl" ? "text-right" : "text-left"}
         ${fontClasses[script] || ""}`,
     };
@@ -1055,7 +1055,11 @@ const NowPlaying = ({
                     const conditionalClass =
                       index === currentLyricIndex
                         ? "text-white"
-                        : "text-white/60";
+                        : index === currentLyricIndex - 1
+                        ? "text-white/40"
+                        : index === currentLyricIndex + 1
+                        ? "text-white/40"
+                        : "text-white/40";
 
                     return (
                       <p
