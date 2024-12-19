@@ -76,6 +76,15 @@ export const notoNaskhAR = localFont({
   ],
 });
 
+export const notoSansDV = localFont({
+  src: "../fonts/NotoSansDV-VF.woff2",
+  variable: "--font-noto-sans-dv",
+  preload: false,
+  display: "swap",
+  fallback: ["system-ui", "sans-serif"],
+  unicode: ["\u0900-\u097F"],
+});
+
 export function detectTextScript(text) {
   if (!text) return "latin";
 
@@ -84,6 +93,7 @@ export function detectTextScript(text) {
     japanese: /[\u3040-\u309F\u30A0-\u30FF]/,
     korean: /[\uAC00-\uD7AF\u1100-\u11FF]/,
     arabic: /[\u0600-\u06FF\u0750-\u077F]/,
+    devanagari: /[\u0900-\u097F]/,
   };
 
   for (const [script, regex] of Object.entries(scripts)) {
@@ -120,6 +130,7 @@ export const fontFamilyForScript = {
   japanese: `var(--font-noto-serif-jp), var(--font-inter)`,
   korean: `var(--font-noto-sans-kr), var(--font-inter)`,
   arabic: `var(--font-noto-naskh-ar), var(--font-inter)`,
+  devanagari: `var(--font-noto-sans-dv), var(--font-inter)`,
 };
 
 export function useDynamicFont(text) {
