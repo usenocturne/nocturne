@@ -16,6 +16,7 @@ module.exports = {
           "var(--font-noto-naskh-ar)",
           "var(--font-noto-sans-dv)",
           "var(--font-noto-sans-he)",
+          "var(--font-noto-sans-bn)",
         ],
       },
       letterSpacing: {
