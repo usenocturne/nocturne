@@ -14,6 +14,7 @@ import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
 import LongPressLink from "../components/LongPressLink";
 import Image from "next/image";
 import { getCurrentDevice } from "@/services/deviceService";
+import { getTextDirection } from "../constants/fonts";
 
 const NowPlaying = ({
   accessToken,
@@ -930,10 +931,18 @@ const NowPlaying = ({
     </svg>
   );
 
-  const isArabicText = (text) => {
-    const arabicRegex =
-      /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
-    return arabicRegex.test(text);
+  const getTextStyles = (text) => {
+    const { direction, script } = getTextDirection(text);
+
+    const fontClasses = {
+      arabic: "font-noto-naskh-ar",
+    };
+
+    return {
+      className: `text-[40px] font-[580] tracking-tight transition-colors duration-300 
+        ${direction === "rtl" ? "text-right" : "text-left"}
+        ${fontClasses[script] || ""}`,
+    };
   };
 
   return (
@@ -1040,22 +1049,23 @@ const NowPlaying = ({
                     Loading lyrics...
                   </p>
                 ) : parsedLyrics.length > 0 ? (
-                  parsedLyrics.map((lyric, index) => (
-                    <p
-                      key={index}
-                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
-                        index === currentLyricIndex
-                          ? "text-white"
-                          : "text-white/60"
-                      } ${
-                        isArabicText(lyric.text)
-                          ? "text-right font-noto-naskh-ar"
-                          : ""
-                      }`}
-                    >
-                      {lyric.text}
-                    </p>
-                  ))
+                  parsedLyrics.map((lyric, index) => {
+                    const { className } = getTextStyles(lyric.text);
+
+                    const conditionalClass =
+                      index === currentLyricIndex
+                        ? "text-white"
+                        : "text-white/60";
+
+                    return (
+                      <p
+                        key={index}
+                        className={`${className} ${conditionalClass}`}
+                      >
+                        {lyric.text}
+                      </p>
+                    );
+                  })
                 ) : (
                   <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
                     Lyrics not available

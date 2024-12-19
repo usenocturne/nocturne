@@ -23,7 +23,7 @@ import {
   inter,
   notoSansSC,
   notoSerifJP,
-  notoSerifKR,
+  notoSansKR,
   notoNaskhAR,
 } from "../constants/fonts";
 
@@ -112,6 +112,7 @@ export default function App({ Component, pageProps }) {
   const [networkStatus, setNetworkStatus] = useState({ isConnected: false });
   const inactivityTimeoutRef = useRef(null);
   const lastActivityTimeRef = useRef(Date.now());
+  const mainFontClasses = `${inter.variable} ${notoSansSC.variable} ${notoSerifJP.variable} ${notoSansKR.variable} ${notoNaskhAR.variable}`;
 
   useEffect(() => {
     const checkInitialConnectivity = async () => {
@@ -1782,9 +1783,9 @@ export default function App({ Component, pageProps }) {
 
   return (
     <main
-      className={`overflow-hidden relative min-h-screen rounded-2xl ${inter.className}`}
+      className={`overflow-hidden relative min-h-screen rounded-2xl ${mainFontClasses}`}
       style={{
-        fontFamily: `${inter.style.fontFamily}, ${notoSansSC.style.fontFamily}, ${notoSerifJP.style.fontFamily}, ${notoSerifKR.style.fontFamily}, ${notoNaskhAR.style.fontFamily}, sans-serif`,
+        fontFamily: "var(--font-inter)",
         fontOpticalSizing: "auto",
       }}
     >
