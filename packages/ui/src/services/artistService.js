@@ -13,7 +13,7 @@ export const fetchTopArtists = async (
     if (response.ok) {
       const data = await response.json();
       if (data.items.length > 0) {
-        const imageUrl = data.items[0].images[0]?.url;
+        const imageUrl = data.items[0].images?.[0]?.url;
         if (imageUrl) {
           localStorage.setItem("artistsImage", imageUrl);
           updateGradientColors(imageUrl, "artists");

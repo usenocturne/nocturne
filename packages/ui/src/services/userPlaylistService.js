@@ -30,7 +30,7 @@ export const fetchUserOwnedPlaylists = async (
       );
 
       if (userOwnedPlaylists.length > 0) {
-        const imageUrl = userOwnedPlaylists[0].images[0]?.url;
+        const imageUrl = userOwnedPlaylists[0].images?.[0]?.url;
         if (imageUrl) {
           localStorage.setItem("libraryImage", imageUrl);
         }
