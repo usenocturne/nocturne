@@ -161,6 +161,10 @@ TBD
 
 </details>
 
+### Setting up Nocturne UI
+
+Follow the steps as described [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup) to finish the setup of Nocturne.
+
 ## Troubleshooting
 
 If you are having issues flashing Nocturne to your Car Thing, check out the guides below. 
