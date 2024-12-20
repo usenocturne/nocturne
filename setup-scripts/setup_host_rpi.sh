@@ -1,47 +1,20 @@
 #!/usr/bin/env bash
 
-# setup a raspberry pi to provide internet for USB device connected
-# this should be run ONCE on the host machine
+# Sets up a raspberry pi to provide internet for USB device connected
+# This should be run ONCE on the host machine
 
 set -e  # bail on any errors
 
-# need to be root
-if [ "$(id -u)" != "0" ]; then
-    echo "Must be run as root"
-    exit 1
-fi
-
-if [ "$(uname -s)" != "Linux" ]; then
-    echo "Only works on Linux!"
-    exit 1
-fi
-
-# update system 
-apt update && apt upgrade -y
-
-# install needed packages
-#   NOTE: the flag "--break-system-packages" only exists on recent debian/ubuntu versions,
-#   so we have to try with, and if there is an error try again without the flag
-
+#Set terminal as non-interactive
 export DEBIAN_FRONTEND=noninteractive
-apt install -y net-tools git htop build-essential cmake python3 python3-dev python3-pip iptables adb android-sdk-platform-tools-common iptables-persistent
-python3 -m pip install --break-system-packages virtualenv nuitka ordered-set || {
-    python3 -m pip install virtualenv nuitka ordered-set
-}
-python3 -m pip install --break-system-packages git+https://github.com/superna9999/pyamlboot || {
-    python3 -m pip install git+https://github.com/superna9999/pyamlboot
-}
 
+# VARIABLES
 HOST_NAME="superbird"
 USBNET_PREFIX="192.168.7"  # usb network will use .1 as host device, and .2 for superbird
-INACTIVE_INTERFACE="usb0"
+CT_INTERFACE="usb0"
+WAN_INTERFACE="wlan0"
 
-
-
-#if ! ip addr show usb0 | grep -q "inet "; then
-#    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
-#    exit 1
-#fi
+# FUNCTIONS
 
 function remove_if_exists() {
     # remove a file if it exists
@@ -74,12 +47,31 @@ function forward_port() {
     if [ -z "$DEST" ]; then
         DEST="$SOURCE"
     fi
-    iptables -t nat -A PREROUTING -p tcp -i eth0 --dport "$SOURCE" -j DNAT --to-destination "${USBNET_PREFIX}.2:$DEST"
-    iptables -t nat -A PREROUTING -p tcp -i wlan0 --dport "$SOURCE" -j DNAT --to-destination "${USBNET_PREFIX}.2:$DEST"
+    iptables -t nat -A PREROUTING -p tcp -i "${WAN_INTERFACE}" --dport "$SOURCE" -j DNAT --to-destination "${USBNET_PREFIX}.2:$DEST"
     iptables -A FORWARD -p tcp -d "${USBNET_PREFIX}.2" --dport "$DEST" -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 }
 
-# detect if car thing is plugged in
+# PRE_FLIGHT_CHECKS
+
+# Need to be root
+if [ "$(id -u)" != "0" ]; then
+    echo "Must be run as root"
+    exit 1
+fi
+
+# Does not run on BSD
+if [ "$(uname -s)" != "Linux" ]; then
+    echo "Only works on Linux!"
+    exit 1
+fi
+
+# Detect if usb0 CarThing NIC is already configured.
+if ! ip addr show "${CT_INTERFACE}" | grep -q "inet "; then
+    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
+    exit 1
+fi
+
+# Detect if car thing is plugged in
 if lsusb | grep -q "Google Inc."
 then
     echo "Car Thing detected, proceeding with setup"
@@ -88,23 +80,25 @@ else
     exit 1
 fi
 
-# fix usb enumeration when connecting superbird in maskroom mode
+# MAIN_SCRIPT
+
+# Fix usb enumeration when connecting superbird in maskroom mode
 echo '# Amlogic S905 series can be booted up in Maskrom Mode, and it needs a rule to show up correctly' > /etc/udev/rules.d/70-carthing-maskrom-mode.rules
 echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="1b8e", ATTR{idProduct}=="c003", MODE:="0666", SYMLINK+="worldcup"' >> /etc/udev/rules.d/70-carthing-maskrom-mode.rules
 
-# prevent systemd / udev from renaming usb network devices by mac address
+# Prevent systemd / udev from renaming usb network devices by mac address
 remove_if_exists /lib/systemd/network/73-usb-net-by-mac.link
 remove_if_exists /lib/udev/rules.d/73-usb-net-by-mac.rules
 
-#  allow IP forwarding
+# Allow IP forwarding
 append_if_missing "net.ipv4.ip_forward = 1" /etc/sysctl.conf || {
     sysctl -p  # reload from conf
 }
 
-# forwarding rules
+# Forwarding rules
 mkdir -p /etc/iptables
 
-# clear all iptables rules
+# Clear all iptables rules
 iptables -F
 iptables -X
 iptables -Z 
@@ -115,20 +109,11 @@ iptables -t mangle -X
 iptables -t raw -F
 iptables -t raw -X
 
-# rewrite iptables rules
+# Rewrite iptables rules
 iptables -P FORWARD ACCEPT
-iptables -A FORWARD -o eth0 -i eth1 -s "${USBNET_PREFIX}.0/24" -m conntrack --ctstate NEW -j ACCEPT
-iptables -A FORWARD -o eth0 -i eth1 -s "${USBNET_PREFIX}.0/24" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A FORWARD -o "${WAN_INTERFACE}" -i "${CT_INTERFACE}" -s "${USBNET_PREFIX}.0/24" -m conntrack --ctstate NEW -j ACCEPT
+iptables -A FORWARD -o "${WAN_INTERFACE}" -i "${CT_INTERFACE}" -s "${USBNET_PREFIX}.0/24" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A POSTROUTING -t nat -j MASQUERADE -s "${USBNET_PREFIX}.0/24"
-
-# port forwards:
-#   2022: ssh on superbird
-#   5900: vnc on superbird
-#   9222: chromium remote debugging on superbird
-
-forward_port 2022 22
-forward_port 5900
-forward_port 9222
 
 # persist rules to file
 iptables-save > /etc/iptables/rules.v4
@@ -149,3 +134,4 @@ append_if_missing "${USBNET_PREFIX}.2  ${HOST_NAME}"  "/etc/hosts"
 
 echo "Need to reboot for all changes to take effect!"
 
+exit 0
