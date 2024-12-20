@@ -15,6 +15,24 @@ import LongPressLink from "../components/LongPressLink";
 import Image from "next/image";
 import { getCurrentDevice } from "@/services/deviceService";
 import { getTextDirection } from "../constants/fonts";
+import {
+  HeartIcon,
+  HeartIconFilled,
+  BackIcon,
+  PauseIcon,
+  PlayIcon,
+  ForwardIcon,
+  MenuIcon,
+  VolumeOffIcon,
+  VolumeLowIcon,
+  VolumeLoudIcon,
+  PlaylistAddIcon,
+  GoToAlbumIcon,
+  RepeatIcon,
+  RepeatOneIcon,
+  ShuffleIcon,
+  LyricsIcon,
+} from "../components/icons";
 
 const NowPlaying = ({
   accessToken,
@@ -639,298 +657,6 @@ const NowPlaying = ({
     }
   }, [trackName, containerWidth]);
 
-  const StarIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="rgba(256, 256, 256, 0.6)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-    </svg>
-  );
-
-  const StarIconFilled = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="rgba(256, 256, 256)"
-      stroke="rgba(256, 256, 256)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path
-        d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"
-        opacity="0.6"
-      />
-    </svg>
-  );
-
-  const BackIcon = ({ className }) => (
-    <svg
-      viewBox="0 0 200 114"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <path
-        d="M77.8852 111.18C89.9686 117.963 105 109.385 105 95.7045V73.4745L172.135 111.171C184.219 117.963 199.25 109.385 199.25 95.7045V18.555C199.25 4.87502 184.219 -3.70348 172.135 3.08902L105 40.7755V18.5455C105 4.86552 89.9686 -3.71298 77.8852 3.07952L9.17455 41.659C-3.00545 48.499 -3.00545 65.751 9.17455 72.591L77.8852 111.171V111.18Z"
-        fill="white"
-        fillOpacity="1.0"
-      />
-    </svg>
-  );
-
-  const PauseIcon = ({ className }) => (
-    <svg
-      viewBox="0 0 150 204"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <path
-        d="M134.5 0H103.5C94.9396 0 88 5.70837 88 12.75V191.25C88 198.292 94.9396 204 103.5 204H134.5C143.06 204 150 198.292 150 191.25V12.75C150 5.70837 143.06 0 134.5 0Z"
-        fill="white"
-        fillOpacity="1.0"
-      />
-      <path
-        d="M46.5 0H15.5C6.93959 0 0 5.70837 0 12.75V191.25C0 198.292 6.93959 204 15.5 204H46.5C55.0604 204 62 198.292 62 191.25V12.75C62 5.70837 55.0604 0 46.5 0Z"
-        fill="white"
-        fillOpacity="1.0"
-      />
-    </svg>
-  );
-
-  const PlayIcon = ({ className }) => (
-    <svg
-      width="171"
-      height="184"
-      viewBox="0 0 171 184"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M0.875 21.6541C0.875 5.83819 17.8214 -4.17006 31.6756 3.44419L159.577 73.7901C173.93 81.6814 173.93 102.308 159.577 110.21L31.6867 180.556C17.8325 188.17 0.886083 178.151 0.886083 162.346L0.875 21.6541Z"
-        fill="white"
-      />
-    </svg>
-  );
-
-  const ForwardIcon = ({ className }) => (
-    <svg
-      viewBox="0 0 200 114"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <path
-        d="M27.865 3.07002C15.7817 -3.70348 0.75 4.87502 0.75 18.555V95.714C0.75 109.394 15.7817 117.973 27.865 111.18L95 73.4745V95.7045C95 109.385 110.032 117.963 122.115 111.171L190.826 72.591C203.006 65.751 203.006 48.499 190.826 41.659L122.115 3.07952C110.032 -3.71298 95 4.86552 95 18.5455V40.7755L27.865 3.07002Z"
-        fill="white"
-        fillOpacity="1.0"
-      />
-    </svg>
-  );
-
-  const MenuIcon = ({ className }) => (
-    <svg
-      viewBox="0 0 202 202"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M101 202C156.781 202 202 156.781 202 101C202 45.2192 156.781 0 101 0C45.2192 0 0 45.2192 0 101C0 156.781 45.2192 202 101 202ZM47.2509 92.5009C45.1293 94.6224 43.9375 97.4997 43.9375 100.5C43.9375 103.5 45.1293 106.378 47.2509 108.499C49.3724 110.621 52.2497 111.812 55.25 111.812C58.2503 111.812 61.1276 110.621 63.2491 108.499C65.3707 106.378 66.5625 103.5 66.5625 100.5C66.5625 97.4997 65.3707 94.6224 63.2491 92.5009C61.1276 90.3793 58.2503 89.1875 55.25 89.1875C52.2497 89.1875 49.3724 90.3793 47.2509 92.5009ZM92.5009 92.5009C90.3793 94.6224 89.1875 97.4997 89.1875 100.5C89.1875 103.5 90.3793 106.378 92.5009 108.499C94.6224 110.621 97.4997 111.812 100.5 111.812C103.5 111.812 106.378 110.621 108.499 108.499C110.621 106.378 111.812 103.5 111.812 100.5C111.812 97.4997 110.621 94.6224 108.499 92.5009C106.378 90.3793 103.5 89.1875 100.5 89.1875C97.4997 89.1875 94.6224 90.3793 92.5009 92.5009ZM137.751 92.5009C135.629 94.6224 134.438 97.4997 134.438 100.5C134.438 103.5 135.629 106.378 137.751 108.499C139.872 110.621 142.75 111.812 145.75 111.812C148.75 111.812 151.628 110.621 153.749 108.499C155.871 106.378 157.062 103.5 157.062 100.5C157.062 97.4997 155.871 94.6224 153.749 92.5009C151.628 90.3793 148.75 89.1875 145.75 89.1875C142.75 89.1875 139.872 90.3793 137.751 92.5009Z"
-      />
-    </svg>
-  );
-
-  const VolumeOffIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      stroke="rgba(0, 0, 0)"
-      fill="rgba(0, 0, 0)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      opacity="0.5"
-    >
-      <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
-      <line x1="22" x2="16" y1="9" y2="15" opacity="0.6" />
-      <line x1="16" x2="22" y1="9" y2="15" opacity="0.6" />
-    </svg>
-  );
-
-  const VolumeLowIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      stroke="rgba(0, 0, 0)"
-      fill="rgba(0, 0, 0)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      opacity="0.5"
-    >
-      <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
-      <path d="M16 9a5 5 0 0 1 0 6" opacity="0.6" />
-    </svg>
-  );
-
-  const VolumeLoudIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      opacity="0.5"
-    >
-      <path
-        d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
-        stroke="rgba(0, 0, 0)"
-        fill="rgba(0, 0, 0)"
-      />
-      <path
-        d="M16 9a5 5 0 0 1 0 6"
-        stroke="rgba(0, 0, 0)"
-        fill="rgba(0, 0, 0)"
-        opacity="0.6"
-      />
-      <path
-        d="M19.364 18.364a9 9 0 0 0 0-12.728"
-        stroke="rgba(0, 0, 0)"
-        opacity="0.6"
-      />
-    </svg>
-  );
-
-  const PlaylistAddIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M11 12H3" />
-      <path d="M16 6H3" />
-      <path d="M16 18H3" />
-      <path d="M18 9v6" />
-      <path d="M21 12h-6" />
-    </svg>
-  );
-
-  const GoToAlbumIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" />
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 12h.01" />
-    </svg>
-  );
-
-  const RepeatIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m17 2 4 4-4 4" />
-      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
-      <path d="m7 22-4-4 4-4" />
-      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
-    </svg>
-  );
-
-  const RepeatOneIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m17 2 4 4-4 4" />
-      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
-      <path d="m7 22-4-4 4-4" />
-      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
-      <path d="M11 10h1v4" />
-    </svg>
-  );
-
-  const ShuffleIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22" />
-      <path d="m18 2 4 4-4 4" />
-      <path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2" />
-      <path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8" />
-      <path d="m18 14 4 4-4 4" />
-    </svg>
-  );
-
-  const LyricsIcon = ({ className }) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m11 7.601-5.994 8.19a1 1 0 0 0 .1 1.298l.817.818a1 1 0 0 0 1.314.087L15.09 12" />
-      <path d="M16.5 21.174C15.5 20.5 14.372 20 13 20c-2.058 0-3.928 2.356-6 2-2.072-.356-2.775-3.369-1.5-4.5" />
-      <circle cx="16" cy="7" r="5" />
-    </svg>
-  );
-
   const getTextStyles = (text) => {
     const { direction, script } = getTextDirection(text);
 
@@ -1093,9 +819,9 @@ const NowPlaying = ({
         <div className="flex justify-between items-center w-full px-12 mt-4">
           <div className="flex-shrink-0" onClick={toggleLikeTrack}>
             {isLiked ? (
-              <StarIconFilled className="w-14 h-14" />
+              <HeartIconFilled className="w-14 h-14" />
             ) : (
-              <StarIcon className="w-14 h-14" />
+              <HeartIcon className="w-14 h-14" />
             )}
           </div>
 
