@@ -24,43 +24,64 @@
 
 ## How To Use
 
-Unless receiving power through a Linux computer, running Nocturne on your Car Thing requires a host device such as a Raspberry Pi, a microSD card, a microUSB to USB-C cable, a microUSB/your power source's connector, as well as a Spotify Premium account. You will also need [superbird-tool](https://github.com/thinglabsoss/superbird-tool) to flash the image regardless of your computer's operating system.
+Running Nocturne on your Car Thing requires a host device such as a Raspberry Pi, Windows PC, Mac, or Linux PC, as well as a Spotify Premium account. You will also need [superbird-tool](https://github.com/thinglabsoss/superbird-tool) to flash the image to the CarThing regardless of your computer's operating system. Alternatively, there is a web version of superbird-tool called [Terbium](https://terbium.app/).
 
-### Windows
+### Flashing the Spotify CarThing
 
-#### Raspberry Pi Setup
-
-Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager/imager_latest.exe), select Raspberry Pi OS (Legacy, 64-bit) Lite, select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
-
-#### Flashing Process
-
-If you haven't already, download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and run the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
-
-Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
-
-```bash
-# Go into the superbird-tool repository
-$ cd C:\path\to\superbird-tool-main
-
-# Find device
-$ python superbird_tool.py --find_device
-
-# Flash Nocturne image, without resetting the data partition 
-$ python superbird_tool.py --dont_reset --restore_device C:\path\to\nocturne-image\image 
-```
-After the flashing completes, connect your Raspberry Pi to your computer, and change directories to the scripts folder.
-
-```bash
-# Go into the setup-scripts folder
-$ cd \path\to\nocturne-image\setup-scripts
-```
-
-There are two different ways to use Nocturne. You can either use it at your desk, or in your car. 
+Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting). Then follow either of the below flashing methods.
 
 <details>
-<summary>Using Nocturne at your desk</summary>
+<summary>Using superbird-tool</summary>
+
 <br>
-Connect your Car Thing to the Raspberry Pi and run the following from your command line:
+
+  If you haven't already, download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and run the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
+
+<br>
+
+  ```bash
+  # Go into the superbird-tool repository
+  $ cd \path\to\superbird-tool-main
+
+  # Find device
+  $ python superbird_tool.py --find_device
+
+  # Flash Nocturne image, without resetting the data partition 
+  $ python superbird_tool.py --dont_reset --restore_device \path\to\nocturne-image\image 
+  ```
+</details>
+
+<br >
+
+<details>
+<summary>Using Terbium</summary>
+
+<br>
+
+Open [Terbium](https://terbium.app/) in a web usb compatible browser (ex. Google Chrome, Chromium, etc)
+
+Follow the prompts in Terbium as they follow and select the folder path `\path\to\nocturne-image\image` as the image folder.
+
+</details>
+
+### Setting up host device
+
+<details>
+<summary>Raspberry Pi (Recommended)</summary>
+
+<br>
+
+This setup requires the following extra hardware:
+```
+1x Pi Zero W 1/2
+1x Micro USB to USB cable or adapter
+1x SD Card >= 8GB
+1x 5V 2A power supply
+```
+
+Download and open [Raspberry Pi Imager](https://www.raspberrypi.com/software/), select Raspberry Pi OS (Legacy, 64-bit) Lite, select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
+
+After the OS is successfully flashed to the SD card, copy the setup script to your Pi connect your car thing and run the commands as follows:
 
 ```bash
 # Transfer setup_host_rpi.sh to Raspberry Pi
@@ -78,126 +99,8 @@ $ sudo ./setup_host_rpi.sh
 # Reboot Raspberry Pi
 $ sudo reboot
 ```
-</details>
 
-<details>
-<summary>Using Nocturne in your car</summary>
-<br>
-Connect your Car Thing to the Raspberry Pi and run the following from your command line:
-
-```bash
-# Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp \path\to\nocturne-image\setup-scripts\setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
-
-# SSH into Raspberry Pi
-$ ssh pi@raspberrypi.local
-
-# Make setup_host_rpi.sh executable
-$ chmod +x /home/pi/setup_host_rpi.sh
-
-# Execute setup_host_rpi.sh
-$ sudo ./setup_host_rpi.sh
-
-# Reboot Raspberry Pi
-$ sudo reboot
-```
-
-After, you will need to run the `setup_hotspot.py` script: 
-```bash
-# Transfer setup_hotspot.py to Raspberry Pi
-$ scp \path\to\nocturne-image\setup-scripts\setup_hotspot.py pi@raspberrypi.local:/home/pi/
-
-# SSH into Raspberry Pi
-$ ssh pi@raspberrypi.local
-
-# Execute setup_hotspot.py
-$ sudo python3 ./setup_hotspot.py
-```
-
-The script will ask you to input the name of your hotspot, as well as the password for the hotspot.
-
-After the script completes, Nocturne is almost ready to be used in your car!
-
-</details>
-<br  >
-
-Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Login with Phone`, scan the QR Code, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
-
-### macOS
-
-#### Raspberry Pi Setup
-
-Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager/imager_latest.dmg), select Raspberry Pi OS (Legacy, 64-bit) Lite, select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
-
-#### Flashing Process
-
-If you haven't already, download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and run the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
-
-Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
-
-```bash
-# Go into the superbird-tool repository
-$ cd /path/to/superbird-tool-main
-
-# Find device
-$ /opt/homebrew/bin/python3 superbird_tool.py --find_device
-
-# Flash Nocturne image, without resetting the data partition 
-$ /opt/homebrew/bin/python3 superbird_tool.py --dont_reset --restore_device /path/to/nocturne-image/image 
-```
-After the flashing completes, connect your Raspberry Pi to your computer, and change directories to the scripts folder.
-
-```bash
-# Go into the setup-scripts folder
-$ cd /path/to/nocturne-image/setup-scripts
-```
-
-There are two different ways to use Nocturne. You can either use it at your desk, or in your car. 
-
-<details>
-<summary>Using Nocturne at your desk</summary>
-<br>
-Connect your Car Thing to the Raspberry Pi and run the following from your command line:
-
-```bash
-# Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup-scripts/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
-
-# SSH into Raspberry Pi
-$ ssh pi@raspberrypi.local
-
-# Make setup_host_rpi.sh executable
-$ chmod +x /home/pi/setup_host_rpi.sh
-
-# Execute setup_host_rpi.sh
-$ sudo ./setup_host_rpi.sh
-
-# Reboot Raspberry Pi
-$ sudo reboot
-```
-</details>
-
-<details>
-<summary>Using Nocturne in your car</summary>
-<br>
-Connect your Car Thing to the Raspberry Pi and run the following from your command line:
-
-```bash
-# Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup-scripts/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
-
-# SSH into Raspberry Pi
-$ ssh pi@raspberrypi.local
-
-# Make setup_host_rpi.sh executable
-$ chmod +x /home/pi/setup_host_rpi.sh
-
-# Execute setup_host_rpi.sh
-$ sudo ./setup_host_rpi.sh
-
-# Reboot Raspberry Pi
-$ sudo reboot
-```
+Optionally for portable use, you can configure the Pi to prioritize your mobile hotspot as follows:
 
 After, you will need to run the `setup_hotspot.py` script: 
 ```bash
@@ -210,93 +113,53 @@ $ ssh pi@raspberrypi.local
 # Execute setup_hotspot.py
 $ sudo python3 ./setup_hotspot.py
 ```
-
-The script will ask you to input the name of your hotspot, as well as the password for the hotspot.
-
-After the script completes, Nocturne is almost ready to be used in your car!
-
 </details>
-<br  >
 
-Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Login with Phone`, scan the QR Code, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
-
-### Linux
-
-#### Raspberry Pi Setup
-
-A Raspberry Pi is not required on Linux, unless you want to use Nocturne in your car.
-
-Download and open [Raspberry Pi Imager](https://downloads.raspberrypi.org/imager/imager_latest.dmg), select Raspberry Pi OS (Legacy, 64-bit) Lite, select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
-
-#### Flashing Process
-
-If you haven't already, download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and run the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
-
-Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and run the following from your command line:
-
-```bash
-# Go into the superbird-tool repository
-$ cd /path/to/superbird-tool-main
-
-# Find device
-$ sudo python3 ./superbird_tool.py --find_device
-
-# Flash Nocturne image, without resetting the data partition 
-$ sudo python3 ./superbird_tool.py --dont_reset --restore_device /path/to/nocturne-image/image
-```
-After the flashing completes, unplug and replug your Car Thing, and change directories to the scripts folder.
-
-```bash
-# Go into the setup-scripts folder
-$ cd /path/to/nocturne-image/setup-scripts
-```
-
-There are two different ways to use Nocturne. You can either use it at your desk, or in your car. 
+<br>
 
 <details>
-<summary>Using Nocturne at your desk</summary>
+<summary>Windows (Not Recommended)</summary>
 <br>
 
-At this point, there are two different scripts that you can use. The first one, `setup_host_apt.sh`, is used on Linux distros that utilize apt as it's package manager. The second one, `setup_host_pacman.sh`, is used on Linux distros that utilize Pacman as it's package manager. If you use Pacman, replace `setup_host_apt.sh` in the following commands with `setup_host_pacman.sh` to continue with setup.
+NOTE: This setup method is not recommended as there are frequent issues with the AMD USB chipset and recognizing the CarThing. Proceed with caution knowing that it may not work with your PC.
 
-It is important to note that `setup_host_pacman.sh` has not been tested very well, so it may not work as intended for setup. 
-
-``` bash
-# Make setup_host_apt.sh executable
-$ chmod +x setup_host_apt.sh
-
-# Execute setup_host_apt.sh
-$ sudo ./setup_host_apt.sh
-```
-</details>
-
-<details>
-<summary>Using Nocturne in your car</summary>
-<br>
-To use Nocturne in your car, you will need to have a Raspberry Pi to provide network.  
-
-Connect your Raspberry Pi to your computer, your Car Thing to the Raspberry Pi, and run the following from your command line:
+Enter the following commands in powershell as Administrator to allow internet access to your CarThing:
 
 ```bash
-# Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp /path/to/nocturne-image/setup-scripts/setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
+#Identify correct network adapter is present:
+$ctNic = (Get-NetAdapter -InterfaceDescription "*NDIS*")
 
-# SSH into Raspberry Pi
-$ ssh pi@raspberrypi.local
+#Set IP address of network interface:
+$ctNic | Set-NetIPAddress -IPAddress 192.168.7.1 -PrefixLength 24
 
-# Make setup_host_rpi.sh executable
-$ chmod +x /home/pi/setup_host_rpi.sh
+#Allow sharing of network connection to CarThing
+New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 192.168.7.0/24
 
-# Execute setup_host_rpi.sh
-$ sudo ./setup_host_rpi.sh
-
-# Reboot Raspberry Pi
-$ sudo reboot
 ```
+
+As an FYI, your mileage may vary greately here. You may need to configure the Windows Firewall to allow this traffic depending on your environment. 
+
 </details>
+
 <br>
 
-Continue setting up Nocturne by following the steps outlined [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup). Then, select `Login with Phone`, scan the QR Code, and enter the Client ID and the Client Secret, and login to Spotify. After logging in, you are ready to use Nocturne!
+<details>
+<summary>MacOS (Not Recommended)</summary>
+<br>
+
+TBD
+
+</details>
+
+<br>
+
+<details>
+<summary>Linux (Not Recommended)</summary>
+<br>
+
+TBD
+
+</details>
 
 ## Troubleshooting
 
