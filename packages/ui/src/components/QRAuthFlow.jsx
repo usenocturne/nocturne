@@ -48,6 +48,8 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
             type: "custom",
             tempId: data.tempId,
             skipSpotifyAuth: true,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
           });
         } else if (data.authCompleted) {
           console.error("Auth completed but missing tokens");

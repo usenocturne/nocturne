@@ -5,7 +5,7 @@ import packageInfo from "../../package.json";
 import NetworkScreen from "../components/bluetooth/NetworkScreen";
 import PairingScreen from "../components/bluetooth/PairingScreen";
 import EnableTetheringScreen from "../components/bluetooth/EnableTetheringScreen";
-import NocturneIcon from "../components/icons";
+import { NocturneIcon } from "../components/icons";
 
 const ConnectionScreen = () => {
   const [isBluetoothDiscovering, setIsBluetoothDiscovering] = useState(false);
@@ -183,6 +183,7 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
   const [defaultButtonVisible, setDefaultButtonVisible] = useState(false);
   const [showDefaultButton, setShowDefaultButton] = useState(false);
   const [escapeKeyTimer, setEscapeKeyTimer] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (showDefaultButton) {
@@ -225,7 +226,7 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
     onSelect({ type: "default" });
   };
 
-  if (!networkStatus?.isConnected) {
+  if (!networkStatus?.isConnected && !router.pathname.includes("phone-auth")) {
     return <ConnectionScreen />;
   }
 

@@ -1,5 +1,5 @@
 import React from "react";
-import NocturneIcon from "../../components/icons";
+import { NocturneIcon } from "../../components/icons";
 
 const EnableTetheringScreen = ({ deviceType, message }) => {
   return (
