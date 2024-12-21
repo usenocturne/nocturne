@@ -20,6 +20,12 @@
         {
           options.services.nocturne-ui = {
             enable = lib.mkEnableOption "Nocturne UI service";
+            
+            host = lib.mkOption {
+              type = lib.types.str;
+              default = "0.0.0.0";
+              description = "Host to listen on";
+            };
 
             port = lib.mkOption {
               type = lib.types.port;
@@ -39,7 +45,10 @@
 
               serviceConfig = {
                 ExecStart = "${pkgs.nocturne-ui}/bin/nocturne";
-                Environment = [ "PORT=${toString cfg.port}" ];
+                Environment = [
+                  "HOST=${toString cfg.host}"
+                  "PORT=${toString cfg.port}"
+                ];
 
                 User = "superbird";
                 Group = "users";

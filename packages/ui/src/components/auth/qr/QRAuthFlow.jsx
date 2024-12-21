@@ -114,7 +114,7 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
       return null;
     }
 
-    const qrUrl = `${window.location.origin}/phone-auth?session=${sessionId}`;
+    const qrUrl = `https://172.20.10.12:3500/phone-auth?session=${sessionId}`;
 
     return (
       <div className="flex flex-col items-center space-y-8">
