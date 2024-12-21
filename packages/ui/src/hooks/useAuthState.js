@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabaseClient";
 import ReactDOM from "react-dom";
-import PhoneAuthResult from "@/components/auth/PhoneAuthResult";
+import PhoneAuthResult from "@/components/auth/phone/PhoneAuthResult";
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {

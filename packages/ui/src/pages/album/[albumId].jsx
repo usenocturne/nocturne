@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/LongPressLink";
+import LongPressLink from "../../components/common/navigation/LongPressLink";
 import Image from "next/image";
 import { getCurrentDevice } from "@/services/deviceService";
 import { setPlaybackShuffleState } from "@/services/playerService";

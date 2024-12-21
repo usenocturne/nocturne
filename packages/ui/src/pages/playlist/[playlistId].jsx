@@ -1,10 +1,10 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/LongPressLink";
+import LongPressLink from "../../components/common/navigation/LongPressLink";
 import Image from "next/image";
-import SuccessAlert from "../../components/SuccessAlert";
+import SuccessAlert from "../../components/common/alerts/SuccessAlert";
 import { getCurrentDevice } from "@/services/deviceService";
-import {setPlaybackShuffleState} from "@/services/playerService";
+import { setPlaybackShuffleState } from "@/services/playerService";
 export const runtime = "experimental-edge";
 
 const PlaylistPage = ({

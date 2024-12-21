@@ -3,7 +3,10 @@ import { useRouter } from "next/router";
 import classNames from "classnames";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import Link from "next/link";
-import Drawer, { DrawerTrigger, DrawerContent } from "../components/Drawer";
+import Drawer, {
+  DrawerTrigger,
+  DrawerContent,
+} from "../components/common/navigation/Drawer";
 import {
   Dialog,
   DialogBackdrop,
@@ -11,7 +14,7 @@ import {
   DialogTitle,
 } from "@headlessui/react";
 import { fetchUserOwnedPlaylists } from "../services/userPlaylistService";
-import LongPressLink from "../components/LongPressLink";
+import LongPressLink from "../components/common/navigation/LongPressLink";
 import Image from "next/image";
 import { getCurrentDevice } from "@/services/deviceService";
 import { getTextDirection } from "../constants/fonts";

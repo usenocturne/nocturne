@@ -1,9 +1,9 @@
 import "../styles/globals.css";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import ErrorAlert from "../components/ErrorAlert";
-import AuthSelection from "../components/AuthSelection";
-import ButtonMappingOverlay from "../components/ButtonMappingOverlay";
+import ErrorAlert from "../components/common/alerts/ErrorAlert";
+import AuthSelection from "../components/auth/AuthSelection";
+import ButtonMappingOverlay from "../components/common/controls/ButtonMappingOverlay";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
 import {

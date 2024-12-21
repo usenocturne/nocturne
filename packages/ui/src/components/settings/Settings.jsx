@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Field, Label, Switch } from "@headlessui/react";
 import { useRouter } from "next/router";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function Settings({ onOpenDonationModal }) {
   const router = useRouter();

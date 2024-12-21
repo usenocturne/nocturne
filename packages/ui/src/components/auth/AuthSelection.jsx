@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import QRAuthFlow from "./QRAuthFlow";
-import packageInfo from "../../package.json";
-import NetworkScreen from "../components/bluetooth/NetworkScreen";
-import PairingScreen from "../components/bluetooth/PairingScreen";
-import EnableTetheringScreen from "../components/bluetooth/EnableTetheringScreen";
-import { NocturneIcon } from "../components/icons";
+import QRAuthFlow from "./qr/QRAuthFlow";
+import packageInfo from "../../../package.json";
+import NetworkScreen from "../bluetooth/NetworkScreen";
+import PairingScreen from "../bluetooth/PairingScreen";
+import EnableTetheringScreen from "../bluetooth/EnableTetheringScreen";
+import { NocturneIcon } from "../icons";
 
 const ConnectionScreen = () => {
   const [isBluetoothDiscovering, setIsBluetoothDiscovering] = useState(false);

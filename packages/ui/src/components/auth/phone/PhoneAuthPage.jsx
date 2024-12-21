@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { NocturneIcon } from "../components/icons";
+import { NocturneIcon } from "../../icons";
 
 const PhoneAuthPage = () => {
   const [clientId, setClientId] = useState("");

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CheckIcon } from "../components/icons";
+import { CheckIcon } from "../../icons";
 
 export default function SuccessAlert({ message, onClose, show }) {
   const [isVisible, setIsVisible] = useState(false);

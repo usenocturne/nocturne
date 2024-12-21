@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { XIcon } from "../components/icons";
+import { XIcon } from "../../icons";
 
 export default function ErrorAlert({ error, onClose }) {
   const [isVisible, setIsVisible] = useState(false);

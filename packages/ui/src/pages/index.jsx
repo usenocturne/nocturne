@@ -1,10 +1,10 @@
-import Sidebar from "../components/Sidebar";
-import Settings from "../components/Settings";
-import LongPressLink from "../components/LongPressLink";
+import Sidebar from "../components/common/navigation/Sidebar";
+import Settings from "../components/settings/Settings";
+import LongPressLink from "../components/common/navigation/LongPressLink";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { fetchLikedSongs } from "../services/playlistService";
-import DonationQRModal from "../components/DonationQRModal";
+import DonationQRModal from "../components/common/modals/DonationQRModal";
 
 export default function Home({
   accessToken,

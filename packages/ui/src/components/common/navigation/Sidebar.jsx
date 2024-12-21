@@ -6,7 +6,7 @@ import {
   ArtistsIcon,
   RadioIcon,
   SettingsIcon,
-} from "./icons";
+} from "../../icons";
 
 export default function Sidebar({ activeSection, setActiveSection }) {
   const handleSectionClick = (section) => {

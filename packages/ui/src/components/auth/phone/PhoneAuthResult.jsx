@@ -1,5 +1,5 @@
 import React from "react";
-import { inter } from "../../constants/fonts";
+import { inter } from "../../../constants/fonts";
 
 const PhoneAuthResult = ({ status, error }) => {
   if (status === "success") {
