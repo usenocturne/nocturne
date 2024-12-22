@@ -91,6 +91,7 @@ export default function App({ Component, pageProps }) {
     currentlyPlayingTrackUri,
     currentlyPlayingAlbum,
     albumsQueue,
+    recentAlbums,
     playlists,
     artists,
     radio,
@@ -101,6 +102,7 @@ export default function App({ Component, pageProps }) {
     setArtists,
     setRadio,
     setAlbumsQueue,
+    setRecentAlbums,
   } = useMediaState(accessToken, handleError);
 
   const {
@@ -302,7 +304,7 @@ export default function App({ Component, pageProps }) {
           await Promise.all([
             fetchRecentlyPlayedAlbums(
               accessToken,
-              setPlaylists,
+              setRecentAlbums,
               setAlbumsQueue,
               handleError
             ),
@@ -338,7 +340,7 @@ export default function App({ Component, pageProps }) {
       const recentlyPlayedInterval = setInterval(() => {
         fetchRecentlyPlayedAlbums(
           accessToken,
-          setPlaylists,
+          setRecentAlbums,
           setAlbumsQueue,
           handleError
         );
@@ -570,6 +572,7 @@ export default function App({ Component, pageProps }) {
               {...pageProps}
               accessToken={accessToken}
               playlists={playlists}
+              recentAlbums={recentAlbums}
               artists={artists}
               radio={radio}
               currentlyPlayingAlbum={currentlyPlayingAlbum}

@@ -7,6 +7,7 @@ export function useMediaState(accessToken, handleError) {
     useState(null);
   const [currentlyPlayingAlbum, setCurrentlyPlayingAlbum] = useState(null);
   const [albumsQueue, setAlbumsQueue] = useState([]);
+  const [recentAlbums, setRecentAlbums] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [artists, setArtists] = useState([]);
   const [radio, setRadio] = useState([]);
@@ -101,6 +102,7 @@ export function useMediaState(accessToken, handleError) {
     currentlyPlayingTrackUri,
     currentlyPlayingAlbum,
     albumsQueue,
+    recentAlbums,
     playlists,
     artists,
     radio,
@@ -110,6 +112,7 @@ export function useMediaState(accessToken, handleError) {
     setCurrentlyPlayingTrackUri,
     setCurrentlyPlayingAlbum,
     setAlbumsQueue,
+    setRecentAlbums,
     setPlaylists,
     setArtists,
     setRadio,
