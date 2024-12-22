@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { getCurrentDevice } from "@/services/deviceService";
+import { useNavigationState } from "./useNavigationState";
 
 export function useKeyboardHandlers({
   drawerOpen,
@@ -17,6 +18,8 @@ export function useKeyboardHandlers({
   setPressedButton,
   setShowMappingOverlay,
 }) {
+  const { handleBack, updateSectionHistory } = useNavigationState();
+
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
     const pressStartTimes = {};
@@ -28,8 +31,13 @@ export function useKeyboardHandlers({
         if (drawerOpen) {
           setDrawerOpen(false);
         } else {
-          router.push("/").then(() => {
-            setActiveSection("recents");
+          const { pathname, query, section } = handleBack();
+          if (section) {
+            setActiveSection(section);
+          }
+          router.push({
+            pathname,
+            query,
           });
         }
         return;
@@ -254,5 +262,7 @@ export function useKeyboardHandlers({
     refreshAccessToken,
     handleError,
     setActiveSection,
+    handleBack,
+    updateSectionHistory,
   ]);
 }

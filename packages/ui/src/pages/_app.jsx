@@ -37,6 +37,7 @@ import {
 import { useAuthState } from "../hooks/useAuthState";
 import { useMediaState } from "../hooks/useMediaState";
 import { useGradientState } from "../hooks/useGradientState";
+import { useNavigationState } from "../hooks/useNavigationState";
 import { useKeyboardHandlers } from "../hooks/useKeyboardHandlers";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -51,7 +52,13 @@ export default function App({ Component, pageProps }) {
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
   const [networkStatus, setNetworkStatus] = useState({ isConnected: false });
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState("recents");
+  const [activeSection, setActiveSection] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("lastActiveSection") || "recents";
+    }
+    return "recents";
+  });
+  const { updateSectionHistory } = useNavigationState();
 
   const lastActivityTimeRef = useRef(Date.now());
   const inactivityTimeoutRef = useRef(null);
@@ -519,6 +526,10 @@ export default function App({ Component, pageProps }) {
       document.removeEventListener("keydown", handleKeyDown, { capture: true });
     };
   }, [showBrightnessOverlay]);
+
+  useEffect(() => {
+    updateSectionHistory(activeSection);
+  }, [activeSection, updateSectionHistory]);
 
   useEffect(() => {
     const handleEscapePress = (event) => {
