@@ -114,7 +114,8 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
       return null;
     }
 
-    const qrUrl = `https://172.20.10.12:3500/phone-auth?session=${sessionId}`;
+    const origin = window.location.origin == "https://localhost:3500" ? "https://172.20.10.12:3500" : window.location.origin
+    const qrUrl = `${origin}/phone-auth?session=${sessionId}`;
 
     return (
       <div className="flex flex-col items-center space-y-8">
