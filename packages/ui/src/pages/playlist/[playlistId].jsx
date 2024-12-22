@@ -9,6 +9,7 @@ export const runtime = "experimental-edge";
 
 const PlaylistPage = ({
   initialPlaylist,
+  updateGradientColors,
   currentlyPlayingTrackUri,
   handleError,
   error,
@@ -160,12 +161,16 @@ const PlaylistPage = ({
   );
 
   useEffect(() => {
-    const playlistImage =
-      playlist.images && playlist.images.length > 0
-        ? playlist.images[0].url
-        : "";
-    localStorage.setItem("playlistPageImage", playlistImage);
-  }, [playlist]);
+    if (playlist?.images && playlist.images.length > 0) {
+      const playlistImage = playlist.images[0].url;
+      localStorage.setItem("playlistPageImage", playlistImage);
+      updateGradientColors(playlistImage);
+    }
+
+    return () => {
+      updateGradientColors(null);
+    };
+  }, [playlist, updateGradientColors]);
 
   useEffect(() => {
     void setPlaybackShuffleState(accessToken, handleError, setIsShuffleEnabled);

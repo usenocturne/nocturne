@@ -9,6 +9,7 @@ export const runtime = "experimental-edge";
 
 const ArtistPage = ({
   artist,
+  updateGradientColors,
   currentlyPlayingTrackUri,
   handleError,
   error,
@@ -24,10 +25,16 @@ const ArtistPage = ({
   }, [error, handleError]);
 
   useEffect(() => {
-    const artistImage =
-      artist.images && artist.images.length > 0 ? artist.images[0].url : "";
-    localStorage.setItem("artistPageImage", artistImage);
-  }, [artist]);
+    if (artist?.images && artist.images.length > 0) {
+      const artistImage = artist.images[0].url;
+      localStorage.setItem("artistPageImage", artistImage);
+      updateGradientColors(artistImage);
+    }
+
+    return () => {
+      updateGradientColors(null);
+    };
+  }, [artist, updateGradientColors]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {

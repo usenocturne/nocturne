@@ -8,6 +8,7 @@ export const runtime = "experimental-edge";
 
 const ShowPage = ({
   initialShow,
+  updateGradientColors,
   currentlyPlayingTrackUri,
   handleError,
   error,
@@ -43,10 +44,16 @@ const ShowPage = ({
   );
 
   useEffect(() => {
-    const showImage =
-      show.images && show.images.length > 0 && show.images[0].url;
-    localStorage.setItem("showPageImage", showImage);
-  }, [show]);
+    if (show?.images && show.images.length > 0) {
+      const showImage = show.images[0].url;
+      localStorage.setItem("showPageImage", showImage);
+      updateGradientColors(showImage);
+    }
+
+    return () => {
+      updateGradientColors(null);
+    };
+  }, [show, updateGradientColors]);
 
   const loadMoreEpisodes = async () => {
     if (isLoading || !hasMore) return;

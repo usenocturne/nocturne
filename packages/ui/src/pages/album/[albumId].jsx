@@ -9,6 +9,7 @@ export const runtime = "experimental-edge";
 
 const AlbumPage = ({
   initialAlbum,
+  updateGradientColors,
   currentlyPlayingTrackUri,
   handleError,
   error,
@@ -45,10 +46,16 @@ const AlbumPage = ({
   );
 
   useEffect(() => {
-    const albumImage =
-      album.images && album.images.length > 0 && album.images[0].url;
-    localStorage.setItem("albumPageImage", albumImage);
-  }, [album]);
+    if (album?.images && album.images.length > 0) {
+      const albumImage = album.images[0].url;
+      localStorage.setItem("albumPageImage", albumImage);
+      updateGradientColors(albumImage);
+    }
+
+    return () => {
+      updateGradientColors(null);
+    };
+  }, [album, updateGradientColors]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {

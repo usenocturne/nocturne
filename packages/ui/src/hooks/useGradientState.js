@@ -211,6 +211,11 @@ export function useGradientState(activeSection) {
             setTargetColor3(libraryColors[2]);
             setTargetColor4(libraryColors[3]);
           }
+        } else {
+          setTargetColor1("#191414");
+          setTargetColor2("#191414");
+          setTargetColor3("#191414");
+          setTargetColor4("#191414");
         }
         return;
       }
@@ -226,12 +231,15 @@ export function useGradientState(activeSection) {
             `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}`
         );
 
-        setSectionGradients((prev) => ({
-          ...prev,
-          [section]: hexColors,
-        }));
+        if (section) {
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: hexColors,
+          }));
+        }
 
         if (
+          !section ||
           section === activeSection ||
           section === "nowPlaying" ||
           activeSection === "nowPlaying"

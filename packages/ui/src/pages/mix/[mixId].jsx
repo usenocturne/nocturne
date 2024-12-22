@@ -10,6 +10,7 @@ export const runtime = "experimental-edge";
 
 const MixPage = ({
   initialMix,
+  updateGradientColors,
   currentlyPlayingTrackUri,
   handleError,
   error,
@@ -94,9 +95,16 @@ const MixPage = ({
   }, [tracks, isShuffleEnabled]);
 
   useEffect(() => {
-    const mixImage = mix?.images?.[0]?.url || "";
-    localStorage.setItem("mixPageImage", mixImage);
-  }, [mix]);
+    if (mix?.images && mix.images.length > 0) {
+      const mixImage = mix.images[0].url;
+      localStorage.setItem("mixPageImage", mixImage);
+      updateGradientColors(mixImage);
+    }
+
+    return () => {
+      updateGradientColors(null);
+    };
+  }, [mix, updateGradientColors]);
 
   useEffect(() => {
     void setPlaybackShuffleState(accessToken, handleError, setIsShuffleEnabled);
