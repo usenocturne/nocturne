@@ -176,22 +176,27 @@ export default function Home({
             >
               {activeSection === "recents" && (
                 <>
-                  {albumsQueue.map((album) => (
+                  {albumsQueue.map((item) => (
                     <div
-                      key={album.id}
+                      key={item.id}
                       className="min-w-[280px] mr-10 snap-start"
                     >
                       <LongPressLink
-                        href={`/album/${album.id}`}
-                        spotifyUrl={album?.external_urls?.spotify}
+                        href={
+                          item.type === "show"
+                            ? `/show/${item.id}`
+                            : `/album/${item.id}`
+                        }
+                        spotifyUrl={item?.external_urls?.spotify}
                         accessToken={accessToken}
                       >
                         <Image
                           src={
-                            album?.images?.[0]?.url ||
-                            "/images/not-playing.webp"
+                            item?.images?.[0]?.url || "/images/not-playing.webp"
                           }
-                          alt="Album Cover"
+                          alt={
+                            item.type === "show" ? "Show Cover" : "Album Cover"
+                          }
                           width={280}
                           height={280}
                           priority
@@ -199,30 +204,34 @@ export default function Home({
                         />
                       </LongPressLink>
                       <LongPressLink
-                        href={`/album/${album.id}`}
-                        spotifyUrl={album?.external_urls?.spotify}
+                        href={
+                          item.type === "show"
+                            ? `/show/${item.id}`
+                            : `/album/${item.id}`
+                        }
+                        spotifyUrl={item?.external_urls?.spotify}
                         accessToken={accessToken}
                       >
                         <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                          {album.name}
+                          {item.name}
                         </h4>
                       </LongPressLink>
-                      {album.artists?.[0] ? (
+                      {item.type === "show" ? (
+                        <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                          {item.publisher}
+                        </h4>
+                      ) : item.artists?.[0] ? (
                         <LongPressLink
-                          href={`/artist/${album.artists[0].id}`}
-                          spotifyUrl={album.artists[0]?.external_urls?.spotify}
+                          href={`/artist/${item.artists[0].id}`}
+                          spotifyUrl={item.artists[0]?.external_urls?.spotify}
                           accessToken={accessToken}
                         >
                           <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                            {album.artists
+                            {item.artists
                               .map((artist) => artist.name)
                               .join(", ")}
                           </h4>
                         </LongPressLink>
-                      ) : album.type === "show" && album.name ? (
-                        <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                          {album.publisher}
-                        </h4>
                       ) : null}
                     </div>
                   ))}
