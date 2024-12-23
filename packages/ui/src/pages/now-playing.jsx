@@ -16,6 +16,7 @@ import Drawer, {
 } from "../components/common/navigation/Drawer";
 import LongPressLink from "../components/common/navigation/LongPressLink";
 import { getTextDirection } from "../constants/fonts";
+import ProgressBar from "../components/player/ProgressBar";
 
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useLyrics } from "@/hooks/useLyrics";
@@ -292,13 +293,12 @@ export default function NowPlaying({
           )}
         </div>
 
-        <div className="w-full px-12 overflow-hidden">
-          <div className="w-full bg-white/20 h-2 rounded-full mt-4 overflow-hidden">
-            <div
-              className="progress-bar bg-white h-2"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+        <div className="px-12">
+          <ProgressBar
+            progress={progress}
+            isPlaying={isPlaying}
+            durationMs={currentPlayback?.item?.duration_ms}
+          />
         </div>
 
         <div className="flex justify-between items-center w-full px-12 mt-4">
