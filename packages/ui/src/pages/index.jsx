@@ -61,24 +61,6 @@ export default function Home({
       spotify: "https://open.spotify.com/collection/tracks",
     },
   });
-  const prevQueueRef = useRef(albumsQueue);
-
-  const preloadImages = (items) => {
-    if (typeof window === "undefined") return;
-
-    items.slice(0, 3).forEach((item) => {
-      if (item?.images?.[0]?.url) {
-        const img = new window.Image();
-        img.src = item.images[0].url;
-      }
-    });
-  };
-
-  useEffect(() => {
-    if (activeSection === "recents") {
-      preloadImages(albumsQueue);
-    }
-  }, [albumsQueue, activeSection]);
 
   const handleWheel = (e) => {
     if (!showBrightnessOverlay) {
@@ -124,6 +106,21 @@ export default function Home({
   };
 
   useEffect(() => {
+    if (
+      scrollContainerRef.current &&
+      activeSection === "recents" &&
+      albumsQueue.length !== prevQueueLengthRef.current
+    ) {
+      scrollContainerRef.current.scrollTo({
+        left: 0,
+        behavior: "smooth",
+      });
+    }
+
+    prevQueueLengthRef.current = albumsQueue.length;
+  }, [albumsQueue, activeSection]);
+
+  useEffect(() => {
     return () => {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
@@ -132,37 +129,25 @@ export default function Home({
   }, []);
 
   useEffect(() => {
-    if (scrollContainerRef.current && activeSection === "recents") {
-      const hasNewItemAtStart =
-        albumsQueue.length > 0 &&
-        (prevQueueRef.current.length === 0 ||
-          albumsQueue[0].id !== prevQueueRef.current[0]?.id);
+    if (
+      scrollContainerRef.current &&
+      activeSection === "recents" &&
+      currentlyPlayingAlbum &&
+      !hasScrolledToCurrentAlbumRef.current
+    ) {
+      const currentAlbumIndex = albumsQueue.findIndex(
+        (album) => album.id === currentlyPlayingAlbum.id
+      );
 
-      const shouldScrollToCurrentAlbum =
-        currentlyPlayingAlbum && !hasScrolledToCurrentAlbumRef.current;
-
-      if (hasNewItemAtStart) {
+      if (currentAlbumIndex !== -1) {
         scrollContainerRef.current.scrollTo({
-          left: 0,
+          left: currentAlbumIndex * (itemWidth + 40),
           behavior: "smooth",
         });
-      } else if (shouldScrollToCurrentAlbum) {
-        const currentAlbumIndex = albumsQueue.findIndex(
-          (album) => album.id === currentlyPlayingAlbum.id
-        );
-
-        if (currentAlbumIndex !== -1) {
-          scrollContainerRef.current.scrollTo({
-            left: currentAlbumIndex * (itemWidth + 40),
-            behavior: "smooth",
-          });
-          hasScrolledToCurrentAlbumRef.current = true;
-        }
+        hasScrolledToCurrentAlbumRef.current = true;
       }
-
-      prevQueueRef.current = albumsQueue;
     }
-  }, [albumsQueue, activeSection, currentlyPlayingAlbum, itemWidth]);
+  }, [currentlyPlayingAlbum, activeSection, albumsQueue]);
 
   useEffect(() => {
     hasScrolledToCurrentAlbumRef.current = false;
