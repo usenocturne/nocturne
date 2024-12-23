@@ -31,6 +31,19 @@ Running Nocturne on your Car Thing requires a host device such as a Raspberry Pi
 Download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting). Then follow either of the below flashing methods.
 
 <details>
+<summary>Using Terbium (Recommended)</summary>
+
+<br>
+
+Open [Terbium](https://terbium.app/) in a web usb compatible browser (ex. Google Chrome, Chromium, etc)
+
+Follow the prompts in Terbium as they follow and select the folder path `/path/to/nocturne-image/image` as the image folder.
+
+</details>
+
+<br>
+
+<details>
 <summary>Using superbird-tool</summary>
 
 <br>
@@ -41,28 +54,17 @@ Download and unzip the latest image from [Releases](https://github.com/brandonsa
 
   ```bash
   # Go into the superbird-tool repository
-  $ cd \path\to\superbird-tool-main
+  $ cd /path/to/superbird-tool-main
 
   # Find device
   $ python superbird_tool.py --find_device
 
   # Flash Nocturne image, without resetting the data partition 
-  $ python superbird_tool.py --dont_reset --restore_device \path\to\nocturne-image\image 
+  $ python superbird_tool.py --dont_reset --restore_device /path/to/nocturne-image/image 
   ```
 </details>
 
-<br >
-
-<details>
-<summary>Using Terbium</summary>
-
 <br>
-
-Open [Terbium](https://terbium.app/) in a web usb compatible browser (ex. Google Chrome, Chromium, etc)
-
-Follow the prompts in Terbium as they follow and select the folder path `\path\to\nocturne-image\image` as the image folder.
-
-</details>
 
 ### Setting up host device
 
@@ -84,11 +86,11 @@ Download and open [Raspberry Pi Imager](https://www.raspberrypi.com/software/), 
 After the OS is successfully flashed to the SD card, copy the setup script to your Pi connect your car thing and run the commands as follows:
 
 ```bash
-# Transfer setup_host_rpi.sh to Raspberry Pi
-$ scp \path\to\nocturne-image\setup-scripts\setup_host_rpi.sh pi@raspberrypi.local:/home/pi/
-
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
+
+# Download setup_host_rpi.sh to Raspberry Pi
+$ wget https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/setup-scripts/setup_host_rpi.sh
 
 # Make setup_host_rpi.sh executable
 $ chmod +x /home/pi/setup_host_rpi.sh
@@ -104,22 +106,44 @@ Optionally for portable use, you can configure the Pi to prioritize your mobile 
 
 After, you will need to run the `setup_hotspot.py` script: 
 ```bash
-# Transfer setup_hotspot.py to Raspberry Pi
-$ scp /path/to/nocturne-image/setup-scripts/setup_hotspot.py pi@raspberrypi.local:/home/pi/
-
 # SSH into Raspberry Pi
 $ ssh pi@raspberrypi.local
 
+# Download setup_hotspot.py to Raspberry Pi
+$ wget https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/setup-scripts/setup_hotspot.py
+
 # Execute setup_hotspot.py
-$ sudo python3 ./setup_hotspot.py
+$ sudo python3 ./setup_hotspot_rpi.py
 ```
 </details>
 
 <br>
 
 <details>
-<summary>Windows (Not Recommended)</summary>
+<summary>MacOS (Not Recommended)</summary>
 <br>
+
+TBD
+
+</details>
+
+<br>
+
+<details>
+<summary>Linux (Not Recommended)</summary>
+<br>
+
+TBD
+
+</details>
+
+<br>
+
+<details>
+<summary>Windows (Not Officially Supported)</summary>
+<br>
+
+NOTE: NO SUPPORT IS PROVIDED FOR THIS METHOD
 
 NOTE: This setup method is not recommended as there are frequent issues with the AMD USB chipset and recognizing the CarThing. Proceed with caution knowing that it may not work with your PC.
 
@@ -143,24 +167,6 @@ As an FYI, your mileage may vary greately here. You may need to configure the Wi
 
 <br>
 
-<details>
-<summary>MacOS (Not Recommended)</summary>
-<br>
-
-TBD
-
-</details>
-
-<br>
-
-<details>
-<summary>Linux (Not Recommended)</summary>
-<br>
-
-TBD
-
-</details>
-
 ### Setting up Nocturne UI
 
 Follow the steps as described [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup) to finish the setup of Nocturne.
@@ -168,6 +174,7 @@ Follow the steps as described [here](https://github.com/usenocturne/nocturne-ui?
 ## Troubleshooting
 
 If you are having issues flashing Nocturne to your Car Thing, check out the guides below. 
+
 <br>
 
 <details>
@@ -248,7 +255,6 @@ This software was made possible only through the following individuals and open 
 - [bbaovanc](https://x.com/bbaovanc), for OS development, debugging, and testing
 - [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk), and modifying [aml-imgpack](https://github.com/bishopdynamics/aml-imgpack)
 - [Thing Labs' fork of superbird-tool](https://github.com/thinglabsoss/superbird-tool), for their contributions on the original superbird-tool
-
 
 ## Related
 
