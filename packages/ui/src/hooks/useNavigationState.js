@@ -7,6 +7,7 @@ export function useNavigationState() {
   ]);
 
   const isHandlingBack = useRef(false);
+  const previousSection = useRef(null);
 
   const [lastActiveSection, setLastActiveSection] = useState(() => {
     if (typeof window !== "undefined") {
@@ -39,6 +40,14 @@ export function useNavigationState() {
           return prev;
         }
 
+        if (
+          lastEntry.pathname === "/" &&
+          newEntry.pathname === "/now-playing"
+        ) {
+          previousSection.current =
+            localStorage.getItem("lastActiveSection") || "recents";
+        }
+
         return [...prev, newEntry];
       });
     };
@@ -56,16 +65,40 @@ export function useNavigationState() {
   const handleBack = () => {
     isHandlingBack.current = true;
 
+    const currentPath =
+      navigationHistory[navigationHistory.length - 1].pathname;
+
+    if (currentPath === "/") {
+      previousSection.current =
+        localStorage.getItem("lastActiveSection") || "recents";
+      return {
+        pathname: "/now-playing",
+        query: {},
+        section: null,
+      };
+    }
+
     if (navigationHistory.length > 1) {
       const newHistory = [...navigationHistory];
       newHistory.pop();
       const previousPage = newHistory[newHistory.length - 1];
       setNavigationHistory(newHistory);
 
+      if (previousPage.pathname === "/" && currentPath === "/now-playing") {
+        const sectionToRestore =
+          previousSection.current ||
+          localStorage.getItem("lastActiveSection") ||
+          "recents";
+        return {
+          pathname: previousPage.pathname,
+          query: previousPage.query,
+          section: sectionToRestore,
+        };
+      }
+
       if (previousPage.pathname === "/") {
         const currentSection =
           localStorage.getItem("lastActiveSection") || "recents";
-
         return {
           pathname: previousPage.pathname,
           query: previousPage.query,
@@ -80,9 +113,11 @@ export function useNavigationState() {
       };
     }
 
-    const currentSection =
-      localStorage.getItem("lastActiveSection") || "recents";
-    return { pathname: "/", query: {}, section: currentSection };
+    return {
+      pathname: "/now-playing",
+      query: {},
+      section: null,
+    };
   };
 
   const updateSectionHistory = (section) => {
@@ -93,8 +128,9 @@ export function useNavigationState() {
       return;
     }
 
-    if (section !== lastActiveSection) {
-      setLastActiveSection(section);
+    setLastActiveSection(section);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lastActiveSection", section);
     }
   };
 

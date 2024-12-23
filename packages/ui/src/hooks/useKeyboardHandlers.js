@@ -26,19 +26,28 @@ export function useKeyboardHandlers({
     const holdDuration = 2000;
     let hideTimerRef = null;
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = async (event) => {
       if (event.key === "Escape") {
         if (drawerOpen) {
           setDrawerOpen(false);
         } else {
-          const { pathname, query, section } = handleBack();
-          if (section) {
-            setActiveSection(section);
+          const result = handleBack();
+
+          if (result.pathname === "/" && result.section) {
+            setActiveSection(result.section);
+
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            router.push({
+              pathname: result.pathname,
+              query: result.query,
+            });
+          } else {
+            router.push({
+              pathname: result.pathname,
+              query: result.query,
+            });
           }
-          router.push({
-            pathname,
-            query,
-          });
         }
         return;
       }

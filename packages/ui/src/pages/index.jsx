@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { fetchLikedSongs } from "../services/playlistService";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
+import { useRouter } from "next/router";
 
 export default function Home({
   accessToken,
@@ -21,6 +22,15 @@ export default function Home({
   handleError,
 }) {
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const storedSection = localStorage.getItem("lastActiveSection");
+    if (storedSection && storedSection !== activeSection) {
+      setActiveSection(storedSection);
+    }
+  }, [router.pathname]);
+
   useEffect(() => {
     if (activeSection === "radio") {
       updateGradientColors(null, "radio");
