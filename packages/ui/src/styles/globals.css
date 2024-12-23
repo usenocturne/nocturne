@@ -51,7 +51,7 @@ body {
 }
 
 .fadeIn-animation {
-  animation: 1.5s fadeIn;
+  animation: 0.8s fadeIn;
 }
 
 .progress-bar {
@@ -104,10 +104,6 @@ body {
   animation-name: volumeOutScale;
   animation-duration: 1s;
   animation-fill-mode: forwards;
-}
-
-.backdrop-blur-md {
-  backdrop-filter: blur(12px);
 }
 
 section {
