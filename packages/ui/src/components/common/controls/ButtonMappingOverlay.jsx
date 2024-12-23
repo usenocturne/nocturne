@@ -14,19 +14,32 @@ export default function ButtonMappingOverlay({
       const images = {};
       [1, 2, 3, 4].forEach((buttonNum) => {
         const imageUrl = localStorage.getItem(`button${buttonNum}Image`);
-        if (imageUrl) {
+        if (imageUrl && !preloadedImages[buttonNum]) {
           const img = new Image();
           img.src = imageUrl;
           images[buttonNum] = imageUrl;
+        } else if (imageUrl) {
+          images[buttonNum] = preloadedImages[buttonNum];
         }
       });
-      setPreloadedImages(images);
+      if (JSON.stringify(images) !== JSON.stringify(preloadedImages)) {
+        setPreloadedImages(images);
+      }
     };
 
     preloadImages();
-    const intervalId = setInterval(preloadImages, 1000);
-    return () => clearInterval(intervalId);
-  }, []);
+
+    let intervalId;
+    if (show) {
+      intervalId = setInterval(preloadImages, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [show]);
 
   useEffect(() => {
     if (show) {

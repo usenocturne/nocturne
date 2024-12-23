@@ -1,13 +1,16 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/LongPressLink";
+import LongPressLink from "../../components/common/navigation/LongPressLink";
 import Image from "next/image";
-import SuccessAlert from "../../components/SuccessAlert";
+import SuccessAlert from "../../components/common/alerts/SuccessAlert";
 import { fetchUserRadio } from "../../services";
+import { getCurrentDevice } from "@/services/deviceService";
+import { setPlaybackShuffleState } from "@/services/playerService";
 export const runtime = "experimental-edge";
 
 const MixPage = ({
   initialMix,
+  updateGradientColors,
   currentlyPlayingTrackUri,
   handleError,
   error,
@@ -92,28 +95,19 @@ const MixPage = ({
   }, [tracks, isShuffleEnabled]);
 
   useEffect(() => {
-    const mixImage = mix?.images?.[0]?.url || "";
-    localStorage.setItem("mixPageImage", mixImage);
-  }, [mix]);
+    if (mix?.images && mix.images.length > 0) {
+      const mixImage = mix.images[0].url;
+      localStorage.setItem("mixPageImage", mixImage);
+      updateGradientColors(mixImage);
+    }
+
+    return () => {
+      updateGradientColors(null);
+    };
+  }, [mix, updateGradientColors]);
 
   useEffect(() => {
-    const fetchPlaybackState = async () => {
-      try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setIsShuffleEnabled(data.shuffle_state);
-        }
-      } catch (error) {
-        return;
-      }
-    };
-
-    fetchPlaybackState();
+    void setPlaybackShuffleState(accessToken, handleError, setIsShuffleEnabled);
   }, [accessToken]);
 
   const playMix = async () => {
@@ -157,28 +151,10 @@ const MixPage = ({
         }
       );
 
-      const devicesResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const device = await getCurrentDevice(accessToken, handleError);
+      const activeDeviceId = device == null ? null : device.id;
 
-      const devicesData = await devicesResponse.json();
-      if (devicesData.devices.length === 0) {
-        handleError(
-          "NO_DEVICES_AVAILABLE",
-          "No devices available for playback"
-        );
-        return;
-      }
-
-      const device = devicesData.devices[0];
-      const activeDeviceId = device.id;
-
-      if (!device.is_active) {
+      if (device && !device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: {
@@ -277,29 +253,10 @@ const MixPage = ({
         }
       );
 
-      const devicesResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const device = await getCurrentDevice(accessToken, handleError);
+      const activeDeviceId = device == null ? null : device.id;
 
-      const devicesData = await devicesResponse.json();
-      if (devicesData.devices.length === 0) {
-        handleError(
-          "NO_DEVICES_AVAILABLE",
-          "No devices available for playback"
-        );
-        return;
-      }
-
-      const device = devicesData.devices[0];
-      const activeDeviceId = device.id;
-
-      if (!device.is_active) {
+      if (device && !device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: {

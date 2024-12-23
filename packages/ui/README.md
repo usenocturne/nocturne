@@ -68,23 +68,6 @@
    - Client ID (shown on the dashboard)
    - Client Secret (click "Show Client Secret")
 
-5. Required Scopes:
-   The app needs these Spotify scopes:
-   ```
-   user-read-recently-played
-   user-read-private
-   user-top-read
-   user-read-playback-state
-   user-modify-playback-state
-   user-read-currently-playing
-   user-library-read
-   user-library-modify
-   playlist-read-private
-   playlist-read-collaborative
-   playlist-modify-public
-   playlist-modify-private
-   ```
-
 ## Local Development Server
 
 First, set up the configuration and database:

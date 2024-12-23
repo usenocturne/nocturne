@@ -1,8 +1,10 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/LongPressLink";
+import LongPressLink from "../../components/common/navigation/LongPressLink";
 import Image from "next/image";
-import SuccessAlert from "../../components/SuccessAlert";
+import SuccessAlert from "../../components/common/alerts/SuccessAlert";
+import { getCurrentDevice } from "@/services/deviceService";
+import { setPlaybackShuffleState } from "@/services/playerService";
 export const runtime = "experimental-edge";
 
 const LikedSongsPage = ({
@@ -96,23 +98,7 @@ const LikedSongsPage = ({
   );
 
   useEffect(() => {
-    const fetchPlaybackState = async () => {
-      try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setIsShuffleEnabled(data.shuffle_state);
-        }
-      } catch (error) {
-        handleError("FETCH_PLAYBACK_STATE_ERROR", error.message);
-      }
-    };
-
-    fetchPlaybackState();
+    void setPlaybackShuffleState(accessToken, handleError, setIsShuffleEnabled);
   }, [accessToken]);
 
   useEffect(() => {
@@ -163,29 +149,10 @@ const LikedSongsPage = ({
 
   const playLikedSongs = async () => {
     try {
-      const devicesResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const device = await getCurrentDevice(accessToken, handleError);
+      const activeDeviceId = device == null ? null : device.id;
 
-      const devicesData = await devicesResponse.json();
-
-      if (devicesData.devices.length === 0) {
-        handleError(
-          "NO_DEVICES_AVAILABLE",
-          "No devices available for playback"
-        );
-        return;
-      }
-
-      const device = devicesData.devices[0];
-      const activeDeviceId = device.id;
-
-      if (!device.is_active) {
+      if (device && !device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: {
@@ -238,29 +205,10 @@ const LikedSongsPage = ({
 
   const playTrack = async (trackUri, trackIndex) => {
     try {
-      const devicesResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const device = await getCurrentDevice(accessToken, handleError);
+      const activeDeviceId = device == null ? null : device.id;
 
-      const devicesData = await devicesResponse.json();
-
-      if (devicesData.devices.length === 0) {
-        handleError(
-          "NO_DEVICES_AVAILABLE",
-          "No devices available for playback"
-        );
-        return;
-      }
-
-      const device = devicesData.devices[0];
-      const activeDeviceId = device.id;
-
-      if (!device.is_active) {
+      if (device && !device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: {
@@ -284,7 +232,7 @@ const LikedSongsPage = ({
         }
       );
 
-      await fetch("https://api.spotify.com/v1/me/player/play", {
+      const resp = await fetch("https://api.spotify.com/v1/me/player/play", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${accessToken}`,

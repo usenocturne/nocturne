@@ -14,6 +14,7 @@ const nextConfig = {
       },
     ],
   },
+  output: "standalone",
 };
 
 if (process.env.NODE_ENV === 'development') {

@@ -1,28 +1,14 @@
 import React, { useEffect, useState } from "react";
+import { XIcon } from "../../icons";
 
-const CheckIcon = ({ className }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-export default function SuccessAlert({ message, onClose, show }) {
+export default function ErrorAlert({ error, onClose }) {
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     let timeoutId;
 
-    if (show) {
+    if (error) {
       setShouldRender(true);
       requestAnimationFrame(() => {
         setIsVisible(true);
@@ -34,7 +20,7 @@ export default function SuccessAlert({ message, onClose, show }) {
           setShouldRender(false);
           onClose();
         }, 300);
-      }, 3000);
+      }, 5000);
     }
 
     return () => {
@@ -42,9 +28,9 @@ export default function SuccessAlert({ message, onClose, show }) {
         window.clearTimeout(timeoutId);
       }
     };
-  }, [show, onClose]);
+  }, [error, onClose]);
 
-  if (!shouldRender) return null;
+  if (!shouldRender || !error) return null;
 
   return (
     <div
@@ -52,9 +38,9 @@ export default function SuccessAlert({ message, onClose, show }) {
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
       }`}
     >
-      <div className="pointer-events-auto flex items-center justify-between gap-x-6 bg-emerald-600/70 backdrop-blur-xl px-6 py-2.5 sm:rounded-xl sm:py-3 sm:pl-4 sm:pr-3.5">
+      <div className="pointer-events-auto flex items-center justify-between gap-x-6 bg-[#fe3b30]/70 backdrop-blur-xl px-6 py-2.5 sm:rounded-xl sm:py-3 sm:pl-4 sm:pr-3.5">
         <p className="text-[28px] font-[560] text-white tracking-tight">
-          {message || "Shortcut saved successfully"}
+          {error.message}
         </p>
         <button
           type="button"
@@ -68,7 +54,7 @@ export default function SuccessAlert({ message, onClose, show }) {
           }}
         >
           <span className="sr-only">Dismiss</span>
-          <CheckIcon className="h-12 w-12 text-white" />
+          <XIcon className="h-12 w-12 text-white" />
         </button>
       </div>
     </div>

@@ -23,9 +23,10 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local env files
-.env*.local
+#.env*.local
 .env
 .env.development
+.env.local
 .env.test
 .env.production
 
@@ -48,3 +49,6 @@ ca.key
 cert.crt
 cert.key
 server.js
+
+# Nix
+result

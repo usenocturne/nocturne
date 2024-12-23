@@ -51,13 +51,14 @@ body {
 }
 
 .fadeIn-animation {
-  animation: 1.5s fadeIn;
+  animation: 0.8s fadeIn;
 }
 
 .progress-bar {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition-property: width;
+  transition-timing-function: linear;
+  transition-duration: 250ms;
+  will-change: width;
 }
 
 .progress-bar.no-transition {
@@ -106,42 +107,36 @@ body {
   animation-fill-mode: forwards;
 }
 
-.backdrop-blur-md {
-  backdrop-filter: blur(12px);
-}
-
 section {
   display: flex;
   gap: 3px;
   padding-top: 8px;
 }
 
-[class*='wave'] {
-  aspect-ratio: .125/1;
-  background-color: #FFFFFF;
+[class*="wave"] {
+  aspect-ratio: 0.125/1;
+  background-color: #ffffff;
   border-radius: 15px;
-  width: .1vw;
+  width: 0.1vw;
 }
 
 @keyframes waveform {
   0% {
-    transform: scaleY(.5);
+    transform: scaleY(0.5);
   }
   50% {
     transform: scaleY(1.5);
   }
   100% {
-    transform: scaleY(.5);
+    transform: scaleY(0.5);
   }
 }
 
-[class*='wave'] {
-  aspect-ratio: .125/1;
+[class*="wave"] {
+  aspect-ratio: 0.125/1;
   /*This can all be written on one line:*/
-  animation: waveform var(--wavefreq)
-             ease-in-out 0.1s infinite
-             forwards;
-  background-color: #FFFFFF;
+  animation: waveform var(--wavefreq) ease-in-out 0.1s infinite forwards;
+  background-color: #ffffff;
   border-radius: 15px;
   width: 1vw;
 }
@@ -194,13 +189,16 @@ section {
 }
 
 @keyframes marquee {
-  0%, 2.5% {
+  0%,
+  2.5% {
     transform: translateX(0);
   }
-  47.5%, 52.5% {
+  47.5%,
+  52.5% {
     transform: translateX(var(--final-position));
   }
-  97.5%, 100% {
+  97.5%,
+  100% {
     transform: translateX(0);
   }
 }
