@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { X } from "lucide-react";
+import { XIcon } from "../../icons";
 const DonationQRModal = ({ onClose }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -34,7 +34,7 @@ const DonationQRModal = ({ onClose }) => {
             onClick={handleClose}
             className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
           >
-            <X size={24} />
+            <XIcon size={24} />
           </button>
           <div className="flex flex-col items-center space-y-8">
             <div className="bg-white p-1 rounded-xl">

@@ -6,17 +6,17 @@ import {
   DialogTitle,
 } from "@headlessui/react";
 import {
-  Check,
-  Smartphone,
-  Laptop,
-  Speaker,
-  TvMinimal,
-  Tablet,
-  Gamepad,
-  Radio,
-  Car,
-  Cast,
-} from "lucide-react";
+  CheckIcon,
+  SmartphoneIcon,
+  LaptopIcon,
+  SpeakerIcon,
+  TvIcon,
+  TabletIcon,
+  GamepadIcon,
+  RadiowaveIcon,
+  CarIcon,
+  CastIcon,
+} from "../../icons";
 import { inter } from "../../../constants/fonts";
 
 const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
@@ -132,46 +132,46 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
                             switch (device.type) {
                               case "Computer":
                                 return (
-                                  <Laptop className="h-8 w-8 text-white/60" />
+                                  <LaptopIcon className="h-8 w-8 text-white/60" />
                                 );
                               case "Smartphone":
                                 return (
-                                  <Smartphone className="h-8 w-8 text-white/60" />
+                                  <SmartphoneIcon className="h-8 w-8 text-white/60" />
                                 );
                               case "Speaker":
                                 return (
-                                  <Speaker className="h-8 w-8 text-white/60" />
+                                  <SpeakerIcon className="h-8 w-8 text-white/60" />
                                 );
                               case "TV":
                                 return (
-                                  <TvMinimal className="h-8 w-8 text-white/60" />
+                                  <TvIcon className="h-8 w-8 text-white/60" />
                                 );
                               case "Tablet":
                                 return (
-                                  <Tablet className="h-8 w-8 text-white/60" />
+                                  <TabletIcon className="h-8 w-8 text-white/60" />
                                 );
                               case "Gamepad":
                                 return (
-                                  <Gamepad className="h-8 w-8 text-white/60" />
+                                  <GamepadIcon className="h-8 w-8 text-white/60" />
                                 );
                               case "AVR":
                               case "STB":
                               case "AudioDongle":
                                 return (
-                                  <Radio className="h-8 w-8 text-white/60" />
+                                  <RadiowaveIcon className="h-8 w-8 text-white/60" />
                                 );
                               case "Car":
                                 return (
-                                  <Car className="h-8 w-8 text-white/60" />
+                                  <CarIcon className="h-8 w-8 text-white/60" />
                                 );
                               case "CastVideo":
                               case "CastAudio":
                                 return (
-                                  <Cast className="h-8 w-8 text-white/60" />
+                                  <CastIcon className="h-8 w-8 text-white/60" />
                                 );
                               default:
                                 return (
-                                  <Speaker className="h-8 w-8 text-white/60" />
+                                  <SpeakerIcon className="h-8 w-8 text-white/60" />
                                 );
                             }
                           })()}
@@ -185,7 +185,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
                           </div>
                         </div>
                         {device.is_active && (
-                          <Check className="h-8 w-8 text-white" />
+                          <CheckIcon className="h-8 w-8 text-white" />
                         )}
                       </button>
                     ))}

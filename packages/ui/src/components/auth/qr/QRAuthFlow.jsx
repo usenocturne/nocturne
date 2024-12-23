@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeftIcon, XIcon } from "../../icons";
 
 const QRAuthFlow = ({ onBack, onComplete }) => {
   const [sessionId, setSessionId] = useState("");
@@ -89,7 +89,7 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
             onClick={onBack}
             className="flex items-center justify-center space-x-2 rounded-full bg-white/10 px-6 py-4 text-xl font-[560] text-white tracking-tight shadow-sm mx-auto"
           >
-            <ArrowLeft size={24} />
+            <ArrowLeftIcon size={24} />
             <span>Go Back</span>
           </button>
         </div>
@@ -114,7 +114,10 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
       return null;
     }
 
-    const origin = window.location.origin == "https://localhost:3500" ? "https://172.20.10.12:3500" : window.location.origin
+    const origin =
+      window.location.origin == "https://localhost:3500"
+        ? "https://172.20.10.12:3500"
+        : window.location.origin;
     const qrUrl = `${origin}/phone-auth?session=${sessionId}`;
 
     return (
@@ -153,7 +156,7 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
             onClick={handleClose}
             className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
           >
-            <X size={24} />
+            <XIcon size={24} />
           </button>
           {modalContent()}
         </div>

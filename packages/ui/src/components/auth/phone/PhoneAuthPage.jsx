@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
-import { NocturneIcon } from "../../icons";
+import { NocturneIcon, EyeIcon, EyeOffIcon } from "../../icons";
 
 const PhoneAuthPage = () => {
   const [clientId, setClientId] = useState("");
@@ -122,7 +121,11 @@ const PhoneAuthPage = () => {
               className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
               tabIndex={-1}
             >
-              {showClientSecret ? <EyeOff size={24} /> : <Eye size={24} />}
+              {showClientSecret ? (
+                <EyeOffIcon size={24} />
+              ) : (
+                <EyeIcon size={24} />
+              )}
             </button>
           </div>
           {error && (
