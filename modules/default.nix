@@ -1,5 +1,4 @@
 {
-  pkgs,
   lib,
   ...
 }: {
@@ -7,24 +6,23 @@
     ./bluetooth.nix
     ./display.nix
     ./nocturne.nix
+    ./system.nix
   ];
 
-  superbird = {
-    swap = {
-      enable = true;
-      size = 512;
+  options.nocturne = {
+    dev = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable development mode";
+    };
+    url = lib.mkOption {
+      type = lib.types.str;
+      default = "https://127.0.0.1:3500";
+      description = "URL to open in browser";
     };
   };
 
-  nixpkgs.overlays = [
-    (self: super: {
-      cage = super.cage.overrideAttrs (old: {
-        patches = (old.patches or []) ++ [
-          ../patches/cage/0001-Command-line-option-to-hide-cursor.patch
-        ];
-      });
-    })
-  ];
-
-  system.stateVersion = "24.11";
+  config = {
+    system.stateVersion = "24.11";
+  };
 }

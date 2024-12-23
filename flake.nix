@@ -8,8 +8,8 @@
     deploy-rs.url = "github:serokell/deploy-rs";
 
     nocturned.url = "github:usenocturne/nocturned";
-    nocturne-ui.url = "github:usenocturne/nocturne-ui/v3.0.0-beta.1";
-    #nocturne-ui.url = "git+file:///home/nebula/nocturne-ui";
+    #nocturne-ui.url = "github:usenocturne/nocturne-ui/v3.0.0-beta.1";
+    nocturne-ui.url = "git+file:///home/nebula/nocturne-ui";
   };
 
   outputs = inputs@{ self, nixpkgs, nixos-superbird, deploy-rs, ... }:
@@ -27,18 +27,20 @@
           ];
         };
 
-        superbird-qemu = nixosSystem {
+        superbird-dev = nixosSystem {
           system = "aarch64-linux";
           specialArgs = { inherit inputs; };
           modules = [
             nixos-superbird.nixosModules.superbird
             ./modules/default.nix
-            (
-              { ... }:
-              {
-                superbird.qemu = true;
-              }
-            )
+            ({ ... }: {
+              nocturne = {
+                dev = true;
+                
+                # Change this to point to your nocturne-ui development server
+                url = "https://172.16.42.1:3000";
+              };
+            })
           ];
         };
       };

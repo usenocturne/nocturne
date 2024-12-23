@@ -1,16 +1,16 @@
 {
-  pkgs,
   inputs,
+  config,
   ...
 }: {
   imports = [
-    inputs.nocturne-ui.nixosModules.default
     inputs.nocturned.nixosModules.default
+    inputs.nocturne-ui.nixosModules.default
   ];
 
   services = {
     nocturne-ui = {
-      enable = true;
+      enable = !config.nocturne.dev;
       port = 3500;
     };
     nocturned = {

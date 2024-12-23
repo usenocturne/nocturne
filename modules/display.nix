@@ -1,5 +1,6 @@
 {
   pkgs,
+  config,
   ...
 }: {
   programs.chromium = {
@@ -43,7 +44,7 @@
         --disable-extensions \
         --disable-gesture-typing \
         --kiosk \
-        --app=https://127.0.0.1:3500
+        --app=${config.nocturne.url}
     '';
   };
 
