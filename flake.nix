@@ -8,8 +8,7 @@
     deploy-rs.url = "github:serokell/deploy-rs";
 
     nocturned.url = "github:usenocturne/nocturned";
-    #nocturne-ui.url = "github:usenocturne/nocturne-ui/v3.0.0-beta.1";
-    nocturne-ui.url = "git+file:///home/nebula/nocturne-ui";
+    nocturne-ui.url = "github:usenocturne/nocturne-ui";
   };
 
   outputs = inputs@{ self, nixpkgs, nixos-superbird, deploy-rs, ... }:
