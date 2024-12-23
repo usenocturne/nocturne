@@ -4,8 +4,8 @@ build:
 build-system:
   nix build '.#nixosConfigurations.superbird.config.system.build.toplevel' -j"$(nproc)" --show-trace
 
-docker-bash:
-  docker compose run --rm nix bash
+docker-shell:
+  docker compose run --rm nix nix-shell docker/shell.nix
 
 zip-system:
   #!/usr/bin/env bash

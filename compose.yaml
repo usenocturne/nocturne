@@ -1,8 +1,8 @@
 services:
   nix:
     build:
-      context: ./nixos-superbird/docker/
-      dockerfile: ./Dockerfile.nix
+      context: ./docker/
+      dockerfile: ./Dockerfile
     volumes:
       - ./:/workdir
       - nix-store:/nix
