@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import {
   Dialog,
@@ -17,6 +17,7 @@ import Drawer, {
 import LongPressLink from "../components/common/navigation/LongPressLink";
 import { getTextDirection } from "../constants/fonts";
 import ProgressBar from "../components/player/ProgressBar";
+import DeviceSwitcherModal from "../components/common/modals/DeviceSwitcherModal";
 
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useLyrics } from "@/hooks/useLyrics";
@@ -37,7 +38,7 @@ import {
   VolumeLowIcon,
   VolumeLoudIcon,
   PlaylistAddIcon,
-  GoToAlbumIcon,
+  DeviceSwitcherIcon,
   RepeatIcon,
   RepeatOneIcon,
   ShuffleIcon,
@@ -62,6 +63,8 @@ export default function NowPlaying({
     drawerOpen,
     setDrawerOpen,
   });
+
+  const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
 
   const {
     isLiked,
@@ -347,19 +350,15 @@ export default function NowPlaying({
                 </div>
 
                 <div className="py-1">
-                  <Link
-                    href={`/album/${currentPlayback?.item?.album?.id}?accessToken=${accessToken}`}
-                  >
-                    <MenuItem>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                        <span className="text-[28px]">Go to Album</span>
-                        <GoToAlbumIcon
-                          aria-hidden="true"
-                          className="h-8 w-8 text-white/60"
-                        />
-                      </div>
-                    </MenuItem>
-                  </Link>
+                  <MenuItem onClick={() => setIsDeviceSwitcherOpen(true)}>
+                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <span className="text-[28px]">Switch Device</span>
+                      <DeviceSwitcherIcon
+                        aria-hidden="true"
+                        className="h-8 w-8 text-white/60"
+                      />
+                    </div>
+                  </MenuItem>
                 </div>
 
                 <div className="py-1">
@@ -536,6 +535,12 @@ export default function NowPlaying({
           </div>
         </Dialog>
       </div>
+      <DeviceSwitcherModal
+        isOpen={isDeviceSwitcherOpen}
+        onClose={() => setIsDeviceSwitcherOpen(false)}
+        accessToken={accessToken}
+        handleError={handleError}
+      />
     </>
   );
 }

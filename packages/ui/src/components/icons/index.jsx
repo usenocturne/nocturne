@@ -21,7 +21,7 @@ export { default as VolumeOffIcon } from "./VolumeOffIcon";
 export { default as VolumeLowIcon } from "./VolumeLowIcon";
 export { default as VolumeLoudIcon } from "./VolumeLoudIcon";
 export { default as PlaylistAddIcon } from "./PlaylistAddIcon";
-export { default as GoToAlbumIcon } from "./GoToAlbumIcon";
+export { default as DeviceSwitcherIcon } from "./DeviceSwitcherIcon";
 export { default as RepeatIcon } from "./RepeatIcon";
 export { default as RepeatOneIcon } from "./RepeatOneIcon";
 export { default as ShuffleIcon } from "./ShuffleIcon";
