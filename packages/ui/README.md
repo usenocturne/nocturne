@@ -68,23 +68,6 @@
    - Client ID (shown on the dashboard)
    - Client Secret (click "Show Client Secret")
 
-5. Required Scopes:
-   The app needs these Spotify scopes:
-   ```
-   user-read-recently-played
-   user-read-private
-   user-top-read
-   user-read-playback-state
-   user-modify-playback-state
-   user-read-currently-playing
-   user-library-read
-   user-library-modify
-   playlist-read-private
-   playlist-read-collaborative
-   playlist-modify-public
-   playlist-modify-private
-   ```
-
 ## Local Development Server
 
 First, set up the configuration and database:
@@ -125,12 +108,7 @@ create table spotify_credentials (
   last_used timestamp with time zone,
   first_used_at timestamp with time zone,
   token_refresh_count integer default 0,
-  user_agent text,
-  auth_completed text,
-  session_id text,
-  access_token text,
-  version text,
-  token_expiry text
+  user_agent text
 );
 
 -- Add policies for Row Level Security (RLS)
@@ -409,10 +387,6 @@ The rotation schedule can be modified in `workers/key-rotation/wrangler.toml`.
 Nocturne is a massive endeavor, and the team have spent everyday over the last few months making it a reality out of our passion for creating something that people like you love to use.
 
 All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
-
-[Buy Me a Coffee](https://buymeacoffee.com/brandonsaldan) |
-[Ko-Fi](https://ko-fi.com/brandonsaldan)
-
 
 ## Credits
 
