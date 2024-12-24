@@ -165,7 +165,6 @@ As an FYI, your mileage may vary greately here. You may need to configure the Wi
 
 </details>
 
-<br>
 
 ### Setting up Nocturne UI
 
