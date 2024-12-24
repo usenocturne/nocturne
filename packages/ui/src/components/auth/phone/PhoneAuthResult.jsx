@@ -6,6 +6,7 @@ const PhoneAuthResult = ({ status, error }) => {
     return (
       <div
         className={`min-h-screen bg-black flex flex-col items-center justify-center p-4 ${inter.variable}`}
+        style={{ fontFamily: "var(--font-inter)" }}
       >
         <div className="flex flex-col items-center space-y-6">
           <div className="w-16 h-16 bg-[#1DB954] rounded-full flex items-center justify-center">
@@ -23,7 +24,7 @@ const PhoneAuthResult = ({ status, error }) => {
           <h1 className="text-2xl font-bold text-white">
             Authentication Successful
           </h1>
-          <p className="text-white/70">
+          <p className="text-white/70 text-center">
             You can close this window and return to Nocturne.
           </p>
         </div>
@@ -32,7 +33,10 @@ const PhoneAuthResult = ({ status, error }) => {
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
+    <div
+      className={`min-h-screen bg-black flex flex-col items-center justify-center p-4 ${inter.variable}`}
+      style={{ fontFamily: "var(--font-inter)" }}
+    >
       <div className="flex flex-col items-center space-y-6">
         <div className="w-16 h-16 bg-[#E34D4D] rounded-full flex items-center justify-center">
           <svg
@@ -48,7 +52,7 @@ const PhoneAuthResult = ({ status, error }) => {
           </svg>
         </div>
         <h1 className="text-2xl font-bold text-white">Authentication Error</h1>
-        <p className="text-white/70">
+        <p className="text-white/70 text-center">
           Something went wrong while authenticating.
         </p>
         {error && <div className="text-sm text-red-400/80">{error}</div>}

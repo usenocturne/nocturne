@@ -35,3 +35,6 @@ export { default as SmartphoneIcon } from "./SmartphoneIcon";
 export { default as SpeakerIcon } from "./SpeakerIcon";
 export { default as TabletIcon } from "./TabletIcon";
 export { default as TvIcon } from "./TvIcon";
+export { default as ArrowLeftIcon } from "./ArrowLeftIcon";
+export { default as EyeIcon } from "./EyeIcon";
+export { default as EyeOffIcon } from "./EyeOffIcon";
