@@ -69,12 +69,12 @@ fi
 
 # Does not run on anything but Raspbian Bullseye
 if ! lsb_release -a | grep -q "Raspbian GNU/Linux 11 (bullseye)"; then
-    echo "Current OS not supported!"
+    echo "Current OS not supported! Only Raspbian Bullseye is supported at the moment."
     exit 1
 fi
 
 # Detect if usb0 CarThing NIC is already configured.
-if ! ip addr show "${CT_INTERFACE}" | grep -q "192.168.1 "; then
+if ! ip addr show "${CT_INTERFACE}" | grep -q "${USBNET_PREFIX} "; then
     echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
     exit 1
 fi
