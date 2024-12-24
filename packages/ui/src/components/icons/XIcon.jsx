@@ -1,4 +1,4 @@
-const XIcon = ({ className }) => (
+const XIcon = ({ className, size }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
@@ -8,6 +8,8 @@ const XIcon = ({ className }) => (
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
+    width={size}
+    height={size}
   >
     <path d="M18 6 6 18" />
     <path d="m6 6 12 12" />
