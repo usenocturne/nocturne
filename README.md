@@ -175,7 +175,6 @@ Follow the steps as described [here](https://github.com/usenocturne/nocturne-ui?
 
 If you are having issues flashing Nocturne to your Car Thing, check out the guides below. 
 
-<br>
 
 <details>
 <summary>superbird-tool: USBTimeoutError</summary>
