@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
 #SCRIPT NAME: setup_host_rpi
-#AUTHOR(s): ELLEgant
-#DATE: 12/23/2024
+#AUTHOR(s): https://github.com/usenocturne/nocturne-image/
 #DESCRIPTION: Configures a Raspberry Pi running Debian Bullseye to be a network passthrough device for the Spotify CarThing running custom firmware.
 
 set -e  # bail on any errors
 
-#Set terminal as non-interactive
+#Set terminal as non-interactive to prevent apt from prompting with proposed config changes and accepts defualts instead.
 export DEBIAN_FRONTEND=noninteractive
 
 # VARIABLES
@@ -134,11 +133,12 @@ esac
 
 # Update system
 echo "Updating repositories and packages..."
-apt -qq update -y && apt -qq upgrade -y
+apt -qq update -y > /dev/null
+apt -qq upgrade -y > /dev/null
 
 # Gather deps
 echo "Installing deps..."
-apt install -qq iptables iptables-persistent -y
+apt install -qq iptables iptables-persistent -y > /dev/null
 
 # Fix usb enumeration when connecting superbird in maskroom mode
 echo "Applying USB fixes..."
