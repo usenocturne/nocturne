@@ -99,7 +99,7 @@ $ ssh pi@raspberrypi.local
 # Download setup_hotspot.py to Raspberry Pi
 $ wget https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/setup-scripts/setup_hotspot_rpi.py
 
-# Execute setup_hotspot.py
+# Execute setup_hotspot_rpi.py
 $ sudo python3 ./setup_hotspot_rpi.py
 ```
 </details>
