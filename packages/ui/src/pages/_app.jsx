@@ -83,7 +83,6 @@ export default function App({ Component, pageProps }) {
     handleAuthSelection: hookHandleAuthSelection,
     refreshAccessToken,
     clearSession,
-    redirectToSpotify,
     setAccessToken,
     setRefreshToken,
     setAuthState,
@@ -263,7 +262,7 @@ export default function App({ Component, pageProps }) {
           if (error.message && error.message.includes("invalid_grant")) {
             await clearSession();
             if (!authState.tempId) {
-              redirectToSpotify();
+              await clearSession();
             }
           }
         }
@@ -272,7 +271,7 @@ export default function App({ Component, pageProps }) {
         !router.pathname.includes("phone-auth")
       ) {
         if (!authState.tempId) {
-          redirectToSpotify();
+          await clearSession();
         }
       }
     };
@@ -384,7 +383,6 @@ export default function App({ Component, pageProps }) {
             console.error("Token refresh failed:", error);
             if (error.message.includes("invalid_grant")) {
               await clearSession();
-              redirectToSpotify();
             }
           }
         }

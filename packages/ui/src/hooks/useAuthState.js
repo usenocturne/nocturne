@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/lib/supabaseClient";
-import ReactDOM from "react-dom";
-import PhoneAuthResult from "@/components/auth/phone/PhoneAuthResult";
 
 const initialAuthState = () => {
   if (typeof window === "undefined") {
@@ -24,6 +21,16 @@ const initialAuthState = () => {
         tempId: existingTempId,
       };
     }
+
+    const clientId = localStorage.getItem("spotifyClientId");
+    const clientSecret = localStorage.getItem("spotifyClientSecret");
+
+    if (clientId && clientSecret) {
+      return {
+        authSelectionMade: true,
+        authType: "custom",
+      };
+    }
   } catch (e) {
     console.error("Error accessing localStorage:", e);
   }
@@ -41,99 +48,122 @@ export function useAuthState() {
   const [refreshToken, setRefreshToken] = useState(null);
   const [authCode, setAuthCode] = useState(null);
 
-  const handlePhoneAuth = async (code, sessionId, tempId) => {
-    try {
-      const tokenResponse = await fetch("/api/v1/auth/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code,
-          isPhoneAuth: true,
-          sessionId,
-          tempId,
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        throw new Error("Token exchange failed");
-      }
-
-      const tokenData = await tokenResponse.json();
-
-      const { error: updateError } = await supabase
-        .from("spotify_credentials")
-        .update({
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
-          token_expiry: new Date(
-            Date.now() + tokenData.expires_in * 1000
-          ).toISOString(),
-          auth_completed: true,
-          first_used_at: new Date().toISOString(),
-          last_used: new Date().toISOString(),
-        })
-        .eq("session_id", sessionId);
-
-      if (updateError) {
-        throw new Error("Failed to store tokens");
-      }
-
-      setAccessToken(tokenData.access_token);
-      setRefreshToken(tokenData.refresh_token);
-      setAuthState({
-        authSelectionMade: true,
-        authType: "custom",
-        tempId: tempId,
-      });
-
-      const root = document.getElementById("__next");
-      if (root) {
-        ReactDOM.render(<PhoneAuthResult status="success" />, root);
-      }
-    } catch (error) {
-      const root = document.getElementById("__next");
-      if (root) {
-        ReactDOM.render(
-          <PhoneAuthResult status="error" error={error.message} />,
-          root
-        );
-      }
-    }
-  };
-
   const handleAuthSelection = async (selection) => {
     const newState = {
       authSelectionMade: true,
       authType: selection.type,
+      deviceId: selection.deviceId
     };
+    
     setAuthState(newState);
 
-    if (selection.accessToken) {
-      setAccessToken(selection.accessToken);
+    if (selection.authCode) {
+      setAuthCode(selection.authCode);
     }
-    if (selection.refreshToken) {
-      setRefreshToken(selection.refreshToken);
+  };
+
+  useEffect(() => {
+    const handleCodeExchange = async () => {
+      if (authCode && authState.deviceId) {
+        try {
+          await exchangeCodeForToken(authCode, authState.deviceId);
+        } catch (error) {
+          console.error("Token exchange failed:", error);
+        }
+      }
+    };
+
+    handleCodeExchange();
+  }, [authCode, authState.deviceId]);
+
+  const exchangeCodeForToken = async (code, deviceId) => {
+    try {
+      const clientId = localStorage.getItem("spotifyClientId");
+      const clientSecret = localStorage.getItem("spotifyClientSecret");
+
+      if (!clientId || !clientSecret) {
+        throw new Error("Missing credentials");
+      }
+
+      const params = new URLSearchParams();
+      params.append("grant_type", "authorization_code");
+      params.append("code", code);
+      params.append("redirect_uri", "https://192.168.1.232:4000/v1/auth/callback");
+
+      const response = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: "Basic " + btoa(`${clientId}:${clientSecret}`),
+        },
+        body: params.toString(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Token exchange error response:", errorData);
+        throw new Error(`Token exchange failed: ${errorData.error}`);
+      }
+
+      const data = await response.json();
+      
+      setAccessToken(data.access_token);
+      setRefreshToken(data.refresh_token);
+      
+      localStorage.setItem("spotifyAccessToken", data.access_token);
+      localStorage.setItem("spotifyRefreshToken", data.refresh_token);
+      localStorage.setItem("spotifyTokenExpiry", new Date(Date.now() + data.expires_in * 1000).toISOString());
+      localStorage.setItem("spotifyAuthType", "custom");
+
+      return data;
+    } catch (error) {
+      console.error("Error in exchangeCodeForToken:", error);
+      throw error;
+    }
+  };
+
+  const clearSession = async () => {
+    try {
+      const authItems = [
+        "spotifyAccessToken",
+        "spotifyRefreshToken",
+        "spotifyTokenExpiry",
+        "spotifyAuthType",
+        "spotifyClientId",
+        "spotifyClientSecret"
+      ];
+      authItems.forEach((item) => localStorage.removeItem(item));
+
+      setAccessToken(null);
+      setRefreshToken(null);
+      setAuthState({
+        authSelectionMade: false,
+        authType: null,
+      });
+      
+    } catch (error) {
+      console.error("Error during session cleanup:", error);
+      throw error;
     }
   };
 
   const refreshAccessToken = async () => {
     try {
+      const clientId = localStorage.getItem("spotifyClientId");
+      const clientSecret = localStorage.getItem("spotifyClientSecret");
       const currentRefreshToken = localStorage.getItem("spotifyRefreshToken");
-      const currentAuthType = localStorage.getItem("spotifyAuthType");
-      const currentTempId = localStorage.getItem("spotifyTempId");
 
-      const response = await fetch("/api/v1/auth/refresh-token", {
+      const params = new URLSearchParams();
+      params.append("grant_type", "refresh_token");
+      params.append("refresh_token", currentRefreshToken);
+
+      const response = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: "Basic " + btoa(`${clientId}:${clientSecret}`),
         },
-        body: JSON.stringify({
-          refresh_token: currentRefreshToken,
-          isCustomAuth: currentAuthType === "custom",
-          tempId: currentTempId,
-        }),
+        body: params.toString(),
       });
 
       if (!response.ok) {
@@ -150,92 +180,9 @@ export function useAuthState() {
 
       return data;
     } catch (error) {
+      console.error("Error refreshing token:", error);
       throw error;
     }
-  };
-
-  const clearSession = async () => {
-    try {
-      const refreshToken = localStorage.getItem("spotifyRefreshToken");
-      const tempId = localStorage.getItem("spotifyTempId");
-      const authType = localStorage.getItem("spotifyAuthType");
-
-      if (authType === "custom" && refreshToken && tempId) {
-        await supabase.from("spotify_credentials").delete().match({
-          temp_id: tempId,
-          refresh_token: refreshToken,
-        });
-      }
-
-      const authItems = [
-        "spotifyAccessToken",
-        "spotifyRefreshToken",
-        "spotifyTokenExpiry",
-        "spotifyAuthType",
-        "spotifyTempId",
-        "spotifySessionId",
-      ];
-      authItems.forEach((item) => localStorage.removeItem(item));
-
-      setAccessToken(null);
-      setRefreshToken(null);
-      setAuthState({
-        authSelectionMade: false,
-        authType: null,
-      });
-    } catch (error) {
-      console.error("Error during session cleanup:", error);
-      throw error;
-    }
-  };
-
-  const redirectToSpotify = () => {
-    const scopes = [
-      "user-read-recently-played",
-      "user-read-private",
-      "user-top-read",
-      "user-read-playback-state",
-      "user-modify-playback-state",
-      "user-read-currently-playing",
-      "user-library-read",
-      "user-library-modify",
-      "playlist-read-private",
-      "playlist-read-collaborative",
-      "playlist-modify-public",
-      "playlist-modify-private",
-    ].join(" ");
-
-    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-    const urlParams = new URLSearchParams(window.location.search);
-    const phoneSession = urlParams.get("session");
-    const isPhoneAuth = !!phoneSession;
-
-    if (!clientId) {
-      throw new Error("No client ID available");
-    }
-
-    const state = isPhoneAuth
-      ? encodeURIComponent(
-          JSON.stringify({
-            phoneAuth: true,
-            sessionId: phoneSession,
-          })
-        )
-      : undefined;
-
-    const authUrl = new URL("https://accounts.spotify.com/authorize");
-    authUrl.searchParams.append("client_id", clientId);
-    authUrl.searchParams.append("response_type", "code");
-    authUrl.searchParams.append(
-      "redirect_uri",
-      process.env.NEXT_PUBLIC_REDIRECT_URI
-    );
-    authUrl.searchParams.append("scope", scopes);
-    if (state) {
-      authUrl.searchParams.append("state", state);
-    }
-
-    window.location.href = authUrl.toString();
   };
 
   return {
@@ -248,9 +195,8 @@ export function useAuthState() {
     authCode,
     setAuthCode,
     handleAuthSelection,
-    handlePhoneAuth,
     refreshAccessToken,
     clearSession,
-    redirectToSpotify,
+    exchangeCodeForToken
   };
 }

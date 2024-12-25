@@ -1,58 +1,65 @@
 import React, { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ArrowLeftIcon, XIcon } from "../../icons";
+import { registerDevice, checkAuthStatus } from "../../../services/authService";
 
 const QRAuthFlow = ({ onBack, onComplete }) => {
-  const [sessionId, setSessionId] = useState("");
+  const [deviceId, setDeviceId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
-    const generateSessionId = () => {
-      const array = new Uint8Array(16);
-      crypto.getRandomValues(array);
-      return Array.from(array, (byte) =>
-        byte.toString(16).padStart(2, "0")
-      ).join("");
+    const initDevice = async () => {
+      try {
+        const { deviceId } = await registerDevice();
+        setDeviceId(deviceId);
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Failed to register device:", err);
+        setError("Failed to generate QR code");
+        setIsLoading(false);
+      }
     };
-    setSessionId(generateSessionId());
-    setIsLoading(false);
+
     setIsVisible(true);
+    initDevice();
   }, []);
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!deviceId) return;
 
     let isMounted = true;
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(
-          `/api/v1/auth/qr/check?session_id=${sessionId}`
-        );
-        const data = await response.json();
+        const data = await checkAuthStatus(deviceId);
 
         if (!isMounted) return;
 
-        if (data.authCompleted && data.access_token && data.refresh_token) {
+        if (data.status === 'authorized') {
           clearInterval(pollInterval);
+          const clientId = data.encryptedData?.clientId;
+          const clientSecret = data.encryptedData?.clientSecret;
+          const authCode = data.code;
 
-          localStorage.setItem("spotifyAccessToken", data.access_token);
-          localStorage.setItem("spotifyRefreshToken", data.refresh_token);
-          localStorage.setItem("spotifyTokenExpiry", data.token_expiry);
-          localStorage.setItem("spotifyAuthType", "custom");
-          localStorage.setItem("spotifyTempId", data.tempId);
-
-          onComplete({
-            type: "custom",
-            tempId: data.tempId,
-            skipSpotifyAuth: true,
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
-          });
-        } else if (data.authCompleted) {
-          console.error("Auth completed but missing tokens");
+          if (clientId && clientSecret && authCode) {
+            // Storing these in localStorage temporarily
+            localStorage.setItem('spotifyClientId', clientId);
+            localStorage.setItem('spotifyClientSecret', clientSecret);
+            localStorage.setItem('spotifyAuthType', 'custom');
+            onComplete({
+              type: "custom",
+              authCode: data.code,
+              deviceId
+            });
+          } else {
+            const missing = [];
+            if (!clientId) missing.push('clientId');
+            if (!clientSecret) missing.push('clientSecret');
+            if (!authCode) missing.push('authCode');
+            setError(`Incomplete auth data. Missing: ${missing.join(', ')}`);
+          }
         }
 
         if (error) setError(null);
@@ -71,7 +78,7 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
       clearInterval(pollInterval);
       clearTimeout(timeoutId);
     };
-  }, [sessionId, onComplete, error]);
+  }, [deviceId, onComplete, error]);
 
   const handleClose = () => {
     setIsExiting(true);
@@ -110,15 +117,11 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
       );
     }
 
-    if (!sessionId) {
+    if (!deviceId) {
       return null;
     }
 
-    const origin =
-      window.location.origin == "https://localhost:3500"
-        ? "https://172.20.10.12:3500"
-        : window.location.origin;
-    const qrUrl = `${origin}/phone-auth?session=${sessionId}`;
+    const qrUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/auth/ui/${deviceId}`;
 
     return (
       <div className="flex flex-col items-center space-y-8">
