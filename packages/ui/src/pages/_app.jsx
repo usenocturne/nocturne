@@ -28,6 +28,7 @@ import {
   notoSansBN,
   notoSansTA,
   notoSansTH,
+  notoSansGK,
 } from "../constants/fonts";
 import {
   BrightnessLowIcon,
@@ -63,7 +64,7 @@ export default function App({ Component, pageProps }) {
   const lastActivityTimeRef = useRef(Date.now());
   const inactivityTimeoutRef = useRef(null);
 
-  const mainFontClasses = `${inter.variable} ${notoSansSC.variable} ${notoSansTC.variable} ${notoSerifJP.variable} ${notoSansKR.variable} ${notoNaskhAR.variable} ${notoSansDV.variable} ${notoSansHE.variable} ${notoSansBN.variable} ${notoSansTA.variable} ${notoSansTH.variable}`;
+  const mainFontClasses = `${inter.variable} ${notoSansSC.variable} ${notoSansTC.variable} ${notoSerifJP.variable} ${notoSansKR.variable} ${notoNaskhAR.variable} ${notoSansDV.variable} ${notoSansHE.variable} ${notoSansBN.variable} ${notoSansTA.variable} ${notoSansTH.variable} ${notoSansGK.variable}`;
 
   const handleError = (errorType, errorMessage) => {
     setError({
@@ -551,7 +552,7 @@ export default function App({ Component, pageProps }) {
     <main
     className={`overflow-hidden relative min-h-screen rounded-2xl ${mainFontClasses}`}
       style={{
-        fontFamily: "var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-bn), var(--font-noto-sans-ta), var(--font-noto-sans-th)",
+        fontFamily: "var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-bn), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk)",
         fontOpticalSizing: "auto",
       }}
     >
