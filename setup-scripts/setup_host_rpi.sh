@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-#SCRIPT NAME: setup_host_rpi
-#AUTHOR(s): https://github.com/usenocturne/nocturne-image/
-#DESCRIPTION: Configures a Raspberry Pi running Debian Bullseye to be a network passthrough device for the Spotify Car Thing running custom firmware.
+# Configures a Raspberry Pi running Debian Bullseye to be a network passthrough device for the Spotify Car Thing running custom firmware.
 
 set -e  # bail on any errors
 
