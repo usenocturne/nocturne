@@ -188,8 +188,3 @@ export const fontFamilyForScript = {
   tamil: `var(--font-noto-sans-ta), var(--font-inter)`,
   thai: `var(--font-noto-sans-th), var(--font-inter)`,
 };
-
-export function useDynamicFont(text) {
-  const script = detectTextScript(text);
-  return fontFamilyForScript[script] || fontFamilyForScript.latin;
-}
