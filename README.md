@@ -24,11 +24,11 @@
 
 ## How To Use
 
-To run Nocturne on your Car Thing, you'll need a host device tethered to it, such as a Raspberry Pi, Windows PC, Mac, or Linux PC, along with a Spotify Premium account. For flashing your Car Thing, you can use the web-based [Terbium](https://terbium.app/), a tool designed for quick and easy setup via a compatible browser (e.g., Chromium). Alternatively, advanced users can opt for the CLI version of [superbird-tool](https://github.com/thinglabsoss/superbird-tool) to manually flash the required image to their device. 
+To run Nocturne on your Car Thing, you will need a host device tethered to it, such as a Raspberry Pi, Windows PC, or Linux PC, along with a Spotify Premium account. For flashing your Car Thing, you can use the web-based [Terbium](https://terbium.app/), a tool designed for quick and easy setup via a compatible browser. If Terbium is not working for you, then you can use  [superbird-tool](https://github.com/thinglabsoss/superbird-tool) to manually flash the required image to their device. 
 
 ### Flashing the Spotify Car Thing
 
-To flash your Car Thing with the Nocturne image download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases), connect the Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting). Then follow either of the below flashing methods.
+To flash your Car Thing with the Nocturne image, download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases). Next, connect the Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and follow either of the flashing methods.
 
 <details>
 <summary>Using Terbium (Recommended)</summary>
@@ -90,7 +90,7 @@ $ sudo ./setup_host_rpi.sh
 $ sudo reboot
 ```
 
-Optionally for portable/car use, you can configure the Raspberry Pi to prioritize connecting to your phone's mobile hotspot as follows:
+If you would like to use Nocturne in a car, you can run the following commands to allow your phone's hotspot to provide internet: 
 
 ```bash
 # SSH into Raspberry Pi
@@ -138,7 +138,7 @@ As an FYI, your mileage may vary greately here. You may need to configure the Wi
 
 ### Setting up Nocturne UI
 
-Follow the steps as described [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup) to finish the setup of Nocturne.
+Follow the steps as described [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup), scan the QR code, enter the Client ID and Client Secret, and log into Spotify to finish the setting up Nocturne.
 
 ## Troubleshooting
 
@@ -148,7 +148,7 @@ If you are having issues flashing Nocturne to your Car Thing, check out the guid
 <details>
 <summary>superbird-tool: USBTimeoutError</summary>
 
-If you are running into this error while flashing your Car Thing, try using the option `--slow_burn` or `--slower_burn` in the command used to flash. 
+If you are encountering this error while flashing your Car Thing, try using the option `--slow_burn` or `--slower_burn` in the command used to flash. 
 
 This will look like the following:
 ```bash
@@ -176,7 +176,7 @@ For Linux, it will be `python3`
 <details>
 <summary>superbird-tool: "bulkcmd timed out or failed!" after system_b </summary>
 
-If you are running into this error while flashing your Car Thing, you must replace the `superbird_partitions.py` file in the `superbird-tool` folder with the one provided in this repo. 
+If you are encountering this error while flashing your Car Thing, you must replace the `superbird_partitions.py` file in the `superbird-tool` folder with the one provided in this repo. 
 
 This error occurs since some devices have a smaller data partition, causing the error when attempting to flash the data partition.
 </details>
@@ -184,7 +184,7 @@ This error occurs since some devices have a smaller data partition, causing the 
 <details>
 <summary>superbird-tool: AssertionError </summary>
 
-If you are running into this error while flashing your Car Thing, you must install the `libusbk` driver in Zadig. You can do this with the steps found [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#windows), and replacing `libusb-win32` with `libusbk` instead.
+If you are encountering this error while flashing your Car Thing, you must install the `libusbk` driver in Zadig. You can do this with the steps found [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#windows), and replacing `libusb-win32` with `libusbk` instead.
 </details>
 
 If your issue is not listed here, or if you need help, join our Discord [here!](https://discord.gg/GTP9AawHPt)
