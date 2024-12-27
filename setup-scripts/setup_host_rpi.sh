@@ -2,7 +2,7 @@
 
 #SCRIPT NAME: setup_host_rpi
 #AUTHOR(s): https://github.com/usenocturne/nocturne-image/
-#DESCRIPTION: Configures a Raspberry Pi running Debian Bullseye to be a network passthrough device for the Spotify CarThing running custom firmware.
+#DESCRIPTION: Configures a Raspberry Pi running Debian Bullseye to be a network passthrough device for the Spotify Car Thing running custom firmware.
 
 set -e  # bail on any errors
 
@@ -73,7 +73,7 @@ if ! lsb_release -a | grep -q "Raspbian GNU/Linux 11 (bullseye)"; then
     exit 1
 fi
 
-# Detect if usb0 CarThing NIC is already configured.
+# Detect if usb0 Car Thing NIC is already configured.
 if ! ip addr show "${CT_INTERFACE}" | grep -q "${USBNET_PREFIX} "; then
     echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
     exit 1
@@ -113,7 +113,7 @@ else
 fi
 
 # Ask if user wants ports forwarded for ssh, vnc, and debugging
-read -p "Do you want to enable dev mode to have remote access to the CarThing? (y/N): " dev_response
+read -p "Do you want to enable dev mode to have remote access to the Car Thing? (y/N): " dev_response
 case "$dev_response" in
     [Yy]* )
         echo "Dev mode will be enabled!"
@@ -208,7 +208,7 @@ iface usb0 inet static
 	netmask 255.255.255.0
 EOF
 
-# Add superbird (CarThing) to /etc/hosts
+# Add superbird (Car Thing) to /etc/hosts
 append_if_missing "${USBNET_PREFIX}.2  ${HOST_NAME}"  "/etc/hosts"
 
 echo "Need to reboot for all changes to take effect!"

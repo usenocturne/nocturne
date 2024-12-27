@@ -116,9 +116,9 @@ NOTE: A rewrite of the script is in progress to address edge cases and allow for
 
 NOTE: NO SUPPORT IS PROVIDED FOR THIS METHOD
 
-NOTE: This setup method is not recommended as there are frequent issues with the AMD USB chipset with earlier Ryzen models and recognizing the CarThing. Proceed with caution knowing that it may not work with your PC.
+NOTE: This setup method is not recommended as there are frequent issues with the AMD USB chipset with earlier Ryzen models and recognizing the Car Thing. Proceed with caution knowing that it may not work with your PC.
 
-Enter the following commands in powershell as Administrator to allow internet access to your CarThing:
+Enter the following commands in powershell as Administrator to allow internet access to your Car Thing:
 
 ```bash
 #Identify correct network adapter is present:
@@ -127,7 +127,7 @@ $ctNic = (Get-NetAdapter -InterfaceDescription "*NDIS*")
 #Set IP address of network interface:
 $ctNic | Set-NetIPAddress -IPAddress 192.168.7.1 -PrefixLength 24
 
-#Allow sharing of network connection to CarThing
+#Allow sharing of network connection to Car Thing
 New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 192.168.7.0/24
 
 ```
