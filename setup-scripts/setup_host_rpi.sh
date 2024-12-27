@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Configures a Raspberry Pi running Debian Bullseye to be a network passthrough device for the Spotify Car Thing running custom firmware.
+# Configures a Raspberry Pi to be a network passthrough device for the Spotify Car Thing running custom firmware.
 
 set -e # bail on any error
 
@@ -15,7 +15,6 @@ CT_INTERFACE="usb0"
 WAN_INTERFACE="wlan0" # should be wlan0 for wifi, unless you connect a USB NIC
 NET_ADAPTERS=($(ip link | grep -oE '\b(eth[0-9]+|wlan[0-9]+)\b'))
 DEV_MODE=0
-
 
 # Remove a file if it exists
 function remove_if_exists() {
@@ -48,10 +47,10 @@ function forward_port() {
     if [ -z "$DEST" ]; then
         DEST="$SOURCE"
     fi
-    iptables -t nat -A PREROUTING -p tcp -i "${WAN_INTERFACE}" --dport "$SOURCE" -j DNAT --to-destination "${USBNET_PREFIX}.2:$DEST"
-    iptables -A FORWARD -p tcp -d "${USBNET_PREFIX}.2" --dport "$DEST" -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-}
 
+    nft add rule ip nat prerouting tcp dport "$SOURCE" iifname "${WAN_INTERFACE}" dnat to "${USBNET_PREFIX}.2:$DEST"
+    nft add rule ip filter forward ip daddr "${USBNET_PREFIX}.2" tcp dport "$DEST" ct state new,established,related accept
+}
 
 if [ "$(id -u)" != "0" ]; then
     echo "Must be run as root"
@@ -60,11 +59,6 @@ fi
 
 if [ "$(uname -s)" != "Linux" ]; then
     echo "Only works on Linux!"
-    exit 1
-fi
-
-if ! lsb_release -a | grep -q "Raspbian GNU/Linux 11 (bullseye)"; then
-    echo "Current OS not supported! Only Raspbian Bullseye is supported at the moment."
     exit 1
 fi
 
@@ -107,8 +101,8 @@ else
     echo "Only one WiFi interface detected, using $WAN_INTERFACE..."
 fi
 
-# ask if user wants ports forwarded for ssh, vnc, and debugging
-read -p "Do you want to enable dev mode to have remote access (ssh, vnc, chrome remote debugging) to the Car Thing? (y/N): " dev_response
+# ask if user wants ports forwarded for ssh and remote debugging
+read -p "Do you want to enable developer mode to have remote access (ssh/chrome remote debugging) to the Car Thing? (y/N): " dev_response
 case "$dev_response" in
     [Yy]* )
         echo "Dev mode will be enabled!"
@@ -127,16 +121,11 @@ esac
 # MAIN SCRIPT
 
 echo "Updating repositories and packages..."
-apt -qq update -y > /dev/null
-apt -qq upgrade -y > /dev/null
+apt -qq update -y
+apt -qq upgrade -y
 
 echo "Installing deps..."
-apt install -qq iptables iptables-persistent -y > /dev/null
-
-# fix usb enumeration when connecting superbird in maskroom mode
-echo "Applying USB fixes..."
-echo '# Amlogic S905 series can be booted up in Maskrom Mode, and it needs a rule to show up correctly' > /etc/udev/rules.d/70-carthing-maskrom-mode.rules
-echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="1b8e", ATTR{idProduct}=="c003", MODE:="0666", SYMLINK+="worldcup"' >> /etc/udev/rules.d/70-carthing-maskrom-mode.rules
+apt install -qq -y nftables ifupdown 
 
 # prevent systemd / udev from renaming usb network devices by mac address
 remove_if_exists /lib/systemd/network/73-usb-net-by-mac.link
@@ -168,10 +157,12 @@ iptables -A POSTROUTING -t nat -j MASQUERADE -s "${USBNET_PREFIX}.0/24"
 
 if [ "$DEV_MODE" -eq 1 ]; then
     echo "Setting up Dev Mode..."
+
+    # ssh port, use port 2022 to connect
     echo "Forwarding port: 2022:22"
     forward_port 2022 22
-    echo "Forwarding port: 5900:5900"
-    forward_port 5900
+
+    # remote debugging port, use port 9222 to connect
     echo "Forwarding port: 9222:9222"
     forward_port 9222
 else
