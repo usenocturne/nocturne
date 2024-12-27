@@ -33,9 +33,9 @@ To flash your Car Thing with the Nocturne image, download and unzip the latest i
 <details>
 <summary>Using Terbium (Recommended)</summary>
 
-Open [Terbium](https://terbium.app/) in a web usb compatible browser (ex. Google Chrome, Chromium, etc)
+Open [Terbium](https://terbium.app/) in a WebUSB compatible browser (ex. Google Chrome, Chromium, etc).
 
-Follow the prompts in Terbium as they follow and select the folder path `/path/to/nocturne-image/image` as the image folder.
+Follow the prompts in Terbium and select the folder path `/path/to/nocturne-image/image` when prompted to select an image folder.
 
 </details>
 
