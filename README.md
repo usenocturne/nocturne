@@ -63,10 +63,11 @@ Follow the prompts in Terbium as they follow and select the folder path `/path/t
 
 NOTE: This setup requires the following extra hardware:
 ```
-1x Pi Zero W 1/2
-1x Micro USB to USB cable or adapter
-1x SD Card >= 8GB
-1x 5V 2A power supply
+- Pi Zero W or Pi Zero 2 W
+- Micro USB to USB C Cable (to connect the Car Thing to the Pi)
+- Micro USB to USB A/USB C Cable (to power the Pi)  
+- SD Card >= 8GB
+- 5V 2A power supply
 ```
 
 Download and open [Raspberry Pi Imager](https://www.raspberrypi.com/software/), select Raspberry Pi OS (Legacy, 64-bit) Lite, select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
