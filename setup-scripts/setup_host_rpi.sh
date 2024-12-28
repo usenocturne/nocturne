@@ -130,9 +130,7 @@ remove_if_exists /lib/systemd/network/73-usb-net-by-mac.link
 remove_if_exists /lib/udev/rules.d/73-usb-net-by-mac.rules
 
 echo "Enabling IP forwarding..."
-append_if_missing "net.ipv4.ip_forward = 1" /etc/sysctl.conf || {
-    sysctl -p # reload from conf
-}
+echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/nocturne.conf
 
 # clear rules, and add new tables
 echo "Setting up nftables..."
