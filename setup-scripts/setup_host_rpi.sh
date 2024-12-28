@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 # Configures a Raspberry Pi to be a network passthrough device for the Spotify Car Thing running custom firmware.
-# TODO: find out why append_if_missing is not working as it should
 
 set -e # bail on any error
 
@@ -33,11 +32,9 @@ function append_if_missing() {
     FILEPATH="$2"
     grep -q "$STRING" "$FILEPATH" || {
         echo "appending \"$STRING\" to $FILEPATH"
-        echo "$STRING" >> "$FILEPATH"
-        return 1
+        printf "%s\n" "$STRING" >> "$FILEPATH"
     }
     echo "Already found \"$STRING\" in $FILEPATH"
-    return 0
 }
 
 # Usage: forward_port <host port> <superbird port>
