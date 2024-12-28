@@ -122,11 +122,11 @@ esac
 # MAIN SCRIPT
 
 echo "Updating repositories and packages..."
-apt -qq update -y
-apt -qq upgrade -y
+apt -qq -y update 
+apt -qq -y upgrade 
 
 echo "Installing deps..."
-apt install -qq -y nftables ifupdown 
+apt -qq -y install  nftables ifupdown 
 
 # prevent systemd / udev from renaming usb network devices by mac address
 remove_if_exists /lib/systemd/network/73-usb-net-by-mac.link
