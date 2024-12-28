@@ -9,10 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 HOST_NAME="superbird"
 USBNET_PREFIX="192.168.7" # usb network will use .1 as host device and .2 for superbird
-# typically usb0 but can appear as eth0 depending on network manager.
-# TODO: determine this interface name automatically
-# in my testing, it seems that itll be ethX, where X is 0 (pi zero) or 1 (any pi with an ethernet port), but i will test more 
-CT_INTERFACE="eth0"
+CT_INTERFACE="eth0" 
 WAN_INTERFACE="wlan0" # should be wlan0 for wifi, unless you connect a USB NIC
 NET_ADAPTERS=($(ip link | grep -oE '\b(eth[0-9]+|wlan[0-9]+)\b'))
 DEV_MODE=0
@@ -67,6 +64,13 @@ if lsusb | grep -q "Google Inc."; then
 else
     echo "Car Thing not detected. Please plug in the Car Thing and try again"
     exit 1
+fi
+
+# set CT_INTERFACE depending on what pi this script is being ran on 
+if [[ "$(cat /sys/firmware/devicetree/base/model | sed 's/\(.*\)\(Model\|Rev\).*/\1/')" == *"Pi Zero"* ]] then 
+    CT_INTERFACE="eth0"
+else
+    CT_INTERFACE="eth1"
 fi
 
 # detect if multiple NIC are present and select one
