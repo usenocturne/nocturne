@@ -106,11 +106,11 @@ fi
 read -p "Do you want to enable developer mode to have remote access (ssh/chrome remote debugging) to the Car Thing? (y/N): " dev_response
 case "$dev_response" in
     [Yy]* )
-        echo "Dev mode will be enabled!"
+        echo "Developer mode will be enabled!"
         DEV_MODE=1
         ;;
     [Nn]* )
-        echo "Dev mode will not be enabled!"
+        echo "Developer mode will not be enabled!"
         DEV_MODE=0
         ;;
     * )
@@ -160,11 +160,11 @@ if [ "$DEV_MODE" -eq 1 ]; then
     echo "Setting up Dev Mode..."
 
     # ssh port, use port 2022 to connect
-    echo "Forwarding port: 2022:22"
+    echo "Forwarding SSH port: 2022:22"
     forward_port 2022 22
 
     # remote debugging port, use port 9222 to connect
-    echo "Forwarding port: 9222:9222"
+    echo "Forwarding Remote Debugging port: 9222:9222"
     forward_port 9222
 else
     echo "Skipping Dev Mode setup..."
