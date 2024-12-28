@@ -48,7 +48,7 @@ function forward_port() {
         DEST="$SOURCE"
     fi
 
-    nft add rule ip nat prerouting tcp dport "$SOURCE" iifname "${WAN_INTERFACE}" dnat to "${USBNET_PREFIX}.2:$DEST"
+    nft add rule ip nat prerouting tcp dport "$SOURCE" iifname "$WAN_INTERFACE" dnat to "${USBNET_PREFIX}.2:$DEST"
     nft add rule ip filter forward ip daddr "${USBNET_PREFIX}.2" tcp dport "$DEST" ct state new,established,related accept
 }
 
