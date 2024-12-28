@@ -11,7 +11,8 @@ HOST_NAME="superbird"
 USBNET_PREFIX="192.168.7" # usb network will use .1 as host device and .2 for superbird
 # typically usb0 but can appear as eth0 depending on network manager.
 # TODO: determine this interface name automatically
-CT_INTERFACE="usb0"
+# in my testing, it seems that itll be ethX, where X is 0 (pi zero) or 1 (any pi with an ethernet port), but i will test more 
+CT_INTERFACE="eth0"
 WAN_INTERFACE="wlan0" # should be wlan0 for wifi, unless you connect a USB NIC
 NET_ADAPTERS=($(ip link | grep -oE '\b(eth[0-9]+|wlan[0-9]+)\b'))
 DEV_MODE=0
