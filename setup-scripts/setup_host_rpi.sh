@@ -62,8 +62,7 @@ if [ "$(uname -s)" != "Linux" ]; then
 fi
 
 # detect if Car Thing is plugged in
-if lsusb | grep -q "Google Inc."
-then
+if lsusb | grep -q "Google Inc."; then
     echo "Car Thing detected, proceeding with setup"
 else
     echo "Car Thing not detected. Please plug in the Car Thing and try again"
@@ -75,9 +74,11 @@ if [ "${#NET_ADAPTERS[@]}" -gt 1 ]; then
     NIC_ID=0
     echo "Multiple NICs found, please choose a network adapter that is connected to the internet"
     echo "Your options are: "
+    
     for i in ${!NET_ADAPTERS[@]}; do
         echo "$i - ${NET_ADAPTERS[i]}"
     done
+    
     echo ""
     read -p "Choice: " NIC_ID
     WAN_INTERFACE="${NET_ADAPTERS[NIC_ID]}"
@@ -118,7 +119,7 @@ apt -qq -y update
 apt -qq -y upgrade 
 
 echo "Installing deps..."
-apt -qq -y install  nftables ifupdown 
+apt -qq -y install nftables ifupdown 
 
 # prevent systemd / udev from renaming usb network devices by mac address
 remove_if_exists /lib/systemd/network/73-usb-net-by-mac.link
