@@ -129,8 +129,6 @@ append_if_missing "net.ipv4.ip_forward = 1" /etc/sysctl.conf || {
     sysctl -p # reload from conf
 }
 
-mkdir -p /etc/iptables
-
 # clear rules, and add new tables
 echo "Setting up nftables..."
 nft flush ruleset
