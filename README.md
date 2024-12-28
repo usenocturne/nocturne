@@ -108,7 +108,7 @@ $ sudo python3 ./setup_hotspot_rpi.py
 <details>
 <summary>Linux (TBD)</summary>
 
-NOTE: A rewrite of the script is in progress to address edge cases and allow for greater device security. If you want to persue this route still you will need knowledge of your Linux OS and how to configure your local firewall for NAT and forwarding of network traffic. Unfortunately this varies greatly between OS (ex. Ubuntu uses UFW, Fedora uses firewalld, and Debian uses nftables).
+NOTE: A rewrite of the script is in progress to address edge cases and allow for greater device security. If you still would like to persue this route, you will need to know how to configure your local firewall for NAT and forwarding of network traffic for your specific distro. Unfortunately, this varies greatly between OS (ex. Ubuntu uses UFW, Fedora uses firewalld, and Debian uses nftables).
 
 </details>
 
