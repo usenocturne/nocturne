@@ -62,11 +62,12 @@ if [ "$(uname -s)" != "Linux" ]; then
     exit 1
 fi
 
-# detect if usb0 (Car Thing network) is already configured.
-if ! ip addr show "${CT_INTERFACE}" | grep -q "${USBNET_PREFIX} "; then
-    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
-    exit 1
-fi
+# detect if usb0 (Car Thing network) is already configured. 
+# commented out since it still did not work
+#if ! ip addr show "${CT_INTERFACE}" | grep -q "${USBNET_PREFIX} "; then
+#    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
+#    exit 1
+#fi
 
 # detect if Car Thing is plugged in
 if lsusb | grep -q "Google Inc."
