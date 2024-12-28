@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Configures a Raspberry Pi to be a network passthrough device for the Spotify Car Thing running custom firmware.
+# TODO: find out why append_if_missing is not working as it should
 
 set -e # bail on any error
 
