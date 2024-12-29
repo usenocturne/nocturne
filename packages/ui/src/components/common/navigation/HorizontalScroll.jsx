@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/router";
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 
 export default function HorizontalScroll({
   children,
@@ -86,23 +86,26 @@ export default function HorizontalScroll({
   };
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!["ArrowLeft", "ArrowRight", "Enter"].includes(e.key)) return;
+    if (activeSection === "settings") return;
+    
+    const handleWheel = (e) => {
       if (!containerRef.current || items.length === 0) return;
+      e.preventDefault();
 
       lastActivityRef.current = Date.now();
       if (inactivityTimeoutRef.current) {
         clearTimeout(inactivityTimeoutRef.current);
       }
 
-      if (selectedIndex === -1 && ["ArrowLeft", "ArrowRight"].includes(e.key)) {
+      if (selectedIndex === -1) {
         const scaledItem = items.findIndex(
           (item) =>
             item.classList.contains("scale-105") ||
             item.classList.contains("transition-transform")
         );
 
-        const startIndex = scaledItem !== -1 ? scaledItem : 0;
+        const startIndex = scaledItem !== -1 ? scaledItem : 
+                          e.deltaX > 0 ? 0 : items.length - 1;
         setSelectedIndex(startIndex);
         const targetItem = items[startIndex];
 
@@ -130,93 +133,61 @@ export default function HorizontalScroll({
       let newIndex = selectedIndex;
       const maxIndex = items.length - 1;
 
-      switch (e.key) {
-        case "ArrowLeft":
-          if (selectedIndex > 0) {
-            newIndex = selectedIndex - 1;
-            const targetItem = items[newIndex];
-            if (targetItem) {
-              items.forEach((item) => {
-                item.classList.remove(
-                  "scale-105",
-                  "transition-transform",
-                  "duration-200",
-                  "ease-out"
-                );
-              });
-              targetItem.classList.add(
+      if (e.deltaX > 0) {
+        if (selectedIndex < maxIndex) {
+          newIndex = selectedIndex + 1;
+          const targetItem = items[newIndex];
+          if (targetItem) {
+            items.forEach((item) => {
+              item.classList.remove(
                 "scale-105",
                 "transition-transform",
                 "duration-200",
                 "ease-out"
               );
-              setSelectedIndex(newIndex);
-              scrollItemIntoView(targetItem);
-            }
+            });
+            targetItem.classList.add(
+              "scale-105",
+              "transition-transform",
+              "duration-200",
+              "ease-out"
+            );
+            setSelectedIndex(newIndex);
+            scrollItemIntoView(targetItem);
           }
-          break;
-
-        case "ArrowRight":
-          if (selectedIndex < maxIndex) {
-            newIndex = selectedIndex + 1;
-            const targetItem = items[newIndex];
-            if (targetItem) {
-              items.forEach((item) => {
-                item.classList.remove(
-                  "scale-105",
-                  "transition-transform",
-                  "duration-200",
-                  "ease-out"
-                );
-              });
-              targetItem.classList.add(
+        } else {
+          const lastItem = items[maxIndex];
+          if (lastItem) {
+            lastItem.classList.add(
+              "scale-105",
+              "transition-transform",
+              "duration-200",
+              "ease-out"
+            );
+          }
+        }
+      } else if (e.deltaX < 0) {
+        if (selectedIndex > 0) {
+          newIndex = selectedIndex - 1;
+          const targetItem = items[newIndex];
+          if (targetItem) {
+            items.forEach((item) => {
+              item.classList.remove(
                 "scale-105",
                 "transition-transform",
                 "duration-200",
                 "ease-out"
               );
-              setSelectedIndex(newIndex);
-              scrollItemIntoView(targetItem);
-            }
-          } else {
-            newIndex = maxIndex;
-            const lastItem = items[maxIndex];
-            if (lastItem) {
-              lastItem.classList.add(
-                "scale-105",
-                "transition-transform",
-                "duration-200",
-                "ease-out"
-              );
-            }
+            });
+            targetItem.classList.add(
+              "scale-105",
+              "transition-transform",
+              "duration-200",
+              "ease-out"
+            );
+            setSelectedIndex(newIndex);
+            scrollItemIntoView(targetItem);
           }
-          break;
-
-        case "Enter":
-          if (selectedIndex !== -1) {
-            const link = items[selectedIndex]?.querySelector("a");
-            if (link?.getAttribute("href")) {
-              const href = link.getAttribute("href");
-              router.push(
-                `${href}${
-                  href.includes("?") ? "&" : "?"
-                }accessToken=${accessToken}`
-              );
-            }
-          }
-          return;
-      }
-
-      if (inactivityTimeoutRef.current) {
-        clearTimeout(inactivityTimeoutRef.current);
-      }
-
-      if (newIndex !== selectedIndex) {
-        setSelectedIndex(newIndex);
-        const targetItem = items[newIndex];
-        if (targetItem) {
-          targetItem.classList.add("scale-105");
-          scrollItemIntoView(targetItem);
         }
       }
 
@@ -239,14 +210,31 @@ export default function HorizontalScroll({
       }, 3000);
     };
 
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter" && selectedIndex !== -1) {
+        const link = items[selectedIndex]?.querySelector("a");
+        if (link?.getAttribute("href")) {
+          const href = link.getAttribute("href");
+          router.push(
+            `${href}${
+              href.includes("?") ? "&" : "?"
+            }accessToken=${accessToken}`
+          );
+        }
+      }
+    };
+
+    containerRef.current?.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("keydown", handleKeyDown);
+    
     return () => {
+      containerRef.current?.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKeyDown);
       if (inactivityTimeoutRef.current) {
         clearTimeout(inactivityTimeoutRef.current);
       }
     };
-  }, [selectedIndex, items, router, accessToken]);
+  }, [selectedIndex, items, router, accessToken, activeSection]);
 
   useEffect(() => {
     if (
