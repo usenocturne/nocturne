@@ -13,6 +13,7 @@ const TrackListNavigation = ({
   const [items, setItems] = useState([]);
   const lastActivityRef = useRef(Date.now());
   const inactivityTimeoutRef = useRef(null);
+  const isActiveRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -39,7 +40,19 @@ const TrackListNavigation = ({
       subtree: true,
     });
 
-    return () => observer.disconnect();
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        isActiveRef.current = entries[0]?.isIntersecting ?? false;
+      },
+      { threshold: 0.1 }
+    );
+
+    intersectionObserver.observe(containerRef.current);
+
+    return () => {
+      observer.disconnect();
+      intersectionObserver.disconnect();
+    };
   }, []);
 
   const scrollItemIntoView = (item) => {
@@ -83,71 +96,30 @@ const TrackListNavigation = ({
     };
   }, [selectedIndex, items]);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!["ArrowLeft", "ArrowRight", "Enter"].includes(e.key)) return;
-      if (!containerRef.current || items.length === 0) return;
+  const handleWheel = (e) => {
+    if (!isActiveRef.current || !containerRef.current || items.length === 0) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
 
-      e.preventDefault();
-      lastActivityRef.current = Date.now();
+    lastActivityRef.current = Date.now();
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
 
-      if (selectedIndex === -1 && ["ArrowLeft", "ArrowRight"].includes(e.key)) {
-        const scaledItem = items.findIndex(
-          (item) =>
-            item.classList.contains("scale-105") ||
-            item.classList.contains("transition-transform")
-        );
+    if (selectedIndex === -1) {
+      const scaledItem = items.findIndex(
+        (item) =>
+          item.classList.contains("scale-105") ||
+          item.classList.contains("transition-transform")
+      );
 
-        const startIndex =
-          scaledItem !== -1
-            ? scaledItem
-            : e.key === "ArrowRight"
-            ? 0
-            : items.length - 1;
+      const startIndex = scaledItem !== -1 ? scaledItem : 
+                        e.deltaX > 0 ? 0 : items.length - 1;
+      setSelectedIndex(startIndex);
+      const targetItem = items[startIndex];
 
-        setSelectedIndex(startIndex);
-        const targetItem = items[startIndex];
-
-        if (targetItem) {
-          items.forEach((item) => {
-            item.classList.remove(
-              "scale-105",
-              "transition-transform",
-              "duration-200",
-              "ease-out"
-            );
-          });
-
-          targetItem.classList.add("scale-105");
-          scrollItemIntoView(targetItem);
-        }
-        return;
-      }
-
-      let newIndex = selectedIndex;
-      const maxIndex = items.length - 1;
-
-      switch (e.key) {
-        case "ArrowLeft":
-          if (selectedIndex > 0) {
-            newIndex = selectedIndex - 1;
-          }
-          break;
-
-        case "ArrowRight":
-          if (selectedIndex < maxIndex) {
-            newIndex = selectedIndex + 1;
-          }
-          break;
-
-        case "Enter":
-          if (selectedIndex !== -1 && playTrack) {
-            playTrack(tracks[selectedIndex].uri, selectedIndex);
-          }
-          return;
-      }
-
-      if (newIndex !== selectedIndex) {
+      if (targetItem) {
         items.forEach((item) => {
           item.classList.remove(
             "scale-105",
@@ -157,18 +129,115 @@ const TrackListNavigation = ({
           );
         });
 
+        targetItem.classList.add(
+          "scale-105",
+          "transition-transform",
+          "duration-200",
+          "ease-out"
+        );
+        scrollItemIntoView(targetItem);
+      }
+      return;
+    }
+
+    let newIndex = selectedIndex;
+    const maxIndex = items.length - 1;
+
+    if (e.deltaX > 0) {
+      if (selectedIndex < maxIndex) {
+        newIndex = selectedIndex + 1;
         const targetItem = items[newIndex];
         if (targetItem) {
-          targetItem.classList.add("scale-105");
+          items.forEach((item) => {
+            item.classList.remove(
+              "scale-105",
+              "transition-transform",
+              "duration-200",
+              "ease-out"
+            );
+          });
+          targetItem.classList.add(
+            "scale-105",
+            "transition-transform",
+            "duration-200",
+            "ease-out"
+          );
+          setSelectedIndex(newIndex);
+          scrollItemIntoView(targetItem);
+        }
+      } else {
+        const lastItem = items[maxIndex];
+        if (lastItem) {
+          lastItem.classList.add(
+            "scale-105",
+            "transition-transform",
+            "duration-200",
+            "ease-out"
+          );
+        }
+      }
+    } else if (e.deltaX < 0) {
+      if (selectedIndex > 0) {
+        newIndex = selectedIndex - 1;
+        const targetItem = items[newIndex];
+        if (targetItem) {
+          items.forEach((item) => {
+            item.classList.remove(
+              "scale-105",
+              "transition-transform",
+              "duration-200",
+              "ease-out"
+            );
+          });
+          targetItem.classList.add(
+            "scale-105",
+            "transition-transform",
+            "duration-200",
+            "ease-out"
+          );
           setSelectedIndex(newIndex);
           scrollItemIntoView(targetItem);
         }
       }
+    }
+
+    inactivityTimeoutRef.current = setTimeout(() => {
+      const scaledItemIndex = items.findIndex((item) =>
+        item.classList.contains("scale-105")
+      );
+
+      if (scaledItemIndex !== -1) {
+        const scaledItem = items[scaledItemIndex];
+        scaledItem.classList.add(
+          "transition-transform",
+          "duration-200",
+          "ease-out"
+        );
+        scaledItem.classList.remove("scale-105");
+      }
+
+      setSelectedIndex(-1);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!isActiveRef.current) return;
+      
+      if (e.key === "Enter" && selectedIndex !== -1 && playTrack) {
+        playTrack(tracks[selectedIndex].uri, selectedIndex);
+      }
     };
 
+    document.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("keydown", handleKeyDown);
+    
     return () => {
+      document.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKeyDown);
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+      }
     };
   }, [selectedIndex, items, tracks, playTrack]);
 

@@ -16,6 +16,7 @@ export default function HorizontalScroll({
   const hasScrolledToPlayingRef = useRef(false);
   const isUserScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
+  const isActiveRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -29,7 +30,19 @@ export default function HorizontalScroll({
       childList: true,
     });
 
-    return () => observer.disconnect();
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        isActiveRef.current = entries[0]?.isIntersecting ?? false;
+      },
+      { threshold: 0.1 }
+    );
+
+    intersectionObserver.observe(containerRef.current);
+
+    return () => {
+      observer.disconnect();
+      intersectionObserver.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -85,30 +98,57 @@ export default function HorizontalScroll({
     });
   };
 
-  useEffect(() => {
-    if (activeSection === "settings") return;
+  const handleWheel = (e) => {
+    if (!isActiveRef.current || !containerRef.current || items.length === 0 || activeSection === "settings") return;
     
-    const handleWheel = (e) => {
-      if (!containerRef.current || items.length === 0) return;
-      e.preventDefault();
+    e.preventDefault();
+    e.stopPropagation();
 
-      lastActivityRef.current = Date.now();
-      if (inactivityTimeoutRef.current) {
-        clearTimeout(inactivityTimeoutRef.current);
-      }
+    lastActivityRef.current = Date.now();
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
 
-      if (selectedIndex === -1) {
-        const scaledItem = items.findIndex(
-          (item) =>
-            item.classList.contains("scale-105") ||
-            item.classList.contains("transition-transform")
+    if (selectedIndex === -1) {
+      const scaledItem = items.findIndex(
+        (item) =>
+          item.classList.contains("scale-105") ||
+          item.classList.contains("transition-transform")
+      );
+
+      const startIndex = scaledItem !== -1 ? scaledItem : 
+                        e.deltaX > 0 ? 0 : items.length - 1;
+      setSelectedIndex(startIndex);
+      const targetItem = items[startIndex];
+
+      if (targetItem) {
+        items.forEach((item) => {
+          item.classList.remove(
+            "scale-105",
+            "transition-transform",
+            "duration-200",
+            "ease-out"
+          );
+        });
+
+        targetItem.classList.add(
+          "scale-105",
+          "transition-transform",
+          "duration-200",
+          "ease-out"
         );
+        scrollItemIntoView(targetItem);
+      }
+      return;
+    }
 
-        const startIndex = scaledItem !== -1 ? scaledItem : 
-                          e.deltaX > 0 ? 0 : items.length - 1;
-        setSelectedIndex(startIndex);
-        const targetItem = items[startIndex];
+    let newIndex = selectedIndex;
+    const maxIndex = items.length - 1;
 
+    if (e.deltaX > 0) {
+      if (selectedIndex < maxIndex) {
+        newIndex = selectedIndex + 1;
+        const targetItem = items[newIndex];
         if (targetItem) {
           items.forEach((item) => {
             item.classList.remove(
@@ -118,99 +158,74 @@ export default function HorizontalScroll({
               "ease-out"
             );
           });
-
           targetItem.classList.add(
             "scale-105",
             "transition-transform",
             "duration-200",
             "ease-out"
           );
+          setSelectedIndex(newIndex);
           scrollItemIntoView(targetItem);
         }
-        return;
-      }
-
-      let newIndex = selectedIndex;
-      const maxIndex = items.length - 1;
-
-      if (e.deltaX > 0) {
-        if (selectedIndex < maxIndex) {
-          newIndex = selectedIndex + 1;
-          const targetItem = items[newIndex];
-          if (targetItem) {
-            items.forEach((item) => {
-              item.classList.remove(
-                "scale-105",
-                "transition-transform",
-                "duration-200",
-                "ease-out"
-              );
-            });
-            targetItem.classList.add(
-              "scale-105",
-              "transition-transform",
-              "duration-200",
-              "ease-out"
-            );
-            setSelectedIndex(newIndex);
-            scrollItemIntoView(targetItem);
-          }
-        } else {
-          const lastItem = items[maxIndex];
-          if (lastItem) {
-            lastItem.classList.add(
-              "scale-105",
-              "transition-transform",
-              "duration-200",
-              "ease-out"
-            );
-          }
-        }
-      } else if (e.deltaX < 0) {
-        if (selectedIndex > 0) {
-          newIndex = selectedIndex - 1;
-          const targetItem = items[newIndex];
-          if (targetItem) {
-            items.forEach((item) => {
-              item.classList.remove(
-                "scale-105",
-                "transition-transform",
-                "duration-200",
-                "ease-out"
-              );
-            });
-            targetItem.classList.add(
-              "scale-105",
-              "transition-transform",
-              "duration-200",
-              "ease-out"
-            );
-            setSelectedIndex(newIndex);
-            scrollItemIntoView(targetItem);
-          }
-        }
-      }
-
-      inactivityTimeoutRef.current = setTimeout(() => {
-        const scaledItemIndex = items.findIndex((item) =>
-          item.classList.contains("scale-105")
-        );
-
-        if (scaledItemIndex !== -1) {
-          const scaledItem = items[scaledItemIndex];
-          scaledItem.classList.add(
+      } else {
+        const lastItem = items[maxIndex];
+        if (lastItem) {
+          lastItem.classList.add(
+            "scale-105",
             "transition-transform",
             "duration-200",
             "ease-out"
           );
-          scaledItem.classList.remove("scale-105");
         }
+      }
+    } else if (e.deltaX < 0) {
+      if (selectedIndex > 0) {
+        newIndex = selectedIndex - 1;
+        const targetItem = items[newIndex];
+        if (targetItem) {
+          items.forEach((item) => {
+            item.classList.remove(
+              "scale-105",
+              "transition-transform",
+              "duration-200",
+              "ease-out"
+            );
+          });
+          targetItem.classList.add(
+            "scale-105",
+            "transition-transform",
+            "duration-200",
+            "ease-out"
+          );
+          setSelectedIndex(newIndex);
+          scrollItemIntoView(targetItem);
+        }
+      }
+    }
 
-        setSelectedIndex(-1);
-      }, 3000);
-    };
+    inactivityTimeoutRef.current = setTimeout(() => {
+      const scaledItemIndex = items.findIndex((item) =>
+        item.classList.contains("scale-105")
+      );
 
+      if (scaledItemIndex !== -1) {
+        const scaledItem = items[scaledItemIndex];
+        scaledItem.classList.add(
+          "transition-transform",
+          "duration-200",
+          "ease-out"
+        );
+        scaledItem.classList.remove("scale-105");
+      }
+
+      setSelectedIndex(-1);
+    }, 3000);
+  };
+
+  useEffect(() => {
     const handleKeyDown = (e) => {
+      if (!isActiveRef.current) return;
+      
       if (e.key === "Enter" && selectedIndex !== -1) {
         const link = items[selectedIndex]?.querySelector("a");
         if (link?.getAttribute("href")) {
@@ -224,11 +239,11 @@ export default function HorizontalScroll({
       }
     };
 
-    containerRef.current?.addEventListener("wheel", handleWheel, { passive: false });
+    document.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("keydown", handleKeyDown);
     
     return () => {
-      containerRef.current?.removeEventListener("wheel", handleWheel);
+      document.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKeyDown);
       if (inactivityTimeoutRef.current) {
         clearTimeout(inactivityTimeoutRef.current);
