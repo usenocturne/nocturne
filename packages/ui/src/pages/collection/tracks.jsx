@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/common/navigation/LongPressLink";
+import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import SuccessAlert from "../../components/common/alerts/SuccessAlert";
 import { getCurrentDevice } from "@/services/deviceService";
@@ -26,6 +27,7 @@ const LikedSongsPage = ({
   const observer = useRef();
   const [showSuccess, setShowSuccess] = useState(false);
   const [pressedButton, setPressedButton] = useState(null);
+  const tracksContainerRef = useRef(null);
 
   useEffect(() => {
     updateGradientColors(null, "library");
@@ -252,8 +254,8 @@ const LikedSongsPage = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen fadeIn-animation">
-      <div className="md:w-1/3 h-screen sticky top-0">
+    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
+      <div className="md:w-1/3 sticky top-10">
         <div className="min-w-[280px] mr-10">
           <LongPressLink
             href="/now-playing"
@@ -277,12 +279,22 @@ const LikedSongsPage = ({
         </div>
       </div>
 
-      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container scroll-smooth pb-12">
+      <div
+        className="md:w-2/3 pl-20 h-[calc(100vh-5rem)] overflow-y-auto scroll-container scroll-smooth pb-12"
+        ref={tracksContainerRef}
+      >
+        <TrackListNavigation
+          tracks={tracks}
+          containerRef={tracksContainerRef}
+          accessToken={accessToken}
+          currentlyPlayingTrackUri={currentlyPlayingTrackUri}
+          playTrack={playTrack}
+        />
         {tracks.map((item, index) => (
           <div
             key={item.track.id}
-            className="flex gap-12 items-start mb-4"
-            ref={index === tracks.length - 1 ? lastTrackElementRef : null}
+            className="flex gap-12 items-start mb-4 transition-transform duration-200 ease-out"
+            style={{ transition: "transform 0.2s ease-out" }}
           >
             <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
               {item.track.uri === currentlyPlayingTrackUri ? (

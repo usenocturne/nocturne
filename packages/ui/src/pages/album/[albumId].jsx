@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/common/navigation/LongPressLink";
+import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import { getCurrentDevice } from "@/services/deviceService";
 import { setPlaybackShuffleState } from "@/services/playerService";
@@ -24,6 +25,7 @@ const AlbumPage = ({
     initialAlbum.tracks.total > initialAlbum.tracks.items.length
   );
   const observer = useRef();
+  const tracksContainerRef = useRef(null);
 
   useEffect(() => {
     if (error) {
@@ -217,8 +219,8 @@ const AlbumPage = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen fadeIn-animation">
-      <div className="md:w-1/3 h-screen sticky top-0">
+    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
+      <div className="md:w-1/3 sticky top-10">
         {album.images && album.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
             <LongPressLink
@@ -256,12 +258,23 @@ const AlbumPage = ({
         )}
       </div>
 
-      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container scroll-smooth pb-12">
+      <div
+        className="md:w-2/3 pl-20 h-[calc(100vh-5rem)] overflow-y-auto scroll-container scroll-smooth pb-12"
+        ref={tracksContainerRef}
+      >
+        <TrackListNavigation
+          tracks={tracks}
+          containerRef={tracksContainerRef}
+          accessToken={accessToken}
+          currentlyPlayingTrackUri={currentlyPlayingTrackUri}
+          playTrack={playTrack}
+        />
         {tracks.map((track, index) => (
           <div
             key={track.id}
-            className="flex gap-12 items-start mb-4"
             ref={index === tracks.length - 1 ? lastTrackElementRef : null}
+            className="flex gap-12 items-start mb-4 transition-transform duration-200 ease-out"
+            style={{ transition: "transform 0.2s ease-out" }}
           >
             <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
               {track.uri === currentlyPlayingTrackUri ? (

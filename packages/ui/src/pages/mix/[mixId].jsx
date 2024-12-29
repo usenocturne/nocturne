@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
 import LongPressLink from "../../components/common/navigation/LongPressLink";
+import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import SuccessAlert from "../../components/common/alerts/SuccessAlert";
 import { fetchUserRadio } from "../../services";
@@ -22,6 +23,7 @@ const MixPage = ({
   const [tracks, setTracks] = useState(initialMix?.tracks || []);
   const [showSuccess, setShowSuccess] = useState(false);
   const [pressedButton, setPressedButton] = useState(null);
+  const tracksContainerRef = useRef(null);
 
   useEffect(() => {
     const validKeys = ["1", "2", "3", "4"];
@@ -320,8 +322,8 @@ const MixPage = ({
   }, []);
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 max-h-screen fadeIn-animation">
-      <div className="md:w-1/3 h-screen sticky top-0">
+    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
+      <div className="md:w-1/3 sticky top-10">
         {mix?.images && mix.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
             <Image
@@ -344,9 +346,23 @@ const MixPage = ({
         )}
       </div>
 
-      <div className="md:w-2/3 ml-20 h-screen overflow-y-scroll scroll-container scroll-smooth pb-12">
+      <div
+        className="md:w-2/3 pl-20 h-[calc(100vh-5rem)] overflow-y-auto scroll-container scroll-smooth pb-12"
+        ref={tracksContainerRef}
+      >
+        <TrackListNavigation
+          tracks={mix.tracks}
+          containerRef={tracksContainerRef}
+          accessToken={accessToken}
+          currentlyPlayingTrackUri={currentlyPlayingTrackUri}
+          playTrack={playTrack}
+        />
         {tracks.map((track, index) => (
-          <div key={track.id} className="flex gap-12 items-start mb-4">
+          <div
+            key={track.id}
+            className="flex gap-12 items-start mb-4 transition-transform duration-200 ease-out"
+            style={{ transition: "transform 0.2s ease-out" }}
+          >
             <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
               {track.uri === currentlyPlayingTrackUri ? (
                 <div className="w-5">

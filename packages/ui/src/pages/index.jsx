@@ -1,6 +1,7 @@
 import Sidebar from "../components/common/navigation/Sidebar";
 import Settings from "../components/settings/Settings";
 import LongPressLink from "../components/common/navigation/LongPressLink";
+import HorizontalScroll from "@/components/common/navigation/HorizontalScroll";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { fetchLikedSongs } from "../services/playlistService";
@@ -166,7 +167,7 @@ export default function Home({
   return (
     <div className="relative min-h-screen">
       {!loading && (
-        <div className="relative z-10 grid grid-cols-[2.21fr_3fr] fadeIn-animation">
+        <div className="relative z-10 grid grid-cols-[2.2fr_3fr] fadeIn-animation">
           <div
             className="h-screen overflow-y-auto pb-12 pl-8 relative scroll-container scroll-smooth"
             style={{ willChange: "transform" }}
@@ -178,220 +179,240 @@ export default function Home({
           </div>
 
           <div className="h-screen overflow-y-auto">
-            <div
-              ref={scrollContainerRef}
-              onScroll={handleScroll}
-              className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
-              style={{ willChange: "transform" }}
-            >
-              {activeSection === "recents" && (
-                <>
-                  {albumsQueue.map((item) => (
-                    <div
-                      key={item.id}
-                      className="min-w-[280px] mr-10 snap-start"
-                    >
-                      <LongPressLink
-                        href={
-                          item.type === "show"
-                            ? `/show/${item.id}`
-                            : `/album/${item.id}`
-                        }
-                        spotifyUrl={item?.external_urls?.spotify}
-                        accessToken={accessToken}
-                      >
-                        <Image
-                          src={
-                            item?.images?.[0]?.url || "/images/not-playing.webp"
-                          }
-                          alt={
-                            item.type === "show" ? "Show Cover" : "Album Cover"
-                          }
-                          width={280}
-                          height={280}
-                          priority
-                          className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                        />
-                      </LongPressLink>
-                      <LongPressLink
-                        href={
-                          item.type === "show"
-                            ? `/show/${item.id}`
-                            : `/album/${item.id}`
-                        }
-                        spotifyUrl={item?.external_urls?.spotify}
-                        accessToken={accessToken}
-                      >
-                        <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                          {item.name}
-                        </h4>
-                      </LongPressLink>
-                      {item.type === "show" ? (
-                        <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                          {item.publisher}
-                        </h4>
-                      ) : item.artists?.[0] ? (
-                        <LongPressLink
-                          href={`/artist/${item.artists[0].id}`}
-                          spotifyUrl={item.artists[0]?.external_urls?.spotify}
-                          accessToken={accessToken}
+            {activeSection !== "settings" ? (
+              <HorizontalScroll
+                containerRef={scrollContainerRef}
+                currentlyPlayingId={currentlyPlayingAlbum?.id}
+                accessToken={accessToken}
+                activeSection={activeSection}
+              >
+                <div
+                  ref={scrollContainerRef}
+                  onScroll={handleScroll}
+                  className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
+                  style={{ willChange: "transform" }}
+                >
+                  {activeSection === "recents" && (
+                    <>
+                      {albumsQueue.slice(0, 20).map((item) => (
+                        <div
+                          key={item.id}
+                          className="min-w-[280px] mr-10 snap-start"
                         >
-                          <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                            {item.artists
-                              .map((artist) => artist.name)
-                              .join(", ")}
-                          </h4>
-                        </LongPressLink>
-                      ) : null}
-                    </div>
-                  ))}
-                </>
-              )}
-              {activeSection === "library" && (
-                <>
-                  {likedSongs && (
-                    <div
-                      key="liked-songs"
-                      className="min-w-[280px] mr-10 snap-start"
-                    >
-                      <LongPressLink
-                        href="/collection/tracks"
-                        spotifyUrl={likedSongs.external_urls.spotify}
-                        accessToken={accessToken}
-                      >
-                        <Image
-                          src="https://misc.scdn.co/liked-songs/liked-songs-640.png"
-                          alt="Liked Songs"
-                          width={280}
-                          height={280}
-                          className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                        />
-                      </LongPressLink>
-                      <LongPressLink
-                        href="/collection/tracks"
-                        spotifyUrl={likedSongs.external_urls.spotify}
-                        accessToken={accessToken}
-                      >
-                        <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                          {likedSongs.name}
-                        </h4>
-                      </LongPressLink>
-                      <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                        {likedSongs.tracks.total.toLocaleString()} Songs
-                      </h4>
-                    </div>
+                          <LongPressLink
+                            href={
+                              item.type === "show"
+                                ? `/show/${item.id}`
+                                : `/album/${item.id}`
+                            }
+                            spotifyUrl={item?.external_urls?.spotify}
+                            accessToken={accessToken}
+                          >
+                            <Image
+                              src={
+                                item?.images?.[0]?.url ||
+                                "/images/not-playing.webp"
+                              }
+                              alt={
+                                item.type === "show"
+                                  ? "Show Cover"
+                                  : "Album Cover"
+                              }
+                              width={280}
+                              height={280}
+                              priority
+                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                            />
+                          </LongPressLink>
+                          <LongPressLink
+                            href={
+                              item.type === "show"
+                                ? `/show/${item.id}`
+                                : `/album/${item.id}`
+                            }
+                            spotifyUrl={item?.external_urls?.spotify}
+                            accessToken={accessToken}
+                          >
+                            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                              {item.name}
+                            </h4>
+                          </LongPressLink>
+                          {item.type === "show" ? (
+                            <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                              {item.publisher}
+                            </h4>
+                          ) : item.artists?.[0] ? (
+                            <LongPressLink
+                              href={`/artist/${item.artists[0].id}`}
+                              spotifyUrl={
+                                item.artists[0]?.external_urls?.spotify
+                              }
+                              accessToken={accessToken}
+                            >
+                              <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                                {item.artists
+                                  .map((artist) => artist.name)
+                                  .join(", ")}
+                              </h4>
+                            </LongPressLink>
+                          ) : null}
+                        </div>
+                      ))}
+                    </>
                   )}
-                  {playlists
-                    ?.filter((item) => item?.type === "playlist")
-                    .map((playlist) => (
+                  {activeSection === "library" && (
+                    <>
+                      {likedSongs && (
+                        <div
+                          key="liked-songs"
+                          className="min-w-[280px] mr-10 snap-start"
+                        >
+                          <LongPressLink
+                            href="/collection/tracks"
+                            spotifyUrl={likedSongs.external_urls.spotify}
+                            accessToken={accessToken}
+                          >
+                            <Image
+                              src="https://misc.scdn.co/liked-songs/liked-songs-640.png"
+                              alt="Liked Songs"
+                              width={280}
+                              height={280}
+                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                            />
+                          </LongPressLink>
+                          <LongPressLink
+                            href="/collection/tracks"
+                            spotifyUrl={likedSongs.external_urls.spotify}
+                            accessToken={accessToken}
+                          >
+                            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                              {likedSongs.name}
+                            </h4>
+                          </LongPressLink>
+                          <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                            {likedSongs.tracks.total.toLocaleString()} Songs
+                          </h4>
+                        </div>
+                      )}
+                      {playlists
+                        ?.filter((item) => item?.type === "playlist")
+                        .map((playlist) => (
+                          <div
+                            key={`playlist-${playlist.id}`}
+                            className="min-w-[280px] mr-10 snap-start"
+                          >
+                            <LongPressLink
+                              href={`/playlist/${playlist.id}`}
+                              spotifyUrl={playlist?.external_urls?.spotify}
+                              accessToken={accessToken}
+                            >
+                              <Image
+                                src={
+                                  playlist?.images?.[0]?.url ||
+                                  "/images/not-playing.webp"
+                                }
+                                alt={`${playlist.name} Cover`}
+                                width={280}
+                                height={280}
+                                className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                              />
+                            </LongPressLink>
+                            <LongPressLink
+                              href={`/playlist/${playlist.id}`}
+                              spotifyUrl={playlist?.external_urls?.spotify}
+                              accessToken={accessToken}
+                            >
+                              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                                {playlist.name}
+                              </h4>
+                            </LongPressLink>
+                            <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                              {playlist.tracks?.total?.toLocaleString() || 0}{" "}
+                              Songs
+                            </h4>
+                          </div>
+                        ))}
+                    </>
+                  )}
+                  {activeSection === "artists" &&
+                    artists.map((artist) => (
                       <div
-                        key={`playlist-${playlist.id}`}
+                        key={artist.id}
                         className="min-w-[280px] mr-10 snap-start"
                       >
                         <LongPressLink
-                          href={`/playlist/${playlist.id}`}
-                          spotifyUrl={playlist?.external_urls?.spotify}
+                          href={`/artist/${artist.id}`}
+                          spotifyUrl={artist?.external_urls?.spotify}
                           accessToken={accessToken}
                         >
                           <Image
                             src={
-                              playlist?.images?.[0]?.url ||
+                              artist?.images?.[0]?.url ||
                               "/images/not-playing.webp"
                             }
-                            alt={`${playlist.name} Cover`}
+                            alt="Artist Cover"
+                            width={280}
+                            height={280}
+                            className="mt-10 aspect-square rounded-full drop-shadow-xl"
+                          />
+                        </LongPressLink>
+                        <LongPressLink
+                          href={`/artist/${artist.id}`}
+                          spotifyUrl={artist?.external_urls?.spotify}
+                          accessToken={accessToken}
+                        >
+                          <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                            {artist.name}
+                          </h4>
+                        </LongPressLink>
+                        <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
+                          {artist.followers.total.toLocaleString()} Followers
+                        </h4>
+                      </div>
+                    ))}
+                  {activeSection === "radio" &&
+                    radio.map((mix) => (
+                      <div
+                        key={mix.id}
+                        className="min-w-[280px] mr-10 snap-start"
+                      >
+                        <LongPressLink
+                          href={`/mix/${mix.id}?accessToken=${accessToken}`}
+                          accessToken={accessToken}
+                        >
+                          <Image
+                            src={
+                              mix.images[0].url || "/images/not-playing.webp"
+                            }
+                            alt="Radio Cover"
                             width={280}
                             height={280}
                             className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
                           />
                         </LongPressLink>
                         <LongPressLink
-                          href={`/playlist/${playlist.id}`}
-                          spotifyUrl={playlist?.external_urls?.spotify}
+                          href={`/mix/${mix.id}?accessToken=${accessToken}`}
                           accessToken={accessToken}
                         >
                           <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                            {playlist.name}
+                            {mix.name}
                           </h4>
                         </LongPressLink>
-                        <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                          {playlist.tracks?.total?.toLocaleString() || 0} Songs
+                        <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                          {mix.tracks.length} Songs
                         </h4>
                       </div>
                     ))}
-                </>
-              )}
-              {activeSection === "artists" &&
-                artists.map((artist) => (
-                  <div
-                    key={artist.id}
-                    className="min-w-[280px] mr-10 snap-start"
-                  >
-                    <LongPressLink
-                      href={`/artist/${artist.id}`}
-                      spotifyUrl={artist?.external_urls?.spotify}
-                      accessToken={accessToken}
-                    >
-                      <Image
-                        src={
-                          artist?.images?.[0]?.url || "/images/not-playing.webp"
-                        }
-                        alt="Artist Cover"
-                        width={280}
-                        height={280}
-                        className="mt-10 aspect-square rounded-full drop-shadow-xl"
-                      />
-                    </LongPressLink>
-                    <LongPressLink
-                      href={`/artist/${artist.id}`}
-                      spotifyUrl={artist?.external_urls?.spotify}
-                      accessToken={accessToken}
-                    >
-                      <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                        {artist.name}
-                      </h4>
-                    </LongPressLink>
-                    <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                      {artist.followers.total.toLocaleString()} Followers
-                    </h4>
-                  </div>
-                ))}
-              {activeSection === "radio" &&
-                radio.map((mix) => (
-                  <div key={mix.id} className="min-w-[280px] mr-10 snap-start">
-                    <LongPressLink
-                      href={`/mix/${mix.id}?accessToken=${accessToken}`}
-                      accessToken={accessToken}
-                    >
-                      <Image
-                        src={mix.images[0].url || "/images/not-playing.webp"}
-                        alt="Radio Cover"
-                        width={280}
-                        height={280}
-                        className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                      />
-                    </LongPressLink>
-                    <LongPressLink
-                      href={`/mix/${mix.id}?accessToken=${accessToken}`}
-                      accessToken={accessToken}
-                    >
-                      <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                        {mix.name}
-                      </h4>
-                    </LongPressLink>
-                    <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                      {mix.tracks.length} Songs
-                    </h4>
-                  </div>
-                ))}
-              {activeSection === "settings" && (
-                <div className="w-full h-full overflow-y-auto">
-                  <Settings
-                    accessToken={accessToken}
-                    onOpenDonationModal={() => setShowDonationModal(true)}
-                  />
                 </div>
-              )}
-            </div>
+              </HorizontalScroll>
+            ) : (
+              <div className="w-full h-full overflow-y-auto">
+                <Settings
+                  accessToken={accessToken}
+                  onOpenDonationModal={() => setShowDonationModal(true)}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
