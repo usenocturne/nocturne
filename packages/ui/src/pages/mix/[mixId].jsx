@@ -214,7 +214,7 @@ const MixPage = ({
     }
   };
 
-  const playTrack = async (trackIndex) => {
+  const playTrack = async (trackUri, trackIndex) => {
     try {
       const userResponse = await fetch("https://api.spotify.com/v1/me", {
         headers: {
@@ -240,7 +240,7 @@ const MixPage = ({
       );
       const playlistData = await createPlaylistResponse.json();
 
-      const tracksToAdd = tracks.slice(trackIndex).map((track) => track.uri);
+      const tracksToAdd = tracks.map((track) => track.uri);
       await fetch(
         `https://api.spotify.com/v1/playlists/${playlistData.id}/tracks`,
         {
@@ -290,6 +290,7 @@ const MixPage = ({
         },
         body: JSON.stringify({
           context_uri: `spotify:playlist:${playlistData.id}`,
+          offset: { uri: trackUri },
           device_id: activeDeviceId,
         }),
       });

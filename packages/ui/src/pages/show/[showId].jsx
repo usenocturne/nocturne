@@ -91,7 +91,7 @@ const ShowPage = ({
     }
   };
 
-  const playEpisode = async (episodeUri, episodeId) => {
+  const playEpisode = async (episodeUri, episodeIndex) => {
     try {
       const device = await getCurrentDevice(accessToken, handleError);
       const activeDeviceId = device == null ? null : device.id;
@@ -198,7 +198,12 @@ const ShowPage = ({
         ref={tracksContainerRef}
       >
         <TrackListNavigation
-          tracks={episodes}
+          tracks={episodes.map((episode) => ({
+            ...episode,
+            uri: episode.uri,
+            id: episode.id,
+            name: episode.name,
+          }))}
           containerRef={tracksContainerRef}
           accessToken={accessToken}
           currentlyPlayingTrackUri={currentlyPlayingTrackUri}
@@ -232,7 +237,7 @@ const ShowPage = ({
                 spotifyUrl={episode.external_urls.spotify}
                 accessToken={accessToken}
               >
-                <div onClick={() => playEpisode(episode.uri, episode.id)}>
+                <div onClick={() => playEpisode(episode.uri, index)}>
                   <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                     {episode.name}
                   </p>

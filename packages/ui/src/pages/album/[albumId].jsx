@@ -202,7 +202,9 @@ const AlbumPage = ({
           },
           body: JSON.stringify({
             context_uri: album.uri,
-            offset: { position: trackIndex },
+            offset: {
+              uri: trackUri,
+            },
             device_id: activeDeviceId,
           }),
         }
@@ -212,6 +214,7 @@ const AlbumPage = ({
         const errorData = await playResponse.json();
         console.error("Error playing track:", errorData.error.message);
       }
+
       router.push("/now-playing");
     } catch (error) {
       console.error("Error playing track:", error.message);

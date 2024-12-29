@@ -140,7 +140,6 @@ const ArtistPage = ({
       }
 
       const allTrackUris = artist.topTracks.map((track) => track.uri);
-      const tracksToPlay = allTrackUris.slice(trackIndex);
 
       const playResponse = await fetch(
         "https://api.spotify.com/v1/me/player/play",
@@ -151,7 +150,8 @@ const ArtistPage = ({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            uris: tracksToPlay,
+            uris: allTrackUris,
+            offset: { uri: trackUri },
             device_id: activeDeviceId,
           }),
         }
@@ -161,6 +161,8 @@ const ArtistPage = ({
         const errorData = await playResponse.json();
         console.error("Error playing track:", errorData);
       }
+
+      router.push("/now-playing");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }
