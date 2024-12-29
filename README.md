@@ -28,7 +28,7 @@ To run Nocturne on your Car Thing, you will need a host device tethered to it, s
 
 ### Flashing the Spotify Car Thing
 
-To flash your Car Thing with the Nocturne image, download and unzip the latest image from [Releases](https://github.com/brandonsaldan/nocturne-image/releases). Next, connect the Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and follow either of the flashing methods.
+To flash your Car Thing with Nocturne, download and unzip the latest image from [Releases](https://github.com/usenocturne/nocturne-image/releases/latest). Next, connect the Car Thing to your computer in USB Mode (hold preset buttons 1 and 4 while connecting), and follow either of the flashing methods.
 
 <details>
 <summary>Using Terbium (Recommended)</summary>
@@ -192,7 +192,7 @@ If your issue is not listed here, or if you need help, join our Discord [here!](
 
 ## Download
 
-You can download the latest flashable version of Nocturne for Windows, macOS and Linux [here](https://github.com/brandonsaldan/nocturne-image/releases/latest).
+You can download the latest flashable version of Nocturne for Windows, macOS and Linux [here](https://github.com/usenocturne/nocturne-image/releases/latest).
 
 ## Donate
 
@@ -216,7 +216,7 @@ This software was made possible only through the following individuals and open 
 
 ## Related
 
-[nocturne](https://github.com/brandonsaldan/nocturne) - The web application that this Debian image runs
+[nocturne-ui](https://github.com/brandonsaldan/nocturne) - The web application that this Debian image runs
 
 ## License
 
