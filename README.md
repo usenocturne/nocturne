@@ -24,7 +24,7 @@
 
 ## How To Use
 
-To run Nocturne on your Car Thing, you will need a host device tethered to it, such as a Raspberry Pi, Windows PC, or Linux PC, along with a Spotify Premium account. For flashing your Car Thing, you can use the web-based [Terbium](https://terbium.app/), a tool designed for quick and easy setup via a compatible browser. If Terbium is not working for you, then you can use  [superbird-tool](https://github.com/thinglabsoss/superbird-tool) to manually flash the required image to their device. 
+To run Nocturne on your Car Thing, you will need a host device tethered to it, such as a Raspberry Pi, Windows PC, or Linux PC, along with a Spotify Premium account. To flash your Car Thing, you can use the web-based flashing tool, [Terbium](https://terbium.app/), a tool designed for quick and easy setup with a compatible browser. If Terbium is not working, then you can use [superbird-tool](https://github.com/thinglabsoss/superbird-tool) to flash the image to your Car Thing. 
 
 ### Flashing the Spotify Car Thing
 
@@ -133,7 +133,7 @@ New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 192.168.7.0/24
 
 ```
 
-As an FYI, your mileage may vary greately here. You may need to configure the Windows Firewall to allow this traffic depending on your environment. 
+As an FYI, your mileage may vary greatly here. You may need to configure the Windows Firewall to allow this traffic depending on your environment. 
 
 </details>
 
