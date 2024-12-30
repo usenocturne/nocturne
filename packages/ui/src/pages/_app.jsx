@@ -206,6 +206,16 @@ export default function App({ Component, pageProps }) {
     const initializeAuth = async () => {
       if (typeof window === "undefined") return;
 
+      try {
+        await checkNetworkConnectivity(localStorage.getItem("spotifyAccessToken"));
+      } catch (error) {
+        setAuthState({
+          authSelectionMade: false,
+          authType: null,
+        });
+        return;
+      }
+
       if (window.location.search.includes("code")) return;
 
       const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
