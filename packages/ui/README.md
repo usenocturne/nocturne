@@ -29,12 +29,11 @@
 ## How To Use
 
 ### Custom Credentials
-1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>
-2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>
-2. Once running on your Car Thing, press "Use Custom Credentials" and enter your Spotify Client ID and Client Secret using VNC Viewer
-4. Your credentials will be encrypted and stored securely
-5. Authorize with Spotify
-6. Start using the app
+1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>.
+2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
+3. Once running on your Car Thing, press "Login with Phone" and scan the QR Code.
+4. Enter your Spotify Client ID and Client Secret on your phone. Your credentials will be encrypted and stored securely.
+5. Authorize with Spotify and start using Nocturne!
 
 ### Default Credentials (Beta)
 **It is not recommended to use default credentials at this point in time. Unless you know what you're doing, please use custom credentials**
@@ -42,8 +41,7 @@
 2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 3. Once running on your Car Thing, hold the back button (under the knob) until the "Use Default Credentials (Beta)" button appears
 4. Press the "Use Default Credentials (Beta)" button
-5. Authorize with Spotify
-6. Start using the app
+5. Authorize with Spotify and start using Nocturne!
 
 ### Button Mapping and Button Usage
 - Hold one of the top hardware preset buttons while on a playlist page to map it to the button
