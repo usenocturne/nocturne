@@ -1,11 +1,53 @@
 #!/usr/bin/env bash
 
-# setup a raspberry pi to provide internet for USB device connected
-# this should be run ONCE on the host machine
+# Configures a Raspberry Pi to be a network passthrough device for the Spotify Car Thing running custom firmware.
 
-set -e  # bail on any errors
+set -e # bail on any error
 
-# need to be root
+# set terminal as non-interactive to prevent apt from prompting for config changes; accepts defaults instead
+export DEBIAN_FRONTEND=noninteractive
+
+HOST_NAME="superbird"
+USBNET_PREFIX="192.168.7" # usb network will use .1 as host device and .2 for superbird
+CT_INTERFACE="eth0" 
+WAN_INTERFACE="wlan0" # should be wlan0 for wifi, unless you connect a USB NIC
+NET_ADAPTERS=($(ip link | grep -oE '\b(eth[0-9]+|wlan[0-9]+)\b'))
+DEV_MODE=0
+
+# Remove a file if it exists
+function remove_if_exists() {
+    FILEPATH="$1"
+    if [ -f "$FILEPATH" ]; then
+        echo "found ${FILEPATH}, removing"
+        rm "$FILEPATH"
+    fi
+}
+
+# Append string to file only if it does not already exist in the file
+function append_if_missing() {
+    STRING="$1"
+    FILEPATH="$2"
+    grep -q "$STRING" "$FILEPATH" || {
+        echo "appending \"$STRING\" to $FILEPATH"
+        printf "%s\n" "$STRING" >> "$FILEPATH"
+    }
+    echo "Already found \"$STRING\" in $FILEPATH"
+}
+
+# Usage: forward_port <host port> <superbird port>
+# Forward a TCP port to access service on superbird via host.
+# If no superbird port is provided, same port number is used for both.
+function forward_port() {
+    SOURCE="$1"
+    DEST="$2"
+    if [ -z "$DEST" ]; then
+        DEST="$SOURCE"
+    fi
+
+    nft add rule ip nat prerouting tcp dport "$SOURCE" iifname "$WAN_INTERFACE" dnat to "${USBNET_PREFIX}.2:$DEST"
+    nft add rule ip filter forward ip daddr "${USBNET_PREFIX}.2" tcp dport "$DEST" ct state new,established,related accept
+}
+
 if [ "$(id -u)" != "0" ]; then
     echo "Must be run as root"
     exit 1
@@ -16,136 +58,140 @@ if [ "$(uname -s)" != "Linux" ]; then
     exit 1
 fi
 
-# update system 
-apt update && apt upgrade -y
-
-# install needed packages
-#   NOTE: the flag "--break-system-packages" only exists on recent debian/ubuntu versions,
-#   so we have to try with, and if there is an error try again without the flag
-
-export DEBIAN_FRONTEND=noninteractive
-apt install -y net-tools git htop build-essential cmake python3 python3-dev python3-pip iptables adb android-sdk-platform-tools-common iptables-persistent
-python3 -m pip install --break-system-packages virtualenv nuitka ordered-set || {
-    python3 -m pip install virtualenv nuitka ordered-set
-}
-python3 -m pip install --break-system-packages git+https://github.com/superna9999/pyamlboot || {
-    python3 -m pip install git+https://github.com/superna9999/pyamlboot
-}
-
-HOST_NAME="superbird"
-USBNET_PREFIX="192.168.7"  # usb network will use .1 as host device, and .2 for superbird
-INACTIVE_INTERFACE="usb0"
-
-
-
-#if ! ip addr show usb0 | grep -q "inet "; then
-#    echo "No inactive network interface found. This may occur if the script was already run, or if your Spotify Car Thing is not plugged in."
-#    exit 1
-#fi
-
-function remove_if_exists() {
-    # remove a file if it exists
-    FILEPATH="$1"
-    if [ -f "$FILEPATH" ]; then
-        echo "found ${FILEPATH}, removing"
-        rm "$FILEPATH"
-    fi
-}
-
-function append_if_missing() {
-    # append string to file only if it does not already exist in the file
-    STRING="$1"
-    FILEPATH="$2"
-    grep -q "$STRING" "$FILEPATH" || {
-        echo "appending \"$STRING\" to $FILEPATH"
-        echo "$STRING" >> "$FILEPATH"
-        return 1
-    }
-    echo "Already found \"$STRING\" in $FILEPATH"
-    return 0
-}
-
-function forward_port() {
-    # usage: forward_port <host port> <superbird port>
-    # forward a tcp port to access service on superbird via host
-    #   if no superbird port is provided, same port number is used for both
-    SOURCE="$1"
-    DEST="$2"
-    if [ -z "$DEST" ]; then
-        DEST="$SOURCE"
-    fi
-    iptables -t nat -A PREROUTING -p tcp -i eth0 --dport "$SOURCE" -j DNAT --to-destination "${USBNET_PREFIX}.2:$DEST"
-    iptables -t nat -A PREROUTING -p tcp -i wlan0 --dport "$SOURCE" -j DNAT --to-destination "${USBNET_PREFIX}.2:$DEST"
-    iptables -A FORWARD -p tcp -d "${USBNET_PREFIX}.2" --dport "$DEST" -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-}
-
-# detect if car thing is plugged in
-if lsusb | grep -q "Google Inc."
-then
+# detect if Car Thing is plugged in
+if lsusb | grep -q "Google Inc."; then
     echo "Car Thing detected, proceeding with setup"
 else
     echo "Car Thing not detected. Please plug in the Car Thing and try again"
     exit 1
 fi
 
-# fix usb enumeration when connecting superbird in maskroom mode
-echo '# Amlogic S905 series can be booted up in Maskrom Mode, and it needs a rule to show up correctly' > /etc/udev/rules.d/70-carthing-maskrom-mode.rules
-echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="1b8e", ATTR{idProduct}=="c003", MODE:="0666", SYMLINK+="worldcup"' >> /etc/udev/rules.d/70-carthing-maskrom-mode.rules
+# set CT_INTERFACE depending on what pi this script is being ran on 
+if [[ "$(cat /sys/firmware/devicetree/base/model | sed 's/\(.*\)\(Model\|Rev\).*/\1/')" == *"Pi Zero"* ]] then 
+    CT_INTERFACE="eth0"
+else
+    CT_INTERFACE="eth1"
+fi
+
+# detect if multiple NIC are present and select one
+if [ "${#NET_ADAPTERS[@]}" -gt 1 ]; then
+    NIC_ID=0
+    echo "Multiple NICs found, please choose a network adapter that is connected to the internet"
+    echo "Your options are: "
+    
+    for i in ${!NET_ADAPTERS[@]}; do
+        echo "$i - ${NET_ADAPTERS[i]}"
+    done
+    
+    echo ""
+    read -p "Choice: " NIC_ID
+    WAN_INTERFACE="${NET_ADAPTERS[NIC_ID]}"
+fi
+
+# if multiple NICs are not present set default WAN_INTERFACE
+if printf '%s\n' "${NET_ADAPTERS[@]}" | grep -q '^eth'; then
+    # set NIC to the only available eth interface
+    WAN_INTERFACE="${NET_ADAPTERS[0]}"
+    echo "Only one Ethernet interface detected, using $WAN_INTERFACE..."
+else
+    # set NIC to only available wlan interface
+    WAN_INTERFACE="${NET_ADAPTERS[0]}"
+    echo "Only one WiFi interface detected, using $WAN_INTERFACE..."
+fi
+
+# ask if user wants ports forwarded for ssh and remote debugging
+read -p "Do you want to enable developer mode to have remote access (ssh/chrome remote debugging) to the Car Thing? (y/N): " dev_response
+case "$dev_response" in
+    [Yy]* )
+        echo "Developer mode will be enabled!"
+        DEV_MODE=1
+        ;;
+    [Nn]* )
+        echo "Developer mode will not be enabled!"
+        DEV_MODE=0
+        ;;
+    * )
+        echo "Invalid input! Assuming no, dev mode will not be enabled!"
+        DEV_MODE=0
+        ;;
+esac
+
+# MAIN SCRIPT
+
+echo "Updating repositories and packages..."
+apt -qq -y update 
+apt -qq -y upgrade 
+
+echo "Installing deps..."
+apt -qq -y install nftables ifupdown 
 
 # prevent systemd / udev from renaming usb network devices by mac address
 remove_if_exists /lib/systemd/network/73-usb-net-by-mac.link
 remove_if_exists /lib/udev/rules.d/73-usb-net-by-mac.rules
 
-#  allow IP forwarding
-append_if_missing "net.ipv4.ip_forward = 1" /etc/sysctl.conf || {
-    sysctl -p  # reload from conf
-}
+echo "Enabling IP forwarding..."
+echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/nocturne.conf
 
-# forwarding rules
-mkdir -p /etc/iptables
+# clear rules, and add new tables
+echo "Setting up nftables..."
+nft flush ruleset
+nft add table ip filter
+nft add table ip nat
 
-# clear all iptables rules
-iptables -F
-iptables -X
-iptables -Z 
-iptables -t nat -F
-iptables -t nat -X
-iptables -t mangle -F
-iptables -t mangle -X
-iptables -t raw -F
-iptables -t raw -X
+# set new rules
+nft add chain ip filter input { type filter hook input priority 0 \; }
+nft add chain ip filter forward { type filter hook forward priority 0 \; }
+nft add chain ip filter output { type filter hook output priority 0 \; }
 
-# rewrite iptables rules
-iptables -P FORWARD ACCEPT
-iptables -A FORWARD -o eth0 -i eth1 -s "${USBNET_PREFIX}.0/24" -m conntrack --ctstate NEW -j ACCEPT
-iptables -A FORWARD -o eth0 -i eth1 -s "${USBNET_PREFIX}.0/24" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A POSTROUTING -t nat -j MASQUERADE -s "${USBNET_PREFIX}.0/24"
+nft add chain ip nat prerouting { type nat hook prerouting priority -100 \; }
+nft add chain ip nat postrouting { type nat hook postrouting priority 100 \; }
 
-# port forwards:
-#   2022: ssh on superbird
-#   5900: vnc on superbird
-#   9222: chromium remote debugging on superbird
+nft add rule ip filter forward iifname "${CT_INTERFACE}" oifname "${WAN_INTERFACE}" ip saddr "${USBNET_PREFIX}.0/24" ct state new accept
+nft add rule ip filter forward iifname "${CT_INTERFACE}" oifname "${WAN_INTERFACE}" ip saddr "${USBNET_PREFIX}.0/24" ct state established,related accept
 
-forward_port 2022 22
-forward_port 5900
-forward_port 9222
+nft add rule ip nat postrouting oifname "${WAN_INTERFACE}" masquerade
 
-# persist rules to file
-iptables-save > /etc/iptables/rules.v4
+if [ "$DEV_MODE" -eq 1 ]; then
+    echo "Setting up Dev Mode..."
 
-# write the usb network config
-mkdir -p /etc/network/interfaces.d/
+    # ssh port, use port 2022 to connect
+    echo "Forwarding SSH port: 2022:22"
+    forward_port 2022 22
 
-cat << EOF > /etc/network/interfaces.d/usb0
+    # remote debugging port, use port 9222 to connect
+    echo "Forwarding Remote Debugging port: 9222:9222"
+    forward_port 9222
+else
+    echo "Skipping Dev Mode setup..."
+fi
+
+# save rules, enable and start nftables service
+nft list ruleset > /etc/nftables.conf
+systemctl enable nftables
+systemctl start nftables
+
+# stop networkmanager from managing interface that car thing is using
+cat << EOF > /etc/NetworkManager/conf.d/99-unmanaged-interfaces.conf
 # generated by $0
-allow-hotplug usb0
-iface usb0 inet static
+[keyfile]
+unmanaged-devices=interface-name:$CT_INTERFACE
+EOF
+
+# write the config changes for usb network
+echo "Writing config for $CT_INTERFACE..."
+
+    cat << EOF > /etc/network/interfaces.d/$CT_INTERFACE
+# generated by $0
+auto $CT_INTERFACE
+allow-hotplug $CT_INTERFACE
+iface $CT_INTERFACE inet static
 	address ${USBNET_PREFIX}.1
 	netmask 255.255.255.0
 EOF
 
-# add superbird to /etc/hosts
+# add Car Thing to /etc/hosts
 append_if_missing "${USBNET_PREFIX}.2  ${HOST_NAME}"  "/etc/hosts"
 
 echo "Need to reboot for all changes to take effect!"
 
+exit 0
