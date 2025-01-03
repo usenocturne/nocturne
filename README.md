@@ -42,7 +42,7 @@ Follow the prompts in Terbium and select the folder path `/path/to/nocturne-imag
 <details>
 <summary>Using superbird-tool</summary>
 
-  If you haven't already, download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and run the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
+  Download [superbird-tool](https://github.com/thinglabsoss/superbird-tool) and follow the setup process detailed [here](https://github.com/thinglabsoss/superbird-tool?tab=readme-ov-file#supported-platforms).
 
   ```bash
   # Go into the superbird-tool repository
@@ -106,20 +106,18 @@ $ sudo python3 ./setup_hotspot_rpi.py
 </details>
 
 <details>
-<summary>Linux (TBD)</summary>
+<summary>Linux (WIP)</summary>
 
 NOTE: A rewrite of the script is in progress to address edge cases and allow for greater device security. If you still would like to persue this route, you will need to know how to configure your local firewall for NAT and forwarding of network traffic for your specific distro. Unfortunately, this varies greatly between OS (ex. Ubuntu uses UFW, Fedora uses firewalld, and Debian uses nftables).
 
 </details>
 
 <details>
-<summary>Windows (Not Officially Supported)</summary>
+<summary>Windows (UNSUPPORTED)</summary>
 
-NOTE: NO SUPPORT IS PROVIDED FOR THIS METHOD
+NOTE: This setup method is not recommended as there are frequent issues with the AMD USB chipset with earlier Ryzen models and recognizing the Car Thing. Proceed with caution knowing that it may not work on your PC.
 
-NOTE: This setup method is not recommended as there are frequent issues with the AMD USB chipset with earlier Ryzen models and recognizing the Car Thing. Proceed with caution knowing that it may not work with your PC.
-
-Enter the following commands in powershell as Administrator to allow internet access to your Car Thing:
+Enter the following commands in PowerShell as Administrator to allow internet access to your Car Thing:
 
 ```bash
 #Identify correct network adapter is present:
@@ -133,13 +131,13 @@ New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 192.168.7.0/24
 
 ```
 
-As an FYI, your mileage may vary greatly here. You may need to configure the Windows Firewall to allow this traffic depending on your environment. 
+Your mileage may vary greatly here. You may need to configure the Windows Firewall to allow this traffic depending on your environment. 
 
 </details>
 
 ### Setting up Nocturne UI
 
-Follow the steps as described [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup), scan the QR code, enter the Client ID and Client Secret, and log into Spotify to finish the setting up Nocturne.
+Follow the steps as described [here](https://github.com/usenocturne/nocturne-ui?tab=readme-ov-file#spotify-developer-setup), scan the QR code, enter the Client ID and Client Secret, and log into Spotify to finish setting up Nocturne.
 
 ## Troubleshooting
 
