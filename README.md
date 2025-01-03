@@ -54,6 +54,8 @@ Follow the prompts in Terbium and select the folder path `/path/to/nocturne-imag
   # Flash Nocturne image, without resetting the data partition 
   $ python superbird_tool.py --dont_reset --restore_device /path/to/nocturne-image/image 
   ```
+
+  `python` on Windows could also use `py`, macOS will use `/opt/homebrew/bin/python3` and, Linux will use `python3` instead. 
 </details>
 
 ### Setting up a host device
