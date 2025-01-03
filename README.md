@@ -70,7 +70,7 @@ NOTE: This setup requires the following extra hardware:
 - 5V 2A power supply
 ```
 
-Download and open [Raspberry Pi Imager](https://www.raspberrypi.com/software/), select Raspberry Pi OS (Legacy, 64-bit) Lite, select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
+Download and open [Raspberry Pi Imager](https://www.raspberrypi.com/software/), select Raspberry Pi OS (64-bit) Lite, select "Edit Settings", check "Set hostname", check "Set username and password" (set a password), check "Configure wireless LAN", (enter your network's SSID and password), check "Set local settings". Open the Services tab, enable SSH, and use password authentication. Write the configured OS to your microSD card and insert it into your Raspberry Pi.
 
 After the OS is successfully flashed to the SD card, copy the setup script to your Pi connect your car thing and run the commands as follows:
 
