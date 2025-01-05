@@ -97,6 +97,17 @@ export function useMediaState(accessToken, handleError) {
     }
   }, [accessToken, currentlyPlayingAlbum, handleError]);
 
+  useEffect(() => {
+    if (currentPlayback?.shuffle_state !== undefined) {
+      setIsShuffleEnabled(currentPlayback.shuffle_state);
+      localStorage.setItem("shuffleEnabled", currentPlayback.shuffle_state);
+    }
+    if (currentPlayback?.repeat_state) {
+      setCurrentRepeat(currentPlayback.repeat_state);
+      localStorage.setItem("repeatMode", currentPlayback.repeat_state);
+    }
+  }, [currentPlayback?.shuffle_state, currentPlayback?.repeat_state]);
+
   return {
     currentPlayback,
     currentlyPlayingTrackUri,

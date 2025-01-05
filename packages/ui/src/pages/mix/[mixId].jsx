@@ -18,7 +18,12 @@ const MixPage = ({
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
-  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("shuffleEnabled") === "true";
+    }
+    return false;
+  });
   const [mix, setMix] = useState(initialMix);
   const [tracks, setTracks] = useState(initialMix?.tracks || []);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -170,8 +175,10 @@ const MixPage = ({
         });
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
       await fetch(
-        `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
         {
           method: "PUT",
           headers: {
@@ -191,6 +198,17 @@ const MixPage = ({
           device_id: activeDeviceId,
         }),
       });
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       setTimeout(async () => {
         try {
@@ -259,21 +277,32 @@ const MixPage = ({
       const activeDeviceId = device == null ? null : device.id;
 
       if (device && !device.is_active) {
-        await fetch("https://api.spotify.com/v1/me/player", {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            device_ids: [activeDeviceId],
-            play: false,
-          }),
-        });
+        const transferResponse = await fetch(
+          "https://api.spotify.com/v1/me/player",
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              device_ids: [activeDeviceId],
+              play: false,
+            }),
+          }
+        );
+
+        if (!transferResponse.ok) {
+          const errorData = await transferResponse.json();
+          console.error("Error transferring playback:", errorData);
+          return;
+        }
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
       await fetch(
-        `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
         {
           method: "PUT",
           headers: {
@@ -290,10 +319,21 @@ const MixPage = ({
         },
         body: JSON.stringify({
           context_uri: `spotify:playlist:${playlistData.id}`,
-          offset: { uri: trackUri },
+          offset: { position: trackIndex },
           device_id: activeDeviceId,
         }),
       });
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       setTimeout(async () => {
         try {

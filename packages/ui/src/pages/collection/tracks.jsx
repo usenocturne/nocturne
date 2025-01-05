@@ -17,7 +17,12 @@ const LikedSongsPage = ({
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
-  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("shuffleEnabled") === "true";
+    }
+    return false;
+  });
   const [tracks, setTracks] = useState(initialTracks?.items || []);
   const [totalTracks, setTotalTracks] = useState(initialTracks?.total || 0);
   const [isLoading, setIsLoading] = useState(false);
@@ -168,8 +173,11 @@ const LikedSongsPage = ({
         });
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
+
       await fetch(
-        `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
         {
           method: "PUT",
           headers: {
@@ -178,12 +186,9 @@ const LikedSongsPage = ({
         }
       );
 
-      let offset;
-      if (isShuffleEnabled) {
-        const randomPosition = Math.floor(Math.random() * tracks.length);
-        offset = { position: randomPosition };
-      } else {
-        offset = { position: 0 };
+      let startPosition = 0;
+      if (savedShuffleState) {
+        startPosition = Math.floor(Math.random() * tracks.length);
       }
 
       await fetch("https://api.spotify.com/v1/me/player/play", {
@@ -194,10 +199,21 @@ const LikedSongsPage = ({
         },
         body: JSON.stringify({
           uris: tracks.map((item) => item.track.uri),
-          offset: offset,
+          offset: { position: startPosition },
           device_id: activeDeviceId,
         }),
       });
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       router.push("/now-playing");
     } catch (error) {
@@ -224,8 +240,10 @@ const LikedSongsPage = ({
         });
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
       await fetch(
-        `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
         {
           method: "PUT",
           headers: {
@@ -234,7 +252,7 @@ const LikedSongsPage = ({
         }
       );
 
-      const resp = await fetch("https://api.spotify.com/v1/me/player/play", {
+      await fetch("https://api.spotify.com/v1/me/player/play", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -246,6 +264,17 @@ const LikedSongsPage = ({
           device_id: activeDeviceId,
         }),
       });
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       router.push("/now-playing");
     } catch (error) {

@@ -16,6 +16,12 @@ const ShowPage = ({
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("shuffleEnabled") === "true";
+    }
+    return false;
+  });
   const [show, setShow] = useState(initialShow);
   const [episodes, setEpisodes] = useState(initialShow.episodes.items);
   const [isLoading, setIsLoading] = useState(false);
@@ -119,6 +125,18 @@ const ShowPage = ({
         }
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
       const playResponse = await fetch(
         "https://api.spotify.com/v1/me/player/play",
         {
@@ -138,6 +156,18 @@ const ShowPage = ({
         const errorData = await playResponse.json();
         console.error("Error playing episode:", errorData.error.message);
       }
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
       router.push("/now-playing");
     } catch (error) {
       console.error("Error playing episode:", error.message);

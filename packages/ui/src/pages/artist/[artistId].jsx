@@ -17,7 +17,12 @@ const ArtistPage = ({
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
-  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("shuffleEnabled") === "true";
+    }
+    return false;
+  });
   const tracksContainerRef = useRef(null);
 
   useEffect(() => {
@@ -74,8 +79,11 @@ const ArtistPage = ({
         });
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
+
       await fetch(
-        `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
         {
           method: "PUT",
           headers: {
@@ -87,7 +95,7 @@ const ArtistPage = ({
       const trackUris = artist.topTracks.map((track) => track.uri);
 
       let offset;
-      if (isShuffleEnabled) {
+      if (savedShuffleState) {
         const randomPosition = Math.floor(Math.random() * trackUris.length);
         offset = { position: randomPosition };
       } else {
@@ -103,8 +111,21 @@ const ArtistPage = ({
         body: JSON.stringify({
           uris: trackUris,
           offset: offset,
+          device_id: activeDeviceId,
         }),
       });
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
       router.push("/now-playing");
     } catch (error) {
       console.error("Error playing artist top tracks:", error.message);
@@ -139,6 +160,18 @@ const ArtistPage = ({
         }
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
       const allTrackUris = artist.topTracks.map((track) => track.uri);
 
       const playResponse = await fetch(
@@ -161,6 +194,17 @@ const ArtistPage = ({
         const errorData = await playResponse.json();
         console.error("Error playing track:", errorData);
       }
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       router.push("/now-playing");
     } catch (error) {

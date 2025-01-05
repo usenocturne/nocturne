@@ -17,7 +17,12 @@ const AlbumPage = ({
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
-  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("shuffleEnabled") === "true";
+    }
+    return false;
+  });
   const [album, setAlbum] = useState(initialAlbum);
   const [tracks, setTracks] = useState(initialAlbum.tracks.items);
   const [isLoading, setIsLoading] = useState(false);
@@ -129,8 +134,11 @@ const AlbumPage = ({
         });
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
+
       await fetch(
-        `https://api.spotify.com/v1/me/player/shuffle?state=${isShuffleEnabled}`,
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
         {
           method: "PUT",
           headers: {
@@ -140,7 +148,7 @@ const AlbumPage = ({
       );
 
       let offset;
-      if (isShuffleEnabled) {
+      if (savedShuffleState) {
         const randomPosition = Math.floor(Math.random() * album.tracks.total);
         offset = { position: randomPosition };
       } else {
@@ -158,6 +166,18 @@ const AlbumPage = ({
           offset: offset,
         }),
       });
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
       router.push("/now-playing");
     } catch (error) {
       console.error("Error playing album:", error.message);
@@ -192,6 +212,18 @@ const AlbumPage = ({
         }
       }
 
+      const savedShuffleState =
+        localStorage.getItem("shuffleEnabled") === "true";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/shuffle?state=${savedShuffleState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
       const playResponse = await fetch(
         "https://api.spotify.com/v1/me/player/play",
         {
@@ -214,6 +246,17 @@ const AlbumPage = ({
         const errorData = await playResponse.json();
         console.error("Error playing track:", errorData.error.message);
       }
+
+      const savedRepeatState = localStorage.getItem("repeatMode") || "off";
+      await fetch(
+        `https://api.spotify.com/v1/me/player/repeat?state=${savedRepeatState}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       router.push("/now-playing");
     } catch (error) {
