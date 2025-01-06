@@ -370,26 +370,27 @@ After setting up your local server, you may follow these steps to see your chang
       reverse_proxy localhost:3000
     }
     ```
-1. SSH into your Raspberry pi.
+2. SSH into your Raspberry pi.
    ```
    ssh pi@raspberrypi.local
    ```
-2. SSH into the Car Thing.
+3. SSH into the Car Thing.
    ```
    ssh superbird@192.168.7.2
+   # The password should be "superbird".
    ```
-3. Edit `/scripts/chromium_settings.sh`.
+4. Edit `/scripts/chromium_settings.sh`.
    ```
    nano /scripts/chromium_settings.sh
    ```
-4. Replace the URL to point to your local server's IP address:
+5. Replace the URL to point to your local server's IP address:
    ```bash
    # settings for /scripts/start_chromium.sh
 
    # URL="https://nocturne.brandons.place/"
    URL="https://your.local.ip.address:3443/"
    ```
-5. Reboot your Car Thing to apply your changes.
+6. Reboot your Car Thing to apply your changes.
    ```
    sudo reboot
    ```
