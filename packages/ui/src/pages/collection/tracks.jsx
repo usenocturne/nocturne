@@ -173,6 +173,8 @@ const LikedSongsPage = ({
         });
       }
 
+      localStorage.setItem("playingLikedSongs", "true");
+
       const savedShuffleState =
         localStorage.getItem("shuffleEnabled") === "true";
 
@@ -225,6 +227,7 @@ const LikedSongsPage = ({
     try {
       const device = await getCurrentDevice(accessToken, handleError);
       const activeDeviceId = device == null ? null : device.id;
+      localStorage.setItem("playingLikedSongs", "true");
 
       if (device && !device.is_active) {
         await fetch("https://api.spotify.com/v1/me/player", {

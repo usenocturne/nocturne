@@ -21,6 +21,7 @@ export default function Home({
   currentlyPlayingAlbum,
   showBrightnessOverlay,
   handleError,
+  currentPlayback,
 }) {
   const [showDonationModal, setShowDonationModal] = useState(false);
   const router = useRouter();
@@ -289,8 +290,27 @@ export default function Home({
                               {likedSongs.name}
                             </h4>
                           </LongPressLink>
-                          <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                            {likedSongs.tracks.total.toLocaleString()} Songs
+                          <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
+                            {currentPlayback?.context?.uri?.includes(
+                              "collection"
+                            ) ||
+                            (currentPlayback?.context === null &&
+                              localStorage.getItem("playingLikedSongs") ===
+                                "true") ? (
+                              <>
+                                <div className="w-5 ml-0.5 mr-3 mb-2">
+                                  <section>
+                                    <div className="wave0"></div>
+                                    <div className="wave1"></div>
+                                    <div className="wave2"></div>
+                                    <div className="wave3"></div>
+                                  </section>
+                                </div>
+                                Now Playing
+                              </>
+                            ) : (
+                              `${likedSongs.tracks.total.toLocaleString()} Songs`
+                            )}
                           </h4>
                         </div>
                       )}
@@ -326,9 +346,27 @@ export default function Home({
                                 {playlist.name}
                               </h4>
                             </LongPressLink>
-                            <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                              {playlist.tracks?.total?.toLocaleString() || 0}{" "}
-                              Songs
+                            <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
+                              {currentPlayback &&
+                              currentPlayback.context &&
+                              currentPlayback.context.uri ===
+                                `spotify:playlist:${playlist.id}` ? (
+                                <>
+                                  <div className="w-5 ml-0.5 mr-3 mb-2">
+                                    <section>
+                                      <div className="wave0"></div>
+                                      <div className="wave1"></div>
+                                      <div className="wave2"></div>
+                                      <div className="wave3"></div>
+                                    </section>
+                                  </div>
+                                  Now Playing
+                                </>
+                              ) : (
+                                `${
+                                  playlist.tracks?.total?.toLocaleString() || 0
+                                } Songs`
+                              )}
                             </h4>
                           </div>
                         ))}
@@ -365,8 +403,24 @@ export default function Home({
                             {artist.name}
                           </h4>
                         </LongPressLink>
-                        <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px]">
-                          {artist.followers.total.toLocaleString()} Followers
+                        <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
+                          {currentPlayback?.item?.artists?.some(
+                            (a) => a.id === artist.id
+                          ) ? (
+                            <>
+                              <div className="w-5 ml-0.5 mr-3 mb-2">
+                                <section>
+                                  <div className="wave0"></div>
+                                  <div className="wave1"></div>
+                                  <div className="wave2"></div>
+                                  <div className="wave3"></div>
+                                </section>
+                              </div>
+                              Now Playing
+                            </>
+                          ) : (
+                            `${artist.followers.total.toLocaleString()} Followers`
+                          )}
                         </h4>
                       </div>
                     ))}
@@ -398,8 +452,28 @@ export default function Home({
                             {mix.name}
                           </h4>
                         </LongPressLink>
-                        <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                          {mix.tracks.length} Songs
+                        <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
+                          {(() => {
+                            const playingMixId = localStorage.getItem(
+                              `playingMix-${mix.id}`
+                            );
+                            return currentPlayback?.context?.uri ===
+                              playingMixId ? (
+                              <>
+                                <div className="w-5 ml-0.5 mr-3 mb-2">
+                                  <section>
+                                    <div className="wave0"></div>
+                                    <div className="wave1"></div>
+                                    <div className="wave2"></div>
+                                    <div className="wave3"></div>
+                                  </section>
+                                </div>
+                                Now Playing
+                              </>
+                            ) : (
+                              `${mix.tracks.length} Songs`
+                            );
+                          })()}
                         </h4>
                       </div>
                     ))}

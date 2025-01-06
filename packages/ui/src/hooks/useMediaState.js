@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getCurrentDevice } from "@/services/deviceService";
+import local from "next/font/local";
 
 export function useMediaState(accessToken, handleError) {
   const [currentPlayback, setCurrentPlayback] = useState(null);
@@ -31,6 +32,7 @@ export function useMediaState(accessToken, handleError) {
         setCurrentPlayback(null);
         setCurrentlyPlayingAlbum(null);
         setCurrentlyPlayingTrackUri(null);
+        localStorage.removeItem("playingLikedSongs");
         return;
       }
 
@@ -40,7 +42,27 @@ export function useMediaState(accessToken, handleError) {
           setCurrentPlayback(null);
           setCurrentlyPlayingAlbum(null);
           setCurrentlyPlayingTrackUri(null);
+          localStorage.removeItem("playingLikedSongs");
           return;
+        }
+
+        if (data.context?.uri) {
+          if (!data.context.uri.includes("collection")) {
+            localStorage.removeItem("playingLikedSongs");
+          }
+          const mixFlags = Object.keys(localStorage).filter((key) =>
+            key.startsWith("playingMix-")
+          );
+          mixFlags.forEach((flag) => {
+            if (localStorage.getItem(flag) !== data.context.uri) {
+              localStorage.removeItem(flag);
+            }
+          });
+        } else if (!data.item) {
+          localStorage.removeItem("playingLikedSongs");
+          Object.keys(localStorage)
+            .filter((key) => key.startsWith("playingMix-"))
+            .forEach((key) => localStorage.removeItem(key));
         }
 
         setCurrentPlayback({

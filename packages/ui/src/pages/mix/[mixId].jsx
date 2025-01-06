@@ -119,6 +119,7 @@ const MixPage = ({
 
   const playMix = async () => {
     try {
+      const mixId = router.query.mixId;
       const userResponse = await fetch("https://api.spotify.com/v1/me", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -142,6 +143,10 @@ const MixPage = ({
         }
       );
       const playlistData = await createPlaylistResponse.json();
+      localStorage.setItem(
+        `playingMix-${mixId}`,
+        `spotify:playlist:${playlistData.id}`
+      );
 
       const tracksToAdd = tracks.map((track) => track.uri);
       await fetch(
@@ -234,6 +239,7 @@ const MixPage = ({
 
   const playTrack = async (trackUri, trackIndex) => {
     try {
+      const mixId = router.query.mixId;
       const userResponse = await fetch("https://api.spotify.com/v1/me", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -257,6 +263,10 @@ const MixPage = ({
         }
       );
       const playlistData = await createPlaylistResponse.json();
+      localStorage.setItem(
+        `playingMix-${mixId}`,
+        `spotify:playlist:${playlistData.id}`
+      );
 
       const tracksToAdd = tracks.map((track) => track.uri);
       await fetch(

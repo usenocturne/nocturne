@@ -113,13 +113,6 @@ section {
   padding-top: 8px;
 }
 
-[class*="wave"] {
-  aspect-ratio: 0.125/1;
-  background-color: #ffffff;
-  border-radius: 15px;
-  width: 0.1vw;
-}
-
 @keyframes waveform {
   0% {
     transform: scaleY(0.5);
@@ -134,8 +127,8 @@ section {
 
 [class*="wave"] {
   aspect-ratio: 0.125/1;
-  /*This can all be written on one line:*/
-  animation: waveform var(--wavefreq) ease-in-out 0.1s infinite forwards;
+  animation: waveform var(--wavefreq) ease-in-out infinite forwards;
+  animation-delay: var(--wave-offset);
   background-color: #ffffff;
   border-radius: 15px;
   width: 1vw;
@@ -144,30 +137,37 @@ section {
 :root {
   --m: 11.5;
   --wavefreq: calc(100ms * var(--m));
+  --wave-offset: -1.5s;
 }
 
 .wave1 {
   --wavefreq: calc(200ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.2s);
 }
 
 .wave2 {
   --wavefreq: calc(300ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.3s);
 }
 
 .wave3 {
   --wavefreq: calc(400ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.4s);
 }
 
 .wave4 {
   --wavefreq: calc(500ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.5s);
 }
 
 .wave5 {
   --wavefreq: calc(600ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.6s);
 }
 
 .wave6 {
   --wavefreq: calc(700ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.7s);
 }
 
 .track-name-container {
