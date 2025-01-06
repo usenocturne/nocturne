@@ -176,8 +176,6 @@ export default function NowPlaying({
     return `${!elapsed ? "-" : ""}${formattedMinutes}:${formattedSeconds}`;
   }
 
-
-
   const PlayPauseButton = () =>
     isPlaying ? (
       <PauseIcon className="w-14 h-14" />
