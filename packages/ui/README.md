@@ -360,7 +360,16 @@ npx wrangler deploy
 
 ## Displaying your local environment on the Car Thing
 After setting up your local server, you may follow these steps to see your changes on your car thing.
+1. Edit your `Caddyfile` to include your local server's IP address:
+    ```Caddyfile
+    https://localhost:3443 {
+      reverse_proxy localhost:3000
+    }
 
+    https://your.local.ip.address:3443 {
+      reverse_proxy localhost:3000
+    }
+    ```
 1. SSH into your Raspberry pi.
    ```
    ssh pi@raspberrypi.local
@@ -378,7 +387,7 @@ After setting up your local server, you may follow these steps to see your chang
    # settings for /scripts/start_chromium.sh
 
    # URL="https://nocturne.brandons.place/"
-   URL="http://your.local.ip.address:3000/"
+   URL="https://your.local.ip.address:3443/"
    ```
 5. Reboot your Car Thing to apply your changes.
    ```
