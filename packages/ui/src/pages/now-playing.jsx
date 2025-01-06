@@ -25,6 +25,7 @@ import { useTrackScroll } from "@/hooks/useTrackScroll";
 import { usePlaybackControls } from "@/hooks/usePlaybackControls";
 import { usePlaylistDialog } from "@/hooks/usePlaylistDialog";
 import { useAppState } from "@/hooks/useAppState";
+import { useElapsedTime } from "@/hooks/useElapsedTime";
 
 import {
   HeartIcon,
@@ -118,6 +119,8 @@ export default function NowPlaying({
   const { trackNameScrollingEnabled, shouldScroll, trackNameRef } =
     useTrackScroll(trackName);
 
+  const { elapsedTimeEnabled } = useElapsedTime();
+
   const artistName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
       ? currentPlayback.item.show.name
@@ -156,6 +159,25 @@ export default function NowPlaying({
     };
   };
 
+  const convertTimeToLength = (ms, elapsed) => {
+    let totalSeconds = Math.floor(ms / 1000);
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const formattedMinutes = minutes.toString().padStart(2, "0");
+    const formattedSeconds = seconds.toString().padStart(2, "0");
+
+    if (hours > 0) {
+      return `${
+        !elapsed ? "-" : ""
+      }${hours}:${formattedMinutes}:${formattedSeconds}`;
+    }
+
+    return `${!elapsed ? "-" : ""}${formattedMinutes}:${formattedSeconds}`;
+  };
+
   const PlayPauseButton = () =>
     isPlaying ? (
       <PauseIcon className="w-14 h-14" />
@@ -172,7 +194,7 @@ export default function NowPlaying({
 
   return (
     <>
-      <div className="flex flex-col gap-4 h-screen w-full z-10 fadeIn-animation">
+      <div className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation">
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div className="min-w-[280px] mr-8">
             <LongPressLink
@@ -296,7 +318,7 @@ export default function NowPlaying({
           )}
         </div>
 
-        <div className="px-12">
+        <div className={`px-12 ${!elapsedTimeEnabled ? "pb-7 pt-3" : ""}`}>
           <ProgressBar
             progress={progress}
             isPlaying={isPlaying}
@@ -304,7 +326,32 @@ export default function NowPlaying({
           />
         </div>
 
-        <div className="flex justify-between items-center w-full px-12 mt-4">
+        {elapsedTimeEnabled && (
+          <div className="w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden">
+            <div className="flex justify-between">
+              {currentPlayback && currentPlayback.item ? (
+                <>
+                  <span className="text-white/60 text-[20px]">
+                    {convertTimeToLength(currentPlayback.progress_ms, true)}
+                  </span>
+                  <span className="text-white/60 text-[20px]">
+                    {convertTimeToLength(
+                      currentPlayback.item.duration_ms,
+                      true
+                    )}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-white/60 text-[20px]">--:--</span>
+                  <span className="text-white/60 text-[20px]">--:--</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-between items-center w-full px-12">
           <div className="flex-shrink-0" onClick={toggleLikeTrack}>
             {isLiked ? (
               <HeartIconFilled className="w-14 h-14" />
