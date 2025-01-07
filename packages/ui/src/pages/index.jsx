@@ -45,8 +45,7 @@ export default function Home({
       const firstAlbumImage = albumsQueue[0]?.images?.[0]?.url;
       updateGradientColors(firstAlbumImage || null, "recents");
     } else if (activeSection === "settings") {
-      const firstAlbumImage = albumsQueue[0]?.images?.[0]?.url;
-      updateGradientColors(firstAlbumImage || null, "recents");
+      updateGradientColors(null, "settings");
     }
   }, [activeSection, updateGradientColors, playlists, artists, albumsQueue]);
 

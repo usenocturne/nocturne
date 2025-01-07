@@ -211,6 +211,18 @@ export function useGradientState(activeSection) {
             setTargetColor3(libraryColors[2]);
             setTargetColor4(libraryColors[3]);
           }
+        } else if (section === "settings") {
+          const settingsColors = ["#1f1e23", "#aeb7ba", "#8c6764", "#968479"];
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: settingsColors,
+          }));
+          if (activeSection === "settings") {
+            setTargetColor1(settingsColors[0]);
+            setTargetColor2(settingsColors[1]);
+            setTargetColor3(settingsColors[2]);
+            setTargetColor4(settingsColors[3]);
+          }
         } else {
           setTargetColor1("#191414");
           setTargetColor2("#191414");

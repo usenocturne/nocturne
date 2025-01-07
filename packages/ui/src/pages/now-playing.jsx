@@ -119,7 +119,8 @@ export default function NowPlaying({
   const { trackNameScrollingEnabled, shouldScroll, trackNameRef } =
     useTrackScroll(trackName);
 
-  const { elapsedTimeEnabled } = useElapsedTime();
+  const { elapsedTimeEnabled, remainingTimeEnabled, showTimeDisplay } =
+    useElapsedTime();
 
   const artistName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -318,7 +319,7 @@ export default function NowPlaying({
           )}
         </div>
 
-        <div className={`px-12 ${!elapsedTimeEnabled ? "pb-7 pt-3" : ""}`}>
+        <div className={`px-12 ${!showTimeDisplay ? "pb-7 pt-3" : ""}`}>
           <ProgressBar
             progress={progress}
             isPlaying={isPlaying}
@@ -326,7 +327,7 @@ export default function NowPlaying({
           />
         </div>
 
-        {elapsedTimeEnabled && (
+        {showTimeDisplay && (
           <div className="w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden">
             <div className="flex justify-between">
               {currentPlayback && currentPlayback.item ? (
@@ -335,10 +336,16 @@ export default function NowPlaying({
                     {convertTimeToLength(currentPlayback.progress_ms, true)}
                   </span>
                   <span className="text-white/60 text-[20px]">
-                    {convertTimeToLength(
-                      currentPlayback.item.duration_ms,
-                      true
-                    )}
+                    {remainingTimeEnabled
+                      ? convertTimeToLength(
+                          currentPlayback.item.duration_ms -
+                            currentPlayback.progress_ms,
+                          false
+                        )
+                      : convertTimeToLength(
+                          currentPlayback.item.duration_ms,
+                          true
+                        )}
                   </span>
                 </>
               ) : (
