@@ -360,7 +360,8 @@ npx wrangler deploy
 
 ## Displaying your local environment on the Car Thing
 After setting up your local server, you may follow these steps to see your changes on your car thing.
-1. Edit your `Caddyfile` to include your local server's IP address:
+1. *If you're using ***Method #2*** for your local server, you can skip this step.*  
+  Edit your `Caddyfile` to include your local server's IP address:
     ```Caddyfile
     https://localhost:3443 {
       reverse_proxy localhost:3000
@@ -377,18 +378,20 @@ After setting up your local server, you may follow these steps to see your chang
 3. SSH into the Car Thing.
    ```
    ssh superbird@192.168.7.2
-   # The password should be "superbird".
+   # The login password is "superbird".
    ```
 4. Edit `/scripts/chromium_settings.sh`.
    ```
    nano /scripts/chromium_settings.sh
    ```
-5. Replace the URL to point to your local server's IP address:
+5. Replace the URL to point to your local server's IP address.
+- If you're using **Method #1**, replace `port` with `3443`.
+- If you're using **Method #2**, replace `port` with `3000`.
    ```bash
    # settings for /scripts/start_chromium.sh
 
    # URL="https://nocturne.brandons.place/"
-   URL="https://your.local.ip.address:3443/"
+   URL="https://your.local.ip.address:port/"
    ```
 6. Reboot your Car Thing to apply your changes.
    ```
