@@ -106,7 +106,11 @@ create table spotify_credentials (
   last_used timestamp with time zone,
   first_used_at timestamp with time zone,
   token_refresh_count integer default 0,
-  user_agent text
+  user_agent text,
+  session_id TEXT,
+  auth_completed BOOLEAN,
+  access_token TEXT,
+  token_expiry TIMESTAMPTZ
 );
 
 -- Add policies for Row Level Security (RLS)
@@ -186,7 +190,7 @@ Now, it's time to:
 
 Nocturne requires HTTPS to make API requests, so you need to set up HTTPS on the local server. This makes two different ways to run the dev server:
 
-#### Using [Caddy][caddy-download]
+#### Method #1: Using [Caddy][caddy-download]
 
 [caddy-download]: https://caddyserver.com
 
@@ -212,7 +216,7 @@ caddy run
 This may prompt you for a `sudo` password to install Caddy's certificate on your system, to make it automatically trusted.
 
 
-#### Using `mkcert` and JS webserver
+#### Method #2: Using `mkcert` and JS webserver
 
 First, install `mkcert`.
 
@@ -354,6 +358,46 @@ cd workers/key-rotation
 npx wrangler deploy
 ```
 
+## Displaying your local environment on the Car Thing
+After setting up your local server, you may follow these steps to see your changes on your car thing.
+1. *If you're using ***Method #2*** for your local server, you can skip this step.*  
+  Edit your `Caddyfile` to include your local server's IP address:
+    ```Caddyfile
+    https://localhost:3443 {
+      reverse_proxy localhost:3000
+    }
+
+    https://your.local.ip.address:3443 {
+      reverse_proxy localhost:3000
+    }
+    ```
+2. SSH into your Raspberry pi.
+   ```
+   ssh pi@raspberrypi.local
+   ```
+3. SSH into the Car Thing.
+   ```
+   ssh superbird@192.168.7.2
+   # The login password is "superbird".
+   ```
+4. Edit `/scripts/chromium_settings.sh`.
+   ```
+   nano /scripts/chromium_settings.sh
+   ```
+5. Replace the URL to point to your local server's IP address.
+- If you're using **Method #1**, replace `port` with `3443`.
+- If you're using **Method #2**, replace `port` with `3000`.
+   ```bash
+   # settings for /scripts/start_chromium.sh
+
+   # URL="https://nocturne.brandons.place/"
+   URL="https://your.local.ip.address:port/"
+   ```
+6. Reboot your Car Thing to apply your changes.
+   ```
+   sudo reboot
+   ```
+
 ## Key Rotation
 
 The project includes automatic key rotation for encrypted credentials. The rotation worker runs every 7 days and:
@@ -367,6 +411,7 @@ The rotation schedule can be modified in `workers/key-rotation/wrangler.toml`.
 ## Contributing
 
 1. Fork the repository
+    - Your changes should be based off the `main` branch. 
 2. Create a feature branch: `git checkout -b feature/new-feature`
 3. Commit your changes: `git commit -m 'Add new feature'`
 4. Push to the branch: `git push origin feature/new-feature`

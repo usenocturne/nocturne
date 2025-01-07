@@ -88,7 +88,7 @@ export function useAuthState() {
       const params = new URLSearchParams();
       params.append("grant_type", "authorization_code");
       params.append("code", code);
-      params.append("redirect_uri", "https://192.168.1.232:4000/v1/auth/callback");
+      params.append("redirect_uri", process.env.NEXT_PUBLIC_REDIRECT_URI);
 
       const response = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
