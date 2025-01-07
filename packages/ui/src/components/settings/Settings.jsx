@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronRightIcon, ArrowLeftIcon } from "lucide-react";
 import { useRouter } from "next/router";
 import { Switch } from "@headlessui/react";
 import { supabase } from "../../lib/supabaseClient";
 import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
   SettingsAccountIcon,
   SettingsAboutIcon,
   SettingsCreditsIcon,
@@ -424,7 +425,7 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
                     className="mr-4"
                     disabled={isAnimating}
                   >
-                    <ArrowLeftIcon className="w-8 h-8 text-white" />
+                    <ChevronLeftIcon className="w-8 h-8 text-white" />
                   </button>
                   <h2 className="text-[46px] font-[580] text-white tracking-tight">
                     {settingsStructure[activeSubpage].title}
