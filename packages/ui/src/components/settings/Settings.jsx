@@ -20,138 +20,18 @@ const getVersionInfo = () => {
   return `Client version: ${clientVersion}`;
 };
 
-const settingsStructure = {
-  general: {
-    title: "General",
-    icon: SettingsGeneralIcon,
-    items: [
-      {
-        id: "idle-redirect",
-        title: "Idle Redirect",
-        type: "toggle",
-        description:
-          "Automatically redirect to the Now Playing screen after one minute of inactivity.",
-        storageKey: "autoRedirectEnabled",
-        defaultValue: false,
+const fetchSpotifyProfile = async (accessToken) => {
+  try {
+    const response = await fetch("https://api.spotify.com/v1/me", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
       },
-    ],
-  },
-  playback: {
-    title: "Playback",
-    icon: SettingsPlaybackIcon,
-    items: [
-      {
-        id: "track-scrolling",
-        title: "Track Name Scrolling",
-        type: "toggle",
-        description:
-          "Enable or disable the scrolling animation for the track name in the player.",
-        storageKey: "trackNameScrollingEnabled",
-        defaultValue: true,
-      },
-      {
-        id: "lyrics-menu",
-        title: "Lyrics Menu Option",
-        type: "toggle",
-        description: "Enable or disable the lyrics menu option in the player.",
-        storageKey: "lyricsMenuEnabled",
-        defaultValue: true,
-      },
-      {
-        id: "elapsed-time",
-        title: "Show Time Elapsed",
-        type: "toggle",
-        description: "Display the elapsed track time below the progress bar.",
-        storageKey: "elapsedTimeEnabled",
-        defaultValue: false,
-      },
-      {
-        id: "remaining-time",
-        title: "Show Time Remaining",
-        type: "toggle",
-        description: "Display the remaining track time below the progress bar.",
-        storageKey: "remainingTimeEnabled",
-        defaultValue: false,
-      },
-    ],
-  },
-  account: {
-    title: "Account",
-    icon: SettingsAccountIcon,
-    items: [
-      {
-        id: "sign-out",
-        title: "Sign Out",
-        type: "action",
-        description: "Sign out and reset authentication settings.",
-        action: "signOut",
-      },
-    ],
-  },
-  about: {
-    title: "About",
-    icon: SettingsAboutIcon,
-    items: [
-      {
-        id: "nocturne-version",
-        title: "Nocturne Version",
-        type: "info",
-        description: getVersionInfo(),
-      },
-      {
-        id: "artwork-credits",
-        title: "Artwork & Credits",
-        type: "info",
-        description:
-          "All album artwork, artist images, and track metadata are provided by Spotify Technology S.A. These materials are protected by intellectual property rights owned by Spotify or its licensors.",
-      },
-    ],
-  },
-  support: {
-    title: "Support Nocturne",
-    icon: SettingsSupportIcon,
-  },
-  credits: {
-    title: "Credits",
-    icon: SettingsCreditsIcon,
-    type: "custom",
-    items: [
-      {
-        id: "developers",
-        title: "Developers",
-        type: "sponsors",
-        names: ["Brandon Saldan", "bbaovanc", "Dominic Frye", "shadow"],
-      },
-      {
-        id: "contributors",
-        title: "Contributors",
-        type: "sponsors",
-        names: ["angelolz", "EllEation", "Jenner Gray", "vakst"],
-      },
-      {
-        id: "sponsors",
-        title: "Sponsors",
-        type: "sponsors",
-        names: [
-          "Canaan.0",
-          "Cbb",
-          "danielvaswani",
-          "DeanGulBairy",
-          "DeepfakeKittens",
-          "itsamanpret",
-          "Jenner Gray",
-          "MaydaySilly",
-          "Nathan",
-          "Navi",
-          "nono9k",
-          "Tanner",
-          "uktexan",
-          "Vonnieboo",
-          "Yungguap",
-        ],
-      },
-    ],
-  },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching Spotify profile:", error);
+    return null;
+  }
 };
 
 export default function Settings({ accessToken, onOpenDonationModal }) {
@@ -159,8 +39,185 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
   const [currentPage, setCurrentPage] = useState("main");
   const [activeSubpage, setActiveSubpage] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
 
   const ANIMATION_DURATION = 400;
+
+  useEffect(() => {
+    if (accessToken) {
+      fetchSpotifyProfile(accessToken).then((profile) => {
+        setUserProfile(profile);
+      });
+    }
+  }, [accessToken]);
+
+  const AccountInfo = () => {
+    if (!userProfile) return null;
+
+    return (
+      <div className="mb-8">
+        <div className="flex items-center mb-6">
+          {userProfile.images?.[0]?.url && (
+            <img
+              src={userProfile.images[0].url}
+              alt="Profile"
+              className="w-24 h-24 rounded-full mr-4"
+            />
+          )}
+          <div>
+            <h3 className="text-[32px] font-[580] text-white tracking-tight">
+              {userProfile.display_name}
+            </h3>
+            <p className="text-[24px] font-[560] text-white/60 tracking-tight">
+              {userProfile.email}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const settingsStructure = {
+    general: {
+      title: "General",
+      icon: SettingsGeneralIcon,
+      items: [
+        {
+          id: "idle-redirect",
+          title: "Idle Redirect",
+          type: "toggle",
+          description:
+            "Automatically redirect to the Now Playing screen after one minute of inactivity.",
+          storageKey: "autoRedirectEnabled",
+          defaultValue: false,
+        },
+      ],
+    },
+    playback: {
+      title: "Playback",
+      icon: SettingsPlaybackIcon,
+      items: [
+        {
+          id: "track-scrolling",
+          title: "Track Name Scrolling",
+          type: "toggle",
+          description:
+            "Enable or disable the scrolling animation for the track name in the player.",
+          storageKey: "trackNameScrollingEnabled",
+          defaultValue: true,
+        },
+        {
+          id: "lyrics-menu",
+          title: "Lyrics Menu Option",
+          type: "toggle",
+          description:
+            "Enable or disable the lyrics menu option in the player.",
+          storageKey: "lyricsMenuEnabled",
+          defaultValue: true,
+        },
+        {
+          id: "elapsed-time",
+          title: "Show Time Elapsed",
+          type: "toggle",
+          description: "Display the elapsed track time below the progress bar.",
+          storageKey: "elapsedTimeEnabled",
+          defaultValue: false,
+        },
+        {
+          id: "remaining-time",
+          title: "Show Time Remaining",
+          type: "toggle",
+          description:
+            "Display the remaining track time below the progress bar.",
+          storageKey: "remainingTimeEnabled",
+          defaultValue: false,
+        },
+      ],
+    },
+    account: {
+      title: "Account",
+      icon: SettingsAccountIcon,
+      items: [
+        {
+          id: "profile-info",
+          title: "Profile Information",
+          type: "custom",
+          component: AccountInfo,
+        },
+        {
+          id: "sign-out",
+          title: "Sign Out",
+          type: "action",
+          description: "Sign out and reset authentication settings.",
+          action: "signOut",
+        },
+      ],
+    },
+    about: {
+      title: "About",
+      icon: SettingsAboutIcon,
+      items: [
+        {
+          id: "nocturne-version",
+          title: "Nocturne Version",
+          type: "info",
+          description: getVersionInfo(),
+        },
+        {
+          id: "artwork-credits",
+          title: "Artwork & Credits",
+          type: "info",
+          description:
+            "All album artwork, artist images, and track metadata are provided by Spotify Technology S.A. These materials are protected by intellectual property rights owned by Spotify or its licensors.",
+        },
+      ],
+    },
+    support: {
+      title: "Support Nocturne",
+      icon: SettingsSupportIcon,
+    },
+    credits: {
+      title: "Credits",
+      icon: SettingsCreditsIcon,
+      type: "custom",
+      items: [
+        {
+          id: "developers",
+          title: "Developers",
+          type: "sponsors",
+          names: ["Brandon Saldan", "bbaovanc", "Dominic Frye", "shadow"],
+        },
+        {
+          id: "contributors",
+          title: "Contributors",
+          type: "sponsors",
+          names: ["angelolz", "EllEation", "Jenner Gray", "vakst"],
+        },
+        {
+          id: "sponsors",
+          title: "Sponsors",
+          type: "sponsors",
+          names: [
+            "Canaan.0",
+            "Cbb",
+            "danielvaswani",
+            "DeanGulBairy",
+            "DeepfakeKittens",
+            "itsamanpret",
+            "Jenner Gray",
+            "MaydaySilly",
+            "Nathan",
+            "Navi",
+            "nono9k",
+            "Tanner",
+            "uktexan",
+            "Vonnieboo",
+            "Yungguap",
+          ],
+        },
+      ],
+    },
+  };
 
   const [settings, setSettings] = useState(() => {
     const states = {};
@@ -316,6 +373,12 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
 
   const renderSettingItem = (item) => {
     switch (item.type) {
+      case "custom":
+        if (item.component) {
+          const Component = item.component;
+          return <Component key={item.id} />;
+        }
+        return null;
       case "toggle":
         return (
           <div key={item.id} className="mb-8">
