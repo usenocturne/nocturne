@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { Switch } from "@headlessui/react";
 import { supabase } from "../../lib/supabaseClient";
+import packageInfo from "../../../package.json";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -12,6 +13,12 @@ import {
   SettingsPlaybackIcon,
   SettingsSupportIcon,
 } from "../icons";
+
+const getVersionInfo = () => {
+  const clientVersion = packageInfo.version;
+
+  return `Client version: ${clientVersion}`;
+};
 
 const settingsStructure = {
   general: {
@@ -85,6 +92,12 @@ const settingsStructure = {
     title: "About",
     icon: SettingsAboutIcon,
     items: [
+      {
+        id: "nocturne-version",
+        title: "Nocturne Version",
+        type: "info",
+        description: getVersionInfo(),
+      },
       {
         id: "artwork-credits",
         title: "Artwork & Credits",
