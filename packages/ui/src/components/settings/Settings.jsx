@@ -14,12 +14,6 @@ import {
   SettingsSupportIcon,
 } from "../icons";
 
-const getVersionInfo = () => {
-  const clientVersion = packageInfo.version;
-
-  return `Client version: ${clientVersion}`;
-};
-
 const fetchSpotifyProfile = async (accessToken) => {
   try {
     const response = await fetch("https://api.spotify.com/v1/me", {
@@ -40,10 +34,29 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
   const [activeSubpage, setActiveSubpage] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
+  const [versionInfo, setVersionInfo] = useState("Loading versions...");
 
   const ANIMATION_DURATION = 400;
 
+  const getVersionInfo = async () => {
+    const clientVersion = packageInfo.version;
+    let osVersion = "Unknown";
+
+    try {
+      const response = await fetch("http://localhost:5000/info");
+      const data = await response.json();
+      osVersion = data.version;
+    } catch (error) {
+      console.error("Error fetching OS version:", error);
+    }
+
+    return `Client version: ${clientVersion}\nOS version: ${osVersion}`;
+  };
+
   useEffect(() => {
+    getVersionInfo().then((info) => {
+      setVersionInfo(info);
+    });
     if (accessToken) {
       fetchSpotifyProfile(accessToken).then((profile) => {
         setUserProfile(profile);
@@ -161,7 +174,7 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
           id: "nocturne-version",
           title: "Nocturne Version",
           type: "info",
-          description: getVersionInfo(),
+          description: versionInfo,
         },
         {
           id: "artwork-credits",
@@ -373,12 +386,6 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
 
   const renderSettingItem = (item) => {
     switch (item.type) {
-      case "custom":
-        if (item.component) {
-          const Component = item.component;
-          return <Component key={item.id} />;
-        }
-        return null;
       case "toggle":
         return (
           <div key={item.id} className="mb-8">
@@ -444,11 +451,17 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
       case "info":
         return (
           <div key={item.id} className="mb-8">
-            <p className="text-[20px] font-[560] text-white/60 max-w-[380px] tracking-tight">
+            <p className="text-[20px] font-[560] text-white/60 max-w-[380px] tracking-tight whitespace-pre-line">
               {item.description}
             </p>
           </div>
         );
+      case "custom":
+        if (item.component) {
+          const Component = item.component;
+          return <Component key={item.id} />;
+        }
+        return null;
       default:
         return null;
     }
