@@ -216,7 +216,7 @@ This software was made possible only through the following individuals and open 
 
 ## Related
 
-[nocturne-ui](https://github.com/brandonsaldan/nocturne) - The web application that this Debian image runs
+[nocturne-ui](https://github.com/usenocturne/nocturne-ui) - The web application that this Debian image runs
 
 ## License
 
