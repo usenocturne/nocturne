@@ -26,6 +26,7 @@ import { usePlaybackControls } from "@/hooks/usePlaybackControls";
 import { usePlaylistDialog } from "@/hooks/usePlaylistDialog";
 import { useAppState } from "@/hooks/useAppState";
 import { useElapsedTime } from "@/hooks/useElapsedTime";
+import { inter } from "../constants/fonts";
 
 import {
   HeartIcon,
@@ -200,7 +201,8 @@ export default function NowPlaying({
           <div className="min-w-[280px] mr-8">
             <LongPressLink
               href={
-                currentPlayback?.item?.type === "episode"
+                !currentPlayback ? "" 
+                : currentPlayback?.item?.type === "episode"
                   ? `/show/${currentPlayback.item.show.id}`
                   : `/album/${currentPlayback?.item?.album?.id}`
               }
@@ -230,7 +232,8 @@ export default function NowPlaying({
             <div className="flex-1 text-center md:text-left">
               <LongPressLink
                 href={
-                  currentPlayback?.item?.type === "episode"
+                  !currentPlayback ? "" 
+                  : currentPlayback?.item?.type === "episode"
                     ? `/show/${currentPlayback.item.show.id}`
                     : `/album/${currentPlayback?.item?.album?.id}`
                 }
@@ -390,9 +393,9 @@ export default function NowPlaying({
                 className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
               >
                 <div className="py-1">
-                  <DrawerTrigger onClick={() => setDrawerOpen(true)}>
+                  <DrawerTrigger onClick={(e) => currentPlayback ? setDrawerOpen(currentPlayback) : e.preventDefault()}>
                     <MenuItem>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
                         <span className="text-[28px]">Add to Playlist</span>
                         <PlaylistAddIcon
                           aria-hidden="true"
@@ -404,7 +407,7 @@ export default function NowPlaying({
                 </div>
 
                 <div className="py-1">
-                  <MenuItem onClick={() => setIsDeviceSwitcherOpen(true)}>
+                  <MenuItem onClick={() => setIsDeviceSwitcherOpen(true) }>
                     <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                       <span className="text-[28px]">Switch Device</span>
                       <DeviceSwitcherIcon
@@ -416,8 +419,8 @@ export default function NowPlaying({
                 </div>
 
                 <div className="py-1">
-                  <MenuItem onClick={toggleRepeat}>
-                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                  <MenuItem onClick={(e) => currentPlayback ? toggleRepeat() : e.preventDefault()}>
+                    <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
                       <span className="text-[28px]">
                         {repeatMode === "off"
                           ? "Enable Repeat"
@@ -437,8 +440,8 @@ export default function NowPlaying({
                 </div>
 
                 <div className="py-1">
-                  <MenuItem onClick={toggleShuffle}>
-                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                  <MenuItem onClick={(e) => currentPlayback ? toggleShuffle() : e.preventDefault()}>
+                    <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
                       <span className="text-[28px]">
                         {isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
                       </span>
@@ -454,8 +457,8 @@ export default function NowPlaying({
 
                 {lyricsMenuOptionEnabled && (
                   <div className="py-1">
-                    <MenuItem onClick={handleToggleLyrics}>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                    <MenuItem onClick={(e) => currentPlayback ? handleToggleLyrics() : e.preventDefault()}>
+                      <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
                         <span className="text-[28px]">
                           {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
                         </span>
@@ -547,10 +550,13 @@ export default function NowPlaying({
           />
 
           <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
-            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div 
+              className={`flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0 ${inter.variable}`}
+              style={{ fontFamily: "var(--font-inter)" }}
+            >
               <DialogPanel
                 transition
-                className="relative transform overflow-hidden rounded-[17px] bg-black/30 backdrop-blur-xl px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[36rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+                className="relative transform overflow-hidden rounded-[17px] bg-[#161616] px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[36rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
               >
                 <div>
                   <div className="text-center">
