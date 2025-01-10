@@ -393,7 +393,7 @@ export default function NowPlaying({
                 className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
               >
                 <div className="py-1">
-                  <DrawerTrigger onClick={(e) => currentPlayback ? setDrawerOpen(currentPlayback) : e.preventDefault()}>
+                  <DrawerTrigger onClick={(e) => currentPlayback ? setDrawerOpen(true) : e.preventDefault()}>
                     <MenuItem>
                       <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
                         <span className="text-[28px]">Add to Playlist</span>
@@ -407,7 +407,7 @@ export default function NowPlaying({
                 </div>
 
                 <div className="py-1">
-                  <MenuItem onClick={() => setIsDeviceSwitcherOpen(true) }>
+                  <MenuItem onClick={() => setIsDeviceSwitcherOpen(true)}>
                     <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                       <span className="text-[28px]">Switch Device</span>
                       <DeviceSwitcherIcon
