@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { ArrowLeftIcon, XIcon } from "../../icons";
+import { ArrowLeftIcon, XIcon, CircleOffIcon } from "../../icons";
 import { registerDevice, checkAuthStatus } from "../../../services/authService";
+import ErrorCodes from "../../../constants/errorCodes";
 
 const QRAuthFlow = ({ onBack, onComplete }) => {
   const [deviceId, setDeviceId] = useState("");
@@ -18,7 +19,14 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
         setIsLoading(false);
       } catch (err) {
         console.error("Failed to register device:", err);
-        setError("Failed to generate QR code");
+        const errorMessage = err.message?.includes("CERT_COMMON_NAME_INVALID")
+          ? "CERT_COMMON_NAME_ERROR"
+          : "REGISTER_DEVICE_ERROR";
+        setError({
+          message: "Failed to Generate QR Code",
+          code: ErrorCodes[errorMessage],
+          details: err.message,
+        });
         setIsLoading(false);
       }
     };
@@ -37,7 +45,7 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
 
         if (!isMounted) return;
 
-        if (data.status === 'authorized') {
+        if (data.status === "authorized") {
           clearInterval(pollInterval);
           const clientId = data.encryptedData?.clientId;
           const clientSecret = data.encryptedData?.clientSecret;
@@ -45,20 +53,24 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
 
           if (clientId && clientSecret && authCode) {
             // Storing these in localStorage temporarily
-            localStorage.setItem('spotifyClientId', clientId);
-            localStorage.setItem('spotifyClientSecret', clientSecret);
-            localStorage.setItem('spotifyAuthType', 'custom');
+            localStorage.setItem("spotifyClientId", clientId);
+            localStorage.setItem("spotifyClientSecret", clientSecret);
+            localStorage.setItem("spotifyAuthType", "custom");
             onComplete({
               type: "custom",
               authCode: data.code,
-              deviceId
+              deviceId,
             });
           } else {
             const missing = [];
-            if (!clientId) missing.push('clientId');
-            if (!clientSecret) missing.push('clientSecret');
-            if (!authCode) missing.push('authCode');
-            setError(`Incomplete auth data. Missing: ${missing.join(', ')}`);
+            if (!clientId) missing.push("clientId");
+            if (!clientSecret) missing.push("clientSecret");
+            if (!authCode) missing.push("authCode");
+            setError({
+              message: "Failed to Generate QR Code",
+              code: ErrorCodes.AUTH_ERROR,
+              details: `Incomplete auth data. Missing: ${missing.join(", ")}`,
+            });
           }
         }
 
@@ -70,7 +82,11 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
 
     const timeoutId = setTimeout(() => {
       clearInterval(pollInterval);
-      setError("QR code has expired. Please try again.");
+      setError({
+        message: "Failed to Generate QR Code",
+        code: ErrorCodes.AUTH_ERROR,
+        details: "QR code has expired. Please try again.",
+      });
     }, 15 * 60 * 1000);
 
     return () => {
@@ -87,24 +103,32 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
     }, 300);
   };
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <div className="text-white/70 text-xl">{error}</div>
-          <button
-            onClick={onBack}
-            className="flex items-center justify-center space-x-2 rounded-full bg-white/10 px-6 py-4 text-xl font-[560] text-white tracking-tight shadow-sm mx-auto"
-          >
-            <ArrowLeftIcon size={24} />
-            <span>Go Back</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const modalContent = () => {
+    if (error) {
+      return (
+        <div className="flex flex-col items-center space-y-8">
+          <div className="bg-white w-[200px] h-[200px] rounded-xl flex items-center justify-center">
+            <CircleOffIcon size={64} className="text-black" />
+          </div>
+          <div className="space-y-6 text-center">
+            <div className="space-y-2">
+              <div className="text-white/70 text-xl">{error.message}</div>
+              <div className="text-red-500/70 text-sm font-mono">
+                Error {error.code}: {error.details}
+              </div>
+            </div>
+            <button
+              onClick={handleClose}
+              className="inline-flex items-center gap-3 rounded-full bg-white/10 px-8 py-4 text-xl font-[560] text-white tracking-tight shadow-sm whitespace-nowrap min-w-[160px]"
+            >
+              <ArrowLeftIcon className="w-6 h-6" />
+              <span>Go Back</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (isLoading) {
       return (
         <div className="flex flex-col items-center space-y-8">

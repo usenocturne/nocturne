@@ -46,3 +46,4 @@ export { default as SettingsPlaybackIcon } from "./SettingsPlaybackIcon";
 export { default as SettingsSupportIcon } from "./SettingsSupportIcon";
 export { default as ChevronRightIcon } from "./ChevronRightIcon";
 export { default as ChevronLeftIcon } from "./ChevronLeftIcon";
+export { default as CircleOffIcon } from "./CircleOffIcon";

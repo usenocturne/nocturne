@@ -36,6 +36,8 @@ export const ErrorCodes = {
   AUTH_ERROR: "E035",
   DEVICES_FETCH_ERROR: "E036",
   FETCH_PLAYLIST_TRACKS_ERROR: "E037",
+  REGISTER_DEVICE_ERROR: "E038",
+  CERT_COMMON_NAME_ERROR: "E039",
 };
 
 export default ErrorCodes;
