@@ -67,7 +67,7 @@ else
 fi
 
 # set CT_INTERFACE depending on what pi this script is being ran on 
-if [[ "$(cat /sys/firmware/devicetree/base/model | sed 's/\(.*\)\(Model\|Rev\).*/\1/')" == *"Pi Zero"* ]] then 
+if [[ "$(cat /sys/firmware/devicetree/base/model | sed 's/\(.*\)\(Model\|Rev\).*/\1/')" == *"Pi Zero"* ]]; then 
     CT_INTERFACE="eth0"
 else
     CT_INTERFACE="eth1"
