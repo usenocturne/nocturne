@@ -191,7 +191,7 @@ export function useGradientState(activeSection) {
     (imageUrl, section = null) => {
       if (!imageUrl) {
         if (section === "radio") {
-          const radioColors = ["#d5f2c0", "#daf4c7", "#da90c9", "#db3dcb"];
+          const radioColors = ["#3B518B", "#202F57", "#142045", "#151231"];
           setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
           if (activeSection === "radio" || activeSection === "nowPlaying") {
             setTargetColor1(radioColors[0]);
