@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, use } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { getCurrentDevice } from "@/services/deviceService";
 
