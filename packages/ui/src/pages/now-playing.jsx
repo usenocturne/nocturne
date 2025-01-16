@@ -78,6 +78,8 @@ export default function NowPlaying({
     changeVolume,
     toggleLikeTrack,
     handleWheelScroll,
+    handleTouchStart,
+    handleTouchEnd
   } = useNowPlaying({
     accessToken,
     currentPlayback,
@@ -122,31 +124,6 @@ export default function NowPlaying({
 
   const { elapsedTimeEnabled, remainingTimeEnabled, showTimeDisplay } =
     useElapsedTime();
-
-    const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
-
-    const handleTouchStart = (event) => {
-      const touch = event.touches[0];
-      setStartPosition({ x: touch.clientX, y: touch.clientY });
-    };
-  
-    const handleTouchEnd = (event) => {
-      if(showLyrics || !currentPlayback) return;
-
-      const touch = event.changedTouches[0];
-      const endPosition = { x: touch.clientX, y: touch.clientY };
-  
-      const dx = endPosition.x - startPosition.x;
-      const dy = endPosition.y - startPosition.y;
-  
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0) {
-          skipToPrevious();
-        } else {
-          skipToNext();
-        }
-      }
-    };
 
   const artistName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -222,7 +199,7 @@ export default function NowPlaying({
   return (
     <>
       <div className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation">
-        <div id="touchArea" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
             <div className="min-w-[280px] mr-8">
               <LongPressLink
@@ -346,7 +323,7 @@ export default function NowPlaying({
               </div>
             </div>
           )}
-        </div>
+          </div>
         </div>
 
         <div className={`px-12 ${!showTimeDisplay ? "pb-7 pt-3" : ""}`}>

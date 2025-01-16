@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, use } from "react";
 import { useRouter } from "next/router";
 import { getCurrentDevice } from "@/services/deviceService";
 
@@ -14,6 +14,7 @@ export function useNowPlaying({
   const [isLiked, setIsLiked] = useState(false);
   const [volume, setVolume] = useState(null);
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
+  const [startTouchPosition, setStartTouchPosition] = useState({ x: 0, y: 0 });
   const volumeTimeoutRef = useRef(null);
   const volumeSyncIntervalRef = useRef(null);
   const previousTrackId = useRef(null);
@@ -146,6 +147,34 @@ export function useNowPlaying({
     [showBrightnessOverlay, drawerOpen, volume]
   );
 
+  const handleTouchStart = useCallback(
+    (event) => {
+      const touch = event.touches[0];
+      setStartTouchPosition({ x: touch.clientX, y: touch.clientY });
+    },
+    [startTouchPosition]
+  );
+
+  const handleTouchEnd = useCallback(
+    (event) => {
+      if(!currentPlayback) return;
+
+      const touch = event.changedTouches[0];
+      const endPosition = { x: touch.clientX, y: touch.clientY };
+      const dx = endPosition.x - startTouchPosition.x;
+      const dy = endPosition.y - startTouchPosition.y;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) { //swipe right
+          skipToPrevious();
+        } else { //swipe left
+          skipToNext();
+        }
+      }
+    }, 
+    [startTouchPosition]
+  );
+
   const checkIfTrackIsLiked = useCallback(
     async (trackId) => {
       if (!accessToken) return;
@@ -261,5 +290,7 @@ export function useNowPlaying({
     changeVolume,
     toggleLikeTrack,
     handleWheelScroll,
+    handleTouchStart,
+    handleTouchEnd
   };
 }
