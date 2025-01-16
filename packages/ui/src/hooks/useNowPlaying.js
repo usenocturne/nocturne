@@ -166,7 +166,6 @@ export function useNowPlaying({
       const dx = endPosition.x - startTouchPosition.x;
       const dy = endPosition.y - startTouchPosition.y;
 
-      // handleError("epic", `dx: ${dx} | dy: ${dy}`);
       if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
           if (dx > 0) { //swipe right
             skipToPrevious();
