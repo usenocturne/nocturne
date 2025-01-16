@@ -6,6 +6,8 @@ export function useNowPlaying({
   accessToken,
   currentPlayback,
   fetchCurrentPlayback,
+  showLyrics,
+  handleToggleLyrics,
   handleError,
   showBrightnessOverlay,
   drawerOpen,
@@ -164,15 +166,20 @@ export function useNowPlaying({
       const dx = endPosition.x - startTouchPosition.x;
       const dy = endPosition.y - startTouchPosition.y;
 
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0) { //swipe right
-          skipToPrevious();
-        } else { //swipe left
-          skipToNext();
+      // handleError("epic", `dx: ${dx} | dy: ${dy}`);
+      if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+          if (dx > 0) { //swipe right
+            skipToPrevious();
+          } else { //swipe left
+            skipToNext();
+          }
+      } else if(Math.abs(dy) > 18 && Math.abs(dy) > Math.abs(dx)) {
+        if(dy < 0 && !showLyrics) {
+          handleToggleLyrics();
         }
       }
     }, 
-    [startTouchPosition]
+    [startTouchPosition, currentPlayback, showLyrics]
   );
 
   const checkIfTrackIsLiked = useCallback(

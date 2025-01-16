@@ -69,6 +69,17 @@ export default function NowPlaying({
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
 
   const {
+    showLyrics,
+    parsedLyrics,
+    currentLyricIndex,
+    isLoadingLyrics,
+    lyricsUnavailable,
+    lyricsMenuOptionEnabled,
+    lyricsContainerRef,
+    handleToggleLyrics,
+  } = useLyrics({ currentPlayback });
+
+  const {
     isLiked,
     volume,
     isVolumeVisible,
@@ -84,21 +95,12 @@ export default function NowPlaying({
     accessToken,
     currentPlayback,
     fetchCurrentPlayback,
+    showLyrics,
+    handleToggleLyrics,
     handleError,
     showBrightnessOverlay,
     drawerOpen,
   });
-
-  const {
-    showLyrics,
-    parsedLyrics,
-    currentLyricIndex,
-    isLoadingLyrics,
-    lyricsUnavailable,
-    lyricsMenuOptionEnabled,
-    lyricsContainerRef,
-    handleToggleLyrics,
-  } = useLyrics({ currentPlayback });
 
   const { isShuffled, repeatMode, toggleShuffle, toggleRepeat } =
     usePlaybackControls({
