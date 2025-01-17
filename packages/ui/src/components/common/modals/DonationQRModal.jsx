@@ -39,7 +39,7 @@ const DonationQRModal = ({ onClose }) => {
           <div className="flex flex-col items-center space-y-8">
             <div className="bg-white p-1 rounded-xl">
               <QRCodeSVG
-                value="https://brandons.place/nocturne/support"
+                value="https://usenocturne.com/support"
                 size={200}
                 level="H"
                 includeMargin={true}
