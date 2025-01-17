@@ -3,7 +3,9 @@ import { useRouter } from "next/router";
 import { Switch } from "@headlessui/react";
 import { supabase } from "../../lib/supabaseClient";
 import packageInfo from "../../../package.json";
+import BluetoothDevices from "../bluetooth/BluetoothDevices";
 import {
+  BluetoothIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   SettingsAccountIcon,
@@ -103,6 +105,18 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
             "Automatically redirect to the Now Playing screen after one minute of inactivity.",
           storageKey: "autoRedirectEnabled",
           defaultValue: false,
+        },
+      ],
+    },
+    bluetooth: {
+      title: "Bluetooth",
+      icon: BluetoothIcon,
+      type: "custom",
+      items: [
+        {
+          id: "bluetooth-devices",
+          type: "custom",
+          component: BluetoothDevices,
         },
       ],
     },
@@ -508,7 +522,7 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
 
             {activeSubpage && (
               <div className={subPageClasses}>
-                <div className="flex items-center mb-8">
+                <div className="flex items-center mb-4">
                   <button
                     onClick={navigateBack}
                     className="mr-4"
