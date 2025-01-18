@@ -69,25 +69,6 @@ export default function NowPlaying({
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
 
   const {
-    isLiked,
-    volume,
-    isVolumeVisible,
-    togglePlayPause,
-    skipToNext,
-    skipToPrevious,
-    changeVolume,
-    toggleLikeTrack,
-    handleWheelScroll,
-  } = useNowPlaying({
-    accessToken,
-    currentPlayback,
-    fetchCurrentPlayback,
-    handleError,
-    showBrightnessOverlay,
-    drawerOpen,
-  });
-
-  const {
     showLyrics,
     parsedLyrics,
     currentLyricIndex,
@@ -97,6 +78,29 @@ export default function NowPlaying({
     lyricsContainerRef,
     handleToggleLyrics,
   } = useLyrics({ currentPlayback });
+
+  const {
+    isLiked,
+    volume,
+    isVolumeVisible,
+    togglePlayPause,
+    skipToNext,
+    skipToPrevious,
+    changeVolume,
+    toggleLikeTrack,
+    handleWheelScroll,
+    handleTouchStart,
+    handleTouchEnd
+  } = useNowPlaying({
+    accessToken,
+    currentPlayback,
+    fetchCurrentPlayback,
+    showLyrics,
+    handleToggleLyrics,
+    handleError,
+    showBrightnessOverlay,
+    drawerOpen,
+  });
 
   const { isShuffled, repeatMode, toggleShuffle, toggleRepeat } =
     usePlaybackControls({
@@ -197,39 +201,9 @@ export default function NowPlaying({
   return (
     <>
       <div className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation">
-        <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
-          <div className="min-w-[280px] mr-8">
-            <LongPressLink
-              href={
-                !currentPlayback ? "" 
-                : currentPlayback?.item?.type === "episode"
-                  ? `/show/${currentPlayback.item.show.id}`
-                  : `/album/${currentPlayback?.item?.album?.id}`
-              }
-              spotifyUrl={
-                currentPlayback?.item?.type === "episode"
-                  ? currentPlayback.item.show.external_urls?.spotify
-                  : currentPlayback?.item?.album?.external_urls?.spotify
-              }
-              accessToken={accessToken}
-            >
-              <Image
-                src={albumArt}
-                alt={
-                  currentPlayback?.item?.type === "episode"
-                    ? "Podcast Cover"
-                    : "Album Art"
-                }
-                width={280}
-                height={280}
-                priority
-                className="aspect-square rounded-[12px] drop-shadow-xl"
-              />
-            </LongPressLink>
-          </div>
-
-          {!showLyrics || !currentPlayback?.item ? (
-            <div className="flex-1 text-center md:text-left">
+        <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+          <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
+            <div className="min-w-[280px] mr-8">
               <LongPressLink
                 href={
                   !currentPlayback ? "" 
@@ -244,61 +218,92 @@ export default function NowPlaying({
                 }
                 accessToken={accessToken}
               >
-                {trackNameScrollingEnabled ? (
-                  <div className="track-name-container">
-                    <h4
-                      ref={trackNameRef}
-                      key={currentPlayback?.item?.id || "not-playing"}
-                      className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                        trackNameScrollingEnabled && shouldScroll
-                          ? "animate-scroll"
-                          : ""
-                      }`}
-                    >
-                      {trackName}
-                    </h4>
-                  </div>
-                ) : (
-                  <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
-                    {trackName}
-                  </h4>
-                )}
-              </LongPressLink>
-              <LongPressLink
-                href={
-                  currentPlayback?.item?.type === "episode"
-                    ? `/show/${currentPlayback.item.show.id}`
-                    : `/artist/${currentPlayback?.item?.artists[0]?.id}`
-                }
-                spotifyUrl={
-                  currentPlayback?.item?.type === "episode"
-                    ? currentPlayback.item.show.external_urls?.spotify
-                    : currentPlayback?.item?.artists[0]?.external_urls?.spotify
-                }
-                accessToken={accessToken}
-              >
-                <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
-                  {artistName}
-                </h4>
+                <Image
+                  src={albumArt}
+                  alt={
+                    currentPlayback?.item?.type === "episode"
+                      ? "Podcast Cover"
+                      : "Album Art"
+                  }
+                  width={280}
+                  height={280}
+                  priority
+                  className="aspect-square rounded-[12px] drop-shadow-xl"
+                />
               </LongPressLink>
             </div>
-          ) : (
-            <div className="flex-1 flex flex-col h-[280px]">
-              <div
-                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
-                ref={lyricsContainerRef}
-              >
-                {isLoadingLyrics ? (
-                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
-                    Loading lyrics...
-                  </p>
-                ) : parsedLyrics.length > 0 ? (
-                  parsedLyrics.map((lyric, index) => {
-                    const { className } = getTextStyles(lyric.text);
-                    const conditionalClass =
-                      index === currentLyricIndex
-                        ? "text-white"
-                        : index === currentLyricIndex - 1 ||
+
+            {!showLyrics || !currentPlayback?.item ? (
+              <div className="flex-1 text-center md:text-left">
+                <LongPressLink
+                  href={
+                    !currentPlayback ? "" 
+                    : currentPlayback?.item?.type === "episode"
+                      ? `/show/${currentPlayback.item.show.id}`
+                      : `/album/${currentPlayback?.item?.album?.id}`
+                  }
+                  spotifyUrl={
+                    currentPlayback?.item?.type === "episode"
+                      ? currentPlayback.item.show.external_urls?.spotify
+                      : currentPlayback?.item?.album?.external_urls?.spotify
+                  }
+                  accessToken={accessToken}
+                >
+                  {trackNameScrollingEnabled ? (
+                    <div className="track-name-container">
+                      <h4
+                        ref={trackNameRef}
+                        key={currentPlayback?.item?.id || "not-playing"}
+                        className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
+                          trackNameScrollingEnabled && shouldScroll
+                            ? "animate-scroll"
+                            : ""
+                        }`}
+                      >
+                        {trackName}
+                      </h4>
+                    </div>
+                  ) : (
+                    <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
+                      {trackName}
+                    </h4>
+                  )}
+                </LongPressLink>
+                <LongPressLink
+                  href={
+                    currentPlayback?.item?.type === "episode"
+                      ? `/show/${currentPlayback.item.show.id}`
+                      : `/artist/${currentPlayback?.item?.artists[0]?.id}`
+                  }
+                  spotifyUrl={
+                    currentPlayback?.item?.type === "episode"
+                      ? currentPlayback.item.show.external_urls?.spotify
+                      : currentPlayback?.item?.artists[0]?.external_urls?.spotify
+                  }
+                  accessToken={accessToken}
+                >
+                  <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
+                    {artistName}
+                  </h4>
+                </LongPressLink>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col h-[280px]">
+                <div
+                  className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
+                  ref={lyricsContainerRef}
+                >
+                  {isLoadingLyrics ? (
+                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                      Loading lyrics...
+                    </p>
+                  ) : parsedLyrics.length > 0 ? (
+                    parsedLyrics.map((lyric, index) => {
+                      const { className } = getTextStyles(lyric.text);
+                      const conditionalClass =
+                        index === currentLyricIndex
+                          ? "text-white"
+                          : index === currentLyricIndex - 1 ||
                           index === currentLyricIndex + 1
                         ? "text-white/40"
                         : "text-white/40";
@@ -320,6 +325,7 @@ export default function NowPlaying({
               </div>
             </div>
           )}
+          </div>
         </div>
 
         <div className={`px-12 ${!showTimeDisplay ? "pb-7 pt-3" : ""}`}>
