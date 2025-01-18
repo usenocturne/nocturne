@@ -17,6 +17,8 @@ export function useNowPlaying({
   const [volume, setVolume] = useState(null);
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
   const [startTouchPosition, setStartTouchPosition] = useState({ x: 0, y: 0 });
+  const [songChangeGestureEnabled, setSongChangeGestureEnabled] = useState(true);
+  const [showLyricsGestureEnabled, setShowLyricsGestureEnabled] = useState(false);
   const volumeTimeoutRef = useRef(null);
   const volumeSyncIntervalRef = useRef(null);
   const previousTrackId = useRef(null);
@@ -166,13 +168,13 @@ export function useNowPlaying({
       const dx = endPosition.x - startTouchPosition.x;
       const dy = endPosition.y - startTouchPosition.y;
 
-      if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
-          if (dx > 0) { //swipe right
-            skipToPrevious();
-          } else { //swipe left
-            skipToNext();
-          }
-      } else if(Math.abs(dy) > 18 && Math.abs(dy) > Math.abs(dx)) {
+      if (songChangeGestureEnabled === "true" && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) { //swipe right
+          skipToPrevious();
+        } else { //swipe left
+          skipToNext();
+        }
+      } else if(showLyricsGestureEnabled === "true" && Math.abs(dy) > 18 && Math.abs(dy) > Math.abs(dx)) {
         if(dy < 0 && !showLyrics) {
           handleToggleLyrics();
         }
@@ -233,6 +235,25 @@ export function useNowPlaying({
       console.error("Error toggling like track:", error);
     }
   };
+
+  useEffect(() => {
+    const songChangeGestureEnabledValue = localStorage.getItem("songChangeGestureEnabled");
+    const showLyricsGestureEnabledValue = localStorage.getItem("showLyricsGestureEnabled");
+
+    if (songChangeGestureEnabledValue === null) {
+      localStorage.setItem("songChangeGestureEnabled", "true");
+      setSongChangeGestureEnabled(true);
+    } else {
+      setSongChangeGestureEnabled(songChangeGestureEnabledValue);
+    }
+
+    if(showLyricsGestureEnabledValue === null) {
+      localStorage.setItem("showLyricsGestureEnabled", "false");
+      setShowLyricsGestureEnabled(false);
+    } else {
+      setShowLyricsGestureEnabled(showLyricsGestureEnabledValue);
+    }
+  }, []);
 
   useEffect(() => {
     if (currentPlayback && currentPlayback.item) {
