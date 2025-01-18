@@ -1,7 +1,7 @@
 
 <h1 align="center">
   <br>
-  <img src="https://raw.githubusercontent.com/usenocturne/nocturne-image/refs/heads/main/pictures/nocturne-logo.png" alt="Nocturne" width="200">
+  <img src="https://usenocturne.com/images/logo.png" alt="Nocturne" width="200">
   <br>
   nocturne
   <br>
