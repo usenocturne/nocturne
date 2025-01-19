@@ -90,7 +90,7 @@ export default function NowPlaying({
     toggleLikeTrack,
     handleWheelScroll,
     handleTouchStart,
-    handleTouchEnd
+    handleTouchEnd,
   } = useNowPlaying({
     accessToken,
     currentPlayback,
@@ -206,8 +206,9 @@ export default function NowPlaying({
             <div className="min-w-[280px] mr-8">
               <LongPressLink
                 href={
-                  !currentPlayback ? "" 
-                  : currentPlayback?.item?.type === "episode"
+                  !currentPlayback
+                    ? ""
+                    : currentPlayback?.item?.type === "episode"
                     ? `/show/${currentPlayback.item.show.id}`
                     : `/album/${currentPlayback?.item?.album?.id}`
                 }
@@ -237,8 +238,9 @@ export default function NowPlaying({
               <div className="flex-1 text-center md:text-left">
                 <LongPressLink
                   href={
-                    !currentPlayback ? "" 
-                    : currentPlayback?.item?.type === "episode"
+                    !currentPlayback
+                      ? ""
+                      : currentPlayback?.item?.type === "episode"
                       ? `/show/${currentPlayback.item.show.id}`
                       : `/album/${currentPlayback?.item?.album?.id}`
                   }
@@ -278,7 +280,8 @@ export default function NowPlaying({
                   spotifyUrl={
                     currentPlayback?.item?.type === "episode"
                       ? currentPlayback.item.show.external_urls?.spotify
-                      : currentPlayback?.item?.artists[0]?.external_urls?.spotify
+                      : currentPlayback?.item?.artists[0]?.external_urls
+                          ?.spotify
                   }
                   accessToken={accessToken}
                 >
@@ -304,27 +307,27 @@ export default function NowPlaying({
                         index === currentLyricIndex
                           ? "text-white"
                           : index === currentLyricIndex - 1 ||
-                          index === currentLyricIndex + 1
-                        ? "text-white/40"
-                        : "text-white/40";
+                            index === currentLyricIndex + 1
+                          ? "text-white/40"
+                          : "text-white/40";
 
-                    return (
-                      <p
-                        key={index}
-                        className={`${className} ${conditionalClass}`}
-                      >
-                        {lyric.text}
-                      </p>
-                    );
-                  })
-                ) : (
-                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
-                    Lyrics not available
-                  </p>
-                )}
+                      return (
+                        <p
+                          key={index}
+                          className={`${className} ${conditionalClass}`}
+                        >
+                          {lyric.text}
+                        </p>
+                      );
+                    })
+                  ) : (
+                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                      Lyrics not available
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
 
@@ -390,7 +393,7 @@ export default function NowPlaying({
 
           <div className="flex-shrink-0">
             <Menu as="div" className="relative inline-block text-left">
-              <MenuButton>
+              <MenuButton className="focus:outline-none">
                 <MenuIcon className="w-14 h-14 fill-white/60" />
               </MenuButton>
 
@@ -399,9 +402,17 @@ export default function NowPlaying({
                 className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
               >
                 <div className="py-1">
-                  <DrawerTrigger onClick={(e) => currentPlayback ? setDrawerOpen(true) : e.preventDefault()}>
+                  <DrawerTrigger
+                    onClick={(e) =>
+                      currentPlayback ? setDrawerOpen(true) : e.preventDefault()
+                    }
+                  >
                     <MenuItem>
-                      <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
+                      <div
+                        className={`group flex items-center justify-between px-4 py-[16px] text-sm ${
+                          currentPlayback ? "text-white" : "text-white/60"
+                        } font-[560] tracking-tight`}
+                      >
                         <span className="text-[28px]">Add to Playlist</span>
                         <PlaylistAddIcon
                           aria-hidden="true"
@@ -425,8 +436,16 @@ export default function NowPlaying({
                 </div>
 
                 <div className="py-1">
-                  <MenuItem onClick={(e) => currentPlayback ? toggleRepeat() : e.preventDefault()}>
-                    <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
+                  <MenuItem
+                    onClick={(e) =>
+                      currentPlayback ? toggleRepeat() : e.preventDefault()
+                    }
+                  >
+                    <div
+                      className={`group flex items-center justify-between px-4 py-[16px] text-sm ${
+                        currentPlayback ? "text-white" : "text-white/60"
+                      } font-[560] tracking-tight`}
+                    >
                       <span className="text-[28px]">
                         {repeatMode === "off"
                           ? "Enable Repeat"
@@ -446,8 +465,16 @@ export default function NowPlaying({
                 </div>
 
                 <div className="py-1">
-                  <MenuItem onClick={(e) => currentPlayback ? toggleShuffle() : e.preventDefault()}>
-                    <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
+                  <MenuItem
+                    onClick={(e) =>
+                      currentPlayback ? toggleShuffle() : e.preventDefault()
+                    }
+                  >
+                    <div
+                      className={`group flex items-center justify-between px-4 py-[16px] text-sm ${
+                        currentPlayback ? "text-white" : "text-white/60"
+                      } font-[560] tracking-tight`}
+                    >
                       <span className="text-[28px]">
                         {isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
                       </span>
@@ -463,8 +490,18 @@ export default function NowPlaying({
 
                 {lyricsMenuOptionEnabled && (
                   <div className="py-1">
-                    <MenuItem onClick={(e) => currentPlayback ? handleToggleLyrics() : e.preventDefault()}>
-                      <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60" } font-[560] tracking-tight`}>
+                    <MenuItem
+                      onClick={(e) =>
+                        currentPlayback
+                          ? handleToggleLyrics()
+                          : e.preventDefault()
+                      }
+                    >
+                      <div
+                        className={`group flex items-center justify-between px-4 py-[16px] text-sm ${
+                          currentPlayback ? "text-white" : "text-white/60"
+                        } font-[560] tracking-tight`}
+                      >
                         <span className="text-[28px]">
                           {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
                         </span>
@@ -556,7 +593,7 @@ export default function NowPlaying({
           />
 
           <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
-            <div 
+            <div
               className={`flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0 ${inter.variable}`}
               style={{ fontFamily: "var(--font-inter)" }}
             >
