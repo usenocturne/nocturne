@@ -7,6 +7,7 @@ import {
   RadioIcon,
   SettingsIcon,
 } from "../../icons";
+import StatusBar from "./StatusBar";
 
 export default function Sidebar({ activeSection, setActiveSection }) {
   const handleSectionClick = (section) => {
@@ -39,6 +40,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
 
   return (
     <div className="space-y-7 pt-12">
+      <StatusBar />
       <Link href={`/now-playing`}>
         <div className="relative flex items-center">
           <div className="mr-4 flex-shrink-0">

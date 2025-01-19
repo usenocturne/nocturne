@@ -48,3 +48,8 @@ export { default as ChevronRightIcon } from "./ChevronRightIcon";
 export { default as ChevronLeftIcon } from "./ChevronLeftIcon";
 export { default as CircleOffIcon } from "./CircleOffIcon";
 export { default as BluetoothIcon } from "./BluetoothIcon";
+export { default as SignalMaxIcon } from "./SignalMaxIcon";
+export { default as SignalMiddleIcon } from "./SignalMiddleIcon";
+export { default as SignalLowIcon } from "./SignalLowIcon";
+export { default as SignalLowestIcon } from "./SignalLowestIcon";
+export { default as BatteryIcon } from "./BatteryIcon";
