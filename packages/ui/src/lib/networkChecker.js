@@ -24,15 +24,23 @@ export async function checkNetworkConnectivity() {
       throw new NetworkError(`HTTP error! status: ${response.status}`);
     }
 
-    return {
-      isConnected: true
-    };
+    if (response.ok) {
+      return {
+        isConnected: true
+      };
+    }
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new NetworkError("Network request timed out");
+      return {
+        isConnected: false,
+        error: "Network request timed out"
+      };
     }
     if (error instanceof NetworkError) {
-      throw error;
+      return {
+        isConnected: false,
+        error: error.message
+      };
     }
     throw new NetworkError(
       error.message || "Network connectivity check failed"
