@@ -24,7 +24,7 @@ const StatusBar = () => {
     <div className="flex justify-between w-full mb-6 pr-10 pl-2 items-start">
       <div
         className="text-[26px] font-[580] text-white tracking-tight leading-none"
-        style={{ margin: 0, padding: 0 }}
+        style={{ margin: 0, padding: 0, marginTop: "-1px" }}
       >
         {currentTime}
       </div>
