@@ -6,6 +6,7 @@ import NetworkScreen from "../bluetooth/NetworkScreen";
 import PairingScreen from "../bluetooth/PairingScreen";
 import EnableTetheringScreen from "../bluetooth/EnableTetheringScreen";
 import { NocturneIcon } from "../icons";
+// import { checkNetworkConnectivity } from "../../lib/networkChecker";
 
 const ConnectionScreen = () => {
   const [isBluetoothDiscovering, setIsBluetoothDiscovering] = useState(false);
