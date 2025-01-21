@@ -562,14 +562,17 @@ export default function App({ Component, pageProps }) {
         fontOpticalSizing: "auto",
       }}
     >
-      {!authState.authSelectionMade &&
-      !router.pathname.includes("phone-auth") &&
-      !window.location.search.includes("code") ? (
+      {(!networkStatus?.isConnected && !router.pathname.includes("phone-auth")) ||
+      (!authState.authSelectionMade &&
+        !router.pathname.includes("phone-auth") &&
+        !window.location.search.includes("code") &&
+        !localStorage.getItem("spotifyRefreshToken") &&
+        !localStorage.getItem("spotifyAccessToken")) ? (
         <AuthSelection
           onSelect={hookHandleAuthSelection}
           networkStatus={networkStatus}
         />
-      ) : (
+      ) : networkStatus?.isConnected ? (
         <>
           <div
             style={{
@@ -652,6 +655,11 @@ export default function App({ Component, pageProps }) {
             activeButton={pressedButton}
           />
         </>
+      ) : (
+        <AuthSelection
+          onSelect={hookHandleAuthSelection}
+          networkStatus={networkStatus}
+        />
       )}
     </main>
   );

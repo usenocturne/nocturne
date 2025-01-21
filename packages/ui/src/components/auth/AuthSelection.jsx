@@ -205,6 +205,18 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
   const [escapeKeyTimer, setEscapeKeyTimer] = useState(null);
   const router = useRouter();
 
+  const hasStoredCredentials = typeof window !== 'undefined' && (
+    localStorage.getItem("spotifyRefreshToken") || 
+    localStorage.getItem("spotifyAccessToken")
+  );
+
+  useEffect(() => {
+    if (hasStoredCredentials) {
+      const savedAuthType = localStorage.getItem("spotifyAuthType") || "default";
+      onSelect({ type: savedAuthType });
+    }
+  }, [hasStoredCredentials, onSelect]);
+
   useEffect(() => {
     if (showDefaultButton) {
       setTimeout(() => setDefaultButtonVisible(true), 50);
