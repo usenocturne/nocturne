@@ -153,12 +153,7 @@ export default function App({ Component, pageProps }) {
       }
       const intervalId = setInterval(async () => {
         try {
-          const savedAccessToken = localStorage.getItem("spotifyAccessToken");
-          if (savedAccessToken) {
-            await checkNetworkConnectivity(savedAccessToken);
-          } else {
-            await fetch("https://api.spotify.com/v1", { method: "OPTIONS" });
-          }
+          await checkNetworkConnectivity();
           clearInterval(intervalId);
           setNetworkStatus({ isConnected: true });
         } catch (error) {
@@ -207,9 +202,7 @@ export default function App({ Component, pageProps }) {
       if (typeof window === "undefined") return;
 
       try {
-        await checkNetworkConnectivity(
-          localStorage.getItem("spotifyAccessToken")
-        );
+        await checkNetworkConnectivity();
       } catch (error) {
         setAuthState({
           authSelectionMade: false,
@@ -305,7 +298,7 @@ export default function App({ Component, pageProps }) {
         async (isConnected) => {
           try {
             if (isConnected) {
-              const status = await checkNetworkConnectivity(accessToken);
+              const status = await checkNetworkConnectivity();
               setNetworkStatus({ isConnected: true });
             } else {
               setNetworkStatus({ isConnected: false });
@@ -569,14 +562,17 @@ export default function App({ Component, pageProps }) {
         fontOpticalSizing: "auto",
       }}
     >
-      {!authState.authSelectionMade &&
-      !router.pathname.includes("phone-auth") &&
-      !window.location.search.includes("code") ? (
+      {(!networkStatus?.isConnected && !router.pathname.includes("phone-auth")) ||
+      (!authState.authSelectionMade &&
+        !router.pathname.includes("phone-auth") &&
+        !window.location.search.includes("code") &&
+        !localStorage.getItem("spotifyRefreshToken") &&
+        !localStorage.getItem("spotifyAccessToken")) ? (
         <AuthSelection
           onSelect={hookHandleAuthSelection}
           networkStatus={networkStatus}
         />
-      ) : (
+      ) : networkStatus?.isConnected ? (
         <>
           <div
             style={{
@@ -659,6 +655,11 @@ export default function App({ Component, pageProps }) {
             activeButton={pressedButton}
           />
         </>
+      ) : (
+        <AuthSelection
+          onSelect={hookHandleAuthSelection}
+          networkStatus={networkStatus}
+        />
       )}
     </main>
   );

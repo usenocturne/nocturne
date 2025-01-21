@@ -5,22 +5,15 @@ export class NetworkError extends Error {
   }
 }
 
-export async function checkNetworkConnectivity(accessToken) {
-  if (!accessToken) {
-    throw new NetworkError("No access token available");
-  }
-
+export async function checkNetworkConnectivity() {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 50000);
 
     const response = await fetch(
-      "https://api.spotify.com/v1/me/player/devices",
+      "https://api.spotify.com/v1/",
       {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        method: "OPTIONS",
         signal: controller.signal,
       }
     );
@@ -28,25 +21,26 @@ export async function checkNetworkConnectivity(accessToken) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        throw new NetworkError("Authorization error");
-      }
       throw new NetworkError(`HTTP error! status: ${response.status}`);
     }
 
-    return {
-      isConnected: true,
-      hasDevices: async () => {
-        const data = await response.json();
-        return data.devices && data.devices.length > 0;
-      },
-    };
+    if (response.ok) {
+      return {
+        isConnected: true
+      };
+    }
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new NetworkError("Network request timed out");
+      return {
+        isConnected: false,
+        error: "Network request timed out"
+      };
     }
     if (error instanceof NetworkError) {
-      throw error;
+      return {
+        isConnected: false,
+        error: error.message
+      };
     }
     throw new NetworkError(
       error.message || "Network connectivity check failed"
@@ -55,7 +49,6 @@ export async function checkNetworkConnectivity(accessToken) {
 }
 
 export async function waitForNetwork(
-  accessToken,
   maxAttempts = 3,
   delayMs = 2000
 ) {
@@ -63,7 +56,7 @@ export async function waitForNetwork(
 
   while (attempts < maxAttempts) {
     try {
-      const status = await checkNetworkConnectivity(accessToken);
+      const status = await checkNetworkConnectivity();
       return status;
     } catch (error) {
       attempts++;
@@ -75,12 +68,12 @@ export async function waitForNetwork(
   }
 }
 
-export function startNetworkMonitoring(accessToken, onStatusChange) {
+export function startNetworkMonitoring(onStatusChange) {
   let isOnline = true;
 
   const checkConnection = async () => {
     try {
-      await checkNetworkConnectivity(accessToken);
+      await checkNetworkConnectivity();
       if (!isOnline) {
         isOnline = true;
         onStatusChange?.(true);
