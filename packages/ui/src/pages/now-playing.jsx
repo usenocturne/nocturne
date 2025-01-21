@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import {
   Dialog,
@@ -67,6 +67,7 @@ export default function NowPlaying({
   });
 
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
+  const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
 
   const {
     showLyrics,
@@ -100,6 +101,7 @@ export default function NowPlaying({
     handleError,
     showBrightnessOverlay,
     drawerOpen,
+    isProgressScrubbing,
   });
 
   const { isShuffled, repeatMode, toggleShuffle, toggleRepeat } =
@@ -143,7 +145,9 @@ export default function NowPlaying({
   const progress = currentPlayback?.item
     ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
     : 0;
-
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [localProgress, setProgress] = useState(progress);
+  const seekTimeoutRef = useRef(null);
   const getTextStyles = (text) => {
     const { direction, script } = getTextDirection(text);
 
@@ -333,14 +337,52 @@ export default function NowPlaying({
 
         <div className={`px-12 ${!showTimeDisplay ? "pb-7 pt-3" : ""}`}>
           <ProgressBar
-            progress={progress}
+            progress={isSeeking ? localProgress : progress}
             isPlaying={isPlaying}
             durationMs={currentPlayback?.item?.duration_ms}
+            onSeek={async (position) => {
+              try {
+                setIsSeeking(true);
+                const tempProgress =
+                  (position / currentPlayback.item.duration_ms) * 100;
+                setProgress(tempProgress);
+
+                const seekUrl = `https://api.spotify.com/v1/me/player/seek?position_ms=${position}`;
+                await fetch(seekUrl, {
+                  method: "PUT",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                });
+
+                setTimeout(async () => {
+                  if (!currentPlayback?.is_playing) {
+                    await togglePlayPause();
+                  }
+
+                  setTimeout(() => {
+                    setIsSeeking(false);
+                    fetchCurrentPlayback();
+                  }, 200);
+                }, 100);
+              } catch (error) {
+                handleError("SEEK_ERROR", error.message);
+                setIsSeeking(false);
+              }
+            }}
+            onPlayPause={togglePlayPause}
+            onScrubbingChange={setIsProgressScrubbing}
           />
         </div>
 
         {showTimeDisplay && (
-          <div className="w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden">
+          <div
+            className={`w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden transition-all duration-200 ease-in-out ${
+              isProgressScrubbing
+                ? "translate-y-24 opacity-0"
+                : "translate-y-0 opacity-100"
+            }`}
+          >
             <div className="flex justify-between">
               {currentPlayback && currentPlayback.item ? (
                 <>
@@ -370,7 +412,13 @@ export default function NowPlaying({
           </div>
         )}
 
-        <div className="flex justify-between items-center w-full px-12">
+        <div
+          className={`flex justify-between items-center w-full px-12 transition-all duration-200 ease-in-out ${
+            isProgressScrubbing
+              ? "translate-y-24 opacity-0"
+              : "translate-y-0 opacity-100"
+          }`}
+        >
           <div className="flex-shrink-0" onClick={toggleLikeTrack}>
             {isLiked ? (
               <HeartIconFilled className="w-14 h-14" />

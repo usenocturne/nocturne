@@ -11,14 +11,17 @@ export function useNowPlaying({
   handleError,
   showBrightnessOverlay,
   drawerOpen,
+  isProgressScrubbing,
 }) {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
   const [volume, setVolume] = useState(null);
   const [isVolumeVisible, setIsVolumeVisible] = useState(false);
   const [startTouchPosition, setStartTouchPosition] = useState({ x: 0, y: 0 });
-  const [songChangeGestureEnabled, setSongChangeGestureEnabled] = useState(true);
-  const [showLyricsGestureEnabled, setShowLyricsGestureEnabled] = useState(false);
+  const [songChangeGestureEnabled, setSongChangeGestureEnabled] =
+    useState(true);
+  const [showLyricsGestureEnabled, setShowLyricsGestureEnabled] =
+    useState(false);
   const volumeTimeoutRef = useRef(null);
   const volumeSyncIntervalRef = useRef(null);
   const previousTrackId = useRef(null);
@@ -140,7 +143,7 @@ export function useNowPlaying({
 
   const handleWheelScroll = useCallback(
     (event) => {
-      if (!showBrightnessOverlay && !drawerOpen) {
+      if (!isProgressScrubbing && !showBrightnessOverlay && !drawerOpen) {
         if (event.deltaX > 0) {
           changeVolume(volume + 7);
         } else if (event.deltaX < 0) {
@@ -148,7 +151,7 @@ export function useNowPlaying({
         }
       }
     },
-    [showBrightnessOverlay, drawerOpen, volume]
+    [showBrightnessOverlay, drawerOpen, volume, isProgressScrubbing]
   );
 
   const handleTouchStart = useCallback(
@@ -161,25 +164,35 @@ export function useNowPlaying({
 
   const handleTouchEnd = useCallback(
     (event) => {
-      if(!currentPlayback) return;
+      if (!currentPlayback) return;
 
       const touch = event.changedTouches[0];
       const endPosition = { x: touch.clientX, y: touch.clientY };
       const dx = endPosition.x - startTouchPosition.x;
       const dy = endPosition.y - startTouchPosition.y;
 
-      if (songChangeGestureEnabled === "true" && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0) { //swipe right
+      if (
+        songChangeGestureEnabled === "true" &&
+        Math.abs(dx) > 30 &&
+        Math.abs(dx) > Math.abs(dy)
+      ) {
+        if (dx > 0) {
+          //swipe right
           skipToPrevious();
-        } else { //swipe left
+        } else {
+          //swipe left
           skipToNext();
         }
-      } else if(showLyricsGestureEnabled === "true" && Math.abs(dy) > 18 && Math.abs(dy) > Math.abs(dx)) {
-        if(dy < 0 && !showLyrics) {
+      } else if (
+        showLyricsGestureEnabled === "true" &&
+        Math.abs(dy) > 18 &&
+        Math.abs(dy) > Math.abs(dx)
+      ) {
+        if (dy < 0 && !showLyrics) {
           handleToggleLyrics();
         }
       }
-    }, 
+    },
     [startTouchPosition, currentPlayback, showLyrics]
   );
 
@@ -237,8 +250,12 @@ export function useNowPlaying({
   };
 
   useEffect(() => {
-    const songChangeGestureEnabledValue = localStorage.getItem("songChangeGestureEnabled");
-    const showLyricsGestureEnabledValue = localStorage.getItem("showLyricsGestureEnabled");
+    const songChangeGestureEnabledValue = localStorage.getItem(
+      "songChangeGestureEnabled"
+    );
+    const showLyricsGestureEnabledValue = localStorage.getItem(
+      "showLyricsGestureEnabled"
+    );
 
     if (songChangeGestureEnabledValue === null) {
       localStorage.setItem("songChangeGestureEnabled", "true");
@@ -247,7 +264,7 @@ export function useNowPlaying({
       setSongChangeGestureEnabled(songChangeGestureEnabledValue);
     }
 
-    if(showLyricsGestureEnabledValue === null) {
+    if (showLyricsGestureEnabledValue === null) {
       localStorage.setItem("showLyricsGestureEnabled", "false");
       setShowLyricsGestureEnabled(false);
     } else {
@@ -318,6 +335,6 @@ export function useNowPlaying({
     toggleLikeTrack,
     handleWheelScroll,
     handleTouchStart,
-    handleTouchEnd
+    handleTouchEnd,
   };
 }
