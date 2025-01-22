@@ -313,23 +313,20 @@ export default function App({ Component, pageProps }) {
         new Date(Date.now() + 3600 * 1000).toISOString()
       );
 
-      const networkCleanup = startNetworkMonitoring(
-        accessToken,
-        async (isConnected) => {
-          try {
-            if (isConnected) {
-              const status = await checkNetworkConnectivity();
-              setNetworkStatus({ isConnected: true });
-            } else {
-              setNetworkStatus({ isConnected: false });
-              handleError("NETWORK_ERROR", "Lost connection to Spotify");
-            }
-          } catch (error) {
+      const networkCleanup = startNetworkMonitoring(async (isConnected) => {
+        try {
+          if (isConnected) {
+            const status = await checkNetworkConnectivity();
+            setNetworkStatus({ isConnected: true });
+          } else {
             setNetworkStatus({ isConnected: false });
-            handleError("NETWORK_ERROR", error.message);
+            handleError("NETWORK_ERROR", "Lost connection to Spotify");
           }
+        } catch (error) {
+          setNetworkStatus({ isConnected: false });
+          handleError("NETWORK_ERROR", error.message);
         }
-      );
+      });
 
       const fetchInitialData = async () => {
         try {
