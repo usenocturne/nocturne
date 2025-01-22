@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   NowPlayingIcon,
   RecentsIcon,
@@ -10,6 +11,45 @@ import {
 import StatusBar from "./StatusBar";
 
 export default function Sidebar({ activeSection, setActiveSection }) {
+  const [isBluetoothTethered, setIsBluetoothTethered] = useState(false);
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:5000/ws");
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "bluetooth/network") {
+        setIsBluetoothTethered(true);
+      }
+    };
+
+    ws.onerror = () => {
+      setIsBluetoothTethered(false);
+    };
+
+    ws.onclose = () => {
+      setIsBluetoothTethered(false);
+    };
+
+    const checkCurrentConnection = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/bluetooth/status");
+        if (response.ok) {
+          const data = await response.json();
+          setIsBluetoothTethered(data.isNetworkEnabled || false);
+        }
+      } catch (error) {
+        setIsBluetoothTethered(false);
+      }
+    };
+
+    checkCurrentConnection();
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
   const handleSectionClick = (section) => {
     setActiveSection(section);
   };
@@ -40,7 +80,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
 
   return (
     <div className="space-y-7 pt-12">
-      <StatusBar />
+      {isBluetoothTethered && <StatusBar />}
       <Link href={`/now-playing`}>
         <div className="relative flex items-center">
           <div className="mr-4 flex-shrink-0">
