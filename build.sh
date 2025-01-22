@@ -99,9 +99,23 @@ sudo tar -xvf "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" -C "$MOUNTS_DIR/system" > "$OUT_D
 # we assume the kernel version of stock OS
 OUT_DIR="$OUT_DIR" MOUNTS_DIR="$MOUNTS_DIR" SOURCE_SYSTEM="$SOURCE_SYSTEM" ./copy_modules.sh 4.9.113
 
+# could be done with `xchroot` tool from void but instead let's do it manually
+# in case your distro doesn't have xtools packaged
+system_mountpoint="$MOUNTS_DIR/system"
+sudo cp -p /etc/resolv.conf "$system_mountpoint/etc/"
+
+sudo mount -t proc none "$system_mountpoint/proc"
+sudo mount -t sysfs none "$system_mountpoint/sys"
+sudo mount --rbind /dev "$system_mountpoint/dev"
+sudo mount --rbind /run "$system_mountpoint/run"
+
+# bwrap is not an option because we need root inside the chroot here
+sudo chroot "$system_mountpoint" /bin/bash -c <<EOF
+
+EOF
 
 read -p "Done. Unmount everything under $MOUNTS_DIR? [Yn] " yn
 case "$yn" in
     [Nn]) exit ;;
-    *) sudo umount "$MOUNTS_DIR"/* && msg "Unmounted." ;;
+    *) sudo umount -R "$MOUNTS_DIR"/* && msg "Unmounted." ;;
 esac
