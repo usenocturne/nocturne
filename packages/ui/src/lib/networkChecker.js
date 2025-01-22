@@ -10,13 +10,10 @@ export async function checkNetworkConnectivity() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 50000);
 
-    const response = await fetch(
-      "https://api.spotify.com/v1/",
-      {
-        method: "OPTIONS",
-        signal: controller.signal,
-      }
-    );
+    const response = await fetch("https://api.spotify.com/v1/", {
+      method: "OPTIONS",
+      signal: controller.signal,
+    });
 
     clearTimeout(timeoutId);
 
@@ -26,20 +23,20 @@ export async function checkNetworkConnectivity() {
 
     if (response.ok) {
       return {
-        isConnected: true
+        isConnected: true,
       };
     }
   } catch (error) {
     if (error.name === "AbortError") {
       return {
         isConnected: false,
-        error: "Network request timed out"
+        error: "Network request timed out",
       };
     }
     if (error instanceof NetworkError) {
       return {
         isConnected: false,
-        error: error.message
+        error: error.message,
       };
     }
     throw new NetworkError(
@@ -48,10 +45,7 @@ export async function checkNetworkConnectivity() {
   }
 }
 
-export async function waitForNetwork(
-  maxAttempts = 3,
-  delayMs = 2000
-) {
+export async function waitForNetwork(maxAttempts = 3, delayMs = 2000) {
   let attempts = 0;
 
   while (attempts < maxAttempts) {

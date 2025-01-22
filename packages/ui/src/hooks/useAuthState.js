@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 
 const initialAuthState = () => {
@@ -48,35 +48,31 @@ export function useAuthState() {
   const [refreshToken, setRefreshToken] = useState(null);
   const [authCode, setAuthCode] = useState(null);
 
-  const handleAuthSelection = async (selection) => {
-    const newState = {
-      authSelectionMade: true,
-      authType: selection.type,
-      deviceId: selection.deviceId
-    };
-    
-    setAuthState(newState);
+  const handleAuthSelection = useCallback(async (selection) => {
+    if (!selection) return;
 
-    if (selection.authCode) {
-      setAuthCode(selection.authCode);
-    }
-  };
+    const batchUpdates = () => {
+      setAuthState({
+        authSelectionMade: true,
+        authType: selection.type,
+        deviceId: selection.deviceId,
+      });
 
-  useEffect(() => {
-    const handleCodeExchange = async () => {
-      if (authCode && authState.deviceId) {
-        try {
-          await exchangeCodeForToken(authCode, authState.deviceId);
-        } catch (error) {
-          console.error("Token exchange failed:", error);
-        }
+      if (selection.authCode) {
+        setAuthCode(selection.authCode);
       }
     };
 
-    handleCodeExchange();
-  }, [authCode, authState.deviceId]);
+    if (typeof window !== "undefined" && window.ReactDOM) {
+      window.ReactDOM.unstable_batchedUpdates(batchUpdates);
+    } else {
+      batchUpdates();
+    }
+  }, []);
 
-  const exchangeCodeForToken = async (code, deviceId) => {
+  const exchangeCodeForToken = useCallback(async (code, deviceId) => {
+    if (!code || !deviceId) return;
+
     try {
       const clientId = localStorage.getItem("spotifyClientId");
       const clientSecret = localStorage.getItem("spotifyClientSecret");
@@ -106,13 +102,24 @@ export function useAuthState() {
       }
 
       const data = await response.json();
-      
-      setAccessToken(data.access_token);
-      setRefreshToken(data.refresh_token);
-      
+
+      const batchUpdates = () => {
+        setAccessToken(data.access_token);
+        setRefreshToken(data.refresh_token);
+      };
+
+      if (typeof window !== "undefined" && window.ReactDOM) {
+        window.ReactDOM.unstable_batchedUpdates(batchUpdates);
+      } else {
+        batchUpdates();
+      }
+
       localStorage.setItem("spotifyAccessToken", data.access_token);
       localStorage.setItem("spotifyRefreshToken", data.refresh_token);
-      localStorage.setItem("spotifyTokenExpiry", new Date(Date.now() + data.expires_in * 1000).toISOString());
+      localStorage.setItem(
+        "spotifyTokenExpiry",
+        new Date(Date.now() + data.expires_in * 1000).toISOString()
+      );
       localStorage.setItem("spotifyAuthType", "custom");
 
       return data;
@@ -120,9 +127,9 @@ export function useAuthState() {
       console.error("Error in exchangeCodeForToken:", error);
       throw error;
     }
-  };
+  }, []);
 
-  const clearSession = async () => {
+  const clearSession = useCallback(async () => {
     try {
       const authItems = [
         "spotifyAccessToken",
@@ -130,24 +137,31 @@ export function useAuthState() {
         "spotifyTokenExpiry",
         "spotifyAuthType",
         "spotifyClientId",
-        "spotifyClientSecret"
+        "spotifyClientSecret",
       ];
       authItems.forEach((item) => localStorage.removeItem(item));
 
-      setAccessToken(null);
-      setRefreshToken(null);
-      setAuthState({
-        authSelectionMade: false,
-        authType: null,
-      });
-      
+      const batchUpdates = () => {
+        setAccessToken(null);
+        setRefreshToken(null);
+        setAuthState({
+          authSelectionMade: false,
+          authType: null,
+        });
+      };
+
+      if (typeof window !== "undefined" && window.ReactDOM) {
+        window.ReactDOM.unstable_batchedUpdates(batchUpdates);
+      } else {
+        batchUpdates();
+      }
     } catch (error) {
       console.error("Error during session cleanup:", error);
       throw error;
     }
-  };
+  }, []);
 
-  const refreshAccessToken = async () => {
+  const refreshAccessToken = useCallback(async () => {
     try {
       const clientId = localStorage.getItem("spotifyClientId");
       const clientSecret = localStorage.getItem("spotifyClientSecret");
@@ -172,10 +186,18 @@ export function useAuthState() {
 
       const data = await response.json();
 
-      setAccessToken(data.access_token);
-      if (data.refresh_token) {
-        setRefreshToken(data.refresh_token);
-        localStorage.setItem("spotifyRefreshToken", data.refresh_token);
+      const batchUpdates = () => {
+        setAccessToken(data.access_token);
+        if (data.refresh_token) {
+          setRefreshToken(data.refresh_token);
+          localStorage.setItem("spotifyRefreshToken", data.refresh_token);
+        }
+      };
+
+      if (typeof window !== "undefined" && window.ReactDOM) {
+        window.ReactDOM.unstable_batchedUpdates(batchUpdates);
+      } else {
+        batchUpdates();
       }
 
       return data;
@@ -183,7 +205,27 @@ export function useAuthState() {
       console.error("Error refreshing token:", error);
       throw error;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const handleCodeExchange = async () => {
+      if (!authCode || !authState.deviceId || !mounted) return;
+
+      try {
+        await exchangeCodeForToken(authCode, authState.deviceId);
+      } catch (error) {
+        console.error("Token exchange failed:", error);
+      }
+    };
+
+    handleCodeExchange();
+
+    return () => {
+      mounted = false;
+    };
+  }, [authCode, authState.deviceId, exchangeCodeForToken]);
 
   return {
     authState,
@@ -197,6 +239,6 @@ export function useAuthState() {
     handleAuthSelection,
     refreshAccessToken,
     clearSession,
-    exchangeCodeForToken
+    exchangeCodeForToken,
   };
 }

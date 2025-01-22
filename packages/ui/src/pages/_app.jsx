@@ -151,22 +151,42 @@ export default function App({ Component, pageProps }) {
       if (router.pathname.includes("phone-auth")) {
         return;
       }
-      const intervalId = setInterval(async () => {
-        try {
-          await checkNetworkConnectivity();
-          clearInterval(intervalId);
-          setNetworkStatus({ isConnected: true });
-        } catch (error) {
-          setNetworkStatus({ isConnected: false });
-          handleError("NETWORK_ERROR", "Unable to connect to Spotify");
-        }
-      }, 3000);
 
-      return () => clearInterval(intervalId);
+      let mounted = true;
+      let retryCount = 0;
+      const maxRetries = 5;
+
+      const attemptConnection = async () => {
+        if (!mounted || retryCount >= maxRetries) return;
+
+        try {
+          const status = await checkNetworkConnectivity();
+          if (mounted) {
+            setNetworkStatus({ isConnected: status.isConnected });
+            if (status.isConnected) return;
+          }
+        } catch (error) {
+          if (mounted) {
+            setNetworkStatus({ isConnected: false });
+            handleError("NETWORK_ERROR", "Unable to connect to Spotify");
+          }
+        }
+
+        retryCount++;
+        if (mounted && retryCount < maxRetries) {
+          setTimeout(attemptConnection, 3000);
+        }
+      };
+
+      attemptConnection();
+
+      return () => {
+        mounted = false;
+      };
     };
 
     checkInitialConnectivity();
-  }, []);
+  }, [router.pathname]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -562,7 +582,8 @@ export default function App({ Component, pageProps }) {
         fontOpticalSizing: "auto",
       }}
     >
-      {(!networkStatus?.isConnected && !router.pathname.includes("phone-auth")) ||
+      {(!networkStatus?.isConnected &&
+        !router.pathname.includes("phone-auth")) ||
       (!authState.authSelectionMade &&
         !router.pathname.includes("phone-auth") &&
         !window.location.search.includes("code") &&

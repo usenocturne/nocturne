@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import QRAuthFlow from "./qr/QRAuthFlow";
 import packageInfo from "../../../package.json";
@@ -15,13 +15,13 @@ const ConnectionScreen = () => {
   const [showTethering, setShowTethering] = useState(false);
   const [deviceType, setDeviceType] = useState(null);
   const [isNetworkConnected, setIsNetworkConnected] = useState(false);
-  
-  const hasStoredCredentials = typeof window !== 'undefined' && (
-    localStorage.getItem("spotifyRefreshToken") || 
-    localStorage.getItem("spotifyAccessToken")
-  );
 
-  const checkNetwork = async () => {
+  const hasStoredCredentials =
+    typeof window !== "undefined" &&
+    (localStorage.getItem("spotifyRefreshToken") ||
+      localStorage.getItem("spotifyAccessToken"));
+
+  const checkNetwork = useCallback(async () => {
     try {
       const response = await checkNetworkConnectivity();
       const isConnected = response.isConnected;
@@ -32,7 +32,7 @@ const ConnectionScreen = () => {
       setIsNetworkConnected(false);
       return false;
     }
-  };
+  }, []);
 
   const enableBluetoothDiscovery = async () => {
     try {
@@ -115,11 +115,30 @@ const ConnectionScreen = () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setDeviceType(isIOS ? "ios" : "other");
 
-    checkNetwork();
+    let mounted = true;
+    let checkInterval;
+
+    const initialCheck = async () => {
+      if (!mounted) return;
+      const isConnected = await checkNetwork();
+
+      if (!isConnected && mounted) {
+        checkInterval = setInterval(async () => {
+          const status = await checkNetwork();
+          if (status && checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
+          }
+        }, 3000);
+      }
+    };
+
+    initialCheck();
 
     const ws = new WebSocket("ws://localhost:5000/ws");
 
     ws.onmessage = (event) => {
+      if (!mounted) return;
       const data = JSON.parse(event.data);
       if (data.type === "bluetooth/pairing") {
         const { address, pairingKey } = data.payload;
@@ -140,6 +159,10 @@ const ConnectionScreen = () => {
     enableBluetoothDiscovery();
 
     return () => {
+      mounted = false;
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
       ws.close();
     };
   }, []);
@@ -205,14 +228,15 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
   const [escapeKeyTimer, setEscapeKeyTimer] = useState(null);
   const router = useRouter();
 
-  const hasStoredCredentials = typeof window !== 'undefined' && (
-    localStorage.getItem("spotifyRefreshToken") || 
-    localStorage.getItem("spotifyAccessToken")
-  );
+  const hasStoredCredentials =
+    typeof window !== "undefined" &&
+    (localStorage.getItem("spotifyRefreshToken") ||
+      localStorage.getItem("spotifyAccessToken"));
 
   useEffect(() => {
     if (hasStoredCredentials) {
-      const savedAuthType = localStorage.getItem("spotifyAuthType") || "default";
+      const savedAuthType =
+        localStorage.getItem("spotifyAuthType") || "default";
       onSelect({ type: savedAuthType });
     }
   }, [hasStoredCredentials, onSelect]);
