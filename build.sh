@@ -1,5 +1,10 @@
 #!/bin/sh -e
 
+# sub url must end with slash because it will be concatenated to fname
+VOID_BOOTSTRAP_SUBURL="https://repo-default.voidlinux.org/live/current/"
+VOID_BOOTSTRAP_FNAME="void-aarch64-ROOTFS-20240314.tar.xz"
+VOID_BOOTSTRAP_SHA256="157853d296b02b0d8bb917ae9074d1630834f3803ef14968edc23cf0a7ac8390"
+
 msg() {
     echo "[*]" $@ >&2
 }
@@ -74,6 +79,26 @@ mkdir -p "$OUT_DIR" "$MOUNTS_DIR"/system
 # let's make it 512 MiB so it's a nice even number, and to have a margin
 format_specific_size "$OUT_DIR/system" ext2 536870912
 mount_file system
+
+void_checksum() {
+    echo "$VOID_BOOTSTRAP_SHA256 $OUT_DIR/$VOID_BOOTSTRAP_FNAME" | sha256sum -c
+}
+
+if void_checksum; then
+    msg "Skipping download of Void bootstrap as the hash matches."
+else
+    msg "Downloading Void bootstrap: $VOID_BOOTSTRAP_SUBURL$VOID_BOOTSTRAP_FNAME"
+    curl -Lo "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" "$VOID_BOOTSTRAP_SUBURL$VOID_BOOTSTRAP_FNAME"
+    msg "Checking hash of bootstrap"
+    void_checksum || { msg "Checksum failed!"; exit 1; }
+fi
+
+msg "Extracting $OUT_DIR/$VOID_BOOTSTRAP_FNAME"
+sudo tar -xvf "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" -C "$MOUNTS_DIR/system" > "$OUT_DIR/bootstrap_extract.log"
+
+# we assume the kernel version of stock OS
+OUT_DIR="$OUT_DIR" MOUNTS_DIR="$MOUNTS_DIR" SOURCE_SYSTEM="$SOURCE_SYSTEM" ./copy_modules.sh 4.9.113
+
 
 read -p "Done. Unmount everything under $MOUNTS_DIR? [Yn] " yn
 case "$yn" in
