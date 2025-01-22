@@ -106,6 +106,15 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
           storageKey: "autoRedirectEnabled",
           defaultValue: false,
         },
+        {
+          id: "24-hour-time",
+          title: "24-Hour Time",
+          type: "toggle",
+          description:
+            "Display the clock in 24-hour format instead of 12-hour format. The clock is only shown in the status bar when connected to Bluetooth.",
+          storageKey: "use24HourTime",
+          defaultValue: false,
+        },
       ],
     },
     bluetooth: {
@@ -321,6 +330,10 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
       } else {
         newSettings[key] = newValue;
         localStorage.setItem(key, newValue.toString());
+
+        if (key === "use24HourTime") {
+          window.dispatchEvent(new Event("timeFormatChanged"));
+        }
       }
 
       return newSettings;
