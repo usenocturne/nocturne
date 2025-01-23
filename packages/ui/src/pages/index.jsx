@@ -8,6 +8,68 @@ import { fetchLikedSongs } from "../services/playlistService";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
 import { useRouter } from "next/router";
 
+const imageCache = new Set();
+
+const CachedImage = ({ src, alt, ...props }) => {
+  const [isLoaded, setIsLoaded] = useState(imageCache.has(src));
+
+  useEffect(() => {
+    if (imageCache.has(src)) {
+      setIsLoaded(true);
+    }
+  }, [src]);
+
+  return (
+    <div className="relative">
+      {!isLoaded && (
+        <div className="absolute inset-0 rounded-[12px] loading-shimmer" />
+      )}
+      <Image
+        src={src}
+        alt={alt}
+        {...props}
+        className={`${props.className} ${
+          isLoaded ? "opacity-100" : "opacity-0"
+        }`}
+        onLoadingComplete={(img) => {
+          imageCache.add(src);
+          setIsLoaded(true);
+        }}
+      />
+    </div>
+  );
+};
+
+const CachedArtistImage = ({ src, alt, ...props }) => {
+  const [isLoaded, setIsLoaded] = useState(imageCache.has(src));
+
+  useEffect(() => {
+    if (imageCache.has(src)) {
+      setIsLoaded(true);
+    }
+  }, [src]);
+
+  return (
+    <div className="relative">
+      {!isLoaded && (
+        <div className="absolute inset-0 rounded-full loading-shimmer" />
+      )}
+      <Image
+        src={src}
+        alt={alt}
+        {...props}
+        className={`${props.className} ${
+          isLoaded ? "opacity-100" : "opacity-0"
+        }`}
+        onLoadingComplete={(img) => {
+          imageCache.add(src);
+          setIsLoaded(true);
+        }}
+      />
+    </div>
+  );
+};
+
 export default function Home({
   accessToken,
   playlists,
@@ -208,7 +270,7 @@ export default function Home({
                             spotifyUrl={item?.external_urls?.spotify}
                             accessToken={accessToken}
                           >
-                            <Image
+                            <CachedImage
                               src={
                                 item?.images?.[0]?.url ||
                                 "/images/not-playing.webp"
@@ -221,7 +283,7 @@ export default function Home({
                               width={280}
                               height={280}
                               priority
-                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl relative z-10 transition-opacity duration-300"
                             />
                           </LongPressLink>
                           <LongPressLink
@@ -272,12 +334,12 @@ export default function Home({
                             spotifyUrl={likedSongs.external_urls.spotify}
                             accessToken={accessToken}
                           >
-                            <Image
+                            <CachedImage
                               src="https://misc.scdn.co/liked-songs/liked-songs-640.png"
                               alt="Liked Songs"
                               width={280}
                               height={280}
-                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl relative z-10 transition-opacity duration-300"
                             />
                           </LongPressLink>
                           <LongPressLink
@@ -325,7 +387,7 @@ export default function Home({
                               spotifyUrl={playlist?.external_urls?.spotify}
                               accessToken={accessToken}
                             >
-                              <Image
+                              <CachedImage
                                 src={
                                   playlist?.images?.[0]?.url ||
                                   "/images/not-playing.webp"
@@ -333,7 +395,7 @@ export default function Home({
                                 alt={`${playlist.name} Cover`}
                                 width={280}
                                 height={280}
-                                className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                                className="mt-10 aspect-square rounded-[12px] drop-shadow-xl relative z-10 transition-opacity duration-300"
                               />
                             </LongPressLink>
                             <LongPressLink
@@ -382,7 +444,7 @@ export default function Home({
                           spotifyUrl={artist?.external_urls?.spotify}
                           accessToken={accessToken}
                         >
-                          <Image
+                          <CachedArtistImage
                             src={
                               artist?.images?.[0]?.url ||
                               "/images/not-playing.webp"
@@ -390,7 +452,7 @@ export default function Home({
                             alt="Artist Cover"
                             width={280}
                             height={280}
-                            className="mt-10 aspect-square rounded-full drop-shadow-xl"
+                            className="mt-10 aspect-square rounded-full drop-shadow-xl relative z-10 transition-opacity duration-300"
                           />
                         </LongPressLink>
                         <LongPressLink
@@ -433,14 +495,14 @@ export default function Home({
                           href={`/mix/${mix.id}?accessToken=${accessToken}`}
                           accessToken={accessToken}
                         >
-                          <Image
+                          <CachedImage
                             src={
                               mix.images[0].url || "/images/not-playing.webp"
                             }
                             alt="Radio Cover"
                             width={280}
                             height={280}
-                            className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                            className="mt-10 aspect-square rounded-[12px] drop-shadow-xl relative z-10 transition-opacity duration-300"
                           />
                         </LongPressLink>
                         <LongPressLink
