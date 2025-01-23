@@ -9,9 +9,6 @@ msg() {
     echo "[*]" $@ >&2
 }
 
-msg "Note: this script will use sudo to elevate privileges for mounting images."
-read -p "Press enter to continue." _reply
-
 short_usage="Usage: ./build.sh oem-system-part"
 if [ "$#" -lt 1 ]; then
     msg "$short_usage"
@@ -25,6 +22,10 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     msg "$short_usage"
     msg "$options_usage"
 fi
+
+
+msg "Note: this script will use sudo to elevate privileges for mounting images."
+read -p "Press enter to continue." _reply
 
 
 # usage: format_specific_size [path] [filesystem] [size in bytes]
