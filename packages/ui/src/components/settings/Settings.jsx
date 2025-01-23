@@ -49,7 +49,7 @@ const settingsStructure = {
     items: [
       {
         id: "bluetooth-devices",
-        type: "custom"
+        type: "custom",
       },
     ],
   },
@@ -70,8 +70,7 @@ const settingsStructure = {
         id: "lyrics-menu",
         title: "Lyrics Menu Option",
         type: "toggle",
-        description:
-          "Enable or disable the lyrics menu option in the player.",
+        description: "Enable or disable the lyrics menu option in the player.",
         storageKey: "lyricsMenuEnabled",
         defaultValue: true,
       },
@@ -105,8 +104,7 @@ const settingsStructure = {
         id: "remaining-time",
         title: "Show Time Remaining",
         type: "toggle",
-        description:
-          "Display the remaining track time below the progress bar.",
+        description: "Display the remaining track time below the progress bar.",
         storageKey: "remainingTimeEnabled",
         defaultValue: false,
       },
@@ -119,13 +117,13 @@ const settingsStructure = {
       {
         id: "profile-info",
         title: "Profile Information",
-        type: "custom"
+        type: "custom",
       },
       {
         id: "sign-out",
         title: "Sign Out",
         type: "action",
-        description: "Sign out and reset ALL settings.",
+        description: "Sign out out of Nocturne and reset all settings.",
         action: "signOut",
       },
     ],
@@ -137,7 +135,7 @@ const settingsStructure = {
       {
         id: "nocturne-version",
         title: "Nocturne Version",
-        type: "info"
+        type: "info",
       },
       {
         id: "artwork-credits",
@@ -199,14 +197,17 @@ const getDefaultSettingValue = (categoryKey, storageKey) => {
   const category = settingsStructure[categoryKey];
   if (category && category.items) {
     for (const item of category.items) {
-      if (item.storageKey === storageKey && item.hasOwnProperty("defaultValue")) {
+      if (
+        item.storageKey === storageKey &&
+        item.hasOwnProperty("defaultValue")
+      ) {
         return item.defaultValue;
       }
     }
   }
 
   return undefined;
-}
+};
 
 const clearSettings = () => {
   for (const categoryKey in settingsStructure) {
@@ -219,7 +220,7 @@ const clearSettings = () => {
       }
     }
   }
-}
+};
 
 const fetchSpotifyProfile = async (accessToken) => {
   try {
@@ -325,8 +326,8 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
         } else {
           updateLocalStorage({ [key]: false });
         }
-      } else if(key === "showLyricsGestureEnabled") {
-        if(newValue) {
+      } else if (key === "showLyricsGestureEnabled") {
+        if (newValue) {
           updateLocalStorage({
             showLyricsGestureEnabled: true,
             lyricsMenuEnabled: true,
@@ -334,8 +335,8 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
         } else {
           updateLocalStorage({ [key]: false });
         }
-      } else if(key === "lyricsMenuEnabled") {
-        if(!newValue) {
+      } else if (key === "lyricsMenuEnabled") {
+        if (!newValue) {
           updateLocalStorage({
             showLyricsGestureEnabled: false,
             lyricsMenuEnabled: false,
@@ -518,11 +519,11 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
           </div>
         );
       case "custom":
-        switch(item.id) {
+        switch (item.id) {
           case "bluetooth-devices":
-            return <BluetoothDevices/>
+            return <BluetoothDevices />;
           case "profile-info":
-            return <AccountInfo userProfile={userProfile}/>
+            return <AccountInfo userProfile={userProfile} />;
           default:
             return null;
         }
@@ -598,4 +599,4 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
   );
 }
 
-export {getDefaultSettingValue};
+export { getDefaultSettingValue };
