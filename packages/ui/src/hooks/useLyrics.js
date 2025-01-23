@@ -1,3 +1,4 @@
+import { getDefaultSettingValue } from "@/components/settings/Settings";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 export function useLyrics({ currentPlayback }) {
@@ -80,8 +81,9 @@ export function useLyrics({ currentPlayback }) {
   useEffect(() => {
     const lyricsEnabled = localStorage.getItem("lyricsMenuEnabled");
     if (lyricsEnabled === null) {
-      localStorage.setItem("lyricsMenuEnabled", "true");
-      setLyricsMenuOptionEnabled(true);
+      const lyricsEnabledDefaultValue = getDefaultSettingValue("playback", "lyricsMenuEnabled")
+      localStorage.setItem("lyricsMenuEnabled", lyricsEnabledDefaultValue);
+      setLyricsMenuOptionEnabled(lyricsEnabledDefaultValue);
     } else {
       setLyricsMenuOptionEnabled(lyricsEnabled === "true");
     }

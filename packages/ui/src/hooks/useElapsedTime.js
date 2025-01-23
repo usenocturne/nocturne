@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getDefaultSettingValue } from "@/components/settings/Settings";
 
 export function useElapsedTime() {
   const [elapsedTimeEnabled, setElapsedTimeEnabled] = useState(false);
@@ -9,10 +10,12 @@ export function useElapsedTime() {
     const remainingTimeEnabled = localStorage.getItem("remainingTimeEnabled");
 
     if (elapsedTimeEnabled === null && remainingTimeEnabled === null) {
-      localStorage.setItem("elapsedTimeEnabled", "false");
-      localStorage.setItem("remainingTimeEnabled", "false");
-      setElapsedTimeEnabled(false);
-      setRemainingTimeEnabled(false);
+      const elapsedTimeDefaultValue = getDefaultSettingValue("playback", "elapsedTimeEnabled");
+      const remainingTimeDefaultValue = getDefaultSettingValue("playback", "remainingTimeEnabled");
+      localStorage.setItem("elapsedTimeEnabled", elapsedTimeDefaultValue);
+      localStorage.setItem("remainingTimeEnabled", remainingTimeDefaultValue);
+      setElapsedTimeEnabled(elapsedTimeDefaultValue);
+      setRemainingTimeEnabled(remainingTimeDefaultValue);
     } else {
       setElapsedTimeEnabled(elapsedTimeEnabled === "true");
       setRemainingTimeEnabled(remainingTimeEnabled === "true");
