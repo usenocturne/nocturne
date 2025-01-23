@@ -115,8 +115,11 @@ sudo mount --rbind /run "$system_mountpoint/run"
 sudo mount --make-rslave "$system_mountpoint/run"
 
 # bwrap is not an option because we need root inside the chroot here
-sudo chroot "$system_mountpoint" /bin/bash -c <<EOF
-
+sudo chroot "$system_mountpoint" /bin/bash <<EOF
+    xbps-install -S
+    # TODO: add nocturne repo
+    #xbps-install -y base-system
+    xbps-install -y nocturne-base
 EOF
 
 read -p "Done. Unmount everything under $MOUNTS_DIR? [Yn] " yn
