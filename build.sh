@@ -71,7 +71,7 @@ DEST_DATA="$OUT_DIR/data"
 
 if [ -d "$MOUNTS_DIR" ]; then
     msg "Unmounting if mounted:" "$MOUNTS_DIR"/*
-    sudo umount "$MOUNTS_DIR"/* || :
+    sudo umount -R "$MOUNTS_DIR"/* || :
 fi
 
 mkdir -p "$OUT_DIR" "$MOUNTS_DIR"/system
@@ -107,8 +107,12 @@ sudo cp -p /etc/resolv.conf "$system_mountpoint/etc/"
 
 sudo mount -t proc none "$system_mountpoint/proc"
 sudo mount -t sysfs none "$system_mountpoint/sys"
+
+# make-rslave: https://unix.stackexchange.com/questions/120827/recursive-umount-after-rbind-mount
 sudo mount --rbind /dev "$system_mountpoint/dev"
+sudo mount --make-rslave "$system_mountpoint/dev"
 sudo mount --rbind /run "$system_mountpoint/run"
+sudo mount --make-rslave "$system_mountpoint/run"
 
 # bwrap is not an option because we need root inside the chroot here
 sudo chroot "$system_mountpoint" /bin/bash -c <<EOF
