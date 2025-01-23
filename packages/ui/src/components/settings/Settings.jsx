@@ -308,26 +308,43 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
     setSettings((prev) => {
       const newSettings = { ...prev };
 
+      const updateLocalStorage = (updates) => {
+        Object.entries(updates).forEach(([key, value]) => {
+          newSettings[key] = value;
+          localStorage.setItem(key, value.toString());
+        });
+      };
+
       if (key === "elapsedTimeEnabled" || key === "remainingTimeEnabled") {
         if (newValue) {
-          if (key === "elapsedTimeEnabled") {
-            newSettings.elapsedTimeEnabled = true;
-            newSettings.remainingTimeEnabled = false;
-            localStorage.setItem("elapsedTimeEnabled", "true");
-            localStorage.setItem("remainingTimeEnabled", "false");
-          } else {
-            newSettings.remainingTimeEnabled = true;
-            newSettings.elapsedTimeEnabled = false;
-            localStorage.setItem("remainingTimeEnabled", "true");
-            localStorage.setItem("elapsedTimeEnabled", "false");
-          }
+          const isElapsed = key === "elapsedTimeEnabled";
+          updateLocalStorage({
+            elapsedTimeEnabled: isElapsed,
+            remainingTimeEnabled: !isElapsed,
+          });
         } else {
-          newSettings[key] = false;
-          localStorage.setItem(key, "false");
+          updateLocalStorage({ [key]: false });
+        }
+      } else if(key === "showLyricsGestureEnabled") {
+        if(newValue) {
+          updateLocalStorage({
+            showLyricsGestureEnabled: true,
+            lyricsMenuEnabled: true,
+          });
+        } else {
+          updateLocalStorage({ [key]: false });
+        }
+      } else if(key === "lyricsMenuEnabled") {
+        if(!newValue) {
+          updateLocalStorage({
+            showLyricsGestureEnabled: false,
+            lyricsMenuEnabled: false,
+          });
+        } else {
+          updateLocalStorage({ [key]: true });
         }
       } else {
-        newSettings[key] = newValue;
-        localStorage.setItem(key, newValue.toString());
+        updateLocalStorage({ [key]: newValue });
 
         if (key === "use24HourTime") {
           window.dispatchEvent(new Event("timeFormatChanged"));

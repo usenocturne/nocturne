@@ -8,6 +8,7 @@ export function useNowPlaying({
   currentPlayback,
   fetchCurrentPlayback,
   showLyrics,
+  lyricsMenuOptionEnabled,
   handleToggleLyrics,
   handleError,
   showBrightnessOverlay,
@@ -189,7 +190,7 @@ export function useNowPlaying({
         Math.abs(dy) > 18 &&
         Math.abs(dy) > Math.abs(dx)
       ) {
-        if (dy < 0 && !showLyrics) {
+        if (dy < 0 && !showLyrics && lyricsMenuOptionEnabled) {
           handleToggleLyrics();
         }
       }
