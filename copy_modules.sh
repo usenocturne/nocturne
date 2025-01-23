@@ -6,7 +6,7 @@
 # defined for us
 
 msg() {
-    echo "[+]" $@ >&2
+    echo "[nocturne-copy_modules]" $@ >&2
 }
 
 [ -z "$OUT_DIR" ] && echo "OUT_DIR undefined" && exit 1

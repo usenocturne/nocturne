@@ -6,7 +6,7 @@ VOID_BOOTSTRAP_FNAME="void-aarch64-ROOTFS-20240314.tar.xz"
 VOID_BOOTSTRAP_SHA256="157853d296b02b0d8bb917ae9074d1630834f3803ef14968edc23cf0a7ac8390"
 
 msg() {
-    echo "[*]" $@ >&2
+    echo "[nocturne]" $@ >&2
 }
 
 short_usage="Usage: ./build.sh oem-system-part"
