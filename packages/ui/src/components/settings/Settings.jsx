@@ -76,6 +76,24 @@ const settingsStructure = {
         defaultValue: true,
       },
       {
+        id: "show-lyrics-gesture",
+        title: "Swipe to Show Lyrics",
+        type: "toggle",
+        description:
+          "Enable swiping up on the track info to show the lyrics of a song.",
+        storageKey: "showLyricsGestureEnabled",
+        defaultValue: false,
+      },
+      {
+        id: "song-change-gesture",
+        title: "Swipe to Change Song",
+        type: "toggle",
+        description:
+          "Enable left/right swipe gestures to skip to the previous or next song.",
+        storageKey: "songChangeGestureEnabled",
+        defaultValue: true,
+      },
+      {
         id: "elapsed-time",
         title: "Show Time Elapsed",
         type: "toggle",
@@ -90,24 +108,6 @@ const settingsStructure = {
         description:
           "Display the remaining track time below the progress bar.",
         storageKey: "remainingTimeEnabled",
-        defaultValue: false,
-      },
-      {
-        id: "song-change-gesture",
-        title: "Swipe to Change Song",
-        type: "toggle",
-        description:
-          "Enable left/right swipe gestures to skip to the previous or next song.",
-        storageKey: "songChangeGestureEnabled",
-        defaultValue: true,
-      },
-      {
-        id: "show-lyrics-gesture",
-        title: "Swipe to Show Lyrics",
-        type: "toggle",
-        description:
-          "Enable swiping up on the track info to show the lyrics of a song.",
-        storageKey: "showLyricsGestureEnabled",
         defaultValue: false,
       },
     ],
