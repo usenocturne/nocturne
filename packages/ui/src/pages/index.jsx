@@ -221,7 +221,7 @@ export default function Home({
                               width={280}
                               height={280}
                               priority
-                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                             />
                           </LongPressLink>
                           <LongPressLink
@@ -277,7 +277,7 @@ export default function Home({
                               alt="Liked Songs"
                               width={280}
                               height={280}
-                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                             />
                           </LongPressLink>
                           <LongPressLink
@@ -333,7 +333,7 @@ export default function Home({
                                 alt={`${playlist.name} Cover`}
                                 width={280}
                                 height={280}
-                                className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                                className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                               />
                             </LongPressLink>
                             <LongPressLink
@@ -390,7 +390,7 @@ export default function Home({
                             alt="Artist Cover"
                             width={280}
                             height={280}
-                            className="mt-10 aspect-square rounded-full drop-shadow-xl"
+                            className="mt-10 aspect-square rounded-full drop-shadow-xl bg-white/10"
                           />
                         </LongPressLink>
                         <LongPressLink
@@ -440,7 +440,7 @@ export default function Home({
                             alt="Radio Cover"
                             width={280}
                             height={280}
-                            className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                            className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                           />
                         </LongPressLink>
                         <LongPressLink
