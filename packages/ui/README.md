@@ -1,4 +1,3 @@
-
 <h1 align="center">
   <br>
   <img src="https://usenocturne.com/images/logo.png" alt="Nocturne" width="200">
@@ -29,6 +28,7 @@
 ## How To Use
 
 ### Custom Credentials
+
 1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>.
 2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 3. Once running on your Car Thing, press "Login with Phone" and scan the QR Code.
@@ -36,7 +36,9 @@
 5. Authorize with Spotify and start using Nocturne!
 
 ### Default Credentials (Beta)
+
 **It is not recommended to use default credentials at this point in time. Unless you know what you're doing, please use custom credentials**
+
 1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>
 2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 3. Once running on your Car Thing, hold the back button (under the knob) until the "Use Default Credentials (Beta)" button appears
@@ -44,6 +46,7 @@
 5. Authorize with Spotify and start using Nocturne!
 
 ### Button Mapping and Button Usage
+
 - Hold one of the top hardware preset buttons while on a playlist page to map it to the button
 - Press the mapped buttons to quickly play playlists
 - Hold the right-most top hardware button to access settings
@@ -57,6 +60,7 @@
 2. Log in with your Spotify account (create one if needed)
 
 3. Click "Create App"
+
    - App name: Choose a name (e.g., "Nocturne")
    - App description: Brief description of your app
    - Redirect URI: Add `https://nocturne.brandons.place` for non-development usage, or `https://your.local.ip.address:port` for development usage
@@ -71,12 +75,14 @@
 First, set up the configuration and database:
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/nocturne-ui.git
 cd nocturne
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 # or
@@ -86,102 +92,24 @@ bun install
 ```
 
 3. Copy the environment example file:
+
 ```bash
 cp .env.example .env.local
 ```
 
-4. Set up your Supabase project:
-   - Create a new project at [Supabase](https://supabase.com)
-   - Create a new table named `spotify_credentials` with the following schema:
+4. Update your `.env.local` with the required values:
 
-```sql
-create table spotify_credentials (
-  id uuid default uuid_generate_v4() primary key,
-  temp_id text not null,
-  client_id text not null,
-  encrypted_client_secret text not null,
-  refresh_token text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  expires_at timestamp with time zone,
-  last_used timestamp with time zone,
-  first_used_at timestamp with time zone,
-  token_refresh_count integer default 0,
-  user_agent text,
-  session_id TEXT,
-  auth_completed BOOLEAN,
-  access_token TEXT,
-  token_expiry TIMESTAMPTZ
-);
-
--- Add policies for Row Level Security (RLS)
-alter table spotify_credentials enable row level security;
-
--- Cleanup expired records
-create policy "Cleanup expired records"
-on spotify_credentials for all
-using (expires_at < current_timestamp or refresh_token = current_setting('app.current_refresh_token'::text, true));
-
--- Cleanup unused temp IDs
-create policy "cleanup_unused_temp_ids"
-on spotify_credentials for all
-using (created_at < current_timestamp - interval '1 hour' and refresh_token is null);
-
--- Enforce expiration
-create policy "Enforce expiration"
-on spotify_credentials for all
-using (expires_at is null or expires_at > current_timestamp);
-
--- Update restrictions
-create policy "Restricted updates"
-on spotify_credentials for update
-using (temp_id is not null)
-with check (
-  client_id = (select client_id from spotify_credentials where id = id)
-  and encrypted_client_secret = (select encrypted_client_secret from spotify_credentials where id = id)
-  and temp_id = (select temp_id from spotify_credentials where id = id)
-  and created_at = (select created_at from spotify_credentials where id = id)
-);
-
--- Insert validation
-create policy "Validated inserts"
-on spotify_credentials for insert
-with check (
-  temp_id is not null 
-  and client_id is not null 
-  and encrypted_client_secret is not null 
-  and length(temp_id) >= 7 
-  and created_at <= current_timestamp 
-  and (expires_at is null or expires_at > current_timestamp)
-  and not exists (
-    select 1 from spotify_credentials sc 
-    where sc.temp_id = spotify_credentials.temp_id
-  )
-);
-```
-
-5. Generate encryption keys:
-```bash
-# Generate 32-byte key for AES-256
-openssl rand -hex 32
-
-# Generate 16-byte IV
-openssl rand -hex 16
-```
-
-6. Update your `.env.local` with the required values:
 ```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-
 # Spotify
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your_client_id
 SPOTIFY_CLIENT_SECRET=your_client_secret
-NEXT_PUBLIC_REDIRECT_URI=https://your.local.ip.address:port
+NEXT_PUBLIC_REDIRECT_URI=your_redirect_uri
 
-# Encryption (from step 5)
-ENCRYPTION_KEY=your_32_byte_hex_key
-ENCRYPTION_IV=your_16_byte_hex_key
+# Development Environment
+NODE_ENV=development
+
+# API Variables
+NEXT_PUBLIC_API_BASE_URL=your_api_url
 ```
 
 Now, it's time to:
@@ -214,7 +142,6 @@ caddy run
 ```
 
 This may prompt you for a `sudo` password to install Caddy's certificate on your system, to make it automatically trusted.
-
 
 #### Method #2: Using `mkcert` and JS webserver
 
@@ -267,18 +194,18 @@ cp "$(mkcert -CAROOT)/rootCA-key.pem" ca.key
 Create custom server file at `./server.js`:
 
 ```js
-const { createServer } = require('https');
-const { parse } = require('url');
-const next = require('next');
-const fs = require('fs');
+const { createServer } = require("https");
+const { parse } = require("url");
+const next = require("next");
+const fs = require("fs");
 
-const dev = process.env.NODE_ENV !== 'production';
+const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const httpsOptions = {
-  key: fs.readFileSync('./cert.key'),
-  cert: fs.readFileSync('./cert.crt')
+  key: fs.readFileSync("./cert.key"),
+  cert: fs.readFileSync("./cert.crt"),
 };
 
 app.prepare().then(() => {
@@ -287,8 +214,8 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl);
   }).listen(3000, (err) => {
     if (err) throw err;
-    console.log('> Ready on https://localhost:3000');
-    console.log('> Also available on https://your.local.ip.address:3000');
+    console.log("> Ready on https://localhost:3000");
+    console.log("> Also available on https://your.local.ip.address:3000");
   });
 });
 ```
@@ -303,74 +230,25 @@ yarn dev
 bun dev
 ```
 
-## Cloudflare Deployment Setup
-
-1. Install Wrangler CLI:
-```bash
-npm install -g wrangler
-```
-
-2. Login to Cloudflare:
-```bash
-wrangler login
-```
-
-3. Create a KV namespace for encryption keys:
-```bash
-cd workers/key-rotation
-npx wrangler kv:namespace create ENCRYPTION_KEYS
-```
-
-4. Update the KV namespace ID in your root `wrangler.toml`:
-```toml
-name = "nocturne"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output/static"
-
-kv_namespaces = [
-  { binding = "ENCRYPTION_KEYS", id = "your_namespace_id_here" }
-]
-
-[vars]
-NEXT_PUBLIC_REDIRECT_URI = "your_production_url"
-NEXT_PUBLIC_SUPABASE_URL = "your_supabase_url"
-NEXT_PUBLIC_SPOTIFY_CLIENT_ID = "your_client_id"
-```
-
-5. Set up environment secrets:
-```bash
-# For the main app
-npx wrangler secret put SUPABASE_ANON_KEY
-npx wrangler secret put SPOTIFY_CLIENT_SECRET
-npx wrangler secret put ENCRYPTION_KEY
-npx wrangler secret put ENCRYPTION_IV
-
-# For the key rotation worker
-cd workers/key-rotation
-npx wrangler secret put ENCRYPTION_KEY
-npx wrangler secret put ENCRYPTION_IV
-```
-
-6. Deploy the key rotation worker:
-```bash
-cd workers/key-rotation
-npx wrangler deploy
-```
+````
 
 ## Displaying your local environment on the Car Thing
-After setting up your local server, you may follow these steps to see your changes on your car thing.
-1. *If you're using ***Method #2*** for your local server, you can skip this step.*  
-  Edit your `Caddyfile` to include your local server's IP address:
-    ```Caddyfile
-    https://localhost:3443 {
-      reverse_proxy localhost:3000
-    }
 
-    https://your.local.ip.address:3443 {
-      reverse_proxy localhost:3000
-    }
-    ```
+After setting up your local server, you may follow these steps to see your changes on your car thing.
+
+1. \*If you're using **_Method #2_** for your local server, you can skip this step.\*
+   Edit your `Caddyfile` to include your local server's IP address:
+
+   ```Caddyfile
+   https://localhost:3443 {
+     reverse_proxy localhost:3000
+   }
+
+   https://your.local.ip.address:3443 {
+     reverse_proxy localhost:3000
+   }
+````
+
 2. SSH into your Raspberry pi.
    ```
    ssh pi@raspberrypi.local
@@ -385,14 +263,17 @@ After setting up your local server, you may follow these steps to see your chang
    nano /scripts/chromium_settings.sh
    ```
 5. Replace the URL to point to your local server's IP address.
+
 - If you're using **Method #1**, replace `port` with `3443`.
 - If you're using **Method #2**, replace `port` with `3000`.
-   ```bash
-   # settings for /scripts/start_chromium.sh
 
-   # URL="https://nocturne.brandons.place/"
-   URL="https://your.local.ip.address:port/"
-   ```
+  ```bash
+  # settings for /scripts/start_chromium.sh
+
+  # URL="https://nocturne.brandons.place/"
+  URL="https://your.local.ip.address:port/"
+  ```
+
 6. Reboot your Car Thing to apply your changes.
    ```
    sudo reboot
@@ -401,6 +282,7 @@ After setting up your local server, you may follow these steps to see your chang
 ## Key Rotation
 
 The project includes automatic key rotation for encrypted credentials. The rotation worker runs every 7 days and:
+
 - Generates new encryption keys
 - Re-encrypts existing credentials
 - Maintains backups during rotation
@@ -411,7 +293,7 @@ The rotation schedule can be modified in `workers/key-rotation/wrangler.toml`.
 ## Contributing
 
 1. Fork the repository
-    - Your changes should be based off the `main` branch. 
+   - Your changes should be based off the `main` branch.
 2. Create a feature branch: `git checkout -b feature/new-feature`
 3. Commit your changes: `git commit -m 'Add new feature'`
 4. Push to the branch: `git push origin feature/new-feature`
@@ -457,4 +339,3 @@ We kindly ask that any modifications or distributions made outside of direct for
 > [brandons.place](https://brandons.place/) &nbsp;&middot;&nbsp;
 > GitHub [@brandonsaldan](https://github.com/brandonsaldan) &nbsp;&middot;&nbsp;
 > Twitter [@brandonsaldan](https://twitter.com/brandonsaldan)
-

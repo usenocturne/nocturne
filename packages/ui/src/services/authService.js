@@ -1,7 +1,9 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 async function decryptData(encryptedData, deviceId, salt) {
-  const encryptedBytes = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+  const encryptedBytes = Uint8Array.from(atob(encryptedData), (c) =>
+    c.charCodeAt(0)
+  );
   const iv = encryptedBytes.slice(0, 12);
   const ciphertext = encryptedBytes.slice(12);
 
@@ -44,47 +46,53 @@ async function decryptData(encryptedData, deviceId, salt) {
 export async function registerDevice() {
   try {
     const response = await fetch(`${API_BASE_URL}/v1/auth/register-device`, {
-      method: 'POST',
+      method: "POST",
     });
-    
+
     if (!response.ok) {
-      throw new Error('Failed to register device');
+      throw new Error("Failed to register device");
     }
-    
+
     const { deviceId, salt } = await response.json();
     return { deviceId, salt };
   } catch (error) {
-    console.error('Error registering device:', error);
+    console.error("Error registering device:", error);
     throw error;
   }
 }
 
 export async function checkAuthStatus(deviceId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/v1/auth/check-status/${deviceId}`);
-    
+    const response = await fetch(
+      `${API_BASE_URL}/v1/auth/check-status/${deviceId}`
+    );
+
     if (!response.ok) {
-      throw new Error('Failed to check auth status');
+      throw new Error("Failed to check auth status");
     }
-    
+
     const data = await response.json();
 
-    if (data.status === 'authorized' && data.encryptedData) {
+    if (data.status === "authorized" && data.encryptedData) {
       try {
-        const decryptedCredentials = await decryptData(data.encryptedData, deviceId, data.salt);
+        const decryptedCredentials = await decryptData(
+          data.encryptedData,
+          deviceId,
+          data.salt
+        );
         return {
           ...data,
-          encryptedData: decryptedCredentials
+          encryptedData: decryptedCredentials,
         };
       } catch (decryptError) {
-        console.error('Error decrypting credentials:', decryptError);
-        throw new Error('Failed to decrypt credentials');
+        console.error("Error decrypting credentials:", decryptError);
+        throw new Error("Failed to decrypt credentials");
       }
     }
-    
+
     return data;
   } catch (error) {
-    console.error('Error checking auth status:', error);
+    console.error("Error checking auth status:", error);
     throw error;
   }
 }
