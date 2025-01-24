@@ -279,17 +279,6 @@ After setting up your local server, you may follow these steps to see your chang
    sudo reboot
    ```
 
-## Key Rotation
-
-The project includes automatic key rotation for encrypted credentials. The rotation worker runs every 7 days and:
-
-- Generates new encryption keys
-- Re-encrypts existing credentials
-- Maintains backups during rotation
-- Handles failures gracefully
-
-The rotation schedule can be modified in `workers/key-rotation/wrangler.toml`.
-
 ## Contributing
 
 1. Fork the repository
