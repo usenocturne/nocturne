@@ -33,10 +33,6 @@ yarn-error.log*
 # Vercel
 .vercel
 
-# Cloudflare
-.wrangler/
-.cloudflare/
-
 # IDE
 .vscode/
 .idea/

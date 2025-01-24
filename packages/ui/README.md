@@ -230,66 +230,13 @@ yarn dev
 bun dev
 ```
 
-## Cloudflare Deployment Setup
-
-1. Install Wrangler CLI:
-
-```bash
-npm install -g wrangler
-```
-
-2. Login to Cloudflare:
-
-```bash
-wrangler login
-```
-
-3. Create a KV namespace for encryption keys:
-
-```bash
-cd workers/key-rotation
-npx wrangler kv:namespace create ENCRYPTION_KEYS
-```
-
-4. Update the KV namespace ID in your root `wrangler.toml`:
-
-```toml
-name = "nocturne"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output/static"
-
-[vars]
-NEXT_PUBLIC_REDIRECT_URI = "your_production_url"
-NEXT_PUBLIC_SPOTIFY_CLIENT_ID = "your_client_id"
-```
-
-5. Set up environment secrets:
-
-```bash
-# For the main app
-npx wrangler secret put SPOTIFY_CLIENT_SECRET
-npx wrangler secret put ENCRYPTION_KEY
-npx wrangler secret put ENCRYPTION_IV
-
-# For the key rotation worker
-cd workers/key-rotation
-npx wrangler secret put ENCRYPTION_KEY
-npx wrangler secret put ENCRYPTION_IV
-```
-
-6. Deploy the key rotation worker:
-
-```bash
-cd workers/key-rotation
-npx wrangler deploy
-```
+````
 
 ## Displaying your local environment on the Car Thing
 
 After setting up your local server, you may follow these steps to see your changes on your car thing.
 
-1. \*If you're using **_Method #2_** for your local server, you can skip this step.\*  
+1. \*If you're using **_Method #2_** for your local server, you can skip this step.\*
    Edit your `Caddyfile` to include your local server's IP address:
 
    ```Caddyfile
@@ -300,7 +247,7 @@ After setting up your local server, you may follow these steps to see your chang
    https://your.local.ip.address:3443 {
      reverse_proxy localhost:3000
    }
-   ```
+````
 
 2. SSH into your Raspberry pi.
    ```
