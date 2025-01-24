@@ -14,7 +14,6 @@
   "dependencies": {
     "@headlessui/react": "^2.1.8",
     "@heroicons/react": "^2.1.5",
-    "@supabase/supabase-js": "^2.46.1",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "color-thief-browser": "^2.0.2",

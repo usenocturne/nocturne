@@ -1,77 +1,33 @@
-import { createClient } from '@supabase/supabase-js';
-import { encrypt, decrypt } from '@/lib/cryptoUtils';
-export const runtime = 'experimental-edge';
-import packageInfo from '../../../../../package.json';
+export const runtime = "experimental-edge";
 
 export default async function handler(req) {
-  if (req.method !== 'POST') {
-    return new Response('Method Not Allowed', {
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", {
       status: 405,
-      headers: { 'Allow': ['POST'] }
+      headers: { Allow: ["POST"] },
     });
   }
 
   try {
     const body = await req.json();
-    const { code, isPhoneAuth, sessionId } = body;
+    const { code, isPhoneAuth } = body;
 
     if (!code) {
-      console.error('Missing authorization code');
+      console.error("Missing authorization code");
       return new Response(
-        JSON.stringify({ error: 'Authorization code is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Authorization code is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    let useClientId, useClientSecret;
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
+    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
-    if (isPhoneAuth && sessionId) {
-      const { data: credentials, error: credentialsError } = await supabase
-        .from('spotify_credentials')
-        .select('client_id, encrypted_client_secret')
-        .eq('session_id', sessionId)
-        .maybeSingle();
-
-      if (credentialsError) {
-        console.error('Database query error:', credentialsError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to get credentials', details: credentialsError.message }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (!credentials) {
-        console.error('No credentials found in database');
-        return new Response(
-          JSON.stringify({ error: 'Credentials not found or expired' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      useClientId = credentials.client_id;
-      try {
-        useClientSecret = await decrypt(credentials.encrypted_client_secret);
-      } catch (decryptError) {
-        console.error('Decryption error:', decryptError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to decrypt credentials' }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-    } else {
-      useClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-      useClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    }
-
-    if (!useClientId || !useClientSecret) {
-      console.error('Missing credentials after retrieval');
+    if (!clientId || !clientSecret) {
+      console.error("Missing credentials");
       return new Response(
-        JSON.stringify({ error: 'Invalid credentials configuration' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Invalid credentials configuration" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -84,7 +40,7 @@ export default async function handler(req) {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: "Basic " + btoa(`${useClientId}:${useClientSecret}`),
+        Authorization: "Basic " + btoa(`${clientId}:${clientSecret}`),
       },
       body: params.toString(),
     });
@@ -92,38 +48,18 @@ export default async function handler(req) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Spotify token exchange failed:', data);
+      console.error("Spotify token exchange failed:", data);
       return new Response(
         JSON.stringify({
-          error: 'Token exchange failed',
+          error: "Token exchange failed",
           spotifyError: data.error,
-          spotifyErrorDescription: data.error_description
+          spotifyErrorDescription: data.error_description,
         }),
-        { status: response.status, headers: { 'Content-Type': 'application/json' } }
+        {
+          status: response.status,
+          headers: { "Content-Type": "application/json" },
+        }
       );
-    }
-
-    if (isPhoneAuth && sessionId) {
-      const { error: updateError } = await supabase
-        .from('spotify_credentials')
-        .update({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-          token_expiry: new Date(Date.now() + data.expires_in * 1000).toISOString(),
-          auth_completed: true,
-          first_used_at: new Date().toISOString(),
-          last_used: new Date().toISOString(),
-          version: packageInfo.version
-        })
-        .eq('session_id', sessionId);
-
-      if (updateError) {
-        console.error('Error updating tokens in database:', updateError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to store tokens', details: updateError.message }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
     }
 
     return new Response(
@@ -133,28 +69,26 @@ export default async function handler(req) {
         expires_in: data.expires_in,
         token_type: data.token_type,
         scope: data.scope,
-        isPhoneAuth
+        isPhoneAuth,
       }),
       {
         status: 200,
         headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store, must-revalidate'
-        }
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, must-revalidate",
+        },
       }
     );
-
   } catch (error) {
-    console.error('Unhandled token exchange error:', error);
+    console.error("Unhandled token exchange error:", error);
     return new Response(
       JSON.stringify({
-        error: 'Failed to process token exchange',
+        error: "Failed to process token exchange",
         details: error.message,
-        stack: error.stack
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
