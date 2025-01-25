@@ -152,17 +152,15 @@ export default function App({ Component, pageProps }) {
       }
 
       let mounted = true;
-      let retryCount = 0;
-      const maxRetries = 5;
+      let checkInterval;
 
-      const attemptConnection = async () => {
-        if (!mounted || retryCount >= maxRetries) return;
+      const checkNetwork = async () => {
+        if (!mounted) return;
 
         try {
           const status = await checkNetworkConnectivity();
           if (mounted) {
             setNetworkStatus({ isConnected: status.isConnected });
-            if (status.isConnected) return;
           }
         } catch (error) {
           if (mounted) {
@@ -170,119 +168,24 @@ export default function App({ Component, pageProps }) {
             handleError("NETWORK_ERROR", "Unable to connect to Spotify");
           }
         }
-
-        retryCount++;
-        if (mounted && retryCount < maxRetries) {
-          setTimeout(attemptConnection, 3000);
-        }
       };
 
-      attemptConnection();
+      // Initial check
+      checkNetwork();
+      
+      // Continue checking every 3 seconds
+      checkInterval = setInterval(checkNetwork, 3000);
 
       return () => {
         mounted = false;
+        if (checkInterval) {
+          clearInterval(checkInterval);
+        }
       };
     };
 
     checkInitialConnectivity();
   }, [router.pathname]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const code = new URLSearchParams(window.location.search).get("code");
-      const state = new URLSearchParams(window.location.search).get("state");
-
-      if (code) {
-        if (state) {
-          try {
-            const stateData = JSON.parse(decodeURIComponent(state));
-            if (stateData.phoneAuth) {
-              localStorage.setItem("spotifySessionId", stateData.sessionId);
-              handlePhoneAuth(code, stateData.sessionId, stateData.tempId);
-            } else {
-              setAuthCode(code);
-              setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
-            }
-          } catch (e) {
-            console.error("Error parsing state:", e);
-            setAuthCode(code);
-            setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
-          }
-        } else {
-          setAuthCode(code);
-          setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
-        }
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const initializeAuth = async () => {
-      if (typeof window === "undefined") return;
-
-      try {
-        await checkNetworkConnectivity();
-      } catch (error) {
-        setAuthState({
-          authSelectionMade: false,
-          authType: null,
-        });
-        return;
-      }
-
-      if (window.location.search.includes("code")) return;
-
-      const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-      const savedAuthType = localStorage.getItem("spotifyAuthType");
-      const savedTempId = localStorage.getItem("spotifyTempId");
-
-      if (savedRefreshToken && savedAuthType) {
-        try {
-          const refreshData = await refreshAccessToken();
-
-          if (refreshData?.access_token) {
-            setAccessToken(refreshData.access_token);
-            localStorage.setItem(
-              "spotifyAccessToken",
-              refreshData.access_token
-            );
-
-            if (refreshData.refresh_token) {
-              setRefreshToken(refreshData.refresh_token);
-              localStorage.setItem(
-                "spotifyRefreshToken",
-                refreshData.refresh_token
-              );
-            }
-
-            const newExpiry = new Date(
-              Date.now() + refreshData.expires_in * 1000
-            ).toISOString();
-            localStorage.setItem("spotifyTokenExpiry", newExpiry);
-
-            setAuthState({
-              authSelectionMade: true,
-              authType: savedAuthType,
-              tempId: savedTempId,
-            });
-          }
-        } catch (error) {
-          console.error("Failed to restore session:", error);
-
-          if (error.message && error.message.includes("invalid_grant")) {
-            await clearSession();
-          }
-        }
-      } else if (
-        authState.authSelectionMade &&
-        !router.pathname.includes("phone-auth")
-      ) {
-        await clearSession();
-      }
-    };
-
-    initializeAuth();
-  }, []);
 
   useEffect(() => {
     if (accessToken) {
@@ -296,14 +199,12 @@ export default function App({ Component, pageProps }) {
         try {
           if (isConnected) {
             const status = await checkNetworkConnectivity();
-            setNetworkStatus({ isConnected: true });
+            setNetworkStatus({ isConnected: status.isConnected });
           } else {
             setNetworkStatus({ isConnected: false });
-            handleError("NETWORK_ERROR", "Lost connection to Spotify");
           }
         } catch (error) {
           setNetworkStatus({ isConnected: false });
-          handleError("NETWORK_ERROR", error.message);
         }
       });
 
@@ -370,27 +271,47 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     if (accessToken) {
-      const checkTokenExpiry = async () => {
-        const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
-        const currentTime = new Date();
-        const expiryTime = new Date(tokenExpiry);
+      const attemptTokenRefresh = async () => {
+        try {
+          // Check network connectivity first
+          const networkStatus = await checkNetworkConnectivity();
+          if (!networkStatus.isConnected) {
+            // If no network, retry in 3 seconds
+            setTimeout(attemptTokenRefresh, 3000);
+            return;
+          }
 
-        if (
-          !tokenExpiry ||
-          expiryTime <= new Date(currentTime.getTime() + 5 * 60000)
-        ) {
-          try {
-            await refreshAccessToken();
-          } catch (error) {
-            console.error("Token refresh failed:", error);
-            if (error.message.includes("invalid_grant")) {
-              await clearSession();
+          const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+          const currentTime = new Date();
+          const expiryTime = new Date(tokenExpiry);
+
+          if (
+            !tokenExpiry ||
+            expiryTime <= new Date(currentTime.getTime() + 5 * 60000)
+          ) {
+            try {
+              await refreshAccessToken();
+            } catch (error) {
+              console.error("Token refresh failed:", error);
+              if (error.message.includes("invalid_grant")) {
+                await clearSession();
+              } else {
+                // For network or other errors, retry in 3 seconds
+                setTimeout(attemptTokenRefresh, 3000);
+              }
             }
           }
+        } catch (error) {
+          // If network check fails, retry in 3 seconds
+          setTimeout(attemptTokenRefresh, 3000);
         }
       };
 
-      const tokenRefreshInterval = setInterval(checkTokenExpiry, 5 * 60 * 1000);
+      // Initial token refresh check
+      attemptTokenRefresh();
+
+      // Set up interval for token refresh checks
+      const tokenRefreshInterval = setInterval(attemptTokenRefresh, 5 * 60 * 1000);
       const playbackInterval = setInterval(fetchCurrentPlayback, 1000);
 
       return () => {
@@ -544,6 +465,108 @@ export default function App({ Component, pageProps }) {
       window.removeEventListener("keydown", handleEscapePress);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const code = new URLSearchParams(window.location.search).get("code");
+      const state = new URLSearchParams(window.location.search).get("state");
+
+      if (code) {
+        if (state) {
+          try {
+            const stateData = JSON.parse(decodeURIComponent(state));
+            if (stateData.phoneAuth) {
+              localStorage.setItem("spotifySessionId", stateData.sessionId);
+              handlePhoneAuth(code, stateData.sessionId, stateData.tempId);
+            } else {
+              setAuthCode(code);
+              setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+            }
+          } catch (e) {
+            console.error("Error parsing state:", e);
+            setAuthCode(code);
+            setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+          }
+        } else {
+          setAuthCode(code);
+          setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      if (typeof window === "undefined") return;
+      if (window.location.search.includes("code")) return;
+
+      const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+      const savedAuthType = localStorage.getItem("spotifyAuthType");
+      const savedTempId = localStorage.getItem("spotifyTempId");
+
+      if (savedRefreshToken && savedAuthType) {
+        const attemptSessionRestore = async () => {
+          try {
+            // First verify we have network connectivity
+            const networkStatus = await checkNetworkConnectivity();
+            if (!networkStatus.isConnected) {
+              // If no network, retry in 3 seconds
+              setTimeout(attemptSessionRestore, 3000);
+              return;
+            }
+
+            const refreshData = await refreshAccessToken();
+
+            if (refreshData?.access_token) {
+              setAccessToken(refreshData.access_token);
+              localStorage.setItem(
+                "spotifyAccessToken",
+                refreshData.access_token
+              );
+
+              if (refreshData.refresh_token) {
+                setRefreshToken(refreshData.refresh_token);
+                localStorage.setItem(
+                  "spotifyRefreshToken",
+                  refreshData.refresh_token
+                );
+              }
+
+              const newExpiry = new Date(
+                Date.now() + refreshData.expires_in * 1000
+              ).toISOString();
+              localStorage.setItem("spotifyTokenExpiry", newExpiry);
+
+              setAuthState({
+                authSelectionMade: true,
+                authType: savedAuthType,
+                tempId: savedTempId,
+              });
+            }
+          } catch (error) {
+            console.error("Failed to restore session:", error);
+
+            if (error.message && error.message.includes("invalid_grant")) {
+              await clearSession();
+            } else {
+              // For any other error, retry in 3 seconds
+              setTimeout(attemptSessionRestore, 3000);
+            }
+          }
+        };
+
+        // Start the session restoration process
+        attemptSessionRestore();
+      } else if (
+        authState.authSelectionMade &&
+        !router.pathname.includes("phone-auth")
+      ) {
+        await clearSession();
+      }
+    };
+
+    initializeAuth();
+  }, [networkStatus?.isConnected]);
 
   if (!isHydrated) {
     return null;

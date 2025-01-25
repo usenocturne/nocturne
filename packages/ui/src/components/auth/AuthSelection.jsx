@@ -15,6 +15,7 @@ const ConnectionScreen = () => {
   const [showTethering, setShowTethering] = useState(false);
   const [deviceType, setDeviceType] = useState(null);
   const [isNetworkConnected, setIsNetworkConnected] = useState(false);
+  const [isCheckingNetwork, setIsCheckingNetwork] = useState(true);
 
   const hasStoredCredentials =
     typeof window !== "undefined" &&
@@ -23,6 +24,7 @@ const ConnectionScreen = () => {
 
   const checkNetwork = useCallback(async () => {
     try {
+      setIsCheckingNetwork(true);
       const response = await checkNetworkConnectivity();
       const isConnected = response.isConnected;
       setIsNetworkConnected(isConnected);
@@ -31,6 +33,8 @@ const ConnectionScreen = () => {
       console.error("Network connectivity check failed:", error);
       setIsNetworkConnected(false);
       return false;
+    } finally {
+      setIsCheckingNetwork(false);
     }
   }, []);
 
@@ -84,23 +88,8 @@ const ConnectionScreen = () => {
 
           if (data.status === "success") {
             clearInterval(intervalId);
-
-            const networkCheckInterval = setInterval(async () => {
-              const isConnected = await checkNetworkConnectivity();
-              if (isConnected) {
-                clearInterval(networkCheckInterval);
-                if (hasStoredCredentials) {
-                  window.location.reload();
-                }
-              }
-            }, 5000);
-
-            setTimeout(async () => {
-              setIsBluetoothDiscovering(false);
-              setPairingKey(null);
-              setIsPairing(false);
-              setShowTethering(false);
-            }, 5000);
+            setShowTethering(true);
+            setIsPairing(false);
           }
         } catch (error) {
           console.error("Error enabling bluetooth networking:", error);
@@ -118,22 +107,16 @@ const ConnectionScreen = () => {
     let mounted = true;
     let checkInterval;
 
-    const initialCheck = async () => {
-      if (!mounted) return;
-      const isConnected = await checkNetwork();
-
-      if (!isConnected && mounted) {
-        checkInterval = setInterval(async () => {
-          const status = await checkNetwork();
-          if (status && checkInterval) {
-            clearInterval(checkInterval);
-            checkInterval = null;
-          }
-        }, 3000);
-      }
+    const startNetworkCheck = () => {
+      checkNetwork(); // Initial check
+      
+      checkInterval = setInterval(async () => {
+        if (!mounted) return;
+        await checkNetwork();
+      }, 3000);
     };
 
-    initialCheck();
+    startNetworkCheck();
 
     const ws = new WebSocket("ws://localhost:5000/ws");
 
@@ -144,10 +127,8 @@ const ConnectionScreen = () => {
         const { address, pairingKey } = data.payload;
         setIsPairing(true);
         setPairingKey(pairingKey);
-        console.log("pairing", address, pairingKey);
       } else if (data.type === "bluetooth/paired") {
         const { address } = data.payload.device;
-        console.log("paired", address);
         enableBluetoothNetwork(address);
       }
     };
@@ -166,6 +147,16 @@ const ConnectionScreen = () => {
       ws.close();
     };
   }, []);
+
+  // Effect to handle network state changes
+  useEffect(() => {
+    if (isNetworkConnected) {
+      setIsBluetoothDiscovering(false);
+      setPairingKey(null);
+      setIsPairing(false);
+      setShowTethering(false);
+    }
+  }, [isNetworkConnected]);
 
   const handlePairingAccept = async () => {
     try {
@@ -217,7 +208,11 @@ const ConnectionScreen = () => {
     );
   }
 
-  return <NetworkScreen />;
+  if (!isNetworkConnected) {
+    return <NetworkScreen isCheckingNetwork={isCheckingNetwork} />;
+  }
+
+  return null;
 };
 
 const AuthMethodSelector = ({ onSelect, networkStatus }) => {
@@ -226,6 +221,7 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
   const [defaultButtonVisible, setDefaultButtonVisible] = useState(false);
   const [showDefaultButton, setShowDefaultButton] = useState(false);
   const [escapeKeyTimer, setEscapeKeyTimer] = useState(null);
+  const [isNetworkReady, setIsNetworkReady] = useState(false);
   const router = useRouter();
 
   const hasStoredCredentials =
@@ -234,11 +230,44 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
       localStorage.getItem("spotifyAccessToken"));
 
   useEffect(() => {
-    if (hasStoredCredentials) {
-      const savedAuthType =
-        localStorage.getItem("spotifyAuthType") || "default";
-      onSelect({ type: savedAuthType });
-    }
+    let mounted = true;
+    let checkInterval;
+
+    const startNetworkCheck = () => {
+      const check = async () => {
+        if (!mounted) return;
+        try {
+          const status = await checkNetworkConnectivity();
+          if (mounted) {
+            const isConnected = status.isConnected;
+            setIsNetworkReady(isConnected);
+            
+            // If we have credentials and network, proceed with auth
+            if (isConnected && hasStoredCredentials) {
+              const savedAuthType = localStorage.getItem("spotifyAuthType") || "default";
+              onSelect({ type: savedAuthType });
+            }
+          }
+        } catch (error) {
+          console.error("Network check failed:", error);
+          if (mounted) {
+            setIsNetworkReady(false);
+          }
+        }
+      };
+
+      check(); // Initial check
+      checkInterval = setInterval(check, 2000);
+    };
+
+    startNetworkCheck();
+
+    return () => {
+      mounted = false;
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
+    };
   }, [hasStoredCredentials, onSelect]);
 
   useEffect(() => {
@@ -278,81 +307,89 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
 
   const handleDefaultSubmit = (e) => {
     e.preventDefault();
+    if (!isNetworkReady) return;
     localStorage.setItem("spotifyAuthType", "default");
     onSelect({ type: "default" });
   };
 
+  // If we have network but no stored credentials, show auth UI
+  if (networkStatus?.isConnected && !hasStoredCredentials) {
+    return (
+      <div className="bg-black h-screen flex items-center justify-center overflow-hidden fixed inset-0">
+        <div className="w-full flex flex-col items-center px-6 py-12 lg:px-8">
+          <div className="sm:mx-auto sm:w-full sm:max-w-xl">
+            <NocturneIcon className="mx-auto h-14 w-auto" />
+            <div
+              className={`transition-all duration-250 ${
+                buttonsVisible ? "h-[70px] opacity-100" : "h-0 opacity-0"
+              }`}
+            >
+              <h2 className="mt-4 text-center text-[46px] font-[580] text-white tracking-tight">
+                Welcome to Nocturne
+              </h2>
+            </div>
+          </div>
+
+          <div className="sm:mx-auto sm:w-full sm:max-w-xl">
+            <div
+              className={`relative transition-all duration-250 ${
+                showDefaultButton ? "h-[260px]" : "h-[150px]"
+              }`}
+            >
+              <div
+                className={`absolute top-0 left-0 w-full transition-opacity duration-250 ${
+                  buttonsVisible ? "opacity-100" : "opacity-0"
+                } ${showDefaultButton ? "space-y-6 mt-2" : "mt-6"}`}
+                style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
+              >
+                <div>
+                  <button
+                    onClick={() => setShowQRFlow(true)}
+                    className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
+                  >
+                    Login with Phone
+                  </button>
+                </div>
+                <div
+                  className={`transition-all duration-250 overflow-hidden ${
+                    showDefaultButton
+                      ? defaultButtonVisible
+                        ? "h-[80px] opacity-100"
+                        : "h-0 opacity-0"
+                      : "h-0 opacity-0"
+                  }`}
+                >
+                  <button
+                    onClick={handleDefaultSubmit}
+                    className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
+                  >
+                    Use Developer Credentials
+                  </button>
+                </div>
+                <p className="mt-6 text-center text-white/30 text-[16px]">
+                  {packageInfo.version}
+                </p>
+              </div>
+            </div>
+            {showQRFlow && (
+              <QRAuthFlow
+                onBack={() => setShowQRFlow(false)}
+                onComplete={onSelect}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If no network and not in phone auth, show connection screen
   if (!networkStatus?.isConnected && !router.pathname.includes("phone-auth")) {
     return <ConnectionScreen />;
   }
 
-  return (
-    <div className="bg-black h-screen flex items-center justify-center overflow-hidden fixed inset-0">
-      <div className="w-full flex flex-col items-center px-6 py-12 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-xl">
-          <NocturneIcon className="mx-auto h-14 w-auto" />
-          <div
-            className={`transition-all duration-250 ${
-              buttonsVisible ? "h-[70px] opacity-100" : "h-0 opacity-0"
-            }`}
-          >
-            <h2 className="mt-4 text-center text-[46px] font-[580] text-white tracking-tight">
-              Welcome to Nocturne
-            </h2>
-          </div>
-        </div>
-
-        <div className="sm:mx-auto sm:w-full sm:max-w-xl">
-          <div
-            className={`relative transition-all duration-250 ${
-              showDefaultButton ? "h-[260px]" : "h-[150px]"
-            }`}
-          >
-            <div
-              className={`absolute top-0 left-0 w-full transition-opacity duration-250 ${
-                buttonsVisible ? "opacity-100" : "opacity-0"
-              } ${showDefaultButton ? "space-y-6 mt-2" : "mt-6"}`}
-              style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
-            >
-              <div>
-                <button
-                  onClick={() => setShowQRFlow(true)}
-                  className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
-                >
-                  Login with Phone
-                </button>
-              </div>
-              <div
-                className={`transition-all duration-250 overflow-hidden ${
-                  showDefaultButton
-                    ? defaultButtonVisible
-                      ? "h-[80px] opacity-100"
-                      : "h-0 opacity-0"
-                    : "h-0 opacity-0"
-                }`}
-              >
-                <button
-                  onClick={handleDefaultSubmit}
-                  className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
-                >
-                  Use Developer Credentials
-                </button>
-              </div>
-              <p className="mt-6 text-center text-white/30 text-[16px]">
-                {packageInfo.version}
-              </p>
-            </div>
-          </div>
-          {showQRFlow && (
-            <QRAuthFlow
-              onBack={() => setShowQRFlow(false)}
-              onComplete={onSelect}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  // Show network screen while waiting for network
+  return <NetworkScreen isCheckingNetwork={!isNetworkReady} />;
 };
 
 export default AuthMethodSelector;
