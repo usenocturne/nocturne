@@ -38,6 +38,7 @@ export const ErrorCodes = {
   FETCH_PLAYLIST_TRACKS_ERROR: "E037",
   REGISTER_DEVICE_ERROR: "E038",
   CERT_COMMON_NAME_ERROR: "E039",
+  NETWORK_ERROR: "E040",
 };
 
 export default ErrorCodes;
