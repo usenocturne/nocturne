@@ -51,6 +51,7 @@ export default function App({ Component, pageProps }) {
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
   const [networkStatus, setNetworkStatus] = useState({ isConnected: false });
+  const [showNoNetwork, setShowNoNetwork] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState(() => {
     if (typeof window !== "undefined") {
@@ -62,6 +63,8 @@ export default function App({ Component, pageProps }) {
 
   const lastActivityTimeRef = useRef(Date.now());
   const inactivityTimeoutRef = useRef(null);
+  const initialCheckTimeoutRef = useRef(null);
+  const initialCheckDoneRef = useRef(false);
 
   const mainFontClasses = `${inter.variable} ${notoSansSC.variable} ${notoSansTC.variable} ${notoSerifJP.variable} ${notoSansKR.variable} ${notoNaskhAR.variable} ${notoSansDV.variable} ${notoSansHE.variable} ${notoSansBN.variable} ${notoSansTA.variable} ${notoSansTH.variable} ${notoSansGK.variable}`;
 
@@ -153,6 +156,13 @@ export default function App({ Component, pageProps }) {
 
       let mounted = true;
       let checkInterval;
+      let hasShownError = false;
+
+      initialCheckTimeoutRef.current = setTimeout(() => {
+        if (!initialCheckDoneRef.current && mounted) {
+          setShowNoNetwork(true);
+        }
+      }, 5000);
 
       const checkNetwork = async () => {
         if (!mounted) return;
@@ -161,19 +171,27 @@ export default function App({ Component, pageProps }) {
           const status = await checkNetworkConnectivity();
           if (mounted) {
             setNetworkStatus({ isConnected: status.isConnected });
+            initialCheckDoneRef.current = true;
+            if (status.isConnected) {
+              if (hasShownError) {
+                clearError();
+                hasShownError = false;
+              }
+              if (initialCheckTimeoutRef.current) {
+                clearTimeout(initialCheckTimeoutRef.current);
+                initialCheckTimeoutRef.current = null;
+              }
+            }
           }
         } catch (error) {
           if (mounted) {
             setNetworkStatus({ isConnected: false });
-            handleError("NETWORK_ERROR", "Unable to connect to Spotify");
+            initialCheckDoneRef.current = true;
           }
         }
       };
 
-      // Initial check
       checkNetwork();
-      
-      // Continue checking every 3 seconds
       checkInterval = setInterval(checkNetwork, 3000);
 
       return () => {
@@ -181,11 +199,32 @@ export default function App({ Component, pageProps }) {
         if (checkInterval) {
           clearInterval(checkInterval);
         }
+        if (initialCheckTimeoutRef.current) {
+          clearTimeout(initialCheckTimeoutRef.current);
+        }
       };
     };
 
     checkInitialConnectivity();
   }, [router.pathname]);
+
+  useEffect(() => {
+    let timeoutId;
+    if (!networkStatus?.isConnected && initialCheckDoneRef.current) {
+
+      timeoutId = setTimeout(() => {
+        setShowNoNetwork(true);
+      }, 10000);
+    } else {
+      setShowNoNetwork(false);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [networkStatus?.isConnected]);
 
   useEffect(() => {
     if (accessToken) {
@@ -200,11 +239,18 @@ export default function App({ Component, pageProps }) {
           if (isConnected) {
             const status = await checkNetworkConnectivity();
             setNetworkStatus({ isConnected: status.isConnected });
+            clearError();
           } else {
             setNetworkStatus({ isConnected: false });
+            if (accessToken && !router.pathname.includes("phone-auth")) {
+              handleError("NETWORK_ERROR", "Lost connection to Spotify");
+            }
           }
         } catch (error) {
           setNetworkStatus({ isConnected: false });
+          if (accessToken && !router.pathname.includes("phone-auth")) {
+            handleError("NETWORK_ERROR", error.message);
+          }
         }
       });
 
@@ -273,10 +319,8 @@ export default function App({ Component, pageProps }) {
     if (accessToken) {
       const attemptTokenRefresh = async () => {
         try {
-          // Check network connectivity first
           const networkStatus = await checkNetworkConnectivity();
           if (!networkStatus.isConnected) {
-            // If no network, retry in 3 seconds
             setTimeout(attemptTokenRefresh, 3000);
             return;
           }
@@ -296,21 +340,17 @@ export default function App({ Component, pageProps }) {
               if (error.message.includes("invalid_grant")) {
                 await clearSession();
               } else {
-                // For network or other errors, retry in 3 seconds
                 setTimeout(attemptTokenRefresh, 3000);
               }
             }
           }
         } catch (error) {
-          // If network check fails, retry in 3 seconds
           setTimeout(attemptTokenRefresh, 3000);
         }
       };
 
-      // Initial token refresh check
       attemptTokenRefresh();
 
-      // Set up interval for token refresh checks
       const tokenRefreshInterval = setInterval(attemptTokenRefresh, 5 * 60 * 1000);
       const playbackInterval = setInterval(fetchCurrentPlayback, 1000);
 
@@ -507,10 +547,8 @@ export default function App({ Component, pageProps }) {
       if (savedRefreshToken && savedAuthType) {
         const attemptSessionRestore = async () => {
           try {
-            // First verify we have network connectivity
             const networkStatus = await checkNetworkConnectivity();
             if (!networkStatus.isConnected) {
-              // If no network, retry in 3 seconds
               setTimeout(attemptSessionRestore, 3000);
               return;
             }
@@ -549,13 +587,11 @@ export default function App({ Component, pageProps }) {
             if (error.message && error.message.includes("invalid_grant")) {
               await clearSession();
             } else {
-              // For any other error, retry in 3 seconds
               setTimeout(attemptSessionRestore, 3000);
             }
           }
         };
 
-        // Start the session restoration process
         attemptSessionRestore();
       } else if (
         authState.authSelectionMade &&
@@ -581,7 +617,7 @@ export default function App({ Component, pageProps }) {
         fontOpticalSizing: "auto",
       }}
     >
-      {(!networkStatus?.isConnected &&
+      {(!networkStatus?.isConnected && showNoNetwork &&
         !router.pathname.includes("phone-auth")) ||
       (!authState.authSelectionMade &&
         !router.pathname.includes("phone-auth") &&

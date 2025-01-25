@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import QRAuthFlow from "./qr/QRAuthFlow";
 import packageInfo from "../../../package.json";
@@ -16,6 +16,9 @@ const ConnectionScreen = () => {
   const [deviceType, setDeviceType] = useState(null);
   const [isNetworkConnected, setIsNetworkConnected] = useState(false);
   const [isCheckingNetwork, setIsCheckingNetwork] = useState(true);
+  const [showNoNetwork, setShowNoNetwork] = useState(false);
+  const initialCheckTimeoutRef = useRef(null);
+  const initialCheckDoneRef = useRef(false);
 
   const hasStoredCredentials =
     typeof window !== "undefined" &&
@@ -28,10 +31,17 @@ const ConnectionScreen = () => {
       const response = await checkNetworkConnectivity();
       const isConnected = response.isConnected;
       setIsNetworkConnected(isConnected);
+      initialCheckDoneRef.current = true;
+      
+      if (isConnected && initialCheckTimeoutRef.current) {
+        clearTimeout(initialCheckTimeoutRef.current);
+        initialCheckTimeoutRef.current = null;
+      }
       return isConnected;
     } catch (error) {
       console.error("Network connectivity check failed:", error);
       setIsNetworkConnected(false);
+      initialCheckDoneRef.current = true;
       return false;
     } finally {
       setIsCheckingNetwork(false);
@@ -101,14 +111,17 @@ const ConnectionScreen = () => {
   };
 
   useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    setDeviceType(isIOS ? "ios" : "other");
-
     let mounted = true;
     let checkInterval;
 
     const startNetworkCheck = () => {
-      checkNetwork(); // Initial check
+      initialCheckTimeoutRef.current = setTimeout(() => {
+        if (!initialCheckDoneRef.current && mounted) {
+          setShowNoNetwork(true);
+        }
+      }, 5000);
+
+      checkNetwork();
       
       checkInterval = setInterval(async () => {
         if (!mounted) return;
@@ -144,11 +157,30 @@ const ConnectionScreen = () => {
       if (checkInterval) {
         clearInterval(checkInterval);
       }
+      if (initialCheckTimeoutRef.current) {
+        clearTimeout(initialCheckTimeoutRef.current);
+      }
       ws.close();
     };
   }, []);
 
-  // Effect to handle network state changes
+  useEffect(() => {
+    let timeoutId;
+    if (!isNetworkConnected && initialCheckDoneRef.current) {
+      timeoutId = setTimeout(() => {
+        setShowNoNetwork(true);
+      }, 10000);
+    } else {
+      setShowNoNetwork(false);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isNetworkConnected]);
+
   useEffect(() => {
     if (isNetworkConnected) {
       setIsBluetoothDiscovering(false);
@@ -208,7 +240,7 @@ const ConnectionScreen = () => {
     );
   }
 
-  if (!isNetworkConnected) {
+  if (!isNetworkConnected && showNoNetwork) {
     return <NetworkScreen isCheckingNetwork={isCheckingNetwork} />;
   }
 
@@ -242,7 +274,6 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
             const isConnected = status.isConnected;
             setIsNetworkReady(isConnected);
             
-            // If we have credentials and network, proceed with auth
             if (isConnected && hasStoredCredentials) {
               const savedAuthType = localStorage.getItem("spotifyAuthType") || "default";
               onSelect({ type: savedAuthType });
@@ -256,7 +287,7 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
         }
       };
 
-      check(); // Initial check
+      check();
       checkInterval = setInterval(check, 2000);
     };
 
@@ -312,7 +343,6 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
     onSelect({ type: "default" });
   };
 
-  // If we have network but no stored credentials, show auth UI
   if (networkStatus?.isConnected && !hasStoredCredentials) {
     return (
       <div className="bg-black h-screen flex items-center justify-center overflow-hidden fixed inset-0">
@@ -383,12 +413,10 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
     );
   }
 
-  // If no network and not in phone auth, show connection screen
   if (!networkStatus?.isConnected && !router.pathname.includes("phone-auth")) {
     return <ConnectionScreen />;
   }
 
-  // Show network screen while waiting for network
   return <NetworkScreen isCheckingNetwork={!isNetworkReady} />;
 };
 
