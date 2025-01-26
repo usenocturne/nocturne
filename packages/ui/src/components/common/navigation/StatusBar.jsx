@@ -4,7 +4,62 @@ import { SignalLowIcon, BatteryIcon } from "@/components/icons";
 const StatusBar = () => {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
-  const batteryPercentage = 80;
+  const [isBluetoothTethered, setIsBluetoothTethered] = useState(false);
+  const [batteryPercentage, setBatteryPercentage] = useState(80);
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:5000/ws");
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "bluetooth/network") {
+        setIsBluetoothTethered(true);
+      }
+    };
+
+    ws.onerror = () => {
+      setIsBluetoothTethered(false);
+    };
+
+    ws.onclose = () => {
+      setIsBluetoothTethered(false);
+    };
+
+    const checkBatteryPercentage = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/bluetooth/devices",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        if (response.ok) {
+          const devices = await response.json();
+          const connectedDevice = devices.find(device => device.connected);
+          if (connectedDevice?.batteryPercentage) {
+            setBatteryPercentage(connectedDevice.batteryPercentage);
+            setIsBluetoothTethered(true);
+          } else {
+            setIsBluetoothTethered(false);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch battery percentage:", error);
+      }
+    };
+
+    checkBatteryPercentage();
+    const batteryCheckInterval = setInterval(checkBatteryPercentage, 60000);
+
+    return () => {
+      ws.close();
+      clearInterval(batteryCheckInterval);
+    };
+  }, []);
 
   useEffect(() => {
     const updateTime = () => {
@@ -39,6 +94,8 @@ const StatusBar = () => {
       window.removeEventListener("timeFormatChanged", handleTimeFormatChange);
     };
   }, []);
+
+  if (!isBluetoothTethered) return null;
 
   return (
     <div
