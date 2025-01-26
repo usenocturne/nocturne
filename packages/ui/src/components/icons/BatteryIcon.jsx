@@ -19,7 +19,7 @@ const BatteryIcon = ({ percentage = 100, className }) => {
           {percentage > 0 && (
             <text
               x="11"
-              y="6.5"
+              y="7"
               textAnchor="middle"
               alignmentBaseline="central"
               fontSize="10"
@@ -36,7 +36,7 @@ const BatteryIcon = ({ percentage = 100, className }) => {
           {percentage > 0 && (
             <text
               x="11"
-              y="6.5"
+              y="7"
               textAnchor="middle"
               alignmentBaseline="central"
               fontSize="10"
