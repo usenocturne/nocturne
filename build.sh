@@ -9,18 +9,27 @@ msg() {
     echo "[nocturne]" $@ >&2
 }
 
-short_usage="Usage: ./build.sh oem-system-part"
-if [ "$#" -lt 1 ]; then
-    msg "$short_usage"
-    exit 1
-fi
-
+short_usage="Usage: ./build.sh [--help] oem-system-part path-to-void-repo"
 options_usage="Arguments:
   oem-system-part       Path to system partition from original Car Thing OS
+  path-to-void-repo     Path to Void binary package repo with Nocturne packages
+    For example: if you have https://github.com/usenocturne/void-repo cloned
+    at ~/projects/nocturne-void-repo and you are on the main branch, you should put:
+      ~/projects/nocturne-void-repo/hostdir/binpkgs/main
+    Also, make sure you have built the packages already so they are actually there.
+
+Environment vars:
+  PERSISTENT_XBPS_CACHE     Set this variable to make /var/cache/xbps mounted to a persistent location
 "
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     msg "$short_usage"
     msg "$options_usage"
+    exit 0
+fi
+
+if [ "$#" -lt 2 ]; then
+    msg "$short_usage"
+    exit 1
 fi
 
 
@@ -64,6 +73,7 @@ mount_file() {
 
 # used to extract modules from, should be a dump of the OEM OS system partition
 SOURCE_SYSTEM="$1"
+BINPKGS_PATH="$2"
 [ -z "$OUT_DIR" ] && OUT_DIR="./out"
 [ -z "$MOUNTS_DIR" ] && MOUNTS_DIR="$OUT_DIR/mounts"
 DEST_ROOT="$OUT_DIR/system_a"
@@ -80,6 +90,8 @@ mkdir -p "$OUT_DIR" "$MOUNTS_DIR"/system
 # let's make it 512 MiB so it's a nice even number, and to have a margin
 format_specific_size "$OUT_DIR/system" ext2 536870912
 mount_file system
+
+exit 1
 
 void_checksum() {
     echo "$VOID_BOOTSTRAP_SHA256 $OUT_DIR/$VOID_BOOTSTRAP_FNAME" | sha256sum -c
@@ -114,11 +126,17 @@ sudo mount --make-rslave "$system_mountpoint/dev"
 sudo mount --rbind /run "$system_mountpoint/run"
 sudo mount --make-rslave "$system_mountpoint/run"
 
+sudo mkdir -p "$system_mountpoint/nocturne-repo"
+sudo mount --bind "$BINPKGS_PATH" "$system_mountpoint/nocturne-repo"
+
+if ! [ -z "$PERSISTENT_XBPS_CACHE" ]; then
+    mkdir -p ./cache/xbps
+    sudo mount --bind ./cache/xbps "$system_mountpoint/var/cache/xbps"
+fi
+
 # bwrap is not an option because we need root inside the chroot here
 sudo chroot "$system_mountpoint" /bin/bash <<EOF
-    xbps-install -S
-    # TODO: add nocturne repo
-    #xbps-install -y base-system
+    xbps-install -Suy
     xbps-install -y nocturne-base
 EOF
 
