@@ -91,8 +91,6 @@ mkdir -p "$OUT_DIR" "$MOUNTS_DIR"/system
 format_specific_size "$OUT_DIR/system" ext2 536870912
 mount_file system
 
-exit 1
-
 void_checksum() {
     echo "$VOID_BOOTSTRAP_SHA256 $OUT_DIR/$VOID_BOOTSTRAP_FNAME" | sha256sum -c
 }
@@ -107,6 +105,7 @@ else
 fi
 
 msg "Extracting $OUT_DIR/$VOID_BOOTSTRAP_FNAME"
+read -p "press enter to extract" ksjadf
 sudo tar -xvf "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" -C "$MOUNTS_DIR/system" > "$OUT_DIR/bootstrap_extract.log"
 
 # we assume the kernel version of stock OS
@@ -115,23 +114,34 @@ OUT_DIR="$OUT_DIR" MOUNTS_DIR="$MOUNTS_DIR" SOURCE_SYSTEM="$SOURCE_SYSTEM" ./cop
 # could be done with `xchroot` tool from void but instead let's do it manually
 # in case your distro doesn't have xtools packaged
 system_mountpoint="$MOUNTS_DIR/system"
-sudo cp -p /etc/resolv.conf "$system_mountpoint/etc/"
+sudo cp -v /etc/resolv.conf "$system_mountpoint/etc/"
+sudo cp -rv ./files/. "$system_mountpoint/"
 
-sudo mount -t proc none "$system_mountpoint/proc"
-sudo mount -t sysfs none "$system_mountpoint/sys"
+#sudo mount -t proc none "$system_mountpoint/proc"
+#sudo mount -t sysfs none "$system_mountpoint/sys"
+#
+## make-rslave: https://unix.stackexchange.com/questions/120827/recursive-umount-after-rbind-mount
+#sudo mount --rbind /dev "$system_mountpoint/dev"
+#sudo mount --make-rslave "$system_mountpoint/dev"
+#sudo mount --rbind /run "$system_mountpoint/run"
+#sudo mount --make-rslave "$system_mountpoint/run"
 
-# make-rslave: https://unix.stackexchange.com/questions/120827/recursive-umount-after-rbind-mount
-sudo mount --rbind /dev "$system_mountpoint/dev"
-sudo mount --make-rslave "$system_mountpoint/dev"
-sudo mount --rbind /run "$system_mountpoint/run"
-sudo mount --make-rslave "$system_mountpoint/run"
+echo "binpkgs path: $BINPKGS_PATH"
+read -p "before mount nocturne-repo" skdaf
 
 sudo mkdir -p "$system_mountpoint/nocturne-repo"
 sudo mount --bind "$BINPKGS_PATH" "$system_mountpoint/nocturne-repo"
 
+
+read -p "done mount " dsfakj
+
+# do not uncomment or else you might have issues with them staying mounted in other mnt ns'es for some reason
 if ! [ -z "$PERSISTENT_XBPS_CACHE" ]; then
+    read -p "enter persistent" asdfkj
     mkdir -p ./cache/xbps
+    sudo mkdir -p "$system_mountpoint/var/cache/xbps"
     sudo mount --bind ./cache/xbps "$system_mountpoint/var/cache/xbps"
+    read -p "done mount persistent" asjdkf
 fi
 
 # bwrap is not an option because we need root inside the chroot here
