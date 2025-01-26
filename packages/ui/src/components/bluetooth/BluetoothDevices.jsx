@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogPanel,
@@ -8,30 +8,36 @@ import {
 import { inter } from "../../constants/fonts";
 
 const BluetoothDevices = () => {
-  const [devices, setDevices] = useState([
-    {
-      id: "1",
-      name: "iPhone 14 Pro",
-      status: "connected",
-      type: "phone",
-    },
-    {
-      id: "2",
-      name: "Galaxy S23 Ultra With A Really Long Name That Should Truncate",
-      status: "disconnected",
-      type: "phone",
-    },
-    {
-      id: "3",
-      name: "Pixel 8",
-      status: "disconnected",
-      type: "phone",
-    },
-  ]);
+  const [devices, setDevices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForgetDialog, setShowForgetDialog] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const longPressTimer = useRef(null);
   const buttonPressInProgress = useRef(false);
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/bluetooth/devices');
+        if (!response.ok) {
+          throw new Error('Failed to fetch devices');
+        }
+        const data = await response.json();
+        const mappedDevices = data.map(device => ({
+          ...device,
+          status: device.connected ? "connected" : "disconnected"
+        }));
+        setDevices(mappedDevices);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDevices();
+  }, []);
 
   const handleConnect = (deviceId) => {
     setDevices(
