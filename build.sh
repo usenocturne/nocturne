@@ -90,8 +90,8 @@ mkdir -p "$OUT_DIR" "$DEST_ROOT_MOUNT"
 # let's make it 512 MiB so it's a nice even number, and to have a margin
 # ignore the above; outdated
 
-# 1 GiB
-format_specific_size "$DEST_ROOT" ext4 1073741824
+# 2 GiB
+format_specific_size "$DEST_ROOT" ext4 2147483648
 sudo mount -o loop "$DEST_ROOT" "$DEST_ROOT_MOUNT"
 
 void_checksum() {
