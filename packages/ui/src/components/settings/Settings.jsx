@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { Switch } from "@headlessui/react";
-import { supabase } from "../../lib/supabaseClient";
 import packageInfo from "../../../package.json";
 import BluetoothDevices from "../bluetooth/BluetoothDevices";
 import AccountInfo from "./AccountInfo";
@@ -358,24 +357,12 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
 
   const handleSignOut = async () => {
     try {
-      const refreshToken = localStorage.getItem("spotifyRefreshToken");
-      const tempId = localStorage.getItem("spotifyTempId");
-      const authType = localStorage.getItem("spotifyAuthType");
-
-      if (authType === "custom" && refreshToken && tempId) {
-        await supabase.from("spotify_credentials").delete().match({
-          temp_id: tempId,
-          refresh_token: refreshToken,
-        });
-      }
-
       localStorage.removeItem("spotifyAccessToken");
       localStorage.removeItem("spotifyRefreshToken");
       localStorage.removeItem("spotifyTokenExpiry");
       localStorage.removeItem("spotifyAuthType");
       localStorage.removeItem("spotifyTempId");
       clearSettings();
-
       router.push("/").then(() => window.location.reload());
     } catch (error) {
       console.error("Error during sign out:", error);

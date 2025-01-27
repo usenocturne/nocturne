@@ -40,7 +40,6 @@ import { useMediaState } from "../hooks/useMediaState";
 import { useGradientState } from "../hooks/useGradientState";
 import { useNavigationState } from "../hooks/useNavigationState";
 import { useKeyboardHandlers } from "../hooks/useKeyboardHandlers";
-import { supabase } from "@/lib/supabaseClient";
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -266,39 +265,19 @@ export default function App({ Component, pageProps }) {
               authType: savedAuthType,
               tempId: savedTempId,
             });
-
-            if (savedAuthType === "custom") {
-              await supabase
-                .from("spotify_credentials")
-                .update({
-                  access_token: refreshData.access_token,
-                  refresh_token: refreshData.refresh_token || savedRefreshToken,
-                  token_expiry: newExpiry,
-                  last_used: new Date().toISOString(),
-                })
-                .match({
-                  temp_id: savedTempId,
-                  refresh_token: savedRefreshToken,
-                });
-            }
           }
         } catch (error) {
           console.error("Failed to restore session:", error);
 
           if (error.message && error.message.includes("invalid_grant")) {
             await clearSession();
-            if (!authState.tempId) {
-              await clearSession();
-            }
           }
         }
       } else if (
         authState.authSelectionMade &&
         !router.pathname.includes("phone-auth")
       ) {
-        if (!authState.tempId) {
-          await clearSession();
-        }
+        await clearSession();
       }
     };
 
