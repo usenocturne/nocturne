@@ -60,14 +60,14 @@ format_specific_size() {
             msg "formatting $path as ext2"
             mkfs.ext2 -F "$path"
             ;;
+        ext4)
+            msg "formatting $path as ext4"
+            mkfs.ext4 -F "$path"
+            ;;
+        *)
+            msg "ERROR: invalid fs type to format, see format_specific_size function"
+            ;;
     esac
-}
-
-# usage: mount_file [name]
-mount_file() {
-    name="$1"
-    msg "Mounting $name"
-    sudo mount -o loop "$OUT_DIR/$name" "$MOUNTS_DIR/$name"
 }
 
 
@@ -76,20 +76,23 @@ SOURCE_SYSTEM="$1"
 BINPKGS_PATH="$2"
 [ -z "$OUT_DIR" ] && OUT_DIR="./out"
 [ -z "$MOUNTS_DIR" ] && MOUNTS_DIR="$OUT_DIR/mounts"
-DEST_ROOT="$OUT_DIR/system_a"
-DEST_DATA="$OUT_DIR/data"
+DEST_ROOT="$OUT_DIR/data"
+DEST_ROOT_MOUNT="$MOUNTS_DIR/data"
 
 if [ -d "$MOUNTS_DIR" ]; then
     msg "Unmounting if mounted:" "$MOUNTS_DIR"/*
     sudo umount -R "$MOUNTS_DIR"/* || :
 fi
 
-mkdir -p "$OUT_DIR" "$MOUNTS_DIR"/system
+mkdir -p "$OUT_DIR" "$DEST_ROOT_MOUNT"
 
 # most dumps have the system partition sizes as 541110272 (516.0429688 MiB)
 # let's make it 512 MiB so it's a nice even number, and to have a margin
-format_specific_size "$OUT_DIR/system" ext2 536870912
-mount_file system
+# ignore the above; outdated
+
+# 1 GiB
+format_specific_size "$DEST_ROOT" ext4 1073741824
+sudo mount -o loop "$DEST_ROOT" "$DEST_ROOT_MOUNT"
 
 void_checksum() {
     echo "$VOID_BOOTSTRAP_SHA256 $OUT_DIR/$VOID_BOOTSTRAP_FNAME" | sha256sum -c
@@ -106,31 +109,30 @@ fi
 
 msg "Extracting $OUT_DIR/$VOID_BOOTSTRAP_FNAME"
 read -p "press enter to extract" ksjadf
-sudo tar -xvf "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" -C "$MOUNTS_DIR/system" > "$OUT_DIR/bootstrap_extract.log"
+sudo tar -xvf "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" -C "$DEST_ROOT_MOUNT" > "$OUT_DIR/bootstrap_extract.log"
 
 # we assume the kernel version of stock OS
 OUT_DIR="$OUT_DIR" MOUNTS_DIR="$MOUNTS_DIR" SOURCE_SYSTEM="$SOURCE_SYSTEM" ./copy_modules.sh 4.9.113
 
 # could be done with `xchroot` tool from void but instead let's do it manually
 # in case your distro doesn't have xtools packaged
-system_mountpoint="$MOUNTS_DIR/system"
-sudo cp -v /etc/resolv.conf "$system_mountpoint/etc/"
-sudo cp -rv ./files/. "$system_mountpoint/"
+sudo cp -v /etc/resolv.conf "$DEST_ROOT_MOUNT/etc/"
+sudo cp -rv ./files/. "$DEST_ROOT_MOUNT/"
 
-#sudo mount -t proc none "$system_mountpoint/proc"
-#sudo mount -t sysfs none "$system_mountpoint/sys"
+#sudo mount -t proc none "$DEST_ROOT_MOUNT/proc"
+#sudo mount -t sysfs none "$DEST_ROOT_MOUNT/sys"
 #
 ## make-rslave: https://unix.stackexchange.com/questions/120827/recursive-umount-after-rbind-mount
-#sudo mount --rbind /dev "$system_mountpoint/dev"
-#sudo mount --make-rslave "$system_mountpoint/dev"
-#sudo mount --rbind /run "$system_mountpoint/run"
-#sudo mount --make-rslave "$system_mountpoint/run"
+#sudo mount --rbind /dev "$DEST_ROOT_MOUNT/dev"
+#sudo mount --make-rslave "$DEST_ROOT_MOUNT/dev"
+#sudo mount --rbind /run "$DEST_ROOT_MOUNT/run"
+#sudo mount --make-rslave "$DEST_ROOT_MOUNT/run"
 
 echo "binpkgs path: $BINPKGS_PATH"
 read -p "before mount nocturne-repo" skdaf
 
-sudo mkdir -p "$system_mountpoint/nocturne-repo"
-sudo mount --bind "$BINPKGS_PATH" "$system_mountpoint/nocturne-repo"
+sudo mkdir -p "$DEST_ROOT_MOUNT/nocturne-repo"
+sudo mount --bind "$BINPKGS_PATH" "$DEST_ROOT_MOUNT/nocturne-repo"
 
 
 read -p "done mount " dsfakj
@@ -139,13 +141,13 @@ read -p "done mount " dsfakj
 if ! [ -z "$PERSISTENT_XBPS_CACHE" ]; then
     read -p "enter persistent" asdfkj
     mkdir -p ./cache/xbps
-    sudo mkdir -p "$system_mountpoint/var/cache/xbps"
-    sudo mount --bind ./cache/xbps "$system_mountpoint/var/cache/xbps"
+    sudo mkdir -p "$DEST_ROOT_MOUNT/var/cache/xbps"
+    sudo mount --bind ./cache/xbps "$DEST_ROOT_MOUNT/var/cache/xbps"
     read -p "done mount persistent" asjdkf
 fi
 
 # bwrap is not an option because we need root inside the chroot here
-sudo chroot "$system_mountpoint" /bin/bash <<EOF
+sudo chroot "$DEST_ROOT_MOUNT" /bin/bash <<EOF
     xbps-install -Suy
     xbps-install -y nocturne-base
 EOF
