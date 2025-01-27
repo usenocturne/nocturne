@@ -148,9 +148,6 @@ fi
 sudo chroot "$DEST_ROOT_MOUNT" /bin/bash -x <<EOF
     xbps-install -Suy
     xbps-install -y nocturne-base
-    ln -s /etc/sv/nocturne-ui-prodserver /etc/runit/runsvdir/default/
-    ln -s /etc/sv/nocturne-ui /etc/runit/runsvdir/default/
-    ln -s /etc/sv/nocturned /etc/runit/runsvdir/default/
 EOF
 
 read -p "Done. Unmount everything under $MOUNTS_DIR? [Yn] " yn
