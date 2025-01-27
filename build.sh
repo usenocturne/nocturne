@@ -150,7 +150,11 @@ sudo chroot "$DEST_ROOT_MOUNT" /bin/bash -x <<EOF
     xbps-install -y nocturne-base
 EOF
 
-read -p "Done. Unmount everything under $MOUNTS_DIR? [Yn] " yn
+echo
+echo
+echo
+msg "Nocturne image is finished building. Partition images available under $OUT_DIR."
+read -p "Unmount everything under $MOUNTS_DIR? [Yn] " yn
 case "$yn" in
     [Nn]) exit ;;
     *) sudo umount -R "$MOUNTS_DIR"/* && msg "Unmounted." ;;
