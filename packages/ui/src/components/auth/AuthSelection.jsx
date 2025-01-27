@@ -19,6 +19,7 @@ const ConnectionScreen = () => {
   const [showNoNetwork, setShowNoNetwork] = useState(false);
   const initialCheckTimeoutRef = useRef(null);
   const initialCheckDoneRef = useRef(false);
+  const reconnectionAttemptedRef = useRef(false);
 
   const hasStoredCredentials =
     typeof window !== "undefined" &&
@@ -47,6 +48,40 @@ const ConnectionScreen = () => {
       setIsCheckingNetwork(false);
     }
   }, []);
+
+  const tryReconnectLastDevice = async () => {
+    const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+    if (lastDeviceAddress && !reconnectionAttemptedRef.current) {
+      try {
+        const response = await fetch(
+          `http://localhost:5000/bluetooth/connect/${lastDeviceAddress}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to reconnect to last device");
+        }
+
+        const data = await response.json();
+        if (data.status === "success") {
+          console.log("Successfully reconnected to last device");
+          setShowNoNetwork(false);
+          setShowTethering(true);
+          enableBluetoothNetwork(lastDeviceAddress);
+          reconnectionAttemptedRef.current = true;
+          return true;
+        }
+      } catch (error) {
+        console.error("Error reconnecting to last device:", error);
+      }
+    }
+    return false;
+  };
 
   const enableBluetoothDiscovery = async () => {
     try {
@@ -84,6 +119,12 @@ const ConnectionScreen = () => {
     try {
       const intervalId = setInterval(async () => {
         try {
+          const networkStatus = await checkNetworkConnectivity();
+          if (networkStatus.isConnected) {
+            clearInterval(intervalId);
+            return;
+          }
+
           const response = await fetch(
             `http://localhost:5000/bluetooth/network/${address}`,
             {
@@ -97,14 +138,24 @@ const ConnectionScreen = () => {
           const data = await response.json();
 
           if (data.status === "success") {
-            clearInterval(intervalId);
             setShowTethering(true);
             setIsPairing(false);
           }
         } catch (error) {
           console.error("Error enabling bluetooth networking:", error);
         }
-      }, 5000);
+      }, 10000);
+
+      fetch(
+        `http://localhost:5000/bluetooth/network/${address}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      ).catch(console.error);
+
     } catch (error) {
       console.error("Error enabling bluetooth networking:", error);
     }
@@ -113,20 +164,84 @@ const ConnectionScreen = () => {
   useEffect(() => {
     let mounted = true;
     let checkInterval;
+    let reconnectInterval;
+    let reconnectTimeoutId;
 
-    const startNetworkCheck = () => {
+    const startNetworkCheck = async () => {
+      const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+      if (lastDeviceAddress) {
+        reconnectionAttemptedRef.current = false;
+        
+        reconnectTimeoutId = setTimeout(() => {
+          if (!reconnectionAttemptedRef.current && mounted) {
+            setShowNoNetwork(true);
+            setShowTethering(false);
+          }
+        }, 15000);
+
+        const reconnected = await tryReconnectLastDevice();
+        if (!reconnected) {
+          setShowNoNetwork(true);
+          reconnectInterval = setInterval(async () => {
+            if (!reconnectionAttemptedRef.current) {
+              const reconnected = await tryReconnectLastDevice();
+              if (reconnected) {
+                setShowNoNetwork(false);
+                setShowTethering(true);
+                clearInterval(reconnectInterval);
+                reconnectInterval = null;
+              }
+            }
+          }, 10000);
+        } else {
+          if (reconnectTimeoutId) {
+            clearTimeout(reconnectTimeoutId);
+          }
+          setShowNoNetwork(false);
+          setShowTethering(true);
+        }
+      }
+
       initialCheckTimeoutRef.current = setTimeout(() => {
         if (!initialCheckDoneRef.current && mounted) {
           setShowNoNetwork(true);
         }
       }, 5000);
 
-      checkNetwork();
+      const isConnected = await checkNetwork();
+      
+      if (!isConnected && !lastDeviceAddress) {
+        enableBluetoothDiscovery();
+      }
       
       checkInterval = setInterval(async () => {
         if (!mounted) return;
-        await checkNetwork();
-      }, 3000);
+        const isConnected = await checkNetwork();
+        if (!isConnected) {
+          const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+          if (lastDeviceAddress) {
+            if (!reconnectionAttemptedRef.current) {
+              setShowNoNetwork(true);
+              if (!reconnectInterval) {
+                reconnectInterval = setInterval(async () => {
+                  if (!reconnectionAttemptedRef.current) {
+                    const reconnected = await tryReconnectLastDevice();
+                    if (reconnected) {
+                      setShowNoNetwork(false);
+                      setShowTethering(true);
+                      clearInterval(reconnectInterval);
+                      reconnectInterval = null;
+                    }
+                  }
+                }, 10000);
+              }
+            }
+            enableBluetoothNetwork(lastDeviceAddress);
+          } else {
+            enableBluetoothDiscovery();
+          }
+        }
+      }, 10000);
     };
 
     startNetworkCheck();
@@ -142,7 +257,30 @@ const ConnectionScreen = () => {
         setPairingKey(pairingKey);
       } else if (data.type === "bluetooth/paired") {
         const { address } = data.payload.device;
+        setShowNoNetwork(false);
+        setShowTethering(true);
         enableBluetoothNetwork(address);
+      } else if (data.type === "bluetooth/network/disconnect") {
+        const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+        if (lastDeviceAddress) {
+          setShowNoNetwork(true);
+          setIsPairing(false);
+          reconnectionAttemptedRef.current = false;
+          if (!reconnectInterval) {
+            reconnectInterval = setInterval(async () => {
+              if (!reconnectionAttemptedRef.current) {
+                const reconnected = await tryReconnectLastDevice();
+                if (reconnected) {
+                  setShowNoNetwork(false);
+                  setShowTethering(true);
+                  clearInterval(reconnectInterval);
+                  reconnectInterval = null;
+                }
+              }
+            }, 10000);
+          }
+          enableBluetoothNetwork(lastDeviceAddress);
+        }
       }
     };
 
@@ -150,15 +288,19 @@ const ConnectionScreen = () => {
       console.error("WebSocket error:", error);
     };
 
-    enableBluetoothDiscovery();
-
     return () => {
       mounted = false;
       if (checkInterval) {
         clearInterval(checkInterval);
       }
+      if (reconnectInterval) {
+        clearInterval(reconnectInterval);
+      }
       if (initialCheckTimeoutRef.current) {
         clearTimeout(initialCheckTimeoutRef.current);
+      }
+      if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
       }
       ws.close();
     };

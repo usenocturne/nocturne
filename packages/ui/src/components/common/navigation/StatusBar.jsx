@@ -6,6 +6,7 @@ const StatusBar = () => {
   const [isFourDigits, setIsFourDigits] = useState(false);
   const [isBluetoothTethered, setIsBluetoothTethered] = useState(false);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
+  const [connectedDeviceAddress, setConnectedDeviceAddress] = useState(null);
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:5000/ws");
@@ -14,6 +15,8 @@ const StatusBar = () => {
       const data = JSON.parse(event.data);
       if (data.type === "bluetooth/network") {
         setIsBluetoothTethered(true);
+      } else if (data.type === "bluetooth/network/disconnect") {
+        setIsBluetoothTethered(false);
       }
     };
 
@@ -25,7 +28,7 @@ const StatusBar = () => {
       setIsBluetoothTethered(false);
     };
 
-    const checkBatteryPercentage = async () => {
+    const checkConnectedDevice = async () => {
       try {
         const response = await fetch(
           "http://localhost:5000/bluetooth/devices",
@@ -40,11 +43,39 @@ const StatusBar = () => {
         if (response.ok) {
           const devices = await response.json();
           const connectedDevice = devices.find(device => device.connected);
-          if (connectedDevice?.batteryPercentage) {
-            setBatteryPercentage(connectedDevice.batteryPercentage);
+          if (connectedDevice?.address) {
+            setConnectedDeviceAddress(connectedDevice.address);
+            localStorage.setItem('connectedBluetoothAddress', connectedDevice.address);
             setIsBluetoothTethered(true);
           } else {
             setIsBluetoothTethered(false);
+            setConnectedDeviceAddress(null);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch devices:", error);
+      }
+    };
+
+    const checkBatteryPercentage = async () => {
+      const address = localStorage.getItem('connectedBluetoothAddress');
+      if (!address) return;
+
+      try {
+        const response = await fetch(
+          `http://localhost:5000/bluetooth/info/${address}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        if (response.ok) {
+          const deviceInfo = await response.json();
+          if (deviceInfo?.batteryPercentage) {
+            setBatteryPercentage(deviceInfo.batteryPercentage);
           }
         }
       } catch (error) {
@@ -52,11 +83,15 @@ const StatusBar = () => {
       }
     };
 
+    checkConnectedDevice();
     checkBatteryPercentage();
+
+    const deviceCheckInterval = setInterval(checkConnectedDevice, 5000);
     const batteryCheckInterval = setInterval(checkBatteryPercentage, 60000);
 
     return () => {
       ws.close();
+      clearInterval(deviceCheckInterval);
       clearInterval(batteryCheckInterval);
     };
   }, []);
