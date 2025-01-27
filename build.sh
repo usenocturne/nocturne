@@ -108,7 +108,6 @@ else
 fi
 
 msg "Extracting $OUT_DIR/$VOID_BOOTSTRAP_FNAME"
-read -p "press enter to extract" ksjadf
 sudo tar -xvf "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" -C "$DEST_ROOT_MOUNT" > "$OUT_DIR/bootstrap_extract.log"
 
 # we assume the kernel version of stock OS
@@ -129,21 +128,16 @@ sudo cp -rv ./files/. "$DEST_ROOT_MOUNT/"
 #sudo mount --make-rslave "$DEST_ROOT_MOUNT/run"
 
 echo "binpkgs path: $BINPKGS_PATH"
-read -p "before mount nocturne-repo" skdaf
 
 sudo mkdir -p "$DEST_ROOT_MOUNT/nocturne-repo"
 sudo mount --bind "$BINPKGS_PATH" "$DEST_ROOT_MOUNT/nocturne-repo"
 
 
-read -p "done mount " dsfakj
-
 # do not uncomment or else you might have issues with them staying mounted in other mnt ns'es for some reason
 if ! [ -z "$PERSISTENT_XBPS_CACHE" ]; then
-    read -p "enter persistent" asdfkj
     mkdir -p ./cache/xbps
     sudo mkdir -p "$DEST_ROOT_MOUNT/var/cache/xbps"
     sudo mount --bind ./cache/xbps "$DEST_ROOT_MOUNT/var/cache/xbps"
-    read -p "done mount persistent" asjdkf
 fi
 
 # bwrap is not an option because we need root inside the chroot here
