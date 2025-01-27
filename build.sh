@@ -111,7 +111,11 @@ msg "Extracting $OUT_DIR/$VOID_BOOTSTRAP_FNAME"
 sudo tar -xvf "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" -C "$DEST_ROOT_MOUNT" > "$OUT_DIR/bootstrap_extract.log"
 
 # we assume the kernel version of stock OS
-OUT_DIR="$OUT_DIR" MOUNTS_DIR="$MOUNTS_DIR" SOURCE_SYSTEM="$SOURCE_SYSTEM" ./copy_modules.sh 4.9.113
+source_system_mount="$MOUNTS_DIR/source_system"
+msg "Mounting $SOURCE_SYSTEM to $source_system_mount"
+mkdir -p "$source_system_mount"
+sudo mount -o loop "$SOURCE_SYSTEM" "$source_system_mount"
+SOURCE_SYSTEM_MOUNT="$source_system_mount" DEST_ROOT_MOUNT="$DEST_ROOT_MOUNT" ./copy_modules.sh 4.9.113
 
 # could be done with `xchroot` tool from void but instead let's do it manually
 # in case your distro doesn't have xtools packaged
@@ -141,9 +145,11 @@ if ! [ -z "$PERSISTENT_XBPS_CACHE" ]; then
 fi
 
 # bwrap is not an option because we need root inside the chroot here
-sudo chroot "$DEST_ROOT_MOUNT" /bin/bash <<EOF
+sudo chroot "$DEST_ROOT_MOUNT" /bin/bash -x <<EOF
     xbps-install -Suy
     xbps-install -y nocturne-base
+    ln -s /etc/sv/nocturne-ui-prodserver /etc/runit/runsvdir/default/
+    ln -s /etc/sv/nocturne-ui /etc/runit/runsvdir/default/
 EOF
 
 read -p "Done. Unmount everything under $MOUNTS_DIR? [Yn] " yn
