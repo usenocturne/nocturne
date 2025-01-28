@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SignalLowIcon, BatteryIcon } from "@/components/icons";
 
 const StatusBar = () => {
@@ -7,6 +7,8 @@ const StatusBar = () => {
   const [isBluetoothTethered, setIsBluetoothTethered] = useState(false);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const [connectedDeviceAddress, setConnectedDeviceAddress] = useState(null);
+  const failedDeviceChecksRef = useRef(0);
+  const failedBatteryChecksRef = useRef(0);
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:5000/ws");
@@ -15,6 +17,8 @@ const StatusBar = () => {
       const data = JSON.parse(event.data);
       if (data.type === "bluetooth/network") {
         setIsBluetoothTethered(true);
+        failedDeviceChecksRef.current = 0;
+        failedBatteryChecksRef.current = 0;
       } else if (data.type === "bluetooth/network/disconnect") {
         setIsBluetoothTethered(false);
       }
@@ -29,7 +33,14 @@ const StatusBar = () => {
     };
 
     const checkConnectedDevice = async () => {
+      if (failedDeviceChecksRef.current >= 10) {
+        return false;
+      }
+
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
         const response = await fetch(
           "http://localhost:5000/bluetooth/devices",
           {
@@ -37,8 +48,11 @@ const StatusBar = () => {
             headers: {
               "Content-Type": "application/json",
             },
+            signal: controller.signal
           }
         );
+
+        clearTimeout(timeout);
         
         if (response.ok) {
           const devices = await response.json();
@@ -47,21 +61,43 @@ const StatusBar = () => {
             setConnectedDeviceAddress(connectedDevice.address);
             localStorage.setItem('connectedBluetoothAddress', connectedDevice.address);
             setIsBluetoothTethered(true);
+            failedDeviceChecksRef.current = 0;
+            return true;
           } else {
             setIsBluetoothTethered(false);
             setConnectedDeviceAddress(null);
+            failedDeviceChecksRef.current++;
+            return false;
           }
         }
+        failedDeviceChecksRef.current++;
+        return false;
       } catch (error) {
-        console.error("Failed to fetch devices:", error);
+        if (error.name === 'AbortError') {
+          console.error("Device check request timed out after 1 minute");
+        } else {
+          console.error("Failed to fetch devices:", error);
+        }
+        failedDeviceChecksRef.current++;
+        return false;
       }
     };
 
     const checkBatteryPercentage = async () => {
+      if (failedBatteryChecksRef.current >= 10) {
+        return;
+      }
+
       const address = localStorage.getItem('connectedBluetoothAddress');
-      if (!address) return;
+      if (!address) {
+        failedBatteryChecksRef.current++;
+        return;
+      }
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
         const response = await fetch(
           `http://localhost:5000/bluetooth/info/${address}`,
           {
@@ -69,30 +105,63 @@ const StatusBar = () => {
             headers: {
               "Content-Type": "application/json",
             },
+            signal: controller.signal
           }
         );
+
+        clearTimeout(timeout);
         
         if (response.ok) {
           const deviceInfo = await response.json();
           if (deviceInfo?.batteryPercentage) {
             setBatteryPercentage(deviceInfo.batteryPercentage);
+            failedBatteryChecksRef.current = 0; 
+          } else {
+            failedBatteryChecksRef.current++;
           }
+        } else {
+          failedBatteryChecksRef.current++;
         }
       } catch (error) {
-        console.error("Failed to fetch battery percentage:", error);
+        if (error.name === 'AbortError') {
+          console.error("Battery check request timed out after 1 minute");
+        } else {
+          console.error("Failed to fetch battery percentage:", error);
+        }
+        failedBatteryChecksRef.current++;
       }
     };
 
+    let deviceCheckInterval;
+    let batteryCheckInterval;
+    
     checkConnectedDevice();
     checkBatteryPercentage();
 
-    const deviceCheckInterval = setInterval(checkConnectedDevice, 5000);
-    const batteryCheckInterval = setInterval(checkBatteryPercentage, 60000);
+    deviceCheckInterval = setInterval(async () => {
+      const isConnected = await checkConnectedDevice();
+      if (failedDeviceChecksRef.current >= 10) {
+        clearInterval(deviceCheckInterval);
+        clearInterval(batteryCheckInterval);
+      }
+    }, 5000);
+
+    batteryCheckInterval = setInterval(() => {
+      if (failedBatteryChecksRef.current >= 10) {
+        clearInterval(batteryCheckInterval);
+      } else {
+        checkBatteryPercentage();
+      }
+    }, 60000);
 
     return () => {
       ws.close();
-      clearInterval(deviceCheckInterval);
-      clearInterval(batteryCheckInterval);
+      if (deviceCheckInterval) {
+        clearInterval(deviceCheckInterval);
+      }
+      if (batteryCheckInterval) {
+        clearInterval(batteryCheckInterval);
+      }
     };
   }, []);
 

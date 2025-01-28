@@ -20,6 +20,7 @@ const ConnectionScreen = () => {
   const initialCheckTimeoutRef = useRef(null);
   const initialCheckDoneRef = useRef(false);
   const reconnectionAttemptedRef = useRef(false);
+  const failedReconnectAttemptsRef = useRef(0);
 
   const hasStoredCredentials =
     typeof window !== "undefined" &&
@@ -51,8 +52,19 @@ const ConnectionScreen = () => {
 
   const tryReconnectLastDevice = async () => {
     const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+    if (failedReconnectAttemptsRef.current >= 10) {
+      if (reconnectInterval) {
+        clearInterval(reconnectInterval);
+        reconnectInterval = null;
+      }
+      return false;
+    }
+
     if (lastDeviceAddress && !reconnectionAttemptedRef.current) {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
         const response = await fetch(
           `http://localhost:5000/bluetooth/connect/${lastDeviceAddress}`,
           {
@@ -60,8 +72,11 @@ const ConnectionScreen = () => {
             headers: {
               "Content-Type": "application/json",
             },
+            signal: controller.signal
           }
         );
+
+        clearTimeout(timeout);
 
         if (!response.ok) {
           throw new Error("Failed to reconnect to last device");
@@ -74,10 +89,17 @@ const ConnectionScreen = () => {
           setShowTethering(true);
           enableBluetoothNetwork(lastDeviceAddress);
           reconnectionAttemptedRef.current = true;
+          failedReconnectAttemptsRef.current = 0;
           return true;
         }
+        failedReconnectAttemptsRef.current++;
       } catch (error) {
-        console.error("Error reconnecting to last device:", error);
+        if (error.name === 'AbortError') {
+          console.error("Reconnection request timed out after 1 minute");
+        } else {
+          console.error("Error reconnecting to last device:", error);
+        }
+        failedReconnectAttemptsRef.current++;
       }
     }
     return false;
@@ -116,12 +138,22 @@ const ConnectionScreen = () => {
   };
 
   const enableBluetoothNetwork = (address) => {
+    let failedNetworkAttempts = 0;
     try {
       const intervalId = setInterval(async () => {
         try {
+          if (failedNetworkAttempts >= 10) {
+            clearInterval(intervalId);
+            return;
+          }
+
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 60000);
+
           const networkStatus = await checkNetworkConnectivity();
           if (networkStatus.isConnected) {
             clearInterval(intervalId);
+            clearTimeout(timeout);
             return;
           }
 
@@ -132,19 +164,33 @@ const ConnectionScreen = () => {
               headers: {
                 "Content-Type": "application/json",
               },
+              signal: controller.signal
             }
           );
+
+          clearTimeout(timeout);
 
           const data = await response.json();
 
           if (data.status === "success") {
             setShowTethering(true);
             setIsPairing(false);
+            failedNetworkAttempts = 0;
+          } else {
+            failedNetworkAttempts++;
           }
         } catch (error) {
-          console.error("Error enabling bluetooth networking:", error);
+          if (error.name === 'AbortError') {
+            console.error("Network request timed out after 1 minute");
+          } else {
+            console.error("Error enabling bluetooth networking:", error);
+          }
+          failedNetworkAttempts++;
         }
       }, 10000);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
 
       fetch(
         `http://localhost:5000/bluetooth/network/${address}`,
@@ -153,11 +199,20 @@ const ConnectionScreen = () => {
           headers: {
             "Content-Type": "application/json",
           },
+          signal: controller.signal
         }
-      ).catch(console.error);
+      ).catch(error => {
+        if (error.name === 'AbortError') {
+          console.error("Initial network request timed out after 1 minute");
+        } else {
+          console.error(error);
+        }
+        failedNetworkAttempts++;
+      });
 
     } catch (error) {
       console.error("Error enabling bluetooth networking:", error);
+      failedNetworkAttempts++;
     }
   };
 
@@ -171,6 +226,7 @@ const ConnectionScreen = () => {
       const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
       if (lastDeviceAddress) {
         reconnectionAttemptedRef.current = false;
+        failedReconnectAttemptsRef.current = 0;
         
         reconnectTimeoutId = setTimeout(() => {
           if (!reconnectionAttemptedRef.current && mounted) {
@@ -185,9 +241,11 @@ const ConnectionScreen = () => {
           reconnectInterval = setInterval(async () => {
             if (!reconnectionAttemptedRef.current) {
               const reconnected = await tryReconnectLastDevice();
-              if (reconnected) {
-                setShowNoNetwork(false);
-                setShowTethering(true);
+              if (reconnected || failedReconnectAttemptsRef.current >= 10) {
+                if (reconnected) {
+                  setShowNoNetwork(false);
+                  setShowTethering(true);
+                }
                 clearInterval(reconnectInterval);
                 reconnectInterval = null;
               }
@@ -226,9 +284,11 @@ const ConnectionScreen = () => {
                 reconnectInterval = setInterval(async () => {
                   if (!reconnectionAttemptedRef.current) {
                     const reconnected = await tryReconnectLastDevice();
-                    if (reconnected) {
-                      setShowNoNetwork(false);
-                      setShowTethering(true);
+                    if (reconnected || failedReconnectAttemptsRef.current >= 10) {
+                      if (reconnected) {
+                        setShowNoNetwork(false);
+                        setShowTethering(true);
+                      }
                       clearInterval(reconnectInterval);
                       reconnectInterval = null;
                     }
@@ -270,9 +330,11 @@ const ConnectionScreen = () => {
             reconnectInterval = setInterval(async () => {
               if (!reconnectionAttemptedRef.current) {
                 const reconnected = await tryReconnectLastDevice();
-                if (reconnected) {
-                  setShowNoNetwork(false);
-                  setShowTethering(true);
+                if (reconnected || failedReconnectAttemptsRef.current >= 10) {
+                  if (reconnected) {
+                    setShowNoNetwork(false);
+                    setShowTethering(true);
+                  }
                   clearInterval(reconnectInterval);
                   reconnectInterval = null;
                 }
