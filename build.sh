@@ -9,6 +9,11 @@ msg() {
     echo "[nocturne]" $@ >&2
 }
 
+if ! command -v mksquashfs > /dev/null; then
+    msg "Please install mksquashfs"
+    exit 1
+fi
+
 short_usage="Usage: ./build.sh [--help] oem-system-part path-to-void-repo"
 options_usage="Arguments:
   oem-system-part       Path to system partition from original Car Thing OS
@@ -64,6 +69,10 @@ format_specific_size() {
             msg "formatting $path as ext4"
             mkfs.ext4 -F "$path"
             ;;
+        squashfs)
+            msg "formatting $path as squashfs"
+            mksquashfs -comp zstd "$path"
+            ;;
         *)
             msg "ERROR: invalid fs type to format, see format_specific_size function"
             ;;
@@ -76,13 +85,31 @@ SOURCE_SYSTEM="$1"
 BINPKGS_PATH="$2"
 [ -z "$OUT_DIR" ] && OUT_DIR="./out"
 [ -z "$MOUNTS_DIR" ] && MOUNTS_DIR="$OUT_DIR/mounts"
-DEST_ROOT="$OUT_DIR/data"
-DEST_ROOT_MOUNT="$MOUNTS_DIR/data"
+[ -z "$TREES_DIR" ] && TREES_DIR="$OUT_DIR/trees"
+#DEST_ROOT="$OUT_DIR/data"
+DEST_ROOT_MOUNT="$TREES_DIR/system_root"
+source_system_mount="$MOUNTS_DIR/source_system"
 
-if [ -d "$MOUNTS_DIR" ]; then
-    msg "Unmounting if mounted:" "$MOUNTS_DIR"/*
-    sudo umount -R "$MOUNTS_DIR"/* || :
+umount_all() {
+    xbps_mount="$DEST_ROOT_MOUNT/var/cache/xbps"
+    nocturne_repo_mount="$DEST_ROOT_MOUNT/nocturne-repo"
+    msg "Unmounting if mounted: $source_system_mount $xbps_mount $nocturne_repo_mount"
+    sudo umount -R "$source_system_mount" "$xbps_mount" "$nocturne_repo_mount"
+}
+
+if [ -d "$OUT_DIR" ]; then
+    umount_all || :
 fi
+
+msg "Cleaning up files"
+read -p "Type y and press enter to \`rm -rf $DEST_ROOT_MOUNT\`: " yn
+case "$yn" in
+    y) sudo rm -rf "$DEST_ROOT_MOUNT" ;;
+    *)
+        msg "Will not delete $DEST_ROOT_MOUNT. Exiting."
+        exit 1
+        ;;
+esac
 
 mkdir -p "$OUT_DIR" "$DEST_ROOT_MOUNT"
 
@@ -91,8 +118,8 @@ mkdir -p "$OUT_DIR" "$DEST_ROOT_MOUNT"
 # ignore the above; outdated
 
 # 2 GiB
-format_specific_size "$DEST_ROOT" ext4 2147483648
-sudo mount -o loop "$DEST_ROOT" "$DEST_ROOT_MOUNT"
+#format_specific_size "$DEST_ROOT" squashfs 2147483648
+#sudo mount -o loop "$DEST_ROOT" "$DEST_ROOT_MOUNT"
 
 void_checksum() {
     echo "$VOID_BOOTSTRAP_SHA256 $OUT_DIR/$VOID_BOOTSTRAP_FNAME" | sha256sum -c
@@ -111,7 +138,6 @@ msg "Extracting $OUT_DIR/$VOID_BOOTSTRAP_FNAME"
 sudo tar -xvf "$OUT_DIR/$VOID_BOOTSTRAP_FNAME" -C "$DEST_ROOT_MOUNT" > "$OUT_DIR/bootstrap_extract.log"
 
 # we assume the kernel version of stock OS
-source_system_mount="$MOUNTS_DIR/source_system"
 msg "Mounting $SOURCE_SYSTEM to $source_system_mount"
 mkdir -p "$source_system_mount"
 sudo mount -o loop "$SOURCE_SYSTEM" "$source_system_mount"
@@ -131,8 +157,6 @@ sudo cp -rv ./files/. "$DEST_ROOT_MOUNT/"
 #sudo mount --rbind /run "$DEST_ROOT_MOUNT/run"
 #sudo mount --make-rslave "$DEST_ROOT_MOUNT/run"
 
-echo "binpkgs path: $BINPKGS_PATH"
-
 sudo mkdir -p "$DEST_ROOT_MOUNT/nocturne-repo"
 sudo mount --bind "$BINPKGS_PATH" "$DEST_ROOT_MOUNT/nocturne-repo"
 
@@ -150,12 +174,16 @@ sudo chroot "$DEST_ROOT_MOUNT" /bin/bash -x <<EOF
     xbps-install -y nocturne-base
 EOF
 
+rm "$OUT_DIR/system"
+sudo mksquashfs "$DEST_ROOT_MOUNT" "$OUT_DIR/system" -comp zstd
+sudo chown "$(id -u):$(id -g)" "$DEST_ROOT_MOUNT"
+
 echo
 echo
 echo
 msg "Nocturne image is finished building. Partition images available under $OUT_DIR."
-read -p "Unmount everything under $MOUNTS_DIR? [Yn] " yn
+read -p "Unmount everything under $OUT_DIR? [Yn] " yn
 case "$yn" in
     [Nn]) exit ;;
-    *) sudo umount -R "$MOUNTS_DIR"/* && msg "Unmounted." ;;
+    *) umount_all && msg "Unmounted." ;;
 esac
