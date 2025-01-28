@@ -7,6 +7,7 @@ const StatusBar = () => {
   const [isBluetoothTethered, setIsBluetoothTethered] = useState(false);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const [connectedDeviceAddress, setConnectedDeviceAddress] = useState(null);
+  const [timezone, setTimezone] = useState(null);
   const failedDeviceChecksRef = useRef(0);
   const failedBatteryChecksRef = useRef(0);
 
@@ -166,20 +167,44 @@ const StatusBar = () => {
   }, []);
 
   useEffect(() => {
+    const fetchTimezone = async () => {
+      try {
+        const response = await fetch('https://api.usenocturne.com/v1/timezone');
+        if (response.ok) {
+          const data = await response.json();
+          setTimezone(data.timezone);
+        } else {
+          console.error('Failed to fetch timezone');
+        }
+      } catch (error) {
+        console.error('Error fetching timezone:', error);
+      }
+    };
+
+    fetchTimezone();
+  }, []);
+
+  useEffect(() => {
     const updateTime = () => {
       const now = new Date();
+      
+      // Convert to the fetched timezone if available
+      const timeInZone = timezone 
+        ? new Date(now.toLocaleString('en-US', { timeZone: timezone }))
+        : now;
+
       const use24Hour = localStorage.getItem("use24HourTime") === "true";
 
       let hours;
       if (use24Hour) {
-        hours = now.getHours().toString().padStart(2, "0");
+        hours = timeInZone.getHours().toString().padStart(2, "0");
         setIsFourDigits(true);
       } else {
-        hours = now.getHours() % 12 || 12;
+        hours = timeInZone.getHours() % 12 || 12;
         setIsFourDigits(hours >= 10);
       }
 
-      const minutes = now.getMinutes().toString().padStart(2, "0");
+      const minutes = timeInZone.getMinutes().toString().padStart(2, "0");
       const timeString = `${hours}:${minutes}`;
       setCurrentTime(timeString);
     };
@@ -197,7 +222,7 @@ const StatusBar = () => {
       clearInterval(interval);
       window.removeEventListener("timeFormatChanged", handleTimeFormatChange);
     };
-  }, []);
+  }, [timezone]);
 
   if (!isBluetoothTethered) return null;
 
