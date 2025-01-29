@@ -74,7 +74,6 @@ const StatusBar = () => {
           } else {
             setIsBluetoothTethered(false);
             setConnectedDeviceAddress(null);
-            localStorage.removeItem('connectedBluetoothAddress');
             failedDeviceChecksRef.current++;
             return false;
           }

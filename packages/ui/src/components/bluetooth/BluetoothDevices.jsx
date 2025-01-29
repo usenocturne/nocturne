@@ -88,11 +88,24 @@ const BluetoothDevices = () => {
     }
   };
 
-  const handleForget = () => {
+  const handleForget = async () => {
     if (selectedDevice) {
-      setDevices(devices.filter((device) => device.address !== selectedDevice));
-      setShowForgetDialog(false);
-      setSelectedDevice(null);
+      try {
+        const response = await fetch(`http://localhost:5000/bluetooth/remove/${selectedDevice}`, {
+          method: 'POST'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to remove device');
+        }
+
+        localStorage.removeItem('connectedBluetoothAddress');
+        setDevices(devices.filter((device) => device.address !== selectedDevice));
+        setShowForgetDialog(false);
+        setSelectedDevice(null);
+      } catch (err) {
+        setError(err.message);
+      }
     }
   };
 
