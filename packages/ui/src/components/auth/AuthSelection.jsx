@@ -54,6 +54,7 @@ const ConnectionScreen = () => {
     const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
     if (failedReconnectAttemptsRef.current >= 10) {
       if (reconnectInterval) {
+        console.log("Stopping automatic reconnection attempts - reached maximum failure attempts");
         clearInterval(reconnectInterval);
         reconnectInterval = null;
       }
@@ -143,6 +144,7 @@ const ConnectionScreen = () => {
       const intervalId = setInterval(async () => {
         try {
           if (failedNetworkAttempts >= 10) {
+            console.log("Stopping automatic network enabling attempts - reached maximum failure attempts");
             clearInterval(intervalId);
             return;
           }

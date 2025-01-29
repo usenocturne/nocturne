@@ -35,6 +35,14 @@ const StatusBar = () => {
 
     const checkConnectedDevice = async () => {
       if (failedDeviceChecksRef.current >= 10) {
+        console.log("Stopping automatic Bluetooth device checks - reached maximum failure attempts");
+        return false;
+      }
+
+      const storedAddress = localStorage.getItem('connectedBluetoothAddress');
+      if (!storedAddress) {
+        setIsBluetoothTethered(false);
+        setConnectedDeviceAddress(null);
         return false;
       }
 
@@ -57,16 +65,16 @@ const StatusBar = () => {
         
         if (response.ok) {
           const devices = await response.json();
-          const connectedDevice = devices.find(device => device.connected);
+          const connectedDevice = devices.find(device => device.connected && device.address === storedAddress);
           if (connectedDevice?.address) {
             setConnectedDeviceAddress(connectedDevice.address);
-            localStorage.setItem('connectedBluetoothAddress', connectedDevice.address);
             setIsBluetoothTethered(true);
             failedDeviceChecksRef.current = 0;
             return true;
           } else {
             setIsBluetoothTethered(false);
             setConnectedDeviceAddress(null);
+            localStorage.removeItem('connectedBluetoothAddress');
             failedDeviceChecksRef.current++;
             return false;
           }
@@ -136,27 +144,52 @@ const StatusBar = () => {
     let deviceCheckInterval;
     let batteryCheckInterval;
     
-    checkConnectedDevice();
-    checkBatteryPercentage();
+    const startChecks = () => {
+      console.log("Starting Bluetooth checks");
+      failedDeviceChecksRef.current = 0;
+      failedBatteryChecksRef.current = 0;
+      
+      checkConnectedDevice();
+      checkBatteryPercentage();
 
-    deviceCheckInterval = setInterval(async () => {
-      const isConnected = await checkConnectedDevice();
-      if (failedDeviceChecksRef.current >= 10) {
+      if (deviceCheckInterval) {
         clearInterval(deviceCheckInterval);
+      }
+      if (batteryCheckInterval) {
         clearInterval(batteryCheckInterval);
       }
-    }, 5000);
 
-    batteryCheckInterval = setInterval(() => {
-      if (failedBatteryChecksRef.current >= 10) {
-        clearInterval(batteryCheckInterval);
-      } else {
-        checkBatteryPercentage();
-      }
-    }, 60000);
+      deviceCheckInterval = setInterval(async () => {
+        const isConnected = await checkConnectedDevice();
+        if (failedDeviceChecksRef.current >= 10) {
+          console.log("Clearing device check interval - reached maximum failure attempts");
+          clearInterval(deviceCheckInterval);
+          clearInterval(batteryCheckInterval);
+        }
+      }, 5000);
+
+      batteryCheckInterval = setInterval(() => {
+        if (failedBatteryChecksRef.current >= 10) {
+          console.log("Clearing battery check interval - reached maximum failure attempts");
+          clearInterval(batteryCheckInterval);
+        } else {
+          checkBatteryPercentage();
+        }
+      }, 60000);
+    };
+
+    startChecks();
+
+    const handleDeviceConnected = () => {
+      console.log("New Bluetooth connection detected - restarting checks");
+      startChecks();
+    };
+
+    window.addEventListener('bluetooth-device-connected', handleDeviceConnected);
 
     return () => {
       ws.close();
+      window.removeEventListener('bluetooth-device-connected', handleDeviceConnected);
       if (deviceCheckInterval) {
         clearInterval(deviceCheckInterval);
       }
@@ -188,7 +221,6 @@ const StatusBar = () => {
     const updateTime = () => {
       const now = new Date();
       
-      // Convert to the fetched timezone if available
       const timeInZone = timezone 
         ? new Date(now.toLocaleString('en-US', { timeZone: timezone }))
         : now;

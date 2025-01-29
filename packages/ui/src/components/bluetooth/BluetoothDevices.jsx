@@ -39,31 +39,58 @@ const BluetoothDevices = () => {
     fetchDevices();
   }, []);
 
-  const handleConnect = (deviceId) => {
-    setDevices(
-      devices.map((device) => {
-        if (device.id === deviceId) {
-          return { ...device, status: "connected" };
-        }
-        return { ...device, status: "disconnected" };
-      })
-    );
+  const handleConnect = async (deviceAddress) => {
+    try {
+      const response = await fetch(`http://localhost:5000/bluetooth/connect/${deviceAddress}`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to connect to device');
+      }
+
+      localStorage.setItem('connectedBluetoothAddress', deviceAddress);
+      window.dispatchEvent(new CustomEvent('bluetooth-device-connected'));
+      
+      setDevices(
+        devices.map((device) => {
+          if (device.address === deviceAddress) {
+            return { ...device, status: "connected" };
+          }
+          return { ...device, status: "disconnected" };
+        })
+      );
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
-  const handleDisconnect = (deviceId) => {
-    setDevices(
-      devices.map((device) => {
-        if (device.id === deviceId) {
-          return { ...device, status: "disconnected" };
-        }
-        return device;
-      })
-    );
+  const handleDisconnect = async (deviceAddress) => {
+    try {
+      const response = await fetch(`http://localhost:5000/bluetooth/disconnect/${deviceAddress}`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to disconnect device');
+      }
+
+      setDevices(
+        devices.map((device) => {
+          if (device.address === deviceAddress) {
+            return { ...device, status: "disconnected" };
+          }
+          return device;
+        })
+      );
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleForget = () => {
     if (selectedDevice) {
-      setDevices(devices.filter((device) => device.id !== selectedDevice));
+      setDevices(devices.filter((device) => device.address !== selectedDevice));
       setShowForgetDialog(false);
       setSelectedDevice(null);
     }
@@ -71,7 +98,7 @@ const BluetoothDevices = () => {
 
   const handleCardPress = (device) => {
     longPressTimer.current = setTimeout(() => {
-      setSelectedDevice(device.id);
+      setSelectedDevice(device.address);
       setShowForgetDialog(true);
     }, 800);
   };
@@ -87,9 +114,9 @@ const BluetoothDevices = () => {
     buttonPressInProgress.current = true;
 
     if (device.status === "connected") {
-      handleDisconnect(device.id);
+      handleDisconnect(device.address);
     } else {
-      handleConnect(device.id);
+      handleConnect(device.address);
     }
 
     setTimeout(() => {
@@ -113,7 +140,7 @@ const BluetoothDevices = () => {
 
     return devices.map((device) => (
       <div
-        key={device.id}
+        key={device.address}
         onTouchStart={() =>
           !buttonPressInProgress.current && handleCardPress(device)
         }
