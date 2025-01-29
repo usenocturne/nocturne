@@ -319,6 +319,7 @@ const ConnectionScreen = () => {
         setPairingKey(pairingKey);
       } else if (data.type === "bluetooth/paired") {
         const { address } = data.payload.device;
+        localStorage.setItem('connectedBluetoothAddress', address);
         setShowNoNetwork(false);
         setShowTethering(true);
         enableBluetoothNetwork(address);
