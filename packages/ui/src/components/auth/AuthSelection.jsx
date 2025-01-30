@@ -323,6 +323,17 @@ const ConnectionScreen = () => {
         setShowNoNetwork(false);
         setShowTethering(true);
         enableBluetoothNetwork(address);
+      } else if (data.type === "bluetooth/connect") {
+        const { address } = data;
+        localStorage.setItem('connectedBluetoothAddress', address);
+        setShowNoNetwork(false);
+        setShowTethering(true);
+        reconnectionAttemptedRef.current = true;
+        if (reconnectInterval) {
+          clearInterval(reconnectInterval);
+          reconnectInterval = null;
+        }
+        enableBluetoothNetwork(address);
       } else if (data.type === "bluetooth/network/disconnect") {
         const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
         if (lastDeviceAddress) {
