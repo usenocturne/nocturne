@@ -46,10 +46,7 @@ const StatusBar = () => {
     }
   };
 
-  const checkInitialConnection = async () => {
-    const address = localStorage.getItem('connectedBluetoothAddress');
-    if (!address || address === 'undefined') return;
-
+  const getConnectedDeviceAddress = async () => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60000);
@@ -69,50 +66,70 @@ const StatusBar = () => {
       
       if (response.ok) {
         const devices = await response.json();
-        const connectedDevice = devices.find(device => device.connected && device.address === address);
-        if (connectedDevice) {
-          setIsBluetoothTethered(true);
-          checkBatteryPercentage();
-          if (batteryCheckIntervalRef.current) {
-            clearInterval(batteryCheckIntervalRef.current);
-          }
-          batteryCheckIntervalRef.current = setInterval(checkBatteryPercentage, 60000);
+        const connectedDevice = devices.find(device => device.connected);
+        if (connectedDevice?.address) {
+          localStorage.setItem('connectedBluetoothAddress', connectedDevice.address);
+          return connectedDevice.address;
         }
       }
+      return null;
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.error("Initial connection check timed out after 1 minute");
+        console.error("Device check request timed out after 1 minute");
       } else {
-        console.error("Failed to check initial connection:", error);
+        console.error("Failed to check connected devices:", error);
       }
+      return null;
     }
   };
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:5000/ws");
 
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      setTimeout(checkInitialConnection, 1000);
-    }
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "bluetooth/network" || data.type === "bluetooth/connect") {
+    getConnectedDeviceAddress().then(address => {
+      if (address) {
         setIsBluetoothTethered(true);
-        if (data.address && data.address !== 'undefined') {
-          localStorage.setItem('connectedBluetoothAddress', data.address);
-          window.dispatchEvent(new CustomEvent('bluetooth-device-connected', { 
-            detail: { address: data.address }
-          }));
-        }
         checkBatteryPercentage();
         if (batteryCheckIntervalRef.current) {
           clearInterval(batteryCheckIntervalRef.current);
         }
         batteryCheckIntervalRef.current = setInterval(checkBatteryPercentage, 60000);
+      }
+    });
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "bluetooth/connect") {
+        if (data.address) {
+          localStorage.setItem('connectedBluetoothAddress', data.address);
+          setIsBluetoothTethered(true);
+          window.dispatchEvent(new CustomEvent('bluetooth-device-connected', { 
+            detail: { address: data.address }
+          }));
+          checkBatteryPercentage();
+          if (batteryCheckIntervalRef.current) {
+            clearInterval(batteryCheckIntervalRef.current);
+          }
+          batteryCheckIntervalRef.current = setInterval(checkBatteryPercentage, 60000);
+        } else {
+          getConnectedDeviceAddress().then(address => {
+            if (address) {
+              setIsBluetoothTethered(true);
+              window.dispatchEvent(new CustomEvent('bluetooth-device-connected', { 
+                detail: { address }
+              }));
+              checkBatteryPercentage();
+              if (batteryCheckIntervalRef.current) {
+                clearInterval(batteryCheckIntervalRef.current);
+              }
+              batteryCheckIntervalRef.current = setInterval(checkBatteryPercentage, 60000);
+            }
+          });
+        }
       } else if (data.type === "bluetooth/network/disconnect" || data.type === "bluetooth/disconnect") {
         setIsBluetoothTethered(false);
+        localStorage.removeItem('connectedBluetoothAddress');
+        setBatteryPercentage(80);
 
         if (batteryCheckIntervalRef.current) {
           clearInterval(batteryCheckIntervalRef.current);
@@ -123,6 +140,8 @@ const StatusBar = () => {
 
     ws.onerror = () => {
       setIsBluetoothTethered(false);
+      localStorage.removeItem('connectedBluetoothAddress');
+      setBatteryPercentage(80);
       if (batteryCheckIntervalRef.current) {
         clearInterval(batteryCheckIntervalRef.current);
         batteryCheckIntervalRef.current = null;
@@ -131,6 +150,8 @@ const StatusBar = () => {
 
     ws.onclose = () => {
       setIsBluetoothTethered(false);
+      localStorage.removeItem('connectedBluetoothAddress');
+      setBatteryPercentage(80);
       if (batteryCheckIntervalRef.current) {
         clearInterval(batteryCheckIntervalRef.current);
         batteryCheckIntervalRef.current = null;
