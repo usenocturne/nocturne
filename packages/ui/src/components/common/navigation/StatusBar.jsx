@@ -128,7 +128,6 @@ const StatusBar = () => {
         }
       } else if (data.type === "bluetooth/network/disconnect" || data.type === "bluetooth/disconnect") {
         setIsBluetoothTethered(false);
-        localStorage.removeItem('connectedBluetoothAddress');
         setBatteryPercentage(80);
 
         if (batteryCheckIntervalRef.current) {
@@ -140,7 +139,6 @@ const StatusBar = () => {
 
     ws.onerror = () => {
       setIsBluetoothTethered(false);
-      localStorage.removeItem('connectedBluetoothAddress');
       setBatteryPercentage(80);
       if (batteryCheckIntervalRef.current) {
         clearInterval(batteryCheckIntervalRef.current);
@@ -150,7 +148,6 @@ const StatusBar = () => {
 
     ws.onclose = () => {
       setIsBluetoothTethered(false);
-      localStorage.removeItem('connectedBluetoothAddress');
       setBatteryPercentage(80);
       if (batteryCheckIntervalRef.current) {
         clearInterval(batteryCheckIntervalRef.current);
