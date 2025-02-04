@@ -169,9 +169,29 @@ if ! [ -z "$PERSISTENT_XBPS_CACHE" ]; then
 fi
 
 # bwrap is not an option because we need root inside the chroot here
-sudo chroot "$DEST_ROOT_MOUNT" /bin/bash -x <<EOF
+sudo chroot "$DEST_ROOT_MOUNT" /bin/bash -ex <<EOF
     xbps-install -Suy
-    xbps-install -y nocturne-base
+    xbps-install -y \
+        base-files coreutils findutils diffutils dash bash grep gzip sed gawk \
+        util-linux which tar shadow procps-ng iana-etc xbps tzdata \
+        removed-packages \
+        sudo file less man-pages e2fsprogs dhcpcd nvi vim nano \
+        runit-void
+    xbps-install -y cage
+    xbps-install -y nocturne-ui nocturned
+
+    ln -s /etc/sv/nocturne-ui-prodserver /etc/runit/runsvdir/default/
+    ln -s /etc/sv/nocturne-ui /etc/runit/runsvdir/default/
+    ln -s /etc/sv/nocturned /etc/runit/runsvdir/default/
+
+    mkdir /etc/sv/cage-nocturne
+    cat <<EOS > /etc/sv/cage-nocturne/run
+#!/bin/sh
+exec 2>&1
+exec cage -D -- chromium https://localhost:3500
+EOS
+
+    ln -s /etc/sv/cage-nocturne /etc/runit/runsvdir/default/
 EOF
 
 rm "$OUT_DIR/system"
