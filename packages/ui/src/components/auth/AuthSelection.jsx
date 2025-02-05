@@ -260,6 +260,8 @@ const ConnectionScreen = () => {
           setShowNoNetwork(false);
           setShowTethering(true);
         }
+      } else {
+        enableBluetoothDiscovery();
       }
 
       initialCheckTimeoutRef.current = setTimeout(() => {
@@ -269,10 +271,6 @@ const ConnectionScreen = () => {
       }, 5000);
 
       const isConnected = await checkNetwork();
-      
-      if (!isConnected && !lastDeviceAddress) {
-        enableBluetoothDiscovery();
-      }
       
       checkInterval = setInterval(async () => {
         if (!mounted) return;
