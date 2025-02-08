@@ -226,7 +226,9 @@ const ConnectionScreen = () => {
 
     const startNetworkCheck = async () => {
       const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
-      if (lastDeviceAddress) {
+      if (!lastDeviceAddress) {
+        enableBluetoothDiscovery();
+      } else {
         reconnectionAttemptedRef.current = false;
         failedReconnectAttemptsRef.current = 0;
         
@@ -260,8 +262,6 @@ const ConnectionScreen = () => {
           setShowNoNetwork(false);
           setShowTethering(true);
         }
-      } else {
-        enableBluetoothDiscovery();
       }
 
       initialCheckTimeoutRef.current = setTimeout(() => {
