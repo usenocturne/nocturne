@@ -77,9 +77,6 @@ const ProgressBar = ({
     setIsScrubbing(true);
     onScrubbingChange(true);
     wasPlayingRef.current = isPlaying;
-    if (isPlaying) {
-      onPlayPause();
-    }
   };
 
   useEffect(() => {
@@ -107,35 +104,29 @@ const ProgressBar = ({
         event.preventDefault();
 
         setInterpolatedProgress(scrubbingProgress);
-
         setIsScrubbing(false);
         onScrubbingChange(false);
 
         if (scrubbingProgress !== null) {
           const seekMs = Math.floor((scrubbingProgress / 100) * durationMs);
           onSeek(seekMs);
-          if (wasPlayingRef.current) {
-            setTimeout(() => {
-              onPlayPause();
-            }, 100);
-          }
         }
 
         setScrubbingProgress(null);
       } else if (event.key === "Escape" && isScrubbing) {
         event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
         setIsScrubbing(false);
         onScrubbingChange(false);
         setScrubbingProgress(null);
         setInterpolatedProgress(progress);
-        if (wasPlayingRef.current) {
-          onPlayPause();
-        }
+        return false;
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
   }, [
     isScrubbing,
     scrubbingProgress,
