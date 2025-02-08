@@ -83,26 +83,22 @@ const ProgressBar = ({
   };
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    if (!isScrubbing) return;
 
     const handleWheel = (event) => {
-      if (isScrubbing) {
-        event.preventDefault();
-        event.stopPropagation();
-        const delta = event.deltaX;
-        const step = 0.5;
+      event.preventDefault();
+      event.stopPropagation();
+      const delta = event.deltaX;
+      const step = 0.5;
 
-        setScrubbingProgress((prev) => {
-          const nextValue =
-            (prev ?? interpolatedProgress) + (delta > 0 ? step : -step);
-          return Math.max(0, Math.min(100, nextValue));
-        });
-      }
+      setScrubbingProgress((prev) => {
+        const nextValue = (prev ?? interpolatedProgress) + (delta > 0 ? step : -step);
+        return Math.max(0, Math.min(100, nextValue));
+      });
     };
 
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheel);
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    return () => window.removeEventListener("wheel", handleWheel);
   }, [isScrubbing, interpolatedProgress]);
 
   useEffect(() => {
