@@ -158,11 +158,13 @@ export default function App({ Component, pageProps }) {
       let checkInterval;
       let hasShownError = false;
 
-      initialCheckTimeoutRef.current = setTimeout(() => {
-        if (!initialCheckDoneRef.current && mounted) {
-          setShowNoNetwork(true);
-        }
-      }, 5000);
+      if (!initialCheckDoneRef.current) {
+        initialCheckTimeoutRef.current = setTimeout(() => {
+          if (!initialCheckDoneRef.current && mounted) {
+            setShowNoNetwork(true);
+          }
+        }, 5000);
+      }
 
       const checkNetwork = async () => {
         if (!mounted) return;
@@ -191,16 +193,21 @@ export default function App({ Component, pageProps }) {
         }
       };
 
-      checkNetwork();
-      checkInterval = setInterval(checkNetwork, 3000);
+      if (!window.networkCheckInterval) {
+        checkNetwork();
+        window.networkCheckInterval = setInterval(checkNetwork, 3000);
+        checkInterval = window.networkCheckInterval;
+      }
 
       return () => {
         mounted = false;
-        if (checkInterval) {
-          clearInterval(checkInterval);
+        if (checkInterval && checkInterval === window.networkCheckInterval) {
+          clearInterval(window.networkCheckInterval);
+          window.networkCheckInterval = null;
         }
         if (initialCheckTimeoutRef.current) {
           clearTimeout(initialCheckTimeoutRef.current);
+          initialCheckTimeoutRef.current = null;
         }
       };
     };
@@ -234,25 +241,30 @@ export default function App({ Component, pageProps }) {
         new Date(Date.now() + 3600 * 1000).toISOString()
       );
 
-      const networkCleanup = startNetworkMonitoring(async (isConnected) => {
-        try {
-          if (isConnected) {
-            const status = await checkNetworkConnectivity();
-            setNetworkStatus({ isConnected: status.isConnected });
-            clearError();
-          } else {
+      if (!window.networkMonitoringActive) {
+        window.networkMonitoringActive = true;
+        const networkCleanup = startNetworkMonitoring(async (isConnected) => {
+          try {
+            if (isConnected) {
+              const status = await checkNetworkConnectivity();
+              setNetworkStatus({ isConnected: status.isConnected });
+              clearError();
+            } else {
+              setNetworkStatus({ isConnected: false });
+              if (accessToken && !router.pathname.includes("phone-auth")) {
+                handleError("NETWORK_ERROR", "Lost connection to Spotify");
+              }
+            }
+          } catch (error) {
             setNetworkStatus({ isConnected: false });
             if (accessToken && !router.pathname.includes("phone-auth")) {
-              handleError("NETWORK_ERROR", "Lost connection to Spotify");
+              handleError("NETWORK_ERROR", error.message);
             }
           }
-        } catch (error) {
-          setNetworkStatus({ isConnected: false });
-          if (accessToken && !router.pathname.includes("phone-auth")) {
-            handleError("NETWORK_ERROR", error.message);
-          }
-        }
-      });
+        });
+
+        window.networkMonitoringCleanup = networkCleanup;
+      }
 
       const fetchInitialData = async () => {
         try {
@@ -303,7 +315,11 @@ export default function App({ Component, pageProps }) {
 
       return () => {
         clearInterval(recentlyPlayedInterval);
-        networkCleanup();
+        if (window.networkMonitoringCleanup) {
+          window.networkMonitoringCleanup();
+          window.networkMonitoringCleanup = null;
+          window.networkMonitoringActive = false;
+        }
       };
     }
   }, [accessToken]);
