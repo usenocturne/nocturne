@@ -102,6 +102,8 @@ const ProgressBar = ({
     const handleKeyDown = (event) => {
       if (event.key === "Enter" && isScrubbing) {
         event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
 
         setInterpolatedProgress(scrubbingProgress);
         setIsScrubbing(false);
@@ -113,6 +115,7 @@ const ProgressBar = ({
         }
 
         setScrubbingProgress(null);
+        return false;
       } else if (event.key === "Escape" && isScrubbing) {
         event.preventDefault();
         event.stopPropagation();
