@@ -12,7 +12,12 @@ export const fetchUserPlaylists = async (
     });
     if (response.ok) {
       const data = await response.json();
-      const validPlaylists = data.items.filter((item) => item && item.id);
+      const validPlaylists = data.items
+        .filter((item) => item && item.id)
+        .map(playlist => ({
+          ...playlist,
+          images: Array.isArray(playlist.images) ? playlist.images : []
+        }));
       if (validPlaylists.length > 0) {
         const imageUrl = validPlaylists[0].images?.[0]?.url;
         if (imageUrl) {

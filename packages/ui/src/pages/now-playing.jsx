@@ -138,8 +138,10 @@ export default function NowPlaying({
 
   const albumArt = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
-      ? currentPlayback.item.show.images[0]?.url
-      : currentPlayback.item?.album?.images?.[0]?.url
+      ? currentPlayback.item.show.images[0]?.url || "/images/not-playing.webp"
+      : currentPlayback.item.type === "local" || !currentPlayback.item?.album?.images?.[0]?.url || !currentPlayback.item?.album?.images?.[0]
+        ? "/images/not-playing.webp"
+        : currentPlayback.item.album.images[0].url
     : "/images/not-playing.webp";
 
   const isPlaying = currentPlayback?.is_playing || false;
@@ -243,7 +245,7 @@ export default function NowPlaying({
               <div className="flex-1 text-center md:text-left">
                 <LongPressLink
                   href={
-                    !currentPlayback
+                    !currentPlayback || currentPlayback?.item?.is_local
                       ? ""
                       : currentPlayback?.item?.type === "episode"
                       ? `/show/${currentPlayback.item.show.id}`
@@ -278,7 +280,9 @@ export default function NowPlaying({
                 </LongPressLink>
                 <LongPressLink
                   href={
-                    currentPlayback?.item?.type === "episode"
+                    currentPlayback?.item?.is_local
+                      ? ""
+                      : currentPlayback?.item?.type === "episode"
                       ? `/show/${currentPlayback.item.show.id}`
                       : `/artist/${currentPlayback?.item?.artists[0]?.id}`
                   }

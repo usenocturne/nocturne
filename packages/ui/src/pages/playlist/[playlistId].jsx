@@ -376,36 +376,32 @@ const PlaylistPage = ({
   return (
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10">
-        {playlist.images && playlist.images.length > 0 ? (
-          <div className="min-w-[280px] mr-10">
-            <LongPressLink
-              spotifyUrl={playlist.external_urls.spotify}
-              accessToken={accessToken}
-            >
-              <Image
-                src={playlist.images[0].url || "/images/not-playing.webp"}
-                alt="Playlist Cover"
-                data-main-image
-                width={280}
-                height={280}
-                className="aspect-square rounded-[12px] drop-shadow-xl"
-              />
-            </LongPressLink>
-            <LongPressLink
-              spotifyUrl={playlist.external_urls.spotify}
-              accessToken={accessToken}
-            >
-              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                {playlist.name}
-              </h4>
-            </LongPressLink>
-            <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-              {playlist.tracks.total.toLocaleString()} Songs
+        <div className="min-w-[280px] mr-10">
+          <LongPressLink
+            spotifyUrl={playlist.external_urls.spotify}
+            accessToken={accessToken}
+          >
+            <Image
+              src={playlist?.images?.[0]?.url || "/images/not-playing.webp"}
+              alt="Playlist Cover"
+              data-main-image
+              width={280}
+              height={280}
+              className="aspect-square rounded-[12px] drop-shadow-xl"
+            />
+          </LongPressLink>
+          <LongPressLink
+            spotifyUrl={playlist.external_urls.spotify}
+            accessToken={accessToken}
+          >
+            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+              {playlist.name}
             </h4>
-          </div>
-        ) : (
-          <p>No image available</p>
-        )}
+          </LongPressLink>
+          <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+            {playlist.tracks.total.toLocaleString()} Songs
+          </h4>
+        </div>
       </div>
 
       <div
