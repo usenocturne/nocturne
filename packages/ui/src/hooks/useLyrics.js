@@ -55,13 +55,16 @@ export function useLyrics({ currentPlayback }) {
       const parsed = parseLRC(data.lyrics);
       setParsedLyrics(parsed);
       currentTrackId.current = trackId;
+      if (parsed.length > 0) {
+        fetchedTracks.current.add(trackId);
+      }
     } catch (error) {
       console.error("Error fetching lyrics:", error);
       setParsedLyrics([]);
       setLyricsUnavailable(true);
+      fetchedTracks.current.delete(trackId);
     } finally {
       setIsLoadingLyrics(false);
-      fetchedTracks.current.add(trackId);
     }
   }, [currentPlayback]);
 
@@ -96,7 +99,10 @@ export function useLyrics({ currentPlayback }) {
         setParsedLyrics([]);
         setCurrentLyricIndex(-1);
         setLyricsUnavailable(false);
-        if (showLyrics && !fetchedTracks.current.has(newTrackId)) {
+        if (currentTrackId.current) {
+          fetchedTracks.current.delete(currentTrackId.current);
+        }
+        if (showLyrics) {
           fetchLyrics();
         }
       }
