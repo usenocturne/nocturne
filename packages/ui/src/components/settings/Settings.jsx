@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { Switch } from "@headlessui/react";
 import packageInfo from "../../../package.json";
 import BluetoothDevices from "../bluetooth/BluetoothDevices";
+import AccountInfo from "./AccountInfo";
 import {
   BluetoothIcon,
   ChevronLeftIcon,
@@ -14,6 +15,211 @@ import {
   SettingsPlaybackIcon,
   SettingsSupportIcon,
 } from "../icons";
+
+const settingsStructure = {
+  general: {
+    title: "General",
+    icon: SettingsGeneralIcon,
+    items: [
+      {
+        id: "idle-redirect",
+        title: "Idle Redirect",
+        type: "toggle",
+        description:
+          "Automatically redirect to the Now Playing screen after one minute of inactivity.",
+        storageKey: "autoRedirectEnabled",
+        defaultValue: false,
+      },
+      {
+        id: "24-hour-time",
+        title: "24-Hour Time",
+        type: "toggle",
+        description:
+          "Display the clock in 24-hour format instead of 12-hour format. The clock is only shown in the status bar when connected to Bluetooth.",
+        storageKey: "use24HourTime",
+        defaultValue: false,
+      },
+    ],
+  },
+  bluetooth: {
+    title: "Bluetooth",
+    icon: BluetoothIcon,
+    type: "custom",
+    items: [
+      {
+        id: "bluetooth-devices",
+        type: "custom",
+      },
+    ],
+  },
+  playback: {
+    title: "Playback",
+    icon: SettingsPlaybackIcon,
+    items: [
+      {
+        id: "track-scrolling",
+        title: "Track Name Scrolling",
+        type: "toggle",
+        description:
+          "Enable or disable the scrolling animation for the track name in the player.",
+        storageKey: "trackNameScrollingEnabled",
+        defaultValue: true,
+      },
+      {
+        id: "lyrics-menu",
+        title: "Lyrics Menu Option",
+        type: "toggle",
+        description: "Enable or disable the lyrics menu option in the player.",
+        storageKey: "lyricsMenuEnabled",
+        defaultValue: true,
+      },
+      {
+        id: "show-lyrics-gesture",
+        title: "Swipe to Show Lyrics",
+        type: "toggle",
+        description:
+          "Enable swiping up on the track info to show the lyrics of a song.",
+        storageKey: "showLyricsGestureEnabled",
+        defaultValue: false,
+      },
+      {
+        id: "song-change-gesture",
+        title: "Swipe to Change Song",
+        type: "toggle",
+        description:
+          "Enable left/right swipe gestures to skip to the previous or next song.",
+        storageKey: "songChangeGestureEnabled",
+        defaultValue: true,
+      },
+      {
+        id: "elapsed-time",
+        title: "Show Time Elapsed",
+        type: "toggle",
+        description: "Display the elapsed track time below the progress bar.",
+        storageKey: "elapsedTimeEnabled",
+        defaultValue: false,
+      },
+      {
+        id: "remaining-time",
+        title: "Show Time Remaining",
+        type: "toggle",
+        description: "Display the remaining track time below the progress bar.",
+        storageKey: "remainingTimeEnabled",
+        defaultValue: false,
+      },
+    ],
+  },
+  account: {
+    title: "Account",
+    icon: SettingsAccountIcon,
+    items: [
+      {
+        id: "profile-info",
+        title: "Profile Information",
+        type: "custom",
+      },
+      {
+        id: "sign-out",
+        title: "Sign Out",
+        type: "action",
+        description: "Sign out out of Nocturne and reset all settings.",
+        action: "signOut",
+      },
+    ],
+  },
+  about: {
+    title: "About",
+    icon: SettingsAboutIcon,
+    items: [
+      {
+        id: "nocturne-version",
+        title: "Nocturne Version",
+        type: "info",
+      },
+      {
+        id: "artwork-credits",
+        title: "Artwork & Credits",
+        type: "info",
+        description:
+          "All album artwork, artist images, and track metadata are provided by Spotify Technology S.A. These materials are protected by intellectual property rights owned by Spotify or its licensors.",
+      },
+    ],
+  },
+  support: {
+    title: "Support Nocturne",
+    icon: SettingsSupportIcon,
+  },
+  credits: {
+    title: "Credits",
+    icon: SettingsCreditsIcon,
+    type: "custom",
+    items: [
+      {
+        id: "developers",
+        title: "Developers",
+        type: "sponsors",
+        names: ["Brandon Saldan", "bbaovanc", "Dominic Frye", "shadow"],
+      },
+      {
+        id: "contributors",
+        title: "Contributors",
+        type: "sponsors",
+        names: ["angelolz", "EllEation", "Jenner Gray", "vakst"],
+      },
+      {
+        id: "sponsors",
+        title: "Sponsors",
+        type: "sponsors",
+        names: [
+          "Canaan.0",
+          "Cbb",
+          "danielvaswani",
+          "DeanGulBairy",
+          "DeepfakeKittens",
+          "itsamanpret",
+          "Jenner Gray",
+          "MaydaySilly",
+          "Nathan",
+          "Navi",
+          "nono9k",
+          "Tanner",
+          "uktexan",
+          "Vonnieboo",
+          "Yungguap",
+        ],
+      },
+    ],
+  },
+};
+
+const getDefaultSettingValue = (categoryKey, storageKey) => {
+  const category = settingsStructure[categoryKey];
+  if (category && category.items) {
+    for (const item of category.items) {
+      if (
+        item.storageKey === storageKey &&
+        item.hasOwnProperty("defaultValue")
+      ) {
+        return item.defaultValue;
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const clearSettings = () => {
+  for (const categoryKey in settingsStructure) {
+    const category = settingsStructure[categoryKey];
+    if (category.items) {
+      for (const item of category.items) {
+        if (item.storageKey) {
+          localStorage.removeItem(item.storageKey);
+        }
+      }
+    }
+  }
+};
 
 const fetchSpotifyProfile = async (accessToken) => {
   try {
@@ -65,213 +271,6 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
     }
   }, [accessToken]);
 
-  const AccountInfo = () => {
-    if (!userProfile) return null;
-
-    return (
-      <div className="mb-8">
-        <div className="flex items-center mb-6">
-          {userProfile.images?.[0]?.url && (
-            <img
-              src={userProfile.images[0].url}
-              alt="Profile"
-              className="w-24 h-24 rounded-full mr-4"
-            />
-          )}
-          <div>
-            <h3 className="text-[32px] font-[580] text-white tracking-tight">
-              {userProfile.display_name}
-            </h3>
-            <p className="text-[24px] font-[560] text-white/60 tracking-tight">
-              {userProfile.email}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const settingsStructure = {
-    general: {
-      title: "General",
-      icon: SettingsGeneralIcon,
-      items: [
-        {
-          id: "idle-redirect",
-          title: "Idle Redirect",
-          type: "toggle",
-          description:
-            "Automatically redirect to the Now Playing screen after one minute of inactivity.",
-          storageKey: "autoRedirectEnabled",
-          defaultValue: false,
-        },
-        {
-          id: "24-hour-time",
-          title: "24-Hour Time",
-          type: "toggle",
-          description:
-            "Display the clock in 24-hour format instead of 12-hour format. The clock is only shown in the status bar when connected to Bluetooth.",
-          storageKey: "use24HourTime",
-          defaultValue: false,
-        },
-      ],
-    },
-    bluetooth: {
-      title: "Bluetooth",
-      icon: BluetoothIcon,
-      type: "custom",
-      items: [
-        {
-          id: "bluetooth-devices",
-          type: "custom",
-          component: BluetoothDevices,
-        },
-      ],
-    },
-    playback: {
-      title: "Playback",
-      icon: SettingsPlaybackIcon,
-      items: [
-        {
-          id: "track-scrolling",
-          title: "Track Name Scrolling",
-          type: "toggle",
-          description:
-            "Enable or disable the scrolling animation for the track name in the player.",
-          storageKey: "trackNameScrollingEnabled",
-          defaultValue: true,
-        },
-        {
-          id: "lyrics-menu",
-          title: "Lyrics Menu Option",
-          type: "toggle",
-          description:
-            "Enable or disable the lyrics menu option in the player.",
-          storageKey: "lyricsMenuEnabled",
-          defaultValue: true,
-        },
-        {
-          id: "elapsed-time",
-          title: "Show Time Elapsed",
-          type: "toggle",
-          description: "Display the elapsed track time below the progress bar.",
-          storageKey: "elapsedTimeEnabled",
-          defaultValue: false,
-        },
-        {
-          id: "remaining-time",
-          title: "Show Time Remaining",
-          type: "toggle",
-          description:
-            "Display the remaining track time below the progress bar.",
-          storageKey: "remainingTimeEnabled",
-          defaultValue: false,
-        },
-        {
-          id: "song-change-gesture",
-          title: "Swipe to Change Song",
-          type: "toggle",
-          description:
-            "Enable left/right swipe gestures to skip to the previous or next song.",
-          storageKey: "songChangeGestureEnabled",
-          defaultValue: true,
-        },
-        {
-          id: "show-lyrics-gesture",
-          title: "Swipe to Show Lyrics",
-          type: "toggle",
-          description:
-            "Enable swiping up on the track info to show the lyrics of a song.",
-          storageKey: "showLyricsGestureEnabled",
-          defaultValue: false,
-        },
-      ],
-    },
-    account: {
-      title: "Account",
-      icon: SettingsAccountIcon,
-      items: [
-        {
-          id: "profile-info",
-          title: "Profile Information",
-          type: "custom",
-          component: AccountInfo,
-        },
-        {
-          id: "sign-out",
-          title: "Sign Out",
-          type: "action",
-          description: "Sign out and reset authentication settings.",
-          action: "signOut",
-        },
-      ],
-    },
-    about: {
-      title: "About",
-      icon: SettingsAboutIcon,
-      items: [
-        {
-          id: "nocturne-version",
-          title: "Nocturne Version",
-          type: "info",
-          description: versionInfo,
-        },
-        {
-          id: "artwork-credits",
-          title: "Artwork & Credits",
-          type: "info",
-          description:
-            "All album artwork, artist images, and track metadata are provided by Spotify Technology S.A. These materials are protected by intellectual property rights owned by Spotify or its licensors.",
-        },
-      ],
-    },
-    support: {
-      title: "Support Nocturne",
-      icon: SettingsSupportIcon,
-    },
-    credits: {
-      title: "Credits",
-      icon: SettingsCreditsIcon,
-      type: "custom",
-      items: [
-        {
-          id: "developers",
-          title: "Developers",
-          type: "sponsors",
-          names: ["Brandon Saldan", "bbaovanc", "Dominic Frye", "shadow"],
-        },
-        {
-          id: "contributors",
-          title: "Contributors",
-          type: "sponsors",
-          names: ["angelolz", "EllEation", "Jenner Gray", "vakst"],
-        },
-        {
-          id: "sponsors",
-          title: "Sponsors",
-          type: "sponsors",
-          names: [
-            "Canaan.0",
-            "Cbb",
-            "danielvaswani",
-            "DeanGulBairy",
-            "DeepfakeKittens",
-            "itsamanpret",
-            "Jenner Gray",
-            "MaydaySilly",
-            "Nathan",
-            "Navi",
-            "nono9k",
-            "Tanner",
-            "uktexan",
-            "Vonnieboo",
-            "Yungguap",
-          ],
-        },
-      ],
-    },
-  };
-
   const [settings, setSettings] = useState(() => {
     const states = {};
     Object.values(settingsStructure).forEach((section) => {
@@ -309,26 +308,43 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
     setSettings((prev) => {
       const newSettings = { ...prev };
 
+      const updateLocalStorage = (updates) => {
+        Object.entries(updates).forEach(([key, value]) => {
+          newSettings[key] = value;
+          localStorage.setItem(key, value.toString());
+        });
+      };
+
       if (key === "elapsedTimeEnabled" || key === "remainingTimeEnabled") {
         if (newValue) {
-          if (key === "elapsedTimeEnabled") {
-            newSettings.elapsedTimeEnabled = true;
-            newSettings.remainingTimeEnabled = false;
-            localStorage.setItem("elapsedTimeEnabled", "true");
-            localStorage.setItem("remainingTimeEnabled", "false");
-          } else {
-            newSettings.remainingTimeEnabled = true;
-            newSettings.elapsedTimeEnabled = false;
-            localStorage.setItem("remainingTimeEnabled", "true");
-            localStorage.setItem("elapsedTimeEnabled", "false");
-          }
+          const isElapsed = key === "elapsedTimeEnabled";
+          updateLocalStorage({
+            elapsedTimeEnabled: isElapsed,
+            remainingTimeEnabled: !isElapsed,
+          });
         } else {
-          newSettings[key] = false;
-          localStorage.setItem(key, "false");
+          updateLocalStorage({ [key]: false });
+        }
+      } else if (key === "showLyricsGestureEnabled") {
+        if (newValue) {
+          updateLocalStorage({
+            showLyricsGestureEnabled: true,
+            lyricsMenuEnabled: true,
+          });
+        } else {
+          updateLocalStorage({ [key]: false });
+        }
+      } else if (key === "lyricsMenuEnabled") {
+        if (!newValue) {
+          updateLocalStorage({
+            showLyricsGestureEnabled: false,
+            lyricsMenuEnabled: false,
+          });
+        } else {
+          updateLocalStorage({ [key]: true });
         }
       } else {
-        newSettings[key] = newValue;
-        localStorage.setItem(key, newValue.toString());
+        updateLocalStorage({ [key]: newValue });
 
         if (key === "use24HourTime") {
           window.dispatchEvent(new Event("timeFormatChanged"));
@@ -346,6 +362,7 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
       localStorage.removeItem("spotifyTokenExpiry");
       localStorage.removeItem("spotifyAuthType");
       localStorage.removeItem("spotifyTempId");
+      clearSettings();
       router.push("/").then(() => window.location.reload());
     } catch (error) {
       console.error("Error during sign out:", error);
@@ -484,16 +501,19 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
         return (
           <div key={item.id} className="mb-8">
             <p className="text-[20px] font-[560] text-white/60 max-w-[380px] tracking-tight whitespace-pre-line">
-              {item.description}
+              {item.id === "nocturne-version" ? versionInfo : item.description}
             </p>
           </div>
         );
       case "custom":
-        if (item.component) {
-          const Component = item.component;
-          return <Component key={item.id} />;
+        switch (item.id) {
+          case "bluetooth-devices":
+            return <BluetoothDevices />;
+          case "profile-info":
+            return <AccountInfo userProfile={userProfile} />;
+          default:
+            return null;
         }
-        return null;
       default:
         return null;
     }
@@ -565,3 +585,5 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
     </div>
   );
 }
+
+export { getDefaultSettingValue };

@@ -97,6 +97,7 @@ export default function NowPlaying({
     currentPlayback,
     fetchCurrentPlayback,
     showLyrics,
+    lyricsMenuOptionEnabled,
     handleToggleLyrics,
     handleError,
     showBrightnessOverlay,

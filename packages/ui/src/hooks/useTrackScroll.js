@@ -1,3 +1,4 @@
+import { getDefaultSettingValue } from "@/components/settings/Settings";
 import { useState, useEffect, useRef } from "react";
 
 export function useTrackScroll(trackName, containerWidth = 380) {
@@ -10,8 +11,9 @@ export function useTrackScroll(trackName, containerWidth = 380) {
   useEffect(() => {
     const scrollingEnabled = localStorage.getItem("trackNameScrollingEnabled");
     if (scrollingEnabled === null) {
-      localStorage.setItem("trackNameScrollingEnabled", "true");
-      setTrackNameScrollingEnabled(true);
+      const trackNameScrollingDefaultValue = getDefaultSettingValue("playback", "trackNameScrollingEnabled");
+      localStorage.setItem("trackNameScrollingEnabled", trackNameScrollingDefaultValue);
+      setTrackNameScrollingEnabled(trackNameScrollingDefaultValue);
     } else {
       setTrackNameScrollingEnabled(scrollingEnabled === "true");
     }

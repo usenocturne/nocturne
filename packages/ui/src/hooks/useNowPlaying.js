@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { getCurrentDevice } from "@/services/deviceService";
+import { getDefaultSettingValue } from "@/components/settings/Settings";
 
 export function useNowPlaying({
   accessToken,
   currentPlayback,
   fetchCurrentPlayback,
   showLyrics,
+  lyricsMenuOptionEnabled,
   handleToggleLyrics,
   handleError,
   showBrightnessOverlay,
@@ -188,7 +190,7 @@ export function useNowPlaying({
         Math.abs(dy) > 18 &&
         Math.abs(dy) > Math.abs(dx)
       ) {
-        if (dy < 0 && !showLyrics) {
+        if (dy < 0 && !showLyrics && lyricsMenuOptionEnabled) {
           handleToggleLyrics();
         }
       }
@@ -258,15 +260,17 @@ export function useNowPlaying({
     );
 
     if (songChangeGestureEnabledValue === null) {
-      localStorage.setItem("songChangeGestureEnabled", "true");
-      setSongChangeGestureEnabled(true);
+      const songChangeGestureDefaultValue = getDefaultSettingValue("playback", "songChangeGestureEnabled");
+      localStorage.setItem("songChangeGestureEnabled", songChangeGestureDefaultValue);
+      setSongChangeGestureEnabled(songChangeGestureDefaultValue);
     } else {
       setSongChangeGestureEnabled(songChangeGestureEnabledValue);
     }
 
     if (showLyricsGestureEnabledValue === null) {
-      localStorage.setItem("showLyricsGestureEnabled", "false");
-      setShowLyricsGestureEnabled(false);
+      const showLyricsGestureDefaultValue = getDefaultSettingValue("playback", "showLyricsGestureEnabled");
+      localStorage.setItem("showLyricsGestureEnabled", showLyricsGestureDefaultValue);
+      setShowLyricsGestureEnabled(showLyricsGestureDefaultValue);
     } else {
       setShowLyricsGestureEnabled(showLyricsGestureEnabledValue);
     }
