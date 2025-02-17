@@ -508,9 +508,9 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
       case "custom":
         switch (item.id) {
           case "bluetooth-devices":
-            return <BluetoothDevices />;
+            return <BluetoothDevices key={item.id} />;
           case "profile-info":
-            return <AccountInfo userProfile={userProfile} />;
+            return <AccountInfo key={item.id} userProfile={userProfile} />;
           default:
             return null;
         }
