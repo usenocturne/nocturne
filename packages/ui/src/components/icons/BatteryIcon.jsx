@@ -25,7 +25,7 @@ const BatteryIcon = ({ percentage = 100, className }) => {
               fontSize="10"
               fontWeight="600"
               fill="black"
-              fontFamily="system-ui, -apple-system, sans-serif"
+              fontFamily="var(--font-inter)"
             >
               {percentage}
             </text>
@@ -35,14 +35,14 @@ const BatteryIcon = ({ percentage = 100, className }) => {
           <rect width="22" height="13" fill="black" />
           {percentage > 0 && (
             <text
-              x="11"
+              x="11" 
               y="6.5"
               textAnchor="middle"
               alignmentBaseline="central"
               fontSize="10"
               fontWeight="600"
               fill="white"
-              fontFamily="system-ui, -apple-system, sans-serif"
+              fontFamily="var(--font-inter)"
             >
               {percentage}
             </text>
