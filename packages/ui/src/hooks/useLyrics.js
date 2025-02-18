@@ -43,11 +43,13 @@ export function useLyrics({ currentPlayback }) {
     const artistName = currentPlayback.item.artists[0].name;
 
     try {
+      const encodedTrack = encodeURIComponent(trackName);
+      const encodedArtist = encodeURIComponent(artistName);
+
       const response = await fetch(
-        `/api/v1/app/lyrics?name=${encodeURIComponent(
-          trackName
-        )}&artist=${encodeURIComponent(artistName)}`
+        `https://lrclib.net/api/get?artist_name=${encodedArtist}&track_name=${encodedTrack}`
       );
+
       if (response.status === 404) {
         setLyricsUnavailable(true);
         setParsedLyrics([]);
@@ -55,15 +57,22 @@ export function useLyrics({ currentPlayback }) {
         fetchedTracks.current.add(trackId);
         return;
       }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data = await response.json();
-      const parsed = parseLRC(data.lyrics);
-      setParsedLyrics(parsed);
-      currentTrackId.current = trackId;
-      if (parsed.length > 0) {
-        fetchedTracks.current.add(trackId);
+      if (data && data.syncedLyrics) {
+        const parsed = parseLRC(data.syncedLyrics);
+        setParsedLyrics(parsed);
+        currentTrackId.current = trackId;
+        if (parsed.length > 0) {
+          fetchedTracks.current.add(trackId);
+        }
+      } else {
+        setLyricsUnavailable(true);
+        setParsedLyrics([]);
       }
     } catch (error) {
       console.error("Error fetching lyrics:", error);
@@ -73,7 +82,7 @@ export function useLyrics({ currentPlayback }) {
     } finally {
       setIsLoadingLyrics(false);
     }
-  }, [currentPlayback]);
+  }, [currentPlayback, parseLRC]);
 
   const handleToggleLyrics = useCallback(() => {
     setShowLyrics((prev) => {
@@ -91,7 +100,10 @@ export function useLyrics({ currentPlayback }) {
   useEffect(() => {
     const lyricsEnabled = localStorage.getItem("lyricsMenuEnabled");
     if (lyricsEnabled === null) {
-      const lyricsEnabledDefaultValue = getDefaultSettingValue("playback", "lyricsMenuEnabled")
+      const lyricsEnabledDefaultValue = getDefaultSettingValue(
+        "playback",
+        "lyricsMenuEnabled"
+      );
       localStorage.setItem("lyricsMenuEnabled", lyricsEnabledDefaultValue);
       setLyricsMenuOptionEnabled(lyricsEnabledDefaultValue);
     } else {
