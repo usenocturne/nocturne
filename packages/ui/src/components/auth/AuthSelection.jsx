@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
-import QRAuthFlow from "./qr/QRAuthFlow";
-import packageInfo from "../../../package.json";
 import NetworkScreen from "../bluetooth/NetworkScreen";
 import PairingScreen from "../bluetooth/PairingScreen";
 import EnableTetheringScreen from "../bluetooth/EnableTetheringScreen";
 import { NocturneIcon } from "../icons";
 import { checkNetworkConnectivity } from "../../lib/networkChecker";
 import { useGradientState } from "../../hooks/useGradientState";
+import { oauthAuthorize, checkAuthStatus } from "../../services/authService";
+import { QRCodeSVG } from "qrcode.react";
 
 const ConnectionScreen = () => {
   const [isBluetoothDiscovering, setIsBluetoothDiscovering] = useState(false);
@@ -474,10 +474,23 @@ const ConnectionScreen = () => {
 };
 
 const AuthMethodSelector = ({ onSelect, networkStatus }) => {
-  const [showQRFlow, setShowQRFlow] = useState(false);
-  const [buttonsVisible, setButtonsVisible] = useState(true);
   const [isNetworkReady, setIsNetworkReady] = useState(false);
-  const router = useRouter();
+  const [spotifyAuthData, setSpotifyAuthData] = useState(null);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const {
+    currentColor1,
+    currentColor2,
+    currentColor3,
+    currentColor4,
+    generateMeshGradient,
+    setTargetColor1,
+    setTargetColor2,
+    setTargetColor3,
+    setTargetColor4,
+  } = useGradientState();
+
   const gradientThemes = [
     {
       colors: ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"],
@@ -494,36 +507,66 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
     {
       colors: ["#241623", "#3C223F", "#5C2A6A", "#8E4585"],
     },
-    {
-      colors: ["#201E20", "#433E3F", "#5E5B5E", "#8D99AE"],
-    },
-    {
-      colors: ["#1B1A17", "#403D39", "#7F7976", "#A9927D"],
-    },
-    {
-      colors: ["#1F0A20", "#3C153B", "#662549", "#9A1750"],
-    },
-    {
-      colors: ["#17202A", "#283747", "#566573", "#AAB7B8"],
-    },
   ];
-
-  const {
-    currentColor1,
-    currentColor2,
-    currentColor3,
-    currentColor4,
-    generateMeshGradient,
-    setTargetColor1,
-    setTargetColor2,
-    setTargetColor3,
-    setTargetColor4,
-  } = useGradientState();
 
   const hasStoredCredentials =
     typeof window !== "undefined" &&
     (localStorage.getItem("spotifyRefreshToken") ||
       localStorage.getItem("spotifyAccessToken"));
+
+  useEffect(() => {
+    const initDevice = async () => {
+      try {
+        const authData = await oauthAuthorize();
+        setSpotifyAuthData(authData);
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Failed to authorize oauth2 device:", err);
+        setError({
+          message: "Failed to generate QR code",
+          details: err.message,
+        });
+        setIsLoading(false);
+      }
+    };
+
+    initDevice();
+  }, []);
+
+  useEffect(() => {
+    if (spotifyAuthData?.device_code) {
+      const pollInterval = setInterval(async () => {
+        try {
+          const data = await checkAuthStatus(spotifyAuthData.device_code);
+
+          if (data.access_token && data.refresh_token) {
+            clearInterval(pollInterval);
+
+            localStorage.setItem("spotifyAccessToken", data.access_token);
+            localStorage.setItem("spotifyRefreshToken", data.refresh_token);
+            localStorage.setItem("spotifyAuthType", "spotify");
+            onSelect({
+              type: "spotify",
+            });
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, spotifyAuthData.interval * 1000 || 5000);
+
+      const timeoutId = setTimeout(() => {
+        clearInterval(pollInterval);
+        setError({
+          message: "QR code has expired. Please refresh the page to try again.",
+        });
+      }, 15 * 60 * 1000);
+
+      return () => {
+        clearInterval(pollInterval);
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [spotifyAuthData, onSelect]);
 
   useEffect(() => {
     let mounted = true;
@@ -535,17 +578,15 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
         try {
           const status = await checkNetworkConnectivity();
           if (mounted) {
-            const isConnected = status.isConnected;
-            setIsNetworkReady(isConnected);
+            setIsNetworkReady(status.isConnected);
 
-            if (isConnected && hasStoredCredentials) {
+            if (status.isConnected && hasStoredCredentials) {
               const savedAuthType =
                 localStorage.getItem("spotifyAuthType") || "default";
               onSelect({ type: savedAuthType });
             }
           }
         } catch (error) {
-          console.error("Network check failed:", error);
           if (mounted) {
             setIsNetworkReady(false);
           }
@@ -569,7 +610,7 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
   useEffect(() => {
     let animationFrameId;
     let startTime = Date.now();
-    const totalDuration = 80000;
+    const totalDuration = 30000;
 
     const easeInOutQuad = (t) => {
       return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
@@ -604,7 +645,6 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
       const nextThemeIndex = (currentThemeIndex + 1) % themeCount;
 
       let themeProgress = themePosition - currentThemeIndex;
-
       themeProgress = easeInOutQuad(themeProgress);
 
       const currentTheme = gradientThemes[currentThemeIndex];
@@ -653,73 +693,78 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
     };
   }, [setTargetColor1, setTargetColor2, setTargetColor3, setTargetColor4]);
 
-  if (networkStatus?.isConnected && !hasStoredCredentials) {
-    return (
-      <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
-        <div
-          style={{
-            backgroundImage: generateMeshGradient([
-              currentColor1,
-              currentColor2,
-              currentColor3,
-              currentColor4,
-            ]),
-            transition: "background-image 0.5s linear",
-          }}
-          className="absolute inset-0"
-        />
-        <div className="w-full flex flex-col items-center px-6 py-12 lg:px-8 relative z-10">
-          <div className="sm:mx-auto sm:w-full sm:max-w-xl relative z-10">
-            <NocturneIcon className="mx-auto h-14 w-auto" />
-            <div
-              className={`transition-all duration-250 ${
-                buttonsVisible ? "h-[70px] opacity-100" : "h-0 opacity-0"
-              }`}
-            >
-              <h2 className="mt-4 text-center text-[46px] font-[580] text-white tracking-tight">
-                Welcome to Nocturne
-              </h2>
-            </div>
-          </div>
-
-          <div className="sm:mx-auto sm:w-full sm:max-w-xl relative z-10">
-            <div className="relative transition-all duration-250 h-[150px]">
-              <div
-                className={`absolute top-0 left-0 w-full transition-opacity duration-250 ${
-                  buttonsVisible ? "opacity-100" : "opacity-0"
-                } mt-6`}
-                style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
-              >
-                <div>
-                  <button
-                    onClick={() => setShowQRFlow(true)}
-                    className="flex w-full justify-center bg-white/10 hover:bg-white/20 text-[32px] font-[560] text-white tracking-tight transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
-                  >
-                    Login with Phone
-                  </button>
-                </div>
-                <p className="mt-6 text-center text-white/30 text-[16px]">
-                  {packageInfo.version}
-                </p>
-              </div>
-            </div>
-            {showQRFlow && (
-              <QRAuthFlow
-                onBack={() => setShowQRFlow(false)}
-                onComplete={onSelect}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!networkStatus?.isConnected && !router.pathname.includes("phone-auth")) {
+  if (!networkStatus?.isConnected) {
     return <ConnectionScreen />;
   }
 
-  return <NetworkScreen isCheckingNetwork={!isNetworkReady} />;
+  if (!isNetworkReady) {
+    return <NetworkScreen isCheckingNetwork={true} />;
+  }
+
+  if (hasStoredCredentials) {
+    return null;
+  }
+
+  const renderQRSection = () => {
+    if (isLoading) {
+      return (
+        <div className="animate-pulse bg-white/10 w-[280px] h-[280px] rounded-xl" />
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="w-[280px] h-[280px] rounded-xl bg-white/10 flex items-center justify-center p-6">
+          <p className="text-white/70 text-xl text-center">{error.message}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white p-1 rounded-xl">
+        <QRCodeSVG
+          value={spotifyAuthData?.verification_uri_complete || ""}
+          size={250}
+          level="H"
+          includeMargin={true}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
+      <div
+        style={{
+          backgroundImage: generateMeshGradient([
+            currentColor1,
+            currentColor2,
+            currentColor3,
+            currentColor4,
+          ]),
+          transition: "background-image 0.5s linear",
+        }}
+        className="absolute inset-0"
+      />
+
+      <div className="relative z-10 w-full max-w-6xl px-6 grid grid-cols-2 gap-16 items-center">
+        <div className="flex flex-col items-start space-y-8 mb-10 ml-12">
+          <NocturneIcon className="h-12 w-auto" />
+
+          <div className="space-y-4">
+            <h2 className="text-3xl text-white tracking-tight font-medium">
+              Scan the QR code with your phone's camera.
+            </h2>
+            <p className="text-lg text-white/60 tracking-tight">
+              You'll be redirected to Spotify to authorize Nocturne.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-center">{renderQRSection()}</div>
+      </div>
+    </div>
+  );
 };
 
 export default AuthMethodSelector;
