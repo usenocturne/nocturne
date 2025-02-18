@@ -48,6 +48,13 @@ export function useLyrics({ currentPlayback }) {
           trackName
         )}&artist=${encodeURIComponent(artistName)}`
       );
+      if (response.status === 404) {
+        setLyricsUnavailable(true);
+        setParsedLyrics([]);
+        currentTrackId.current = trackId;
+        fetchedTracks.current.add(trackId);
+        return;
+      }
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
