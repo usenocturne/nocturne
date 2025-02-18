@@ -35,24 +35,57 @@ export function useAuthState() {
   const [refreshToken, setRefreshToken] = useState(null);
   const [authCode, setAuthCode] = useState(null);
 
-  const handleAuthSelection = useCallback(async (selection) => {
-    if (!selection) return;
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedAccessToken = localStorage.getItem("spotifyAccessToken");
+      const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+      const storedAuthType = localStorage.getItem("spotifyAuthType");
 
-    const batchUpdates = () => {
-      setAuthState({
-        authSelectionMade: true,
-        authType: selection.type,
-      });
-
-      if (selection.authCode) {
-        setAuthCode(selection.authCode);
+      if (storedAccessToken && storedRefreshToken) {
+        setAccessToken(storedAccessToken);
+        setRefreshToken(storedRefreshToken);
+        setAuthState({
+          authSelectionMade: true,
+          authType: storedAuthType || "spotify",
+        });
       }
     };
 
-    if (typeof window !== "undefined" && window.ReactDOM) {
-      window.ReactDOM.unstable_batchedUpdates(batchUpdates);
-    } else {
-      batchUpdates();
+    handleStorageChange();
+
+    window.addEventListener("storage", handleStorageChange);
+
+    let count = 0;
+    const interval = setInterval(() => {
+      handleStorageChange();
+      count++;
+      if (count >= 20) clearInterval(interval);
+    }, 100);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleAuthSelection = useCallback(async (selection) => {
+    if (!selection) return;
+
+    setAuthState({
+      authSelectionMade: true,
+      authType: selection.type,
+    });
+
+    if (selection.authCode) {
+      setAuthCode(selection.authCode);
+    }
+
+    const storedAccessToken = localStorage.getItem("spotifyAccessToken");
+    const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+
+    if (storedAccessToken && storedRefreshToken) {
+      setAccessToken(storedAccessToken);
+      setRefreshToken(storedRefreshToken);
     }
   }, []);
 
