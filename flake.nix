@@ -2,9 +2,10 @@
   description = "Nocturne NixOS image";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    #nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixos-superbird.url = "github:joeyeamigh/nixos-superbird";
-    #nixos-superbird.url = "git+file:///nixos-superbird";
+    nixpkgs.follows = "nixos-superbird/nixpkgs";
+
     deploy-rs.url = "github:serokell/deploy-rs";
 
     nocturned.url = "github:usenocturne/nocturned";
@@ -19,7 +20,10 @@
       nixosConfigurations = {
         superbird = nixosSystem {
           system = "aarch64-linux";
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit self;
+            inherit inputs;
+          };
           modules = [
             nixos-superbird.nixosModules.superbird
             ./modules/default.nix
@@ -28,7 +32,10 @@
 
         superbird-dev = nixosSystem {
           system = "aarch64-linux";
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit self;
+            inherit inputs;
+          };
           modules = [
             nixos-superbird.nixosModules.superbird
             ./modules/default.nix
@@ -53,10 +60,6 @@
             sshUser = "root";
             path = deploy-rs.lib.aarch64-linux.activate.nixos self.nixosConfigurations.superbird;
             user = "root";
-            sshOpts = [
-              "-i"
-              "${self.nixosConfigurations.superbird.config.system.build.ed25519Key}"
-            ];
           };
         };
       };

@@ -1,33 +1,20 @@
-build:
-  nix build '.#nixosConfigurations.superbird.config.system.build.installer' -j"$(nproc)" --show-trace
-
-build-system:
-  nix build '.#nixosConfigurations.superbird.config.system.build.toplevel' -j"$(nproc)" --show-trace
-
 docker-shell:
   docker compose run --rm nix nix-shell docker/shell.nix
 
-zip-system:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  dir=$(pwd)
+build config="superbird":
+  nix build '.#nixosConfigurations.{{config}}.config.system.build.toplevel' -j$(nproc) --show-trace
 
-  just build-system
-  mkdir -p out
-  rm -f out/system.zip
-  cd result
-  zip -r9 $dir/out/system.zip .
+fs config="superbird":
+  nix build '.#nixosConfigurations.{{config}}.config.system.build.btrfs' -j$(nproc) --show-trace
+  echo "rootfs is $(stat -Lc%s -- result | numfmt --to=iec)"
 
-  echo "system is $(stat -Lc%s -- $dir/out/system.zip | numfmt --to=iec)"
-
-installer:
+installer config="superbird":
   #!/usr/bin/env bash
   set -euo pipefail
 
-  nix build '.#nixosConfigurations.superbird.config.system.build.installer' -j"$(nproc)" --show-trace
-  echo "kernel is $(stat -Lc%s -- result/linux/kernel | numfmt --to=iec)"
-  echo "initrd is $(stat -Lc%s -- result/linux/initrd.img | numfmt --to=iec)"
-  echo "rootfs (sparse) is $(stat -Lc%s -- result/linux/rootfs.img | numfmt --to=iec)"
+  nix build '.#nixosConfigurations.{{config}}.config.system.build.installer' -j$(nproc) --show-trace
+  echo "kernel is $(stat -Lc%s -- result/builder/kernel | numfmt --to=iec)"
+  echo "rootfs is $(stat -Lc%s -- result/rootfs.img | numfmt --to=iec)"
 
   sudo rm -rf ./out
   mkdir ./out
@@ -35,11 +22,13 @@ installer:
   chown -R $(whoami):$(whoami) ./out
   cd ./out
 
-  sudo ./scripts/shrink-img.sh
-  echo "rootfs (compact) is $(stat -Lc%s -- ./linux/rootfs.img | numfmt --to=iec)"
+  sudo ./scripts/make-bootfs.sh
+  echo "bootfs built!"
 
-run-installer:
-  just installer
+  just zip-installer
+
+run-installer config="superbird":
+  just installer {{config}}
   cd out && ./install.sh
 
 zip-installer:
