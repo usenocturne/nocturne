@@ -445,8 +445,8 @@ const ConnectionScreen = () => {
         deviceType={deviceType}
         message={
           deviceType === "ios"
-            ? "Please turn on your Personal Hotspot in Settings"
-            : "Please enable Bluetooth tethering in your phone's settings"
+            ? "Please enable Personal Hotspot in your phone's settings."
+            : "Please enable Bluetooth tethering in your phone's settings."
         }
       />
     );
