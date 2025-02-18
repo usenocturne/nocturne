@@ -655,7 +655,7 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
 
   if (networkStatus?.isConnected && !hasStoredCredentials) {
     return (
-      <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0">
+      <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
         <div
           style={{
             backgroundImage: generateMeshGradient([
