@@ -19,14 +19,14 @@ const BluetoothDevices = () => {
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        const response = await fetch('http://localhost:5000/bluetooth/devices');
+        const response = await fetch("http://localhost:5000/bluetooth/devices");
         if (!response.ok) {
-          throw new Error('Failed to fetch devices');
+          throw new Error("Failed to fetch devices");
         }
         const data = await response.json();
-        const mappedDevices = data.map(device => ({
+        const mappedDevices = data.map((device) => ({
           ...device,
-          status: device.connected ? "connected" : "disconnected"
+          status: device.connected ? "connected" : "disconnected",
         }));
         setDevices(mappedDevices);
       } catch (err) {
@@ -41,17 +41,20 @@ const BluetoothDevices = () => {
 
   const handleConnect = async (deviceAddress) => {
     try {
-      const response = await fetch(`http://localhost:5000/bluetooth/connect/${deviceAddress}`, {
-        method: 'POST'
-      });
-      
+      const response = await fetch(
+        `http://localhost:5000/bluetooth/connect/${deviceAddress}`,
+        {
+          method: "POST",
+        }
+      );
+
       if (!response.ok) {
-        throw new Error('Failed to connect to device');
+        throw new Error("Failed to connect to device");
       }
 
-      localStorage.setItem('connectedBluetoothAddress', deviceAddress);
-      window.dispatchEvent(new CustomEvent('bluetooth-device-connected'));
-      
+      localStorage.setItem("connectedBluetoothAddress", deviceAddress);
+      window.dispatchEvent(new CustomEvent("bluetooth-device-connected"));
+
       setDevices(
         devices.map((device) => {
           if (device.address === deviceAddress) {
@@ -67,12 +70,15 @@ const BluetoothDevices = () => {
 
   const handleDisconnect = async (deviceAddress) => {
     try {
-      const response = await fetch(`http://localhost:5000/bluetooth/disconnect/${deviceAddress}`, {
-        method: 'POST'
-      });
-      
+      const response = await fetch(
+        `http://localhost:5000/bluetooth/disconnect/${deviceAddress}`,
+        {
+          method: "POST",
+        }
+      );
+
       if (!response.ok) {
-        throw new Error('Failed to disconnect device');
+        throw new Error("Failed to disconnect device");
       }
 
       setDevices(
@@ -91,16 +97,21 @@ const BluetoothDevices = () => {
   const handleForget = async () => {
     if (selectedDevice) {
       try {
-        const response = await fetch(`http://localhost:5000/bluetooth/remove/${selectedDevice}`, {
-          method: 'POST'
-        });
-        
+        const response = await fetch(
+          `http://localhost:5000/bluetooth/remove/${selectedDevice}`,
+          {
+            method: "POST",
+          }
+        );
+
         if (!response.ok) {
-          throw new Error('Failed to remove device');
+          throw new Error("Failed to remove device");
         }
 
-        localStorage.removeItem('connectedBluetoothAddress');
-        setDevices(devices.filter((device) => device.address !== selectedDevice));
+        localStorage.removeItem("connectedBluetoothAddress");
+        setDevices(
+          devices.filter((device) => device.address !== selectedDevice)
+        );
         setShowForgetDialog(false);
         setSelectedDevice(null);
       } catch (err) {
@@ -140,7 +151,7 @@ const BluetoothDevices = () => {
   const renderContent = () => {
     if (devices.length === 0) {
       return (
-        <div className="bg-white/10 rounded-xl p-8 text-center">
+        <div className="bg-white/10 rounded-xl p-8 text-center border border-white/10">
           <p className="text-[32px] font-[580] text-white tracking-tight">
             No Devices Found
           </p>
@@ -167,7 +178,7 @@ const BluetoothDevices = () => {
             clearTimeout(longPressTimer.current);
           }
         }}
-        className="bg-white/10 rounded-xl p-6 select-none"
+        className="bg-white/10 rounded-xl p-6 select-none border border-white/10"
       >
         <div className="flex justify-between items-center">
           <div className="min-w-0 flex-1">
@@ -182,7 +193,7 @@ const BluetoothDevices = () => {
           </div>
           <button
             onClick={(e) => handleButtonClick(e, device)}
-            className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3 min-w-[160px]"
+            className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3 min-w-[160px] border border-white/10"
           >
             <span className="text-[24px] font-[580] text-white tracking-tight">
               {device.status === "connected" ? "Disconnect" : "Connect"}

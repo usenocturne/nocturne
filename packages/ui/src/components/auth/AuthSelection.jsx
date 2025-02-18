@@ -7,6 +7,7 @@ import PairingScreen from "../bluetooth/PairingScreen";
 import EnableTetheringScreen from "../bluetooth/EnableTetheringScreen";
 import { NocturneIcon } from "../icons";
 import { checkNetworkConnectivity } from "../../lib/networkChecker";
+import { useGradientState } from "../../hooks/useGradientState";
 
 const ConnectionScreen = () => {
   const [isBluetoothDiscovering, setIsBluetoothDiscovering] = useState(false);
@@ -34,7 +35,7 @@ const ConnectionScreen = () => {
       const isConnected = response.isConnected;
       setIsNetworkConnected(isConnected);
       initialCheckDoneRef.current = true;
-      
+
       if (isConnected && initialCheckTimeoutRef.current) {
         clearTimeout(initialCheckTimeoutRef.current);
         initialCheckTimeoutRef.current = null;
@@ -51,10 +52,12 @@ const ConnectionScreen = () => {
   }, []);
 
   const tryReconnectLastDevice = async () => {
-    const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+    const lastDeviceAddress = localStorage.getItem("connectedBluetoothAddress");
     if (failedReconnectAttemptsRef.current >= 10) {
       if (reconnectInterval) {
-        console.log("Stopping automatic reconnection attempts - reached maximum failure attempts");
+        console.log(
+          "Stopping automatic reconnection attempts - reached maximum failure attempts"
+        );
         clearInterval(reconnectInterval);
         reconnectInterval = null;
       }
@@ -73,7 +76,7 @@ const ConnectionScreen = () => {
             headers: {
               "Content-Type": "application/json",
             },
-            signal: controller.signal
+            signal: controller.signal,
           }
         );
 
@@ -95,7 +98,7 @@ const ConnectionScreen = () => {
         }
         failedReconnectAttemptsRef.current++;
       } catch (error) {
-        if (error.name === 'AbortError') {
+        if (error.name === "AbortError") {
           console.error("Reconnection request timed out after 1 minute");
         } else {
           console.error("Error reconnecting to last device:", error);
@@ -144,7 +147,9 @@ const ConnectionScreen = () => {
       const intervalId = setInterval(async () => {
         try {
           if (failedNetworkAttempts >= 10) {
-            console.log("Stopping automatic network enabling attempts - reached maximum failure attempts");
+            console.log(
+              "Stopping automatic network enabling attempts - reached maximum failure attempts"
+            );
             clearInterval(intervalId);
             return;
           }
@@ -166,7 +171,7 @@ const ConnectionScreen = () => {
               headers: {
                 "Content-Type": "application/json",
               },
-              signal: controller.signal
+              signal: controller.signal,
             }
           );
 
@@ -182,7 +187,7 @@ const ConnectionScreen = () => {
             failedNetworkAttempts++;
           }
         } catch (error) {
-          if (error.name === 'AbortError') {
+          if (error.name === "AbortError") {
             console.error("Network request timed out after 1 minute");
           } else {
             console.error("Error enabling bluetooth networking:", error);
@@ -194,24 +199,20 @@ const ConnectionScreen = () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60000);
 
-      fetch(
-        `http://localhost:5000/bluetooth/network/${address}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          signal: controller.signal
-        }
-      ).catch(error => {
-        if (error.name === 'AbortError') {
+      fetch(`http://localhost:5000/bluetooth/network/${address}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      }).catch((error) => {
+        if (error.name === "AbortError") {
           console.error("Initial network request timed out after 1 minute");
         } else {
           console.error(error);
         }
         failedNetworkAttempts++;
       });
-
     } catch (error) {
       console.error("Error enabling bluetooth networking:", error);
       failedNetworkAttempts++;
@@ -225,13 +226,15 @@ const ConnectionScreen = () => {
     let reconnectTimeoutId;
 
     const startNetworkCheck = async () => {
-      const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+      const lastDeviceAddress = localStorage.getItem(
+        "connectedBluetoothAddress"
+      );
       if (!lastDeviceAddress) {
         enableBluetoothDiscovery();
       } else {
         reconnectionAttemptedRef.current = false;
         failedReconnectAttemptsRef.current = 0;
-        
+
         reconnectTimeoutId = setTimeout(() => {
           if (!reconnectionAttemptedRef.current && mounted) {
             setShowNoNetwork(true);
@@ -271,12 +274,14 @@ const ConnectionScreen = () => {
       }, 5000);
 
       const isConnected = await checkNetwork();
-      
+
       checkInterval = setInterval(async () => {
         if (!mounted) return;
         const isConnected = await checkNetwork();
         if (!isConnected) {
-          const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+          const lastDeviceAddress = localStorage.getItem(
+            "connectedBluetoothAddress"
+          );
           if (lastDeviceAddress) {
             if (!reconnectionAttemptedRef.current) {
               setShowNoNetwork(true);
@@ -284,7 +289,10 @@ const ConnectionScreen = () => {
                 reconnectInterval = setInterval(async () => {
                   if (!reconnectionAttemptedRef.current) {
                     const reconnected = await tryReconnectLastDevice();
-                    if (reconnected || failedReconnectAttemptsRef.current >= 10) {
+                    if (
+                      reconnected ||
+                      failedReconnectAttemptsRef.current >= 10
+                    ) {
                       if (reconnected) {
                         setShowNoNetwork(false);
                         setShowTethering(true);
@@ -317,13 +325,13 @@ const ConnectionScreen = () => {
         setPairingKey(pairingKey);
       } else if (data.type === "bluetooth/paired") {
         const { address } = data.payload.device;
-        localStorage.setItem('connectedBluetoothAddress', address);
+        localStorage.setItem("connectedBluetoothAddress", address);
         setShowNoNetwork(false);
         setShowTethering(true);
         enableBluetoothNetwork(address);
       } else if (data.type === "bluetooth/connect") {
         const { address } = data;
-        localStorage.setItem('connectedBluetoothAddress', address);
+        localStorage.setItem("connectedBluetoothAddress", address);
         setShowNoNetwork(false);
         setShowTethering(true);
         reconnectionAttemptedRef.current = true;
@@ -333,7 +341,9 @@ const ConnectionScreen = () => {
         }
         enableBluetoothNetwork(address);
       } else if (data.type === "bluetooth/network/disconnect") {
-        const lastDeviceAddress = localStorage.getItem('connectedBluetoothAddress');
+        const lastDeviceAddress = localStorage.getItem(
+          "connectedBluetoothAddress"
+        );
         if (lastDeviceAddress) {
           setShowNoNetwork(true);
           setIsPairing(false);
@@ -466,11 +476,49 @@ const ConnectionScreen = () => {
 const AuthMethodSelector = ({ onSelect, networkStatus }) => {
   const [showQRFlow, setShowQRFlow] = useState(false);
   const [buttonsVisible, setButtonsVisible] = useState(true);
-  const [defaultButtonVisible, setDefaultButtonVisible] = useState(false);
-  const [showDefaultButton, setShowDefaultButton] = useState(false);
-  const [escapeKeyTimer, setEscapeKeyTimer] = useState(null);
   const [isNetworkReady, setIsNetworkReady] = useState(false);
   const router = useRouter();
+  const gradientThemes = [
+    {
+      colors: ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"],
+    },
+    {
+      colors: ["#1A1423", "#3D2C8D", "#9163CB", "#D499B9"],
+    },
+    {
+      colors: ["#0D1B2A", "#1B263B", "#415A77", "#778DA9"],
+    },
+    {
+      colors: ["#0B132B", "#1C2541", "#3A506B", "#5BC0BE"],
+    },
+    {
+      colors: ["#241623", "#3C223F", "#5C2A6A", "#8E4585"],
+    },
+    {
+      colors: ["#201E20", "#433E3F", "#5E5B5E", "#8D99AE"],
+    },
+    {
+      colors: ["#1B1A17", "#403D39", "#7F7976", "#A9927D"],
+    },
+    {
+      colors: ["#1F0A20", "#3C153B", "#662549", "#9A1750"],
+    },
+    {
+      colors: ["#17202A", "#283747", "#566573", "#AAB7B8"],
+    },
+  ];
+
+  const {
+    currentColor1,
+    currentColor2,
+    currentColor3,
+    currentColor4,
+    generateMeshGradient,
+    setTargetColor1,
+    setTargetColor2,
+    setTargetColor3,
+    setTargetColor4,
+  } = useGradientState();
 
   const hasStoredCredentials =
     typeof window !== "undefined" &&
@@ -489,9 +537,10 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
           if (mounted) {
             const isConnected = status.isConnected;
             setIsNetworkReady(isConnected);
-            
+
             if (isConnected && hasStoredCredentials) {
-              const savedAuthType = localStorage.getItem("spotifyAuthType") || "default";
+              const savedAuthType =
+                localStorage.getItem("spotifyAuthType") || "default";
               onSelect({ type: savedAuthType });
             }
           }
@@ -518,52 +567,109 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
   }, [hasStoredCredentials, onSelect]);
 
   useEffect(() => {
-    if (showDefaultButton) {
-      setTimeout(() => setDefaultButtonVisible(true), 50);
-    }
-  }, [showDefaultButton]);
+    let animationFrameId;
+    let startTime = Date.now();
+    const totalDuration = 80000;
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape" && !escapeKeyTimer) {
-        const timer = setTimeout(() => {
-          setShowDefaultButton(true);
-        }, 2000);
-        setEscapeKeyTimer(timer);
-      }
+    const easeInOutQuad = (t) => {
+      return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
     };
 
-    const handleKeyUp = (e) => {
-      if (e.key === "Escape" && escapeKeyTimer) {
-        clearTimeout(escapeKeyTimer);
-        setEscapeKeyTimer(null);
-      }
+    const interpolateColor = (color1, color2, factor) => {
+      const r1 = parseInt(color1.slice(1, 3), 16);
+      const g1 = parseInt(color1.slice(3, 5), 16);
+      const b1 = parseInt(color1.slice(5, 7), 16);
+
+      const r2 = parseInt(color2.slice(1, 3), 16);
+      const g2 = parseInt(color2.slice(3, 5), 16);
+      const b2 = parseInt(color2.slice(5, 7), 16);
+
+      const r = Math.round(r1 + (r2 - r1) * factor);
+      const g = Math.round(g1 + (g2 - g1) * factor);
+      const b = Math.round(b1 + (b2 - b1) * factor);
+
+      return `#${r.toString(16).padStart(2, "0")}${g
+        .toString(16)
+        .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    const animate = () => {
+      const now = Date.now();
+      const elapsed = (now - startTime) % totalDuration;
+      const rawProgress = elapsed / totalDuration;
+
+      const themeCount = gradientThemes.length;
+      const themePosition = rawProgress * themeCount;
+      const currentThemeIndex = Math.floor(themePosition);
+      const nextThemeIndex = (currentThemeIndex + 1) % themeCount;
+
+      let themeProgress = themePosition - currentThemeIndex;
+
+      themeProgress = easeInOutQuad(themeProgress);
+
+      const currentTheme = gradientThemes[currentThemeIndex];
+      const nextTheme = gradientThemes[nextThemeIndex];
+
+      if (elapsed % 12 === 0) {
+        setTargetColor1(
+          interpolateColor(
+            currentTheme.colors[0],
+            nextTheme.colors[0],
+            themeProgress
+          )
+        );
+        setTargetColor2(
+          interpolateColor(
+            currentTheme.colors[1],
+            nextTheme.colors[1],
+            themeProgress
+          )
+        );
+        setTargetColor3(
+          interpolateColor(
+            currentTheme.colors[2],
+            nextTheme.colors[2],
+            themeProgress
+          )
+        );
+        setTargetColor4(
+          interpolateColor(
+            currentTheme.colors[3],
+            nextTheme.colors[3],
+            themeProgress
+          )
+        );
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animate();
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      if (escapeKeyTimer) {
-        clearTimeout(escapeKeyTimer);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [escapeKeyTimer]);
-
-  const handleDefaultSubmit = (e) => {
-    e.preventDefault();
-    if (!isNetworkReady) return;
-    localStorage.setItem("spotifyAuthType", "default");
-    onSelect({ type: "default" });
-  };
+  }, [setTargetColor1, setTargetColor2, setTargetColor3, setTargetColor4]);
 
   if (networkStatus?.isConnected && !hasStoredCredentials) {
     return (
-      <div className="bg-black h-screen flex items-center justify-center overflow-hidden fixed inset-0">
-        <div className="w-full flex flex-col items-center px-6 py-12 lg:px-8">
-          <div className="sm:mx-auto sm:w-full sm:max-w-xl">
+      <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0">
+        <div
+          style={{
+            backgroundImage: generateMeshGradient([
+              currentColor1,
+              currentColor2,
+              currentColor3,
+              currentColor4,
+            ]),
+            transition: "background-image 0.5s linear",
+          }}
+          className="absolute inset-0"
+        />
+        <div className="w-full flex flex-col items-center px-6 py-12 lg:px-8 relative z-10">
+          <div className="sm:mx-auto sm:w-full sm:max-w-xl relative z-10">
             <NocturneIcon className="mx-auto h-14 w-auto" />
             <div
               className={`transition-all duration-250 ${
@@ -576,40 +682,20 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
             </div>
           </div>
 
-          <div className="sm:mx-auto sm:w-full sm:max-w-xl">
-            <div
-              className={`relative transition-all duration-250 ${
-                showDefaultButton ? "h-[260px]" : "h-[150px]"
-              }`}
-            >
+          <div className="sm:mx-auto sm:w-full sm:max-w-xl relative z-10">
+            <div className="relative transition-all duration-250 h-[150px]">
               <div
                 className={`absolute top-0 left-0 w-full transition-opacity duration-250 ${
                   buttonsVisible ? "opacity-100" : "opacity-0"
-                } ${showDefaultButton ? "space-y-6 mt-2" : "mt-6"}`}
+                } mt-6`}
                 style={{ pointerEvents: buttonsVisible ? "auto" : "none" }}
               >
                 <div>
                   <button
                     onClick={() => setShowQRFlow(true)}
-                    className="flex w-full justify-center rounded-full bg-white/10 px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm"
+                    className="flex w-full justify-center bg-white/10 hover:bg-white/20 text-[32px] font-[560] text-white tracking-tight transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
                   >
                     Login with Phone
-                  </button>
-                </div>
-                <div
-                  className={`transition-all duration-250 overflow-hidden ${
-                    showDefaultButton
-                      ? defaultButtonVisible
-                        ? "h-[80px] opacity-100"
-                        : "h-0 opacity-0"
-                      : "h-0 opacity-0"
-                  }`}
-                >
-                  <button
-                    onClick={handleDefaultSubmit}
-                    className="flex w-full justify-center rounded-full ring-white/10 ring-2 ring-inset px-6 py-4 text-[32px] font-[560] text-white tracking-tight shadow-sm hover:bg-white/10 transition-colors"
-                  >
-                    Use Developer Credentials
                   </button>
                 </div>
                 <p className="mt-6 text-center text-white/30 text-[16px]">

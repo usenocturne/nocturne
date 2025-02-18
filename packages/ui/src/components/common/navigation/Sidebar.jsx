@@ -27,7 +27,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
         />
       )}
       <div className="mr-4 flex-shrink-0">
-        <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
+        <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center border border-white/10">
           <Icon className="h-10 w-10" />
         </div>
       </div>
@@ -45,7 +45,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
       <Link href={`/now-playing`}>
         <div className="relative flex items-center">
           <div className="mr-4 flex-shrink-0">
-            <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center">
+            <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center border border-white/10">
               <NowPlayingIcon className="h-10 w-10" />
             </div>
           </div>

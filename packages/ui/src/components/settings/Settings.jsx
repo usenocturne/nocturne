@@ -420,15 +420,17 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
     }
   };
 
-  const mainMenuClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${currentPage === "main"
+  const mainMenuClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${
+    currentPage === "main"
       ? "translate-x-0 opacity-100 pointer-events-auto"
       : "-translate-x-full opacity-0 pointer-events-none"
-    }`;
+  }`;
 
-  const subPageClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${currentPage !== "main" && currentPage !== "transitioning"
+  const subPageClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${
+    currentPage !== "main" && currentPage !== "transitioning"
       ? "translate-x-0 opacity-100 pointer-events-auto"
       : "translate-x-full opacity-0 pointer-events-none"
-    }`;
+  }`;
 
   const renderSettingItem = (item) => {
     switch (item.type) {
@@ -439,14 +441,16 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
               <Switch
                 checked={settings[item.storageKey]}
                 onChange={() => handleToggle(item.storageKey)}
-                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
-                  }`}
+                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
+                }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings[item.storageKey]
+                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    settings[item.storageKey]
                       ? "translate-x-9"
                       : "translate-x-0"
-                    }`}
+                  }`}
                 />
               </Switch>
               <span className="ml-3 text-[32px] font-[580] text-white tracking-tight">
@@ -463,7 +467,7 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
           <div key={item.id} className="mb-8">
             <button
               onClick={() => handleAction(item.action)}
-              className="bg-white/10 hover:bg-white/20 w-80 transition-colors duration-200 rounded-[12px] px-6 py-3"
+              className="bg-white/10 hover:bg-white/20 w-80 transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
             >
               <span className="text-[32px] font-[580] text-white tracking-tight">
                 {item.title}
@@ -534,7 +538,7 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
                         navigateTo(key);
                       }
                     }}
-                    className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+                    className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
                     disabled={isAnimating}
                   >
                     <div className="flex items-center">
