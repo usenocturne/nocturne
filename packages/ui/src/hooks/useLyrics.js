@@ -12,7 +12,7 @@ export function useLyrics({ currentPlayback }) {
   const fetchedTracks = useRef(new Set());
   const lyricsContainerRef = useRef(null);
 
-  const parseLRC = (lrc) => {
+  const parseLRC = useCallback((lrc) => {
     const lines = lrc.split("\n");
     return lines
       .map((line) => {
@@ -29,7 +29,7 @@ export function useLyrics({ currentPlayback }) {
       })
       .filter(Boolean)
       .sort((a, b) => a.time - b.time);
-  };
+  }, []);
 
   const fetchLyrics = useCallback(async () => {
     if (!currentPlayback?.item) return;
@@ -131,12 +131,15 @@ export function useLyrics({ currentPlayback }) {
       setCurrentLyricIndex(-1);
       setLyricsUnavailable(false);
     }
-  }, [currentPlayback, fetchLyrics, showLyrics]);
+  }, [currentPlayback?.item?.id, fetchLyrics, showLyrics]);
 
   useEffect(() => {
     if (!showLyrics || !currentPlayback || parsedLyrics.length === 0) return;
 
+    let mounted = true;
     const updateCurrentLyric = () => {
+      if (!mounted) return;
+
       const currentTime = currentPlayback.progress_ms / 1000;
       const newIndex = parsedLyrics.findIndex(
         (lyric) => lyric.time > currentTime
@@ -149,8 +152,11 @@ export function useLyrics({ currentPlayback }) {
     updateCurrentLyric();
     const intervalId = setInterval(updateCurrentLyric, 100);
 
-    return () => clearInterval(intervalId);
-  }, [showLyrics, currentPlayback, parsedLyrics]);
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+    };
+  }, [showLyrics, currentPlayback?.progress_ms, parsedLyrics]);
 
   useEffect(() => {
     if (currentLyricIndex >= 0 && lyricsContainerRef.current) {

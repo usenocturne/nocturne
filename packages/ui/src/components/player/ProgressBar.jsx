@@ -16,25 +16,7 @@ const ProgressBar = ({
   const wasPlayingRef = useRef(false);
   const containerRef = useRef(null);
   const startTimeRef = useRef(Date.now());
-
-  const animate = () => {
-    if (!isPlaying || !durationMs || isScrubbing) {
-      animationFrameRef.current = requestAnimationFrame(animate);
-      return;
-    }
-
-    const currentTime = Date.now();
-    const deltaTime = currentTime - startTimeRef.current;
-    startTimeRef.current = currentTime;
-    const progressIncrement = (deltaTime / durationMs) * 100;
-
-    setInterpolatedProgress((prev) => {
-      const maxAllowedProgress = progress + 1;
-      return Math.min(prev + progressIncrement, maxAllowedProgress);
-    });
-
-    animationFrameRef.current = requestAnimationFrame(animate);
-  };
+  const scrollSpeed = 40;
 
   useEffect(() => {
     setInterpolatedProgress(
@@ -48,7 +30,12 @@ const ProgressBar = ({
       }
 
       if (isPlaying && durationMs) {
-        const animate = () => {
+        startTimeRef.current = Date.now();
+        const animationFrame = requestAnimationFrame(function animate() {
+          if (!isPlaying || !durationMs || isScrubbing) {
+            return;
+          }
+
           const currentTime = Date.now();
           const deltaTime = currentTime - startTimeRef.current;
           startTimeRef.current = currentTime;
@@ -60,17 +47,15 @@ const ProgressBar = ({
           });
 
           animationFrameRef.current = requestAnimationFrame(animate);
-        };
+        });
 
-        animationFrameRef.current = requestAnimationFrame(animate);
+        return () => {
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+          }
+        };
       }
     }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
   }, [progress, isScrubbing, isPlaying, durationMs, scrubbingProgress]);
 
   const handleClick = () => {
@@ -89,7 +74,8 @@ const ProgressBar = ({
       const step = 0.5;
 
       setScrubbingProgress((prev) => {
-        const nextValue = (prev ?? interpolatedProgress) + (delta > 0 ? step : -step);
+        const nextValue =
+          (prev ?? interpolatedProgress) + (delta > 0 ? step : -step);
         return Math.max(0, Math.min(100, nextValue));
       });
     };
@@ -129,7 +115,8 @@ const ProgressBar = ({
     };
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
-    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
   }, [
     isScrubbing,
     scrubbingProgress,
