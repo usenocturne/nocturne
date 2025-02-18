@@ -22,7 +22,7 @@ export default async function handler(req) {
       );
     }
 
-    let clientId, clientSecret;
+    let clientId;
 
     if (isCustomAuth) {
       clientId = localStorage.getItem("spotifyClientId");

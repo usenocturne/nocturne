@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ArrowLeftIcon, XIcon, CircleOffIcon } from "../../icons";
-import { registerDevice, checkAuthStatus } from "../../../services/authService";
+import { oauthAuthorize, checkAuthStatus } from "../../../services/authService";
 import ErrorCodes from "../../../constants/errorCodes";
 
 const QRAuthFlow = ({ onBack, onComplete }) => {
-  const [deviceId, setDeviceId] = useState("");
+  const [spotifyObject, setSpotifyObject] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -14,11 +14,10 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
   useEffect(() => {
     const initDevice = async () => {
       try {
-        const { deviceId } = await registerDevice();
-        setDeviceId(deviceId);
+        setSpotifyObject(await oauthAuthorize());
         setIsLoading(false);
       } catch (err) {
-        console.error("Failed to register device:", err);
+        console.error("Failed to authorize oauth2 device:", err);
         const errorMessage = err.message?.includes("CERT_COMMON_NAME_INVALID")
           ? "CERT_COMMON_NAME_ERROR"
           : "REGISTER_DEVICE_ERROR";
@@ -36,49 +35,27 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
   }, []);
 
   useEffect(() => {
-    if (!deviceId) return;
-
     let isMounted = true;
     const pollInterval = setInterval(async () => {
       try {
-        const data = await checkAuthStatus(deviceId);
+        const data = await checkAuthStatus(spotifyObject.device_code);
 
         if (!isMounted) return;
 
-        if (data.status === "authorized") {
+        if (data.access_token && data.refresh_token) {
           clearInterval(pollInterval);
-          const clientId = data.encryptedData?.clientId;
-          const clientSecret = data.encryptedData?.clientSecret;
-          const authCode = data.code;
 
-          if (clientId && clientSecret && authCode) {
-            // Storing these in localStorage temporarily
-            localStorage.setItem("spotifyClientId", clientId);
-            localStorage.setItem("spotifyClientSecret", clientSecret);
-            localStorage.setItem("spotifyAuthType", "custom");
-            onComplete({
-              type: "custom",
-              authCode: data.code,
-              deviceId,
-            });
-          } else {
-            const missing = [];
-            if (!clientId) missing.push("clientId");
-            if (!clientSecret) missing.push("clientSecret");
-            if (!authCode) missing.push("authCode");
-            setError({
-              message: "Failed to Generate QR Code",
-              code: ErrorCodes.AUTH_ERROR,
-              details: `Incomplete auth data. Missing: ${missing.join(", ")}`,
-            });
-          }
+          localStorage.setItem("spotifyAccessToken", data.access_token);
+          localStorage.setItem("spotifyRefreshToken", data.refresh_token);
+          localStorage.setItem("spotifyAuthType", "spotify");
+          onComplete({
+            type: "spotify"
+          });
         }
-
-        if (error) setError(null);
       } catch (err) {
         console.error("Polling error:", err);
       }
-    }, 2000);
+    }, (spotifyObject.interval * 1000) || 5000);
 
     const timeoutId = setTimeout(() => {
       clearInterval(pollInterval);
@@ -94,7 +71,7 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
       clearInterval(pollInterval);
       clearTimeout(timeoutId);
     };
-  }, [deviceId, onComplete, error]);
+  }, [spotifyObject, onComplete, error]);
 
   const handleClose = () => {
     setIsExiting(true);
@@ -141,11 +118,7 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
       );
     }
 
-    if (!deviceId) {
-      return null;
-    }
-
-    const qrUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/auth/ui/${deviceId}`;
+    const qrUrl = spotifyObject.verification_uri_complete;
 
     return (
       <div className="flex flex-col items-center space-y-8">
@@ -164,19 +137,17 @@ const QRAuthFlow = ({ onBack, onComplete }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-50 transition-opacity duration-300 ${
-        isVisible && !isExiting ? "opacity-100" : "opacity-0"
-      }`}
+      className={`fixed inset-0 z-50 transition-opacity duration-300 ${isVisible && !isExiting ? "opacity-100" : "opacity-0"
+        }`}
     >
       <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
       <div
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 transition-all duration-300 ${
-          isVisible && !isExiting
-            ? "-translate-y-1/2 opacity-100"
-            : isExiting
+        className={`absolute top-1/2 left-1/2 -translate-x-1/2 transition-all duration-300 ${isVisible && !isExiting
+          ? "-translate-y-1/2 opacity-100"
+          : isExiting
             ? "translate-y-[10%] opacity-0"
             : "translate-y-[10%] opacity-0"
-        }`}
+          }`}
       >
         <div className="relative bg-black/90 p-8 rounded-3xl shadow-2xl min-w-[400px] border border-white/10">
           <button

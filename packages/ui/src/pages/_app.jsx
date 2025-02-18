@@ -92,7 +92,6 @@ export default function App({ Component, pageProps }) {
     authCode,
     setAuthCode,
     handleAuthSelection,
-    handlePhoneAuth,
   } = useAuthState(router);
 
   const {
@@ -525,28 +524,10 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const code = new URLSearchParams(window.location.search).get("code");
-      const state = new URLSearchParams(window.location.search).get("state");
 
       if (code) {
-        if (state) {
-          try {
-            const stateData = JSON.parse(decodeURIComponent(state));
-            if (stateData.phoneAuth) {
-              localStorage.setItem("spotifySessionId", stateData.sessionId);
-              handlePhoneAuth(code, stateData.sessionId, stateData.tempId);
-            } else {
-              setAuthCode(code);
-              setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
-            }
-          } catch (e) {
-            console.error("Error parsing state:", e);
-            setAuthCode(code);
-            setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
-          }
-        } else {
-          setAuthCode(code);
-          setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
-        }
+        setAuthCode(code);
+        setAuthState((prev) => ({ ...prev, authSelectionMade: true }));
       }
     }
   }, []);
@@ -558,7 +539,6 @@ export default function App({ Component, pageProps }) {
 
       const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
       const savedAuthType = localStorage.getItem("spotifyAuthType");
-      const savedTempId = localStorage.getItem("spotifyTempId");
 
       if (savedRefreshToken && savedAuthType) {
         const attemptSessionRestore = async () => {
@@ -594,7 +574,6 @@ export default function App({ Component, pageProps }) {
               setAuthState({
                 authSelectionMade: true,
                 authType: savedAuthType,
-                tempId: savedTempId,
               });
             }
           } catch (error) {
@@ -635,11 +614,11 @@ export default function App({ Component, pageProps }) {
     >
       {(!networkStatus?.isConnected && showNoNetwork &&
         !router.pathname.includes("phone-auth")) ||
-      (!authState.authSelectionMade &&
-        !router.pathname.includes("phone-auth") &&
-        !window.location.search.includes("code") &&
-        !localStorage.getItem("spotifyRefreshToken") &&
-        !localStorage.getItem("spotifyAccessToken")) ? (
+        (!authState.authSelectionMade &&
+          !router.pathname.includes("phone-auth") &&
+          !window.location.search.includes("code") &&
+          !localStorage.getItem("spotifyRefreshToken") &&
+          !localStorage.getItem("spotifyAccessToken")) ? (
         <AuthSelection
           onSelect={hookHandleAuthSelection}
           networkStatus={networkStatus}

@@ -361,7 +361,6 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
       localStorage.removeItem("spotifyRefreshToken");
       localStorage.removeItem("spotifyTokenExpiry");
       localStorage.removeItem("spotifyAuthType");
-      localStorage.removeItem("spotifyTempId");
       clearSettings();
       router.push("/").then(() => window.location.reload());
     } catch (error) {
@@ -421,17 +420,15 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
     }
   };
 
-  const mainMenuClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${
-    currentPage === "main"
+  const mainMenuClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${currentPage === "main"
       ? "translate-x-0 opacity-100 pointer-events-auto"
       : "-translate-x-full opacity-0 pointer-events-none"
-  }`;
+    }`;
 
-  const subPageClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${
-    currentPage !== "main" && currentPage !== "transitioning"
+  const subPageClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${currentPage !== "main" && currentPage !== "transitioning"
       ? "translate-x-0 opacity-100 pointer-events-auto"
       : "translate-x-full opacity-0 pointer-events-none"
-  }`;
+    }`;
 
   const renderSettingItem = (item) => {
     switch (item.type) {
@@ -442,16 +439,14 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
               <Switch
                 checked={settings[item.storageKey]}
                 onChange={() => handleToggle(item.storageKey)}
-                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
-                }`}
+                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
+                  }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    settings[item.storageKey]
+                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings[item.storageKey]
                       ? "translate-x-9"
                       : "translate-x-0"
-                  }`}
+                    }`}
                 />
               </Switch>
               <span className="ml-3 text-[32px] font-[580] text-white tracking-tight">

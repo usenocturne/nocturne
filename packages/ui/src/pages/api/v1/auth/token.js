@@ -10,7 +10,7 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
-    const { code, isPhoneAuth } = body;
+    const { code } = body;
 
     if (!code) {
       console.error("Missing authorization code");
@@ -69,7 +69,6 @@ export default async function handler(req) {
         expires_in: data.expires_in,
         token_type: data.token_type,
         scope: data.scope,
-        isPhoneAuth,
       }),
       {
         status: 200,

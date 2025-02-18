@@ -1,102 +1,60 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-async function decryptData(encryptedData, deviceId, salt) {
-  const encryptedBytes = Uint8Array.from(atob(encryptedData), (c) =>
-    c.charCodeAt(0)
-  );
-  const iv = encryptedBytes.slice(0, 12);
-  const ciphertext = encryptedBytes.slice(12);
-
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(deviceId),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits", "deriveKey"]
-  );
-
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: encoder.encode(salt),
-      iterations: 100000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["decrypt"]
-  );
-
-  const decrypted = await crypto.subtle.decrypt(
-    {
-      name: "AES-GCM",
-      iv: iv,
-    },
-    key,
-    ciphertext
-  );
-
-  const decoder = new TextDecoder();
-  const decryptedText = decoder.decode(decrypted);
-  return JSON.parse(decryptedText);
-}
-
-export async function registerDevice() {
+export async function oauthAuthorize() {
   try {
-    const response = await fetch(`${API_BASE_URL}/v1/auth/register-device`, {
+    const response = await fetch("https://accounts.spotify.com/oauth2/device/authorize", {
       method: "POST",
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        'user-agent': 'Spotify/125700463 Win32_x86_64/0 (PC desktop)',
+        'accept-language': 'en-Latn-US,en-US;q=0.9,en-Latn;q=0.8,en;q=0.7',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'no-cors',
+        'sec-fetch-dest': 'empty'
+      },
+      body: new URLSearchParams({
+        client_id: "65b708073fc0480ea92a077233ca87bd",
+        creation_point: "https://login.app.spotify.com/?client_id=65b708073fc0480ea92a077233ca87bd&utm_source=spotify&utm_medium=desktop-win32&utm_campaign=organic",
+        intent: "login",
+        scope: "app-remote-control,playlist-modify,playlist-modify-private,playlist-modify-public,playlist-read,playlist-read-collaborative,playlist-read-private,streaming,ugc-image-upload,user-follow-modify,user-follow-read,user-library-modify,user-library-read,user-modify,user-modify-playback-state,user-modify-private,user-personalized,user-read-birthdate,user-read-currently-playing,user-read-email,user-read-play-history,user-read-playback-position,user-read-playback-state,user-read-private,user-read-recently-played,user-top-read",
+      }).toString()
     });
 
     if (!response.ok) {
-      throw new Error("Failed to register device");
+      throw new Error("Failed to authorize oauth2 device");
     }
 
-    const { deviceId, salt } = await response.json();
-    return { deviceId, salt };
+    return await response.json();
   } catch (error) {
-    console.error("Error registering device:", error);
+    console.error("Error authorizing oauth2 device:", error);
     throw error;
   }
 }
 
-export async function checkAuthStatus(deviceId) {
+export async function checkAuthStatus(deviceCode) {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/v1/auth/check-status/${deviceId}`
-    );
+    const response = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        'user-agent': 'Spotify/125700463 Win32_x86_64/0 (PC desktop)',
+        'accept-language': 'en-Latn-US,en-US;q=0.9,en-Latn;q=0.8,en;q=0.7',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'no-cors',
+        'sec-fetch-dest': 'empty'
+      },
+      body: new URLSearchParams({
+        client_id: "65b708073fc0480ea92a077233ca87bd",
+        device_code: deviceCode,
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+      }).toString()
+    });
 
     if (!response.ok) {
       throw new Error("Failed to check auth status");
     }
 
-    const data = await response.json();
-
-    if (data.status === "authorized" && data.encryptedData) {
-      try {
-        const decryptedCredentials = await decryptData(
-          data.encryptedData,
-          deviceId,
-          data.salt
-        );
-        return {
-          ...data,
-          encryptedData: decryptedCredentials,
-        };
-      } catch (decryptError) {
-        console.error("Error decrypting credentials:", decryptError);
-        throw new Error("Failed to decrypt credentials");
-      }
-    }
-
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Error checking auth status:", error);
     throw error;
   }
-}
-
-export async function getAuthUrl(deviceId) {
-  return `${API_BASE_URL}/v1/auth/ui/${deviceId}`;
 }

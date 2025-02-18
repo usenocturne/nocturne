@@ -9,26 +9,26 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@headlessui/react": "^2.1.8",
-    "@heroicons/react": "^2.1.5",
+    "@headlessui/react": "^2.2.0",
+    "@heroicons/react": "^2.2.0",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "color-thief-browser": "^2.0.2",
     "lodash": "^4.17.21",
-    "next": "^14.2.10",
-    "qrcode.react": "^4.1.0",
+    "next": "^14.2.24",
+    "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
-    "eslint": "^8",
+    "eslint": "^8.57.1",
     "eslint-config-next": "14.2.7",
-    "postcss": "^8.4.42",
-    "tailwindcss": "^3.4.10",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^3.4.17",
     "vercel": "39.1.1",
-    "wrangler": "^3.86.0"
+    "wrangler": "^3.109.1"
   },
   "overrides": {
     "vercel": "$vercel"
