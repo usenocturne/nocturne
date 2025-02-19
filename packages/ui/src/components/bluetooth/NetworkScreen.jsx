@@ -140,10 +140,10 @@ const NetworkScreen = () => {
           <NocturneIcon className="h-12 w-auto" />
 
           <div className="space-y-4">
-            <h2 className="text-4xl text-white tracking-tight font-medium">
+            <h2 className="text-5xl text-white tracking-tight font-[580] w-[24rem]">
               Connection Lost
             </h2>
-            <p className="text-lg text-white/60 tracking-tight">
+            <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
               Connect to "Nocturne" in your phone's Bluetooth settings.
             </p>
           </div>

@@ -140,22 +140,22 @@ const PairingScreen = ({ onAccept, onReject, pin }) => {
           <NocturneIcon className="h-12 w-auto" />
 
           <div className="space-y-4">
-            <h2 className="text-4xl text-white tracking-tight font-medium">
+            <h2 className="text-5xl text-white tracking-tight font-[580] w-[24rem]">
               Bluetooth Pairing
             </h2>
-            <p className="text-lg text-white/60 tracking-tight">
+            <p className="text-[28px] text-white/60 tracking-tigh">
               Confirm that this pin matches the one on your phone.
             </p>
             <div className="mt-4 flex gap-4 justify-center">
               <button
                 onClick={onReject}
-                className="flex w-full justify-center text-2xl font-[560] text-white tracking-tight transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
+                className="flex w-full justify-center text-4xl font-[560] text-white tracking-tight transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
               >
                 Reject
               </button>
               <button
                 onClick={onAccept}
-                className="flex w-full justify-center bg-white/10 hover:bg-white/20 text-2xl font-[560] text-white tracking-tight transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
+                className="flex w-full justify-center bg-white/10 hover:bg-white/20 text-4xl font-[560] text-white tracking-tight transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
               >
                 Accept
               </button>

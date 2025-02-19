@@ -1,5 +1,7 @@
 import React from "react";
+import { useEffect } from "react";
 import { NocturneIcon } from "../../components/icons";
+import { useGradientState } from "../../hooks/useGradientState";
 
 const EnableTetheringScreen = ({ deviceType, message }) => {
   const {
@@ -138,10 +140,12 @@ const EnableTetheringScreen = ({ deviceType, message }) => {
           <NocturneIcon className="h-12 w-auto" />
 
           <div className="space-y-4">
-            <h2 className="text-4xl text-white tracking-tight font-medium">
+            <h2 className="text-5xl text-white tracking-tight font-[580] w-[24rem]">
               Enable Tethering
             </h2>
-            <p className="text-lg text-white/60 tracking-tight">{message}</p>
+            <p className="text-[28px] text-white/60 tracking-tight">
+              {message}
+            </p>
           </div>
         </div>
       </div>

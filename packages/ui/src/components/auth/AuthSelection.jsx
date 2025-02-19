@@ -752,10 +752,10 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
           <NocturneIcon className="h-12 w-auto" />
 
           <div className="space-y-4">
-            <h2 className="text-3xl text-white tracking-tight font-medium">
+            <h2 className="text-4xl text-white tracking-tight font-[580] w-[24rem]">
               Scan the QR code with your phone's camera.
             </h2>
-            <p className="text-lg text-white/60 tracking-tight">
+            <p className="text-[28px] text-white/60 tracking-tight w-[22rem]">
               You'll be redirected to Spotify to authorize Nocturne.
             </p>
           </div>
