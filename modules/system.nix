@@ -4,7 +4,7 @@
   superbird = {
     boot.logo = ./resources/boot.png;
     installer.manualScript = true;
-    bridgething.enabled = false;
+    bridgething.enable = false;
     swap = {
       enable = true;
       size = 512;
