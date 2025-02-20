@@ -10,7 +10,6 @@
 
 <p align="center">
   <a href="#how-to-use">How To Use</a> •
-  <a href="#spotify-developer-setup">Spotify Developer Setup</a> •
   <a href="#local-development-setup">Local Development Setup</a> •
   <a href="#donate">Donate</a> •
   <a href="#credits">Credits</a> •
@@ -32,7 +31,8 @@
 1. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 2. Once running on your Car Thing, scan the QR Code using your phone's camera.
 3. Authorize with Spotify and start using Nocturne!
-4. Due to the Spotify API's used, the Spotify app will say that it's Spotify for Desktop. This is normal and can be ignored.
+> [!NOTE]  
+> When connecting to Spotify, you may notice the app appears as 'Spotify for Desktop' - this is expected behavior and won't affect functionality.
 
 ### Button Mapping and Button Usage
 
@@ -42,7 +42,7 @@
 - Triple-press the right-most top hardware button to access brightness control
 - Press the hardware button underneath of the knob to go back in the application
 
-## Local Development Server
+## Local Development Setup
 
 First, set up the configuration:
 
@@ -248,14 +248,6 @@ After setting up your local server, you may follow these steps to see your chang
 3. Commit your changes: `git commit -m 'Add new feature'`
 4. Push to the branch: `git push origin feature/new-feature`
 5. Open a Pull Request
-
-## Security
-
-- Client secrets are encrypted using AES-256-CBC
-- Keys are automatically rotated every 7 days
-- Credentials are stored with expiration dates
-- Unused credentials are automatically cleaned up
-- All sensitive operations happen server-side
 
 ## Donate
 
