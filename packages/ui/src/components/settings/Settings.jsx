@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Switch } from "@headlessui/react";
 import packageInfo from "../../../package.json";
 import BluetoothDevices from "../bluetooth/BluetoothDevices";
 import AccountInfo from "./AccountInfo";
+import SoftwareUpdate from "./SoftwareUpdate";
 import {
   BluetoothIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   SettingsAccountIcon,
-  SettingsAboutIcon,
+  SettingsUpdateIcon,
   SettingsCreditsIcon,
   SettingsGeneralIcon,
   SettingsPlaybackIcon,
@@ -38,6 +39,17 @@ const settingsStructure = {
           "Display the clock in 24-hour format instead of 12-hour format. The clock is only shown in the status bar when connected to Bluetooth.",
         storageKey: "use24HourTime",
         defaultValue: false,
+      },
+    ],
+  },
+  update: {
+    title: "Software Update",
+    icon: SettingsUpdateIcon,
+    items: [
+      {
+        id: "software-update",
+        type: "custom",
+        component: SoftwareUpdate,
       },
     ],
   },
@@ -124,24 +136,6 @@ const settingsStructure = {
         type: "action",
         description: "Sign out out of Nocturne and reset all settings.",
         action: "signOut",
-      },
-    ],
-  },
-  about: {
-    title: "About",
-    icon: SettingsAboutIcon,
-    items: [
-      {
-        id: "nocturne-version",
-        title: "Nocturne Version",
-        type: "info",
-      },
-      {
-        id: "artwork-credits",
-        title: "Artwork & Credits",
-        type: "info",
-        description:
-          "All album artwork, artist images, and track metadata are provided by Spotify Technology S.A. These materials are protected by intellectual property rights owned by Spotify or its licensors.",
       },
     ],
   },
@@ -505,11 +499,17 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
           </div>
         );
       case "custom":
+        if (item.component) {
+          const Component = item.component;
+          return <Component key={item.id} />;
+        }
         switch (item.id) {
           case "bluetooth-devices":
             return <BluetoothDevices key={item.id} />;
           case "profile-info":
             return <AccountInfo key={item.id} userProfile={userProfile} />;
+          case "software-update":
+            return <SoftwareUpdate key={item.id} />;
           default:
             return null;
         }
