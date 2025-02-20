@@ -29,21 +29,10 @@
 
 ### Custom Credentials
 
-1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>.
-2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
-3. Once running on your Car Thing, press "Login with Phone" and scan the QR Code.
-4. Enter your Spotify Client ID and Client Secret on your phone. Your credentials will be encrypted and stored securely.
-5. Authorize with Spotify and start using Nocturne!
-
-### Default Credentials (Beta)
-
-**It is not recommended to use default credentials at this point in time. Unless you know what you're doing, please use custom credentials**
-
-1. First, follow the steps in <a href="#spotify-developer-setup">Spotify Developer Setup</a>
-2. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
-3. Once running on your Car Thing, hold the back button (under the knob) until the "Use Default Credentials (Beta)" button appears
-4. Press the "Use Default Credentials (Beta)" button
-5. Authorize with Spotify and start using Nocturne!
+1. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
+2. Once running on your Car Thing, scan the QR Code using your phone's camera.
+3. Authorize with Spotify and start using Nocturne!
+  - Due to the Spotify API's used, the Spotify app will say that it's Spotify for Desktop. This is normal and can be ignored.
 
 ### Button Mapping and Button Usage
 
@@ -53,32 +42,18 @@
 - Triple-press the right-most top hardware button to access brightness control
 - Press the hardware button underneath of the knob to go back in the application
 
-## Spotify Developer Setup
-
-1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-
-2. Log in with your Spotify account (create one if needed)
-
-3. Click "Create App"
-
-   - App name: Choose a name (e.g., "Nocturne")
-   - App description: Brief description of your app
-   - Redirect URI: Add `https://nocturne.brandons.place` for non-development usage, or `https://your.local.ip.address:port` for development usage
-   - Select "Web API" and "Web Playback SDK" as the API's you will be using
-
-4. After creating the app, you'll see your:
-   - Client ID (shown on the dashboard)
-   - Client Secret (click "Show Client Secret")
-
 ## Local Development Server
 
-First, set up the configuration and database:
+First, set up the configuration:
 
 1. Clone the repository:
 
 ```bash
+# for upstream
+git clone https://github.com/usenocturne/nocturne-ui.git
+# for forks
 git clone https://github.com/yourusername/nocturne-ui.git
-cd nocturne
+cd nocturne-ui
 ```
 
 2. Install dependencies:
@@ -100,11 +75,6 @@ cp .env.example .env.local
 4. Update your `.env.local` with the required values:
 
 ```env
-# Spotify
-NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
-NEXT_PUBLIC_REDIRECT_URI=your_redirect_uri
-
 # Development Environment
 NODE_ENV=development
 
@@ -307,6 +277,8 @@ This software was made possible only through the following individuals and open 
 ## Related
 
 [nocturne-image](https://github.com/usenocturne/nocturne-image) - The Debian image that runs this web application
+[nocturne-api](https://github.com/usenocturne/nocturne-api) - Cloudflare Worker for various tasks required server-side
+[nocturned](https://github.com/usenocturne/nocturned) - Local API for the Car Thing to handle bluetooth + others
 
 ## License
 
