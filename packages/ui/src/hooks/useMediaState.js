@@ -82,15 +82,28 @@ export function useMediaState(accessToken, handleError) {
           setCurrentlyPlayingTrackUri(data.item.uri);
 
           if (data.item.type === "track") {
-            const currentAlbum = data.item.album;
+            const currentAlbum = data.item.is_local
+              ? {
+                  id: null,
+                  name: data.item.name,
+                  images: [{ url: "/images/not-playing.webp" }],
+                  artists: data.item.artists,
+                  type: "local",
+                  uri: data.item.uri
+                }
+              : data.item.album;
+            
             if (
               !currentlyPlayingAlbum ||
-              currentlyPlayingAlbum.id !== currentAlbum.id
+              currentlyPlayingAlbum.id !== currentAlbum.id ||
+              (currentAlbum.type === "local" && currentAlbum.uri !== currentlyPlayingAlbum.uri)
             ) {
               setCurrentlyPlayingAlbum(currentAlbum);
               setAlbumsQueue((prevQueue) => {
                 const updatedQueue = prevQueue.filter(
-                  (album) => album.id !== currentAlbum.id
+                  (album) => album.type === "local" 
+                    ? album.uri !== currentAlbum.uri 
+                    : album.id !== currentAlbum.id
                 );
                 return [currentAlbum, ...updatedQueue];
               });

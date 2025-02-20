@@ -196,12 +196,14 @@ export default function Home({
                     <>
                       {albumsQueue.slice(0, 20).map((item) => (
                         <div
-                          key={item.id}
+                          key={item.type === "local" ? `local-${item.uri}` : item.id}
                           className="min-w-[280px] mr-10 snap-start"
                         >
                           <LongPressLink
                             href={
-                              item.type === "show"
+                              item.id === null
+                                ? ""
+                                : item.type === "show"
                                 ? `/show/${item.id}`
                                 : `/album/${item.id}`
                             }
@@ -226,7 +228,9 @@ export default function Home({
                           </LongPressLink>
                           <LongPressLink
                             href={
-                              item.type === "show"
+                              item.id === null
+                                ? ""
+                                : item.type === "show"
                                 ? `/show/${item.id}`
                                 : `/album/${item.id}`
                             }
@@ -243,7 +247,11 @@ export default function Home({
                             </h4>
                           ) : item.artists?.[0] ? (
                             <LongPressLink
-                              href={`/artist/${item.artists[0].id}`}
+                              href={
+                                item.id === null
+                                  ? ""
+                                  : `/artist/${item.artists[0].id}`
+                              }
                               spotifyUrl={
                                 item.artists[0]?.external_urls?.spotify
                               }
@@ -320,31 +328,51 @@ export default function Home({
                             key={`playlist-${playlist.id}`}
                             className="min-w-[280px] mr-10 snap-start"
                           >
-                            <LongPressLink
-                              href={`/playlist/${playlist.id}`}
-                              spotifyUrl={playlist?.external_urls?.spotify}
-                              accessToken={accessToken}
-                            >
-                              <Image
-                                src={
-                                  playlist?.images?.[0]?.url ||
-                                  "/images/not-playing.webp"
-                                }
-                                alt={`${playlist.name} Cover`}
-                                width={280}
-                                height={280}
-                                className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
-                              />
-                            </LongPressLink>
-                            <LongPressLink
-                              href={`/playlist/${playlist.id}`}
-                              spotifyUrl={playlist?.external_urls?.spotify}
-                              accessToken={accessToken}
-                            >
-                              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                                {playlist.name}
-                              </h4>
-                            </LongPressLink>
+                            {playlist.id === "37i9dQZF1EYkqdzj48dyYq" ? (
+                              <>
+                                <Image
+                                  src={
+                                    playlist?.images?.[0]?.url ||
+                                    "/images/not-playing.webp"
+                                  }
+                                  alt={`${playlist.name} Cover`}
+                                  width={280}
+                                  height={280}
+                                  className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
+                                />
+                                <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                                  {playlist.name}
+                                </h4>
+                              </>
+                            ) : (
+                              <>
+                                <LongPressLink
+                                  href={`/playlist/${playlist.id}`}
+                                  spotifyUrl={playlist?.external_urls?.spotify}
+                                  accessToken={accessToken}
+                                >
+                                  <Image
+                                    src={
+                                      playlist?.images?.[0]?.url ||
+                                      "/images/not-playing.webp"
+                                    }
+                                    alt={`${playlist.name} Cover`}
+                                    width={280}
+                                    height={280}
+                                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
+                                  />
+                                </LongPressLink>
+                                <LongPressLink
+                                  href={`/playlist/${playlist.id}`}
+                                  spotifyUrl={playlist?.external_urls?.spotify}
+                                  accessToken={accessToken}
+                                >
+                                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                                    {playlist.name}
+                                  </h4>
+                                </LongPressLink>
+                              </>
+                            )}
                             <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
                               {currentPlayback &&
                               currentPlayback.context &&

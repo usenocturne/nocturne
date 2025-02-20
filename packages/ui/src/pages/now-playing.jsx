@@ -122,7 +122,9 @@ export default function NowPlaying({
     ? currentPlayback.item.type === "episode"
       ? currentPlayback.item.name
       : currentPlayback.item.name || "Not Playing"
-    : "Not Playing";
+    : currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
+      ? "Up next"
+      : "Not Playing";
 
   const { trackNameScrollingEnabled, shouldScroll, trackNameRef } =
     useTrackScroll(trackName);
@@ -134,7 +136,9 @@ export default function NowPlaying({
     ? currentPlayback.item.type === "episode"
       ? currentPlayback.item.show.name
       : currentPlayback.item.artists.map((artist) => artist.name).join(", ")
-    : "";
+    : currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
+      ? "DJ X"
+      : "";
 
   const albumArt = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -142,7 +146,9 @@ export default function NowPlaying({
       : currentPlayback.item.type === "local" || !currentPlayback.item?.album?.images?.[0]?.url || !currentPlayback.item?.album?.images?.[0]
         ? "/images/not-playing.webp"
         : currentPlayback.item.album.images[0].url
-    : "/images/not-playing.webp";
+    : currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
+      ? "/images/dj.webp"
+      : "/images/not-playing.webp";
 
   const isPlaying = currentPlayback?.is_playing || false;
   const progress = currentPlayback?.item
@@ -213,7 +219,7 @@ export default function NowPlaying({
             <div className="min-w-[280px] mr-8">
               <LongPressLink
                 href={
-                  !currentPlayback
+                  !currentPlayback || currentPlayback?.item?.is_local || !currentPlayback?.item?.album?.id
                     ? ""
                     : currentPlayback?.item?.type === "episode"
                     ? `/show/${currentPlayback.item.show.id}`
@@ -222,6 +228,8 @@ export default function NowPlaying({
                 spotifyUrl={
                   currentPlayback?.item?.type === "episode"
                     ? currentPlayback.item.show.external_urls?.spotify
+                    : currentPlayback?.item?.is_local
+                    ? null
                     : currentPlayback?.item?.album?.external_urls?.spotify
                 }
                 accessToken={accessToken}
@@ -245,7 +253,7 @@ export default function NowPlaying({
               <div className="flex-1 text-center md:text-left">
                 <LongPressLink
                   href={
-                    !currentPlayback || currentPlayback?.item?.is_local
+                    !currentPlayback || currentPlayback?.item?.is_local || !currentPlayback?.item?.album?.id
                       ? ""
                       : currentPlayback?.item?.type === "episode"
                       ? `/show/${currentPlayback.item.show.id}`
@@ -254,6 +262,8 @@ export default function NowPlaying({
                   spotifyUrl={
                     currentPlayback?.item?.type === "episode"
                       ? currentPlayback.item.show.external_urls?.spotify
+                      : currentPlayback?.item?.is_local
+                      ? null
                       : currentPlayback?.item?.album?.external_urls?.spotify
                   }
                   accessToken={accessToken}

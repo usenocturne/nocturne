@@ -5,6 +5,7 @@ const LongPressLink = ({ href, children, spotifyUrl, accessToken }) => {
   const [pressTimer, setPressTimer] = useState(null);
 
   const startPress = () => {
+    if (!spotifyUrl) return;
     setPressTimer(
       setTimeout(() => {
         window.open(spotifyUrl, "_blank");
