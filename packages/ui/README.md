@@ -32,7 +32,7 @@
 1. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 2. Once running on your Car Thing, scan the QR Code using your phone's camera.
 3. Authorize with Spotify and start using Nocturne!
-  - Due to the Spotify API's used, the Spotify app will say that it's Spotify for Desktop. This is normal and can be ignored.
+4. Due to the Spotify API's used, the Spotify app will say that it's Spotify for Desktop. This is normal and can be ignored.
 
 ### Button Mapping and Button Usage
 
