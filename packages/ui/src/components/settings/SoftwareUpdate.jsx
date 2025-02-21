@@ -2,24 +2,33 @@ import React from "react";
 import { SettingsUpdateIcon, CheckCircleIcon } from "../icons";
 
 const SoftwareUpdate = ({
-  currentVersion = "3.0.0",
-  latestVersion = "3.0.0",
+  nocturneCurrentVersion = "3.0.0",
+  nocturneLatestVersion = "3.0.0",
+  connectorCurrentVersion = "1.0.0",
+  connectorLatestVersion = "1.0.0",
 }) => {
-  const hasUpdate = currentVersion !== latestVersion;
+  const hasNocturneUpdate = nocturneCurrentVersion !== nocturneLatestVersion;
+  const hasConnectorUpdate = connectorCurrentVersion !== connectorLatestVersion;
 
-  return (
+  const UpdateSection = ({
+    name,
+    currentVersion,
+    latestVersion,
+    hasUpdate,
+    imagePath,
+  }) => (
     <div className="space-y-6">
       <div className="p-4 bg-white/10 rounded-xl border border-white/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <img
-              src="/images/os/3.0.0.webp"
-              alt="Nocturne 3.0.0"
-              className="w-16 h-16 object-cover"
+              src={imagePath}
+              alt={`${name} ${currentVersion}`}
+              className="w-16 h-16 rounded-xl object-cover"
             />
             <div className="ml-4">
               <div className="text-[28px] font-[580] text-white tracking-tight">
-                Nocturne {currentVersion}
+                {name} {currentVersion}
               </div>
               <div className="flex items-center text-[24px] font-[560] tracking-tight">
                 {hasUpdate ? (
@@ -59,6 +68,26 @@ const SoftwareUpdate = ({
           </button>
         </div>
       )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      <UpdateSection
+        name="Nocturne"
+        currentVersion={nocturneCurrentVersion}
+        latestVersion={nocturneLatestVersion}
+        hasUpdate={hasNocturneUpdate}
+        imagePath="/images/os/nocturne/3.0.0.webp"
+      />
+
+      <UpdateSection
+        name="Connector"
+        currentVersion={connectorCurrentVersion}
+        latestVersion={connectorLatestVersion}
+        hasUpdate={hasConnectorUpdate}
+        imagePath="/images/os/connector/1.0.0.webp"
+      />
     </div>
   );
 };
