@@ -6,6 +6,9 @@ export function useKeyboardHandlers({
   drawerOpen,
   setDrawerOpen,
   showBrightnessOverlay,
+  setShowBrightnessOverlay,
+  brightness,
+  setBrightness,
   router,
   setActiveSection,
   handleError,
@@ -25,9 +28,41 @@ export function useKeyboardHandlers({
     const pressStartTimes = {};
     const holdDuration = 2000;
     let hideTimerRef = null;
+    let lastMPressTime = 0;
+    let mPressCount = 0;
+
+    const handleWheel = (event) => {
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        setBrightness((prev) => {
+          const newValue = prev + (event.deltaX > 0 ? 5 : -5);
+          return Math.max(5, Math.min(250, newValue));
+        });
+      }
+    };
 
     const handleKeyDown = async (event) => {
+      if (event.key.toLowerCase() === "m") {
+        const currentTime = Date.now();
+        if (currentTime - lastMPressTime < 2000) {
+          mPressCount++;
+          if (mPressCount === 3) {
+            event.preventDefault();
+            setShowBrightnessOverlay(true);
+            mPressCount = 0;
+          }
+        } else {
+          mPressCount = 1;
+        }
+        lastMPressTime = currentTime;
+        return;
+      }
+
       if (event.key === "Escape") {
+        if (showBrightnessOverlay) {
+          setShowBrightnessOverlay(false);
+          return;
+        }
         if (drawerOpen) {
           setDrawerOpen(false);
         } else {
@@ -53,6 +88,12 @@ export function useKeyboardHandlers({
       }
 
       if (!validKeys.includes(event.key)) return;
+
+      if (showBrightnessOverlay) {
+        event.preventDefault();
+        return;
+      }
+
       pressStartTimes[event.key] = Date.now();
       pressStartTimes[`${event.key}_path`] = window.location.pathname;
     };
@@ -249,10 +290,12 @@ export function useKeyboardHandlers({
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("wheel", handleWheel, { passive: false });
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("wheel", handleWheel);
       if (hideTimerRef) {
         clearTimeout(hideTimerRef);
       }
@@ -273,5 +316,8 @@ export function useKeyboardHandlers({
     setActiveSection,
     handleBack,
     updateSectionHistory,
+    showBrightnessOverlay,
+    setShowBrightnessOverlay,
+    setBrightness,
   ]);
 }
