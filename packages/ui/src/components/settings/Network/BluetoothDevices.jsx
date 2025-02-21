@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogBackdrop,
 } from "@headlessui/react";
-import { inter } from "../../constants/fonts";
+import { inter } from "../../../constants/fonts";
 
 const BluetoothDevices = () => {
   const [devices, setDevices] = useState([]);

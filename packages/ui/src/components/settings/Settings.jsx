@@ -2,11 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Switch } from "@headlessui/react";
 import packageInfo from "../../../package.json";
-import BluetoothDevices from "../bluetooth/BluetoothDevices";
 import AccountInfo from "./AccountInfo";
 import SoftwareUpdate from "./SoftwareUpdate";
 import {
-  BluetoothIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   SettingsAccountIcon,
@@ -15,7 +13,12 @@ import {
   SettingsGeneralIcon,
   SettingsPlaybackIcon,
   SettingsSupportIcon,
+  NetworkIcon,
+  BluetoothIcon,
+  SignalMiddleIcon,
 } from "../icons";
+import BluetoothDevices from "./Network/BluetoothDevices";
+import WiFiNetworks from "./Network/WiFiNetworks";
 
 const settingsStructure = {
   general: {
@@ -53,13 +56,23 @@ const settingsStructure = {
       },
     ],
   },
+  // TODO: Change this into just a network menu with bluetooth and wifi submenus
   bluetooth: {
     title: "Bluetooth",
     icon: BluetoothIcon,
-    type: "custom",
     items: [
       {
-        id: "bluetooth-devices",
+        id: "bluetooth",
+        type: "custom",
+      },
+    ],
+  },
+  wifi: {
+    title: "Wi-Fi",
+    icon: SignalMiddleIcon,
+    items: [
+      {
+        id: "wifi",
         type: "custom",
       },
     ],
@@ -414,17 +427,15 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
     }
   };
 
-  const mainMenuClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${
-    currentPage === "main"
-      ? "translate-x-0 opacity-100 pointer-events-auto"
-      : "-translate-x-full opacity-0 pointer-events-none"
-  }`;
+  const mainMenuClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${currentPage === "main"
+    ? "translate-x-0 opacity-100 pointer-events-auto"
+    : "-translate-x-full opacity-0 pointer-events-none"
+    }`;
 
-  const subPageClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${
-    currentPage !== "main" && currentPage !== "transitioning"
-      ? "translate-x-0 opacity-100 pointer-events-auto"
-      : "translate-x-full opacity-0 pointer-events-none"
-  }`;
+  const subPageClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${currentPage !== "main" && currentPage !== "transitioning"
+    ? "translate-x-0 opacity-100 pointer-events-auto"
+    : "translate-x-full opacity-0 pointer-events-none"
+    }`;
 
   const renderSettingItem = (item) => {
     switch (item.type) {
@@ -435,16 +446,14 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
               <Switch
                 checked={settings[item.storageKey]}
                 onChange={() => handleToggle(item.storageKey)}
-                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
-                }`}
+                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
+                  }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    settings[item.storageKey]
-                      ? "translate-x-9"
-                      : "translate-x-0"
-                  }`}
+                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings[item.storageKey]
+                    ? "translate-x-9"
+                    : "translate-x-0"
+                    }`}
                 />
               </Switch>
               <span className="ml-3 text-[32px] font-[580] text-white tracking-tight">
@@ -504,7 +513,9 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
           return <Component key={item.id} />;
         }
         switch (item.id) {
-          case "bluetooth-devices":
+          case "wifi":
+            return <WiFiNetworks key={item.id} />;
+          case "bluetooth":
             return <BluetoothDevices key={item.id} />;
           case "profile-info":
             return <AccountInfo key={item.id} userProfile={userProfile} />;

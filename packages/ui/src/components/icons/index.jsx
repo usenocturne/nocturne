@@ -54,3 +54,4 @@ export { default as SignalLowIcon } from "./SignalLowIcon";
 export { default as SignalLowestIcon } from "./SignalLowestIcon";
 export { default as BatteryIcon } from "./BatteryIcon";
 export { default as CheckCircleIcon } from "./CheckCircleIcon";
+export { default as NetworkIcon } from "./NetworkIcon";
