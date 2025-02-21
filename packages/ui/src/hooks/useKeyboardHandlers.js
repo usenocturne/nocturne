@@ -28,8 +28,6 @@ export function useKeyboardHandlers({
     const pressStartTimes = {};
     const holdDuration = 2000;
     let hideTimerRef = null;
-    let lastMPressTime = 0;
-    let mPressCount = 0;
 
     const handleWheel = (event) => {
       if (showBrightnessOverlay) {
@@ -43,18 +41,8 @@ export function useKeyboardHandlers({
 
     const handleKeyDown = async (event) => {
       if (event.key.toLowerCase() === "m") {
-        const currentTime = Date.now();
-        if (currentTime - lastMPressTime < 2000) {
-          mPressCount++;
-          if (mPressCount === 3) {
-            event.preventDefault();
-            setShowBrightnessOverlay(true);
-            mPressCount = 0;
-          }
-        } else {
-          mPressCount = 1;
-        }
-        lastMPressTime = currentTime;
+        event.preventDefault();
+        setShowBrightnessOverlay(true);
         return;
       }
 
