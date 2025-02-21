@@ -41,12 +41,15 @@ export const getCurrentDevice = async function (accessToken, handleError) {
       let currentDevice = d[0];
 
       d.forEach((device) => {
-        if (devicesData.active_device_id == device.device_id) {
-          currentDevice = device
+        if (devicesData.active_device_id === device.device_id) {
+          currentDevice = device;
         }
       });
 
-      return currentDevice;
+      return {
+        id: devicesData.active_device_id || currentDevice?.device_id,
+        ...currentDevice
+      };
     } else {
       console.error("Error fetching device list:", response.status);
       return null;

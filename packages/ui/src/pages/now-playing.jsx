@@ -158,6 +158,8 @@ export default function NowPlaying({
   const isPlaying = currentPlayback?.is_playing || false;
   const progress = currentPlayback?.item
     ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
+    : currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
+    ? 0
     : 0;
   const [isSeeking, setIsSeeking] = useState(false);
   const [localProgress, setProgress] = useState(progress);

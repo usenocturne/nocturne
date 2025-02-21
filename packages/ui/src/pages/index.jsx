@@ -7,6 +7,7 @@ import Image from "next/image";
 import { fetchLikedSongs } from "../services/playlistService";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
 import { useRouter } from "next/router";
+import { getCurrentDevice } from "@/services/deviceService";
 
 export default function Home({
   accessToken,
@@ -22,6 +23,7 @@ export default function Home({
   showBrightnessOverlay,
   handleError,
   currentPlayback,
+  fetchCurrentPlayback,
 }) {
   const [showDonationModal, setShowDonationModal] = useState(false);
   const router = useRouter();
@@ -322,57 +324,37 @@ export default function Home({
                         </div>
                       )}
                       {playlists
-                        ?.filter((item) => item?.type === "playlist")
+                        ?.filter((item) => item?.type === "playlist" && item.id !== "37i9dQZF1EYkqdzj48dyYq")
                         .map((playlist) => (
                           <div
                             key={`playlist-${playlist.id}`}
                             className="min-w-[280px] mr-10 snap-start"
                           >
-                            {playlist.id === "37i9dQZF1EYkqdzj48dyYq" ? (
-                              <>
-                                <Image
-                                  src={
-                                    playlist?.images?.[0]?.url ||
-                                    "/images/not-playing.webp"
-                                  }
-                                  alt={`${playlist.name} Cover`}
-                                  width={280}
-                                  height={280}
-                                  className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
-                                />
-                                <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                                  {playlist.name}
-                                </h4>
-                              </>
-                            ) : (
-                              <>
-                                <LongPressLink
-                                  href={`/playlist/${playlist.id}`}
-                                  spotifyUrl={playlist?.external_urls?.spotify}
-                                  accessToken={accessToken}
-                                >
-                                  <Image
-                                    src={
-                                      playlist?.images?.[0]?.url ||
-                                      "/images/not-playing.webp"
-                                    }
-                                    alt={`${playlist.name} Cover`}
-                                    width={280}
-                                    height={280}
-                                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
-                                  />
-                                </LongPressLink>
-                                <LongPressLink
-                                  href={`/playlist/${playlist.id}`}
-                                  spotifyUrl={playlist?.external_urls?.spotify}
-                                  accessToken={accessToken}
-                                >
-                                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                                    {playlist.name}
-                                  </h4>
-                                </LongPressLink>
-                              </>
-                            )}
+                            <LongPressLink
+                              href={`/playlist/${playlist.id}`}
+                              spotifyUrl={playlist?.external_urls?.spotify}
+                              accessToken={accessToken}
+                            >
+                              <Image
+                                src={
+                                  playlist?.images?.[0]?.url ||
+                                  "/images/not-playing.webp"
+                                }
+                                alt={`${playlist.name} Cover`}
+                                width={280}
+                                height={280}
+                                className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
+                              />
+                            </LongPressLink>
+                            <LongPressLink
+                              href={`/playlist/${playlist.id}`}
+                              spotifyUrl={playlist?.external_urls?.spotify}
+                              accessToken={accessToken}
+                            >
+                              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                                {playlist.name}
+                              </h4>
+                            </LongPressLink>
                             <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
                               {currentPlayback &&
                               currentPlayback.context &&
@@ -451,59 +433,121 @@ export default function Home({
                         </h4>
                       </div>
                     ))}
-                  {activeSection === "radio" &&
-                    radio.map((mix) => (
+                  {activeSection === "radio" && (
+                    <>
                       <div
-                        key={mix.id}
+                        key="dj-playlist"
                         className="min-w-[280px] mr-10 snap-start"
                       >
-                        <LongPressLink
-                          href={`/mix/${mix.id}?accessToken=${accessToken}`}
-                          accessToken={accessToken}
+                        <div 
+                          className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10 cursor-pointer"
+                          onClick={async () => {
+                            try {
+                              const device = await getCurrentDevice(accessToken, handleError);
+                              const deviceId = device?.id;
+                              if (!deviceId) return;
+
+                              await fetch(`https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`, {
+                                method: 'POST',
+                                headers: {
+                                  'accept-language': 'en',
+                                  'authorization': `Bearer ${accessToken}`,
+                                  'content-type': 'application/x-www-form-urlencoded'
+                                },
+                                body: '{"command": {"endpoint": "play", "context": {"entity_uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "url": "hm:\\/\\/lexicon-session-provider\\/context-resolve\\/v2\\/session?contextUri=spotify:playlist:37i9dQZF1EYkqdzj48dyYq"}}}'
+                              });
+
+                              // Wait a bit for the playback to start and then fetch the updated state
+                              setTimeout(() => {
+                                fetchCurrentPlayback();
+                              }, 300);
+                            } catch (error) {
+                              console.error("Error playing DJ playlist:", error);
+                              handleError("PLAYBACK_ERROR", error.message);
+                            }
+                          }}
                         >
                           <Image
-                            src={
-                              mix.images[0].url || "/images/not-playing.webp"
-                            }
-                            alt="Radio Cover"
+                            src="/images/radio-cover/dj.webp"
+                            alt="DJ Playlist"
                             width={280}
                             height={280}
-                            className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
+                            className="aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                           />
-                        </LongPressLink>
-                        <LongPressLink
-                          href={`/mix/${mix.id}?accessToken=${accessToken}`}
-                          accessToken={accessToken}
-                        >
-                          <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                            {mix.name}
-                          </h4>
-                        </LongPressLink>
+                        </div>
+                        <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                          DJ
+                        </h4>
                         <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
-                          {(() => {
-                            const playingMixId = localStorage.getItem(
-                              `playingMix-${mix.id}`
-                            );
-                            return currentPlayback?.context?.uri ===
-                              playingMixId ? (
-                              <>
-                                <div className="w-5 ml-0.5 mr-3 mb-2">
-                                  <section>
-                                    <div className="wave0"></div>
-                                    <div className="wave1"></div>
-                                    <div className="wave2"></div>
-                                    <div className="wave3"></div>
-                                  </section>
-                                </div>
-                                Now Playing
-                              </>
-                            ) : (
-                              `${mix.tracks.length} Songs`
-                            );
-                          })()}
+                          {currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" ? (
+                            <>
+                              <div className="w-5 ml-0.5 mr-3 mb-2">
+                                <section>
+                                  <div className="wave0"></div>
+                                  <div className="wave1"></div>
+                                  <div className="wave2"></div>
+                                  <div className="wave3"></div>
+                                </section>
+                              </div>
+                              Now Playing
+                            </>
+                          ) : "AI DJ"}
                         </h4>
                       </div>
-                    ))}
+                      {radio.map((mix) => (
+                        <div
+                          key={mix.id}
+                          className="min-w-[280px] mr-10 snap-start"
+                        >
+                          <LongPressLink
+                            href={`/mix/${mix.id}?accessToken=${accessToken}`}
+                            accessToken={accessToken}
+                          >
+                            <Image
+                              src={
+                                mix.images[0].url || "/images/not-playing.webp"
+                              }
+                              alt="Radio Cover"
+                              width={280}
+                              height={280}
+                              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
+                            />
+                          </LongPressLink>
+                          <LongPressLink
+                            href={`/mix/${mix.id}?accessToken=${accessToken}`}
+                            accessToken={accessToken}
+                          >
+                            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                              {mix.name}
+                            </h4>
+                          </LongPressLink>
+                          <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
+                            {(() => {
+                              const playingMixId = localStorage.getItem(
+                                `playingMix-${mix.id}`
+                              );
+                              return currentPlayback?.context?.uri ===
+                                playingMixId ? (
+                                <>
+                                  <div className="w-5 ml-0.5 mr-3 mb-2">
+                                    <section>
+                                      <div className="wave0"></div>
+                                      <div className="wave1"></div>
+                                      <div className="wave2"></div>
+                                      <div className="wave3"></div>
+                                    </section>
+                                  </div>
+                                  Now Playing
+                                </>
+                              ) : (
+                                `${mix.tracks.length} Songs`
+                              );
+                            })()}
+                          </h4>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </HorizontalScroll>
             ) : (
