@@ -143,22 +143,8 @@ mkcert localhost 127.0.0.1 ::1 your.local.ip.address
 Copy the certificate to the current dir.
 
 ```bash
-# Rename the generated certificates
 mv localhost+3.pem cert.crt
 mv localhost+3-key.pem cert.key
-
-# Copy CA certificates (locations vary by OS)
-# macOS
-cp "$(mkcert -CAROOT)/rootCA.pem" ca.crt
-cp "$(mkcert -CAROOT)/rootCA-key.pem" ca.key
-
-# Windows
-copy "%LOCALAPPDATA%\mkcert\rootCA.pem" ca.crt
-copy "%LOCALAPPDATA%\mkcert\rootCA-key.pem" ca.key
-
-# Linux
-cp "$(mkcert -CAROOT)/rootCA.pem" ca.crt
-cp "$(mkcert -CAROOT)/rootCA-key.pem" ca.key
 ```
 
 Create custom server file at `./server.js`:

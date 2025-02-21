@@ -18,6 +18,7 @@ import {
   CastIcon,
 } from "../../icons";
 import { inter } from "../../../constants/fonts";
+import { generateRandomString } from "../../../lib/utils";
 
 const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
   const [devices, setDevices] = useState([]);
@@ -34,20 +35,35 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
     try {
       setIsLoading(true);
       const response = await fetch(
-        "https://api.spotify.com/v1/me/player/devices",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+        `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`, {
+        method: 'PUT',
+        headers: {
+          'accept': 'application/json',
+          'accept-language': 'en-US,en;q=0.9',
+          'authorization': `Bearer ${accessToken}`,
+          'content-type': 'application/json',
+          'x-spotify-connection-id': generateRandomString(148).toString("base64")
+        },
+        body: JSON.stringify({
+          'member_type': 'CONNECT_STATE',
+          'device': {
+            'device_info': {
+              'capabilities': {
+                'can_be_player': false,
+                'hidden': true,
+                'needs_full_player_state': true
+              }
+            }
+          }
+        })
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch devices");
       }
 
       const data = await response.json();
-      setDevices(data.devices);
+      setDevices(Object.values(data.devices));
     } catch (error) {
       handleError("DEVICES_FETCH_ERROR", error.message);
     } finally {
@@ -86,7 +102,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
     <Dialog open={isOpen} onClose={onClose} className="relative z-40">
       <DialogBackdrop
         transition
-        className="fixed inset-0 bg-black/10 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+        className="fixed inset-0 bg-black/40 transition-opacity data-[closed]:opacity-0 data-[enter]:opacity-100 data-[enter]:duration-300 data-[leave]:duration-300 data-[enter]:ease-out data-[leave]:ease-in"
       />
 
       <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
@@ -123,22 +139,22 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
                     {devices.map((device) => (
                       <button
                         key={device.id}
-                        onClick={() => handleDeviceSelect(device.id)}
+                        onClick={() => handleDeviceSelect(device.device_id)}
                         disabled={isTransferring}
                         className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors disabled:opacity-50"
                       >
                         <div className="flex items-center space-x-3">
                           {(() => {
-                            switch (device.type) {
-                              case "Computer":
+                            switch (device.device_type) {
+                              case "COMPUTER":
                                 return (
                                   <LaptopIcon className="h-8 w-8 text-white/60" />
                                 );
-                              case "Smartphone":
+                              case "SMARTPHONE":
                                 return (
                                   <SmartphoneIcon className="h-8 w-8 text-white/60" />
                                 );
-                              case "Speaker":
+                              case "SPEAKER":
                                 return (
                                   <SpeakerIcon className="h-8 w-8 text-white/60" />
                                 );
@@ -146,25 +162,14 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
                                 return (
                                   <TvIcon className="h-8 w-8 text-white/60" />
                                 );
-                              case "Tablet":
+                              case "TABLET":
                                 return (
                                   <TabletIcon className="h-8 w-8 text-white/60" />
                                 );
-                              case "Gamepad":
-                                return (
-                                  <GamepadIcon className="h-8 w-8 text-white/60" />
-                                );
-                              case "AVR":
-                              case "STB":
-                              case "AudioDongle":
-                                return (
-                                  <RadiowaveIcon className="h-8 w-8 text-white/60" />
-                                );
-                              case "Car":
+                              case "CAR":
                                 return (
                                   <CarIcon className="h-8 w-8 text-white/60" />
                                 );
-                              case "CastVideo":
                               case "CastAudio":
                                 return (
                                   <CastIcon className="h-8 w-8 text-white/60" />

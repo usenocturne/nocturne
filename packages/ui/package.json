@@ -14,7 +14,6 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "color-thief-browser": "^2.0.2",
-    "lodash": "^4.17.21",
     "next": "^14.2.24",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
@@ -26,11 +25,6 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.7",
     "postcss": "^8.5.2",
-    "tailwindcss": "^3.4.17",
-    "vercel": "39.1.1",
-    "wrangler": "^3.109.1"
-  },
-  "overrides": {
-    "vercel": "$vercel"
+    "tailwindcss": "^3.4.17"
   }
 }
