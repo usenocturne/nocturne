@@ -260,65 +260,77 @@ export default function NowPlaying({
 
             {!showLyrics || !currentPlayback?.item ? (
               <div className="flex-1 text-center md:text-left">
-                <LongPressLink
-                  href={
-                    !currentPlayback ||
-                    currentPlayback?.item?.is_local ||
-                    !currentPlayback?.item?.album?.id
-                      ? ""
-                      : currentPlayback?.item?.type === "episode"
-                      ? `/show/${currentPlayback.item.show.id}`
-                      : `/album/${currentPlayback?.item?.album?.id}`
-                  }
-                  spotifyUrl={
-                    currentPlayback?.item?.type === "episode"
-                      ? currentPlayback.item.show.external_urls?.spotify
-                      : currentPlayback?.item?.is_local
-                      ? null
-                      : currentPlayback?.item?.album?.external_urls?.spotify
-                  }
-                  accessToken={accessToken}
-                >
-                  {trackNameScrollingEnabled ? (
-                    <div className="track-name-container">
-                      <h4
-                        ref={trackNameRef}
-                        key={currentPlayback?.item?.id || "not-playing"}
-                        className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                          trackNameScrollingEnabled && shouldScroll
-                            ? "animate-scroll"
-                            : ""
-                        }`}
-                      >
+                {currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item ? (
+                  <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
+                    {trackName}
+                  </h4>
+                ) : (
+                  <LongPressLink
+                    href={
+                      !currentPlayback ||
+                      currentPlayback?.item?.is_local ||
+                      !currentPlayback?.item?.album?.id
+                        ? ""
+                        : currentPlayback?.item?.type === "episode"
+                        ? `/show/${currentPlayback.item.show.id}`
+                        : `/album/${currentPlayback?.item?.album?.id}`
+                    }
+                    spotifyUrl={
+                      currentPlayback?.item?.type === "episode"
+                        ? currentPlayback.item.show.external_urls?.spotify
+                        : currentPlayback?.item?.is_local
+                        ? null
+                        : currentPlayback?.item?.album?.external_urls?.spotify
+                    }
+                    accessToken={accessToken}
+                  >
+                    {trackNameScrollingEnabled ? (
+                      <div className="track-name-container">
+                        <h4
+                          ref={trackNameRef}
+                          key={currentPlayback?.item?.id || "not-playing"}
+                          className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
+                            trackNameScrollingEnabled && shouldScroll
+                              ? "animate-scroll"
+                              : ""
+                          }`}
+                        >
+                          {trackName}
+                        </h4>
+                      </div>
+                    ) : (
+                      <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
                         {trackName}
                       </h4>
-                    </div>
-                  ) : (
-                    <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
-                      {trackName}
-                    </h4>
-                  )}
-                </LongPressLink>
-                <LongPressLink
-                  href={
-                    currentPlayback?.item?.is_local
-                      ? ""
-                      : currentPlayback?.item?.type === "episode"
-                      ? `/show/${currentPlayback.item.show.id}`
-                      : `/artist/${currentPlayback?.item?.artists[0]?.id}`
-                  }
-                  spotifyUrl={
-                    currentPlayback?.item?.type === "episode"
-                      ? currentPlayback.item.show.external_urls?.spotify
-                      : currentPlayback?.item?.artists[0]?.external_urls
-                          ?.spotify
-                  }
-                  accessToken={accessToken}
-                >
+                    )}
+                  </LongPressLink>
+                )}
+                {currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item ? (
                   <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
                     {artistName}
                   </h4>
-                </LongPressLink>
+                ) : (
+                  <LongPressLink
+                    href={
+                      currentPlayback?.item?.is_local
+                        ? ""
+                        : currentPlayback?.item?.type === "episode"
+                        ? `/show/${currentPlayback.item.show.id}`
+                        : `/artist/${currentPlayback?.item?.artists[0]?.id}`
+                    }
+                    spotifyUrl={
+                      currentPlayback?.item?.type === "episode"
+                        ? currentPlayback.item.show.external_urls?.spotify
+                        : currentPlayback?.item?.artists[0]?.external_urls
+                            ?.spotify
+                    }
+                    accessToken={accessToken}
+                  >
+                    <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
+                      {artistName}
+                    </h4>
+                  </LongPressLink>
+                )}
               </div>
             ) : (
               <div className="flex-1 flex flex-col h-[280px]">
