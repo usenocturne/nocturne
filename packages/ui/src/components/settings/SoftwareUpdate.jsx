@@ -17,7 +17,7 @@ const SoftwareUpdate = ({
     hasUpdate,
     imagePath,
   }) => (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="p-4 bg-white/10 rounded-xl border border-white/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -72,7 +72,7 @@ const SoftwareUpdate = ({
   );
 
   return (
-    <div className="space-y-8">
+    <div className={`space-y-${hasNocturneUpdate ? "6" : "4"}`}>
       <UpdateSection
         name="Nocturne"
         currentVersion={nocturneCurrentVersion}
