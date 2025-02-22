@@ -1,5 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { SignalLowestIcon, SignalMiddleIcon, SignalMaxIcon, EyeOffIcon, CheckIcon } from "@/components/icons";
+import {
+  WifiMaxIcon,
+  WifiHighIcon,
+  WifiLowIcon,
+  LockIcon,
+  CheckIcon,
+} from "@/components/icons";
 
 const WiFiNetworks = () => {
   const [currentNetwork, setCurrentNetwork] = useState(null);
@@ -14,14 +20,15 @@ const WiFiNetworks = () => {
   const buttonPressInProgress = useRef(false);
 
   const updateNetworkLists = (scanData, savedNetworks, current) => {
-    const filteredMyNetworks = savedNetworks.filter(myNetwork =>
-      scanData.some(scanNetwork => scanNetwork.ssid === myNetwork.ssid)
+    const filteredMyNetworks = savedNetworks.filter((myNetwork) =>
+      scanData.some((scanNetwork) => scanNetwork.ssid === myNetwork.ssid)
     );
     setMyNetworks(filteredMyNetworks);
 
-    const otherNetworksFiltered = scanData.filter(network =>
-      !savedNetworks.some(myNetwork => myNetwork.ssid === network.ssid) &&
-      (!current || network.ssid !== current.ssid)
+    const otherNetworksFiltered = scanData.filter(
+      (network) =>
+        !savedNetworks.some((myNetwork) => myNetwork.ssid === network.ssid) &&
+        (!current || network.ssid !== current.ssid)
     );
     setOtherNetworks(otherNetworksFiltered);
   };
@@ -49,8 +56,12 @@ const WiFiNetworks = () => {
         }
         const data = await response.json();
 
-        const current = data.find(network => network.flags.includes("[CURRENT]"));
-        const savedNetworks = data.filter(network => !network.flags.includes("[CURRENT]"));
+        const current = data.find((network) =>
+          network.flags.includes("[CURRENT]")
+        );
+        const savedNetworks = data.filter(
+          (network) => !network.flags.includes("[CURRENT]")
+        );
 
         setCurrentNetwork(current);
         setMyNetworks(savedNetworks);
@@ -69,7 +80,10 @@ const WiFiNetworks = () => {
   useEffect(() => {
     if (!myNetworks || !currentNetwork) return;
 
-    const intervalId = setInterval(() => performScan(myNetworks, currentNetwork), 15000);
+    const intervalId = setInterval(
+      () => performScan(myNetworks, currentNetwork),
+      15000
+    );
     return () => clearInterval(intervalId);
   }, [myNetworks, currentNetwork]);
 
@@ -78,11 +92,11 @@ const WiFiNetworks = () => {
     const iconClass = "w-[24px] h-[24px]";
 
     if (signalStrength >= -50) {
-      return <SignalMaxIcon className={iconClass} />;
+      return <WifiMaxIcon className={iconClass} />;
     } else if (signalStrength >= -70) {
-      return <SignalMiddleIcon className={iconClass} />;
+      return <WifiHighIcon className={iconClass} />;
     } else {
-      return <SignalLowestIcon className={iconClass} />;
+      return <WifiLowIcon className={iconClass} />;
     }
   };
 
@@ -93,7 +107,9 @@ const WiFiNetworks = () => {
   const renderCurrentNetwork = () => {
     if (!currentNetwork) return null;
 
-    const scanNetwork = scanResults.find(scan => scan.ssid === currentNetwork.ssid);
+    const scanNetwork = scanResults.find(
+      (scan) => scan.ssid === currentNetwork.ssid
+    );
     const securityFlags = scanNetwork?.flags || currentNetwork.flags;
 
     return (
@@ -108,7 +124,7 @@ const WiFiNetworks = () => {
             <div className="flex items-center gap-3">
               <CheckIcon className="text-white w-[24px] h-[24px]" />
               {hasPasswordSecurity(securityFlags) && (
-                <EyeOffIcon className="text-white" size={24} />
+                <LockIcon className="text-white" size={24} />
               )}
               {scanNetwork && getSignalIcon(scanNetwork.signal)}
             </div>
@@ -139,7 +155,7 @@ const WiFiNetworks = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   {hasPasswordSecurity(network.flags) && (
-                    <EyeOffIcon className="text-white" size={24} />
+                    <LockIcon className="text-white" size={24} />
                   )}
                   {getSignalIcon(network.signal)}
                 </div>
@@ -152,8 +168,8 @@ const WiFiNetworks = () => {
   };
 
   const renderMyNetworks = () => {
-    const networksInRange = myNetworks.filter(network =>
-      scanResults.some(scan => scan.ssid === network.ssid)
+    const networksInRange = myNetworks.filter((network) =>
+      scanResults.some((scan) => scan.ssid === network.ssid)
     );
 
     if (networksInRange.length === 0) return null;
@@ -166,7 +182,9 @@ const WiFiNetworks = () => {
 
         <div className="space-y-4 pt-4">
           {networksInRange.map((network) => {
-            const scanNetwork = scanResults.find(scan => scan.ssid === network.ssid);
+            const scanNetwork = scanResults.find(
+              (scan) => scan.ssid === network.ssid
+            );
             const securityFlags = scanNetwork?.flags || network.flags;
 
             return (
@@ -182,7 +200,7 @@ const WiFiNetworks = () => {
                   </div>
                   <div className="flex items-center gap-3">
                     {hasPasswordSecurity(securityFlags) && (
-                      <EyeOffIcon className="text-white" size={24} />
+                      <LockIcon className="text-white" size={24} />
                     )}
                     {scanNetwork && getSignalIcon(scanNetwork.signal)}
                   </div>

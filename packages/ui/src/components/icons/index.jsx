@@ -58,3 +58,4 @@ export { default as WifiHighIcon } from "./WifiHighIcon";
 export { default as WifiLowIcon } from "./WifiLowIcon";
 export { default as WifiMaxIcon } from "./WifiMaxIcon";
 export { default as WifiOffIcon } from "./WifiOffIcon";
+export { default as LockIcon } from "./LockIcon";
