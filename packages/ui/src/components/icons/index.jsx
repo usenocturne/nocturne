@@ -59,3 +59,4 @@ export { default as WifiLowIcon } from "./WifiLowIcon";
 export { default as WifiMaxIcon } from "./WifiMaxIcon";
 export { default as WifiOffIcon } from "./WifiOffIcon";
 export { default as LockIcon } from "./LockIcon";
+export { default as DJIcon } from "./DJIcon";

@@ -45,6 +45,7 @@ import {
   RepeatOneIcon,
   ShuffleIcon,
   LyricsIcon,
+  DJIcon,
 } from "../components/icons";
 
 export default function NowPlaying({
@@ -158,7 +159,8 @@ export default function NowPlaying({
   const isPlaying = currentPlayback?.is_playing || false;
   const progress = currentPlayback?.item
     ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
-    : currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
+    : currentPlayback?.context?.uri ===
+        "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
     ? 0
     : 0;
   const [isSeeking, setIsSeeking] = useState(false);
@@ -218,6 +220,29 @@ export default function NowPlaying({
     return <VolumeLoudIcon className="w-7 h-7" />;
   };
 
+  const handleDJSignal = async () => {
+    try {
+      const deviceId = currentPlayback?.device?.id;
+      if (!deviceId) return;
+
+      await fetch(
+        `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
+        {
+          method: "POST",
+          headers: {
+            "accept-language": "en",
+            "app-platform": "Win32_x86_64",
+            authorization: `Bearer ${accessToken}`,
+            "content-type": "application/x-www-form-urlencoded",
+          },
+          body: '{"command": {"endpoint": "signal", "signal_id": "jump"}}',
+        }
+      );
+    } catch (error) {
+      handleError("DJ_SIGNAL_ERROR", error.message);
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation">
@@ -260,7 +285,9 @@ export default function NowPlaying({
 
             {!showLyrics || !currentPlayback?.item ? (
               <div className="flex-1 text-center md:text-left">
-                {currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item ? (
+                {currentPlayback?.context?.uri ===
+                  "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" &&
+                !currentPlayback?.item ? (
                   <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
                     {trackName}
                   </h4>
@@ -305,7 +332,9 @@ export default function NowPlaying({
                     )}
                   </LongPressLink>
                 )}
-                {currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item ? (
+                {currentPlayback?.context?.uri ===
+                  "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" &&
+                !currentPlayback?.item ? (
                   <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
                     {artistName}
                   </h4>
@@ -477,7 +506,13 @@ export default function NowPlaying({
             </div>
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="flex items-center gap-4">
+            {currentPlayback?.context?.uri ===
+              "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && (
+              <div onClick={handleDJSignal}>
+                <DJIcon className="w-14 h-14 fill-white/60 mb-1 mr-2" />
+              </div>
+            )}
             <Menu as="div" className="relative inline-block text-left">
               <MenuButton className="focus:outline-none">
                 <MenuIcon className="w-14 h-14 fill-white/60" />
