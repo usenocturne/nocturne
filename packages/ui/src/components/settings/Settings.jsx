@@ -4,6 +4,8 @@ import { Switch } from "@headlessui/react";
 import packageInfo from "../../../package.json";
 import AccountInfo from "./AccountInfo";
 import SoftwareUpdate from "./SoftwareUpdate";
+import WiFiNetworks from "./Network/WiFiNetworks";
+import BluetoothDevices from "./Network/BluetoothDevices";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -13,12 +15,9 @@ import {
   SettingsGeneralIcon,
   SettingsPlaybackIcon,
   SettingsSupportIcon,
-  NetworkIcon,
   BluetoothIcon,
-  SignalMiddleIcon,
+  WifiMaxIcon,
 } from "../icons";
-import BluetoothDevices from "./Network/BluetoothDevices";
-import WiFiNetworks from "./Network/WiFiNetworks";
 
 const settingsStructure = {
   general: {
@@ -56,24 +55,28 @@ const settingsStructure = {
       },
     ],
   },
-  // TODO: Change this into just a network menu with bluetooth and wifi submenus
-  bluetooth: {
-    title: "Bluetooth",
-    icon: BluetoothIcon,
-    items: [
-      {
-        id: "bluetooth",
-        type: "custom",
-      },
-    ],
-  },
-  wifi: {
-    title: "Wi-Fi",
-    icon: SignalMiddleIcon,
+  network: {
+    title: "Network",
+    icon: WifiMaxIcon,
+    type: "parent",
     items: [
       {
         id: "wifi",
-        type: "custom",
+        title: "Wi-Fi",
+        icon: WifiMaxIcon,
+        subpage: {
+          type: "custom",
+          component: WiFiNetworks,
+        },
+      },
+      {
+        id: "bluetooth",
+        title: "Bluetooth",
+        icon: BluetoothIcon,
+        subpage: {
+          type: "custom",
+          component: BluetoothDevices,
+        },
       },
     ],
   },
@@ -249,6 +252,12 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [versionInfo, setVersionInfo] = useState("Loading versions...");
+  const [currentView, setCurrentView] = useState({
+    page: "main",
+    subpage: null,
+    item: null,
+  });
+  const [activeSubItem, setActiveSubItem] = useState(null);
 
   const ANIMATION_DURATION = 400;
 
@@ -388,29 +397,29 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
     }
   };
 
-  const navigateTo = (page) => {
+  const navigateTo = (page, subItem = null) => {
     if (!isAnimating) {
       setIsAnimating(true);
-
-      requestAnimationFrame(() => {
-        setCurrentPage("transitioning");
-
-        setTimeout(() => {
-          const scrollContainer = document.querySelector(
-            ".settings-scroll-container"
-          );
-          if (scrollContainer) {
-            scrollContainer.scrollTop = 0;
-          }
-
-          setActiveSubpage(page);
-          requestAnimationFrame(() => {
-            setCurrentPage(page);
-          });
-        }, ANIMATION_DURATION / 2);
-      });
+      setCurrentPage("transitioning-forward");
+      setTimeout(() => {
+        setCurrentView({
+          page,
+          subpage: subItem?.id || null,
+          item: subItem || null,
+        });
+        setActiveSubpage(page);
+        setActiveSubItem(subItem);
+      }, 50);
 
       setTimeout(() => {
+        const scrollContainer = document.querySelector(
+          ".settings-scroll-container"
+        );
+        if (scrollContainer) {
+          scrollContainer.scrollTop = 0;
+        }
+
+        setCurrentPage(subItem ? "subpage" : page);
         setIsAnimating(false);
       }, ANIMATION_DURATION);
     }
@@ -419,25 +428,88 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
   const navigateBack = () => {
     if (!isAnimating) {
       setIsAnimating(true);
-      setCurrentPage("main");
+      setCurrentPage("transitioning-back");
+
       setTimeout(() => {
-        setActiveSubpage(null);
+        if (currentView.subpage) {
+          setCurrentView({
+            page: currentView.page,
+            subpage: null,
+            item: null,
+          });
+          setActiveSubItem(null);
+          setCurrentPage(currentView.page);
+        } else {
+          setCurrentView({
+            page: "main",
+            subpage: null,
+            item: null,
+          });
+          setActiveSubpage(null);
+          setActiveSubItem(null);
+          setCurrentPage("main");
+        }
+      }, ANIMATION_DURATION / 2);
+
+      setTimeout(() => {
         setIsAnimating(false);
       }, ANIMATION_DURATION);
     }
   };
 
-  const mainMenuClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${currentPage === "main"
-    ? "translate-x-0 opacity-100 pointer-events-auto"
-    : "-translate-x-full opacity-0 pointer-events-none"
-    }`;
+  const getPageClasses = (type) => {
+    const baseClasses =
+      "w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0";
 
-  const subPageClasses = `w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0 ${currentPage !== "main" && currentPage !== "transitioning"
-    ? "translate-x-0 opacity-100 pointer-events-auto"
-    : "translate-x-full opacity-0 pointer-events-none"
-    }`;
+    switch (type) {
+      case "main":
+        if (currentPage === "main") {
+          return `${baseClasses} translate-x-0 opacity-100 pointer-events-auto`;
+        }
+        if (currentPage === "transitioning-forward") {
+          return `${baseClasses} -translate-x-full opacity-0 pointer-events-none`;
+        }
+        if (currentPage === "transitioning-back") {
+          return `${baseClasses} -translate-x-full opacity-0 pointer-events-none`;
+        }
+        return `${baseClasses} -translate-x-full opacity-0 pointer-events-none`;
+
+      case "parent":
+        if (currentPage === currentView.page && !currentView.subpage) {
+          return `${baseClasses} translate-x-0 opacity-100 pointer-events-auto`;
+        }
+        if (currentPage === "transitioning-forward" && !currentView.subpage) {
+          return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
+        }
+        if (currentView.subpage) {
+          return `${baseClasses} -translate-x-full opacity-0 pointer-events-none`;
+        }
+        if (currentPage === "transitioning-back") {
+          return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
+        }
+        return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
+
+      case "subpage":
+        if (currentView.subpage && currentPage === "subpage") {
+          return `${baseClasses} translate-x-0 opacity-100 pointer-events-auto`;
+        }
+        if (currentPage === "transitioning-forward") {
+          return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
+        }
+        if (currentPage === "transitioning-back") {
+          return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
+        }
+        return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
+
+      default:
+        return baseClasses;
+    }
+  };
 
   const renderSettingItem = (item) => {
+    if (item.subpage) {
+      return <item.subpage.component key={item.id} />;
+    }
     switch (item.type) {
       case "toggle":
         return (
@@ -446,14 +518,16 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
               <Switch
                 checked={settings[item.storageKey]}
                 onChange={() => handleToggle(item.storageKey)}
-                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
-                  }`}
+                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
+                }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings[item.storageKey]
-                    ? "translate-x-9"
-                    : "translate-x-0"
-                    }`}
+                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    settings[item.storageKey]
+                      ? "translate-x-9"
+                      : "translate-x-0"
+                  }`}
                 />
               </Switch>
               <span className="ml-3 text-[32px] font-[580] text-white tracking-tight">
@@ -512,18 +586,7 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
           const Component = item.component;
           return <Component key={item.id} />;
         }
-        switch (item.id) {
-          case "wifi":
-            return <WiFiNetworks key={item.id} />;
-          case "bluetooth":
-            return <BluetoothDevices key={item.id} />;
-          case "profile-info":
-            return <AccountInfo key={item.id} userProfile={userProfile} />;
-          case "software-update":
-            return <SoftwareUpdate key={item.id} />;
-          default:
-            return null;
-        }
+        return null;
       default:
         return null;
     }
@@ -534,7 +597,7 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
       <div className="min-h-full flex flex-col px-12 pt-12 -ml-12">
         <div className="flex-1 relative">
           <div className="relative w-full" style={{ minHeight: "100%" }}>
-            <div className={mainMenuClasses}>
+            <div className={getPageClasses("main")}>
               <h2 className="text-[46px] font-[580] text-white tracking-tight mb-6">
                 Settings
               </h2>
@@ -569,25 +632,69 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
             </div>
 
             {activeSubpage && (
-              <div className={subPageClasses}>
-                <div className="flex items-center mb-4">
-                  <button
-                    onClick={navigateBack}
-                    className="mr-4"
-                    disabled={isAnimating}
-                  >
-                    <ChevronLeftIcon className="w-8 h-8 text-white" />
-                  </button>
-                  <h2 className="text-[46px] font-[580] text-white tracking-tight">
-                    {settingsStructure[activeSubpage].title}
-                  </h2>
+              <>
+                <div className={getPageClasses("parent")}>
+                  <div className="flex items-center mb-4">
+                    <button
+                      onClick={navigateBack}
+                      className="mr-4"
+                      disabled={isAnimating}
+                    >
+                      <ChevronLeftIcon className="w-8 h-8 text-white" />
+                    </button>
+                    <h2 className="text-[46px] font-[580] text-white tracking-tight">
+                      {settingsStructure[activeSubpage].title}
+                    </h2>
+                  </div>
+                  <div className="space-y-6 mb-12">
+                    {settingsStructure[activeSubpage].type === "parent" ? (
+                      <div className="space-y-4">
+                        {settingsStructure[activeSubpage].items?.map(
+                          (subItem) => (
+                            <button
+                              key={subItem.id}
+                              onClick={() => navigateTo(activeSubpage, subItem)}
+                              className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
+                            >
+                              <div className="flex items-center">
+                                <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                                  <subItem.icon className="w-7 h-7 text-white" />
+                                </div>
+                                <span className="text-[32px] ml-4 font-[580] text-white tracking-tight">
+                                  {subItem.title}
+                                </span>
+                              </div>
+                              <ChevronRightIcon className="w-8 h-8 text-white/60" />
+                            </button>
+                          )
+                        )}
+                      </div>
+                    ) : (
+                      settingsStructure[activeSubpage].items?.map((item) =>
+                        renderSettingItem(item)
+                      )
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-6 mb-12">
-                  {settingsStructure[activeSubpage].items?.map((item) =>
-                    renderSettingItem(item)
-                  )}
+
+                <div className={getPageClasses("subpage")}>
+                  <div className="flex items-center mb-4">
+                    <button
+                      onClick={navigateBack}
+                      className="mr-4"
+                      disabled={isAnimating}
+                    >
+                      <ChevronLeftIcon className="w-8 h-8 text-white" />
+                    </button>
+                    <h2 className="text-[46px] font-[580] text-white tracking-tight">
+                      {activeSubItem?.title}
+                    </h2>
+                  </div>
+                  <div className="space-y-6 mb-12">
+                    {currentView.subpage && renderSettingItem(currentView.item)}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>

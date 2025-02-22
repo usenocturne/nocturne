@@ -200,7 +200,11 @@ export default function Home({
                     <>
                       {albumsQueue.slice(0, 20).map((item) => (
                         <div
-                          key={item.type === "local" ? `local-${item.uri}` : item.id}
+                          key={
+                            item.type === "local"
+                              ? `local-${item.uri}`
+                              : item.id
+                          }
                           className="min-w-[280px] mr-10 snap-start"
                         >
                           <LongPressLink
@@ -326,7 +330,11 @@ export default function Home({
                         </div>
                       )}
                       {playlists
-                        ?.filter((item) => item?.type === "playlist" && item.id !== "37i9dQZF1EYkqdzj48dyYq")
+                        ?.filter(
+                          (item) =>
+                            item?.type === "playlist" &&
+                            item.id !== "37i9dQZF1EYkqdzj48dyYq"
+                        )
                         .map((playlist) => (
                           <div
                             key={`playlist-${playlist.id}`}
@@ -441,29 +449,39 @@ export default function Home({
                         key="dj-playlist"
                         className="min-w-[280px] mr-10 snap-start"
                       >
-                        <div 
+                        <div
                           className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10 cursor-pointer"
                           onClick={async () => {
                             try {
-                              const device = await getCurrentDevice(accessToken, handleError);
+                              const device = await getCurrentDevice(
+                                accessToken,
+                                handleError
+                              );
                               const deviceId = device?.id;
                               if (!deviceId) return;
 
-                              await fetch(`https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`, {
-                                method: 'POST',
-                                headers: {
-                                  'accept-language': 'en',
-                                  'authorization': `Bearer ${accessToken}`,
-                                  'content-type': 'application/x-www-form-urlencoded'
-                                },
-                                body: '{"command": {"endpoint": "play", "context": {"entity_uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "url": "hm:\\/\\/lexicon-session-provider\\/context-resolve\\/v2\\/session?contextUri=spotify:playlist:37i9dQZF1EYkqdzj48dyYq"}}}'
-                              });
+                              await fetch(
+                                `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
+                                {
+                                  method: "POST",
+                                  headers: {
+                                    "accept-language": "en",
+                                    authorization: `Bearer ${accessToken}`,
+                                    "content-type":
+                                      "application/x-www-form-urlencoded",
+                                  },
+                                  body: '{"command": {"endpoint": "play", "context": {"entity_uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "url": "hm:\\/\\/lexicon-session-provider\\/context-resolve\\/v2\\/session?contextUri=spotify:playlist:37i9dQZF1EYkqdzj48dyYq"}}}',
+                                }
+                              );
 
                               setTimeout(() => {
                                 fetchCurrentPlayback();
                               }, 300);
                             } catch (error) {
-                              console.error("Error playing DJ playlist:", error);
+                              console.error(
+                                "Error playing DJ playlist:",
+                                error
+                              );
                               handleError("PLAYBACK_ERROR", error.message);
                             }
                           }}
@@ -480,7 +498,8 @@ export default function Home({
                           DJ
                         </h4>
                         <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
-                          {currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" ? (
+                          {currentPlayback?.context?.uri ===
+                          "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" ? (
                             <>
                               <div className="w-5 ml-0.5 mr-3 mb-2">
                                 <section>
@@ -492,7 +511,9 @@ export default function Home({
                               </div>
                               Now Playing
                             </>
-                          ) : "AI DJ"}
+                          ) : (
+                            "AI DJ"
+                          )}
                         </h4>
                       </div>
                       {radio.map((mix) => (
