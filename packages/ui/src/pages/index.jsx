@@ -24,6 +24,7 @@ export default function Home({
   handleError,
   currentPlayback,
   fetchCurrentPlayback,
+  timezone,
 }) {
   const [showDonationModal, setShowDonationModal] = useState(false);
   const router = useRouter();
@@ -177,6 +178,7 @@ export default function Home({
             <Sidebar
               activeSection={activeSection}
               setActiveSection={setActiveSection}
+              timezone={timezone}
             />
           </div>
 

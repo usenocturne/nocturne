@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { SignalLowIcon, BatteryIcon } from "@/components/icons";
 
+let hasInitializedTimezone = false;
+
 const StatusBar = () => {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
@@ -84,6 +86,27 @@ const StatusBar = () => {
   };
 
   useEffect(() => {
+    const fetchTimezone = async () => {
+      if (hasInitializedTimezone) return;
+      hasInitializedTimezone = true;
+      
+      try {
+        const response = await fetch('https://api.usenocturne.com/v1/timezone');
+        if (response.ok) {
+          const data = await response.json();
+          setTimezone(data.timezone);
+        } else {
+          console.error('Failed to fetch timezone');
+        }
+      } catch (error) {
+        console.error('Error fetching timezone:', error);
+      }
+    };
+
+    fetchTimezone();
+  }, []);
+
+  useEffect(() => {
     const ws = new WebSocket("ws://localhost:5000/ws");
 
     getConnectedDeviceAddress().then(address => {
@@ -162,24 +185,6 @@ const StatusBar = () => {
         batteryCheckIntervalRef.current = null;
       }
     };
-  }, []);
-
-  useEffect(() => {
-    const fetchTimezone = async () => {
-      try {
-        const response = await fetch('https://api.usenocturne.com/v1/timezone');
-        if (response.ok) {
-          const data = await response.json();
-          setTimezone(data.timezone);
-        } else {
-          console.error('Failed to fetch timezone');
-        }
-      } catch (error) {
-        console.error('Error fetching timezone:', error);
-      }
-    };
-
-    fetchTimezone();
   }, []);
 
   useEffect(() => {

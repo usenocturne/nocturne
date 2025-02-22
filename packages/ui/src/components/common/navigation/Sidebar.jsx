@@ -10,7 +10,7 @@ import {
 } from "../../icons";
 import StatusBar from "./StatusBar";
 
-export default function Sidebar({ activeSection, setActiveSection }) {
+export default function Sidebar({ activeSection, setActiveSection, timezone }) {
   const handleSectionClick = (section) => {
     setActiveSection(section);
   };
@@ -41,7 +41,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
 
   return (
     <div className="space-y-7 pt-12">
-      <StatusBar />
+      <StatusBar timezone={timezone} />
       <Link href={`/now-playing`}>
         <div className="relative flex items-center">
           <div className="mr-4 flex-shrink-0">
