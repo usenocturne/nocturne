@@ -459,7 +459,6 @@ export default function Home({
                                 body: '{"command": {"endpoint": "play", "context": {"entity_uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "url": "hm:\\/\\/lexicon-session-provider\\/context-resolve\\/v2\\/session?contextUri=spotify:playlist:37i9dQZF1EYkqdzj48dyYq"}}}'
                               });
 
-                              // Wait a bit for the playback to start and then fetch the updated state
                               setTimeout(() => {
                                 fetchCurrentPlayback();
                               }, 300);
