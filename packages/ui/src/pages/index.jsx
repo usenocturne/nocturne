@@ -512,7 +512,7 @@ export default function Home({
                               Now Playing
                             </>
                           ) : (
-                            "AI DJ"
+                            "Made for You"
                           )}
                         </h4>
                       </div>
