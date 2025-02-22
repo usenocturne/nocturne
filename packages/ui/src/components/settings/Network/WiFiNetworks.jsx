@@ -89,7 +89,7 @@ const WiFiNetworks = () => {
 
   const getSignalIcon = (signal) => {
     const signalStrength = parseInt(signal);
-    const iconClass = "w-[24px] h-[24px]";
+    const iconClass = "w-[24px] h-[24px] text-white";
 
     if (signalStrength >= -50) {
       return <WifiMaxIcon className={iconClass} />;
