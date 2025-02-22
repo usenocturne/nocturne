@@ -477,6 +477,7 @@ export default function Home({
                               setTimeout(() => {
                                 fetchCurrentPlayback();
                               }, 300);
+                              router.push("/now-playing");
                             } catch (error) {
                               console.error(
                                 "Error playing DJ playlist:",
