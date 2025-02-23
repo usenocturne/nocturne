@@ -177,6 +177,14 @@ sudo chroot "$DEST_ROOT_MOUNT" /bin/bash -ex <<EOF
         removed-packages \
         sudo file less man-pages e2fsprogs dhcpcd nvi vim nano \
         runit-void
+
+    cat <<EOS > /etc/fstab
+# <file system> <dir> <type> <options> <dump> <pass>
+/dev/system_a / ext4 ro 0 1
+/dev/data /mnt/data ro 0 2
+/dev/settings /settings rw 0 2
+EOS
+
     xbps-install -y cage
     xbps-install -y nocturne-ui nocturned
 
