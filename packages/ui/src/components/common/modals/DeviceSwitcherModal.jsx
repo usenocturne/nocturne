@@ -170,9 +170,25 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken, handleError }) => {
                                 return (
                                   <CarIcon className="h-8 w-8 text-white/60" />
                                 );
-                              case "CastAudio":
+                              case "CAST_AUDIO":
                                 return (
                                   <CastIcon className="h-8 w-8 text-white/60" />
+                                );
+                              case "CAST_VIDEO":
+                                return (
+                                  <CastIcon className="h-8 w-8 text-white/60" />
+                                );
+                              case "CHROMEBOOK":
+                                return (
+                                  <LaptopIcon className="h-8 w-8 text-white/60" />
+                                );
+                              case "GAME_CONSOLE":
+                                return (
+                                  <GamepadIcon className="h-8 w-8 text-white/60" />
+                                );
+                              case "AUTOMOBILE":
+                                return (
+                                  <CarIcon className="h-8 w-8 text-white/60" />
                                 );
                               default:
                                 return (
