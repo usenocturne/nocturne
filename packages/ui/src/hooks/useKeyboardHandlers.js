@@ -20,6 +20,7 @@ export function useKeyboardHandlers({
   fetchCurrentPlayback,
   setPressedButton,
   setShowMappingOverlay,
+  showTutorial,
 }) {
   const { handleBack, updateSectionHistory } = useNavigationState();
 
@@ -40,7 +41,7 @@ export function useKeyboardHandlers({
     };
 
     const handleKeyDown = async (event) => {
-      if (event.key.toLowerCase() === "m") {
+      if (event.key.toLowerCase() === "m" && !showTutorial) {
         event.preventDefault();
         setShowBrightnessOverlay(true);
         return;
@@ -307,5 +308,6 @@ export function useKeyboardHandlers({
     showBrightnessOverlay,
     setShowBrightnessOverlay,
     setBrightness,
+    showTutorial,
   ]);
 }

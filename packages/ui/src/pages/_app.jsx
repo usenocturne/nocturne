@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import ErrorAlert from "../components/common/alerts/ErrorAlert";
 import AuthSelection from "../components/auth/AuthSelection";
 import ButtonMappingOverlay from "../components/common/controls/ButtonMappingOverlay";
+import Tutorial from "../components/tutorial/Tutorial";
 import classNames from "classnames";
 import { ErrorCodes } from "../constants/errorCodes";
 import {
@@ -61,6 +62,7 @@ export default function App({ Component, pageProps }) {
   });
   const { updateSectionHistory } = useNavigationState();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const lastActivityTimeRef = useRef(Date.now());
   const inactivityTimeoutRef = useRef(null);
@@ -218,7 +220,6 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     let timeoutId;
     if (!networkStatus?.isConnected && initialCheckDoneRef.current) {
-
       timeoutId = setTimeout(() => {
         setShowNoNetwork(true);
       }, 10000);
@@ -335,7 +336,7 @@ export default function App({ Component, pageProps }) {
     if (accessToken) {
       const attemptTokenRefresh = async () => {
         if (isRefreshing) return;
-        
+
         try {
           setIsRefreshing(true);
           const networkStatus = await checkNetworkConnectivity();
@@ -372,7 +373,10 @@ export default function App({ Component, pageProps }) {
 
       attemptTokenRefresh();
 
-      const tokenRefreshInterval = setInterval(attemptTokenRefresh, 5 * 60 * 1000);
+      const tokenRefreshInterval = setInterval(
+        attemptTokenRefresh,
+        5 * 60 * 1000
+      );
       const playbackInterval = setInterval(fetchCurrentPlayback, 1000);
 
       return () => {
@@ -381,6 +385,15 @@ export default function App({ Component, pageProps }) {
       };
     }
   }, [accessToken]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
+      if (!hasSeenTutorial && authState.authSelectionMade) {
+        setShowTutorial(true);
+      }
+    }
+  }, [authState.authSelectionMade]);
 
   useEffect(() => {
     const handleActivity = () => {
@@ -550,7 +563,7 @@ export default function App({ Component, pageProps }) {
       if (savedRefreshToken && savedAuthType) {
         const attemptSessionRestore = async () => {
           if (isRefreshing) return;
-          
+
           try {
             setIsRefreshing(true);
             const networkStatus = await checkNetworkConnectivity();
@@ -624,100 +637,113 @@ export default function App({ Component, pageProps }) {
         fontOpticalSizing: "auto",
       }}
     >
-      {(!networkStatus?.isConnected && showNoNetwork &&
+      {(!networkStatus?.isConnected &&
+        showNoNetwork &&
         !router.pathname.includes("phone-auth")) ||
-        (!authState.authSelectionMade &&
-          !router.pathname.includes("phone-auth") &&
-          !window.location.search.includes("code") &&
-          !localStorage.getItem("spotifyRefreshToken") &&
-          !localStorage.getItem("spotifyAccessToken")) ? (
+      (!authState.authSelectionMade &&
+        !router.pathname.includes("phone-auth") &&
+        !window.location.search.includes("code") &&
+        !localStorage.getItem("spotifyRefreshToken") &&
+        !localStorage.getItem("spotifyAccessToken")) ? (
         <AuthSelection
           onSelect={hookHandleAuthSelection}
           networkStatus={networkStatus}
         />
       ) : networkStatus?.isConnected ? (
-        <>
-          <div
-            style={{
-              backgroundImage: generateMeshGradient([
-                currentColor1,
-                currentColor2,
-                currentColor3,
-                currentColor4,
-              ]),
-              transition: "background-image 0.5s linear",
+        showTutorial ? (
+          <Tutorial
+            onComplete={() => {
+              setShowTutorial(false);
+              localStorage.setItem("hasSeenTutorial", "true");
             }}
-            className="absolute inset-0 bg-black"
           />
-          <div className="relative z-10">
-            <Component
-              {...pageProps}
-              accessToken={accessToken}
-              playlists={playlists}
-              recentAlbums={recentAlbums}
-              artists={artists}
-              radio={radio}
-              currentlyPlayingAlbum={currentlyPlayingAlbum}
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              loading={loading}
-              albumsQueue={albumsQueue}
-              currentlyPlayingTrackUri={currentlyPlayingTrackUri}
-              currentPlayback={currentPlayback}
-              fetchCurrentPlayback={fetchCurrentPlayback}
-              drawerOpen={drawerOpen}
-              setDrawerOpen={setDrawerOpen}
-              updateGradientColors={updateGradientColors}
-              handleError={handleError}
-              showBrightnessOverlay={showBrightnessOverlay}
-              networkStatus={networkStatus}
-            />
-            <ErrorAlert error={error} onClose={clearError} />
-          </div>
-
-          {(showBrightnessOverlay || brightness) && (
+        ) : (
+          <>
             <div
-              className={classNames(
-                "fixed right-0 top-[70px] transform transition-opacity duration-300 z-50",
-                {
-                  "opacity-0 volumeOutScale": !showBrightnessOverlay,
-                  "opacity-100 volumeInScale": showBrightnessOverlay,
-                }
-              )}
-            >
-              <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
-                <div
-                  className={classNames(
-                    "bg-white w-full transition-all duration-200 ease-out",
-                    {
-                      "rounded-b-[13px]": brightness < 250,
-                      "rounded-[13px]": brightness === 250,
-                    }
-                  )}
-                  style={{ height: `${((brightness - 5) / (250 - 5)) * 100}%` }}
-                >
-                  <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
-                    {(() => {
-                      const brightnessPercent =
-                        ((brightness - 5) / (250 - 5)) * 100;
-                      if (brightnessPercent >= 60)
-                        return <BrightnessHighIcon className="w-7 h-7" />;
-                      if (brightnessPercent >= 30)
-                        return <BrightnessMidIcon className="w-7 h-7" />;
-                      return <BrightnessLowIcon className="w-7 h-7" />;
-                    })()}
+              style={{
+                backgroundImage: generateMeshGradient([
+                  currentColor1,
+                  currentColor2,
+                  currentColor3,
+                  currentColor4,
+                ]),
+                transition: "background-image 0.5s linear",
+              }}
+              className="absolute inset-0 bg-black"
+            />
+            <div className="relative z-10">
+              <Component
+                {...pageProps}
+                accessToken={accessToken}
+                playlists={playlists}
+                recentAlbums={recentAlbums}
+                artists={artists}
+                radio={radio}
+                currentlyPlayingAlbum={currentlyPlayingAlbum}
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                loading={loading}
+                albumsQueue={albumsQueue}
+                currentlyPlayingTrackUri={currentlyPlayingTrackUri}
+                currentPlayback={currentPlayback}
+                fetchCurrentPlayback={fetchCurrentPlayback}
+                drawerOpen={drawerOpen}
+                setDrawerOpen={setDrawerOpen}
+                updateGradientColors={updateGradientColors}
+                handleError={handleError}
+                showBrightnessOverlay={showBrightnessOverlay}
+                networkStatus={networkStatus}
+                showTutorial={showTutorial}
+              />
+              <ErrorAlert error={error} onClose={clearError} />
+            </div>
+
+            {(showBrightnessOverlay || brightness) && (
+              <div
+                className={classNames(
+                  "fixed right-0 top-[70px] transform transition-opacity duration-300 z-50",
+                  {
+                    "opacity-0 volumeOutScale": !showBrightnessOverlay,
+                    "opacity-100 volumeInScale": showBrightnessOverlay,
+                  }
+                )}
+              >
+                <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+                  <div
+                    className={classNames(
+                      "bg-white w-full transition-all duration-200 ease-out",
+                      {
+                        "rounded-b-[13px]": brightness < 250,
+                        "rounded-[13px]": brightness === 250,
+                      }
+                    )}
+                    style={{
+                      height: `${((brightness - 5) / (250 - 5)) * 100}%`,
+                    }}
+                  >
+                    <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+                      {(() => {
+                        const brightnessPercent =
+                          ((brightness - 5) / (250 - 5)) * 100;
+                        if (brightnessPercent >= 60)
+                          return <BrightnessHighIcon className="w-7 h-7" />;
+                        if (brightnessPercent >= 30)
+                          return <BrightnessMidIcon className="w-7 h-7" />;
+                        return <BrightnessLowIcon className="w-7 h-7" />;
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <ButtonMappingOverlay
-            show={showMappingOverlay}
-            onClose={() => setShowMappingOverlay(false)}
-            activeButton={pressedButton}
-          />
-        </>
+            <ButtonMappingOverlay
+              show={showMappingOverlay}
+              onClose={() => setShowMappingOverlay(false)}
+              activeButton={pressedButton}
+            />
+          </>
+        )
       ) : (
         <AuthSelection
           onSelect={hookHandleAuthSelection}
