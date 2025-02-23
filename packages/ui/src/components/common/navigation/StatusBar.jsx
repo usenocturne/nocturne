@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { SignalLowIcon, BatteryIcon } from "@/components/icons";
+import { BatteryIcon, BluetoothIcon } from "@/components/icons";
 
 let hasInitializedTimezone = false;
 
@@ -32,7 +32,7 @@ const StatusBar = () => {
       );
 
       clearTimeout(timeout);
-      
+
       if (response.ok) {
         const deviceInfo = await response.json();
         if (deviceInfo?.batteryPercentage) {
@@ -65,7 +65,7 @@ const StatusBar = () => {
       );
 
       clearTimeout(timeout);
-      
+
       if (response.ok) {
         const devices = await response.json();
         const connectedDevice = devices.find(device => device.connected);
@@ -89,7 +89,7 @@ const StatusBar = () => {
     const fetchTimezone = async () => {
       if (hasInitializedTimezone) return;
       hasInitializedTimezone = true;
-      
+
       try {
         const response = await fetch('https://api.usenocturne.com/v1/timezone');
         if (response.ok) {
@@ -126,7 +126,7 @@ const StatusBar = () => {
         if (data.address) {
           localStorage.setItem('connectedBluetoothAddress', data.address);
           setIsBluetoothTethered(true);
-          window.dispatchEvent(new CustomEvent('bluetooth-device-connected', { 
+          window.dispatchEvent(new CustomEvent('bluetooth-device-connected', {
             detail: { address: data.address }
           }));
           checkBatteryPercentage();
@@ -138,7 +138,7 @@ const StatusBar = () => {
           getConnectedDeviceAddress().then(address => {
             if (address) {
               setIsBluetoothTethered(true);
-              window.dispatchEvent(new CustomEvent('bluetooth-device-connected', { 
+              window.dispatchEvent(new CustomEvent('bluetooth-device-connected', {
                 detail: { address }
               }));
               checkBatteryPercentage();
@@ -190,8 +190,8 @@ const StatusBar = () => {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      
-      const timeInZone = timezone 
+
+      const timeInZone = timezone
         ? new Date(now.toLocaleString('en-US', { timeZone: timezone }))
         : now;
 
@@ -230,9 +230,8 @@ const StatusBar = () => {
 
   return (
     <div
-      className={`flex justify-between w-full mb-6 pr-10 ${
-        isFourDigits ? "pl-0.5" : "pl-2"
-      } items-start`}
+      className={`flex justify-between w-full mb-6 pr-10 ${isFourDigits ? "pl-0.5" : "pl-2"
+        } items-start`}
     >
       <div
         className="text-[26px] font-[580] text-white tracking-tight leading-none"
@@ -241,7 +240,8 @@ const StatusBar = () => {
         {currentTime}
       </div>
       <div className="flex gap-2.5 h-10" style={{ marginTop: "-10px" }}>
-        <SignalLowIcon
+        // TODO: use wifi icon (signal based on periodic scans) when using connector
+        <BluetoothIcon
           className="w-8 h-10"
           style={{
             margin: 0,
