@@ -13,8 +13,8 @@ const StatusBar = () => {
   const mountedRef = useRef(false);
 
   const checkBatteryPercentage = async () => {
-    const address = localStorage.getItem('connectedBluetoothAddress');
-    if (!address || address === 'undefined') return;
+    const address = localStorage.getItem("connectedBluetoothAddress");
+    if (!address || address === "undefined") return;
 
     try {
       const controller = new AbortController();
@@ -27,7 +27,7 @@ const StatusBar = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          signal: controller.signal
+          signal: controller.signal,
         }
       );
 
@@ -40,7 +40,7 @@ const StatusBar = () => {
         }
       }
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.error("Battery check request timed out after 1 minute");
       } else {
         console.error("Failed to fetch battery percentage:", error);
@@ -53,30 +53,30 @@ const StatusBar = () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60000);
 
-      const response = await fetch(
-        "http://localhost:5000/bluetooth/devices",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          signal: controller.signal
-        }
-      );
+      const response = await fetch("http://localhost:5000/bluetooth/devices", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
 
       clearTimeout(timeout);
 
       if (response.ok) {
         const devices = await response.json();
-        const connectedDevice = devices.find(device => device.connected);
+        const connectedDevice = devices.find((device) => device.connected);
         if (connectedDevice?.address) {
-          localStorage.setItem('connectedBluetoothAddress', connectedDevice.address);
+          localStorage.setItem(
+            "connectedBluetoothAddress",
+            connectedDevice.address
+          );
           return connectedDevice.address;
         }
       }
       return null;
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.error("Device check request timed out after 1 minute");
       } else {
         console.error("Failed to check connected devices:", error);
@@ -91,15 +91,15 @@ const StatusBar = () => {
       hasInitializedTimezone = true;
 
       try {
-        const response = await fetch('https://api.usenocturne.com/v1/timezone');
+        const response = await fetch("https://api.usenocturne.com/v1/timezone");
         if (response.ok) {
           const data = await response.json();
           setTimezone(data.timezone);
         } else {
-          console.error('Failed to fetch timezone');
+          console.error("Failed to fetch timezone");
         }
       } catch (error) {
-        console.error('Error fetching timezone:', error);
+        console.error("Error fetching timezone:", error);
       }
     };
 
@@ -109,14 +109,17 @@ const StatusBar = () => {
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:5000/ws");
 
-    getConnectedDeviceAddress().then(address => {
+    getConnectedDeviceAddress().then((address) => {
       if (address) {
         setIsBluetoothTethered(true);
         checkBatteryPercentage();
         if (batteryCheckIntervalRef.current) {
           clearInterval(batteryCheckIntervalRef.current);
         }
-        batteryCheckIntervalRef.current = setInterval(checkBatteryPercentage, 60000);
+        batteryCheckIntervalRef.current = setInterval(
+          checkBatteryPercentage,
+          60000
+        );
       }
     });
 
@@ -124,32 +127,45 @@ const StatusBar = () => {
       const data = JSON.parse(event.data);
       if (data.type === "bluetooth/connect") {
         if (data.address) {
-          localStorage.setItem('connectedBluetoothAddress', data.address);
+          localStorage.setItem("connectedBluetoothAddress", data.address);
           setIsBluetoothTethered(true);
-          window.dispatchEvent(new CustomEvent('bluetooth-device-connected', {
-            detail: { address: data.address }
-          }));
+          window.dispatchEvent(
+            new CustomEvent("bluetooth-device-connected", {
+              detail: { address: data.address },
+            })
+          );
           checkBatteryPercentage();
           if (batteryCheckIntervalRef.current) {
             clearInterval(batteryCheckIntervalRef.current);
           }
-          batteryCheckIntervalRef.current = setInterval(checkBatteryPercentage, 60000);
+          batteryCheckIntervalRef.current = setInterval(
+            checkBatteryPercentage,
+            60000
+          );
         } else {
-          getConnectedDeviceAddress().then(address => {
+          getConnectedDeviceAddress().then((address) => {
             if (address) {
               setIsBluetoothTethered(true);
-              window.dispatchEvent(new CustomEvent('bluetooth-device-connected', {
-                detail: { address }
-              }));
+              window.dispatchEvent(
+                new CustomEvent("bluetooth-device-connected", {
+                  detail: { address },
+                })
+              );
               checkBatteryPercentage();
               if (batteryCheckIntervalRef.current) {
                 clearInterval(batteryCheckIntervalRef.current);
               }
-              batteryCheckIntervalRef.current = setInterval(checkBatteryPercentage, 60000);
+              batteryCheckIntervalRef.current = setInterval(
+                checkBatteryPercentage,
+                60000
+              );
             }
           });
         }
-      } else if (data.type === "bluetooth/network/disconnect" || data.type === "bluetooth/disconnect") {
+      } else if (
+        data.type === "bluetooth/network/disconnect" ||
+        data.type === "bluetooth/disconnect"
+      ) {
         setIsBluetoothTethered(false);
         setBatteryPercentage(80);
 
@@ -192,7 +208,7 @@ const StatusBar = () => {
       const now = new Date();
 
       const timeInZone = timezone
-        ? new Date(now.toLocaleString('en-US', { timeZone: timezone }))
+        ? new Date(now.toLocaleString("en-US", { timeZone: timezone }))
         : now;
 
       const use24Hour = localStorage.getItem("use24HourTime") === "true";
@@ -230,8 +246,9 @@ const StatusBar = () => {
 
   return (
     <div
-      className={`flex justify-between w-full mb-6 pr-10 ${isFourDigits ? "pl-0.5" : "pl-2"
-        } items-start`}
+      className={`flex justify-between w-full mb-6 pr-10 ${
+        isFourDigits ? "pl-0.5" : "pl-2"
+      } items-start`}
     >
       <div
         className="text-[26px] font-[580] text-white tracking-tight leading-none"
@@ -240,7 +257,7 @@ const StatusBar = () => {
         {currentTime}
       </div>
       <div className="flex gap-2.5 h-10" style={{ marginTop: "-10px" }}>
-        // TODO: use wifi icon (signal based on periodic scans) when using connector
+        {/* TODO: use wifi icon (signal based on periodic scans) when using connector */}
         <BluetoothIcon
           className="w-8 h-10"
           style={{
