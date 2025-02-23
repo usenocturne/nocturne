@@ -60,6 +60,7 @@ export default function App({ Component, pageProps }) {
     return "recents";
   });
   const { updateSectionHistory } = useNavigationState();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const lastActivityTimeRef = useRef(Date.now());
   const inactivityTimeoutRef = useRef(null);
@@ -333,7 +334,10 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     if (accessToken) {
       const attemptTokenRefresh = async () => {
+        if (isRefreshing) return;
+        
         try {
+          setIsRefreshing(true);
           const networkStatus = await checkNetworkConnectivity();
           if (!networkStatus.isConnected) {
             setTimeout(attemptTokenRefresh, 3000);
@@ -361,6 +365,8 @@ export default function App({ Component, pageProps }) {
           }
         } catch (error) {
           setTimeout(attemptTokenRefresh, 3000);
+        } finally {
+          setIsRefreshing(false);
         }
       };
 
@@ -536,13 +542,17 @@ export default function App({ Component, pageProps }) {
     const initializeAuth = async () => {
       if (typeof window === "undefined") return;
       if (window.location.search.includes("code")) return;
+      if (isRefreshing) return;
 
       const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
       const savedAuthType = localStorage.getItem("spotifyAuthType");
 
       if (savedRefreshToken && savedAuthType) {
         const attemptSessionRestore = async () => {
+          if (isRefreshing) return;
+          
           try {
+            setIsRefreshing(true);
             const networkStatus = await checkNetworkConnectivity();
             if (!networkStatus.isConnected) {
               setTimeout(attemptSessionRestore, 3000);
@@ -584,6 +594,8 @@ export default function App({ Component, pageProps }) {
             } else {
               setTimeout(attemptSessionRestore, 3000);
             }
+          } finally {
+            setIsRefreshing(false);
           }
         };
 
