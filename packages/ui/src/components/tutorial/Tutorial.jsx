@@ -316,7 +316,7 @@ const Tutorial = ({ onComplete }) => {
       />
 
       <div className="relative h-full z-10 flex justify-between px-12">
-        <div className="flex flex-col items-start w-1/2 mr-12 pt-[calc(50vh-140px)]">
+        <div className="flex flex-col items-start w-1/2 mr-12 pt-[calc(50vh-160px)]">
           <NocturneIcon className="h-12 w-auto mb-8" />
           <div
             className={`space-y-4 transition-opacity duration-200 ${
