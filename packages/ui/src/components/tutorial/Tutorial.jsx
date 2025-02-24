@@ -2,11 +2,14 @@ import React, { useState, useEffect } from "react";
 import TutorialFrame from "../../../public/graphics/tutorial/TutorialFrame";
 import { NocturneIcon } from "../../components/icons";
 import { useGradientState } from "../../hooks/useGradientState";
+import { useRouter } from "next/router";
 
 const Tutorial = ({ onComplete }) => {
   const [currentScreen, setCurrentScreen] = useState(0);
-  const [isTextVisible, setIsTextVisible] = useState(true);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [isContentVisible, setIsContentVisible] = useState(true);
   const [isFrameVisible, setIsFrameVisible] = useState(false);
+  const router = useRouter();
   const {
     currentColor1,
     currentColor2,
@@ -97,6 +100,27 @@ const Tutorial = ({ onComplete }) => {
     },
   ];
 
+  const handleScreenTransition = (nextScreen) => {
+    const currentHeader = screens[currentScreen].header;
+    const nextHeader = screens[nextScreen].header;
+    const headerChanging = currentHeader !== nextHeader;
+
+    if (headerChanging) {
+      setIsHeaderVisible(false);
+    }
+    setIsContentVisible(false);
+
+    setTimeout(() => {
+      setCurrentScreen(nextScreen);
+      setTimeout(() => {
+        if (headerChanging) {
+          setIsHeaderVisible(true);
+        }
+        setIsContentVisible(true);
+      }, 50);
+    }, 200);
+  };
+
   useEffect(() => {
     let holdTimer = null;
     const validPresetButtons = ["1", "2", "3", "4"];
@@ -109,11 +133,22 @@ const Tutorial = ({ onComplete }) => {
         screens[currentScreen].continueType === "scroll" &&
         event.deltaX > 0
       ) {
-        setIsTextVisible(false);
+        const nextScreen = currentScreen + 1;
+        const headerChanging =
+          screens[currentScreen].header !== screens[nextScreen].header;
+
+        if (headerChanging) {
+          setIsHeaderVisible(false);
+        }
+        setIsContentVisible(false);
+
         setTimeout(() => {
-          setCurrentScreen((prev) => prev + 1);
+          setCurrentScreen(nextScreen);
           setTimeout(() => {
-            setIsTextVisible(true);
+            if (headerChanging) {
+              setIsHeaderVisible(true);
+            }
+            setIsContentVisible(true);
           }, 50);
         }, 200);
       }
@@ -124,33 +159,66 @@ const Tutorial = ({ onComplete }) => {
         screens[currentScreen].continueType === "backPress" &&
         e.key === "Escape"
       ) {
-        setIsTextVisible(false);
+        const nextScreen = currentScreen + 1;
+        const headerChanging =
+          screens[currentScreen].header !== screens[nextScreen].header;
+
+        if (headerChanging) {
+          setIsHeaderVisible(false);
+        }
+        setIsContentVisible(false);
+
         setTimeout(() => {
-          setCurrentScreen((prev) => prev + 1);
+          setCurrentScreen(nextScreen);
           setTimeout(() => {
-            setIsTextVisible(true);
+            if (headerChanging) {
+              setIsHeaderVisible(true);
+            }
+            setIsContentVisible(true);
           }, 50);
         }, 200);
       } else if (
         screens[currentScreen].continueType === "topButtonPress" &&
         validPresetButtons.includes(e.key)
       ) {
-        setIsTextVisible(false);
+        const nextScreen = currentScreen + 1;
+        const headerChanging =
+          screens[currentScreen].header !== screens[nextScreen].header;
+
+        if (headerChanging) {
+          setIsHeaderVisible(false);
+        }
+        setIsContentVisible(false);
+
         setTimeout(() => {
-          setCurrentScreen((prev) => prev + 1);
+          setCurrentScreen(nextScreen);
           setTimeout(() => {
-            setIsTextVisible(true);
+            if (headerChanging) {
+              setIsHeaderVisible(true);
+            }
+            setIsContentVisible(true);
           }, 50);
         }, 200);
       } else if (
         screens[currentScreen].continueType === "brightnessPress" &&
         e.key.toLowerCase() === "m"
       ) {
-        setIsTextVisible(false);
+        const nextScreen = currentScreen + 1;
+        const headerChanging =
+          screens[currentScreen].header !== screens[nextScreen].header;
+
+        if (headerChanging) {
+          setIsHeaderVisible(false);
+        }
+        setIsContentVisible(false);
+
         setTimeout(() => {
-          setCurrentScreen((prev) => prev + 1);
+          setCurrentScreen(nextScreen);
           setTimeout(() => {
-            setIsTextVisible(true);
+            if (headerChanging) {
+              setIsHeaderVisible(true);
+            }
+            setIsContentVisible(true);
           }, 50);
         }, 200);
       } else if (
@@ -158,11 +226,22 @@ const Tutorial = ({ onComplete }) => {
         validPresetButtons.includes(e.key)
       ) {
         holdTimer = setTimeout(() => {
-          setIsTextVisible(false);
+          const nextScreen = currentScreen + 1;
+          const headerChanging =
+            screens[currentScreen].header !== screens[nextScreen].header;
+
+          if (headerChanging) {
+            setIsHeaderVisible(false);
+          }
+          setIsContentVisible(false);
+
           setTimeout(() => {
-            setCurrentScreen((prev) => prev + 1);
+            setCurrentScreen(nextScreen);
             setTimeout(() => {
-              setIsTextVisible(true);
+              if (headerChanging) {
+                setIsHeaderVisible(true);
+              }
+              setIsContentVisible(true);
             }, 50);
           }, 200);
         }, 800);
@@ -286,18 +365,15 @@ const Tutorial = ({ onComplete }) => {
   }, [setTargetColor1, setTargetColor2, setTargetColor3, setTargetColor4]);
 
   const handleContinue = () => {
-    setIsTextVisible(false);
-
-    setTimeout(() => {
-      if (currentScreen === screens.length - 1) {
-        onComplete();
-      } else {
-        setCurrentScreen((prev) => prev + 1);
-        setTimeout(() => {
-          setIsTextVisible(true);
-        }, 50);
+    if (currentScreen === screens.length - 1) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("lastActiveSection", "recents");
+        router.push("/");
       }
-    }, 200);
+      onComplete();
+    } else {
+      handleScreenTransition(currentScreen + 1);
+    }
   };
 
   return (
@@ -316,36 +392,45 @@ const Tutorial = ({ onComplete }) => {
       />
 
       <div className="relative h-full z-10 flex justify-between px-12">
-        <div className="flex flex-col items-start w-1/2 mr-12 pt-[calc(50vh-160px)]">
+        <div className="flex flex-col items-start w-1/2 mr-12 flex-1 justify-center">
           <NocturneIcon className="h-12 w-auto mb-8" />
-          <div
-            className={`space-y-4 transition-opacity duration-200 ${
-              isTextVisible ? "opacity-100" : "opacity-0"
-            }`}
-            key={currentScreen}
-          >
-            <h2 className="text-5xl text-white tracking-tight font-[580] w-[29rem]">
-              {screens[currentScreen].header}
-            </h2>
-            <p
-              className={`text-[28px] text-white/60 tracking-tight ${
-                currentScreen === screens.length - 1 ? "w-[30rem]" : "w-[24rem]"
+          <div className="h-[220px]" key={currentScreen}>
+            <div
+              className={`transition-opacity duration-200 ${
+                isHeaderVisible ? "opacity-100" : "opacity-0"
               }`}
             >
-              {screens[currentScreen].subtext}
-            </p>
-            {screens[currentScreen].continueType === "button" && (
-              <button
-                onClick={handleContinue}
-                className="mt-4 bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3"
+              <h2 className="text-5xl text-white tracking-tight font-[580] w-[29rem]">
+                {screens[currentScreen].header}
+              </h2>
+            </div>
+            <div
+              className={`space-y-4 transition-opacity duration-200 ${
+                isContentVisible ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <p
+                className={`text-[28px] mt-3 text-white/60 tracking-tight ${
+                  currentScreen === screens.length - 1
+                    ? "w-[30rem]"
+                    : "w-[24rem]"
+                }`}
               >
-                <span className="text-[28px] font-[560] text-white tracking-tight">
-                  {currentScreen === screens.length - 1
-                    ? "Get Started"
-                    : "Continue"}
-                </span>
-              </button>
-            )}
+                {screens[currentScreen].subtext}
+              </p>
+              {screens[currentScreen].continueType === "button" && (
+                <button
+                  onClick={handleContinue}
+                  className="mt-4 bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3"
+                >
+                  <span className="text-[28px] font-[560] text-white tracking-tight">
+                    {currentScreen === screens.length - 1
+                      ? "Get Started"
+                      : "Continue"}
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

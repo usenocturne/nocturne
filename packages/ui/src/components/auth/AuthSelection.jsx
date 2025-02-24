@@ -446,7 +446,7 @@ const ConnectionScreen = () => {
         message={
           deviceType === "ios"
             ? "Please enable Personal Hotspot in your phone's settings."
-            : "Please enable Bluetooth tethering in your phone's settings."
+            : "Please enable Bluetooth Tethering in your phone's settings."
         }
       />
     );
@@ -748,7 +748,7 @@ const AuthMethodSelector = ({ onSelect, networkStatus }) => {
       />
 
       <div className="relative z-10 w-full max-w-6xl px-6 grid grid-cols-2 gap-16 items-center">
-        <div className="flex flex-col items-start space-y-8 mb-10 ml-12">
+        <div className="flex flex-col items-start space-y-8 ml-12">
           <NocturneIcon className="h-12 w-auto" />
 
           <div className="space-y-4">
