@@ -149,7 +149,8 @@ const TutorialFrame = ({ currentScreen }) => {
       </style>
 
       <svg
-        className="w-80 pr-4"
+        className="mr-8"
+        width="320"
         viewBox="0 0 1853 991"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"

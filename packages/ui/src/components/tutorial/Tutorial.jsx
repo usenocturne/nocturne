@@ -39,7 +39,7 @@ const Tutorial = ({ onComplete }) => {
     {
       header: "Navigation",
       subtext:
-        "Turn the dial to scroll through your music. Try it now - scroll right to continue.",
+        "Turn the dial to browse your music. Try it now - scroll right to continue.",
       continueType: "scroll",
     },
     {
@@ -50,24 +50,14 @@ const Tutorial = ({ onComplete }) => {
     },
     {
       header: "Presets",
-      subtext: (
-        <>
-          Hold any preset button while viewing a playlist to map it.
-          <br />
-          Try it now.
-        </>
-      ),
+      subtext:
+        "Hold any preset button while viewing a playlist to map it. Try it now.",
       continueType: "hold1",
     },
     {
       header: "Presets",
-      subtext: (
-        <>
-          Press a mapped button anytime to instantly start playback.
-          <br />
-          Try it now.
-        </>
-      ),
+      subtext:
+        "Press a mapped button anytime to instantly start playback. Try it now.",
       continueType: "topButtonPress",
     },
     {
@@ -84,7 +74,7 @@ const Tutorial = ({ onComplete }) => {
     },
     {
       header: "Mixes",
-      subtext: "Personalized mixes are always fresh - check the Radio tab.",
+      subtext: "The Radio tab knows what you'll love next.",
       continueType: "button",
     },
     {
@@ -391,8 +381,8 @@ const Tutorial = ({ onComplete }) => {
         className="absolute inset-0 rounded-2xl"
       />
 
-      <div className="relative h-full z-10 flex justify-between px-12">
-        <div className="flex flex-col items-start w-1/2 mr-12 flex-1 justify-center">
+      <div className="relative h-full z-10 flex justify-between px-6">
+        <div className="flex flex-col items-start w-1/2 -mr-6 ml-12 flex-1 justify-center">
           <NocturneIcon className="h-12 w-auto mb-8" />
           <div className="h-[220px]" key={currentScreen}>
             <div
@@ -411,9 +401,9 @@ const Tutorial = ({ onComplete }) => {
             >
               <p
                 className={`text-[28px] mt-3 text-white/60 tracking-tight ${
-                  currentScreen === screens.length - 1
+                  currentScreen === 0 || currentScreen === screens.length - 1
                     ? "w-[30rem]"
-                    : "w-[24rem]"
+                    : "w-[20.68rem]"
                 }`}
               >
                 {screens[currentScreen].subtext}
@@ -435,7 +425,7 @@ const Tutorial = ({ onComplete }) => {
         </div>
 
         {currentScreen !== 0 && currentScreen !== screens.length - 1 && (
-          <div className="flex items-center justify-center w-1/2">
+          <div className="flex items-center justify-center">
             <div
               className={`transition-opacity duration-500 ${
                 isFrameVisible ? "opacity-100" : "opacity-0"
