@@ -259,7 +259,7 @@ const StatusBar = () => {
       <div className="flex gap-2.5 h-10" style={{ marginTop: "-10px" }}>
         {/* TODO: use wifi icon (signal based on periodic scans) when using connector */}
         <BluetoothIcon
-          className="w-8 h-10"
+          className="w-8 h-10 text-white"
           style={{
             margin: 0,
             padding: 0,
