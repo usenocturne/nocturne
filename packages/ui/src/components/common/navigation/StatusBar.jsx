@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { BatteryIcon, BluetoothIcon } from "@/components/icons";
 
-let hasInitializedTimezone = false;
+let cachedTimezone = null;
 
 const StatusBar = () => {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
   const [isBluetoothTethered, setIsBluetoothTethered] = useState(false);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
-  const [timezone, setTimezone] = useState(null);
+  const [timezone, setTimezone] = useState(cachedTimezone);
   const batteryCheckIntervalRef = useRef(null);
   const mountedRef = useRef(false);
 
@@ -87,13 +87,13 @@ const StatusBar = () => {
 
   useEffect(() => {
     const fetchTimezone = async () => {
-      if (hasInitializedTimezone) return;
-      hasInitializedTimezone = true;
+      if (cachedTimezone) return;
 
       try {
         const response = await fetch("https://api.usenocturne.com/v1/timezone");
         if (response.ok) {
           const data = await response.json();
+          cachedTimezone = data.timezone;
           setTimezone(data.timezone);
         } else {
           console.error("Failed to fetch timezone");
