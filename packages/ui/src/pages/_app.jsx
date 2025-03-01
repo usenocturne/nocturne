@@ -377,11 +377,9 @@ export default function App({ Component, pageProps }) {
         attemptTokenRefresh,
         5 * 60 * 1000
       );
-      const playbackInterval = setInterval(fetchCurrentPlayback, 1000);
 
       return () => {
         clearInterval(tokenRefreshInterval);
-        clearInterval(playbackInterval);
       };
     }
   }, [accessToken]);
@@ -601,6 +599,7 @@ export default function App({ Component, pageProps }) {
             }
           } catch (error) {
             console.error("Failed to restore session:", error);
+            clearSession();
 
             if (error.message && error.message.includes("invalid_grant")) {
               await clearSession();
