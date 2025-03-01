@@ -253,6 +253,8 @@ This software was made possible only through the following individuals and open 
 - [Dominic Frye](https://github.com/itsnebulalol)
 - [bbaovanc](https://github.com/bbaovanc)
 
+<br>
+
 - [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for giving Brandon a Car Thing to develop with
 - [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), and [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
 - [Thing Labs's fork of superbird-tool](https://github.com/thinglabsoss/superbird-tool), for their contributions on the original superbird-tool
