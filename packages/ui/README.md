@@ -2,7 +2,7 @@
   <br>
   <img src="https://usenocturne.com/images/logo.png" alt="Nocturne" width="200">
   <br>
-  nocturne
+  Nocturne UI
   <br>
 </h1>
 
@@ -26,11 +26,12 @@
 
 ## How To Use
 
-### Custom Credentials
+### Login
 
 1. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
 2. Once running on your Car Thing, scan the QR Code using your phone's camera.
 3. Authorize with Spotify and start using Nocturne!
+
 > [!NOTE]  
 > When connecting to Spotify, you may notice the app appears as 'Spotify for Desktop' - this is expected behavior and won't affect functionality.
 
@@ -241,21 +242,27 @@ Nocturne is a massive endeavor, and the team have spent everyday over the last f
 
 All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
 
+[Buy Me a Coffee](https://buymeacoffee.com/brandonsaldan) | [Ko-Fi](https://ko-fi.com/brandonsaldan)
+
 ## Credits
 
 This software was made possible only through the following individuals and open source programs:
 
-- [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for giving me a Car Thing to develop with
-- [shadow](https://github.com/68p), for OS development, testing, troubleshooting, and crazy good repo maintainence
-- [Dominic Frye](https://x.com/itsnebulalol), for OS development, debugging, testing, and marketing
-- [bbaovanc](https://x.com/bbaovanc), for OS development, debugging, and testing
+- [Brandon Saldan](https://github.com/brandonsaldan)
+- [shadow](https://github.com/68p)
+- [Dominic Frye](https://github.com/itsnebulalol)
+- [bbaovanc](https://github.com/bbaovanc)
+
+- [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for giving Brandon a Car Thing to develop with
 - [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), and [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
-- [Car Thing Hax Community's fork of superbird-tool](https://github.com/Car-Thing-Hax-Community/superbird-tool), for their contributions on the original superbird-tool
+- [Thing Labs's fork of superbird-tool](https://github.com/thinglabsoss/superbird-tool), for their contributions on the original superbird-tool
 
 ## Related
 
 [nocturne-image](https://github.com/usenocturne/nocturne-image) - The Debian image that runs this web application
+
 [nocturne-api](https://github.com/usenocturne/nocturne-api) - Cloudflare Worker for various tasks required server-side
+
 [nocturned](https://github.com/usenocturne/nocturned) - Local API for the Car Thing to handle bluetooth + others
 
 ## License
@@ -266,6 +273,9 @@ We kindly ask that any modifications or distributions made outside of direct for
 
 ---
 
-> [brandons.place](https://brandons.place/) &nbsp;&middot;&nbsp;
-> GitHub [@brandonsaldan](https://github.com/brandonsaldan) &nbsp;&middot;&nbsp;
-> Twitter [@brandonsaldan](https://twitter.com/brandonsaldan)
+> © 2025 Nocturne.
+
+> "Spotify" and "Car Thing" are trademarks of Spotify AB. This software is not affiliated with or endorsed by Spotify AB.
+
+> [usenocturne.com](https://usenocturne.com) &nbsp;&middot;&nbsp;
+> GitHub [@usenocturne](https://github.com/usenocturne)
