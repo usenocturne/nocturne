@@ -69,6 +69,7 @@ export default function NowPlaying({
 
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
+  const [liveProgress, setLiveProgress] = useState(0);
 
   const {
     showLyrics,
@@ -439,6 +440,8 @@ export default function NowPlaying({
             }}
             onPlayPause={togglePlayPause}
             onScrubbingChange={setIsProgressScrubbing}
+            accessToken={accessToken}
+            onProgressUpdate={setLiveProgress}
           />
         </div>
 
@@ -454,13 +457,21 @@ export default function NowPlaying({
               {currentPlayback && currentPlayback.item ? (
                 <>
                   <span className="text-white/60 text-[20px]">
-                    {convertTimeToLength(currentPlayback.progress_ms, true)}
+                    {convertTimeToLength(
+                      Math.floor(
+                        (liveProgress / 100) * currentPlayback.item.duration_ms
+                      ),
+                      true
+                    )}
                   </span>
                   <span className="text-white/60 text-[20px]">
                     {remainingTimeEnabled
                       ? convertTimeToLength(
                           currentPlayback.item.duration_ms -
-                            currentPlayback.progress_ms,
+                            Math.floor(
+                              (liveProgress / 100) *
+                                currentPlayback.item.duration_ms
+                            ),
                           false
                         )
                       : convertTimeToLength(
