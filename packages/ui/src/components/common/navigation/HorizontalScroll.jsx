@@ -83,6 +83,10 @@ export default function HorizontalScroll({
       const scrollableItems = Array.from(containerRef.current.children);
       setItems(scrollableItems);
       hasScrolledToPlayingRef.current = false;
+      containerRef.current.scrollTo({
+        left: 0,
+        behavior: "smooth",
+      });
     }
   }, [activeSection]);
 

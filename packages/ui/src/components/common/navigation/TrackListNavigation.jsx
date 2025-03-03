@@ -25,6 +25,10 @@ const TrackListNavigation = ({
         )
       );
       setItems(trackItems);
+      containerRef.current.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     };
 
     updateSelectableItems();

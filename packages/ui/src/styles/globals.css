@@ -22,6 +22,10 @@ body {
   display: none; /* For Chrome, Safari, and Edge */
 }
 
+.settings-scroll-container {
+  overflow-x: hidden;
+}
+
 .fade-out {
   opacity: 0;
 }
