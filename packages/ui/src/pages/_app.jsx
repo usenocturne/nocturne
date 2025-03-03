@@ -135,6 +135,7 @@ export default function App({ Component, pageProps }) {
     setBrightness,
     router,
     setActiveSection,
+    activeSection,
     handleError,
     accessToken,
     refreshToken,
@@ -144,6 +145,7 @@ export default function App({ Component, pageProps }) {
     fetchCurrentPlayback,
     setPressedButton,
     setShowMappingOverlay,
+    showTutorial,
   });
 
   useEffect(() => {

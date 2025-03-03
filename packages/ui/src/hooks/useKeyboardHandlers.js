@@ -11,6 +11,7 @@ export function useKeyboardHandlers({
   setBrightness,
   router,
   setActiveSection,
+  activeSection,
   handleError,
   accessToken,
   refreshToken,
@@ -55,6 +56,9 @@ export function useKeyboardHandlers({
         if (drawerOpen) {
           setDrawerOpen(false);
         } else {
+          if (router.pathname === "/" && activeSection === "settings") {
+            return;
+          }
           const result = handleBack();
 
           if (result.pathname === "/" && result.section) {
@@ -303,6 +307,7 @@ export function useKeyboardHandlers({
     refreshAccessToken,
     handleError,
     setActiveSection,
+    activeSection,
     handleBack,
     updateSectionHistory,
     showBrightnessOverlay,

@@ -578,6 +578,7 @@ export default function Home({
                 <Settings
                   accessToken={accessToken}
                   onOpenDonationModal={() => setShowDonationModal(true)}
+                  setActiveSection={setActiveSection}
                 />
               </div>
             )}

@@ -245,7 +245,7 @@ const fetchSpotifyProfile = async (accessToken) => {
   }
 };
 
-export default function Settings({ accessToken, onOpenDonationModal }) {
+export default function Settings({ accessToken, onOpenDonationModal, setActiveSection }) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState("main");
   const [activeSubpage, setActiveSubpage] = useState(null);
@@ -591,6 +591,24 @@ export default function Settings({ accessToken, onOpenDonationModal }) {
         return null;
     }
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !isAnimating) {
+        if (currentPage === "main") {
+          setActiveSection("recents");
+          router.push("/");
+        } else {
+          navigateBack();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isAnimating, navigateBack, currentPage, router, setActiveSection]);
 
   return (
     <div className="h-full overflow-y-auto settings-scroll-container">
