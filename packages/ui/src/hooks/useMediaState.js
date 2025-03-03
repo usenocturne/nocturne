@@ -21,6 +21,7 @@ export function useMediaState(accessToken, handleError) {
   const connectionErrorsRef = useRef(0);
   const lastFetchTimeRef = useRef(0);
   const initialStateLoadedRef = useRef(false);
+  const hasEstablishedConnectionRef = useRef(false);
 
   const processPlaybackState = useCallback(
     (data) => {
@@ -183,7 +184,7 @@ export function useMediaState(accessToken, handleError) {
   }, []);
 
   const connectWebSocket = useCallback(() => {
-    if (!accessToken || webSocketRef.current || isConnectingRef.current) {
+    if (!accessToken || webSocketRef.current || isConnectingRef.current || hasEstablishedConnectionRef.current) {
       return;
     }
 
@@ -218,6 +219,7 @@ export function useMediaState(accessToken, handleError) {
 
         if ("headers" in message && message.headers["Spotify-Connection-Id"]) {
           connectionIdRef.current = message.headers["Spotify-Connection-Id"];
+          hasEstablishedConnectionRef.current = true;
 
           try {
             const url = `https://api.spotify.com/v1/me/notifications/player?connection_id=${encodeURIComponent(
@@ -260,15 +262,19 @@ export function useMediaState(accessToken, handleError) {
 
         if (connectionErrorsRef.current > 3) {
           cleanupWebSocket();
+          hasEstablishedConnectionRef.current = false;
         }
       };
 
       webSocketRef.current.onclose = () => {
         isConnectingRef.current = false;
 
-        cleanupWebSocket();
+        if (webSocketRef.current) {
+          cleanupWebSocket();
+        }
 
         if (connectionErrorsRef.current <= 3) {
+          hasEstablishedConnectionRef.current = false;
           const backoffTime = Math.min(
             1000 * Math.pow(2, connectionErrorsRef.current),
             30000
@@ -302,11 +308,17 @@ export function useMediaState(accessToken, handleError) {
       initialStateLoadedRef.current = false;
 
       fetchInitialPlaybackState();
-
-      connectWebSocket();
+      
+      if (!hasEstablishedConnectionRef.current) {
+        connectWebSocket();
+      }
     }
 
-    return cleanupWebSocket;
+    return () => {
+      if (!hasEstablishedConnectionRef.current) {
+        cleanupWebSocket();
+      }
+    };
   }, [
     accessToken,
     connectWebSocket,
