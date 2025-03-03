@@ -13,6 +13,7 @@ const ShowPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -168,7 +169,7 @@ const ShowPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing episode:", error.message);
     }

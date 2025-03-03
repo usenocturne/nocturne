@@ -15,6 +15,7 @@ const MixPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -231,7 +232,7 @@ const MixPage = ({
         }
       }, 200);
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       handleError("PLAY_MIX_ERROR", error.message);
     }
@@ -361,7 +362,7 @@ const MixPage = ({
         }
       }, 200);
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }

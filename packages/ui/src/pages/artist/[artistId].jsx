@@ -14,6 +14,7 @@ const ArtistPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -126,7 +127,7 @@ const ArtistPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing artist top tracks:", error.message);
     }
@@ -206,7 +207,7 @@ const ArtistPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }

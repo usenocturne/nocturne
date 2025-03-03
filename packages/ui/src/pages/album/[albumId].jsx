@@ -14,6 +14,7 @@ const AlbumPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -178,7 +179,7 @@ const AlbumPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing album:", error.message);
     }
@@ -258,7 +259,7 @@ const AlbumPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }

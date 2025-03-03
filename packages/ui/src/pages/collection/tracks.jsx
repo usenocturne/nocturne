@@ -14,6 +14,7 @@ const LikedSongsPage = ({
   handleError,
   error,
   updateGradientColors,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -217,7 +218,7 @@ const LikedSongsPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       handleError("PLAY_LIKED_SONGS_ERROR", error.message);
     }
@@ -279,7 +280,7 @@ const LikedSongsPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }

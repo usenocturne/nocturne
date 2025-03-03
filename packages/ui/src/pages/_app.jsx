@@ -411,7 +411,7 @@ export default function App({ Component, pageProps }) {
         if (
           isAutoRedirectEnabled &&
           currentPlayback?.is_playing &&
-          router.pathname !== "/now-playing" &&
+          activeSection === "nowPlaying" &&
           !showBrightnessOverlay &&
           !showMappingOverlay &&
           !drawerOpen &&
@@ -420,7 +420,7 @@ export default function App({ Component, pageProps }) {
           !router.pathname.includes("phone-auth") &&
           !window.location.search.includes("code")
         ) {
-          router.push("/now-playing");
+          setActiveSection("nowPlaying");
         }
       }
     };
@@ -465,7 +465,7 @@ export default function App({ Component, pageProps }) {
   ]);
 
   useEffect(() => {
-    if (router.pathname === "/now-playing") {
+    if (activeSection === "nowPlaying") {
       if (!currentPlayback || !currentPlayback.is_playing) {
         updateGradientColors(null);
       } else {
@@ -642,11 +642,11 @@ export default function App({ Component, pageProps }) {
       {(!networkStatus?.isConnected &&
         showNoNetwork &&
         !router.pathname.includes("phone-auth")) ||
-        (!authState.authSelectionMade &&
-          !router.pathname.includes("phone-auth") &&
-          !window.location.search.includes("code") &&
-          !localStorage.getItem("spotifyRefreshToken") &&
-          !localStorage.getItem("spotifyAccessToken")) ? (
+      (!authState.authSelectionMade &&
+        !router.pathname.includes("phone-auth") &&
+        !window.location.search.includes("code") &&
+        !localStorage.getItem("spotifyRefreshToken") &&
+        !localStorage.getItem("spotifyAccessToken")) ? (
         <AuthSelection
           onSelect={hookHandleAuthSelection}
           networkStatus={networkStatus}

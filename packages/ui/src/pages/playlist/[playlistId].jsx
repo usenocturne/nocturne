@@ -14,6 +14,7 @@ const PlaylistPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -282,7 +283,7 @@ const PlaylistPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing playlist:", error.message);
     }
@@ -362,7 +363,7 @@ const PlaylistPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }
