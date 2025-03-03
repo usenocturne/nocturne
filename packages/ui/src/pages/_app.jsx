@@ -41,6 +41,7 @@ import { useMediaState } from "../hooks/useMediaState";
 import { useGradientState } from "../hooks/useGradientState";
 import { useNavigationState } from "../hooks/useNavigationState";
 import { useKeyboardHandlers } from "../hooks/useKeyboardHandlers";
+import { usePlaybackProgress } from "../hooks/usePlaybackProgress";
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -125,6 +126,8 @@ export default function App({ Component, pageProps }) {
     generateMeshGradient,
     updateGradientColors,
   } = useGradientState(activeSection);
+
+  const estimatedProgress = usePlaybackProgress(currentPlayback);
 
   useKeyboardHandlers({
     drawerOpen,
@@ -639,11 +642,11 @@ export default function App({ Component, pageProps }) {
       {(!networkStatus?.isConnected &&
         showNoNetwork &&
         !router.pathname.includes("phone-auth")) ||
-      (!authState.authSelectionMade &&
-        !router.pathname.includes("phone-auth") &&
-        !window.location.search.includes("code") &&
-        !localStorage.getItem("spotifyRefreshToken") &&
-        !localStorage.getItem("spotifyAccessToken")) ? (
+        (!authState.authSelectionMade &&
+          !router.pathname.includes("phone-auth") &&
+          !window.location.search.includes("code") &&
+          !localStorage.getItem("spotifyRefreshToken") &&
+          !localStorage.getItem("spotifyAccessToken")) ? (
         <AuthSelection
           onSelect={hookHandleAuthSelection}
           networkStatus={networkStatus}
@@ -693,6 +696,7 @@ export default function App({ Component, pageProps }) {
                 showBrightnessOverlay={showBrightnessOverlay}
                 networkStatus={networkStatus}
                 showTutorial={showTutorial}
+                estimatedProgress={estimatedProgress}
               />
               <ErrorAlert error={error} onClose={clearError} />
             </div>

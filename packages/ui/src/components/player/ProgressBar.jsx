@@ -186,14 +186,12 @@ const ProgressBar = ({
   return (
     <div
       ref={containerRef}
-      className={`relative transition-all duration-200 ease-in-out ${
-        isScrubbing ? "translate-y-8" : ""
-      }`}
+      className={`relative transition-all duration-200 ease-in-out ${isScrubbing ? "translate-y-8" : ""
+        }`}
     >
       <div
-        className={`relative w-full bg-white/20 rounded-full overflow-hidden cursor-pointer transition-all duration-300 ${
-          isScrubbing ? "h-8" : "h-2 mt-4"
-        }`}
+        className={`relative w-full bg-white/20 rounded-full overflow-hidden cursor-pointer transition-all duration-300 ${isScrubbing ? "h-8" : "h-2 mt-4"
+          }`}
         onClick={handleClick}
       >
         <div
@@ -210,11 +208,10 @@ const ProgressBar = ({
             }}
           >
             <span
-              className={`text-lg font-[580] absolute ${
-                shouldShowTimestampOutside
+              className={`text-lg font-[580] absolute ${shouldShowTimestampOutside
                   ? "left-2 text-black/40"
                   : "right-full pr-2 text-black/40"
-              }`}
+                }`}
             >
               {formatTime(Math.floor((finalProgress / 100) * durationMs))}
             </span>

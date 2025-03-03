@@ -58,6 +58,7 @@ export default function NowPlaying({
   updateGradientColors,
   handleError,
   showBrightnessOverlay,
+  estimatedProgress,
 }) {
   useAppState({
     currentPlayback,
@@ -125,9 +126,9 @@ export default function NowPlaying({
       ? currentPlayback.item.name
       : currentPlayback.item.name || "Not Playing"
     : currentPlayback?.context?.uri ===
-        "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
-    ? "Up next"
-    : "Not Playing";
+      "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
+      ? "Up next"
+      : "Not Playing";
 
   const { trackNameScrollingEnabled, shouldScroll, trackNameRef } =
     useTrackScroll(trackName);
@@ -140,9 +141,9 @@ export default function NowPlaying({
       ? currentPlayback.item.show.name
       : currentPlayback.item.artists.map((artist) => artist.name).join(", ")
     : currentPlayback?.context?.uri ===
-        "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
-    ? "DJ X"
-    : "";
+      "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
+      ? "DJ X"
+      : "";
 
   const albumArt = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -150,22 +151,16 @@ export default function NowPlaying({
       : currentPlayback.item.type === "local" ||
         !currentPlayback.item?.album?.images?.[0]?.url ||
         !currentPlayback.item?.album?.images?.[0]
-      ? "/images/not-playing.webp"
-      : currentPlayback.item.album.images[0].url
+        ? "/images/not-playing.webp"
+        : currentPlayback.item.album.images[0].url
     : currentPlayback?.context?.uri ===
-        "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
-    ? "/images/radio-cover/dj.webp"
-    : "/images/not-playing.webp";
+      "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
+      ? "/images/radio-cover/dj.webp"
+      : "/images/not-playing.webp";
 
   const isPlaying = currentPlayback?.is_playing || false;
-  const progress = currentPlayback?.item
-    ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
-    : currentPlayback?.context?.uri ===
-        "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
-    ? 0
-    : 0;
   const [isSeeking, setIsSeeking] = useState(false);
-  const [localProgress, setProgress] = useState(progress);
+  const [localProgress, setProgress] = useState(estimatedProgress);
   const seekTimeoutRef = useRef(null);
   const getTextStyles = (text) => {
     const { direction, script } = getTextDirection(text);
@@ -199,9 +194,8 @@ export default function NowPlaying({
     const formattedSeconds = seconds.toString().padStart(2, "0");
 
     if (hours > 0) {
-      return `${
-        !elapsed ? "-" : ""
-      }${hours}:${formattedMinutes}:${formattedSeconds}`;
+      return `${!elapsed ? "-" : ""
+        }${hours}:${formattedMinutes}:${formattedSeconds}`;
     }
 
     return `${!elapsed ? "-" : ""}${formattedMinutes}:${formattedSeconds}`;
@@ -253,19 +247,19 @@ export default function NowPlaying({
               <LongPressLink
                 href={
                   !currentPlayback ||
-                  currentPlayback?.item?.is_local ||
-                  !currentPlayback?.item?.album?.id
+                    currentPlayback?.item?.is_local ||
+                    !currentPlayback?.item?.album?.id
                     ? ""
                     : currentPlayback?.item?.type === "episode"
-                    ? `/show/${currentPlayback.item.show.id}`
-                    : `/album/${currentPlayback?.item?.album?.id}`
+                      ? `/show/${currentPlayback.item.show.id}`
+                      : `/album/${currentPlayback?.item?.album?.id}`
                 }
                 spotifyUrl={
                   currentPlayback?.item?.type === "episode"
                     ? currentPlayback.item.show.external_urls?.spotify
                     : currentPlayback?.item?.is_local
-                    ? null
-                    : currentPlayback?.item?.album?.external_urls?.spotify
+                      ? null
+                      : currentPlayback?.item?.album?.external_urls?.spotify
                 }
                 accessToken={accessToken}
               >
@@ -288,7 +282,7 @@ export default function NowPlaying({
               <div className="flex-1 text-center md:text-left">
                 {currentPlayback?.context?.uri ===
                   "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" &&
-                !currentPlayback?.item ? (
+                  !currentPlayback?.item ? (
                   <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
                     {trackName}
                   </h4>
@@ -296,19 +290,19 @@ export default function NowPlaying({
                   <LongPressLink
                     href={
                       !currentPlayback ||
-                      currentPlayback?.item?.is_local ||
-                      !currentPlayback?.item?.album?.id
+                        currentPlayback?.item?.is_local ||
+                        !currentPlayback?.item?.album?.id
                         ? ""
                         : currentPlayback?.item?.type === "episode"
-                        ? `/show/${currentPlayback.item.show.id}`
-                        : `/album/${currentPlayback?.item?.album?.id}`
+                          ? `/show/${currentPlayback.item.show.id}`
+                          : `/album/${currentPlayback?.item?.album?.id}`
                     }
                     spotifyUrl={
                       currentPlayback?.item?.type === "episode"
                         ? currentPlayback.item.show.external_urls?.spotify
                         : currentPlayback?.item?.is_local
-                        ? null
-                        : currentPlayback?.item?.album?.external_urls?.spotify
+                          ? null
+                          : currentPlayback?.item?.album?.external_urls?.spotify
                     }
                     accessToken={accessToken}
                   >
@@ -317,11 +311,10 @@ export default function NowPlaying({
                         <h4
                           ref={trackNameRef}
                           key={currentPlayback?.item?.id || "not-playing"}
-                          className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${
-                            trackNameScrollingEnabled && shouldScroll
+                          className={`track-name text-[40px] font-[580] text-white tracking-tight whitespace-nowrap ${trackNameScrollingEnabled && shouldScroll
                               ? "animate-scroll"
                               : ""
-                          }`}
+                            }`}
                         >
                           {trackName}
                         </h4>
@@ -335,7 +328,7 @@ export default function NowPlaying({
                 )}
                 {currentPlayback?.context?.uri ===
                   "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" &&
-                !currentPlayback?.item ? (
+                  !currentPlayback?.item ? (
                   <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
                     {artistName}
                   </h4>
@@ -345,14 +338,14 @@ export default function NowPlaying({
                       currentPlayback?.item?.is_local
                         ? ""
                         : currentPlayback?.item?.type === "episode"
-                        ? `/show/${currentPlayback.item.show.id}`
-                        : `/artist/${currentPlayback?.item?.artists[0]?.id}`
+                          ? `/show/${currentPlayback.item.show.id}`
+                          : `/artist/${currentPlayback?.item?.artists[0]?.id}`
                     }
                     spotifyUrl={
                       currentPlayback?.item?.type === "episode"
                         ? currentPlayback.item.show.external_urls?.spotify
                         : currentPlayback?.item?.artists[0]?.external_urls
-                            ?.spotify
+                          ?.spotify
                     }
                     accessToken={accessToken}
                   >
@@ -380,8 +373,8 @@ export default function NowPlaying({
                           ? "text-white"
                           : index === currentLyricIndex - 1 ||
                             index === currentLyricIndex + 1
-                          ? "text-white/40"
-                          : "text-white/40";
+                            ? "text-white/40"
+                            : "text-white/40";
 
                       return (
                         <p
@@ -405,7 +398,7 @@ export default function NowPlaying({
 
         <div className={`px-12 ${!showTimeDisplay ? "pb-7 pt-3" : ""}`}>
           <ProgressBar
-            progress={isSeeking ? localProgress : progress}
+            progress={isSeeking ? localProgress : estimatedProgress}
             isPlaying={isPlaying}
             durationMs={currentPlayback?.item?.duration_ms}
             onSeek={async (position) => {
@@ -447,11 +440,10 @@ export default function NowPlaying({
 
         {showTimeDisplay && (
           <div
-            className={`w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden transition-all duration-200 ease-in-out ${
-              isProgressScrubbing
+            className={`w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden transition-all duration-200 ease-in-out ${isProgressScrubbing
                 ? "translate-y-24 opacity-0"
                 : "translate-y-0 opacity-100"
-            }`}
+              }`}
           >
             <div className="flex justify-between">
               {currentPlayback && currentPlayback.item ? (
@@ -459,7 +451,7 @@ export default function NowPlaying({
                   <span className="text-white/60 text-[20px]">
                     {convertTimeToLength(
                       Math.floor(
-                        (liveProgress / 100) * currentPlayback.item.duration_ms
+                        (estimatedProgress / 100) * currentPlayback.item.duration_ms
                       ),
                       true
                     )}
@@ -467,17 +459,17 @@ export default function NowPlaying({
                   <span className="text-white/60 text-[20px]">
                     {remainingTimeEnabled
                       ? convertTimeToLength(
-                          currentPlayback.item.duration_ms -
-                            Math.floor(
-                              (liveProgress / 100) *
-                                currentPlayback.item.duration_ms
-                            ),
-                          false
-                        )
+                        currentPlayback.item.duration_ms -
+                        Math.floor(
+                          (estimatedProgress / 100) *
+                          currentPlayback.item.duration_ms
+                        ),
+                        false
+                      )
                       : convertTimeToLength(
-                          currentPlayback.item.duration_ms,
-                          true
-                        )}
+                        currentPlayback.item.duration_ms,
+                        true
+                      )}
                   </span>
                 </>
               ) : (
@@ -491,11 +483,10 @@ export default function NowPlaying({
         )}
 
         <div
-          className={`flex justify-between items-center w-full px-12 transition-all duration-200 ease-in-out ${
-            isProgressScrubbing
+          className={`flex justify-between items-center w-full px-12 transition-all duration-200 ease-in-out ${isProgressScrubbing
               ? "translate-y-24 opacity-0"
               : "translate-y-0 opacity-100"
-          }`}
+            }`}
         >
           <div className="flex-shrink-0" onClick={toggleLikeTrack}>
             {isLiked ? (
@@ -520,10 +511,10 @@ export default function NowPlaying({
           <div className="flex items-center gap-4">
             {currentPlayback?.context?.uri ===
               "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && (
-              <div onClick={handleDJSignal}>
-                <DJIcon className="w-14 h-14 fill-white/60 mb-1 mr-2" />
-              </div>
-            )}
+                <div onClick={handleDJSignal}>
+                  <DJIcon className="w-14 h-14 fill-white/60 mb-1 mr-2" />
+                </div>
+              )}
             <Menu as="div" className="relative inline-block text-left">
               <MenuButton className="focus:outline-none">
                 <MenuIcon className="w-14 h-14 fill-white/60" />
@@ -541,9 +532,8 @@ export default function NowPlaying({
                   >
                     <MenuItem>
                       <div
-                        className={`group flex items-center justify-between px-4 py-[16px] text-sm ${
-                          currentPlayback ? "text-white" : "text-white/60"
-                        } font-[560] tracking-tight`}
+                        className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60"
+                          } font-[560] tracking-tight`}
                       >
                         <span className="text-[28px]">Add to Playlist</span>
                         <PlaylistAddIcon
@@ -574,16 +564,15 @@ export default function NowPlaying({
                     }
                   >
                     <div
-                      className={`group flex items-center justify-between px-4 py-[16px] text-sm ${
-                        currentPlayback ? "text-white" : "text-white/60"
-                      } font-[560] tracking-tight`}
+                      className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60"
+                        } font-[560] tracking-tight`}
                     >
                       <span className="text-[28px]">
                         {repeatMode === "off"
                           ? "Enable Repeat"
                           : repeatMode === "context"
-                          ? "Enable Repeat One"
-                          : "Disable Repeat"}
+                            ? "Enable Repeat One"
+                            : "Disable Repeat"}
                       </span>
                       {repeatMode === "off" ? (
                         <RepeatIcon className="h-8 w-8 text-white/60" />
@@ -603,18 +592,16 @@ export default function NowPlaying({
                     }
                   >
                     <div
-                      className={`group flex items-center justify-between px-4 py-[16px] text-sm ${
-                        currentPlayback ? "text-white" : "text-white/60"
-                      } font-[560] tracking-tight`}
+                      className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60"
+                        } font-[560] tracking-tight`}
                     >
                       <span className="text-[28px]">
                         {isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
                       </span>
                       <ShuffleIcon
                         aria-hidden="true"
-                        className={`h-8 w-8 ${
-                          isShuffled ? "text-white" : "text-white/60"
-                        }`}
+                        className={`h-8 w-8 ${isShuffled ? "text-white" : "text-white/60"
+                          }`}
                       />
                     </div>
                   </MenuItem>
@@ -630,18 +617,16 @@ export default function NowPlaying({
                       }
                     >
                       <div
-                        className={`group flex items-center justify-between px-4 py-[16px] text-sm ${
-                          currentPlayback ? "text-white" : "text-white/60"
-                        } font-[560] tracking-tight`}
+                        className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/60"
+                          } font-[560] tracking-tight`}
                       >
                         <span className="text-[28px]">
                           {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
                         </span>
                         <LyricsIcon
                           aria-hidden="true"
-                          className={`h-8 w-8 ${
-                            showLyrics ? "text-white" : "text-white/60"
-                          }`}
+                          className={`h-8 w-8 ${showLyrics ? "text-white" : "text-white/60"
+                            }`}
                         />
                       </div>
                     </MenuItem>
