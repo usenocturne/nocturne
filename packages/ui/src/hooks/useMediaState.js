@@ -112,6 +112,17 @@ export function useMediaState(accessToken, handleError) {
     [currentlyPlayingAlbum]
   );
 
+  const resetPlaybackState = useCallback(() => {
+    setCurrentPlayback(null);
+    setCurrentlyPlayingAlbum(null);
+    setCurrentlyPlayingTrackUri(null);
+    localStorage.removeItem("playingLikedSongs");
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("playingMix-"))
+      .forEach((key) => localStorage.removeItem(key));
+    initialStateLoadedRef.current = true;
+  }, []);
+
   const fetchInitialPlaybackState = useCallback(async () => {
     if (!accessToken) return;
 
@@ -133,28 +144,21 @@ export function useMediaState(accessToken, handleError) {
       );
 
       if (response.status === 204) {
-        setCurrentPlayback(null);
-        setCurrentlyPlayingAlbum(null);
-        setCurrentlyPlayingTrackUri(null);
-        localStorage.removeItem("playingLikedSongs");
-        initialStateLoadedRef.current = true;
+        resetPlaybackState();
         return;
       }
 
       if (response.ok) {
         const data = await response.json();
         if (!data || Object.keys(data).length === 0) {
-          setCurrentPlayback(null);
-          setCurrentlyPlayingAlbum(null);
-          setCurrentlyPlayingTrackUri(null);
-          localStorage.removeItem("playingLikedSongs");
+          resetPlaybackState();
         } else {
           processPlaybackState(data);
         }
         initialStateLoadedRef.current = true;
       }
     } catch (error) {}
-  }, [accessToken, processPlaybackState]);
+  }, [accessToken, processPlaybackState, resetPlaybackState]);
 
   const cleanupWebSocket = useCallback(() => {
     if (webSocketRef.current) {
@@ -184,7 +188,12 @@ export function useMediaState(accessToken, handleError) {
   }, []);
 
   const connectWebSocket = useCallback(() => {
-    if (!accessToken || webSocketRef.current || isConnectingRef.current || hasEstablishedConnectionRef.current) {
+    if (
+      !accessToken ||
+      webSocketRef.current ||
+      isConnectingRef.current ||
+      hasEstablishedConnectionRef.current
+    ) {
       return;
     }
 
@@ -249,6 +258,14 @@ export function useMediaState(accessToken, handleError) {
                   eventData.event?.state
                 ) {
                   processPlaybackState(eventData.event.state);
+                } else if (eventData.type === "DEVICE_STATE_CHANGED") {
+                  const devices = eventData.event?.devices || [];
+                  const hasActiveDevice = devices.some(
+                    (device) => device.is_active
+                  );
+                  if (devices.length === 0 || !hasActiveDevice) {
+                    resetPlaybackState();
+                  }
                 }
               }
             }
@@ -299,6 +316,7 @@ export function useMediaState(accessToken, handleError) {
     fetchInitialPlaybackState,
     processPlaybackState,
     cleanupWebSocket,
+    resetPlaybackState,
   ]);
 
   useEffect(() => {
@@ -308,7 +326,7 @@ export function useMediaState(accessToken, handleError) {
       initialStateLoadedRef.current = false;
 
       fetchInitialPlaybackState();
-      
+
       if (!hasEstablishedConnectionRef.current) {
         connectWebSocket();
       }
