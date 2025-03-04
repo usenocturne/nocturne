@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/common/navigation/LongPressLink";
+import Redirect from "../../components/common/navigation/Redirect";
 import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import SuccessAlert from "../../components/common/alerts/SuccessAlert";
@@ -290,11 +290,7 @@ const LikedSongsPage = ({
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10">
         <div className="min-w-[280px] mr-10">
-          <LongPressLink
-            href="/now-playing"
-            onClick={playLikedSongs}
-            accessToken={accessToken}
-          >
+          <div onClick={playLikedSongs}>
             <Image
               src="https://misc.scdn.co/liked-songs/liked-songs-640.png"
               alt="Liked Songs"
@@ -302,7 +298,7 @@ const LikedSongsPage = ({
               height={280}
               className="aspect-square rounded-[12px] drop-shadow-xl"
             />
-          </LongPressLink>
+          </div>
           <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
             Liked Songs
           </h4>
@@ -345,22 +341,16 @@ const LikedSongsPage = ({
             </div>
 
             <div className="flex-grow">
-              <LongPressLink
-                href="/now-playing"
-                spotifyUrl={item.track.external_urls.spotify}
-                accessToken={accessToken}
-              >
-                <div onClick={() => playTrack(item.track.uri, index)}>
-                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {item.track.name}
-                  </p>
-                </div>
-              </LongPressLink>
+              <div onClick={() => playTrack(item.track.uri, index)}>
+                <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  {item.track.name}
+                </p>
+              </div>
               <div className="flex flex-wrap">
                 {item.track.artists.map((artist, artistIndex) => (
-                  <LongPressLink
+                  <Redirect
                     key={artist.id}
-                    spotifyUrl={artist.external_urls.spotify}
+                    href={`/artist/${artist.id}`}
                     accessToken={accessToken}
                   >
                     <p
@@ -372,7 +362,7 @@ const LikedSongsPage = ({
                     >
                       {artist.name}
                     </p>
-                  </LongPressLink>
+                  </Redirect>
                 ))}
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/common/navigation/LongPressLink";
+import Redirect from "../../components/common/navigation/Redirect";
 import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import { getCurrentDevice } from "@/services/deviceService";
@@ -270,35 +270,25 @@ const AlbumPage = ({
       <div className="md:w-1/3 sticky top-10">
         {album.images && album.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
-            <LongPressLink
-              spotifyUrl={album.external_urls.spotify}
-              accessToken={accessToken}
-            >
-              <Image
-                src={album.images[0].url || "/images/not-playing.webp"}
-                alt="Album Cover"
-                width={280}
-                height={280}
-                priority
-                className="aspect-square rounded-[12px] drop-shadow-xl"
-              />
-            </LongPressLink>
-            <LongPressLink
-              spotifyUrl={album.external_urls.spotify}
-              accessToken={accessToken}
-            >
-              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                {album.name}
-              </h4>
-            </LongPressLink>
-            <LongPressLink
-              spotifyUrl={album.artists[0].external_urls.spotify}
+            <Image
+              src={album.images[0].url || "/images/not-playing.webp"}
+              alt="Album Cover"
+              width={280}
+              height={280}
+              priority
+              className="aspect-square rounded-[12px] drop-shadow-xl"
+            />
+            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+              {album.name}
+            </h4>
+            <Redirect
+              href={`/artist/${album.artists[0].id}`}
               accessToken={accessToken}
             >
               <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
                 {album.artists.map((artist) => artist.name).join(", ")}
               </h4>
-            </LongPressLink>
+            </Redirect>
           </div>
         ) : (
           <p>No image available</p>
@@ -339,25 +329,19 @@ const AlbumPage = ({
             </div>
 
             <div className="flex-grow">
-              <LongPressLink
-                href="/now-playing"
-                spotifyUrl={track.external_urls.spotify}
-                accessToken={accessToken}
-              >
-                <div onClick={() => playTrack(track.uri, index)}>
-                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {track.name}
-                  </p>
-                </div>
-              </LongPressLink>
-              <LongPressLink
-                spotifyUrl={track.artists[0].external_urls.spotify}
+              <div onClick={() => playTrack(track.uri, index)}>
+                <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  {track.name}
+                </p>
+              </div>
+              <Redirect
+                href={`/artist/${track.artists[0].id}`}
                 accessToken={accessToken}
               >
                 <p className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
                   {track.artists.map((artist) => artist.name).join(", ")}
                 </p>
-              </LongPressLink>
+              </Redirect>
             </div>
           </div>
         ))}

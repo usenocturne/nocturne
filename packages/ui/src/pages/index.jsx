@@ -1,6 +1,6 @@
 import Sidebar from "../components/common/navigation/Sidebar";
 import Settings from "../components/settings/Settings";
-import LongPressLink from "../components/common/navigation/LongPressLink";
+import Redirect from "../components/common/navigation/Redirect";
 import HorizontalScroll from "@/components/common/navigation/HorizontalScroll";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -241,7 +241,7 @@ export default function Home({
                     key={item.type === "local" ? `local-${item.uri}` : item.id}
                     className="min-w-[280px] mr-10 snap-start"
                   >
-                    <LongPressLink
+                    <Redirect
                       href={
                         item.id === null
                           ? ""
@@ -249,7 +249,6 @@ export default function Home({
                           ? `/show/${item.id}`
                           : `/album/${item.id}`
                       }
-                      spotifyUrl={item?.external_urls?.spotify}
                       accessToken={accessToken}
                     >
                       <Image
@@ -264,8 +263,8 @@ export default function Home({
                         priority
                         className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                       />
-                    </LongPressLink>
-                    <LongPressLink
+                    </Redirect>
+                    <Redirect
                       href={
                         item.id === null
                           ? ""
@@ -273,31 +272,29 @@ export default function Home({
                           ? `/show/${item.id}`
                           : `/album/${item.id}`
                       }
-                      spotifyUrl={item?.external_urls?.spotify}
                       accessToken={accessToken}
                     >
                       <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                         {item.name}
                       </h4>
-                    </LongPressLink>
+                    </Redirect>
                     {item.type === "show" ? (
                       <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
                         {item.publisher}
                       </h4>
                     ) : item.artists?.[0] ? (
-                      <LongPressLink
+                      <Redirect
                         href={
                           item.id === null
                             ? ""
                             : `/artist/${item.artists[0].id}`
                         }
-                        spotifyUrl={item.artists[0]?.external_urls?.spotify}
                         accessToken={accessToken}
                       >
                         <h4 className="text-[32px] font-[560] text-white truncate tracking-tight max-w-[280px]">
                           {item.artists.map((artist) => artist.name).join(", ")}
                         </h4>
-                      </LongPressLink>
+                      </Redirect>
                     ) : null}
                   </div>
                 ))}
@@ -310,9 +307,8 @@ export default function Home({
                     key="liked-songs"
                     className="min-w-[280px] mr-10 snap-start"
                   >
-                    <LongPressLink
+                    <Redirect
                       href="/collection/tracks"
-                      spotifyUrl={likedSongs.external_urls.spotify}
                       accessToken={accessToken}
                     >
                       <Image
@@ -322,16 +318,15 @@ export default function Home({
                         height={280}
                         className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                       />
-                    </LongPressLink>
-                    <LongPressLink
+                    </Redirect>
+                    <Redirect
                       href="/collection/tracks"
-                      spotifyUrl={likedSongs.external_urls.spotify}
                       accessToken={accessToken}
                     >
                       <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                         {likedSongs.name}
                       </h4>
-                    </LongPressLink>
+                    </Redirect>
                     <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
                       {currentPlayback?.context?.uri?.includes("collection") ||
                       (currentPlayback?.context === null &&
@@ -365,9 +360,8 @@ export default function Home({
                       key={`playlist-${playlist.id}`}
                       className="min-w-[280px] mr-10 snap-start"
                     >
-                      <LongPressLink
+                      <Redirect
                         href={`/playlist/${playlist.id}`}
-                        spotifyUrl={playlist?.external_urls?.spotify}
                         accessToken={accessToken}
                       >
                         <Image
@@ -380,16 +374,15 @@ export default function Home({
                           height={280}
                           className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                         />
-                      </LongPressLink>
-                      <LongPressLink
+                      </Redirect>
+                      <Redirect
                         href={`/playlist/${playlist.id}`}
-                        spotifyUrl={playlist?.external_urls?.spotify}
                         accessToken={accessToken}
                       >
                         <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                           {playlist.name}
                         </h4>
-                      </LongPressLink>
+                      </Redirect>
                       <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
                         {currentPlayback &&
                         currentPlayback.context &&
@@ -419,9 +412,8 @@ export default function Home({
             {activeSection === "artists" &&
               artists.map((artist) => (
                 <div key={artist.id} className="min-w-[280px] mr-10 snap-start">
-                  <LongPressLink
+                  <Redirect
                     href={`/artist/${artist.id}`}
-                    spotifyUrl={artist?.external_urls?.spotify}
                     accessToken={accessToken}
                   >
                     <Image
@@ -433,16 +425,15 @@ export default function Home({
                       height={280}
                       className="mt-10 aspect-square rounded-full drop-shadow-xl bg-white/10"
                     />
-                  </LongPressLink>
-                  <LongPressLink
+                  </Redirect>
+                  <Redirect
                     href={`/artist/${artist.id}`}
-                    spotifyUrl={artist?.external_urls?.spotify}
                     accessToken={accessToken}
                   >
                     <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                       {artist.name}
                     </h4>
-                  </LongPressLink>
+                  </Redirect>
                   <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
                     {currentPlayback?.item?.artists?.some(
                       (a) => a.id === artist.id
@@ -537,7 +528,7 @@ export default function Home({
                 </div>
                 {radio.map((mix) => (
                   <div key={mix.id} className="min-w-[280px] mr-10 snap-start">
-                    <LongPressLink
+                    <Redirect
                       href={`/mix/${mix.id}?accessToken=${accessToken}`}
                       accessToken={accessToken}
                     >
@@ -548,15 +539,15 @@ export default function Home({
                         height={280}
                         className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10"
                       />
-                    </LongPressLink>
-                    <LongPressLink
+                    </Redirect>
+                    <Redirect
                       href={`/mix/${mix.id}?accessToken=${accessToken}`}
                       accessToken={accessToken}
                     >
                       <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                         {mix.name}
                       </h4>
-                    </LongPressLink>
+                    </Redirect>
                     <h4 className="text-[28px] font-[560] text-white truncate tracking-tight max-w-[280px] flex items-center">
                       {(() => {
                         const playingMixId = localStorage.getItem(
