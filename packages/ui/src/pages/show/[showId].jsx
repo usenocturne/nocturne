@@ -169,6 +169,7 @@ const ShowPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing episode:", error.message);
     }

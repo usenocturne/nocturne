@@ -128,6 +128,7 @@ const ArtistPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing artist top tracks:", error.message);
     }
@@ -208,6 +209,7 @@ const ArtistPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }

@@ -180,6 +180,7 @@ const AlbumPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing album:", error.message);
     }
@@ -260,6 +261,7 @@ const AlbumPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }

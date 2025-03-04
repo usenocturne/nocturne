@@ -284,6 +284,7 @@ const PlaylistPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing playlist:", error.message);
     }
@@ -364,6 +365,7 @@ const PlaylistPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }

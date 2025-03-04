@@ -219,6 +219,7 @@ const LikedSongsPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       handleError("PLAY_LIKED_SONGS_ERROR", error.message);
     }
@@ -281,6 +282,7 @@ const LikedSongsPage = ({
       );
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }

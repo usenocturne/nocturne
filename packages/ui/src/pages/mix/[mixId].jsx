@@ -233,6 +233,7 @@ const MixPage = ({
       }, 200);
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       handleError("PLAY_MIX_ERROR", error.message);
     }
@@ -363,6 +364,7 @@ const MixPage = ({
       }, 200);
 
       setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }
