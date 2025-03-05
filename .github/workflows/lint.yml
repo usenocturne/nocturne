@@ -1,0 +1,25 @@
+name: Lint
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  run-linters:
+    name: Run linters
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+
+      - name: Run the sh-checker
+        uses: luizm/action-sh-checker@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHELLCHECK_OPTS: --severity=info
+          SHFMT_OPTS: -i 2 -ci -d
+        with:
+          sh_checker_comment: true
+          sh_checker_checkbashisms_enable: true
