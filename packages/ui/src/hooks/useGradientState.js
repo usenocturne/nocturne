@@ -121,13 +121,23 @@ export function useGradientState() {
     return radialGradients.join(", ");
   }, []);
 
-  const updateGradientColors = useCallback(() => {
-    const authColors = ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"];
+  const updateGradientColors = useCallback((imageUrl, section) => {
+    if (!imageUrl && !section) {
+      const authColors = ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"];
+      setTargetColor1(authColors[0]);
+      setTargetColor2(authColors[1]);
+      setTargetColor3(authColors[2]);
+      setTargetColor4(authColors[3]);
+      return;
+    }
 
-    setTargetColor1(authColors[0]);
-    setTargetColor2(authColors[1]);
-    setTargetColor3(authColors[2]);
-    setTargetColor4(authColors[3]);
+    if (section === "tutorial") {
+      const tutorialColors = ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"];
+      setTargetColor1(tutorialColors[0]);
+      setTargetColor2(tutorialColors[1]);
+      setTargetColor3(tutorialColors[2]);
+      setTargetColor4(tutorialColors[3]);
+    }
   }, []);
 
   return {
