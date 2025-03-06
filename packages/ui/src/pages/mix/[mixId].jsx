@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/common/navigation/LongPressLink";
+import Redirect from "../../components/common/navigation/Redirect";
 import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import SuccessAlert from "../../components/common/alerts/SuccessAlert";
@@ -15,6 +15,7 @@ const MixPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -231,7 +232,8 @@ const MixPage = ({
         }
       }, 200);
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       handleError("PLAY_MIX_ERROR", error.message);
     }
@@ -361,7 +363,8 @@ const MixPage = ({
         }
       }, 200);
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }
@@ -430,22 +433,16 @@ const MixPage = ({
             </div>
 
             <div className="flex-grow">
-              <LongPressLink
-                href="/now-playing"
-                spotifyUrl={track.external_urls.spotify}
-                accessToken={accessToken}
-              >
-                <div onClick={() => playTrack(track.uri, index)}>
-                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {track.name}
-                  </p>
-                </div>
-              </LongPressLink>
+              <div onClick={() => playTrack(track.uri, index)}>
+                <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  {track.name}
+                </p>
+              </div>
               <div className="flex flex-wrap">
                 {track.artists.map((artist, artistIndex) => (
-                  <LongPressLink
+                  <Redirect
                     key={artist.id}
-                    spotifyUrl={artist.external_urls.spotify}
+                    href={`/artist/${artist.id}`}
                     accessToken={accessToken}
                   >
                     <p
@@ -457,7 +454,7 @@ const MixPage = ({
                     >
                       {artist.name}
                     </p>
-                  </LongPressLink>
+                  </Redirect>
                 ))}
               </div>
             </div>

@@ -41,6 +41,7 @@ import { useMediaState } from "../hooks/useMediaState";
 import { useGradientState } from "../hooks/useGradientState";
 import { useNavigationState } from "../hooks/useNavigationState";
 import { useKeyboardHandlers } from "../hooks/useKeyboardHandlers";
+import { usePlaybackProgress } from "../hooks/usePlaybackProgress";
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -125,6 +126,8 @@ export default function App({ Component, pageProps }) {
     generateMeshGradient,
     updateGradientColors,
   } = useGradientState(activeSection);
+
+  const estimatedProgress = usePlaybackProgress(currentPlayback);
 
   useKeyboardHandlers({
     drawerOpen,
@@ -379,11 +382,9 @@ export default function App({ Component, pageProps }) {
         attemptTokenRefresh,
         5 * 60 * 1000
       );
-      const playbackInterval = setInterval(fetchCurrentPlayback, 1000);
 
       return () => {
         clearInterval(tokenRefreshInterval);
-        clearInterval(playbackInterval);
       };
     }
   }, [accessToken]);
@@ -412,7 +413,7 @@ export default function App({ Component, pageProps }) {
         if (
           isAutoRedirectEnabled &&
           currentPlayback?.is_playing &&
-          router.pathname !== "/now-playing" &&
+          activeSection === "nowPlaying" &&
           !showBrightnessOverlay &&
           !showMappingOverlay &&
           !drawerOpen &&
@@ -421,7 +422,7 @@ export default function App({ Component, pageProps }) {
           !router.pathname.includes("phone-auth") &&
           !window.location.search.includes("code")
         ) {
-          router.push("/now-playing");
+          setActiveSection("nowPlaying");
         }
       }
     };
@@ -466,7 +467,7 @@ export default function App({ Component, pageProps }) {
   ]);
 
   useEffect(() => {
-    if (router.pathname === "/now-playing") {
+    if (activeSection === "nowPlaying") {
       if (!currentPlayback || !currentPlayback.is_playing) {
         updateGradientColors(null);
       } else {
@@ -603,6 +604,7 @@ export default function App({ Component, pageProps }) {
             }
           } catch (error) {
             console.error("Failed to restore session:", error);
+            clearSession();
 
             if (error.message && error.message.includes("invalid_grant")) {
               await clearSession();
@@ -696,6 +698,7 @@ export default function App({ Component, pageProps }) {
                 showBrightnessOverlay={showBrightnessOverlay}
                 networkStatus={networkStatus}
                 showTutorial={showTutorial}
+                estimatedProgress={estimatedProgress}
               />
               <ErrorAlert error={error} onClose={clearError} />
             </div>

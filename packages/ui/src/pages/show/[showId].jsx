@@ -1,6 +1,5 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/common/navigation/LongPressLink";
 import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import { getCurrentDevice } from "@/services/deviceService";
@@ -13,6 +12,7 @@ const ShowPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -168,7 +168,8 @@ const ShowPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing episode:", error.message);
     }
@@ -193,27 +194,17 @@ const ShowPage = ({
       <div className="md:w-1/3 sticky top-10">
         {show.images && show.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
-            <LongPressLink
-              spotifyUrl={show.external_urls.spotify}
-              accessToken={accessToken}
-            >
-              <Image
-                src={show.images[0].url || "/images/not-playing.webp"}
-                alt="Show Cover"
-                width={280}
-                height={280}
-                priority
-                className="aspect-square rounded-[12px] drop-shadow-xl"
-              />
-            </LongPressLink>
-            <LongPressLink
-              spotifyUrl={show.external_urls.spotify}
-              accessToken={accessToken}
-            >
-              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                {show.name}
-              </h4>
-            </LongPressLink>
+            <Image
+              src={show.images[0].url || "/images/not-playing.webp"}
+              alt="Show Cover"
+              width={280}
+              height={280}
+              priority
+              className="aspect-square rounded-[12px] drop-shadow-xl"
+            />
+            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+              {show.name}
+            </h4>
             <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
               {show.publisher}
             </h4>
@@ -262,26 +253,20 @@ const ShowPage = ({
             </div>
 
             <div className="flex-grow">
-              <LongPressLink
-                href="/now-playing"
-                spotifyUrl={episode.external_urls.spotify}
-                accessToken={accessToken}
-              >
-                <div onClick={() => playEpisode(episode.uri, index)}>
-                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {episode.name}
-                  </p>
-                </div>
-                <p className="text-[24px] font-[560] text-white/60 tracking-tight max-w-[560px] line-clamp-2 mb-2">
-                  {episode.description}
+              <div onClick={() => playEpisode(episode.uri, index)}>
+                <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  {episode.name}
                 </p>
-                <div className="flex space-x-4 text-[20px] font-[560] text-white/40">
-                  <span>{formatDate(episode.release_date)}</span>
-                </div>
-                <div className="flex space-x-4 text-[20px] font-[560] text-white/40">
-                  <span>{formatDuration(episode.duration_ms)}</span>
-                </div>
-              </LongPressLink>
+              </div>
+              <p className="text-[24px] font-[560] text-white/60 tracking-tight max-w-[560px] line-clamp-2 mb-2">
+                {episode.description}
+              </p>
+              <div className="flex space-x-4 text-[20px] font-[560] text-white/40">
+                <span>{formatDate(episode.release_date)}</span>
+              </div>
+              <div className="flex space-x-4 text-[20px] font-[560] text-white/40">
+                <span>{formatDuration(episode.duration_ms)}</span>
+              </div>
             </div>
           </div>
         ))}

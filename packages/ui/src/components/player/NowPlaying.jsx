@@ -13,11 +13,11 @@ import classNames from "classnames";
 import Drawer, {
   DrawerTrigger,
   DrawerContent,
-} from "../components/common/navigation/Drawer";
-import LongPressLink from "../components/common/navigation/LongPressLink";
-import { getTextDirection } from "../constants/fonts";
-import ProgressBar from "../components/player/ProgressBar";
-import DeviceSwitcherModal from "../components/common/modals/DeviceSwitcherModal";
+} from "@/components/common/navigation/Drawer";
+import Redirect from "@/components/common/navigation/Redirect";
+import { getTextDirection } from "@/constants/fonts";
+import ProgressBar from "@/components/player/ProgressBar";
+import DeviceSwitcherModal from "@/components/common/modals/DeviceSwitcherModal";
 
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useLyrics } from "@/hooks/useLyrics";
@@ -26,7 +26,7 @@ import { usePlaybackControls } from "@/hooks/usePlaybackControls";
 import { usePlaylistDialog } from "@/hooks/usePlaylistDialog";
 import { useAppState } from "@/hooks/useAppState";
 import { useElapsedTime } from "@/hooks/useElapsedTime";
-import { inter } from "../constants/fonts";
+import { inter } from "@/constants/fonts";
 
 import {
   HeartIcon,
@@ -46,7 +46,7 @@ import {
   ShuffleIcon,
   LyricsIcon,
   DJIcon,
-} from "../components/icons";
+} from "@/components/icons";
 
 export default function NowPlaying({
   accessToken,
@@ -58,6 +58,7 @@ export default function NowPlaying({
   updateGradientColors,
   handleError,
   showBrightnessOverlay,
+  estimatedProgress,
 }) {
   useAppState({
     currentPlayback,
@@ -69,6 +70,7 @@ export default function NowPlaying({
 
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
+  const [liveProgress, setLiveProgress] = useState(0);
 
   const {
     showLyrics,
@@ -157,14 +159,8 @@ export default function NowPlaying({
     : "/images/not-playing.webp";
 
   const isPlaying = currentPlayback?.is_playing || false;
-  const progress = currentPlayback?.item
-    ? (currentPlayback.progress_ms / currentPlayback.item.duration_ms) * 100
-    : currentPlayback?.context?.uri ===
-        "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" && !currentPlayback?.item
-    ? 0
-    : 0;
   const [isSeeking, setIsSeeking] = useState(false);
-  const [localProgress, setProgress] = useState(progress);
+  const [localProgress, setProgress] = useState(estimatedProgress);
   const seekTimeoutRef = useRef(null);
   const getTextStyles = (text) => {
     const { direction, script } = getTextDirection(text);
@@ -249,7 +245,7 @@ export default function NowPlaying({
         <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
             <div className="min-w-[280px] mr-8">
-              <LongPressLink
+              <Redirect
                 href={
                   !currentPlayback ||
                   currentPlayback?.item?.is_local ||
@@ -258,13 +254,6 @@ export default function NowPlaying({
                     : currentPlayback?.item?.type === "episode"
                     ? `/show/${currentPlayback.item.show.id}`
                     : `/album/${currentPlayback?.item?.album?.id}`
-                }
-                spotifyUrl={
-                  currentPlayback?.item?.type === "episode"
-                    ? currentPlayback.item.show.external_urls?.spotify
-                    : currentPlayback?.item?.is_local
-                    ? null
-                    : currentPlayback?.item?.album?.external_urls?.spotify
                 }
                 accessToken={accessToken}
               >
@@ -280,7 +269,7 @@ export default function NowPlaying({
                   priority
                   className="aspect-square rounded-[12px] drop-shadow-xl"
                 />
-              </LongPressLink>
+              </Redirect>
             </div>
 
             {!showLyrics || !currentPlayback?.item ? (
@@ -292,7 +281,7 @@ export default function NowPlaying({
                     {trackName}
                   </h4>
                 ) : (
-                  <LongPressLink
+                  <Redirect
                     href={
                       !currentPlayback ||
                       currentPlayback?.item?.is_local ||
@@ -301,13 +290,6 @@ export default function NowPlaying({
                         : currentPlayback?.item?.type === "episode"
                         ? `/show/${currentPlayback.item.show.id}`
                         : `/album/${currentPlayback?.item?.album?.id}`
-                    }
-                    spotifyUrl={
-                      currentPlayback?.item?.type === "episode"
-                        ? currentPlayback.item.show.external_urls?.spotify
-                        : currentPlayback?.item?.is_local
-                        ? null
-                        : currentPlayback?.item?.album?.external_urls?.spotify
                     }
                     accessToken={accessToken}
                   >
@@ -330,7 +312,7 @@ export default function NowPlaying({
                         {trackName}
                       </h4>
                     )}
-                  </LongPressLink>
+                  </Redirect>
                 )}
                 {currentPlayback?.context?.uri ===
                   "spotify:playlist:37i9dQZF1EYkqdzj48dyYq" &&
@@ -339,7 +321,7 @@ export default function NowPlaying({
                     {artistName}
                   </h4>
                 ) : (
-                  <LongPressLink
+                  <Redirect
                     href={
                       currentPlayback?.item?.is_local
                         ? ""
@@ -347,18 +329,12 @@ export default function NowPlaying({
                         ? `/show/${currentPlayback.item.show.id}`
                         : `/artist/${currentPlayback?.item?.artists[0]?.id}`
                     }
-                    spotifyUrl={
-                      currentPlayback?.item?.type === "episode"
-                        ? currentPlayback.item.show.external_urls?.spotify
-                        : currentPlayback?.item?.artists[0]?.external_urls
-                            ?.spotify
-                    }
                     accessToken={accessToken}
                   >
                     <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
                       {artistName}
                     </h4>
-                  </LongPressLink>
+                  </Redirect>
                 )}
               </div>
             ) : (
@@ -404,7 +380,7 @@ export default function NowPlaying({
 
         <div className={`px-12 ${!showTimeDisplay ? "pb-7 pt-3" : ""}`}>
           <ProgressBar
-            progress={isSeeking ? localProgress : progress}
+            progress={isSeeking ? localProgress : estimatedProgress}
             isPlaying={isPlaying}
             durationMs={currentPlayback?.item?.duration_ms}
             onSeek={async (position) => {
@@ -439,6 +415,8 @@ export default function NowPlaying({
             }}
             onPlayPause={togglePlayPause}
             onScrubbingChange={setIsProgressScrubbing}
+            accessToken={accessToken}
+            onProgressUpdate={setLiveProgress}
           />
         </div>
 
@@ -454,13 +432,22 @@ export default function NowPlaying({
               {currentPlayback && currentPlayback.item ? (
                 <>
                   <span className="text-white/60 text-[20px]">
-                    {convertTimeToLength(currentPlayback.progress_ms, true)}
+                    {convertTimeToLength(
+                      Math.floor(
+                        (estimatedProgress / 100) *
+                          currentPlayback.item.duration_ms
+                      ),
+                      true
+                    )}
                   </span>
                   <span className="text-white/60 text-[20px]">
                     {remainingTimeEnabled
                       ? convertTimeToLength(
                           currentPlayback.item.duration_ms -
-                            currentPlayback.progress_ms,
+                            Math.floor(
+                              (estimatedProgress / 100) *
+                                currentPlayback.item.duration_ms
+                            ),
                           false
                         )
                       : convertTimeToLength(
@@ -675,9 +662,8 @@ export default function NowPlaying({
             <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
               {playlists.map((item) => (
                 <div key={item.id} className="min-w-[280px] mr-10 mb-4">
-                  <LongPressLink
+                  <Redirect
                     href={`/playlist/${item.id}`}
-                    spotifyUrl={item?.external_urls?.spotify}
                     accessToken={accessToken}
                   >
                     <div
@@ -700,7 +686,7 @@ export default function NowPlaying({
                         {item.name}
                       </h4>
                     </div>
-                  </LongPressLink>
+                  </Redirect>
                 </div>
               ))}
             </div>

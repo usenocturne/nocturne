@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef } from "react";
-import LongPressLink from "../../components/common/navigation/LongPressLink";
+import Redirect from "../../components/common/navigation/Redirect";
 import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import { getCurrentDevice } from "@/services/deviceService";
@@ -14,6 +14,7 @@ const ArtistPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -126,7 +127,8 @@ const ArtistPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing artist top tracks:", error.message);
     }
@@ -206,7 +208,8 @@ const ArtistPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }
@@ -217,26 +220,16 @@ const ArtistPage = ({
       <div className="md:w-1/3 sticky top-10">
         {artist.images && artist.images.length > 0 ? (
           <div className="min-w-[280px] mr-10">
-            <LongPressLink
-              spotifyUrl={artist.external_urls.spotify}
-              accessToken={accessToken}
-            >
-              <Image
-                src={artist.images[0].url || "/images/not-playing.webp"}
-                alt="Artist Image"
-                width={280}
-                height={280}
-                className="aspect-square rounded-full drop-shadow-xl"
-              />
-            </LongPressLink>
-            <LongPressLink
-              spotifyUrl={artist.external_urls.spotify}
-              accessToken={accessToken}
-            >
-              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                {artist.name}
-              </h4>
-            </LongPressLink>
+            <Image
+              src={artist.images[0].url || "/images/not-playing.webp"}
+              alt="Artist Image"
+              width={280}
+              height={280}
+              className="aspect-square rounded-full drop-shadow-xl"
+            />
+            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+              {artist.name}
+            </h4>
             <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
               {artist.followers.total.toLocaleString()} Followers
             </h4>
@@ -280,22 +273,16 @@ const ArtistPage = ({
               </div>
 
               <div className="flex-grow">
-                <LongPressLink
-                  href="/now-playing"
-                  spotifyUrl={track.external_urls.spotify}
-                  accessToken={accessToken}
-                >
-                  <div onClick={() => playTrack(track.uri, index)}>
-                    <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                      {track.name}
-                    </p>
-                  </div>
-                </LongPressLink>
+                <div onClick={() => playTrack(track.uri, index)}>
+                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                    {track.name}
+                  </p>
+                </div>
                 <div className="flex flex-wrap">
                   {track.artists.map((artist, artistIndex) => (
-                    <LongPressLink
+                    <Redirect
                       key={artist.id}
-                      spotifyUrl={artist.external_urls.spotify}
+                      href={`/artist/${artist.id}`}
                       accessToken={accessToken}
                     >
                       <p
@@ -307,7 +294,7 @@ const ArtistPage = ({
                       >
                         {artist.name}
                       </p>
-                    </LongPressLink>
+                    </Redirect>
                   ))}
                 </div>
               </div>

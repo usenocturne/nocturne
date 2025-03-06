@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import LongPressLink from "../../components/common/navigation/LongPressLink";
+import Redirect from "../../components/common/navigation/Redirect";
 import TrackListNavigation from "../../components/common/navigation/TrackListNavigation";
 import Image from "next/image";
 import SuccessAlert from "../../components/common/alerts/SuccessAlert";
@@ -14,6 +14,7 @@ const PlaylistPage = ({
   currentlyPlayingTrackUri,
   handleError,
   error,
+  setActiveSection,
 }) => {
   const router = useRouter();
   const accessToken = router.query.accessToken;
@@ -282,7 +283,8 @@ const PlaylistPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing playlist:", error.message);
     }
@@ -362,7 +364,8 @@ const PlaylistPage = ({
         }
       );
 
-      router.push("/now-playing");
+      setActiveSection("nowPlaying");
+      router.push("/");
     } catch (error) {
       console.error("Error playing track:", error.message);
     }
@@ -377,27 +380,17 @@ const PlaylistPage = ({
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10">
         <div className="min-w-[280px] mr-10">
-          <LongPressLink
-            spotifyUrl={playlist.external_urls.spotify}
-            accessToken={accessToken}
-          >
-            <Image
-              src={playlist?.images?.[0]?.url || "/images/not-playing.webp"}
-              alt="Playlist Cover"
-              data-main-image
-              width={280}
-              height={280}
-              className="aspect-square rounded-[12px] drop-shadow-xl"
-            />
-          </LongPressLink>
-          <LongPressLink
-            spotifyUrl={playlist.external_urls.spotify}
-            accessToken={accessToken}
-          >
-            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-              {playlist.name}
-            </h4>
-          </LongPressLink>
+          <Image
+            src={playlist?.images?.[0]?.url || "/images/not-playing.webp"}
+            alt="Playlist Cover"
+            data-main-image
+            width={280}
+            height={280}
+            className="aspect-square rounded-[12px] drop-shadow-xl"
+          />
+          <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+            {playlist.name}
+          </h4>
           <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
             {playlist.tracks.total.toLocaleString()} Songs
           </h4>
@@ -438,22 +431,16 @@ const PlaylistPage = ({
             </div>
 
             <div className="flex-grow">
-              <LongPressLink
-                href="/now-playing"
-                spotifyUrl={item.track.external_urls.spotify}
-                accessToken={accessToken}
-              >
-                <div onClick={() => playTrack(item.track.uri, index)}>
-                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {item.track.name}
-                  </p>
-                </div>
-              </LongPressLink>
+              <div onClick={() => playTrack(item.track.uri, index)}>
+                <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  {item.track.name}
+                </p>
+              </div>
               <div className="flex flex-wrap">
                 {item.track.artists.map((artist, artistIndex) => (
-                  <LongPressLink
+                  <Redirect
                     key={artist.id}
-                    spotifyUrl={artist.external_urls.spotify}
+                    href={`/artist/${artist.id}`}
                     accessToken={accessToken}
                   >
                     <p
@@ -465,7 +452,7 @@ const PlaylistPage = ({
                     >
                       {artist.name}
                     </p>
-                  </LongPressLink>
+                  </Redirect>
                 ))}
               </div>
             </div>

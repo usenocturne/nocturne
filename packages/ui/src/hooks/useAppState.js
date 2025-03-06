@@ -7,6 +7,7 @@ export function useAppState({
   updateGradientColors,
   drawerOpen,
   setDrawerOpen,
+  activeSection,
 }) {
   const router = useRouter();
 
@@ -32,7 +33,7 @@ export function useAppState({
   }, [currentPlayback, updateGradientColors, setActiveSection]);
 
   useEffect(() => {
-    if (router.pathname === "/now-playing") {
+    if (activeSection === "nowPlaying") {
       if (!currentPlayback || !currentPlayback.is_playing) {
         updateGradientColors(null);
       } else {

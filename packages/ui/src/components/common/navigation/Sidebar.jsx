@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   NowPlayingIcon,
@@ -42,21 +41,12 @@ export default function Sidebar({ activeSection, setActiveSection, timezone }) {
   return (
     <div className="space-y-7 pt-12">
       <StatusBar timezone={timezone} />
-      <Link href={`/now-playing`}>
-        <div className="relative flex items-center">
-          <div className="mr-4 flex-shrink-0">
-            <div className="h-[70px] w-[70px] bg-white/25 rounded-[12px] flex items-center justify-center border border-white/10">
-              <NowPlayingIcon className="h-10 w-10" />
-            </div>
-          </div>
-          <div>
-            <h4 className="ml-1 text-[32px] font-[580] text-white tracking-tight">
-              Now Playing
-            </h4>
-          </div>
-        </div>
-      </Link>
 
+      <SidebarItem
+        section="nowPlaying"
+        icon={NowPlayingIcon}
+        label="Now Playing"
+      />
       <SidebarItem section="recents" icon={RecentsIcon} label="Recents" />
       <SidebarItem section="library" icon={LibraryIcon} label="Library" />
       <SidebarItem section="artists" icon={ArtistsIcon} label="Artists" />

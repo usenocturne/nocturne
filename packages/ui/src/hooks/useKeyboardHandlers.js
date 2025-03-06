@@ -61,20 +61,32 @@ export function useKeyboardHandlers({
           }
           const result = handleBack();
 
-          if (result.pathname === "/" && result.section) {
-            setActiveSection(result.section);
+          if (result.shouldAnimate) {
+            window.dispatchEvent(
+              new CustomEvent("now-playing-exit", {
+                detail: { nextSection: result.section },
+              })
+            );
 
-            await new Promise((resolve) => setTimeout(resolve, 0));
-
-            router.push({
-              pathname: result.pathname,
-              query: result.query,
-            });
+            setTimeout(() => {
+              setActiveSection(result.section);
+            }, 300);
           } else {
-            router.push({
-              pathname: result.pathname,
-              query: result.query,
-            });
+            if (result.pathname === "/" && result.section) {
+              setActiveSection(result.section);
+
+              await new Promise((resolve) => setTimeout(resolve, 0));
+
+              router.push({
+                pathname: result.pathname,
+                query: result.query,
+              });
+            } else {
+              router.push({
+                pathname: result.pathname,
+                query: result.query,
+              });
+            }
           }
         }
         return;
@@ -272,7 +284,7 @@ export function useKeyboardHandlers({
 
             setShowMappingOverlay(false);
             setPressedButton(null);
-            router.push("/now-playing");
+            setActiveSection("nowPlaying");
           } catch (error) {
             console.error("Error in playRequest:", error);
             handleError("PLAY_REQUEST_ERROR", error.message);

@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 
 export function useNavigationState() {
   const [navigationHistory, setNavigationHistory] = useState([
-    { pathname: "/", query: {} },
+    { pathname: "/", query: {}, section: "recents" },
   ]);
 
   const isHandlingBack = useRef(false);
@@ -26,6 +26,8 @@ export function useNavigationState() {
 
   useEffect(() => {
     const handleRouteChange = () => {
+      if (isHandlingBack.current) return;
+
       setNavigationHistory((prev) => {
         const newEntry = {
           pathname: router.pathname,
@@ -38,14 +40,6 @@ export function useNavigationState() {
           JSON.stringify(lastEntry.query) === JSON.stringify(newEntry.query)
         ) {
           return prev;
-        }
-
-        if (
-          lastEntry.pathname === "/" &&
-          newEntry.pathname === "/now-playing"
-        ) {
-          previousSection.current =
-            localStorage.getItem("lastActiveSection") || "recents";
         }
 
         return [...prev, newEntry];
@@ -65,16 +59,13 @@ export function useNavigationState() {
   const handleBack = () => {
     isHandlingBack.current = true;
 
-    const currentPath =
-      navigationHistory[navigationHistory.length - 1].pathname;
-
-    if (currentPath === "/") {
-      previousSection.current =
-        localStorage.getItem("lastActiveSection") || "recents";
+    if (lastActiveSection === "nowPlaying") {
+      const sectionToRestore = previousSection.current || "recents";
       return {
-        pathname: "/now-playing",
-        query: {},
-        section: null,
+        pathname: router.pathname,
+        query: router.query,
+        section: sectionToRestore,
+        shouldAnimate: true,
       };
     }
 
@@ -84,28 +75,6 @@ export function useNavigationState() {
       const previousPage = newHistory[newHistory.length - 1];
       setNavigationHistory(newHistory);
 
-      if (previousPage.pathname === "/" && currentPath === "/now-playing") {
-        const sectionToRestore =
-          previousSection.current ||
-          localStorage.getItem("lastActiveSection") ||
-          "recents";
-        return {
-          pathname: previousPage.pathname,
-          query: previousPage.query,
-          section: sectionToRestore,
-        };
-      }
-
-      if (previousPage.pathname === "/") {
-        const currentSection =
-          localStorage.getItem("lastActiveSection") || "recents";
-        return {
-          pathname: previousPage.pathname,
-          query: previousPage.query,
-          section: currentSection,
-        };
-      }
-
       return {
         pathname: previousPage.pathname,
         query: previousPage.query,
@@ -114,24 +83,25 @@ export function useNavigationState() {
     }
 
     return {
-      pathname: "/now-playing",
+      pathname: "/",
       query: {},
-      section: null,
+      section: "recents",
     };
   };
 
   const updateSectionHistory = (section) => {
-    if (!section || section === "nowPlaying") return;
+    if (!section) return;
 
     if (isHandlingBack.current) {
       isHandlingBack.current = false;
       return;
     }
 
-    setLastActiveSection(section);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("lastActiveSection", section);
+    if (section === "nowPlaying" && lastActiveSection !== "nowPlaying") {
+      previousSection.current = lastActiveSection;
     }
+
+    setLastActiveSection(section);
   };
 
   return {
