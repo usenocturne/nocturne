@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useGradientState } from "../../hooks/useGradientState";
 import NocturneIcon from "../common/icons/NocturneIcon";
 
-const NetworkScreen = ({ isCheckingNetwork }) => {
+const NetworkScreen = () => {
   const {
     currentColor1,
     currentColor2,
@@ -17,7 +17,8 @@ const NetworkScreen = ({ isCheckingNetwork }) => {
   }, [updateGradientColors]);
 
   return (
-    <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
+    <div className="h-screen w-full flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl z-50">
+      <div className="absolute inset-0 bg-black"></div>
       <div
         style={{
           backgroundImage: generateMeshGradient([

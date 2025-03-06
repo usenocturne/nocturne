@@ -8,7 +8,7 @@ export class NetworkError extends Error {
 export async function checkNetworkConnectivity() {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 1000);
 
     const response = await fetch("https://api.spotify.com/v1/", {
       method: "OPTIONS",
@@ -31,12 +31,7 @@ export async function checkNetworkConnectivity() {
         error: "Network request timed out",
       };
     }
-    if (error instanceof NetworkError) {
-      return {
-        isConnected: false,
-        error: error.message,
-      };
-    }
+
     return {
       isConnected: false,
       error: error.message || "Network connectivity check failed",
@@ -45,45 +40,22 @@ export async function checkNetworkConnectivity() {
 }
 
 export function startNetworkMonitoring(onStatusChange) {
-  let isOnline = true;
-
-  const checkConnection = async () => {
-    try {
-      const status = await checkNetworkConnectivity();
-      if (!isOnline && status.isConnected) {
-        isOnline = true;
-        onStatusChange?.(true);
-      } else if (isOnline && !status.isConnected) {
-        isOnline = false;
-        onStatusChange?.(false);
-      }
-    } catch (error) {
-      if (isOnline) {
-        isOnline = false;
-        onStatusChange?.(false);
-      }
+  const handleOnline = async () => {
+    const status = await checkNetworkConnectivity();
+    if (status.isConnected) {
+      onStatusChange?.(true);
     }
   };
 
-  checkConnection();
-
-  const intervalId = setInterval(checkConnection, 30000);
-
-  window.addEventListener("online", () => {
-    checkConnection();
-  });
-
-  window.addEventListener("offline", () => {
-    isOnline = false;
+  const handleOffline = () => {
     onStatusChange?.(false);
-  });
+  };
+
+  window.addEventListener("online", handleOnline);
+  window.addEventListener("offline", handleOffline);
 
   return () => {
-    clearInterval(intervalId);
-    window.removeEventListener("online", checkConnection);
-    window.removeEventListener("offline", () => {
-      isOnline = false;
-      onStatusChange?.(false);
-    });
+    window.removeEventListener("online", handleOnline);
+    window.removeEventListener("offline", handleOffline);
   };
 }

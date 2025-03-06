@@ -5,78 +5,80 @@ import {
 } from "../utils/networkChecker";
 
 export function useNetwork() {
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
   const [isChecking, setIsChecking] = useState(true);
   const [showNoNetwork, setShowNoNetwork] = useState(false);
-  const initialCheckTimeoutRef = useRef(null);
-  const initialCheckDoneRef = useRef(false);
-  const cleanupRef = useRef(null);
+  const checkCountRef = useRef(0);
+  const monitorCleanupRef = useRef(null);
 
   const checkNetwork = useCallback(async () => {
     try {
       setIsChecking(true);
       const response = await checkNetworkConnectivity();
-      setIsConnected(response.isConnected);
-      initialCheckDoneRef.current = true;
 
-      if (response.isConnected && initialCheckTimeoutRef.current) {
-        clearTimeout(initialCheckTimeoutRef.current);
-        initialCheckTimeoutRef.current = null;
+      if (response.isConnected !== isConnected) {
+        setIsConnected(response.isConnected);
+
+        if (response.isConnected) {
+          checkCountRef.current = 0;
+          setShowNoNetwork(false);
+        } else {
+          checkCountRef.current++;
+          if (checkCountRef.current >= 1) {
+            setShowNoNetwork(true);
+          }
+        }
+      } else if (response.isConnected) {
+        checkCountRef.current = 0;
       }
 
       return response.isConnected;
     } catch (error) {
       console.error("Network connectivity check failed:", error);
-      setIsConnected(false);
-      initialCheckDoneRef.current = true;
+
+      if (isConnected) {
+        setIsConnected(false);
+        checkCountRef.current++;
+        if (checkCountRef.current >= 1) {
+          setShowNoNetwork(true);
+        }
+      }
+
       return false;
     } finally {
       setIsChecking(false);
     }
-  }, []);
+  }, [isConnected]);
 
   useEffect(() => {
-    initialCheckTimeoutRef.current = setTimeout(() => {
-      if (!initialCheckDoneRef.current) {
-        setShowNoNetwork(true);
+    const initialCheckId = setTimeout(() => {
+      checkNetwork();
+    }, 500);
+
+    monitorCleanupRef.current = startNetworkMonitoring((connected) => {
+      if (connected) {
+        checkCountRef.current = 0;
+        setIsConnected(true);
+        setShowNoNetwork(false);
+      } else {
+        checkCountRef.current++;
+        setIsConnected(false);
+        if (checkCountRef.current >= 1) {
+          setShowNoNetwork(true);
+        }
       }
-    }, 5000);
-
-    checkNetwork();
-
-    cleanupRef.current = startNetworkMonitoring((connected) => {
-      setIsConnected(connected);
     });
 
-    const intervalId = setInterval(checkNetwork, 10000);
+    const intervalId = setInterval(checkNetwork, 1000);
 
     return () => {
-      if (initialCheckTimeoutRef.current) {
-        clearTimeout(initialCheckTimeoutRef.current);
-      }
+      clearTimeout(initialCheckId);
       clearInterval(intervalId);
-      if (cleanupRef.current) {
-        cleanupRef.current();
+      if (monitorCleanupRef.current) {
+        monitorCleanupRef.current();
       }
     };
   }, [checkNetwork]);
-
-  useEffect(() => {
-    let timeoutId;
-    if (!isConnected && initialCheckDoneRef.current) {
-      timeoutId = setTimeout(() => {
-        setShowNoNetwork(true);
-      }, 10000);
-    } else {
-      setShowNoNetwork(false);
-    }
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [isConnected]);
 
   return {
     isConnected,
