@@ -1,0 +1,68 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  user-select: none;
+}
+
+body {
+  background-color: #000000;
+}
+
+.scroll-container {
+  scrollbar-width: none; /* For Firefox */
+}
+
+.scroll-container::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Edge */
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.fadeIn-animation {
+  animation: 0.8s fadeIn;
+}
+
+@keyframes volumeInScale {
+  from {
+    transform: scale(0) translate3d(100%, 0, 0);
+    margin-right: 0;
+  }
+  to {
+    transform: scale(1) translate3d(0, 0, 0);
+    margin-right: 60px;
+  }
+}
+
+.volumeInScale {
+  animation-name: volumeInScale;
+  animation-duration: 0.3s;
+  animation-fill-mode: forwards;
+}
+
+@keyframes volumeOutScale {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+    margin-right: 60px;
+  }
+  to {
+    transform: scale(0) translate3d(100%, 0, 0);
+    margin-right: 0;
+  }
+}
+
+.volumeOutScale {
+  animation-name: volumeOutScale;
+  animation-duration: 1s;
+  animation-fill-mode: forwards;
+}

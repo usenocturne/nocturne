@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import ColorThief from "color-thief-browser";
 
-export function useGradientState(activeSection) {
-  const [colors, setColors] = useState([]);
+export function useGradientState() {
   const [currentColor1, setCurrentColor1] = useState("#191414");
   const [currentColor2, setCurrentColor2] = useState("#191414");
   const [currentColor3, setCurrentColor3] = useState("#191414");
@@ -11,12 +9,6 @@ export function useGradientState(activeSection) {
   const [targetColor2, setTargetColor2] = useState("#191414");
   const [targetColor3, setTargetColor3] = useState("#191414");
   const [targetColor4, setTargetColor4] = useState("#191414");
-  const [sectionGradients, setSectionGradients] = useState({
-    recents: null,
-    library: null,
-    artists: null,
-    radio: null,
-  });
   const [transitionSpeed] = useState(30);
 
   const hexToRgb = (hex) => {
@@ -28,7 +20,10 @@ export function useGradientState(activeSection) {
   };
 
   const rgbToHex = ({ r, g, b }) => {
-    const toHex = (n) => n.toString(16).padStart(2, "0");
+    const toHex = (n) =>
+      Math.max(0, Math.min(255, Math.round(n)))
+        .toString(16)
+        .padStart(2, "0");
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   };
 
@@ -114,42 +109,6 @@ export function useGradientState(activeSection) {
     targetColor4,
   ]);
 
-  const calculateBrightness = useCallback((hex) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return 0.299 * r + 0.587 * g + 0.114 * b;
-  }, []);
-
-  const calculateHue = useCallback((hex) => {
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h;
-
-    if (max === min) {
-      h = 0;
-    } else {
-      const d = max - min;
-      switch (max) {
-        case r:
-          h = (g - b) / d + (g < b ? 6 : 0);
-          break;
-        case g:
-          h = (b - r) / d + 2;
-          break;
-        case b:
-          h = (r - g) / d + 4;
-          break;
-      }
-      h /= 6;
-    }
-    return h * 360;
-  }, []);
-
   const generateMeshGradient = useCallback((colors) => {
     if (!colors || colors.length === 0) return "#191414";
 
@@ -162,135 +121,25 @@ export function useGradientState(activeSection) {
     return radialGradients.join(", ");
   }, []);
 
-  const extractColors = useCallback(
-    (imageUrl) => {
-      const colorThief = new ColorThief();
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = imageUrl;
-      img.onload = () => {
-        const palette = colorThief.getPalette(img, 8);
-        const filteredColors = palette
-          .map(
-            (color) =>
-              `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}`
-          )
-          .filter((color) => {
-            const brightness = calculateBrightness(color);
-            return brightness > 120 || brightness < 10;
-          })
-          .sort((a, b) => calculateHue(a) - calculateHue(b));
+  const updateGradientColors = useCallback(() => {
+    const authColors = ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"];
 
-        setColors(filteredColors);
-      };
-    },
-    [calculateBrightness, calculateHue]
-  );
-
-  const updateGradientColors = useCallback(
-    (imageUrl, section = null) => {
-      if (!imageUrl) {
-        if (section === "radio") {
-          const radioColors = ["#3B518B", "#202F57", "#142045", "#151231"];
-          setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
-          if (activeSection === "radio" || activeSection === "nowPlaying") {
-            setTargetColor1(radioColors[0]);
-            setTargetColor2(radioColors[1]);
-            setTargetColor3(radioColors[2]);
-            setTargetColor4(radioColors[3]);
-          }
-        } else if (section === "library") {
-          const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
-          setSectionGradients((prev) => ({
-            ...prev,
-            [section]: libraryColors,
-          }));
-          if (activeSection === "library") {
-            setTargetColor1(libraryColors[0]);
-            setTargetColor2(libraryColors[1]);
-            setTargetColor3(libraryColors[2]);
-            setTargetColor4(libraryColors[3]);
-          }
-        } else if (section === "settings") {
-          const settingsColors = ["#1f1e23", "#aeb7ba", "#8c6764", "#968479"];
-          setSectionGradients((prev) => ({
-            ...prev,
-            [section]: settingsColors,
-          }));
-          if (activeSection === "settings") {
-            setTargetColor1(settingsColors[0]);
-            setTargetColor2(settingsColors[1]);
-            setTargetColor3(settingsColors[2]);
-            setTargetColor4(settingsColors[3]);
-          }
-        } else {
-          setTargetColor1("#191414");
-          setTargetColor2("#191414");
-          setTargetColor3("#191414");
-          setTargetColor4("#191414");
-        }
-        return;
-      }
-
-      const colorThief = new ColorThief();
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = imageUrl;
-      img.onload = () => {
-        const dominantColors = colorThief.getPalette(img, 4);
-        const hexColors = dominantColors.map(
-          (color) =>
-            `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}`
-        );
-
-        if (section) {
-          setSectionGradients((prev) => ({
-            ...prev,
-            [section]: hexColors,
-          }));
-        }
-
-        if (
-          !section ||
-          section === activeSection ||
-          section === "nowPlaying" ||
-          activeSection === "nowPlaying"
-        ) {
-          setTargetColor1(hexColors[0]);
-          setTargetColor2(hexColors[1]);
-          setTargetColor3(hexColors[2]);
-          setTargetColor4(hexColors[3]);
-        }
-      };
-    },
-    [activeSection]
-  );
+    setTargetColor1(authColors[0]);
+    setTargetColor2(authColors[1]);
+    setTargetColor3(authColors[2]);
+    setTargetColor4(authColors[3]);
+  }, []);
 
   return {
-    colors,
     currentColor1,
     currentColor2,
     currentColor3,
     currentColor4,
-    targetColor1,
-    targetColor2,
-    targetColor3,
-    targetColor4,
-    sectionGradients,
-    setColors,
-    setCurrentColor1,
-    setCurrentColor2,
-    setCurrentColor3,
-    setCurrentColor4,
     setTargetColor1,
     setTargetColor2,
     setTargetColor3,
     setTargetColor4,
-    setSectionGradients,
-    calculateBrightness,
-    calculateHue,
-    extractColors,
-    updateGradientColors,
     generateMeshGradient,
+    updateGradientColors,
   };
 }
