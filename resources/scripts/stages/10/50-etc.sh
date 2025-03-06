@@ -10,4 +10,4 @@ if [ -n "$LIB_LOG" ]; then
 fi
 
 rm -f "$ROOTFS_PATH"/etc/motd
-cp "$RES_PATH"/motd "$ROOTFS_PATH"/etc/motd
+cp "$RES_PATH"/config/motd "$ROOTFS_PATH"/etc/motd
