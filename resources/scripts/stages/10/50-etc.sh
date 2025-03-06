@@ -8,3 +8,6 @@ echo "SYSLOGD_OPTS=\"-t -K\"" > ${ROOTFS_PATH}/etc/conf.d/syslog
 if [ -n "$LIB_LOG" ]; then
   sed -E "s/.*(rc_logger=).*/\1\"YES\"/" -i ${ROOTFS_PATH}/etc/rc.conf
 fi
+
+rm -f "$ROOTFS_PATH"/etc/motd
+cp "$RES_PATH"/motd "$ROOTFS_PATH"/etc/motd
