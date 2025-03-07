@@ -98,8 +98,10 @@ export default function Home({
   }, [currentlyPlayingAlbum, activeSection, recentAlbums]);
 
   useEffect(() => {
-    hasScrolledToCurrentAlbumRef.current = false;
-  }, [activeSection]);
+    if (currentlyPlayingAlbum?.id) {
+      hasScrolledToCurrentAlbumRef.current = false;
+    }
+  }, [currentlyPlayingAlbum?.id]);
 
   const renderContent = () => {
     if (activeSection === "recents") {
