@@ -152,3 +152,11 @@ body {
     transform: translateX(0);
   }
 }
+
+.scroll-container {
+  scrollbar-width: none; /* For Firefox */
+}
+
+.scroll-container::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Edge */
+}
