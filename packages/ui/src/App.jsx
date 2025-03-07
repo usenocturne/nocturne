@@ -1,31 +1,61 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter as Router } from "react-router-dom";
 import AuthContainer from "./components/auth/AuthContainer";
 import NetworkScreen from "./components/auth/NetworkScreen";
 import Tutorial from "./components/tutorial/Tutorial";
+import Home from "./pages/Home";
 import { useAuth } from "./hooks/useAuth";
 import { useNetwork } from "./hooks/useNetwork";
+import { useGradientState } from "./hooks/useGradientState";
+import { useSpotifyData } from "./hooks/useSpotifyData";
+import { useSpotifyPlayerState } from "./hooks/useSpotifyPlayerState";
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
-  const { isAuthenticated: authState } = useAuth();
-  const { isConnected, isChecking, showNoNetwork, checkNetwork } = useNetwork();
+  const [activeSection, setActiveSection] = useState(() => {
+    return localStorage.getItem("lastActiveSection") || "recents";
+  });
 
-  useEffect(() => {
-    setIsAuthenticated(authState);
+  const { isAuthenticated, accessToken } = useAuth();
+  const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
+  const {
+    currentColor1,
+    currentColor2,
+    currentColor3,
+    currentColor4,
+    generateMeshGradient,
+  } = useGradientState();
 
-    if (authState) {
-      const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
-      setShowTutorial(!hasSeenTutorial);
-    }
-  }, [authState]);
+  const {
+    currentPlayback,
+    currentlyPlayingAlbum,
+    albumChangeEvent,
+    isLoading: playerIsLoading,
+    error: playerError,
+    refreshPlaybackState,
+  } = useSpotifyPlayerState(accessToken);
+
+  const {
+    recentAlbums,
+    userPlaylists,
+    topArtists,
+    isLoading: dataIsLoading,
+    errors: dataErrors,
+    refreshData,
+  } = useSpotifyData(accessToken, albumChangeEvent);
 
   useEffect(() => {
     checkNetwork();
   }, [checkNetwork]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
+      setShowTutorial(!hasSeenTutorial);
+    }
+  }, [isAuthenticated]);
+
   const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
     const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
     setShowTutorial(!hasSeenTutorial);
   };
@@ -36,24 +66,49 @@ function App() {
   };
 
   return (
-    <main className="overflow-hidden relative min-h-screen rounded-2xl">
-      {!isAuthenticated ? (
-        <AuthContainer onAuthSuccess={handleAuthSuccess} />
-      ) : showTutorial ? (
-        <Tutorial onComplete={handleTutorialComplete} />
-      ) : (
-        <div className="h-screen flex items-center justify-center text-white">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">Main App</h1>
-            <p>Tutorial completed, main app would be shown here</p>
-          </div>
-        </div>
-      )}
+    <Router>
+      <main className="overflow-hidden relative min-h-screen rounded-2xl">
+        <div
+          style={{
+            backgroundImage: generateMeshGradient([
+              currentColor1,
+              currentColor2,
+              currentColor3,
+              currentColor4,
+            ]),
+            transition: "background-image 0.5s linear",
+          }}
+          className="absolute inset-0 bg-black"
+        />
 
-      {!isConnected && showNoNetwork && (
-        <NetworkScreen isCheckingNetwork={isChecking} />
-      )}
-    </main>
+        <div className="relative z-10">
+          {!isAuthenticated ? (
+            <AuthContainer onAuthSuccess={handleAuthSuccess} />
+          ) : showTutorial ? (
+            <Tutorial onComplete={handleTutorialComplete} />
+          ) : (
+            <Home
+              accessToken={accessToken}
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+              recentAlbums={recentAlbums}
+              userPlaylists={userPlaylists}
+              topArtists={topArtists}
+              currentPlayback={currentPlayback}
+              currentlyPlayingAlbum={currentlyPlayingAlbum}
+              isLoading={{
+                data: dataIsLoading,
+                player: playerIsLoading,
+              }}
+              refreshData={refreshData}
+              refreshPlaybackState={refreshPlaybackState}
+            />
+          )}
+
+          {!isConnected && showNoNetwork && <NetworkScreen />}
+        </div>
+      </main>
+    </Router>
   );
 }
 

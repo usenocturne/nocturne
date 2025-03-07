@@ -12,12 +12,26 @@ body {
   background-color: #000000;
 }
 
+.album-shadow {
+  box-shadow: 0px 40px 250px rgba(0, 0, 0, 0.25);
+}
+
 .scroll-container {
-  scrollbar-width: none; /* For Firefox */
+  scrollbar-width: none;
 }
 
 .scroll-container::-webkit-scrollbar {
-  display: none; /* For Chrome, Safari, and Edge */
+  display: none;
+}
+
+.fade-out {
+  opacity: 0;
+}
+
+.fade-in {
+  -webkit-transition: background-color 1000ms linear;
+  -ms-transition: background-color 1000ms linear;
+  transition: background-color 1000ms linear;
 }
 
 @keyframes fadeIn {
@@ -33,36 +47,23 @@ body {
   animation: 0.8s fadeIn;
 }
 
-@keyframes volumeInScale {
-  from {
-    transform: scale(0) translate3d(100%, 0, 0);
-    margin-right: 0;
-  }
-  to {
-    transform: scale(1) translate3d(0, 0, 0);
-    margin-right: 60px;
-  }
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
 
-.volumeInScale {
-  animation-name: volumeInScale;
-  animation-duration: 0.3s;
-  animation-fill-mode: forwards;
-}
-
-@keyframes volumeOutScale {
-  from {
-    transform: scale(1) translate3d(0, 0, 0);
-    margin-right: 60px;
+@keyframes marquee {
+  0%,
+  2.5% {
+    transform: translateX(0);
   }
-  to {
-    transform: scale(0) translate3d(100%, 0, 0);
-    margin-right: 0;
+  47.5%,
+  52.5% {
+    transform: translateX(var(--final-position));
   }
-}
-
-.volumeOutScale {
-  animation-name: volumeOutScale;
-  animation-duration: 1s;
-  animation-fill-mode: forwards;
+  97.5%,
+  100% {
+    transform: translateX(0);
+  }
 }
