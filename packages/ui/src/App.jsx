@@ -43,7 +43,7 @@ function App() {
     isLoading: dataIsLoading,
     errors: dataErrors,
     refreshData,
-  } = useSpotifyData(accessToken, albumChangeEvent);
+  } = useSpotifyData(accessToken, albumChangeEvent, activeSection, currentlyPlayingAlbum);
 
   useEffect(() => {
     checkNetwork();

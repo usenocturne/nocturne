@@ -17,6 +17,7 @@ export default function Home({
   isLoading,
   refreshData,
   refreshPlaybackState,
+  setRecentAlbums,
 }) {
   const { updateGradientColors } = useGradientState();
   const scrollContainerRef = useRef(null);
@@ -81,6 +82,12 @@ export default function Home({
   }, []);
 
   useEffect(() => {
+    if (currentlyPlayingAlbum?.id) {
+      hasScrolledToCurrentAlbumRef.current = false;
+    }
+  }, [currentlyPlayingAlbum?.id]);
+
+  useEffect(() => {
     if (
       scrollContainerRef.current &&
       activeSection === "recents" &&
@@ -101,12 +108,6 @@ export default function Home({
       }
     }
   }, [currentlyPlayingAlbum, activeSection, recentAlbums]);
-
-  useEffect(() => {
-    if (currentlyPlayingAlbum?.id) {
-      hasScrolledToCurrentAlbumRef.current = false;
-    }
-  }, [currentlyPlayingAlbum?.id]);
 
   const isPlayingLikedSongs = () => {
     return (

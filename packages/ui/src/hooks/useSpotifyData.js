@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-export function useSpotifyData(accessToken, albumChangeEvent) {
+export function useSpotifyData(accessToken, albumChangeEvent, activeSection, currentlyPlayingAlbum) {
   const [recentAlbums, setRecentAlbums] = useState([]);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [topArtists, setTopArtists] = useState([]);
@@ -22,9 +22,26 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
     topArtists: null,
     likedSongs: null,
   });
+  const [hasInitialData, setHasInitialData] = useState(false);
+
+  useEffect(() => {
+    if (currentlyPlayingAlbum?.id) {
+      setRecentAlbums((prevAlbums) => {
+        if (!prevAlbums.length) return [currentlyPlayingAlbum];
+        const existingIndex = prevAlbums.findIndex(
+          (album) => album.id === currentlyPlayingAlbum.id
+        );
+        if (existingIndex === 0) return prevAlbums;
+        return [
+          currentlyPlayingAlbum,
+          ...prevAlbums.filter((album) => album.id !== currentlyPlayingAlbum.id),
+        ].slice(0, 50);
+      });
+    }
+  }, [currentlyPlayingAlbum]);
 
   const fetchRecentlyPlayed = useCallback(async () => {
-    if (!accessToken) return;
+    if (!accessToken || hasInitialData) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
@@ -43,9 +60,13 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
       }
 
       const data = await response.json();
-
       const uniqueAlbums = [];
       const albumIds = new Set();
+
+      if (currentlyPlayingAlbum?.id) {
+        albumIds.add(currentlyPlayingAlbum.id);
+        uniqueAlbums.push(currentlyPlayingAlbum);
+      }
 
       data.items.forEach((item) => {
         if (
@@ -59,6 +80,7 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
       });
 
       setRecentAlbums(uniqueAlbums);
+      setHasInitialData(true);
       setErrors((prev) => ({ ...prev, recentAlbums: null }));
     } catch (err) {
       console.error("Error fetching recently played:", err);
@@ -66,7 +88,7 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
     } finally {
       setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
     }
-  }, [accessToken]);
+  }, [accessToken, currentlyPlayingAlbum, hasInitialData]);
 
   const fetchUserPlaylists = useCallback(async () => {
     if (!accessToken) return;
@@ -162,27 +184,12 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
   }, [accessToken]);
 
   useEffect(() => {
-    if (albumChangeEvent && albumChangeEvent.album) {
-      const newAlbum = albumChangeEvent.album;
-
-      if (newAlbum.id) {
-        setRecentAlbums((prevAlbums) => {
-          const existingIndex = prevAlbums.findIndex(
-            (album) => album.id === newAlbum.id
-          );
-
-          if (existingIndex === 0) {
-            return prevAlbums;
-          }
-
-          const filteredAlbums =
-            existingIndex !== -1
-              ? prevAlbums.filter((album) => album.id !== newAlbum.id)
-              : [...prevAlbums];
-
-          return [newAlbum, ...filteredAlbums].slice(0, 50);
-        });
-      }
+    if (albumChangeEvent?.album?.id) {
+      setRecentAlbums((prevAlbums) => {
+        const newAlbum = albumChangeEvent.album;
+        const filteredAlbums = prevAlbums.filter(album => album.id !== newAlbum.id);
+        return [newAlbum, ...filteredAlbums].slice(0, 50);
+      });
     }
   }, [albumChangeEvent]);
 
@@ -201,27 +208,11 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
     fetchLikedSongs,
   ]);
 
-  useEffect(() => {
-    if (!accessToken) return;
-
-    const intervalId = setInterval(() => {
-      fetchRecentlyPlayed();
-    }, 5 * 60 * 1000);
-
-    return () => clearInterval(intervalId);
-  }, [accessToken, fetchRecentlyPlayed]);
-
   const refreshData = useCallback(() => {
-    fetchRecentlyPlayed();
     fetchUserPlaylists();
     fetchTopArtists();
     fetchLikedSongs();
-  }, [
-    fetchRecentlyPlayed,
-    fetchUserPlaylists,
-    fetchTopArtists,
-    fetchLikedSongs,
-  ]);
+  }, [fetchUserPlaylists, fetchTopArtists, fetchLikedSongs]);
 
   return {
     recentAlbums,
