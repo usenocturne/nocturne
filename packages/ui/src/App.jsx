@@ -39,6 +39,7 @@ function App() {
     recentAlbums,
     userPlaylists,
     topArtists,
+    likedSongs,
     isLoading: dataIsLoading,
     errors: dataErrors,
     refreshData,
@@ -94,6 +95,7 @@ function App() {
               recentAlbums={recentAlbums}
               userPlaylists={userPlaylists}
               topArtists={topArtists}
+              likedSongs={likedSongs}
               currentPlayback={currentPlayback}
               currentlyPlayingAlbum={currentlyPlayingAlbum}
               isLoading={{

@@ -4,15 +4,23 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
   const [recentAlbums, setRecentAlbums] = useState([]);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [topArtists, setTopArtists] = useState([]);
+  const [likedSongs, setLikedSongs] = useState({
+    name: "Liked Songs",
+    tracks: { total: 0 },
+    images: [{ url: "https://misc.scdn.co/liked-songs/liked-songs-640.png" }],
+    type: "liked-songs",
+  });
   const [isLoading, setIsLoading] = useState({
     recentAlbums: true,
     userPlaylists: true,
     topArtists: true,
+    likedSongs: true,
   });
   const [errors, setErrors] = useState({
     recentAlbums: null,
     userPlaylists: null,
     topArtists: null,
+    likedSongs: null,
   });
 
   const fetchRecentlyPlayed = useCallback(async () => {
@@ -120,6 +128,39 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
     }
   }, [accessToken]);
 
+  const fetchLikedSongs = useCallback(async () => {
+    if (!accessToken) return;
+
+    try {
+      setIsLoading((prev) => ({ ...prev, likedSongs: true }));
+
+      const response = await fetch(
+        "https://api.spotify.com/v1/me/tracks?limit=1",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setLikedSongs((prev) => ({
+        ...prev,
+        tracks: { total: data.total },
+      }));
+      setErrors((prev) => ({ ...prev, likedSongs: null }));
+    } catch (err) {
+      console.error("Error fetching liked songs:", err);
+      setErrors((prev) => ({ ...prev, likedSongs: err.message }));
+    } finally {
+      setIsLoading((prev) => ({ ...prev, likedSongs: false }));
+    }
+  }, [accessToken]);
+
   useEffect(() => {
     if (albumChangeEvent && albumChangeEvent.album) {
       const newAlbum = albumChangeEvent.album;
@@ -150,8 +191,15 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
       fetchRecentlyPlayed();
       fetchUserPlaylists();
       fetchTopArtists();
+      fetchLikedSongs();
     }
-  }, [accessToken, fetchRecentlyPlayed, fetchUserPlaylists, fetchTopArtists]);
+  }, [
+    accessToken,
+    fetchRecentlyPlayed,
+    fetchUserPlaylists,
+    fetchTopArtists,
+    fetchLikedSongs,
+  ]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -167,17 +215,25 @@ export function useSpotifyData(accessToken, albumChangeEvent) {
     fetchRecentlyPlayed();
     fetchUserPlaylists();
     fetchTopArtists();
-  }, [fetchRecentlyPlayed, fetchUserPlaylists, fetchTopArtists]);
+    fetchLikedSongs();
+  }, [
+    fetchRecentlyPlayed,
+    fetchUserPlaylists,
+    fetchTopArtists,
+    fetchLikedSongs,
+  ]);
 
   return {
     recentAlbums,
     userPlaylists,
     topArtists,
+    likedSongs,
     isLoading,
     errors,
     refreshData,
     refreshRecentlyPlayed: fetchRecentlyPlayed,
     refreshUserPlaylists: fetchUserPlaylists,
     refreshTopArtists: fetchTopArtists,
+    refreshLikedSongs: fetchLikedSongs,
   };
 }

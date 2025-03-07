@@ -67,3 +67,51 @@ body {
     transform: translateX(0);
   }
 }
+
+section {
+  display: flex;
+  gap: 3px;
+  padding-top: 8px;
+}
+
+@keyframes waveform {
+  0% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1.5);
+  }
+  100% {
+    transform: scaleY(0.5);
+  }
+}
+
+[class*="wave"] {
+  aspect-ratio: 0.125/1;
+  animation: waveform var(--wavefreq) ease-in-out infinite forwards;
+  animation-delay: var(--wave-offset);
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 15px;
+  width: 1vw;
+}
+
+:root {
+  --m: 11.5;
+  --wavefreq: calc(100ms * var(--m));
+  --wave-offset: -1.5s;
+}
+
+.wave1 {
+  --wavefreq: calc(200ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.2s);
+}
+
+.wave2 {
+  --wavefreq: calc(300ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.3s);
+}
+
+.wave3 {
+  --wavefreq: calc(400ms * var(--m));
+  animation-delay: calc(var(--wave-offset) - 0.4s);
+}
