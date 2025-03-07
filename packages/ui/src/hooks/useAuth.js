@@ -89,32 +89,17 @@ export function useAuth() {
     (deviceCode) => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-
-      if (isAuthenticated) {
-        return;
       }
 
       const intervalTime = (authData?.interval || 5) * 1000;
 
       const poll = async () => {
         try {
-          if (isAuthenticated) {
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-            return;
-          }
-
           const data = await checkAuthStatus(deviceCode);
 
           if (data.access_token) {
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
 
             setAccessToken(data.access_token);
             setRefreshToken(data.refresh_token);
@@ -133,9 +118,7 @@ export function useAuth() {
             setIsAuthenticated(true);
           }
         } catch (error) {
-          if (!isAuthenticated) {
-            console.log("Polling status...");
-          }
+          console.log("Polling status...");
         }
       };
 
@@ -148,7 +131,7 @@ export function useAuth() {
         }
       };
     },
-    [authData, isAuthenticated]
+    [authData]
   );
 
   const logout = useCallback(() => {
@@ -173,17 +156,9 @@ export function useAuth() {
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (isAuthenticated && pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-  }, [isAuthenticated]);
 
   return {
     isAuthenticated,

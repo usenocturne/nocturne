@@ -121,24 +121,13 @@ export function useGradientState() {
     return radialGradients.join(", ");
   }, []);
 
-  const updateGradientColors = useCallback((imageUrl, section) => {
-    const sectionColors = {
-      nowPlaying: ["#191414", "#191414", "#191414", "#191414"],
-      recents: ["#0D1B2A", "#1B263B", "#415A77", "#778DA9"],
-      library: ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"],
-      artists: ["#1A1423", "#3D2C8D", "#9163CB", "#D499B9"],
-      radio: ["#3B518B", "#202F57", "#142045", "#151231"],
-      settings: ["#1f1e23", "#aeb7ba", "#8c6764", "#968479"],
-      tutorial: ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"],
-      auth: ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"],
-    };
+  const updateGradientColors = useCallback(() => {
+    const authColors = ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"];
 
-    const colors = section ? sectionColors[section] : sectionColors.auth;
-
-    setTargetColor1(colors[0]);
-    setTargetColor2(colors[1]);
-    setTargetColor3(colors[2]);
-    setTargetColor4(colors[3]);
+    setTargetColor1(authColors[0]);
+    setTargetColor2(authColors[1]);
+    setTargetColor3(authColors[2]);
+    setTargetColor4(authColors[3]);
   }, []);
 
   return {
