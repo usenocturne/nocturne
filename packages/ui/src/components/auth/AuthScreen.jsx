@@ -26,10 +26,15 @@ const AuthScreen = ({ onAuthSuccess }) => {
     if (!authInitialized && !isAuthenticated) {
       const startAuth = async () => {
         try {
-          const authResponse = await initAuth();
-          if (authResponse?.device_code) {
-            setAuthInitialized(true);
-            pollAuthStatus(authResponse.device_code);
+          const storedAccessToken = localStorage.getItem("spotifyAccessToken");
+          const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+          
+          if (!storedAccessToken || !storedRefreshToken) {
+            const authResponse = await initAuth();
+            if (authResponse?.device_code) {
+              setAuthInitialized(true);
+              pollAuthStatus(authResponse.device_code);
+            }
           }
         } catch (err) {
           setError("Failed to initialize authentication");

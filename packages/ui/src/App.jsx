@@ -16,7 +16,7 @@ function App() {
     return localStorage.getItem("lastActiveSection") || "recents";
   });
 
-  const { isAuthenticated, accessToken } = useAuth();
+  const { isAuthenticated, accessToken, isLoading: authIsLoading } = useAuth();
   const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
   const {
     currentColor1,
@@ -83,7 +83,7 @@ function App() {
         />
 
         <div className="relative z-10">
-          {!isAuthenticated ? (
+          {authIsLoading ? null : !isAuthenticated ? (
             <AuthContainer onAuthSuccess={handleAuthSuccess} />
           ) : showTutorial ? (
             <Tutorial onComplete={handleTutorialComplete} />
