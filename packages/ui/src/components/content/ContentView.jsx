@@ -205,20 +205,35 @@ const ContentView = ({
     }
   };
 
-  const handleTrackPlay = async (track) => {
+  const handleTrackPlay = async (track, index) => {
     let contextUri = null;
+    let uris = null;
 
     if (contentType === "album") {
       contextUri = `spotify:album:${contentId}`;
     } else if (contentType === "playlist") {
       contextUri = `spotify:playlist:${contentId}`;
-    } else if (contentType === "liked-songs") {
-      contextUri = "spotify:collection:tracks";
+    } else if (contentType === "artist") {
+      uris = tracks.map((track) => track.uri);
+      const startIndex = index || 0;
+      uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
     } else if (contentType === "mix") {
-      localStorage.setItem(`playingMix-${contentId}`, "true");
+      uris = tracks.map((track) => track.uri);
+      const startIndex = index || 0;
+      uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+
+      localStorage.setItem("currentPlayingMixId", contentId);
+    } else if (contentType === "liked-songs") {
+      uris = tracks.map((track) => track.uri);
+      const startIndex = index || 0;
+      uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+
+      localStorage.setItem("playingLikedSongs", "true");
     }
 
-    const success = await playTrack(track.uri, contextUri);
+    const success = contextUri
+      ? await playTrack(track.uri, contextUri)
+      : await playTrack(null, null, uris);
 
     if (success && onNavigateToNowPlaying) {
       onNavigateToNowPlaying();
@@ -337,7 +352,7 @@ const ContentView = ({
           <div
             key={track.id || `track-${index}`}
             className="flex gap-12 items-start mb-4 transition-transform duration-200 ease-out cursor-pointer"
-            onClick={() => handleTrackPlay(track)}
+            onClick={() => handleTrackPlay(track, index)}
             style={{ transition: "transform 0.2s ease-out" }}
           >
             <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">

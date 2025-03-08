@@ -5,7 +5,7 @@ export function useSpotifyPlayerControls(accessToken) {
   const [error, setError] = useState(null);
 
   const playTrack = useCallback(
-    async (trackUri, contextUri = null) => {
+    async (trackUri, contextUri = null, uris = null) => {
       if (!accessToken) return false;
 
       try {
@@ -20,6 +20,8 @@ export function useSpotifyPlayerControls(accessToken) {
           if (trackUri) {
             payload.offset = { uri: trackUri };
           }
+        } else if (uris && uris.length > 0) {
+          payload.uris = uris;
         } else if (trackUri) {
           payload.uris = [trackUri];
         }
