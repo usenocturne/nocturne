@@ -12,7 +12,8 @@ import {
 
 const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const [isLiked, setIsLiked] = useState(false);
-  const { playTrack, pausePlayback } = useSpotifyPlayerControls(accessToken);
+  const { playTrack, pausePlayback, skipToNext, skipToPrevious } =
+    useSpotifyPlayerControls(accessToken);
 
   const trackName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -47,6 +48,14 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     } else if (currentPlayback?.item) {
       await playTrack();
     }
+  };
+
+  const handleSkipNext = async () => {
+    await skipToNext();
+  };
+
+  const handleSkipPrevious = async () => {
+    await skipToPrevious();
   };
 
   const handleBack = () => {
@@ -119,7 +128,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
         </div>
 
         <div className="flex justify-center gap-12 flex-1">
-          <div>
+          <div onClick={handleSkipPrevious}>
             <BackIcon className="w-14 h-14" />
           </div>
           <div onClick={handlePlayPause}>
@@ -129,7 +138,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
               <PlayIcon className="w-14 h-14" />
             )}
           </div>
-          <div>
+          <div onClick={handleSkipNext}>
             <ForwardIcon className="w-14 h-14" />
           </div>
         </div>
