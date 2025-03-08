@@ -12,12 +12,12 @@ export default function Home({
   userPlaylists,
   likedSongs,
   topArtists,
+  radioMixes,
   currentPlayback,
   currentlyPlayingAlbum,
   isLoading,
   refreshData,
   refreshPlaybackState,
-  setRecentAlbums,
 }) {
   const { updateGradientColors } = useGradientState();
   const scrollContainerRef = useRef(null);
@@ -41,6 +41,8 @@ export default function Home({
     } else if (activeSection === "artists" && topArtists.length > 0) {
       const firstArtistImage = topArtists[0]?.images?.[0]?.url;
       updateGradientColors(firstArtistImage || null, "artists");
+    } else if (activeSection === "radio" && radioMixes.length > 0) {
+      updateGradientColors(null, "radio");
     } else if (activeSection === "nowPlaying" && currentlyPlayingAlbum) {
       const albumImage = currentlyPlayingAlbum?.images?.[0]?.url;
       updateGradientColors(albumImage || null, "nowPlaying");
@@ -53,6 +55,7 @@ export default function Home({
     recentAlbums,
     userPlaylists,
     topArtists,
+    radioMixes,
     currentlyPlayingAlbum,
   ]);
 
@@ -127,6 +130,18 @@ export default function Home({
 
   const isFromCurrentlyPlayingArtist = (artistId) => {
     return currentPlayback?.item?.artists?.some((a) => a.id === artistId);
+  };
+
+  const isPlayingFromMix = (mixId) => {
+    const playingMixId = localStorage.getItem(`playingMix-${mixId}`);
+    return currentPlayback?.context?.uri === playingMixId;
+  };
+
+  const isPlayingDJ = () => {
+    return (
+      currentPlayback?.context?.uri ===
+      "spotify:playlist:37i9dQZF1EYkqdzj48dyYq"
+    );
   };
 
   const renderRecentsSection = () => {
@@ -432,6 +447,121 @@ export default function Home({
     );
   };
 
+  const renderRadioSection = () => {
+    return (
+      <HorizontalScroll
+        containerRef={scrollContainerRef}
+        accessToken={accessToken}
+        activeSection={activeSection}
+      >
+        <div
+          ref={scrollContainerRef}
+          className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
+          style={{ willChange: "transform" }}
+        >
+          <div key="dj-playlist" className="min-w-[280px] mr-10 snap-start">
+            <div
+              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10 cursor-pointer"
+              style={{ width: 280, height: 280 }}
+            >
+              <img
+                src="/images/radio-cover/dj.webp"
+                alt="DJ Playlist"
+                className="w-full h-full rounded-[12px]"
+              />
+            </div>
+            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+              DJ
+            </h4>
+            <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
+              {isPlayingDJ() ? (
+                <>
+                  <div className="w-5 ml-0.5 mr-3 mb-2">
+                    <section>
+                      <div className="wave0"></div>
+                      <div className="wave1"></div>
+                      <div className="wave2"></div>
+                      <div className="wave3"></div>
+                    </section>
+                  </div>
+                  Now Playing
+                </>
+              ) : (
+                "Made for You"
+              )}
+            </h4>
+          </div>
+
+          {isLoading?.data?.radioMixes &&
+          (!radioMixes || radioMixes.length === 0) ? (
+            Array(4)
+              .fill()
+              .map((_, index) => (
+                <div
+                  key={`loading-mix-${index}`}
+                  className="min-w-[280px] mr-10 snap-start"
+                >
+                  <div
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10 animate-pulse"
+                    style={{ width: 280, height: 280 }}
+                  ></div>
+                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
+                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
+                </div>
+              ))
+          ) : radioMixes && radioMixes.length > 0 ? (
+            radioMixes.map((mix) => (
+              <div key={mix.id} className="min-w-[280px] mr-10 snap-start">
+                <Redirect href={`/mix/${mix.id}`} accessToken={accessToken}>
+                  <div
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                    style={{ width: 280, height: 280 }}
+                  >
+                    {mix.images?.[0]?.url ? (
+                      <img
+                        src={mix.images[0].url}
+                        alt={`${mix.name} Cover`}
+                        className="w-full h-full rounded-[12px] aspect-square"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+                    )}
+                  </div>
+                </Redirect>
+                <Redirect href={`/mix/${mix.id}`} accessToken={accessToken}>
+                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                    {mix.name}
+                  </h4>
+                </Redirect>
+                <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
+                  {isPlayingFromMix(mix.id) ? (
+                    <>
+                      <div className="w-5 ml-0.5 mr-3 mb-2">
+                        <section>
+                          <div className="wave0"></div>
+                          <div className="wave1"></div>
+                          <div className="wave2"></div>
+                          <div className="wave3"></div>
+                        </section>
+                      </div>
+                      Now Playing
+                    </>
+                  ) : (
+                    "Mix"
+                  )}
+                </h4>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+              No mixes found
+            </div>
+          )}
+        </div>
+      </HorizontalScroll>
+    );
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case "recents":
@@ -440,6 +570,8 @@ export default function Home({
         return renderLibrarySection();
       case "artists":
         return renderArtistsSection();
+      case "radio":
+        return renderRadioSection();
       default:
         return (
           <div className="flex items-center justify-center h-full text-white/50 text-2xl">

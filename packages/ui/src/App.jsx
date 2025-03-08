@@ -40,6 +40,7 @@ function App() {
     userPlaylists,
     topArtists,
     likedSongs,
+    radioMixes,
     isLoading: dataIsLoading,
     errors: dataErrors,
     refreshData,
@@ -95,6 +96,7 @@ function App() {
         userPlaylists={userPlaylists}
         topArtists={topArtists}
         likedSongs={likedSongs}
+        radioMixes={radioMixes}
         currentPlayback={currentPlayback}
         currentlyPlayingAlbum={currentlyPlayingAlbum}
         isLoading={{

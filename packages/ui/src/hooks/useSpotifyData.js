@@ -15,18 +15,24 @@ export function useSpotifyData(
     images: [{ url: "https://misc.scdn.co/liked-songs/liked-songs-640.png" }],
     type: "liked-songs",
   });
+  const [radioMixes, setRadioMixes] = useState([]);
+
   const [isLoading, setIsLoading] = useState({
     recentAlbums: true,
     userPlaylists: true,
     topArtists: true,
     likedSongs: true,
+    radioMixes: true,
   });
+
   const [errors, setErrors] = useState({
     recentAlbums: null,
     userPlaylists: null,
     topArtists: null,
     likedSongs: null,
+    radioMixes: null,
   });
+
   const [hasInitialData, setHasInitialData] = useState(false);
 
   useEffect(() => {
@@ -190,6 +196,91 @@ export function useSpotifyData(
     }
   }, [accessToken]);
 
+  const fetchRadioMixes = useCallback(async () => {
+    if (!accessToken) return;
+
+    try {
+      setIsLoading((prev) => ({ ...prev, radioMixes: true }));
+
+      const predefinedMixes = [
+        {
+          id: "top-mix",
+          name: "Your Top Mix",
+          images: [{ url: "/images/radio-cover/top.webp" }],
+          tracks: [],
+          type: "static",
+          sortOrder: 1,
+        },
+        {
+          id: "recent-mix",
+          name: "Recent Mix",
+          images: [{ url: "/images/radio-cover/recent.webp" }],
+          tracks: [],
+          type: "static",
+          sortOrder: 4,
+        },
+        {
+          id: "morning-mix",
+          name: "Morning Mix",
+          images: [{ url: "/images/radio-cover/morning.webp" }],
+          type: "time",
+          sortOrder: 3,
+        },
+        {
+          id: "discoveries-mix",
+          name: "Discoveries",
+          images: [{ url: "/images/radio-cover/discoveries.webp" }],
+          tracks: [],
+          type: "static",
+          sortOrder: 2,
+        },
+        {
+          id: "throwback-mix",
+          name: "Throwbacks",
+          images: [{ url: "/images/radio-cover/throwback.webp" }],
+          tracks: [],
+          type: "static",
+          sortOrder: 5,
+        },
+        {
+          id: "seasonal-mix",
+          name: getSeasonalMixName(),
+          images: [{ url: getSeasonalMixImage() }],
+          tracks: [],
+          type: "seasonal",
+          sortOrder: 6,
+        },
+      ];
+
+      const sortedMixes = predefinedMixes.sort(
+        (a, b) => a.sortOrder - b.sortOrder
+      );
+
+      setRadioMixes(sortedMixes);
+      setErrors((prev) => ({ ...prev, radioMixes: null }));
+    } catch (err) {
+      console.error("Error setting up radio mixes:", err);
+      setErrors((prev) => ({ ...prev, radioMixes: err.message }));
+    } finally {
+      setIsLoading((prev) => ({ ...prev, radioMixes: false }));
+    }
+  }, [accessToken]);
+
+  function getSeasonalMixName() {
+    const month = new Date().getMonth();
+    if (month >= 2 && month <= 4) return "Spring Mix";
+    if (month >= 5 && month <= 7) return "Summer Mix";
+    if (month >= 8 && month <= 10) return "Fall Mix";
+    return "Winter Mix";
+  }
+  function getSeasonalMixImage() {
+    const month = new Date().getMonth();
+    if (month >= 2 && month <= 4) return "/images/radio-cover/spring.webp";
+    if (month >= 5 && month <= 7) return "/images/radio-cover/summer.webp";
+    if (month >= 8 && month <= 10) return "/images/radio-cover/fall.webp";
+    return "/images/radio-cover/winter.webp";
+  }
+
   useEffect(() => {
     if (albumChangeEvent?.album?.id) {
       setRecentAlbums((prevAlbums) => {
@@ -208,6 +299,7 @@ export function useSpotifyData(
       fetchUserPlaylists();
       fetchTopArtists();
       fetchLikedSongs();
+      fetchRadioMixes();
     }
   }, [
     accessToken,
@@ -215,19 +307,22 @@ export function useSpotifyData(
     fetchUserPlaylists,
     fetchTopArtists,
     fetchLikedSongs,
+    fetchRadioMixes,
   ]);
 
   const refreshData = useCallback(() => {
     fetchUserPlaylists();
     fetchTopArtists();
     fetchLikedSongs();
-  }, [fetchUserPlaylists, fetchTopArtists, fetchLikedSongs]);
+    fetchRadioMixes();
+  }, [fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchRadioMixes]);
 
   return {
     recentAlbums,
     userPlaylists,
     topArtists,
     likedSongs,
+    radioMixes,
     isLoading,
     errors,
     refreshData,
@@ -235,5 +330,6 @@ export function useSpotifyData(
     refreshUserPlaylists: fetchUserPlaylists,
     refreshTopArtists: fetchTopArtists,
     refreshLikedSongs: fetchLikedSongs,
+    refreshRadioMixes: fetchRadioMixes,
   };
 }
