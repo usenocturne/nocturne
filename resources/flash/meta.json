@@ -1,0 +1,102 @@
+{
+  "metadataVersion": 1,
+  "name": "nocturne",
+  "version": "3.0.0",
+  "description": "The most advanced Spotify Car Thing mod - Restore functionality to your Spotify Car Thing!",
+  "steps": [
+    {
+      "type": "bulkcmd",
+      "value": "amlmmc key"
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 0,
+        "data": {
+          "filePath": "boot.bin"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 180355072,
+        "data": {
+          "filePath": "misc.raw"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 188743681,
+        "data": {
+          "filePath": "swap.raw"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 457179138,
+        "data": {
+          "filePath": "boot.vfat"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 524288003,
+        "data": {
+          "filePath": "boot.vfat"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 591396868,
+        "data": {
+          "filePath": "system.ext4"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 1933574149,
+        "data": {
+          "filePath": "system.ext4"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 3275751430,
+        "data": {
+          "filePath": "data.ext4"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeEnv",
+      "value": {
+        "filePath": "env.txt"
+      }
+    },
+    {
+      "type": "bulkcmd",
+      "value": "saveenv"
+    }
+  ]
+}

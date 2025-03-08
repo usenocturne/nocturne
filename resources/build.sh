@@ -17,9 +17,9 @@ set -e
 : "${ARCH:="aarch64"}"
 : "${DEV:="mdev"}"
 
-: "${SIZE_ROOT_FS:="516M"}"
-: "${SIZE_ROOT_PART:="516M"}"
-: "${SIZE_DATA:="2000M"}"
+: "${SIZE_BOOT_FS:="64M"}"
+: "${SIZE_ROOT_FS:="1280M"}"
+: "${SIZE_DATA:="680M"}"
 
 : "${OUTPUT_PATH:="/output"}"
 : "${INPUT_PATH:="/input"}"
@@ -38,6 +38,7 @@ export RES_PATH=/resources/
 DEF_STAGE_PATH="${RES_PATH}/scripts/stages"
 export INPUT_PATH
 export ROOTFS_PATH="${WORK_PATH}/root_fs"
+export BOOTFS_PATH="${WORK_PATH}/boot_fs"
 export DATAFS_PATH="${WORK_PATH}/data_fs"
 SETUP_PREFIX="/data"
 
