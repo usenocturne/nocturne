@@ -5,6 +5,7 @@ import NetworkScreen from "./components/auth/NetworkScreen";
 import Tutorial from "./components/tutorial/Tutorial";
 import Home from "./pages/Home";
 import ContentView from "./components/content/ContentView";
+import NowPlaying from "./components/player/NowPlaying";
 import { useAuth } from "./hooks/useAuth";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
@@ -96,6 +97,14 @@ function App() {
     content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showTutorial) {
     content = <Tutorial onComplete={handleTutorialComplete} />;
+  } else if (activeSection === "nowPlaying") {
+    content = (
+      <NowPlaying
+        accessToken={accessToken}
+        currentPlayback={currentPlayback}
+        onClose={() => setActiveSection("recents")}
+      />
+    );
   } else if (viewingContent) {
     content = (
       <ContentView
