@@ -7,6 +7,7 @@ const ContentView = ({
   contentType = "album",
   onClose,
   currentlyPlayingTrackUri,
+  radioMixes = [],
 }) => {
   const [content, setContent] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -155,6 +156,22 @@ const ContentView = ({
             break;
           }
 
+          case "mix": {
+            const foundMix = radioMixes.find((m) => m.id === contentId);
+
+            if (foundMix) {
+              contentData = {
+                ...foundMix,
+                type: "mix",
+              };
+
+              tracksData = foundMix.tracks || [];
+            } else {
+              throw new Error(`Mix not found: ${contentId}`);
+            }
+            break;
+          }
+
           default:
             throw new Error(`Unsupported content type: ${contentType}`);
         }
@@ -251,6 +268,8 @@ const ContentView = ({
         return `${content.tracks?.total || 0} Songs`;
       case "liked-songs":
         return `${content.tracks?.total || 0} Songs`;
+      case "mix":
+        return `${content.tracks?.length || 0} Tracks`;
       default:
         return "";
     }

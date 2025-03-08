@@ -104,6 +104,7 @@ function App() {
         contentType={viewingContent.type}
         onClose={handleCloseContent}
         currentlyPlayingTrackUri={currentPlayback?.item?.uri}
+        radioMixes={radioMixes}
       />
     );
   } else {

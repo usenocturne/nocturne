@@ -434,6 +434,11 @@ export default function Home({
   };
 
   const renderRadioSection = () => {
+    const formatTrackCount = (mix) => {
+      if (!mix.tracks || !mix.tracks.length) return "Mix";
+      return `${mix.tracks.length} Tracks`;
+    };
+
     return (
       <HorizontalScroll
         containerRef={scrollContainerRef}
@@ -499,20 +504,25 @@ export default function Home({
             radioMixes.map((mix) => (
               <div key={mix.id} className="min-w-[280px] mr-10 snap-start">
                 <div
-                  className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-xl cursor-pointer"
                   style={{ width: 280, height: 280 }}
+                  onClick={() => onOpenContent(mix.id, "mix")}
                 >
                   {mix.images?.[0]?.url ? (
                     <img
                       src={mix.images[0].url}
                       alt={`${mix.name} Cover`}
                       className="w-full h-full rounded-[12px] aspect-square"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="w-full h-full rounded-[12px] bg-white/10"></div>
                   )}
                 </div>
-                <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                <h4
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px] cursor-pointer"
+                  onClick={() => onOpenContent(mix.id, "mix")}
+                >
                   {mix.name}
                 </h4>
                 <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
@@ -529,7 +539,7 @@ export default function Home({
                       Now Playing
                     </>
                   ) : (
-                    "Mix"
+                    formatTrackCount(mix)
                   )}
                 </h4>
               </div>
