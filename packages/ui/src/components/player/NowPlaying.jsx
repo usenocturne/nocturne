@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import {
   HeartIcon,
@@ -12,8 +12,17 @@ import {
 
 const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const [isLiked, setIsLiked] = useState(false);
-  const { playTrack, pausePlayback, skipToNext, skipToPrevious } =
-    useSpotifyPlayerControls(accessToken);
+  const [realTimeProgress, setRealTimeProgress] = useState(0);
+  const progressTimerRef = useRef(null);
+  const lastUpdateTimeRef = useRef(0);
+
+  const {
+    playTrack,
+    pausePlayback,
+    skipToNext,
+    skipToPrevious,
+    seekToPosition,
+  } = useSpotifyPlayerControls(accessToken);
 
   const trackName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -38,9 +47,43 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     : "/images/not-playing.webp";
 
   const isPlaying = currentPlayback?.is_playing || false;
-  const progress = currentPlayback?.progress_ms || 0;
   const duration = currentPlayback?.item?.duration_ms || 1;
-  const progressPercentage = (progress / duration) * 100;
+  const progressPercentage = (realTimeProgress / duration) * 100;
+
+  useEffect(() => {
+    if (currentPlayback?.progress_ms !== undefined) {
+      setRealTimeProgress(currentPlayback.progress_ms);
+      lastUpdateTimeRef.current = Date.now();
+    }
+  }, [currentPlayback?.progress_ms]);
+
+  useEffect(() => {
+    const updateProgressTimer = () => {
+      if (isPlaying) {
+        const now = Date.now();
+        const elapsed = now - lastUpdateTimeRef.current;
+        setRealTimeProgress((prev) => {
+          const newProgress = prev + elapsed;
+          return Math.min(newProgress, duration);
+        });
+        lastUpdateTimeRef.current = now;
+      }
+    };
+
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+    }
+
+    if (isPlaying) {
+      progressTimerRef.current = setInterval(updateProgressTimer, 100);
+    }
+
+    return () => {
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+      }
+    };
+  }, [isPlaying, duration]);
 
   const handlePlayPause = async () => {
     if (isPlaying) {
@@ -55,7 +98,15 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   };
 
   const handleSkipPrevious = async () => {
-    await skipToPrevious();
+    const RESTART_THRESHOLD_MS = 3000;
+
+    if (realTimeProgress > RESTART_THRESHOLD_MS) {
+      await seekToPosition(0);
+      setRealTimeProgress(0);
+      lastUpdateTimeRef.current = Date.now();
+    } else {
+      await skipToPrevious();
+    }
   };
 
   const handleBack = () => {
@@ -110,7 +161,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
       <div className="px-12 pt-7 pb-7">
         <div className="relative w-full bg-white/20 rounded-full overflow-hidden h-2">
           <div
-            className="absolute inset-0 bg-white transition-transform duration-300 ease-linear"
+            className="absolute inset-0 bg-white transition-transform duration-100 ease-linear"
             style={{
               transform: `translateX(${progressPercentage - 100}%)`,
             }}

@@ -167,6 +167,45 @@ export function useSpotifyPlayerControls(accessToken) {
     }
   }, [accessToken]);
 
+  const seekToPosition = useCallback(
+    async (positionMs) => {
+      if (!accessToken) return false;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `https://api.spotify.com/v1/me/player/seek?position_ms=${positionMs}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (!response.ok && response.status !== 204) {
+          const errorData = await response.json().catch(() => ({
+            error: { message: `HTTP error! status: ${response.status}` },
+          }));
+          throw new Error(
+            errorData.error?.message || `HTTP error! status: ${response.status}`
+          );
+        }
+
+        return true;
+      } catch (err) {
+        console.error("Error seeking to position:", err);
+        setError(err.message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [accessToken]
+  );
+
   const setVolume = useCallback(
     async (volumePercent) => {
       if (!accessToken) return false;
@@ -294,6 +333,7 @@ export function useSpotifyPlayerControls(accessToken) {
     setVolume,
     toggleShuffle,
     setRepeatMode,
+    seekToPosition,
     isLoading,
     error,
   };
