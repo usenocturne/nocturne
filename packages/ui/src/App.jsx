@@ -43,7 +43,12 @@ function App() {
     isLoading: dataIsLoading,
     errors: dataErrors,
     refreshData,
-  } = useSpotifyData(accessToken, albumChangeEvent, activeSection, currentlyPlayingAlbum);
+  } = useSpotifyData(
+    accessToken,
+    albumChangeEvent,
+    activeSection,
+    currentlyPlayingAlbum
+  );
 
   useEffect(() => {
     checkNetwork();
@@ -57,14 +62,50 @@ function App() {
   }, [isAuthenticated]);
 
   const handleAuthSuccess = () => {
-    const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
-    setShowTutorial(!hasSeenTutorial);
+    const storedAccessToken = localStorage.getItem("spotifyAccessToken");
+    const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+
+    if (storedAccessToken && storedRefreshToken) {
+      const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
+      setShowTutorial(!hasSeenTutorial);
+    } else {
+      console.warn("No valid tokens found after auth success");
+    }
   };
 
   const handleTutorialComplete = () => {
     setShowTutorial(false);
     localStorage.setItem("hasSeenTutorial", "true");
   };
+
+  let content;
+  if (authIsLoading) {
+    content = null;
+  } else if (!isAuthenticated) {
+    content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
+  } else if (showTutorial) {
+    content = <Tutorial onComplete={handleTutorialComplete} />;
+  } else {
+    content = (
+      <Home
+        accessToken={accessToken}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        recentAlbums={recentAlbums}
+        userPlaylists={userPlaylists}
+        topArtists={topArtists}
+        likedSongs={likedSongs}
+        currentPlayback={currentPlayback}
+        currentlyPlayingAlbum={currentlyPlayingAlbum}
+        isLoading={{
+          data: dataIsLoading,
+          player: playerIsLoading,
+        }}
+        refreshData={refreshData}
+        refreshPlaybackState={refreshPlaybackState}
+      />
+    );
+  }
 
   return (
     <Router>
@@ -83,30 +124,7 @@ function App() {
         />
 
         <div className="relative z-10">
-          {authIsLoading ? null : !isAuthenticated ? (
-            <AuthContainer onAuthSuccess={handleAuthSuccess} />
-          ) : showTutorial ? (
-            <Tutorial onComplete={handleTutorialComplete} />
-          ) : (
-            <Home
-              accessToken={accessToken}
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              recentAlbums={recentAlbums}
-              userPlaylists={userPlaylists}
-              topArtists={topArtists}
-              likedSongs={likedSongs}
-              currentPlayback={currentPlayback}
-              currentlyPlayingAlbum={currentlyPlayingAlbum}
-              isLoading={{
-                data: dataIsLoading,
-                player: playerIsLoading,
-              }}
-              refreshData={refreshData}
-              refreshPlaybackState={refreshPlaybackState}
-            />
-          )}
-
+          {content}
           {!isConnected && showNoNetwork && <NetworkScreen />}
         </div>
       </main>

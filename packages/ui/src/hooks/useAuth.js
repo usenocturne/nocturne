@@ -13,67 +13,28 @@ export function useAuth() {
   const [authData, setAuthData] = useState(null);
   const [error, setError] = useState(null);
 
-  const isInitializedRef = useRef(false);
   const pollingIntervalRef = useRef(null);
 
   useEffect(() => {
     const storedAccessToken = localStorage.getItem("spotifyAccessToken");
     const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
 
     if (storedAccessToken && storedRefreshToken) {
       setAccessToken(storedAccessToken);
       setRefreshToken(storedRefreshToken);
-
-      const isExpired = tokenExpiry && new Date(tokenExpiry) <= new Date();
-
-      if (isExpired) {
-        handleRefreshToken(storedRefreshToken);
-      } else {
-        setIsAuthenticated(true);
-      }
+      setIsAuthenticated(true);
     }
 
     setIsLoading(false);
   }, []);
 
-  const handleRefreshToken = async (token) => {
-    try {
-      setIsLoading(true);
-      const data = await refreshAccessToken(token);
-
-      setAccessToken(data.access_token);
-      localStorage.setItem("spotifyAccessToken", data.access_token);
-
-      if (data.refresh_token) {
-        setRefreshToken(data.refresh_token);
-        localStorage.setItem("spotifyRefreshToken", data.refresh_token);
-      }
-
-      const expiryDate = new Date();
-      expiryDate.setSeconds(expiryDate.getSeconds() + data.expires_in);
-      localStorage.setItem("spotifyTokenExpiry", expiryDate.toISOString());
-
-      setIsAuthenticated(true);
-    } catch (error) {
-      console.error("Token refresh failed:", error);
-      setError("Failed to refresh authentication token");
-      logout();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const initAuth = useCallback(async () => {
-    if (isInitializedRef.current || authData) return authData;
-
     try {
       setIsLoading(true);
       setError(null);
 
       const auth = await oauthAuthorize();
       setAuthData(auth);
-      isInitializedRef.current = true;
 
       return auth;
     } catch (error) {
@@ -83,7 +44,7 @@ export function useAuth() {
     } finally {
       setIsLoading(false);
     }
-  }, [authData]);
+  }, []);
 
   const pollAuthStatus = useCallback(
     (deviceCode) => {
@@ -101,9 +62,6 @@ export function useAuth() {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
 
-            setAccessToken(data.access_token);
-            setRefreshToken(data.refresh_token);
-
             localStorage.setItem("spotifyAccessToken", data.access_token);
             localStorage.setItem("spotifyRefreshToken", data.refresh_token);
             localStorage.setItem("spotifyAuthType", "spotify");
@@ -115,11 +73,14 @@ export function useAuth() {
               expiryDate.toISOString()
             );
 
+            setAccessToken(data.access_token);
+            setRefreshToken(data.refresh_token);
+
             setIsAuthenticated(true);
+
+            window.dispatchEvent(new Event("storage"));
           }
-        } catch (error) {
-          console.log("Polling status...");
-        }
+        } catch (error) {}
       };
 
       pollingIntervalRef.current = setInterval(poll, intervalTime);
@@ -149,16 +110,41 @@ export function useAuth() {
     setRefreshToken(null);
     setIsAuthenticated(false);
     setAuthData(null);
-    isInitializedRef.current = false;
   }, []);
 
   useEffect(() => {
+    const handleStorageChange = () => {
+      const storedAccessToken = localStorage.getItem("spotifyAccessToken");
+      const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+
+      if (storedAccessToken && storedRefreshToken) {
+        setAccessToken(storedAccessToken);
+        setRefreshToken(storedRefreshToken);
+        setIsAuthenticated(true);
+      } else {
+        setAccessToken(null);
+        setRefreshToken(null);
+        setIsAuthenticated(false);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
     return () => {
+      window.removeEventListener("storage", handleStorageChange);
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (accessToken && refreshToken) {
+      setIsAuthenticated(true);
+    } else {
+      setIsAuthenticated(false);
+    }
+  }, [accessToken, refreshToken]);
 
   return {
     isAuthenticated,
@@ -170,6 +156,5 @@ export function useAuth() {
     initAuth,
     pollAuthStatus,
     logout,
-    handleRefreshToken,
   };
 }
