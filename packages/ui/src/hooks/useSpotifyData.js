@@ -33,7 +33,7 @@ export function useSpotifyData(
     radioMixes: null,
   });
 
-  const [hasInitialData, setHasInitialData] = useState(false);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.id) {
@@ -54,7 +54,7 @@ export function useSpotifyData(
   }, [currentlyPlayingAlbum]);
 
   const fetchRecentlyPlayed = useCallback(async () => {
-    if (!accessToken || hasInitialData) return;
+    if (!accessToken) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
@@ -93,7 +93,6 @@ export function useSpotifyData(
       });
 
       setRecentAlbums(uniqueAlbums);
-      setHasInitialData(true);
       setErrors((prev) => ({ ...prev, recentAlbums: null }));
     } catch (err) {
       console.error("Error fetching recently played:", err);
@@ -101,7 +100,7 @@ export function useSpotifyData(
     } finally {
       setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
     }
-  }, [accessToken, currentlyPlayingAlbum, hasInitialData]);
+  }, [accessToken, currentlyPlayingAlbum]);
 
   const fetchUserPlaylists = useCallback(async () => {
     if (!accessToken) return;
@@ -580,15 +579,17 @@ export function useSpotifyData(
   }, [albumChangeEvent]);
 
   useEffect(() => {
-    if (accessToken) {
+    if (accessToken && !initialDataLoaded) {
       fetchRecentlyPlayed();
       fetchUserPlaylists();
       fetchTopArtists();
       fetchLikedSongs();
       fetchRadioMixes();
+      setInitialDataLoaded(true);
     }
   }, [
     accessToken,
+    initialDataLoaded,
     fetchRecentlyPlayed,
     fetchUserPlaylists,
     fetchTopArtists,
