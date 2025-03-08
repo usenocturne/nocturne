@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 
-export function useSpotifyData(accessToken, albumChangeEvent, activeSection, currentlyPlayingAlbum) {
+export function useSpotifyData(
+  accessToken,
+  albumChangeEvent,
+  activeSection,
+  currentlyPlayingAlbum
+) {
   const [recentAlbums, setRecentAlbums] = useState([]);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [topArtists, setTopArtists] = useState([]);
@@ -34,7 +39,9 @@ export function useSpotifyData(accessToken, albumChangeEvent, activeSection, cur
         if (existingIndex === 0) return prevAlbums;
         return [
           currentlyPlayingAlbum,
-          ...prevAlbums.filter((album) => album.id !== currentlyPlayingAlbum.id),
+          ...prevAlbums.filter(
+            (album) => album.id !== currentlyPlayingAlbum.id
+          ),
         ].slice(0, 50);
       });
     }
@@ -187,7 +194,9 @@ export function useSpotifyData(accessToken, albumChangeEvent, activeSection, cur
     if (albumChangeEvent?.album?.id) {
       setRecentAlbums((prevAlbums) => {
         const newAlbum = albumChangeEvent.album;
-        const filteredAlbums = prevAlbums.filter(album => album.id !== newAlbum.id);
+        const filteredAlbums = prevAlbums.filter(
+          (album) => album.id !== newAlbum.id
+        );
         return [newAlbum, ...filteredAlbums].slice(0, 50);
       });
     }
