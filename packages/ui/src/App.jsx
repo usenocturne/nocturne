@@ -90,6 +90,12 @@ function App() {
     setViewingContent(null);
   };
 
+  const handleNavigateToNowPlaying = () => {
+    setViewingContent(null);
+    setActiveSection("nowPlaying");
+    refreshPlaybackState();
+  };
+
   let content;
   if (authIsLoading) {
     content = null;
@@ -112,6 +118,7 @@ function App() {
         contentId={viewingContent.id}
         contentType={viewingContent.type}
         onClose={handleCloseContent}
+        onNavigateToNowPlaying={handleNavigateToNowPlaying}
         currentlyPlayingTrackUri={currentPlayback?.item?.uri}
         radioMixes={radioMixes}
       />

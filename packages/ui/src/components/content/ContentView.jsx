@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 
 const ContentView = ({
   accessToken,
   contentId,
   contentType = "album",
   onClose,
+  onNavigateToNowPlaying,
   currentlyPlayingTrackUri,
   radioMixes = [],
 }) => {
@@ -15,6 +17,12 @@ const ContentView = ({
   const [error, setError] = useState(null);
   const tracksContainerRef = useRef(null);
   const navigate = useNavigate();
+
+  const {
+    playTrack,
+    isLoading: isPlaybackLoading,
+    error: playbackError,
+  } = useSpotifyPlayerControls(accessToken);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -187,13 +195,33 @@ const ContentView = ({
     };
 
     fetchContent();
-  }, [contentId, contentType, accessToken]);
+  }, [contentId, contentType, accessToken, radioMixes]);
 
   const handleBack = () => {
     if (onClose) {
       onClose();
     } else {
       navigate(-1);
+    }
+  };
+
+  const handleTrackPlay = async (track) => {
+    let contextUri = null;
+
+    if (contentType === "album") {
+      contextUri = `spotify:album:${contentId}`;
+    } else if (contentType === "playlist") {
+      contextUri = `spotify:playlist:${contentId}`;
+    } else if (contentType === "liked-songs") {
+      contextUri = "spotify:collection:tracks";
+    } else if (contentType === "mix") {
+      localStorage.setItem(`playingMix-${contentId}`, "true");
+    }
+
+    const success = await playTrack(track.uri, contextUri);
+
+    if (success && onNavigateToNowPlaying) {
+      onNavigateToNowPlaying();
     }
   };
 
@@ -307,8 +335,9 @@ const ContentView = ({
       >
         {tracks.map((track, index) => (
           <div
-            key={track.id}
-            className="flex gap-12 items-start mb-4 transition-transform duration-200 ease-out"
+            key={track.id || `track-${index}`}
+            className="flex gap-12 items-start mb-4 transition-transform duration-200 ease-out cursor-pointer"
+            onClick={() => handleTrackPlay(track)}
             style={{ transition: "transform 0.2s ease-out" }}
           >
             <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
@@ -327,7 +356,7 @@ const ContentView = ({
             </div>
 
             <div className="flex-grow">
-              <div className="cursor-pointer">
+              <div>
                 <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
                   {track.name}
                 </p>
@@ -350,6 +379,12 @@ const ContentView = ({
             </div>
           </div>
         ))}
+
+        {playbackError && (
+          <div className="mt-4 p-4 bg-red-500/20 rounded-lg">
+            <p className="text-white/80">{playbackError}</p>
+          </div>
+        )}
       </div>
     </div>
   );
