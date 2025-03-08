@@ -205,7 +205,10 @@ export default function Home({
                 </h4>
 
                 {album.artists?.[0] && (
-                  <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                  <h4
+                    className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
+                    onClick={() => onOpenContent(album.artists[0].id, "artist")}
+                  >
                     {album.artists.map((artist) => artist.name).join(", ")}
                   </h4>
                 )}
