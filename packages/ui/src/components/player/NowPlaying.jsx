@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -11,6 +12,7 @@ import {
 
 const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const [isLiked, setIsLiked] = useState(false);
+  const { playTrack, pausePlayback } = useSpotifyPlayerControls(accessToken);
 
   const trackName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -39,12 +41,13 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const duration = currentPlayback?.item?.duration_ms || 1;
   const progressPercentage = (progress / duration) * 100;
 
-  const PlayPauseButton = () =>
-    isPlaying ? (
-      <PauseIcon className="w-14 h-14" />
-    ) : (
-      <PlayIcon className="w-14 h-14" />
-    );
+  const handlePlayPause = async () => {
+    if (isPlaying) {
+      await pausePlayback();
+    } else if (currentPlayback?.item) {
+      await playTrack();
+    }
+  };
 
   const handleBack = () => {
     if (onClose) {
@@ -119,8 +122,12 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
           <div>
             <BackIcon className="w-14 h-14" />
           </div>
-          <div>
-            <PlayPauseButton />
+          <div onClick={handlePlayPause}>
+            {isPlaying ? (
+              <PauseIcon className="w-14 h-14" />
+            ) : (
+              <PlayIcon className="w-14 h-14" />
+            )}
           </div>
           <div>
             <ForwardIcon className="w-14 h-14" />
