@@ -206,6 +206,128 @@ export function useSpotifyPlayerControls(accessToken) {
     [accessToken]
   );
 
+  const checkIsTrackLiked = useCallback(
+    async (trackId) => {
+      if (!accessToken || !trackId) return false;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `https://api.spotify.com/v1/me/tracks/contains?ids=${trackId}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({
+            error: { message: `HTTP error! status: ${response.status}` },
+          }));
+          throw new Error(
+            errorData.error?.message || `HTTP error! status: ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+        return data[0] || false;
+      } catch (err) {
+        console.error("Error checking if track is liked:", err);
+        setError(err.message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [accessToken]
+  );
+
+  const likeTrack = useCallback(
+    async (trackId) => {
+      if (!accessToken || !trackId) return false;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `https://api.spotify.com/v1/me/tracks?ids=${trackId}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ ids: [trackId] }),
+          }
+        );
+
+        if (!response.ok && response.status !== 204) {
+          const errorData = await response.json().catch(() => ({
+            error: { message: `HTTP error! status: ${response.status}` },
+          }));
+          throw new Error(
+            errorData.error?.message || `HTTP error! status: ${response.status}`
+          );
+        }
+
+        return true;
+      } catch (err) {
+        console.error("Error liking track:", err);
+        setError(err.message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [accessToken]
+  );
+
+  const unlikeTrack = useCallback(
+    async (trackId) => {
+      if (!accessToken || !trackId) return false;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `https://api.spotify.com/v1/me/tracks?ids=${trackId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ ids: [trackId] }),
+          }
+        );
+
+        if (!response.ok && response.status !== 204) {
+          const errorData = await response.json().catch(() => ({
+            error: { message: `HTTP error! status: ${response.status}` },
+          }));
+          throw new Error(
+            errorData.error?.message || `HTTP error! status: ${response.status}`
+          );
+        }
+
+        return true;
+      } catch (err) {
+        console.error("Error unliking track:", err);
+        setError(err.message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [accessToken]
+  );
+
   const setVolume = useCallback(
     async (volumePercent) => {
       if (!accessToken) return false;
@@ -334,6 +456,9 @@ export function useSpotifyPlayerControls(accessToken) {
     toggleShuffle,
     setRepeatMode,
     seekToPosition,
+    checkIsTrackLiked,
+    likeTrack,
+    unlikeTrack,
     isLoading,
     error,
   };

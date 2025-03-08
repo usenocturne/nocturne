@@ -12,9 +12,11 @@ import {
 
 const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const [isLiked, setIsLiked] = useState(false);
+  const [isCheckingLike, setIsCheckingLike] = useState(false);
   const [realTimeProgress, setRealTimeProgress] = useState(0);
   const progressTimerRef = useRef(null);
   const lastUpdateTimeRef = useRef(0);
+  const currentTrackIdRef = useRef(null);
 
   const {
     playTrack,
@@ -22,6 +24,9 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     skipToNext,
     skipToPrevious,
     seekToPosition,
+    checkIsTrackLiked,
+    likeTrack,
+    unlikeTrack,
   } = useSpotifyPlayerControls(accessToken);
 
   const trackName = currentPlayback?.item
@@ -49,6 +54,35 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const isPlaying = currentPlayback?.is_playing || false;
   const duration = currentPlayback?.item?.duration_ms || 1;
   const progressPercentage = (realTimeProgress / duration) * 100;
+  const trackId = currentPlayback?.item?.id;
+
+  useEffect(() => {
+    const checkCurrentTrackLiked = async () => {
+      if (
+        trackId &&
+        currentPlayback?.item?.type === "track" &&
+        !isCheckingLike
+      ) {
+        setIsCheckingLike(true);
+        try {
+          if (trackId !== currentTrackIdRef.current) {
+            currentTrackIdRef.current = trackId;
+            const liked = await checkIsTrackLiked(trackId);
+            setIsLiked(liked);
+          }
+        } catch (error) {
+          console.error("Error checking if track is liked:", error);
+        } finally {
+          setIsCheckingLike(false);
+        }
+      } else if (currentPlayback?.item?.type !== "track") {
+        setIsLiked(false);
+        currentTrackIdRef.current = null;
+      }
+    };
+
+    checkCurrentTrackLiked();
+  }, [trackId, checkIsTrackLiked, currentPlayback?.item?.type]);
 
   useEffect(() => {
     if (currentPlayback?.progress_ms !== undefined) {
@@ -106,6 +140,24 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
       lastUpdateTimeRef.current = Date.now();
     } else {
       await skipToPrevious();
+    }
+  };
+
+  const handleToggleLike = async () => {
+    if (!trackId || currentPlayback?.item?.type !== "track" || isCheckingLike)
+      return;
+
+    try {
+      if (isLiked) {
+        setIsLiked(false);
+        await unlikeTrack(trackId);
+      } else {
+        setIsLiked(true);
+        await likeTrack(trackId);
+      }
+    } catch (error) {
+      setIsLiked(!isLiked);
+      console.error("Error toggling track like:", error);
     }
   };
 
@@ -170,7 +222,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
       </div>
 
       <div className="flex justify-between items-center w-full px-12">
-        <div className="flex-shrink-0" onClick={() => setIsLiked(!isLiked)}>
+        <div className="flex-shrink-0" onClick={handleToggleLike}>
           {isLiked ? (
             <HeartIconFilled className="w-14 h-14" />
           ) : (
