@@ -4,6 +4,7 @@ import AuthContainer from "./components/auth/AuthContainer";
 import NetworkScreen from "./components/auth/NetworkScreen";
 import Tutorial from "./components/tutorial/Tutorial";
 import Home from "./pages/Home";
+import ContentView from "./components/content/ContentView";
 import { useAuth } from "./hooks/useAuth";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
@@ -15,6 +16,7 @@ function App() {
   const [activeSection, setActiveSection] = useState(() => {
     return localStorage.getItem("lastActiveSection") || "recents";
   });
+  const [viewingContent, setViewingContent] = useState(null);
 
   const { isAuthenticated, accessToken, isLoading: authIsLoading } = useAuth();
   const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
@@ -79,6 +81,14 @@ function App() {
     localStorage.setItem("hasSeenTutorial", "true");
   };
 
+  const handleOpenContent = (id, type) => {
+    setViewingContent({ id, type });
+  };
+
+  const handleCloseContent = () => {
+    setViewingContent(null);
+  };
+
   let content;
   if (authIsLoading) {
     content = null;
@@ -86,6 +96,16 @@ function App() {
     content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showTutorial) {
     content = <Tutorial onComplete={handleTutorialComplete} />;
+  } else if (viewingContent) {
+    content = (
+      <ContentView
+        accessToken={accessToken}
+        contentId={viewingContent.id}
+        contentType={viewingContent.type}
+        onClose={handleCloseContent}
+        currentlyPlayingTrackUri={currentPlayback?.item?.uri}
+      />
+    );
   } else {
     content = (
       <Home
@@ -105,6 +125,7 @@ function App() {
         }}
         refreshData={refreshData}
         refreshPlaybackState={refreshPlaybackState}
+        onOpenContent={handleOpenContent}
       />
     );
   }

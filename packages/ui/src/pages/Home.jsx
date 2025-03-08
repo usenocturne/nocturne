@@ -18,6 +18,7 @@ export default function Home({
   isLoading,
   refreshData,
   refreshPlaybackState,
+  onOpenContent,
 }) {
   const { updateGradientColors } = useGradientState();
   const scrollContainerRef = useRef(null);
@@ -180,36 +181,33 @@ export default function Home({
                 className="min-w-[280px] mr-10 snap-start"
                 data-id={album.id}
               >
-                <Redirect href={`/album/${album.id}`} accessToken={accessToken}>
-                  <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                    style={{ width: 280, height: 280 }}
-                  >
-                    {album.images?.[0]?.url ? (
-                      <img
-                        src={album.images[0].url}
-                        alt="Album Cover"
-                        className="w-full h-full rounded-[12px] aspect-square"
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-[12px] bg-white/10"></div>
-                    )}
-                  </div>
-                </Redirect>
+                <div
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-xl cursor-pointer"
+                  style={{ width: 280, height: 280 }}
+                  onClick={() => onOpenContent(album.id, "album")}
+                >
+                  {album.images?.[0]?.url ? (
+                    <img
+                      src={album.images[0].url}
+                      alt="Album Cover"
+                      className="w-full h-full rounded-[12px] aspect-square"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+                  )}
+                </div>
 
-                <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                <h4
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px] cursor-pointer"
+                  onClick={() => onOpenContent(album.id, "album")}
+                >
                   {album.name}
                 </h4>
 
                 {album.artists?.[0] && (
-                  <Redirect
-                    href={`/artist/${album.artists[0].id}`}
-                    accessToken={accessToken}
-                  >
-                    <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                      {album.artists.map((artist) => artist.name).join(", ")}
-                    </h4>
-                  </Redirect>
+                  <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                    {album.artists.map((artist) => artist.name).join(", ")}
+                  </h4>
                 )}
               </div>
             ))
@@ -236,23 +234,23 @@ export default function Home({
           style={{ willChange: "transform" }}
         >
           <div key="liked-songs" className="min-w-[280px] mr-10 snap-start">
-            <Redirect href="/collection/tracks" accessToken={accessToken}>
-              <div
-                className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                style={{ width: 280, height: 280 }}
-              >
-                <img
-                  src={likedSongs.images[0].url}
-                  alt="Liked Songs"
-                  className="w-full h-full rounded-[12px] aspect-square"
-                />
-              </div>
-            </Redirect>
-            <Redirect href="/collection/tracks" accessToken={accessToken}>
-              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                {likedSongs.name}
-              </h4>
-            </Redirect>
+            <div
+              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+              style={{ width: 280, height: 280 }}
+              onClick={() => onOpenContent("liked", "liked-songs")}
+            >
+              <img
+                src={likedSongs.images[0].url}
+                alt="Liked Songs"
+                className="w-full h-full rounded-[12px] aspect-square"
+              />
+            </div>
+            <h4
+              className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+              onClick={() => onOpenContent("liked", "liked-songs")}
+            >
+              {likedSongs.name}
+            </h4>
             <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
               {isPlayingLikedSongs() ? (
                 <>
@@ -300,33 +298,24 @@ export default function Home({
                   key={`playlist-${playlist.id}`}
                   className="min-w-[280px] mr-10 snap-start"
                 >
-                  <Redirect
-                    href={`/playlist/${playlist.id}`}
-                    accessToken={accessToken}
+                  <div
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                    style={{ width: 280, height: 280 }}
+                    onClick={() => onOpenContent(playlist.id, "playlist")}
                   >
-                    <div
-                      className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                      style={{ width: 280, height: 280 }}
-                    >
-                      {playlist?.images?.[0]?.url ? (
-                        <img
-                          src={playlist.images[0].url}
-                          alt={`${playlist.name} Cover`}
-                          className="w-full h-full rounded-[12px] aspect-square"
-                        />
-                      ) : (
-                        <div className="w-full h-full rounded-[12px] bg-white/10"></div>
-                      )}
-                    </div>
-                  </Redirect>
-                  <Redirect
-                    href={`/playlist/${playlist.id}`}
-                    accessToken={accessToken}
-                  >
-                    <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                      {playlist.name}
-                    </h4>
-                  </Redirect>
+                    {playlist?.images?.[0]?.url ? (
+                      <img
+                        src={playlist.images[0].url}
+                        alt={`${playlist.name} Cover`}
+                        className="w-full h-full rounded-[12px] aspect-square"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+                    )}
+                  </div>
+                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                    {playlist.name}
+                  </h4>
                   <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
                     {isPlayingFromPlaylist(playlist.id) ? (
                       <>
@@ -391,33 +380,27 @@ export default function Home({
                 className="min-w-[280px] mr-10 snap-start"
                 data-id={artist.id}
               >
-                <Redirect
-                  href={`/artist/${artist.id}`}
-                  accessToken={accessToken}
+                <div
+                  className="mt-10 aspect-square rounded-full drop-shadow-xl"
+                  style={{ width: 280, height: 280 }}
+                  onClick={() => onOpenContent(artist.id, "artist")}
                 >
-                  <div
-                    className="mt-10 aspect-square rounded-full drop-shadow-xl"
-                    style={{ width: 280, height: 280 }}
-                  >
-                    {artist.images?.[0]?.url ? (
-                      <img
-                        src={artist.images[0].url}
-                        alt={`${artist.name} Profile`}
-                        className="w-full h-full rounded-full aspect-square object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-full bg-white/10"></div>
-                    )}
-                  </div>
-                </Redirect>
-                <Redirect
-                  href={`/artist/${artist.id}`}
-                  accessToken={accessToken}
+                  {artist.images?.[0]?.url ? (
+                    <img
+                      src={artist.images[0].url}
+                      alt={`${artist.name} Profile`}
+                      className="w-full h-full rounded-full aspect-square object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-white/10"></div>
+                  )}
+                </div>
+                <h4
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                  onClick={() => onOpenContent(artist.id, "artist")}
                 >
-                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {artist.name}
-                  </h4>
-                </Redirect>
+                  {artist.name}
+                </h4>
                 <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
                   {isFromCurrentlyPlayingArtist(artist.id) ? (
                     <>
@@ -512,27 +495,23 @@ export default function Home({
           ) : radioMixes && radioMixes.length > 0 ? (
             radioMixes.map((mix) => (
               <div key={mix.id} className="min-w-[280px] mr-10 snap-start">
-                <Redirect href={`/mix/${mix.id}`} accessToken={accessToken}>
-                  <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
-                    style={{ width: 280, height: 280 }}
-                  >
-                    {mix.images?.[0]?.url ? (
-                      <img
-                        src={mix.images[0].url}
-                        alt={`${mix.name} Cover`}
-                        className="w-full h-full rounded-[12px] aspect-square"
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-[12px] bg-white/10"></div>
-                    )}
-                  </div>
-                </Redirect>
-                <Redirect href={`/mix/${mix.id}`} accessToken={accessToken}>
-                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {mix.name}
-                  </h4>
-                </Redirect>
+                <div
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                  style={{ width: 280, height: 280 }}
+                >
+                  {mix.images?.[0]?.url ? (
+                    <img
+                      src={mix.images[0].url}
+                      alt={`${mix.name} Cover`}
+                      className="w-full h-full rounded-[12px] aspect-square"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+                  )}
+                </div>
+                <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  {mix.name}
+                </h4>
                 <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
                   {isPlayingFromMix(mix.id) ? (
                     <>
