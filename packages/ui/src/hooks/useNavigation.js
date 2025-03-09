@@ -16,6 +16,7 @@ export function useNavigation({
   onItemSelect = () => {},
   onItemFocus = () => {},
   inactivityTimeout = 3000,
+  vertical = false,
 }) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -52,14 +53,22 @@ export function useNavigation({
       if (!item || !containerRef.current) return;
 
       const container = containerRef.current;
-      const itemOffset = item.offsetLeft;
 
-      container.scrollTo({
-        left: itemOffset,
-        behavior: "smooth",
-      });
+      if (vertical) {
+        const itemOffset = item.offsetTop;
+        container.scrollTo({
+          top: itemOffset - container.offsetHeight / 3,
+          behavior: "smooth",
+        });
+      } else {
+        const itemOffset = item.offsetLeft;
+        container.scrollTo({
+          left: itemOffset,
+          behavior: "smooth",
+        });
+      }
     },
-    [containerRef]
+    [containerRef, vertical]
   );
 
   useEffect(() => {
@@ -81,6 +90,18 @@ export function useNavigation({
     }
   }, [currentlyPlayingId, scrollItemIntoView, enableScrollTracking]);
 
+  const getTrackItems = useCallback(() => {
+    if (!containerRef.current) return [];
+
+    return Array.from(
+      containerRef.current.querySelectorAll("[data-track-index]")
+    ).sort((a, b) => {
+      const indexA = parseInt(a.getAttribute("data-track-index"), 10);
+      const indexB = parseInt(b.getAttribute("data-track-index"), 10);
+      return indexA - indexB;
+    });
+  }, [containerRef]);
+
   const handleScroll = useCallback(() => {
     setIsUserScrolling(true);
 
@@ -89,7 +110,9 @@ export function useNavigation({
     }
 
     if (selectedIndex !== -1 && enableItemSelection) {
-      const selectedItem = itemsRef.current[selectedIndex];
+      const items = vertical ? getTrackItems() : itemsRef.current;
+      const selectedItem = items[selectedIndex];
+
       if (selectedItem) {
         selectedItem.style.transition = "transform 0.2s ease-out";
         selectedItem.classList.add("scale-105");
@@ -99,7 +122,7 @@ export function useNavigation({
     scrollTimeoutRef.current = setTimeout(() => {
       setIsUserScrolling(false);
     }, 150);
-  }, [selectedIndex, enableItemSelection]);
+  }, [selectedIndex, enableItemSelection, vertical, getTrackItems]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -119,10 +142,12 @@ export function useNavigation({
       if (
         !isActiveRef.current ||
         !containerRef.current ||
-        !enableWheelNavigation ||
-        itemsRef.current.length === 0
+        !enableWheelNavigation
       )
         return;
+
+      const items = vertical ? getTrackItems() : itemsRef.current;
+      if (items.length === 0) return;
 
       e.preventDefault();
       e.stopPropagation();
@@ -133,23 +158,21 @@ export function useNavigation({
       }
 
       if (selectedIndex === -1 && enableItemSelection) {
-        const scaledItem = itemsRef.current.findIndex(
+        const scaledItem = items.findIndex(
           (item) =>
             item.classList.contains("scale-105") ||
             item.classList.contains("transition-transform")
         );
 
+        const delta = vertical ? e.deltaY : e.deltaX;
         const startIndex =
-          scaledItem !== -1
-            ? scaledItem
-            : e.deltaX > 0
-            ? 0
-            : itemsRef.current.length - 1;
+          scaledItem !== -1 ? scaledItem : delta > 0 ? 0 : items.length - 1;
+
         setSelectedIndex(startIndex);
-        const targetItem = itemsRef.current[startIndex];
+        const targetItem = items[startIndex];
 
         if (targetItem) {
-          itemsRef.current.forEach((item) => {
+          items.forEach((item) => {
             item.classList.remove(
               "scale-105",
               "transition-transform",
@@ -173,87 +196,95 @@ export function useNavigation({
 
       if (selectedIndex === -1 || !enableItemSelection) {
         const container = containerRef.current;
-        const scrollAmount = itemWidth + itemGap;
-        const direction = Math.sign(e.deltaX);
+        const scrollAmount = vertical ? 100 : itemWidth + itemGap;
 
-        container.scrollBy({
-          left: scrollAmount * direction,
-          behavior: "smooth",
-        });
+        if (vertical) {
+          const direction = Math.sign(e.deltaY);
+          container.scrollBy({
+            top: scrollAmount * direction,
+            behavior: "smooth",
+          });
+        } else {
+          const direction = Math.sign(e.deltaX);
+          container.scrollBy({
+            left: scrollAmount * direction,
+            behavior: "smooth",
+          });
+        }
         return;
       }
 
       let newIndex = selectedIndex;
-      const maxIndex = itemsRef.current.length - 1;
+      const maxIndex = items.length - 1;
 
-      if (e.deltaX > 0) {
-        if (selectedIndex < maxIndex) {
-          newIndex = selectedIndex + 1;
-          const targetItem = itemsRef.current[newIndex];
-          if (targetItem) {
-            itemsRef.current.forEach((item) => {
-              item.classList.remove(
-                "scale-105",
-                "transition-transform",
-                "duration-200",
-                "ease-out"
-              );
-            });
-            targetItem.classList.add(
-              "scale-105",
-              "transition-transform",
-              "duration-200",
-              "ease-out"
-            );
-            setSelectedIndex(newIndex);
-            onItemFocus(newIndex, targetItem);
-            scrollItemIntoView(targetItem);
+      if (vertical) {
+        if (e.deltaY > 0) {
+          if (selectedIndex < maxIndex) {
+            newIndex = selectedIndex + 1;
           }
-        } else {
-          const lastItem = itemsRef.current[maxIndex];
-          if (lastItem) {
-            lastItem.classList.add(
-              "scale-105",
-              "transition-transform",
-              "duration-200",
-              "ease-out"
-            );
+        } else if (e.deltaY < 0) {
+          if (selectedIndex > 0) {
+            newIndex = selectedIndex - 1;
           }
         }
-      } else if (e.deltaX < 0) {
-        if (selectedIndex > 0) {
-          newIndex = selectedIndex - 1;
-          const targetItem = itemsRef.current[newIndex];
-          if (targetItem) {
-            itemsRef.current.forEach((item) => {
-              item.classList.remove(
-                "scale-105",
-                "transition-transform",
-                "duration-200",
-                "ease-out"
-              );
-            });
-            targetItem.classList.add(
+      } else {
+        if (e.deltaX > 0) {
+          if (selectedIndex < maxIndex) {
+            newIndex = selectedIndex + 1;
+          }
+        } else if (e.deltaX < 0) {
+          if (selectedIndex > 0) {
+            newIndex = selectedIndex - 1;
+          }
+        }
+      }
+
+      if (newIndex !== selectedIndex) {
+        const targetItem = items[newIndex];
+        if (targetItem) {
+          items.forEach((item) => {
+            item.classList.remove(
               "scale-105",
               "transition-transform",
               "duration-200",
               "ease-out"
             );
-            setSelectedIndex(newIndex);
-            onItemFocus(newIndex, targetItem);
-            scrollItemIntoView(targetItem);
-          }
+          });
+
+          targetItem.classList.add(
+            "scale-105",
+            "transition-transform",
+            "duration-200",
+            "ease-out"
+          );
+
+          setSelectedIndex(newIndex);
+          onItemFocus(newIndex, targetItem);
+          scrollItemIntoView(targetItem);
+        }
+      } else if (
+        selectedIndex === maxIndex &&
+        ((vertical && e.deltaY > 0) || (!vertical && e.deltaX > 0))
+      ) {
+        const lastItem = items[maxIndex];
+        if (lastItem) {
+          lastItem.classList.add(
+            "scale-105",
+            "transition-transform",
+            "duration-200",
+            "ease-out"
+          );
         }
       }
 
       if (enableItemSelection) {
         inactivityTimeoutRef.current = setTimeout(() => {
-          const scaledItemIndex = itemsRef.current.findIndex((item) =>
+          const scaledItemIndex = items.findIndex((item) =>
             item.classList?.contains("scale-105")
           );
 
           if (scaledItemIndex !== -1) {
-            const scaledItem = itemsRef.current[scaledItemIndex];
+            const scaledItem = items[scaledItemIndex];
             scaledItem.classList.add(
               "transition-transform",
               "duration-200",
@@ -275,6 +306,8 @@ export function useNavigation({
       itemGap,
       scrollItemIntoView,
       onItemFocus,
+      vertical,
+      getTrackItems,
     ]
   );
 
@@ -288,43 +321,63 @@ export function useNavigation({
       }
 
       if (enableKeyboardNavigation && e.key === "Enter") {
-        if (selectedIndex !== -1 && itemsRef.current[selectedIndex]) {
+        const items = vertical ? getTrackItems() : itemsRef.current;
+
+        if (selectedIndex !== -1 && items[selectedIndex]) {
           if (inactivityTimeoutRef.current) {
             clearTimeout(inactivityTimeoutRef.current);
           }
 
-          onItemSelect(selectedIndex, itemsRef.current[selectedIndex]);
+          onItemSelect(selectedIndex, items[selectedIndex]);
           return;
         } else if (
-          itemsRef.current.length > 0 &&
+          items.length > 0 &&
           enableWheelNavigation &&
           enableItemSelection
         ) {
           const container = containerRef.current;
           if (container) {
-            const containerRect = container.getBoundingClientRect();
-            const containerLeft = containerRect.left;
-
             let visibleItemIndex = -1;
 
-            for (let i = 0; i < itemsRef.current.length; i++) {
-              const item = itemsRef.current[i];
-              const itemRect = item.getBoundingClientRect();
+            if (vertical) {
+              const containerRect = container.getBoundingClientRect();
+              const containerTop = containerRect.top;
 
-              if (
-                itemRect.right > containerLeft &&
-                itemRect.left < containerRect.right
-              ) {
-                visibleItemIndex = i;
-                break;
+              for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const itemRect = item.getBoundingClientRect();
+
+                if (
+                  itemRect.bottom > containerTop &&
+                  itemRect.top < containerRect.bottom
+                ) {
+                  visibleItemIndex = i;
+                  break;
+                }
+              }
+            } else {
+              const containerRect = container.getBoundingClientRect();
+              const containerLeft = containerRect.left;
+
+              for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const itemRect = item.getBoundingClientRect();
+
+                if (
+                  itemRect.right > containerLeft &&
+                  itemRect.left < containerRect.right
+                ) {
+                  visibleItemIndex = i;
+                  break;
+                }
               }
             }
 
             if (visibleItemIndex !== -1) {
               setSelectedIndex(visibleItemIndex);
-              const targetItem = itemsRef.current[visibleItemIndex];
+              const targetItem = items[visibleItemIndex];
 
-              itemsRef.current.forEach((item) => {
+              items.forEach((item) => {
                 item.classList.remove(
                   "scale-105",
                   "transition-transform",
@@ -349,6 +402,71 @@ export function useNavigation({
       if (e.key >= "1" && e.key <= "4" && activeSection === "tutorial") {
         onItemSelect(parseInt(e.key, 10) - 1, null);
       }
+
+      if (enableKeyboardNavigation) {
+        const items = vertical ? getTrackItems() : itemsRef.current;
+        if (items.length === 0) return;
+
+        let newIndex = selectedIndex;
+        const maxIndex = items.length - 1;
+
+        if (
+          (vertical && e.key === "ArrowDown") ||
+          (!vertical && e.key === "ArrowRight")
+        ) {
+          if (selectedIndex === -1) {
+            newIndex = 0;
+          } else if (selectedIndex < maxIndex) {
+            newIndex = selectedIndex + 1;
+          }
+        } else if (
+          (vertical && e.key === "ArrowUp") ||
+          (!vertical && e.key === "ArrowLeft")
+        ) {
+          if (selectedIndex === -1) {
+            newIndex = 0;
+          } else if (selectedIndex > 0) {
+            newIndex = selectedIndex - 1;
+          }
+        }
+
+        if (newIndex !== selectedIndex) {
+          setSelectedIndex(newIndex);
+
+          const targetItem = items[newIndex];
+          if (targetItem) {
+            items.forEach((item) => {
+              item.classList.remove(
+                "scale-105",
+                "transition-transform",
+                "duration-200",
+                "ease-out"
+              );
+            });
+
+            targetItem.classList.add(
+              "scale-105",
+              "transition-transform",
+              "duration-200",
+              "ease-out"
+            );
+
+            onItemFocus(newIndex, targetItem);
+            scrollItemIntoView(targetItem);
+
+            if (inactivityTimeoutRef.current) {
+              clearTimeout(inactivityTimeoutRef.current);
+            }
+
+            if (enableItemSelection) {
+              inactivityTimeoutRef.current = setTimeout(() => {
+                targetItem.classList.remove("scale-105");
+                setSelectedIndex(-1);
+              }, inactivityTimeout);
+            }
+          }
+        }
+      }
     },
     [
       selectedIndex,
@@ -356,9 +474,14 @@ export function useNavigation({
       enableKeyboardNavigation,
       enableItemSelection,
       enableWheelNavigation,
+      vertical,
       activeSection,
       onEscape,
       onItemSelect,
+      onItemFocus,
+      scrollItemIntoView,
+      inactivityTimeout,
+      getTrackItems,
     ]
   );
 
@@ -394,12 +517,13 @@ export function useNavigation({
 
   const selectItem = useCallback(
     (index) => {
-      if (index < 0 || index >= itemsRef.current.length) return;
+      const items = vertical ? getTrackItems() : itemsRef.current;
+      if (index < 0 || index >= items.length) return;
 
       setSelectedIndex(index);
 
       if (enableItemSelection) {
-        itemsRef.current.forEach((item) => {
+        items.forEach((item) => {
           item.classList.remove(
             "scale-105",
             "transition-transform",
@@ -408,7 +532,7 @@ export function useNavigation({
           );
         });
 
-        const targetItem = itemsRef.current[index];
+        const targetItem = items[index];
         targetItem.classList.add(
           "scale-105",
           "transition-transform",
@@ -419,31 +543,45 @@ export function useNavigation({
         scrollItemIntoView(targetItem);
       }
     },
-    [enableItemSelection, scrollItemIntoView]
+    [enableItemSelection, scrollItemIntoView, vertical, getTrackItems]
   );
 
   const scrollToPosition = useCallback(
     (position) => {
       if (!containerRef.current) return;
 
-      containerRef.current.scrollTo({
-        left: position,
-        behavior: "smooth",
-      });
+      if (vertical) {
+        containerRef.current.scrollTo({
+          top: position,
+          behavior: "smooth",
+        });
+      } else {
+        containerRef.current.scrollTo({
+          left: position,
+          behavior: "smooth",
+        });
+      }
     },
-    [containerRef]
+    [containerRef, vertical]
   );
 
   const scrollByAmount = useCallback(
     (amount) => {
       if (!containerRef.current) return;
 
-      containerRef.current.scrollBy({
-        left: amount,
-        behavior: "smooth",
-      });
+      if (vertical) {
+        containerRef.current.scrollBy({
+          top: amount,
+          behavior: "smooth",
+        });
+      } else {
+        containerRef.current.scrollBy({
+          left: amount,
+          behavior: "smooth",
+        });
+      }
     },
-    [containerRef]
+    [containerRef, vertical]
   );
 
   const cleanup = useCallback(() => {
@@ -457,7 +595,8 @@ export function useNavigation({
       scrollTimeoutRef.current = null;
     }
 
-    itemsRef.current.forEach((item) => {
+    const items = vertical ? getTrackItems() : itemsRef.current;
+    items.forEach((item) => {
       if (item?.classList) {
         item.classList.remove(
           "scale-105",
@@ -467,7 +606,7 @@ export function useNavigation({
         );
       }
     });
-  }, []);
+  }, [vertical, getTrackItems]);
 
   useEffect(() => {
     return cleanup;

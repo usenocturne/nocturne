@@ -17,6 +17,7 @@ const ContentView = ({
   const [tracks, setTracks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState(-1);
   const tracksContainerRef = useRef(null);
   const navigate = useNavigate();
 
@@ -26,13 +27,24 @@ const ContentView = ({
     error: playbackError,
   } = useSpotifyPlayerControls(accessToken);
 
-  useNavigation({
+  const handleTrackSelect = (index, trackElement) => {
+    if (index >= 0 && index < tracks.length) {
+      handleTrackPlay(tracks[index], index);
+    }
+  };
+
+  const { selectedIndex } = useNavigation({
     containerRef: tracksContainerRef,
     enableScrollTracking: true,
-    enableWheelNavigation: false,
-    enableKeyboardNavigation: false,
+    enableWheelNavigation: true,
+    enableKeyboardNavigation: true,
+    enableItemSelection: true,
     enableEscapeKey: true,
     onEscape: handleBack,
+    onItemSelect: handleTrackSelect,
+    onItemFocus: (index) => setSelectedTrackIndex(index),
+    inactivityTimeout: 3000,
+    vertical: true,
   });
 
   useEffect(() => {
@@ -356,9 +368,12 @@ const ContentView = ({
         {tracks.map((track, index) => (
           <div
             key={track.id || `track-${index}`}
-            className="flex gap-12 items-start mb-4 transition-transform duration-200 ease-out cursor-pointer"
+            className={`flex gap-12 items-start mb-4 transition-transform duration-200 ease-out cursor-pointer ${
+              selectedTrackIndex === index ? "scale-105" : ""
+            }`}
             onClick={() => handleTrackPlay(track, index)}
             style={{ transition: "transform 0.2s ease-out" }}
+            data-track-index={index}
           >
             <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
               {track.uri === currentlyPlayingTrackUri ? (
