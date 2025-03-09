@@ -120,14 +120,12 @@ section {
   transition: color 0.3s ease-in-out;
 }
 
-/* Scrolling behavior for the lyrics container */
 .flex-1.text-left.overflow-y-auto {
   scroll-behavior: smooth;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-/* Custom scrollbar for the lyrics container */
 .flex-1.text-left.overflow-y-auto::-webkit-scrollbar {
   width: 5px;
 }
@@ -141,7 +139,6 @@ section {
   border-radius: 10px;
 }
 
-/* Animation for lyrics entrance and exit */
 @keyframes fadeInLyric {
   from {
     opacity: 0;
@@ -157,7 +154,6 @@ section {
   animation: fadeInLyric 0.3s ease-out forwards;
 }
 
-/* Space between lyrics lines */
 .flex-1.text-left.overflow-y-auto p {
   margin-bottom: 16px;
 }
