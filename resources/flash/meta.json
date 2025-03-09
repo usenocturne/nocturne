@@ -23,7 +23,7 @@
       "value": {
         "address": 180355072,
         "data": {
-          "filePath": "misc.raw"
+          "filePath": "system.ext4"
         },
         "blockLength": 4096
       }
@@ -31,37 +31,7 @@
     {
       "type": "writeLargeMemory",
       "value": {
-        "address": 188743681,
-        "data": {
-          "filePath": "swap.raw"
-        },
-        "blockLength": 4096
-      }
-    },
-    {
-      "type": "writeLargeMemory",
-      "value": {
-        "address": 457179138,
-        "data": {
-          "filePath": "boot.vfat"
-        },
-        "blockLength": 4096
-      }
-    },
-    {
-      "type": "writeLargeMemory",
-      "value": {
-        "address": 524288003,
-        "data": {
-          "filePath": "boot.vfat"
-        },
-        "blockLength": 4096
-      }
-    },
-    {
-      "type": "writeLargeMemory",
-      "value": {
-        "address": 591396868,
+        "address": 1790967808,
         "data": {
           "filePath": "system.ext4"
         },
@@ -71,17 +41,7 @@
     {
       "type": "writeLargeMemory",
       "value": {
-        "address": 1933574149,
-        "data": {
-          "filePath": "system.ext4"
-        },
-        "blockLength": 4096
-      }
-    },
-    {
-      "type": "writeLargeMemory",
-      "value": {
-        "address": 3275751430,
+        "address": 3401580544,
         "data": {
           "filePath": "data.ext4"
         },

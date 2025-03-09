@@ -11,8 +11,7 @@ mkdir -p /mnt/bootbin
 losetup -o 4194304 /dev/loop0 "$IMAGE_PATH"/boot.bin
 mount -t vfat /dev/loop0 /mnt/bootbin
 
-cp "$RES_PATH"/flash/superbird.dtb /mnt/bootbin/superbird.dtb
-tar -xavf "$RES_PATH"/flash/Image.tar.zst -C /mnt/bootbin/
+cp "$RES_PATH"/kernel/output/Image "$RES_PATH"/kernel/output/dtbs/superbird.dtb /mnt/bootbin/
 ls -C /mnt/bootbin/
 
 umount /mnt/bootbin

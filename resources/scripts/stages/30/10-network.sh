@@ -19,15 +19,14 @@ dhcp-range=172.16.42.1,172.16.42.1,255.255.255.0,1m
 dhcp-option=option:router,172.16.42.1
 server=1.1.1.1
 server=8.8.8.8
+server=2606:4700:4700::1111
+server=2001:4860:4860::8888
 dhcp-leasefile=/data/etc/dnsmasq/dnsmasq.leases
 EOF
 
 mkdir -p "$DATAFS_PATH"/etc/dnsmasq
 sed -i 's|/var/lib/misc/|/data/etc/dnsmasq/|' "$ROOTFS_PATH"/etc/init.d/dnsmasq
 
-install ${RES_PATH}/scripts/services/usbgadget.sh ${ROOTFS_PATH}/etc/init.d/usbgadget
-
 chroot_exec rc-update add dnsmasq default
-chroot_exec rc-update add usbgadget default
 
 

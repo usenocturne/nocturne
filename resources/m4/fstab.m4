@@ -1,6 +1,6 @@
-/dev/system_a   /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
-/dev/system_b   /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
-/dev/data       /data       ext4     defaults            0 2
+/dev/mmcblk0p2  /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
+/dev/mmcblk0p3  /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
+/dev/mmcblk0p4  /data       ext4     defaults            0 2
 /data/root      /root       none     defaults,bind       0 0
 
 proc            /proc       proc     defaults            0 0
