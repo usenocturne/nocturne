@@ -3,6 +3,7 @@ import Sidebar from "../components/common/navigation/Sidebar";
 import HorizontalScroll from "../components/common/navigation/HorizontalScroll";
 import Redirect from "../components/common/navigation/Redirect";
 import { useGradientState } from "../hooks/useGradientState";
+import { useNavigation } from "../hooks/useNavigation";
 
 export default function Home({
   accessToken,
@@ -24,6 +25,17 @@ export default function Home({
   const scrollContainerRef = useRef(null);
   const hasScrolledToCurrentAlbumRef = useRef(false);
   const itemWidth = 290;
+
+  const { scrollByAmount } = useNavigation({
+    containerRef: scrollContainerRef,
+    activeSection,
+    enableScrollTracking: false,
+    enableWheelNavigation: true,
+    enableKeyboardNavigation: false,
+    enableItemSelection: false,
+    itemWidth: itemWidth,
+    itemGap: 40,
+  });
 
   useEffect(() => {
     const storedSection = localStorage.getItem("lastActiveSection");
@@ -59,35 +71,6 @@ export default function Home({
     radioMixes,
     currentlyPlayingAlbum,
   ]);
-
-  const handleWheel = (e) => {
-    e.preventDefault();
-
-    if (scrollContainerRef.current) {
-      const scrollAmount = itemWidth;
-      const direction = Math.sign(e.deltaX);
-
-      scrollContainerRef.current.scrollBy({
-        left: scrollAmount * direction,
-        behavior: "smooth",
-      });
-    }
-  };
-
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
-      scrollContainer.addEventListener("wheel", handleWheel, {
-        passive: false,
-      });
-    }
-
-    return () => {
-      if (scrollContainer) {
-        scrollContainer.removeEventListener("wheel", handleWheel);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.id) {

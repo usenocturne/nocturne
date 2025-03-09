@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import TutorialFrame from "./TutorialFrame";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import { useGradientState } from "../../hooks/useGradientState";
+import { useNavigation } from "../../hooks/useNavigation";
 
 const Tutorial = ({ onComplete }) => {
   const [currentScreen, setCurrentScreen] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isContentVisible, setIsContentVisible] = useState(true);
   const [isFrameVisible, setIsFrameVisible] = useState(false);
+  const tutorialContainerRef = useRef(null);
 
   const {
     currentColor1,
@@ -111,30 +113,34 @@ const Tutorial = ({ onComplete }) => {
     }, 200);
   };
 
+  const handleWheelNavigation = (deltaX) => {
+    if (screens[currentScreen].continueType === "scroll" && deltaX > 0) {
+      handleScreenTransition(currentScreen + 1);
+      return true;
+    }
+    return false;
+  };
+
+  useNavigation({
+    containerRef: tutorialContainerRef,
+    activeSection: "tutorial",
+    enableWheelNavigation: true,
+    enableKeyboardNavigation: true,
+    enableItemSelection: false,
+    enableScrollTracking: false,
+    onEscape: () => {
+      if (screens[currentScreen].continueType === "backPress") {
+        handleScreenTransition(currentScreen + 1);
+      }
+    },
+  });
+
   useEffect(() => {
     let holdTimer = null;
     const validPresetButtons = ["1", "2", "3", "4"];
 
-    const handleWheel = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (
-        screens[currentScreen].continueType === "scroll" &&
-        event.deltaX > 0
-      ) {
-        const nextScreen = currentScreen + 1;
-        handleScreenTransition(nextScreen);
-      }
-    };
-
     const handleKeyDown = (e) => {
       if (
-        screens[currentScreen].continueType === "backPress" &&
-        e.key === "Escape"
-      ) {
-        handleScreenTransition(currentScreen + 1);
-      } else if (
         screens[currentScreen].continueType === "topButtonPress" &&
         validPresetButtons.includes(e.key)
       ) {
@@ -161,15 +167,10 @@ const Tutorial = ({ onComplete }) => {
       }
     };
 
-    document.addEventListener("wheel", handleWheel, {
-      passive: false,
-      capture: true,
-    });
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      document.removeEventListener("wheel", handleWheel, { capture: true });
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       if (holdTimer) {
@@ -177,6 +178,28 @@ const Tutorial = ({ onComplete }) => {
       }
     };
   }, [currentScreen, screens]);
+
+  useEffect(() => {
+    const handleWheel = (event) => {
+      if (
+        screens[currentScreen].continueType === "scroll" &&
+        event.deltaX > 0
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleScreenTransition(currentScreen + 1);
+      }
+    };
+
+    document.addEventListener("wheel", handleWheel, {
+      passive: false,
+      capture: true,
+    });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel, { capture: true });
+    };
+  }, [currentScreen]);
 
   const handleContinue = () => {
     if (currentScreen === screens.length - 1) {
@@ -190,7 +213,7 @@ const Tutorial = ({ onComplete }) => {
   };
 
   return (
-    <div className="fixed inset-0 w-full h-full">
+    <div className="fixed inset-0 w-full h-full" ref={tutorialContainerRef}>
       <div
         style={{
           backgroundImage: generateMeshGradient([

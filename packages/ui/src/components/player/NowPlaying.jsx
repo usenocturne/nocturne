@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGradientState } from "../../hooks/useGradientState";
+import { useNavigation } from "../../hooks/useNavigation";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -18,6 +19,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const progressTimerRef = useRef(null);
   const lastUpdateTimeRef = useRef(0);
   const currentTrackIdRef = useRef(null);
+  const containerRef = useRef(null);
   const { updateGradientColors } = useGradientState();
 
   const {
@@ -30,6 +32,14 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     likeTrack,
     unlikeTrack,
   } = useSpotifyPlayerControls(accessToken);
+
+  useNavigation({
+    containerRef,
+    enableEscapeKey: true,
+    enableWheelNavigation: false,
+    enableKeyboardNavigation: false,
+    onEscape: onClose,
+  });
 
   const trackName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -169,28 +179,11 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     }
   };
 
-  const handleBack = () => {
-    if (onClose) {
-      onClose();
-    }
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        handleBack();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
   return (
-    <div className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation">
+    <div
+      className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation"
+      ref={containerRef}
+    >
       <div>
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div className="min-w-[280px] mr-8">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
+import { useNavigation } from "../../hooks/useNavigation";
 
 const ContentView = ({
   accessToken,
@@ -24,6 +25,15 @@ const ContentView = ({
     isLoading: isPlaybackLoading,
     error: playbackError,
   } = useSpotifyPlayerControls(accessToken);
+
+  useNavigation({
+    containerRef: tracksContainerRef,
+    enableScrollTracking: true,
+    enableWheelNavigation: false,
+    enableKeyboardNavigation: false,
+    enableEscapeKey: true,
+    onEscape: handleBack,
+  });
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -206,13 +216,13 @@ const ContentView = ({
     fetchContent();
   }, [contentId, contentType, accessToken, radioMixes, updateGradientColors]);
 
-  const handleBack = () => {
+  function handleBack() {
     if (onClose) {
       onClose();
     } else {
       navigate(-1);
     }
-  };
+  }
 
   const handleTrackPlay = async (track, index) => {
     let contextUri = null;
@@ -248,20 +258,6 @@ const ContentView = ({
       onNavigateToNowPlaying();
     }
   };
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        handleBack();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   if (isLoading) {
     return (
