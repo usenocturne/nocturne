@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import TutorialFrame from "./TutorialFrame";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import { useGradientState } from "../../hooks/useGradientState";
