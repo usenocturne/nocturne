@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useNavigation } from "../../hooks/useNavigation";
@@ -250,7 +251,24 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
         </div>
 
         <div className="flex items-center">
-          <MenuIcon className="w-14 h-14 fill-white/60" />
+          <Menu as="div" className="relative inline-block text-left">
+            <MenuButton className="focus:outline-none">
+              <MenuIcon className="w-14 h-14 fill-white/60" />
+            </MenuButton>
+
+            <MenuItems
+              transition
+              className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+            >
+              <div className="py-1">
+                <MenuItem>
+                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                    <span className="text-[28px]">Placeholder Option</span>
+                  </div>
+                </MenuItem>
+              </div>
+            </MenuItems>
+          </Menu>
         </div>
       </div>
     </div>

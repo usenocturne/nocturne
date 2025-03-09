@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.0",
     "autoprefixer": "^10.4.20",
     "classnames": "^2.5.1",
     "postcss": "^8.5.0",
