@@ -21,13 +21,15 @@ function App() {
 
   const { isAuthenticated, accessToken, isLoading: authIsLoading } = useAuth();
   const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
+
   const {
     currentColor1,
     currentColor2,
     currentColor3,
     currentColor4,
     generateMeshGradient,
-  } = useGradientState();
+    updateGradientColors,
+  } = useGradientState(activeSection);
 
   const {
     currentPlayback,
@@ -64,6 +66,36 @@ function App() {
       setShowTutorial(!hasSeenTutorial);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (activeSection === "recents" && recentAlbums.length > 0) {
+      const firstAlbumImage = recentAlbums[0]?.images?.[0]?.url;
+      if (firstAlbumImage) {
+        updateGradientColors(firstAlbumImage, "recents");
+      }
+    } else if (activeSection === "library" && userPlaylists.length > 0) {
+      updateGradientColors(null, "library");
+    } else if (activeSection === "artists" && topArtists.length > 0) {
+      const firstArtistImage = topArtists[0]?.images?.[0]?.url;
+      if (firstArtistImage) {
+        updateGradientColors(firstArtistImage, "artists");
+      }
+    } else if (activeSection === "radio") {
+      updateGradientColors(null, "radio");
+    } else if (activeSection === "nowPlaying" && currentlyPlayingAlbum) {
+      const albumImage = currentlyPlayingAlbum?.images?.[0]?.url;
+      if (albumImage) {
+        updateGradientColors(albumImage, "nowPlaying");
+      }
+    }
+  }, [
+    activeSection,
+    updateGradientColors,
+    recentAlbums,
+    userPlaylists,
+    topArtists,
+    currentlyPlayingAlbum,
+  ]);
 
   const handleAuthSuccess = () => {
     const storedAccessToken = localStorage.getItem("spotifyAccessToken");
@@ -109,6 +141,7 @@ function App() {
         accessToken={accessToken}
         currentPlayback={currentPlayback}
         onClose={() => setActiveSection("recents")}
+        updateGradientColors={updateGradientColors}
       />
     );
   } else if (viewingContent) {
@@ -121,6 +154,7 @@ function App() {
         onNavigateToNowPlaying={handleNavigateToNowPlaying}
         currentlyPlayingTrackUri={currentPlayback?.item?.uri}
         radioMixes={radioMixes}
+        updateGradientColors={updateGradientColors}
       />
     );
   } else {
@@ -143,6 +177,7 @@ function App() {
         refreshData={refreshData}
         refreshPlaybackState={refreshPlaybackState}
         onOpenContent={handleOpenContent}
+        updateGradientColors={updateGradientColors}
       />
     );
   }

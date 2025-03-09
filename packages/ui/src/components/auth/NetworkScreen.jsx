@@ -13,7 +13,7 @@ const NetworkScreen = () => {
   } = useGradientState();
 
   useEffect(() => {
-    updateGradientColors();
+    updateGradientColors(null, "auth");
   }, [updateGradientColors]);
 
   return (

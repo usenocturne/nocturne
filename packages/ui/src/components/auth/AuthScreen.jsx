@@ -21,14 +21,16 @@ const AuthScreen = ({ onAuthSuccess }) => {
   } = useGradientState();
 
   useEffect(() => {
-    updateGradientColors();
+    updateGradientColors(null, "auth");
 
     if (!authInitialized && !isAuthenticated) {
       const startAuth = async () => {
         try {
           const storedAccessToken = localStorage.getItem("spotifyAccessToken");
-          const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-          
+          const storedRefreshToken = localStorage.getItem(
+            "spotifyRefreshToken"
+          );
+
           if (!storedAccessToken || !storedRefreshToken) {
             const authResponse = await initAuth();
             if (authResponse?.device_code) {

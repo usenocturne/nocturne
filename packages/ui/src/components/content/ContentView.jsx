@@ -10,6 +10,7 @@ const ContentView = ({
   onNavigateToNowPlaying,
   currentlyPlayingTrackUri,
   radioMixes = [],
+  updateGradientColors,
 }) => {
   const [content, setContent] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -186,6 +187,14 @@ const ContentView = ({
 
         setContent(contentData);
         setTracks(tracksData);
+
+        if (
+          contentData?.images &&
+          contentData.images.length > 0 &&
+          updateGradientColors
+        ) {
+          updateGradientColors(contentData.images[0].url, contentType);
+        }
       } catch (err) {
         console.error(`Error fetching ${contentType} data:`, err);
         setError(err.message);
@@ -195,7 +204,7 @@ const ContentView = ({
     };
 
     fetchContent();
-  }, [contentId, contentType, accessToken, radioMixes]);
+  }, [contentId, contentType, accessToken, radioMixes, updateGradientColors]);
 
   const handleBack = () => {
     if (onClose) {

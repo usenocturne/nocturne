@@ -19,7 +19,7 @@ const Tutorial = ({ onComplete }) => {
   } = useGradientState();
 
   useEffect(() => {
-    updateGradientColors();
+    updateGradientColors(null, "auth");
   }, [updateGradientColors]);
 
   useEffect(() => {

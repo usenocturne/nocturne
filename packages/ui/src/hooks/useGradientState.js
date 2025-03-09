@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { extractColorsFromImage } from "../utils/colorExtractor";
 
-export function useGradientState() {
+export function useGradientState(activeSection) {
   const [currentColor1, setCurrentColor1] = useState("#191414");
   const [currentColor2, setCurrentColor2] = useState("#191414");
   const [currentColor3, setCurrentColor3] = useState("#191414");
@@ -9,6 +10,13 @@ export function useGradientState() {
   const [targetColor2, setTargetColor2] = useState("#191414");
   const [targetColor3, setTargetColor3] = useState("#191414");
   const [targetColor4, setTargetColor4] = useState("#191414");
+  const [sectionGradients, setSectionGradients] = useState({
+    recents: null,
+    library: null,
+    artists: null,
+    radio: null,
+    nowPlaying: null,
+  });
   const [transitionSpeed] = useState(30);
 
   const hexToRgb = (hex) => {
@@ -28,16 +36,16 @@ export function useGradientState() {
   };
 
   const getNextColor = (current, target) => {
-    const step = (start, end) => {
-      if (start === end) return start;
+    const easeStep = (start, end) => {
+      if (Math.abs(start - end) < 1) return end;
       const diff = end - start;
-      return start + (diff > 0 ? Math.min(1, diff) : Math.max(-1, diff));
+      return start + diff * 0.05;
     };
 
     return {
-      r: step(current.r, target.r),
-      g: step(current.g, target.g),
-      b: step(current.b, target.b),
+      r: easeStep(current.r, target.r),
+      g: easeStep(current.g, target.g),
+      b: easeStep(current.b, target.b),
     };
   };
 
@@ -79,20 +87,21 @@ export function useGradientState() {
       current4.g = nextColor4.g;
       current4.b = nextColor4.b;
 
-      if (
-        nextColor1.r === target1.r &&
-        nextColor1.g === target1.g &&
-        nextColor1.b === target1.b &&
-        nextColor2.r === target2.r &&
-        nextColor2.g === target2.g &&
-        nextColor2.b === target2.b &&
-        nextColor3.r === target3.r &&
-        nextColor3.g === target3.g &&
-        nextColor3.b === target3.b &&
-        nextColor4.r === target4.r &&
-        nextColor4.g === target4.g &&
-        nextColor4.b === target4.b
-      ) {
+      const allReachedTarget =
+        Math.abs(nextColor1.r - target1.r) < 1 &&
+        Math.abs(nextColor1.g - target1.g) < 1 &&
+        Math.abs(nextColor1.b - target1.b) < 1 &&
+        Math.abs(nextColor2.r - target2.r) < 1 &&
+        Math.abs(nextColor2.g - target2.g) < 1 &&
+        Math.abs(nextColor2.b - target2.b) < 1 &&
+        Math.abs(nextColor3.r - target3.r) < 1 &&
+        Math.abs(nextColor3.g - target3.g) < 1 &&
+        Math.abs(nextColor3.b - target3.b) < 1 &&
+        Math.abs(nextColor4.r - target4.r) < 1 &&
+        Math.abs(nextColor4.g - target4.g) < 1 &&
+        Math.abs(nextColor4.b - target4.b) < 1;
+
+      if (allReachedTarget) {
         clearInterval(intervalId);
       }
     }, transitionSpeed);
@@ -107,7 +116,44 @@ export function useGradientState() {
     targetColor2,
     targetColor3,
     targetColor4,
+    transitionSpeed,
   ]);
+
+  const calculateBrightness = useCallback((hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  }, []);
+
+  const calculateHue = useCallback((hex) => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h;
+
+    if (max === min) {
+      h = 0;
+    } else {
+      const d = max - min;
+      switch (max) {
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0);
+          break;
+        case g:
+          h = (b - r) / d + 2;
+          break;
+        case b:
+          h = (r - g) / d + 4;
+          break;
+      }
+      h /= 6;
+    }
+    return h * 360;
+  }, []);
 
   const generateMeshGradient = useCallback((colors) => {
     if (!colors || colors.length === 0) return "#191414";
@@ -121,25 +167,194 @@ export function useGradientState() {
     return radialGradients.join(", ");
   }, []);
 
-  const updateGradientColors = useCallback(() => {
-    const authColors = ["#2C1E3D", "#532E5D", "#8D5DA7", "#B98BC9"];
+  const filterColors = useCallback(
+    (colors) => {
+      if (!colors || colors.length === 0) return colors;
 
-    setTargetColor1(authColors[0]);
-    setTargetColor2(authColors[1]);
-    setTargetColor3(authColors[2]);
-    setTargetColor4(authColors[3]);
-  }, []);
+      const withBrightness = colors.map((color) => ({
+        color,
+        brightness: calculateBrightness(color),
+        hue: calculateHue(color),
+      }));
+
+      withBrightness.sort((a, b) => b.brightness - a.brightness);
+
+      const brightColors = withBrightness.filter((c) => c.brightness > 120);
+      const darkColors = withBrightness.filter((c) => c.brightness < 60);
+      const midColors = withBrightness.filter(
+        (c) => c.brightness >= 60 && c.brightness <= 120
+      );
+
+      const result = [];
+
+      if (brightColors.length > 0) {
+        result.push(brightColors[0].color);
+      }
+
+      if (midColors.length > 0) {
+        result.push(midColors[0].color);
+        if (midColors.length > 1) {
+          result.push(midColors[midColors.length - 1].color);
+        }
+      }
+
+      if (darkColors.length > 0) {
+        result.push(darkColors[0].color);
+      }
+
+      while (result.length < 4 && withBrightness.length > 0) {
+        const nextColor = withBrightness.shift().color;
+        if (!result.includes(nextColor)) {
+          result.push(nextColor);
+        }
+      }
+
+      while (result.length < 4) {
+        const baseColor = result[0];
+        const r = parseInt(baseColor.slice(1, 3), 16);
+        const g = parseInt(baseColor.slice(3, 5), 16);
+        const b = parseInt(baseColor.slice(5, 7), 16);
+
+        const variations = [
+          `#${Math.max(0, r - 30)
+            .toString(16)
+            .padStart(2, "0")}${Math.max(0, g - 10)
+            .toString(16)
+            .padStart(2, "0")}${Math.min(255, b + 20)
+            .toString(16)
+            .padStart(2, "0")}`,
+          `#${Math.min(255, r + 20)
+            .toString(16)
+            .padStart(2, "0")}${Math.max(0, g - 20)
+            .toString(16)
+            .padStart(2, "0")}${Math.max(0, b - 30)
+            .toString(16)
+            .padStart(2, "0")}`,
+          `#${Math.max(0, r - 15)
+            .toString(16)
+            .padStart(2, "0")}${Math.min(255, g + 25)
+            .toString(16)
+            .padStart(2, "0")}${Math.max(0, b - 15)
+            .toString(16)
+            .padStart(2, "0")}`,
+        ];
+
+        result.push(variations[result.length - 1]);
+      }
+
+      return result.slice(0, 4);
+    },
+    [calculateBrightness, calculateHue]
+  );
+
+  const updateGradientColors = useCallback(
+    async (imageUrl, section = null) => {
+      if (!imageUrl) {
+        if (section === "radio") {
+          const radioColors = ["#3B518B", "#202F57", "#142045", "#151231"];
+          setSectionGradients((prev) => ({ ...prev, [section]: radioColors }));
+
+          if (activeSection === "radio" || activeSection === "nowPlaying") {
+            setTargetColor1(radioColors[0]);
+            setTargetColor2(radioColors[1]);
+            setTargetColor3(radioColors[2]);
+            setTargetColor4(radioColors[3]);
+          }
+        } else if (section === "library") {
+          const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: libraryColors,
+          }));
+
+          if (activeSection === "library") {
+            setTargetColor1(libraryColors[0]);
+            setTargetColor2(libraryColors[1]);
+            setTargetColor3(libraryColors[2]);
+            setTargetColor4(libraryColors[3]);
+          }
+        } else if (section === "auth") {
+          const authColors = ["#3B518B", "#202F57", "#142045", "#151231"];
+          setSectionGradients((prev) => ({ ...prev, [section]: authColors }));
+
+          setTargetColor1(authColors[0]);
+          setTargetColor2(authColors[1]);
+          setTargetColor3(authColors[2]);
+          setTargetColor4(authColors[3]);
+        } else if (section === "settings") {
+          const settingsColors = ["#1f1e23", "#aeb7ba", "#8c6764", "#968479"];
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: settingsColors,
+          }));
+
+          if (activeSection === "settings") {
+            setTargetColor1(settingsColors[0]);
+            setTargetColor2(settingsColors[1]);
+            setTargetColor3(settingsColors[2]);
+            setTargetColor4(settingsColors[3]);
+          }
+        } else {
+          setTargetColor1("#191414");
+          setTargetColor2("#191414");
+          setTargetColor3("#191414");
+          setTargetColor4("#191414");
+        }
+        return;
+      }
+
+      try {
+        let hexColors = await extractColorsFromImage(imageUrl);
+
+        hexColors = filterColors(hexColors);
+
+        if (section) {
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: hexColors,
+          }));
+        }
+
+        if (
+          !section ||
+          section === activeSection ||
+          section === "nowPlaying" ||
+          activeSection === "nowPlaying"
+        ) {
+          setTargetColor1(hexColors[0]);
+          setTargetColor2(hexColors[1]);
+          setTargetColor3(hexColors[2]);
+          setTargetColor4(hexColors[3]);
+        }
+      } catch (error) {
+        console.error("Error updating gradient colors:", error);
+
+        setTargetColor1("#191414");
+        setTargetColor2("#191414");
+        setTargetColor3("#191414");
+        setTargetColor4("#191414");
+      }
+    },
+    [activeSection, filterColors]
+  );
 
   return {
     currentColor1,
     currentColor2,
     currentColor3,
     currentColor4,
+    targetColor1,
+    targetColor2,
+    targetColor3,
+    targetColor4,
+    sectionGradients,
     setTargetColor1,
     setTargetColor2,
     setTargetColor3,
     setTargetColor4,
-    generateMeshGradient,
+    calculateBrightness,
+    calculateHue,
     updateGradientColors,
+    generateMeshGradient,
   };
 }

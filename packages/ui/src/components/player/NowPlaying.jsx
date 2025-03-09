@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
+import { useGradientState } from "../../hooks/useGradientState";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -17,6 +18,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const progressTimerRef = useRef(null);
   const lastUpdateTimeRef = useRef(0);
   const currentTrackIdRef = useRef(null);
+  const { updateGradientColors } = useGradientState();
 
   const {
     playTrack,
@@ -55,6 +57,12 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const duration = currentPlayback?.item?.duration_ms || 1;
   const progressPercentage = (realTimeProgress / duration) * 100;
   const trackId = currentPlayback?.item?.id;
+
+  useEffect(() => {
+    if (albumArt && updateGradientColors) {
+      updateGradientColors(albumArt, "nowPlaying");
+    }
+  }, [albumArt, updateGradientColors]);
 
   useEffect(() => {
     const checkCurrentTrackLiked = async () => {
@@ -195,7 +203,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
               }
               width={280}
               height={280}
-              className="aspect-square rounded-[12px] drop-shadow-xl"
+              className="aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
             />
           </div>
 

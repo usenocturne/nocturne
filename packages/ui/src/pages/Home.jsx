@@ -164,10 +164,10 @@ export default function Home({
               .map((_, index) => (
                 <div
                   key={`loading-${index}`}
-                  className="min-w-[280px] mr-10 snap-start"
+                  className="min-w-[280px] pl-2 mr-10 snap-start"
                 >
                   <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10 animate-pulse"
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
                     style={{ width: 280, height: 280 }}
                   ></div>
                   <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
@@ -178,11 +178,11 @@ export default function Home({
             recentAlbums.map((album) => (
               <div
                 key={album.id}
-                className="min-w-[280px] mr-10 snap-start"
+                className="min-w-[280px] pl-2 mr-10 snap-start"
                 data-id={album.id}
               >
                 <div
-                  className="mt-10 aspect-square rounded-[12px] drop-shadow-xl cursor-pointer"
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] cursor-pointer"
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(album.id, "album")}
                 >
@@ -236,9 +236,12 @@ export default function Home({
           className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
           style={{ willChange: "transform" }}
         >
-          <div key="liked-songs" className="min-w-[280px] mr-10 snap-start">
+          <div
+            key="liked-songs"
+            className="min-w-[280px] pl-2 mr-10 snap-start"
+          >
             <div
-              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
               style={{ width: 280, height: 280 }}
               onClick={() => onOpenContent("liked", "liked-songs")}
             >
@@ -279,10 +282,10 @@ export default function Home({
               .map((_, index) => (
                 <div
                   key={`loading-playlist-${index}`}
-                  className="min-w-[280px] mr-10 snap-start"
+                  className="min-w-[280px] pl-2 mr-10 snap-start"
                 >
                   <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10 animate-pulse"
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
                     style={{ width: 280, height: 280 }}
                   ></div>
                   <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
@@ -299,10 +302,10 @@ export default function Home({
               .map((playlist) => (
                 <div
                   key={`playlist-${playlist.id}`}
-                  className="min-w-[280px] mr-10 snap-start"
+                  className="min-w-[280px] pl-2 mr-10 snap-start"
                 >
                   <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl"
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                     style={{ width: 280, height: 280 }}
                     onClick={() => onOpenContent(playlist.id, "playlist")}
                   >
@@ -366,10 +369,10 @@ export default function Home({
               .map((_, index) => (
                 <div
                   key={`loading-artist-${index}`}
-                  className="min-w-[280px] mr-10 snap-start"
+                  className="min-w-[280px] pl-2 mr-10 snap-start"
                 >
                   <div
-                    className="mt-10 aspect-square rounded-full drop-shadow-xl bg-white/10 animate-pulse"
+                    className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
                     style={{ width: 280, height: 280 }}
                   ></div>
                   <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
@@ -380,11 +383,11 @@ export default function Home({
             topArtists.map((artist) => (
               <div
                 key={artist.id}
-                className="min-w-[280px] mr-10 snap-start"
+                className="min-w-[280px] pl-2 mr-10 snap-start"
                 data-id={artist.id}
               >
                 <div
-                  className="mt-10 aspect-square rounded-full drop-shadow-xl"
+                  className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(artist.id, "artist")}
                 >
@@ -450,9 +453,12 @@ export default function Home({
           className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
           style={{ willChange: "transform" }}
         >
-          <div key="dj-playlist" className="min-w-[280px] mr-10 snap-start">
+          <div
+            key="dj-playlist"
+            className="min-w-[280px] pl-2 mr-10 snap-start"
+          >
             <div
-              className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10 cursor-pointer"
+              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 cursor-pointer"
               style={{ width: 280, height: 280 }}
             >
               <img
@@ -490,10 +496,10 @@ export default function Home({
               .map((_, index) => (
                 <div
                   key={`loading-mix-${index}`}
-                  className="min-w-[280px] mr-10 snap-start"
+                  className="min-w-[280px] pl-2 mr-10 snap-start"
                 >
                   <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-xl bg-white/10 animate-pulse"
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
                     style={{ width: 280, height: 280 }}
                   ></div>
                   <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
@@ -502,9 +508,9 @@ export default function Home({
               ))
           ) : radioMixes && radioMixes.length > 0 ? (
             radioMixes.map((mix) => (
-              <div key={mix.id} className="min-w-[280px] mr-10 snap-start">
+              <div key={mix.id} className="min-w-[280px] pl-2 mr-10 snap-start">
                 <div
-                  className="mt-10 aspect-square rounded-[12px] drop-shadow-xl cursor-pointer"
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] cursor-pointer"
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(mix.id, "mix")}
                 >
