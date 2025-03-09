@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { extractColorsFromImage } from "../utils/colorExtractor";
 
 export function useGradientState(activeSection) {
@@ -19,21 +19,26 @@ export function useGradientState(activeSection) {
   });
   const [transitionSpeed] = useState(30);
 
-  const hexToRgb = (hex) => {
+  const lastProcessedUrlRef = useRef(null);
+  const lastProcessedSectionRef = useRef(null);
+
+  const MAX_BRIGHTNESS_THRESHOLD = 200;
+
+  const hexToRgb = useCallback((hex) => {
     const bigint = parseInt(hex.slice(1), 16);
     const r = (bigint >> 16) & 255;
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
     return { r, g, b };
-  };
+  }, []);
 
-  const rgbToHex = ({ r, g, b }) => {
+  const rgbToHex = useCallback(({ r, g, b }) => {
     const toHex = (n) =>
       Math.max(0, Math.min(255, Math.round(n)))
         .toString(16)
         .padStart(2, "0");
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
+  }, []);
 
   const getNextColor = (current, target) => {
     const easeStep = (start, end) => {
@@ -117,6 +122,8 @@ export function useGradientState(activeSection) {
     targetColor3,
     targetColor4,
     transitionSpeed,
+    hexToRgb,
+    rgbToHex,
   ]);
 
   const calculateBrightness = useCallback((hex) => {
@@ -125,6 +132,26 @@ export function useGradientState(activeSection) {
     const b = parseInt(hex.slice(5, 7), 16);
     return 0.299 * r + 0.587 * g + 0.114 * b;
   }, []);
+
+  const limitColorBrightness = useCallback(
+    (hexColor) => {
+      const rgb = hexToRgb(hexColor);
+      const brightness = 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
+
+      if (brightness <= MAX_BRIGHTNESS_THRESHOLD) {
+        return hexColor;
+      }
+
+      const reduction = brightness / MAX_BRIGHTNESS_THRESHOLD;
+
+      return rgbToHex({
+        r: Math.round(rgb.r / reduction),
+        g: Math.round(rgb.g / reduction),
+        b: Math.round(rgb.b / reduction),
+      });
+    },
+    [MAX_BRIGHTNESS_THRESHOLD, hexToRgb, rgbToHex]
+  );
 
   const calculateHue = useCallback((hex) => {
     const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -167,11 +194,106 @@ export function useGradientState(activeSection) {
     return radialGradients.join(", ");
   }, []);
 
+  const needsDarkGradientEnhancement = useCallback(
+    (colors) => {
+      if (!colors || colors.length < 2) return true;
+
+      let darkColorCount = 0;
+      let totalBrightness = 0;
+
+      for (const color of colors) {
+        const brightness = calculateBrightness(color);
+        totalBrightness += brightness;
+
+        if (brightness < 30) {
+          darkColorCount++;
+        }
+      }
+
+      const avgBrightness = totalBrightness / colors.length;
+
+      return (
+        darkColorCount >= Math.ceil(colors.length * 0.75) || avgBrightness < 25
+      );
+    },
+    [calculateBrightness]
+  );
+
+  const createEnhancedDarkGradient = useCallback(
+    (colors, accentColor = null) => {
+      let accent = accentColor;
+
+      if (!accent) {
+        for (const color of colors) {
+          const rgb = hexToRgb(color);
+          const isNotBlack = rgb.r > 30 || rgb.g > 30 || rgb.b > 30;
+
+          if (isNotBlack) {
+            accent = color;
+            break;
+          }
+        }
+
+        if (!accent) {
+          const baseColor = colors[0] || "#191414";
+          const baseRgb = hexToRgb(baseColor);
+
+          if (baseRgb.r >= baseRgb.g && baseRgb.r >= baseRgb.b) {
+            accent = "#3D2828";
+          } else if (baseRgb.g >= baseRgb.r && baseRgb.g >= baseRgb.b) {
+            accent = "#283D28";
+          } else {
+            accent = "#28283D";
+          }
+        }
+      }
+
+      const accentRgb = hexToRgb(accent);
+
+      return [
+        rgbToHex({
+          r: Math.min(255, Math.round(accentRgb.r * 0.3)),
+          g: Math.min(255, Math.round(accentRgb.g * 0.3)),
+          b: Math.min(255, Math.round(accentRgb.b * 0.3)),
+        }),
+        rgbToHex({
+          r: Math.min(255, Math.round(accentRgb.r * 0.2)),
+          g: Math.min(255, Math.round(accentRgb.g * 0.2)),
+          b: Math.min(255, Math.round(accentRgb.b * 0.2)),
+        }),
+        accent,
+        rgbToHex({
+          r: Math.max(1, Math.round(accentRgb.r * 0.1)),
+          g: Math.max(1, Math.round(accentRgb.g * 0.1)),
+          b: Math.max(1, Math.round(accentRgb.b * 0.1)),
+        }),
+      ];
+    },
+    [hexToRgb, rgbToHex]
+  );
+
   const filterColors = useCallback(
     (colors) => {
       if (!colors || colors.length === 0) return colors;
 
-      const withBrightness = colors.map((color) => ({
+      const brightnessLimitedColors = colors.map((color) =>
+        limitColorBrightness(color)
+      );
+
+      if (needsDarkGradientEnhancement(brightnessLimitedColors)) {
+        let accentColor = null;
+        for (const color of brightnessLimitedColors) {
+          const brightness = calculateBrightness(color);
+          if (brightness > 30) {
+            accentColor = color;
+            break;
+          }
+        }
+
+        return createEnhancedDarkGradient(brightnessLimitedColors, accentColor);
+      }
+
+      const withBrightness = brightnessLimitedColors.map((color) => ({
         color,
         brightness: calculateBrightness(color),
         hue: calculateHue(color),
@@ -244,11 +366,30 @@ export function useGradientState(activeSection) {
 
       return result.slice(0, 4);
     },
-    [calculateBrightness, calculateHue]
+    [
+      calculateBrightness,
+      calculateHue,
+      limitColorBrightness,
+      needsDarkGradientEnhancement,
+      createEnhancedDarkGradient,
+    ]
   );
 
   const updateGradientColors = useCallback(
     async (imageUrl, section = null) => {
+      const urlSectionKey = `${imageUrl || "none"}-${section || "none"}`;
+      if (
+        urlSectionKey ===
+        `${lastProcessedUrlRef.current || "none"}-${
+          lastProcessedSectionRef.current || "none"
+        }`
+      ) {
+        return;
+      }
+
+      lastProcessedUrlRef.current = imageUrl || "none";
+      lastProcessedSectionRef.current = section || "none";
+
       if (!imageUrl) {
         if (section === "radio") {
           const radioColors = ["#3B518B", "#202F57", "#142045", "#151231"];
