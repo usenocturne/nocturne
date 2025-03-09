@@ -287,12 +287,63 @@ export function useNavigation({
         return;
       }
 
-      if (
-        enableKeyboardNavigation &&
-        e.key === "Enter" &&
-        selectedIndex !== -1
-      ) {
-        onItemSelect(selectedIndex, itemsRef.current[selectedIndex]);
+      if (enableKeyboardNavigation && e.key === "Enter") {
+        if (selectedIndex !== -1 && itemsRef.current[selectedIndex]) {
+          if (inactivityTimeoutRef.current) {
+            clearTimeout(inactivityTimeoutRef.current);
+          }
+
+          onItemSelect(selectedIndex, itemsRef.current[selectedIndex]);
+          return;
+        } else if (
+          itemsRef.current.length > 0 &&
+          enableWheelNavigation &&
+          enableItemSelection
+        ) {
+          const container = containerRef.current;
+          if (container) {
+            const containerRect = container.getBoundingClientRect();
+            const containerLeft = containerRect.left;
+
+            let visibleItemIndex = -1;
+
+            for (let i = 0; i < itemsRef.current.length; i++) {
+              const item = itemsRef.current[i];
+              const itemRect = item.getBoundingClientRect();
+
+              if (
+                itemRect.right > containerLeft &&
+                itemRect.left < containerRect.right
+              ) {
+                visibleItemIndex = i;
+                break;
+              }
+            }
+
+            if (visibleItemIndex !== -1) {
+              setSelectedIndex(visibleItemIndex);
+              const targetItem = itemsRef.current[visibleItemIndex];
+
+              itemsRef.current.forEach((item) => {
+                item.classList.remove(
+                  "scale-105",
+                  "transition-transform",
+                  "duration-200",
+                  "ease-out"
+                );
+              });
+
+              targetItem.classList.add(
+                "scale-105",
+                "transition-transform",
+                "duration-200",
+                "ease-out"
+              );
+
+              onItemSelect(visibleItemIndex, targetItem);
+            }
+          }
+        }
       }
 
       if (e.key >= "1" && e.key <= "4" && activeSection === "tutorial") {
@@ -303,6 +354,8 @@ export function useNavigation({
       selectedIndex,
       enableEscapeKey,
       enableKeyboardNavigation,
+      enableItemSelection,
+      enableWheelNavigation,
       activeSection,
       onEscape,
       onItemSelect,

@@ -128,6 +128,50 @@ export default function Home({
     );
   };
 
+  const handleRecentsItemSelect = (index, item) => {
+    if (index !== -1 && recentAlbums[index]) {
+      const album = recentAlbums[index];
+      onOpenContent(album.id, "album");
+    }
+  };
+
+  const handleLibraryItemSelect = (index, item) => {
+    if (index === 0) {
+      onOpenContent("liked", "liked-songs");
+      return;
+    }
+
+    const adjustedIndex = index - 1;
+    const playlists = userPlaylists.filter(
+      (item) =>
+        item?.type === "playlist" && item.id !== "37i9dQZF1EYkqdzj48dyYq"
+    );
+
+    if (adjustedIndex >= 0 && adjustedIndex < playlists.length) {
+      const playlist = playlists[adjustedIndex];
+      onOpenContent(playlist.id, "playlist");
+    }
+  };
+
+  const handleArtistsItemSelect = (index, item) => {
+    if (index !== -1 && topArtists[index]) {
+      const artist = topArtists[index];
+      onOpenContent(artist.id, "artist");
+    }
+  };
+
+  const handleRadioItemSelect = (index, item) => {
+    if (index === 0) {
+      return;
+    }
+
+    const adjustedIndex = index - 1;
+    if (adjustedIndex >= 0 && adjustedIndex < radioMixes.length) {
+      const mix = radioMixes[adjustedIndex];
+      onOpenContent(mix.id, "mix");
+    }
+  };
+
   const renderRecentsSection = () => {
     return (
       <HorizontalScroll
@@ -135,6 +179,7 @@ export default function Home({
         currentlyPlayingId={currentlyPlayingAlbum?.id}
         accessToken={accessToken}
         activeSection={activeSection}
+        onItemSelect={handleRecentsItemSelect}
       >
         <div
           ref={scrollContainerRef}
@@ -213,6 +258,7 @@ export default function Home({
         containerRef={scrollContainerRef}
         accessToken={accessToken}
         activeSection={activeSection}
+        onItemSelect={handleLibraryItemSelect}
       >
         <div
           ref={scrollContainerRef}
@@ -340,6 +386,7 @@ export default function Home({
         containerRef={scrollContainerRef}
         accessToken={accessToken}
         activeSection={activeSection}
+        onItemSelect={handleArtistsItemSelect}
       >
         <div
           ref={scrollContainerRef}
@@ -430,6 +477,7 @@ export default function Home({
         containerRef={scrollContainerRef}
         accessToken={accessToken}
         activeSection={activeSection}
+        onItemSelect={handleRadioItemSelect}
       >
         <div
           ref={scrollContainerRef}

@@ -7,6 +7,7 @@ export default function HorizontalScroll({
   accessToken,
   currentlyPlayingId,
   activeSection,
+  onItemSelect,
 }) {
   const [items, setItems] = useState([]);
 
@@ -33,6 +34,11 @@ export default function HorizontalScroll({
   const handleItemFocus = (index, item) => {};
 
   const handleItemSelect = (index, item) => {
+    if (onItemSelect) {
+      onItemSelect(index, item);
+      return;
+    }
+
     const link = item?.querySelector("a");
     if (link?.getAttribute("href")) {
       window.location.href = link.getAttribute("href");
