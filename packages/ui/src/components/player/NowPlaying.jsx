@@ -3,6 +3,7 @@ import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useNavigation } from "../../hooks/useNavigation";
+import { useLyrics } from "../../hooks/useLyrics";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -11,6 +12,7 @@ import {
   PlayIcon,
   ForwardIcon,
   MenuIcon,
+  LyricsIcon,
 } from "../common/icons";
 
 const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
@@ -51,6 +53,16 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     onEnterKey: handlePlayPause,
     activeSection: "nowPlaying",
   });
+
+  const {
+    showLyrics,
+    lyrics,
+    currentLyricIndex,
+    isLoading: lyricsLoading,
+    error: lyricsError,
+    lyricsContainerRef,
+    toggleLyrics,
+  } = useLyrics(accessToken, currentPlayback);
 
   const trackName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -203,14 +215,53 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
             />
           </div>
 
-          <div className="flex-1 text-center md:text-left">
-            <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
-              {trackName}
-            </h4>
-            <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
-              {artistName}
-            </h4>
-          </div>
+          {!showLyrics ? (
+            <div className="flex-1 text-center md:text-left">
+              <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
+                {trackName}
+              </h4>
+              <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
+                {artistName}
+              </h4>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col h-[280px]">
+              <div
+                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
+                ref={lyricsContainerRef}
+              >
+                {lyricsLoading ? (
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                    Loading lyrics...
+                  </p>
+                ) : lyricsError ? (
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                    Lyrics not available
+                  </p>
+                ) : lyrics.length > 0 ? (
+                  lyrics.map((lyric, index) => (
+                    <p
+                      key={index}
+                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
+                        index === currentLyricIndex
+                          ? "text-white current-lyric-animation"
+                          : index === currentLyricIndex - 1 ||
+                            index === currentLyricIndex + 1
+                          ? "text-white/40"
+                          : "text-white/20"
+                      }`}
+                    >
+                      {lyric.text}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                    Lyrics not available
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -261,9 +312,17 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
               className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
             >
               <div className="py-1">
-                <MenuItem>
+                <MenuItem onClick={toggleLyrics}>
                   <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                    <span className="text-[28px]">Placeholder Option</span>
+                    <span className="text-[28px]">
+                      {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
+                    </span>
+                    <LyricsIcon
+                      aria-hidden="true"
+                      className={`h-8 w-8 ${
+                        showLyrics ? "text-white" : "text-white/60"
+                      }`}
+                    />
                   </div>
                 </MenuItem>
               </div>
