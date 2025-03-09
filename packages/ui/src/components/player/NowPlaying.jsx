@@ -33,12 +33,22 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     unlikeTrack,
   } = useSpotifyPlayerControls(accessToken);
 
+  const handlePlayPause = async () => {
+    if (isPlaying) {
+      await pausePlayback();
+    } else if (currentPlayback?.item) {
+      await playTrack();
+    }
+  };
+
   useNavigation({
     containerRef,
     enableEscapeKey: true,
     enableWheelNavigation: false,
-    enableKeyboardNavigation: false,
+    enableKeyboardNavigation: true,
     onEscape: onClose,
+    onEnterKey: handlePlayPause,
+    activeSection: "nowPlaying",
   });
 
   const trackName = currentPlayback?.item
@@ -136,14 +146,6 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
       }
     };
   }, [isPlaying, duration]);
-
-  const handlePlayPause = async () => {
-    if (isPlaying) {
-      await pausePlayback();
-    } else if (currentPlayback?.item) {
-      await playTrack();
-    }
-  };
 
   const handleSkipNext = async () => {
     await skipToNext();

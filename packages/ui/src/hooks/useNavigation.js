@@ -15,6 +15,7 @@ export function useNavigation({
   onEscape = () => {},
   onItemSelect = () => {},
   onItemFocus = () => {},
+  onEnterKey = null,
   inactivityTimeout = 3000,
   vertical = false,
 }) {
@@ -320,6 +321,11 @@ export function useNavigation({
         return;
       }
 
+      if (activeSection === "nowPlaying" && e.key === "Enter" && onEnterKey) {
+        onEnterKey();
+        return;
+      }
+
       if (enableKeyboardNavigation && e.key === "Enter") {
         const items = vertical ? getTrackItems() : itemsRef.current;
 
@@ -477,6 +483,7 @@ export function useNavigation({
       vertical,
       activeSection,
       onEscape,
+      onEnterKey,
       onItemSelect,
       onItemFocus,
       scrollItemIntoView,
