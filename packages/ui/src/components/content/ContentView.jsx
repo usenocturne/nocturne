@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
+import { CarThingIcon } from "../common/icons";
 
 const ContentView = ({
   accessToken,
@@ -300,9 +301,14 @@ const ContentView = ({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-5rem)] text-white/70">
-        <h3 className="text-2xl mb-4">Error loading content</h3>
-        <p>{error}</p>
+      <div className="flex flex-col items-center justify-center h-[480px] text-white/70">
+        <CarThingIcon className="h-16 w-auto mb-2" />
+        <h3 className="text-[36px] font-[560] text-white truncate tracking-tight">
+          Error Loading Content
+        </h3>
+        <p className="text-[24px] font-[560] text-white/60 truncate tracking-tight">
+          {error}
+        </p>
       </div>
     );
   }
