@@ -38,17 +38,10 @@ export function useSpotifyData(
   useEffect(() => {
     if (currentlyPlayingAlbum?.id) {
       setRecentAlbums((prevAlbums) => {
-        if (!prevAlbums.length) return [currentlyPlayingAlbum];
-        const existingIndex = prevAlbums.findIndex(
-          (album) => album.id === currentlyPlayingAlbum.id
+        const filteredAlbums = prevAlbums.filter(
+          (album) => album.id !== currentlyPlayingAlbum.id
         );
-        if (existingIndex === 0) return prevAlbums;
-        return [
-          currentlyPlayingAlbum,
-          ...prevAlbums.filter(
-            (album) => album.id !== currentlyPlayingAlbum.id
-          ),
-        ].slice(0, 50);
+        return [currentlyPlayingAlbum, ...filteredAlbums].slice(0, 50);
       });
     }
   }, [currentlyPlayingAlbum]);

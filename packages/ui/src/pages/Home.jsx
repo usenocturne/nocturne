@@ -25,6 +25,7 @@ export default function Home({
   const scrollContainerRef = useRef(null);
   const hasScrolledToCurrentAlbumRef = useRef(false);
   const itemWidth = 290;
+  const [newAlbumAdded, setNewAlbumAdded] = useState(false);
 
   const { scrollByAmount } = useNavigation({
     containerRef: scrollContainerRef,
@@ -81,24 +82,33 @@ export default function Home({
   useEffect(() => {
     if (
       scrollContainerRef.current &&
-      activeSection === "recents" &&
-      currentlyPlayingAlbum?.id &&
-      !hasScrolledToCurrentAlbumRef.current &&
-      recentAlbums.length > 0
+      scrollContainerRef.current.scrollLeft <= 10
     ) {
-      const currentAlbumIndex = recentAlbums.findIndex(
-        (album) => album.id === currentlyPlayingAlbum.id
-      );
-
-      if (currentAlbumIndex !== -1) {
-        scrollContainerRef.current.scrollTo({
-          left: currentAlbumIndex * (itemWidth + 40),
-          behavior: "smooth",
-        });
-        hasScrolledToCurrentAlbumRef.current = true;
+      if (recentAlbums.length > 0 && activeSection === "recents") {
+        setNewAlbumAdded(true);
       }
     }
-  }, [currentlyPlayingAlbum, activeSection, recentAlbums]);
+  }, [recentAlbums]);
+
+  useEffect(() => {
+    if (newAlbumAdded && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        left: itemWidth + 40,
+        behavior: "auto",
+      });
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollContainerRef.current.scrollTo({
+            left: 0,
+            behavior: "smooth",
+          });
+
+          setNewAlbumAdded(false);
+        });
+      });
+    }
+  }, [newAlbumAdded]);
 
   const isPlayingLikedSongs = () => {
     return (
