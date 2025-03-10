@@ -460,7 +460,12 @@ export function useGradientState(activeSection) {
           !section ||
           section === activeSection ||
           section === "nowPlaying" ||
-          activeSection === "nowPlaying"
+          activeSection === "nowPlaying" ||
+          section === "album" ||
+          section === "playlist" ||
+          section === "artist" ||
+          section === "mix" ||
+          section === "liked-songs"
         ) {
           setTargetColor1(hexColors[0]);
           setTargetColor2(hexColors[1]);

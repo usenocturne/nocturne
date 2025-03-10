@@ -120,6 +120,21 @@ function App() {
 
   const handleCloseContent = () => {
     setViewingContent(null);
+
+    if (
+      activeSection === "nowPlaying" &&
+      currentlyPlayingAlbum?.images?.[0]?.url
+    ) {
+      updateGradientColors(currentlyPlayingAlbum.images[0].url, "nowPlaying");
+    } else if (activeSection === "recents" && recentAlbums.length > 0) {
+      updateGradientColors(recentAlbums[0]?.images?.[0]?.url, "recents");
+    } else if (activeSection === "library" && userPlaylists.length > 0) {
+      updateGradientColors(null, "library");
+    } else if (activeSection === "artists" && topArtists.length > 0) {
+      updateGradientColors(topArtists[0]?.images?.[0]?.url, "artists");
+    } else if (activeSection === "radio") {
+      updateGradientColors(null, "radio");
+    }
   };
 
   const handleNavigateToNowPlaying = () => {
