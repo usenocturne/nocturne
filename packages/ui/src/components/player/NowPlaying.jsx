@@ -196,23 +196,40 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
 
   return (
     <div
-      className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation"
+      className="flex flex-col h-screen w-full z-10 fadeIn-animation relative"
       ref={containerRef}
     >
-      <div>
+      <div className="flex-grow overflow-hidden">
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
-          <div className="min-w-[280px] mr-8">
-            <img
-              src={albumArt}
-              alt={
-                currentPlayback?.item?.type === "episode"
-                  ? "Podcast Cover"
-                  : "Album Art"
-              }
-              width={280}
-              height={280}
-              className="aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-            />
+          <div className="flex flex-col">
+            <div
+              className={`transition-all duration-500 ease-in-out ${
+                showLyrics ? "min-w-[220px]" : "min-w-[280px]"
+              } mr-8 flex`}
+            >
+              <img
+                src={albumArt}
+                alt={
+                  currentPlayback?.item?.type === "episode"
+                    ? "Podcast Cover"
+                    : "Album Art"
+                }
+                className={`aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] transition-all duration-500 ease-in-out origin-bottom-right ${
+                  showLyrics ? "w-[220px]" : "w-[280px]"
+                }`}
+              />
+            </div>
+
+            {showLyrics && (
+              <div className="mt-1 mr-8 w-[220px] opacity-0 song-info-fade-in">
+                <h4 className="text-[28px] font-[580] text-white truncate tracking-tight">
+                  {trackName}
+                </h4>
+                <h4 className="text-[24px] font-[560] text-white/60 truncate tracking-tight">
+                  {artistName}
+                </h4>
+              </div>
+            )}
           </div>
 
           {!showLyrics ? (
@@ -225,9 +242,9 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
               </h4>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col h-[280px]">
+            <div className="flex-1 flex flex-col h-[280px] ml-4">
               <div
-                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
+                className="flex-1 text-left overflow-y-auto h-[280px] w-[430px]"
                 ref={lyricsContainerRef}
               >
                 {lyricsLoading ? (
@@ -265,69 +282,71 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
         </div>
       </div>
 
-      <div className="px-12 pt-7 pb-7">
-        <div className="relative w-full bg-white/20 rounded-full overflow-hidden h-2">
-          <div
-            className="absolute inset-0 bg-white transition-transform duration-100 ease-linear"
-            style={{
-              transform: `translateX(${progressPercentage - 100}%)`,
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center w-full px-12">
-        <div className="flex-shrink-0" onClick={handleToggleLike}>
-          {isLiked ? (
-            <HeartIconFilled className="w-14 h-14" />
-          ) : (
-            <HeartIcon className="w-14 h-14" />
-          )}
-        </div>
-
-        <div className="flex justify-center gap-12 flex-1">
-          <div onClick={handleSkipPrevious}>
-            <BackIcon className="w-14 h-14" />
+      <div className="w-full absolute bottom-0 left-0 pb-6">
+        <div className="px-12 pt-7 pb-7">
+          <div className="relative w-full bg-white/20 rounded-full overflow-hidden h-2">
+            <div
+              className="absolute inset-0 bg-white transition-transform duration-100 ease-linear"
+              style={{
+                transform: `translateX(${progressPercentage - 100}%)`,
+              }}
+            />
           </div>
-          <div onClick={handlePlayPause}>
-            {isPlaying ? (
-              <PauseIcon className="w-14 h-14" />
+        </div>
+
+        <div className="flex justify-between items-center w-full px-12">
+          <div className="flex-shrink-0" onClick={handleToggleLike}>
+            {isLiked ? (
+              <HeartIconFilled className="w-14 h-14" />
             ) : (
-              <PlayIcon className="w-14 h-14" />
+              <HeartIcon className="w-14 h-14" />
             )}
           </div>
-          <div onClick={handleSkipNext}>
-            <ForwardIcon className="w-14 h-14" />
+
+          <div className="flex justify-center gap-12 flex-1">
+            <div onClick={handleSkipPrevious}>
+              <BackIcon className="w-14 h-14" />
+            </div>
+            <div onClick={handlePlayPause}>
+              {isPlaying ? (
+                <PauseIcon className="w-14 h-14" />
+              ) : (
+                <PlayIcon className="w-14 h-14" />
+              )}
+            </div>
+            <div onClick={handleSkipNext}>
+              <ForwardIcon className="w-14 h-14" />
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center">
-          <Menu as="div" className="relative inline-block text-left">
-            <MenuButton className="focus:outline-none">
-              <MenuIcon className="w-14 h-14 fill-white/60" />
-            </MenuButton>
+          <div className="flex items-center">
+            <Menu as="div" className="relative inline-block text-left">
+              <MenuButton className="focus:outline-none">
+                <MenuIcon className="w-14 h-14 fill-white/60" />
+              </MenuButton>
 
-            <MenuItems
-              transition
-              className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
-            >
-              <div className="py-1">
-                <MenuItem onClick={toggleLyrics}>
-                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                    <span className="text-[28px]">
-                      {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
-                    </span>
-                    <LyricsIcon
-                      aria-hidden="true"
-                      className={`h-8 w-8 ${
-                        showLyrics ? "text-white" : "text-white/60"
-                      }`}
-                    />
-                  </div>
-                </MenuItem>
-              </div>
-            </MenuItems>
-          </Menu>
+              <MenuItems
+                transition
+                className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+              >
+                <div className="py-1">
+                  <MenuItem onClick={toggleLyrics}>
+                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <span className="text-[28px]">
+                        {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
+                      </span>
+                      <LyricsIcon
+                        aria-hidden="true"
+                        className={`h-8 w-8 ${
+                          showLyrics ? "text-white" : "text-white/60"
+                        }`}
+                      />
+                    </div>
+                  </MenuItem>
+                </div>
+              </MenuItems>
+            </Menu>
+          </div>
         </div>
       </div>
     </div>
