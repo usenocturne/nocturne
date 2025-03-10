@@ -17,7 +17,7 @@ const QRCodeDisplay = ({ verificationUri, isLoading, error }) => {
   }
 
   return (
-    <div className="bg-white p-1 rounded-xl">
+    <div className="bg-white p-1 rounded-xl drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]">
       <QRCodeSVG
         value={verificationUri || ""}
         size={250}
