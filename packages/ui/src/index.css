@@ -157,19 +157,3 @@ section {
 .flex-1.text-left.overflow-y-auto p {
   margin-bottom: 16px;
 }
-
-@keyframes songInfoFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.song-info-fade-in {
-  animation: songInfoFadeIn 0.5s ease-out forwards;
-  animation-delay: 0.3s;
-}
