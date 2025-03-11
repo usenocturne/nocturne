@@ -10,7 +10,7 @@ usage() {
   exit 1
 }
 
-while getopts "r:a:d:v:e:l" OPTS; do
+while getopts "r:a:s:d:v" OPTS; do
   case ${OPTS} in
     r) REPO=${OPTARG} ;;
     a) ASSET=${OPTARG} ;;
@@ -30,14 +30,14 @@ echo "Fetching $VER version of $ASSET from $REPO"
 if [ -z "$VER" ]; then
     wget "https://github.com/$REPO/releases/latest/download/$ASSET"
 
-    if [ ! -n "$NOSUM" ]; then
+    if [ -z "$NOSUM" ]; then
         wget "https://github.com/$REPO/releases/latest/download/$ASSET.sha256"
         sha256sum -c "$ASSET.sha256"
     fi
 else
     wget "https://github.com/$REPO/releases/download/$VER/$ASSET"
 
-    if [ ! -n "$NOSUM" ]; then
+    if [ -z "$NOSUM" ]; then
         wget "https://github.com/$REPO/releases/download/$VER/$ASSET.sha256"
         sha256sum -c "$ASSET.sha256"
     fi

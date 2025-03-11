@@ -2,9 +2,9 @@
 
 echo "Checking for modules in /etc/modules /etc/modules-load.d /usr/lib/modules-load.d"
 
-find-mods ${ROOTFS_PATH}/etc/modules
-find ${ROOTFS_PATH}/etc/modules-load.d -name '*.conf' -exec find-mods {} \;
-find ${ROOTFS_PATH}/usr/lib/modules-load.d -name '*.conf' -exec find-mods {} \;
+find-mods "$ROOTFS_PATH"/etc/modules
+find "$ROOTFS_PATH"/etc/modules-load.d -name '*.conf' -exec find-mods {} \;
+find "$ROOTFS_PATH"/usr/lib/modules-load.d -name '*.conf' -exec find-mods {} \;
 if [ -f /tmp/modules.save ]; then
   LOAD_MODS="$(cat /tmp/modules.save)"
   rm /tmp/modules.save

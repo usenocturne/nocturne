@@ -83,7 +83,7 @@ else
       # store checksum if script is in INPUT or RES_PATH
       if [ -n "$_DO_CHECKSUM" ]; then
         touch "$_CHECKSUMS"
-        _ESCSCRIPT="$(echo ${SCRIPT} | sed 's+\/+\\\/+g')"
+        _ESCSCRIPT="$(echo "$SCRIPT" | sed 's+\/+\\\/+g')"
         sed "/$_ESCSCRIPT/d" -i "$_CHECKSUMS"
         sha3sum "$SCRIPT" >>"$_CHECKSUMS"
       fi

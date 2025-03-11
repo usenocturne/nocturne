@@ -1,9 +1,9 @@
 name: Lint
 
 on:
+  push:
   pull_request:
-    branches:
-      - master
+  workflow_dispatch:
 
 jobs:
   run-linters:
@@ -11,15 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out Git repository
+      - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Run the sh-checker
-        uses: luizm/action-sh-checker@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SHELLCHECK_OPTS: --severity=info
-          SHFMT_OPTS: -i 2 -ci -d
-        with:
-          sh_checker_comment: true
-          sh_checker_checkbashisms_enable: true
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1

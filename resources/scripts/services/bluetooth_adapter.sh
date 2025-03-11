@@ -1,6 +1,7 @@
 #!/sbin/openrc-run
 # shellcheck shell=ash
 
+# shellcheck disable=SC2034
 name="Bluetooth Adapter"
 supervisor="supervise-daemon"
 command="/usr/bin/btattach"

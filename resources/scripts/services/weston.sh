@@ -1,7 +1,9 @@
 #!/sbin/openrc-run
+# shellcheck shell=ash
 
 # TODO: make this run as nocturne user
 
+# shellcheck disable=SC2034
 name="Weston"
 supervisor="supervise-daemon"
 command="/usr/bin/weston"

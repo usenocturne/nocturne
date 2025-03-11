@@ -27,7 +27,7 @@ set -e
 
 : "${STAGES:="00 10 20 30 40 50"}"
 
-ALPINE_BRANCH=$(echo $ALPINE_BRANCH | sed '/^[0-9]/s/^/v/')
+ALPINE_BRANCH=$(echo "$ALPINE_BRANCH" | sed '/^[0-9]/s/^/v/')
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # static config
@@ -40,7 +40,6 @@ export INPUT_PATH
 export BOOTFS_PATH="${WORK_PATH}/boot_fs"
 export ROOTFS_PATH="${WORK_PATH}/root_fs"
 export DATAFS_PATH="${WORK_PATH}/data_fs"
-SETUP_PREFIX="/data"
 
 # console colours (default Green)
 # shellcheck disable=SC2034
@@ -75,10 +74,10 @@ run_stage_scripts() {
     _sname=$(basename "$S")
     [ "$_sname" = "*.sh" ] && break
     colour_echo "  Stage $1 Found $_sname" "$Cyan"
-    if [ -f ${INPUT_PATH}/stages/"$1"/"$_sname" ]; then
+    if [ -f "$INPUT_PATH"/stages/"$1"/"$_sname" ]; then
       colour_echo "  Overriding $1 $_sname with user version" "$Blue"
       # shellcheck disable=SC1090
-      . ${INPUT_PATH}/stages/"$1"/"$_sname"
+      . "$INPUT_PATH"/stages/"$1"/"$_sname"
       _srun="$_srun $_sname"
     else
       # shellcheck disable=SC1090

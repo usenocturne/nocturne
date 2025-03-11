@@ -9,6 +9,6 @@ if [ -n "$LIB_LOG" ]; then
 fi
 colour_echo "   calling m4 with $M4ARG"
 # install fstab
-m4 ${M4ARG} "$RES_PATH"/m4/fstab.m4 > ${ROOTFS_PATH}/etc/fstab
+m4 "$M4ARG" "$RES_PATH"/m4/fstab.m4 > "$ROOTFS_PATH"/etc/fstab
 
-cat ${ROOTFS_PATH}/etc/fstab
+cat "$ROOTFS_PATH"/etc/fstab

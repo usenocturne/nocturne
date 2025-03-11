@@ -14,7 +14,8 @@ rm -f "$ROOTFS_PATH"/etc/weston/weston.ini
 cp "$RES_PATH"/config/weston.ini "$RES_PATH"/background.png "$ROOTFS_PATH"/etc/weston/
 
 mkdir -p "$DATAFS_PATH"/etc/chrome/cache "$DATAFS_PATH"/etc/chrome/data
+# shellcheck disable=SC2174
 mkdir -pm 0700 "$DATAFS_PATH"/tmp/0-runtime-dir
 
-install ${RES_PATH}/scripts/services/weston.sh ${ROOTFS_PATH}/etc/init.d/weston
+install "$RES_PATH"/scripts/services/weston.sh "$ROOTFS_PATH"/etc/init.d/weston
 chroot_exec rc-update add weston default

@@ -11,4 +11,4 @@ if chroot_exec apk update; then
 fi
 
 # stop initramfs creation as not used
-echo "disable_trigger=\"YES\"" > ${ROOTFS_PATH}/etc/mkinitfs/mkinitfs.conf
+echo "disable_trigger=\"YES\"" > "$ROOTFS_PATH"/etc/mkinitfs/mkinitfs.conf
