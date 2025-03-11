@@ -1,6 +1,6 @@
 #!/bin/sh
 
-chroot_exec apk add --no-cache bluez dbus
+chroot_exec apk add bluez dbus
 
 mkdir -p "$ROOTFS_PATH"/lib/firmware/brcm
 cp "$RES_PATH"/firmware/brcm/* "$ROOTFS_PATH"/lib/firmware/brcm/
