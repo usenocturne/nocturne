@@ -8,7 +8,7 @@ export class NetworkError extends Error {
 export async function checkNetworkConnectivity() {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1000);
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
     const response = await fetch("https://api.spotify.com/v1/", {
       method: "OPTIONS",

@@ -24,7 +24,7 @@ export function useNetwork() {
           setShowNoNetwork(false);
         } else {
           checkCountRef.current++;
-          if (checkCountRef.current >= 1) {
+          if (checkCountRef.current >= 2) {
             setShowNoNetwork(true);
           }
         }
@@ -39,7 +39,7 @@ export function useNetwork() {
       if (isConnected) {
         setIsConnected(false);
         checkCountRef.current++;
-        if (checkCountRef.current >= 1) {
+        if (checkCountRef.current >= 2) {
           setShowNoNetwork(true);
         }
       }
@@ -63,7 +63,7 @@ export function useNetwork() {
       } else {
         checkCountRef.current++;
         setIsConnected(false);
-        if (checkCountRef.current >= 1) {
+        if (checkCountRef.current >= 2) {
           setShowNoNetwork(true);
         }
       }
