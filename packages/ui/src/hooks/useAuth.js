@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   oauthAuthorize,
   checkAuthStatus,
-  refreshAccessToken,
+  refreshAccessToken as refreshToken,
 } from "../services/authService";
 
 export function useAuth() {
@@ -12,83 +12,138 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
   const [authData, setAuthData] = useState(null);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const pollingIntervalRef = useRef(null);
-  const refreshTimerRef = useRef(null);
+  const refreshIntervalRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
 
   useEffect(() => {
-    const checkAndRefreshToken = async () => {
-      const storedAccessToken = localStorage.getItem("spotifyAccessToken");
-      const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-      const expiryTimeStr = localStorage.getItem("spotifyTokenExpiry");
+    const storedAccessToken = localStorage.getItem("spotifyAccessToken");
+    const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
 
-      if (storedAccessToken && storedRefreshToken && expiryTimeStr) {
-        const expiryTime = new Date(expiryTimeStr);
-        const now = new Date();
-        const timeUntilExpiry = expiryTime.getTime() - now.getTime();
+    if (storedAccessToken && storedRefreshToken) {
+      setAccessToken(storedAccessToken);
+      setRefreshToken(storedRefreshToken);
+      setIsAuthenticated(true);
+    }
 
-        if (timeUntilExpiry < 300000) {
-          try {
-            const refreshData = await refreshAccessToken(storedRefreshToken);
+    setIsLoading(false);
+  }, []);
 
-            localStorage.setItem(
-              "spotifyAccessToken",
-              refreshData.access_token
-            );
-            if (refreshData.refresh_token) {
-              localStorage.setItem(
-                "spotifyRefreshToken",
-                refreshData.refresh_token
-              );
-            }
+  const refreshAccessToken = useCallback(async () => {
+    if (!refreshToken || isRefreshing) return null;
 
-            const newExpiryDate = new Date();
-            newExpiryDate.setSeconds(
-              newExpiryDate.getSeconds() + refreshData.expires_in
-            );
-            localStorage.setItem(
-              "spotifyTokenExpiry",
-              newExpiryDate.toISOString()
-            );
+    try {
+      setIsRefreshing(true);
+      const data = await refreshToken(refreshToken);
 
-            setAccessToken(refreshData.access_token);
-            setRefreshToken(refreshData.refresh_token || storedRefreshToken);
-            setIsAuthenticated(true);
+      if (data?.access_token) {
+        localStorage.setItem("spotifyAccessToken", data.access_token);
 
-            const newTimeUntilExpiry = refreshData.expires_in * 1000;
-            refreshTimerRef.current = setTimeout(
-              checkAndRefreshToken,
-              newTimeUntilExpiry - 300000
-            );
-          } catch (error) {
-            console.error("Token refresh failed:", error);
-            logout();
-          }
-        } else {
-          setAccessToken(storedAccessToken);
-          setRefreshToken(storedRefreshToken);
-          setIsAuthenticated(true);
+        const expiryDate = new Date();
+        expiryDate.setSeconds(expiryDate.getSeconds() + data.expires_in);
+        localStorage.setItem("spotifyTokenExpiry", expiryDate.toISOString());
 
-          if (refreshTimerRef.current) {
-            clearTimeout(refreshTimerRef.current);
-          }
-          refreshTimerRef.current = setTimeout(
-            checkAndRefreshToken,
-            timeUntilExpiry - 300000
-          );
+        setAccessToken(data.access_token);
+
+        if (data.refresh_token) {
+          localStorage.setItem("spotifyRefreshToken", data.refresh_token);
+          setRefreshToken(data.refresh_token);
         }
+
+        return data;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+
+      if (error.message && error.message.includes("invalid_grant")) {
+        clearSession();
+      } else {
+        retryTimeoutRef.current = setTimeout(() => {
+          refreshAccessToken();
+        }, 3000);
       }
 
-      setIsLoading(false);
+      return null;
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refreshToken]);
+
+  useEffect(() => {
+    if (!accessToken || !refreshToken) return;
+
+    const scheduleTokenRefresh = async () => {
+      if (isRefreshing) return;
+
+      try {
+        const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+
+        if (!tokenExpiry) {
+          await refreshAccessToken();
+          return;
+        }
+
+        const expiryTime = new Date(tokenExpiry);
+        const currentTime = new Date();
+        const fiveMinutesFromNow = new Date(currentTime.getTime() + 5 * 60000);
+
+        if (expiryTime <= fiveMinutesFromNow) {
+          await refreshAccessToken();
+        }
+      } catch (error) {
+        console.error("Error scheduling token refresh:", error);
+      }
     };
 
-    checkAndRefreshToken();
+    scheduleTokenRefresh();
+
+    refreshIntervalRef.current = setInterval(
+      scheduleTokenRefresh,
+      5 * 60 * 1000
+    );
 
     return () => {
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current);
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
       }
     };
+  }, [accessToken, refreshToken, refreshAccessToken, isRefreshing]);
+
+  const clearSession = useCallback(() => {
+    const authItems = [
+      "spotifyAccessToken",
+      "spotifyRefreshToken",
+      "spotifyTokenExpiry",
+      "spotifyAuthType",
+    ];
+
+    authItems.forEach((item) => localStorage.removeItem(item));
+
+    setAccessToken(null);
+    setRefreshToken(null);
+    setIsAuthenticated(false);
+    setAuthData(null);
+
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
   }, []);
 
   const initAuth = useCallback(async () => {
@@ -138,7 +193,6 @@ export function useAuth() {
 
             setAccessToken(data.access_token);
             setRefreshToken(data.refresh_token);
-
             setIsAuthenticated(true);
 
             window.dispatchEvent(new Event("storage"));
@@ -157,28 +211,6 @@ export function useAuth() {
     },
     [authData]
   );
-
-  const logout = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-
-    if (refreshTimerRef.current) {
-      clearTimeout(refreshTimerRef.current);
-      refreshTimerRef.current = null;
-    }
-
-    localStorage.removeItem("spotifyAccessToken");
-    localStorage.removeItem("spotifyRefreshToken");
-    localStorage.removeItem("spotifyTokenExpiry");
-    localStorage.removeItem("spotifyAuthType");
-
-    setAccessToken(null);
-    setRefreshToken(null);
-    setIsAuthenticated(false);
-    setAuthData(null);
-  }, []);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -200,12 +232,6 @@ export function useAuth() {
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current);
-      }
     };
   }, []);
 
@@ -226,6 +252,8 @@ export function useAuth() {
     error,
     initAuth,
     pollAuthStatus,
-    logout,
+    refreshAccessToken,
+    clearSession,
+    logout: clearSession,
   };
 }
