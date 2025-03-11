@@ -390,6 +390,16 @@ export default function Home({
     );
   };
 
+  const formatFollowerCount = (count) => {
+    if (count >= 1000000) {
+      const millions = count / 1000000;
+      return millions % 1 === 0
+        ? `${Math.floor(millions)}M`
+        : `${millions.toFixed(1)}M`;
+    }
+    return count.toLocaleString();
+  };
+
   const renderArtistsSection = () => {
     return (
       <HorizontalScroll
@@ -461,7 +471,7 @@ export default function Home({
                       Now Playing
                     </>
                   ) : (
-                    `${artist.followers.total.toLocaleString()} Followers`
+                    `${formatFollowerCount(artist.followers.total)} Followers`
                   )}
                 </h4>
               </div>
