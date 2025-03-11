@@ -3,6 +3,7 @@
 chroot_exec apk add --no-cache weston weston-backend-drm seatd weston-shell-desktop chromium
 
 chroot_exec rc-update add seatd
+chroot_exec rc-update add swap boot
 
 echo "KERNEL==\"event0\", SUBSYSTEM==\"input\", GROUP=\"input\", MODE=\"0660\", ENV{ID_INPUT_KEYBOARD}=\"1\", ENV{LIBINPUT_DEVICE_GROUP}=\"gpio-keys\"" > "$ROOTFS_PATH"/usr/lib/udev/rules.d/97-keys.rules
 echo "KERNEL==\"event1\", SUBSYSTEM==\"input\", GROUP=\"input\", MODE=\"0660\", ENV{ID_INPUT_KEYBOARD}=\"1\", ENV{LIBINPUT_DEVICE_GROUP}=\"rotary-input\"" > "$ROOTFS_PATH"/usr/lib/udev/rules.d/97-rotary.rules

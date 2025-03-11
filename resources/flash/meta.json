@@ -23,7 +23,7 @@
       "value": {
         "address": 180355072,
         "data": {
-          "filePath": "system.ext4"
+          "filePath": "boot.vfat"
         },
         "blockLength": 4096
       }
@@ -31,7 +31,27 @@
     {
       "type": "writeLargeMemory",
       "value": {
-        "address": 1790967808,
+        "address": 213909504,
+        "data": {
+          "filePath": "boot.vfat"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 247463936,
+        "data": {
+          "filePath": "swap.bin"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 515899392,
         "data": {
           "filePath": "system.ext4"
         },
@@ -41,7 +61,17 @@
     {
       "type": "writeLargeMemory",
       "value": {
-        "address": 3401580544,
+        "address": 1992294400,
+        "data": {
+          "filePath": "system.ext4"
+        },
+        "blockLength": 4096
+      }
+    },
+    {
+      "type": "writeLargeMemory",
+      "value": {
+        "address": 3468689408,
         "data": {
           "filePath": "data.ext4"
         },
