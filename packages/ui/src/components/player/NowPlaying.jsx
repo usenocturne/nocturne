@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
+import ProgressBar from "./ProgressBar";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -19,8 +20,9 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
   const [realTimeProgress, setRealTimeProgress] = useState(0);
+  const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
   const progressTimerRef = useRef(null);
-  const lastUpdateTimeRef = useRef(0);
+  const lastUpdateTimeRef = useRef(Date.now());
   const currentTrackIdRef = useRef(null);
   const containerRef = useRef(null);
   const { updateGradientColors } = useGradientState();
@@ -126,39 +128,38 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   }, [trackId, checkIsTrackLiked, currentPlayback?.item?.type]);
 
   useEffect(() => {
-    if (currentPlayback?.progress_ms !== undefined) {
+    if (currentPlayback?.progress_ms !== undefined && !isProgressScrubbing) {
       setRealTimeProgress(currentPlayback.progress_ms);
       lastUpdateTimeRef.current = Date.now();
     }
-  }, [currentPlayback?.progress_ms]);
+  }, [currentPlayback?.progress_ms, isProgressScrubbing]);
 
   useEffect(() => {
-    const updateProgressTimer = () => {
-      if (isPlaying) {
-        const now = Date.now();
-        const elapsed = now - lastUpdateTimeRef.current;
-        setRealTimeProgress((prev) => {
-          const newProgress = prev + elapsed;
-          return Math.min(newProgress, duration);
-        });
-        lastUpdateTimeRef.current = now;
-      }
-    };
-
     if (progressTimerRef.current) {
       clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
     }
 
-    if (isPlaying) {
-      progressTimerRef.current = setInterval(updateProgressTimer, 100);
+    if (isPlaying && !isProgressScrubbing) {
+      progressTimerRef.current = setInterval(() => {
+        const now = Date.now();
+        const elapsed = now - lastUpdateTimeRef.current;
+        lastUpdateTimeRef.current = now;
+
+        setRealTimeProgress((prev) => {
+          const newProgress = Math.min(prev + elapsed, duration);
+          return newProgress;
+        });
+      }, 100);
     }
 
     return () => {
       if (progressTimerRef.current) {
         clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
       }
     };
-  }, [isPlaying, duration]);
+  }, [isPlaying, isProgressScrubbing, duration]);
 
   const handleSkipNext = async () => {
     await skipToNext();
@@ -192,6 +193,22 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
       setIsLiked(!isLiked);
       console.error("Error toggling track like:", error);
     }
+  };
+
+  const handleSeek = async (position) => {
+    try {
+      if (currentPlayback?.item) {
+        await seekToPosition(position);
+        setRealTimeProgress(position);
+        lastUpdateTimeRef.current = Date.now();
+      }
+    } catch (error) {
+      console.error("Error seeking:", error);
+    }
+  };
+
+  const handleScrubbingChange = (scrubbing) => {
+    setIsProgressScrubbing(scrubbing);
   };
 
   return (
@@ -265,18 +282,24 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
         </div>
       </div>
 
-      <div className="px-12 pt-7 pb-7">
-        <div className="relative w-full bg-white/20 rounded-full overflow-hidden h-2">
-          <div
-            className="absolute inset-0 bg-white transition-transform duration-100 ease-linear"
-            style={{
-              transform: `translateX(${progressPercentage - 100}%)`,
-            }}
-          />
-        </div>
+      <div className="px-12 pt-3 pb-7">
+        <ProgressBar
+          progress={progressPercentage}
+          isPlaying={isPlaying}
+          durationMs={duration}
+          onSeek={handleSeek}
+          onPlayPause={handlePlayPause}
+          onScrubbingChange={handleScrubbingChange}
+        />
       </div>
 
-      <div className="flex justify-between items-center w-full px-12">
+      <div
+        className={`flex justify-between items-center w-full px-12 transition-all duration-200 ease-in-out ${
+          isProgressScrubbing
+            ? "translate-y-24 opacity-0"
+            : "translate-y-0 opacity-100"
+        }`}
+      >
         <div className="flex-shrink-0" onClick={handleToggleLike}>
           {isLiked ? (
             <HeartIconFilled className="w-14 h-14" />

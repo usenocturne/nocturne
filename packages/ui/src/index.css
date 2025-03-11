@@ -157,3 +157,31 @@ section {
 .flex-1.text-left.overflow-y-auto p {
   margin-bottom: 16px;
 }
+
+.progress-bar {
+  transition-property: width;
+  transition-timing-function: linear;
+  transition-duration: 250ms;
+  will-change: width;
+}
+
+.progress-bar.no-transition {
+  transition: none;
+}
+
+.translate-y-24 {
+  transform: translateY(6rem);
+}
+
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: ease-linear;
+  transition-duration: 0ms;
+  will-change: transform;
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
