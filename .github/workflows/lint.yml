@@ -14,5 +14,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Install dependencies
+        run: apt-get install -y shfmt
+
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1

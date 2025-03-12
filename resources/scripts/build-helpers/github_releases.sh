@@ -28,22 +28,22 @@ done
 echo "Fetching $VER version of $ASSET from $REPO"
 
 if [ -z "$VER" ]; then
-    wget "https://github.com/$REPO/releases/latest/download/$ASSET"
+  wget "https://github.com/$REPO/releases/latest/download/$ASSET"
 
-    if [ -z "$NOSUM" ]; then
-        wget "https://github.com/$REPO/releases/latest/download/$ASSET.sha256"
-        sha256sum -c "$ASSET.sha256"
-    fi
+  if [ -z "$NOSUM" ]; then
+    wget "https://github.com/$REPO/releases/latest/download/$ASSET.sha256"
+    sha256sum -c "$ASSET.sha256"
+  fi
 else
-    wget "https://github.com/$REPO/releases/download/$VER/$ASSET"
+  wget "https://github.com/$REPO/releases/download/$VER/$ASSET"
 
-    if [ -z "$NOSUM" ]; then
-        wget "https://github.com/$REPO/releases/download/$VER/$ASSET.sha256"
-        sha256sum -c "$ASSET.sha256"
-    fi
+  if [ -z "$NOSUM" ]; then
+    wget "https://github.com/$REPO/releases/download/$VER/$ASSET.sha256"
+    sha256sum -c "$ASSET.sha256"
+  fi
 fi
 
 if [ ! -d "$DEST" ]; then
-    mkdir -p "$DEST"
-    cp "$ASSET" "$DEST"
+  mkdir -p "$DEST"
+  cp "$ASSET" "$DEST"
 fi

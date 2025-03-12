@@ -3,7 +3,7 @@
 # use hostname in /etc/hostname for dhcp
 sed -E "s/eval echo .IF_DHCP_HOSTNAME/cat \/etc\/hostname/" -i "$ROOTFS_PATH"/usr/libexec/ifupdown-ng/dhcp
 
-cat > "$DATAFS_PATH"/etc/network/interfaces <<EOF2
+cat > "$DATAFS_PATH"/etc/network/interfaces << EOF2
 auto lo
 iface lo inet loopback
 EOF2

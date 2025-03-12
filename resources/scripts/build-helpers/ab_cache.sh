@@ -85,7 +85,7 @@ else
         touch "$_CHECKSUMS"
         _ESCSCRIPT="$(echo "$SCRIPT" | sed 's+\/+\\\/+g')"
         sed "/$_ESCSCRIPT/d" -i "$_CHECKSUMS"
-        sha3sum "$SCRIPT" >>"$_CHECKSUMS"
+        sha3sum "$SCRIPT" >> "$_CHECKSUMS"
       fi
       rm -f /tmp/cache.list
     )

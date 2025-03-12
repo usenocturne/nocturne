@@ -7,4 +7,3 @@ chroot_exec adduser nocturne seat
 
 cp -a "$ROOTFS_PATH"/data/user "$DATAFS_PATH"/
 rm -rf "$ROOTFS_PATH"/data/user
-

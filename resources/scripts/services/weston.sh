@@ -11,17 +11,17 @@ command_args="--continue-without-input --config=/etc/weston/weston.ini -- chromi
 # command_user="nocturne"
 
 depend() {
-    need localmount
-    after bootmisc modules
-    provide display-manager
+  need localmount
+  after bootmisc modules
+  provide display-manager
 }
 
 start_pre() {
-    # if [ ! -d /run/user/$(id -u ${command_user}) ]; then
-    #     mkdir -p /run/user/$(id -u ${command_user})
-    #     chown ${command_user}:${command_user} /run/user/$(id -u ${command_user})
-    #     chmod 0700 /run/user/$(id -u ${command_user})
-    # fi
-    # export XDG_RUNTIME_DIR=/run/user/$(id -u ${command_user})
-    export XDG_RUNTIME_DIR=/data/tmp/0-runtime-dir
+  # if [ ! -d /run/user/$(id -u ${command_user}) ]; then
+  #     mkdir -p /run/user/$(id -u ${command_user})
+  #     chown ${command_user}:${command_user} /run/user/$(id -u ${command_user})
+  #     chmod 0700 /run/user/$(id -u ${command_user})
+  # fi
+  # export XDG_RUNTIME_DIR=/run/user/$(id -u ${command_user})
+  export XDG_RUNTIME_DIR=/data/tmp/0-runtime-dir
 }
