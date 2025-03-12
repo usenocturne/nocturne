@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: use colour_echo -COLOUR "Text"
+# usage: use color_echo -COLOUR "Text"
 #        -COLOUR can be before or after the text
 
 # reset console colours

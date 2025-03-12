@@ -1,3 +1,3 @@
 #!/bin/sh
 
-colour_echo ">> Stage 50 - Create images"
+color_echo ">> Stage 50 - Create images"

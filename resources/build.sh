@@ -11,18 +11,16 @@ set -e
 : "${DEFAULT_HOSTNAME:="nocturne"}"
 : "${DEFAULT_ROOT_PASSWORD:="nocturne"}"
 : "${DEFAULT_DROPBEAR_ENABLED:="true"}"
-: "${DEFAULT_KERNEL_MODULES:="*"}"
 : "${DEFAULT_SERVICES:="hostname local modules networking ntpd syslog"}"
 : "${SYSINIT_SERVICES:="rngd"}"
+: "${BOOT_SERVICES:="swap"}"
 : "${ARCH:="aarch64"}"
-: "${DEV:="mdev"}"
 
 : "${SIZE_BOOT_FS:="32M"}"
 : "${SIZE_ROOT_FS:="1408M"}"
 : "${SIZE_DATA:="412M"}"
 
 : "${OUTPUT_PATH:="/output"}"
-: "${INPUT_PATH:="/input"}"
 : "${CACHE_PATH:="/cache"}"
 
 : "${STAGES:="00 10 20 30 40 50"}"
@@ -36,7 +34,6 @@ WORK_PATH="/work"
 IMAGE_PATH="${WORK_PATH}/img"
 export RES_PATH=/resources/
 DEF_STAGE_PATH="${RES_PATH}/scripts/stages"
-export INPUT_PATH
 export BOOTFS_PATH="${WORK_PATH}/boot_fs"
 export ROOTFS_PATH="${WORK_PATH}/root_fs"
 export DATAFS_PATH="${WORK_PATH}/data_fs"
@@ -73,27 +70,9 @@ run_stage_scripts() {
   for S in "${DEF_STAGE_PATH}/$1"/*.sh; do
     _sname=$(basename "$S")
     [ "$_sname" = "*.sh" ] && break
-    colour_echo "  Stage $1 Found $_sname" "$Cyan"
-    if [ -f "$INPUT_PATH"/stages/"$1"/"$_sname" ]; then
-      colour_echo "  Overriding $1 $_sname with user version" "$Blue"
-      # shellcheck disable=SC1090
-      . "$INPUT_PATH"/stages/"$1"/"$_sname"
-      _srun="$_srun $_sname"
-    else
-      # shellcheck disable=SC1090
-      . "$S"
-    fi
-  done
-  # run remaining user stage scripts
-  colour_echo "  Running user Stage $1 scripts" "$Cyan"
-  for S in "${INPUT_PATH}/stages/$1"/*.sh; do
-    _sname=$(basename "$S")
-    [ "$_sname" = "*.sh" ] && break
-    if ! echo "$_srun" | grep -q "$_sname"; then
-      colour_echo "  Found $_sname" "$Cyan"
-      # shellcheck disable=SC1090
-      . "$S"
-    fi
+    [ "$_sname" = "00-echo.sh" ] || color_echo "  Stage $1 - Running $_sname" "$Cyan"
+    # shellcheck disable=SC1090
+    . "$S"
   done
 }
 
@@ -109,4 +88,4 @@ run_stage_scripts() {
 for _stage in ${STAGES}; do
   run_stage_scripts "$_stage"
 done
-colour_echo ">> Finished <<"
+color_echo ">> Finished <<"

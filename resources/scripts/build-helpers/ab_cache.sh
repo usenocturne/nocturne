@@ -34,26 +34,26 @@ _LOCAL_CACHE="${CACHE_PATH}/${ARCH}/$_ARCNAME.tar.gz"
 _CHECKSUMS="${CACHE_PATH}/${ARCH}/checksums.cache"
 
 if [ -n "${CACHE_PATH}" ]; then
-  if echo "$SCRIPT" | grep -qE "^$INPUT_PATH|^$RES_PATH"; then
-    colour_echo "Checking cache checksum for $SCRIPT" -Cyan
+  if echo "$SCRIPT" | grep -qE "^$RES_PATH"; then
+    color_echo "Checking cache checksum for $SCRIPT" -Cyan
     _DO_CHECKSUM="yes"
     if [ -f "$_CHECKSUMS" ]; then
       grep "$SCRIPT" "$_CHECKSUMS" | sha3sum -c && UP2DATE="YES"
     fi
   else
-    colour_echo "Not checking checksum for: $SCRIPT, not in $INPUT_PATH or $RES_PATH" -Cyan
+    color_echo "Not checking checksum for: $SCRIPT, not in $RES_PATH" -Cyan
     UP2DATE="YES"
   fi
 fi
 
 if [ -f "$_LOCAL_CACHE" ] && [ -n "$UP2DATE" ]; then
-  colour_echo "Unpacking: $_LOCAL_CACHE" -Cyan
+  color_echo "Unpacking: $_LOCAL_CACHE" -Cyan
   mkdir -p "$_DIRNAME"
   tar -xf "$_LOCAL_CACHE" -I pigz -C "$_DIRNAME"
 else
   # run script if result not cached
   if [ "$SCRIPT" != "none" ]; then
-    colour_echo "  cache miss, running $SCRIPT" -Red
+    color_echo "  cache miss, running $SCRIPT" -Red
     if [ -n "$CHROOT" ]; then
       if [ -n "$_DO_CHECKSUM" ]; then
         eval chroot_exec -c "$SCRIPT" "$ARGS"
@@ -69,13 +69,13 @@ else
 
   if [ -n "${CACHE_PATH}" ]; then
     mkdir -p "$(dirname "$_LOCAL_CACHE")"
-    colour_echo "  creating cache archive  $_LOCAL_CACHE" -Red
+    color_echo "  creating cache archive  $_LOCAL_CACHE" -Red
     (
       cd "$_DIRNAME"
       # use find to get names to allow for wildcards
       find ./ -maxdepth 1 -name "$_CNAME" -fprint /tmp/cache.list
       if [ ! -s /tmp/cache.list ]; then
-        colour_echo "  ERR: $_DIRNAME/$_CNAME not found" -Red
+        color_echo "  ERR: $_DIRNAME/$_CNAME not found" -Red
         rm -f /tmp/cache.list
         exit 1
       fi

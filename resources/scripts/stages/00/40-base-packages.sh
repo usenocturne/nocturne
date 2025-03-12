@@ -6,7 +6,6 @@ apk --root "$ROOTFS_PATH" --update-cache --initdb --keys-dir=/usr/share/apk/keys
   ifupdown-ng mkinitfs partx rng-tools-extra tzdata util-linux
 
 if chroot_exec apk update; then
-  colour_echo "   applying updates"
   chroot_exec apk upgrade --available
 fi
 

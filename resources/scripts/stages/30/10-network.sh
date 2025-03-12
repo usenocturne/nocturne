@@ -27,6 +27,6 @@ EOF
 mkdir -p "$DATAFS_PATH"/etc/dnsmasq
 sed -i 's|/var/lib/misc/|/data/etc/dnsmasq/|' "$ROOTFS_PATH"/etc/init.d/dnsmasq
 
-chroot_exec rc-update add dnsmasq default
+DEFAULT_SERVICES="${DEFAULT_SERVICES} dnsmasq"
 
 

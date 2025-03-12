@@ -1,8 +1,7 @@
 #!/bin/sh
 
-# dropbear
 chroot_exec apk add dropbear
-chroot_exec rc-update add dropbear default
+
 rm -rf "$ROOTFS_PATH"/etc/dropbear
 mkdir -p "$DATAFS_PATH"/etc/dropbear
 ln -s /data/etc/dropbear "$ROOTFS_PATH"/etc/
@@ -15,3 +14,5 @@ if [ "$DEFAULT_DROPBEAR_ENABLED" != "true" ]; then
 fi
 
 cp "$ROOTFS_PATH"/etc/conf.d/dropbear_org "$DATAFS_PATH"/etc/dropbear/dropbear.conf
+
+DEFAULT_SERVICES="${DEFAULT_SERVICES} dropbear"

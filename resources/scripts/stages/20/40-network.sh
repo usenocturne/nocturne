@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# interface
 # use hostname in /etc/hostname for dhcp
 sed -E "s/eval echo .IF_DHCP_HOSTNAME/cat \/etc\/hostname/" -i "$ROOTFS_PATH"/usr/libexec/ifupdown-ng/dhcp
 
