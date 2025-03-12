@@ -165,7 +165,7 @@ export function useNavigation({
             item.classList.contains("transition-transform")
         );
 
-        const delta = vertical ? e.deltaY : e.deltaX;
+        const delta = e.deltaX;
         const startIndex =
           scaledItem !== -1 ? scaledItem : delta > 0 ? 0 : items.length - 1;
 
@@ -199,14 +199,14 @@ export function useNavigation({
         const container = containerRef.current;
         const scrollAmount = vertical ? 100 : itemWidth + itemGap;
 
+        const direction = Math.sign(e.deltaX);
+
         if (vertical) {
-          const direction = Math.sign(e.deltaY);
           container.scrollBy({
             top: scrollAmount * direction,
             behavior: "smooth",
           });
         } else {
-          const direction = Math.sign(e.deltaX);
           container.scrollBy({
             left: scrollAmount * direction,
             behavior: "smooth",
@@ -218,25 +218,13 @@ export function useNavigation({
       let newIndex = selectedIndex;
       const maxIndex = items.length - 1;
 
-      if (vertical) {
-        if (e.deltaY > 0) {
-          if (selectedIndex < maxIndex) {
-            newIndex = selectedIndex + 1;
-          }
-        } else if (e.deltaY < 0) {
-          if (selectedIndex > 0) {
-            newIndex = selectedIndex - 1;
-          }
+      if (e.deltaX > 0) {
+        if (selectedIndex < maxIndex) {
+          newIndex = selectedIndex + 1;
         }
-      } else {
-        if (e.deltaX > 0) {
-          if (selectedIndex < maxIndex) {
-            newIndex = selectedIndex + 1;
-          }
-        } else if (e.deltaX < 0) {
-          if (selectedIndex > 0) {
-            newIndex = selectedIndex - 1;
-          }
+      } else if (e.deltaX < 0) {
+        if (selectedIndex > 0) {
+          newIndex = selectedIndex - 1;
         }
       }
 
@@ -263,10 +251,7 @@ export function useNavigation({
           onItemFocus(newIndex, targetItem);
           scrollItemIntoView(targetItem);
         }
-      } else if (
-        selectedIndex === maxIndex &&
-        ((vertical && e.deltaY > 0) || (!vertical && e.deltaX > 0))
-      ) {
+      } else if (selectedIndex === maxIndex && e.deltaX > 0) {
         const lastItem = items[maxIndex];
         if (lastItem) {
           lastItem.classList.add(
