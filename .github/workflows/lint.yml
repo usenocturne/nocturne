@@ -6,16 +6,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-linters:
-    name: Run linters
+  lint:
+    name: Run lint
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install dependencies
-        run: apt-get install -y shfmt
+      - name: Install shfmt
+        uses: mfinelli/setup-shfmt@v3
 
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
