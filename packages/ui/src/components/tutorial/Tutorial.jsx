@@ -128,6 +128,7 @@ const Tutorial = ({ onComplete }) => {
     enableKeyboardNavigation: true,
     enableItemSelection: false,
     enableScrollTracking: false,
+    enableEscapeKey: true,
     onEscape: () => {
       if (screens[currentScreen].continueType === "backPress") {
         handleScreenTransition(currentScreen + 1);
@@ -141,6 +142,13 @@ const Tutorial = ({ onComplete }) => {
 
     const handleKeyDown = (e) => {
       if (
+        screens[currentScreen].continueType === "backPress" &&
+        e.key === "Escape"
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleScreenTransition(currentScreen + 1);
+      } else if (
         screens[currentScreen].continueType === "topButtonPress" &&
         validPresetButtons.includes(e.key)
       ) {
@@ -167,11 +175,11 @@ const Tutorial = ({ onComplete }) => {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
     window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
       window.removeEventListener("keyup", handleKeyUp);
       if (holdTimer) {
         clearTimeout(holdTimer);
