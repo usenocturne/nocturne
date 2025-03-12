@@ -71,7 +71,7 @@ const Tutorial = ({ onComplete }) => {
     {
       header: "Controls",
       subtext:
-        "While in the Now Playing tab, turn the dial to adjust volume. Scroll right to continue.",
+        "Turn the dial in the Now Playing tab to adjust volume. Scroll right to continue.",
       continueType: "scroll",
     },
     {
