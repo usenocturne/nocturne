@@ -47,7 +47,7 @@ This software was made possible only through the following individuals and open 
 - [JoeyEamigh/nixos-superbird](https://github.com/JoeyEamigh/nixos-superbird)
 - [raspi-alpine/builder](https://gitlab.com/raspi-alpine/builder) (by [Benjamin Böhmke](https://gitlab.com/bboehmke) and [Duncan Bellamy](https://gitlab.com/a16bitsysop)) which is what this builder is based on
   - Nocturne's Alpine image would not be easy without raspi-alpine!
-- [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for providing a Car Thing
+- [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for providing Brandon a Car Thing
 - [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk), and modifying [aml-imgpack](https://github.com/bishopdynamics/aml-imgpack)
 - [Thing Labs' fork of superbird-tool](https://github.com/thinglabsoss/superbird-tool), for their contributions on the original superbird-tool
 

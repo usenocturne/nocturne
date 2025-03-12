@@ -43,6 +43,7 @@ export DATAFS_PATH="${WORK_PATH}/data_fs"
 Red='-Red'
 # shellcheck disable=SC2034
 Yellow='-Yellow'
+# shellcheck disable=SC2034
 Blue='-Blue'
 #Purple='-Purple'
 Cyan='-Cyan'
@@ -66,7 +67,6 @@ make_image() {
 
 # run stage scripts
 run_stage_scripts() {
-  _srun=""
   for S in "${DEF_STAGE_PATH}/$1"/*.sh; do
     _sname=$(basename "$S")
     [ "$_sname" = "*.sh" ] && break
