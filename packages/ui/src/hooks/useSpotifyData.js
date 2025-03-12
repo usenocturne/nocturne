@@ -572,6 +572,23 @@ export function useSpotifyData(
   }, [albumChangeEvent]);
 
   useEffect(() => {
+    if (
+      initialDataLoaded &&
+      currentlyPlayingAlbum?.id &&
+      recentAlbums.length > 0
+    ) {
+      if (recentAlbums[0]?.id !== currentlyPlayingAlbum.id) {
+        setRecentAlbums((prevAlbums) => {
+          const filteredAlbums = prevAlbums.filter(
+            (album) => album.id !== currentlyPlayingAlbum.id
+          );
+          return [currentlyPlayingAlbum, ...filteredAlbums].slice(0, 50);
+        });
+      }
+    }
+  }, [initialDataLoaded, currentlyPlayingAlbum, recentAlbums]);
+
+  useEffect(() => {
     if (accessToken && !initialDataLoaded) {
       fetchRecentlyPlayed();
       fetchUserPlaylists();
