@@ -85,10 +85,10 @@ fatwrite mmc 2:1 0x10000 uboot.dat 0x400
 # boot
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 setenv bootargs "init=/sbin/init root=/dev/mmcblk0p2 ro rootwait rootfstype=ext4 ramoops.pstore_en=1 ramoops.record_size=0x8000 ramoops.console_size=0x4000 console=ttyS0,115200n8 no_console_suspend earlycon=aml-uart,0xff803000 logo=osd0,loaded,0x1f800000 fb_width=480 fb_height=800 vout=panel,enable panel_type=lcd_8 frac_rate_policy=1 osd_reverse=0 video_reverse=0 irq_check_en=0 uboot_version=mainline"
-# setexpr bootargs sub " root=[^ ]+" " root=/dev/mmcblk0p${boot_partition}" "${bootargs}"
+setexpr bootargs sub " root=[^ ]+" " root=/dev/mmcblk0p${boot_partition}" "${bootargs}"
 
-ext4load mmc 2:2 0x1000000 /boot/superbird.dtb
-ext4load mmc 2:2 0x1080000 /boot/Image
+ext4load mmc 2:${boot_partition} 0x1000000 /boot/superbird.dtb
+ext4load mmc 2:${boot_partition} 0x1080000 /boot/Image
 
 booti 0x1080000 - 0x1000000
 
