@@ -58,7 +58,7 @@ if itest.b *${addr_boot_counter} -ge ${boot_limit}; then
   mw.b ${addr_boot_counter} 0
 
   setexpr.b boot_partition *${addr_boot_partition}
-  echo "Switch active partition to ${boot_partition_base}${boot_partition}"
+  echo "Switch active partition to ${boot_partition}"
 else
   # increase boot_count
   setexpr.b tmp *${addr_boot_counter} + 1
