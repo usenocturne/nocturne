@@ -6,6 +6,6 @@ the GitHub: https://github.com/usenocturne/nocturne-image
 If you are experienced and you want to change something, you may
 remount the rootfs as read-write with: mount -o remount,rw /
 
-You can use the wingman utility to adjust device stuff, such
-as A/B data and more. https://github.com/usenocturne/wingman
+You can set the active boot slot using the uboot_tool utility,
+or flash an image to the inactive slot using the ab_flash utility.
 

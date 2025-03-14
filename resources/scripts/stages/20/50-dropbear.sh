@@ -1,6 +1,6 @@
 #!/bin/sh
 
-chroot_exec apk add dropbear
+chroot_exec apk add dropbear openssh-sftp-server
 
 rm -rf "$ROOTFS_PATH"/etc/dropbear
 mkdir -p "$DATAFS_PATH"/etc/dropbear

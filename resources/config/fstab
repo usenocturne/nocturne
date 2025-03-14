@@ -1,8 +1,8 @@
 /dev/mmcblk0p1  /uboot      vfat     defaults,ro         0 2
-/dev/mmcblk0p4  none        swap     sw                  0 0
-/dev/mmcblk0p5  /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
-/dev/mmcblk0p6  /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
-/dev/mmcblk0p7  /data       ext4     defaults            0 2
+/dev/mmcblk0p2  /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
+/dev/mmcblk0p3  /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
+/dev/mmcblk0p4  /data       ext4     defaults            0 2
+/data/swapfile  none        swap     sw                  0 0
 
 /data/root      /root       none     defaults,bind       0 0
 /data/var/lib   /var/lib    none     defaults,bind       0 0

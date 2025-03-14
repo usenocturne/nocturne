@@ -1,0 +1,55 @@
+arch=arm
+baudrate=115200
+board=u200
+board_name=u200
+cpu=armv8
+dfu_alt_info=fitimage ram 0x08080000 0x4000000
+fdtoverlay_addr_r=0x01000000
+kernel_comp_addr_r=0x0d080000
+kernel_comp_size=0x2000000
+loadaddr=0x1000000
+pxefile_addr_r=0x01080000
+ramdisk_addr_r=0x13000000
+soc=meson
+stderr=vidconsole,serial
+stdin=usbkbd,serial
+stdout=vidconsole,serial
+vendor=amlogic
+
+# board configuration
+baudrate=115200
+stderr=serial
+stdin=serial
+stdout=serial
+
+# display setup
+display_bpp=16
+display_color_bg=0
+display_color_fg=0xffff
+display_color_index=16
+display_height=800
+display_init=1
+display_layer=osd0
+display_stack=boe
+display_width=480
+fb_addr=0x1f800000
+fb_height=800
+fb_width=480
+frac_rate_policy=1
+osd_reverse=0
+outputmode=panel
+panel_type=lcd_8
+video_reverse=0
+
+# dtb config
+dtb_mem_addr=0x1000000
+fdt_high=0x20000000
+
+# general configuration
+loadaddr=1080000
+lock=10001000
+silent=off
+upgrade_step=0
+
+# boot
+bootcmd=fatload mmc 2:1 0x1000000 boot.scr; source 0x1000000;

@@ -16,9 +16,8 @@ set -e
 : "${BOOT_SERVICES:="swap"}"
 : "${ARCH:="aarch64"}"
 
-: "${SIZE_BOOT_FS:="32M"}"
-: "${SIZE_ROOT_FS:="1408M"}"
-: "${SIZE_DATA:="412M"}"
+: "${SIZE_ROOT_FS:="1536M"}"
+: "${SIZE_DATA:="480M"}"
 
 : "${OUTPUT_PATH:="/output"}"
 : "${CACHE_PATH:="/cache"}"
@@ -34,7 +33,6 @@ WORK_PATH="/work"
 IMAGE_PATH="${WORK_PATH}/img"
 export RES_PATH=/resources/
 DEF_STAGE_PATH="${RES_PATH}/scripts/stages"
-export BOOTFS_PATH="${WORK_PATH}/boot_fs"
 export ROOTFS_PATH="${WORK_PATH}/root_fs"
 export DATAFS_PATH="${WORK_PATH}/data_fs"
 
