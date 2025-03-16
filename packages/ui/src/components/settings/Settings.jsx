@@ -15,8 +15,8 @@ import {
 } from "../common/icons";
 import AccountInfo from "./AccountInfo";
 import SoftwareUpdate from "./SoftwareUpdate";
-import WiFiNetworks from "./Network/WiFiNetworks";
-import BluetoothDevices from "./Network/BluetoothDevices";
+import WiFiNetworks from "./network/WiFiNetworks";
+import BluetoothDevices from "./network/BluetoothDevices";
 
 const settingsStructure = {
   general: {
