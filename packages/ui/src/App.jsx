@@ -6,11 +6,14 @@ import Tutorial from "./components/tutorial/Tutorial";
 import Home from "./pages/Home";
 import ContentView from "./components/content/ContentView";
 import NowPlaying from "./components/player/NowPlaying";
+import BluetoothPairingModal from "./components/bluetooth/BluetoothPairingModal";
+import BluetoothNetworkModal from "./components/bluetooth/BluetoothNetworkModal";
 import { useAuth } from "./hooks/useAuth";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { useSpotifyPlayerState } from "./hooks/useSpotifyPlayerState";
+import { useBluetooth } from "./hooks/useBluetooth";
 
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
@@ -21,6 +24,17 @@ function App() {
 
   const { isAuthenticated, accessToken, isLoading: authIsLoading } = useAuth();
   const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
+  const {
+    pairingRequest,
+    isConnecting,
+    showNetworkPrompt,
+    lastConnectedDevice,
+    acceptPairing,
+    denyPairing,
+    setDiscoverable,
+    disconnectDevice,
+    enableNetworking
+  } = useBluetooth();
 
   const {
     currentColor1,
@@ -97,6 +111,20 @@ function App() {
     currentlyPlayingAlbum,
   ]);
 
+  useEffect(() => {
+    if (!isConnected) {
+      setDiscoverable(true);
+    } else {
+      setDiscoverable(false);
+    }
+  }, [isConnected, setDiscoverable]);
+
+  useEffect(() => {
+    if (showNetworkPrompt) {
+      enableNetworking();
+    }
+  }, [showNetworkPrompt, enableNetworking]);
+
   const handleAuthSuccess = () => {
     const storedAccessToken = localStorage.getItem("spotifyAccessToken");
     const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
@@ -141,6 +169,12 @@ function App() {
     setViewingContent(null);
     setActiveSection("nowPlaying");
     refreshPlaybackState();
+  };
+
+  const handleNetworkCancel = () => {
+    if (lastConnectedDevice) {
+      disconnectDevice(lastConnectedDevice.address);
+    }
   };
 
   let content;
@@ -216,6 +250,18 @@ function App() {
         <div className="relative z-10">
           {content}
           {!isConnected && showNoNetwork && <NetworkScreen />}
+          <BluetoothPairingModal
+            pairingRequest={pairingRequest}
+            isConnecting={isConnecting}
+            onAccept={acceptPairing}
+            onDeny={denyPairing}
+          />
+          <BluetoothNetworkModal
+            show={showNetworkPrompt && !isConnected}
+            deviceName={lastConnectedDevice?.name}
+            onCancel={handleNetworkCancel}
+            isConnecting={isConnecting}
+          />
         </div>
       </main>
     </Router>
