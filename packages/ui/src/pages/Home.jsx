@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import Sidebar from "../components/common/navigation/Sidebar";
 import HorizontalScroll from "../components/common/navigation/HorizontalScroll";
-import Redirect from "../components/common/navigation/Redirect";
+import Settings from "../components/settings/Settings";
 import { useGradientState } from "../hooks/useGradientState";
 import { useNavigation } from "../hooks/useNavigation";
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
+import DonationQRModal from "../components/common/modals/DonationQRModal";
 
 export default function Home({
   accessToken,
@@ -28,6 +29,11 @@ export default function Home({
   const itemWidth = 290;
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
   const { playDJMix } = useSpotifyPlayerControls(accessToken);
+  const [showDonationModal, setShowDonationModal] = useState(false);
+
+  const handleOpenDonationModal = () => {
+    setShowDonationModal(true);
+  };
 
   const { scrollByAmount } = useNavigation({
     containerRef: scrollContainerRef,
@@ -62,6 +68,8 @@ export default function Home({
     } else if (activeSection === "nowPlaying" && currentlyPlayingAlbum) {
       const albumImage = currentlyPlayingAlbum?.images?.[0]?.url;
       updateGradientColors(albumImage || null, "nowPlaying");
+    } else if (activeSection === "settings") {
+      updateGradientColors(null, "settings");
     }
 
     localStorage.setItem("lastActiveSection", activeSection);
@@ -633,6 +641,14 @@ export default function Home({
         return renderArtistsSection();
       case "radio":
         return renderRadioSection();
+      case "settings":
+        return (
+          <Settings
+            accessToken={accessToken}
+            onOpenDonationModal={handleOpenDonationModal}
+            setActiveSection={setActiveSection}
+          />
+        );
       default:
         return (
           <div className="flex items-center justify-center h-full text-white/50 text-2xl">
@@ -657,6 +673,10 @@ export default function Home({
 
         <div className="h-screen overflow-y-auto">{renderContent()}</div>
       </div>
+
+      {showDonationModal && (
+        <DonationQRModal onClose={() => setShowDonationModal(false)} />
+      )}
     </div>
   );
 }
