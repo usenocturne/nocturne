@@ -15,14 +15,10 @@ stderr=vidconsole,serial
 stdin=usbkbd,serial
 stdout=vidconsole,serial
 vendor=amlogic
-
-# board configuration
 baudrate=115200
 stderr=serial
 stdin=serial
 stdout=serial
-
-# display setup
 display_bpp=16
 display_color_bg=0
 display_color_fg=0xffff
@@ -40,16 +36,10 @@ osd_reverse=0
 outputmode=panel
 panel_type=lcd_8
 video_reverse=0
-
-# dtb config
 dtb_mem_addr=0x1000000
 fdt_high=0x20000000
-
-# general configuration
 loadaddr=1080000
 lock=10001000
 silent=off
 upgrade_step=0
-
-# boot
 bootcmd=fatload mmc 2:1 0x1000000 boot.scr; source 0x1000000;

@@ -12,7 +12,11 @@ losetup -o 4194304 /dev/loop0 "$IMAGE_PATH"/boot.bin
 mount -t vfat /dev/loop0 /mnt/bootbin
 
 rm -f /mnt/bootbin/*
-cp "$RES_PATH"/flash/u-boot.bin "$RES_PATH"/flash/fastboot.bin /mnt/bootbin/
+cp "$RES_PATH"/flash/fastboot.bin /mnt/bootbin/
+
+curl -LO https://nightly.link/usenocturne/u-boot/workflows/build/master/u-boot.zip
+unzip u-boot.zip -d /mnt/bootbin/
+
 mkimage -A arm64 -T script -C none -n "Boot script" -d "$RES_PATH"/flash/boot.cmd /mnt/bootbin/boot.scr
 
 ls -C /mnt/bootbin/
