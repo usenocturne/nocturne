@@ -13,6 +13,7 @@ import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { useSpotifyPlayerState } from "./hooks/useSpotifyPlayerState";
+import { useSpotifyPlayerControls } from "./hooks/useSpotifyPlayerControls";
 import { useBluetooth } from "./hooks/useBluetooth";
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
     return localStorage.getItem("lastActiveSection") || "recents";
   });
   const [viewingContent, setViewingContent] = useState(null);
+  const playerControls = useSpotifyPlayerControls();
 
   const { isAuthenticated, accessToken, isLoading: authIsLoading } = useAuth();
   const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
@@ -33,7 +35,7 @@ function App() {
     denyPairing,
     setDiscoverable,
     disconnectDevice,
-    enableNetworking
+    enableNetworking,
   } = useBluetooth();
 
   const {
@@ -204,6 +206,7 @@ function App() {
         currentlyPlayingTrackUri={currentPlayback?.item?.uri}
         radioMixes={radioMixes}
         updateGradientColors={updateGradientColors}
+        playerControls={playerControls}
       />
     );
   } else {

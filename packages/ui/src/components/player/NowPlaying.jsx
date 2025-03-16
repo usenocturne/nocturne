@@ -14,6 +14,7 @@ import {
   ForwardIcon,
   MenuIcon,
   LyricsIcon,
+  DJIcon,
 } from "../common/icons";
 
 const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
@@ -25,6 +26,8 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
   const lastUpdateTimeRef = useRef(Date.now());
   const currentTrackIdRef = useRef(null);
   const containerRef = useRef(null);
+  const isDJPlaylist =
+    currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
   const { updateGradientColors } = useGradientState();
 
   const {
@@ -36,6 +39,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     checkIsTrackLiked,
     likeTrack,
     unlikeTrack,
+    sendDJSignal,
   } = useSpotifyPlayerControls(accessToken);
 
   const handlePlayPause = async () => {
@@ -325,6 +329,11 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
         </div>
 
         <div className="flex items-center">
+          {isDJPlaylist && (
+            <div onClick={sendDJSignal}>
+              <DJIcon className="w-14 h-14 fill-white/60 mr-4 mb-1" />
+            </div>
+          )}
           <Menu as="div" className="relative inline-block text-left">
             <MenuButton className="focus:outline-none">
               <MenuIcon className="w-14 h-14 fill-white/60" />

@@ -4,6 +4,7 @@ import HorizontalScroll from "../components/common/navigation/HorizontalScroll";
 import Redirect from "../components/common/navigation/Redirect";
 import { useGradientState } from "../hooks/useGradientState";
 import { useNavigation } from "../hooks/useNavigation";
+import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
 
 export default function Home({
   accessToken,
@@ -26,6 +27,7 @@ export default function Home({
   const hasScrolledToCurrentAlbumRef = useRef(false);
   const itemWidth = 290;
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
+  const { playDJMix } = useSpotifyPlayerControls(accessToken);
 
   const { scrollByAmount } = useNavigation({
     containerRef: scrollContainerRef,
@@ -511,6 +513,16 @@ export default function Home({
             <div
               className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 cursor-pointer"
               style={{ width: 280, height: 280 }}
+              onClick={() =>
+                playDJMix().then((success) => {
+                  if (success) {
+                    setTimeout(() => {
+                      refreshPlaybackState();
+                      setActiveSection("nowPlaying");
+                    }, 500);
+                  }
+                })
+              }
             >
               <img
                 src="/images/radio-cover/dj.webp"

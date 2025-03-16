@@ -447,6 +447,108 @@ export function useSpotifyPlayerControls(accessToken) {
     [accessToken]
   );
 
+  const playDJMix = useCallback(async () => {
+    if (!accessToken) return false;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const deviceResponse = await fetch(
+        "https://api.spotify.com/v1/me/player",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      let deviceId = null;
+      if (deviceResponse.status !== 204) {
+        const deviceData = await deviceResponse.json();
+        deviceId = deviceData.device?.id;
+      }
+
+      const response = await fetch(
+        `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
+        {
+          method: "POST",
+          headers: {
+            "accept-language": "en",
+            authorization: `Bearer ${accessToken}`,
+            "content-type": "application/x-www-form-urlencoded",
+          },
+          body: '{"command": {"endpoint": "play", "context": {"entity_uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "url": "hm:\\/\\/lexicon-session-provider\\/context-resolve\\/v2\\/session?contextUri=spotify:playlist:37i9dQZF1EYkqdzj48dyYq"}}}',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Error playing DJ mix:", err);
+      setError(err.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accessToken]);
+
+  const sendDJSignal = useCallback(async () => {
+    if (!accessToken) return false;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const deviceResponse = await fetch(
+        "https://api.spotify.com/v1/me/player",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      let deviceId = null;
+      if (deviceResponse.status !== 204) {
+        const deviceData = await deviceResponse.json();
+        deviceId = deviceData.device?.id;
+      }
+
+      if (!deviceId) {
+        throw new Error("No active device found");
+      }
+
+      const response = await fetch(
+        `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
+        {
+          method: "POST",
+          headers: {
+            "accept-language": "en",
+            authorization: `Bearer ${accessToken}`,
+            "content-type": "application/x-www-form-urlencoded",
+          },
+          body: '{"command": {"endpoint": "signal", "signal_id": "jump"}}',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Error sending DJ signal:", err);
+      setError(err.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accessToken]);
+
   return {
     playTrack,
     pausePlayback,
@@ -459,6 +561,8 @@ export function useSpotifyPlayerControls(accessToken) {
     checkIsTrackLiked,
     likeTrack,
     unlikeTrack,
+    playDJMix,
+    sendDJSignal,
     isLoading,
     error,
   };
