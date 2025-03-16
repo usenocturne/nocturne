@@ -5,6 +5,11 @@ import {
   refreshAccessToken,
 } from "../services/authService";
 
+const authInitializationState = {
+  initializing: false,
+  refreshing: false
+};
+
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessToken, setAccessToken] = useState(null);
@@ -16,11 +21,15 @@ export function useAuth() {
   const pollingIntervalRef = useRef(null);
   const refreshTimerRef = useRef(null);
   const currentDeviceCodeRef = useRef(null);
+  const initCalledRef = useRef(false);
 
   const refreshTokens = useCallback(async () => {
     try {
       const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
       if (!storedRefreshToken) return false;
+
+      if (authInitializationState.refreshing) return false;
+      authInitializationState.refreshing = true;
 
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
@@ -49,14 +58,17 @@ export function useAuth() {
 
         scheduleTokenRefresh(expiryDate);
 
+        authInitializationState.refreshing = false;
         return true;
       }
+      authInitializationState.refreshing = false;
       return false;
     } catch (err) {
       console.error("Token refresh failed:", err);
       if (err.message?.includes("invalid_grant")) {
         logout();
       }
+      authInitializationState.refreshing = false;
       return false;
     }
   }, []);
@@ -112,6 +124,9 @@ export function useAuth() {
 
   useEffect(() => {
     const initAuthState = async () => {
+      if (initCalledRef.current) return;
+      initCalledRef.current = true;
+
       const storedAccessToken = localStorage.getItem("spotifyAccessToken");
       const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
 
@@ -141,6 +156,9 @@ export function useAuth() {
 
   const initAuth = useCallback(async () => {
     try {
+      if (authInitializationState.initializing) return null;
+      authInitializationState.initializing = true;
+
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
@@ -153,10 +171,12 @@ export function useAuth() {
       const auth = await oauthAuthorize();
       setAuthData(auth);
 
+      authInitializationState.initializing = false;
       return auth;
     } catch (error) {
       setError("Failed to initialize authentication");
       console.error("Auth initialization failed:", error);
+      authInitializationState.initializing = false;
       return null;
     } finally {
       setIsLoading(false);
@@ -165,7 +185,7 @@ export function useAuth() {
 
   const pollAuthStatus = useCallback(
     (deviceCode) => {
-      if (isAuthenticated) return () => {};
+      if (isAuthenticated) return () => { };
 
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);

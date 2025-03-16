@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useAuth } from "../../hooks/useAuth";
 import NocturneIcon from "../common/icons/NocturneIcon";
@@ -7,6 +7,7 @@ import QRCodeDisplay from "./QRCodeDisplay";
 const AuthScreen = ({ onAuthSuccess }) => {
   const [error, setError] = useState(null);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const authAttemptedRef = useRef(false);
 
   const { authData, isLoading, initAuth, pollAuthStatus, isAuthenticated } =
     useAuth();
@@ -23,7 +24,9 @@ const AuthScreen = ({ onAuthSuccess }) => {
   useEffect(() => {
     updateGradientColors(null, "auth");
 
-    if (!authInitialized && !isAuthenticated) {
+    if (!authInitialized && !isAuthenticated && !authAttemptedRef.current) {
+      authAttemptedRef.current = true;
+
       const startAuth = async () => {
         try {
           const storedAccessToken = localStorage.getItem("spotifyAccessToken");
@@ -97,8 +100,8 @@ const AuthScreen = ({ onAuthSuccess }) => {
               error
                 ? error
                 : authData === null
-                ? "Failed to generate QR code"
-                : null
+                  ? "Failed to generate QR code"
+                  : null
             }
           />
         </div>
