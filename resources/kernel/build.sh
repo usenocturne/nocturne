@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 
 if [ ! "$(docker volume inspect nix-store 2> /dev/null)" ]; then
   docker volume create nix-store
