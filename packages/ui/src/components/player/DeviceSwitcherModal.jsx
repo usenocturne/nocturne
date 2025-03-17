@@ -15,6 +15,7 @@ import {
   CarIcon
 } from "../common/icons";
 import { generateRandomString } from "../../utils/helpers";
+import RefreshIcon from "../common/icons/RefreshIcon";
 
 const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
   const [devices, setDevices] = useState([]);
@@ -94,6 +95,10 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
     }
   };
 
+  const handleRefresh = () => {
+    fetchDevices();
+  };
+
   const getDeviceIcon = (type) => {
     type = type?.toLowerCase() || "";
     if (type.includes("computer") || type.includes("laptop")) {
@@ -126,12 +131,22 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
           >
             <div>
               <div className="text-center">
-                <DialogTitle
-                  as="h3"
-                  className="text-[36px] font-[560] tracking-tight text-white"
-                >
-                  Switch Device
-                </DialogTitle>
+                <div className="flex items-center justify-between px-6">
+                  <div className="w-8"></div>
+                  <DialogTitle
+                    as="h3"
+                    className="text-[36px] font-[560] tracking-tight text-white"
+                  >
+                    Switch Device
+                  </DialogTitle>
+                  <button
+                    onClick={handleRefresh}
+                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                    disabled={isLoading}
+                  >
+                    <RefreshIcon className={`w-6 h-6 text-white/60 ${isLoading ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
                 {isLoading ? (
                   <div className="mt-2">
                     <p className="text-[28px] font-[560] tracking-tight text-white/60">

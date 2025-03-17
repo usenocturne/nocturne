@@ -8,12 +8,13 @@ import ContentView from "./components/content/ContentView";
 import NowPlaying from "./components/player/NowPlaying";
 import BluetoothPairingModal from "./components/bluetooth/BluetoothPairingModal";
 import BluetoothNetworkModal from "./components/bluetooth/BluetoothNetworkModal";
+import DeviceSwitcherModal from "./components/player/DeviceSwitcherModal";
 import { useAuth } from "./hooks/useAuth";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { useSpotifyPlayerState } from "./hooks/useSpotifyPlayerState";
-import { useSpotifyPlayerControls } from "./hooks/useSpotifyPlayerControls";
+import { useSpotifyPlayerControls, DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
 import { useBluetooth } from "./hooks/useBluetooth";
 
 function App() {
@@ -22,7 +23,7 @@ function App() {
     return localStorage.getItem("lastActiveSection") || "recents";
   });
   const [viewingContent, setViewingContent] = useState(null);
-  const playerControls = useSpotifyPlayerControls();
+  const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
 
   const { isAuthenticated, accessToken, isLoading: authIsLoading } = useAuth();
   const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
@@ -55,6 +56,20 @@ function App() {
     error: playerError,
     refreshPlaybackState,
   } = useSpotifyPlayerState(accessToken);
+
+  const handleOpenDeviceSwitcher = () => {
+    setIsDeviceSwitcherOpen(true);
+  };
+
+  const handleCloseDeviceSwitcher = () => {
+    setIsDeviceSwitcherOpen(false);
+  };
+
+  const deviceSwitcherContextValue = {
+    openDeviceSwitcher: handleOpenDeviceSwitcher
+  };
+
+  const playerControls = useSpotifyPlayerControls(accessToken);
 
   const {
     recentAlbums,
@@ -193,6 +208,7 @@ function App() {
         currentPlayback={currentPlayback}
         onClose={() => setActiveSection("recents")}
         updateGradientColors={updateGradientColors}
+        onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
       />
     );
   } else if (viewingContent) {
@@ -207,6 +223,7 @@ function App() {
         radioMixes={radioMixes}
         updateGradientColors={updateGradientColors}
         playerControls={playerControls}
+        onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
       />
     );
   } else {
@@ -230,44 +247,52 @@ function App() {
         refreshPlaybackState={refreshPlaybackState}
         onOpenContent={handleOpenContent}
         updateGradientColors={updateGradientColors}
+        onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
       />
     );
   }
 
   return (
-    <Router>
-      <main className="overflow-hidden relative min-h-screen rounded-2xl">
-        <div
-          style={{
-            backgroundImage: generateMeshGradient([
-              currentColor1,
-              currentColor2,
-              currentColor3,
-              currentColor4,
-            ]),
-            transition: "background-image 0.5s linear",
-          }}
-          className="absolute inset-0 bg-black"
-        />
+    <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
+      <Router>
+        <main className="overflow-hidden relative min-h-screen rounded-2xl">
+          <div
+            style={{
+              backgroundImage: generateMeshGradient([
+                currentColor1,
+                currentColor2,
+                currentColor3,
+                currentColor4,
+              ]),
+              transition: "background-image 0.5s linear",
+            }}
+            className="absolute inset-0 bg-black"
+          />
 
-        <div className="relative z-10">
-          {content}
-          {!isConnected && showNoNetwork && <NetworkScreen />}
-          <BluetoothPairingModal
-            pairingRequest={pairingRequest}
-            isConnecting={isConnecting}
-            onAccept={acceptPairing}
-            onDeny={denyPairing}
-          />
-          <BluetoothNetworkModal
-            show={showNetworkPrompt && !isConnected}
-            deviceName={lastConnectedDevice?.name}
-            onCancel={handleNetworkCancel}
-            isConnecting={isConnecting}
-          />
-        </div>
-      </main>
-    </Router>
+          <div className="relative z-10">
+            {content}
+            {!isConnected && showNoNetwork && <NetworkScreen />}
+            <BluetoothPairingModal
+              pairingRequest={pairingRequest}
+              isConnecting={isConnecting}
+              onAccept={acceptPairing}
+              onDeny={denyPairing}
+            />
+            <BluetoothNetworkModal
+              show={showNetworkPrompt && !isConnected}
+              deviceName={lastConnectedDevice?.name}
+              onCancel={handleNetworkCancel}
+              isConnecting={isConnecting}
+            />
+            <DeviceSwitcherModal
+              isOpen={isDeviceSwitcherOpen}
+              onClose={handleCloseDeviceSwitcher}
+              accessToken={accessToken}
+            />
+          </div>
+        </main>
+      </Router>
+    </DeviceSwitcherContext.Provider>
   );
 }
 

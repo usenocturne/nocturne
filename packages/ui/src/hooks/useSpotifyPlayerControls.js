@@ -1,8 +1,14 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useContext } from "react";
+import React from "react";
+
+export const DeviceSwitcherContext = React.createContext({
+  openDeviceSwitcher: () => { },
+});
 
 export function useSpotifyPlayerControls(accessToken) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
 
   const playTrack = useCallback(
     async (trackUri, contextUri = null, uris = null) => {
@@ -42,9 +48,17 @@ export function useSpotifyPlayerControls(accessToken) {
           const errorData = await response.json().catch(() => ({
             error: { message: `HTTP error! status: ${response.status}` },
           }));
-          throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
-          );
+
+          const errorMessage = errorData.error?.message || `HTTP error! status: ${response.status}`;
+
+          // TODO: make this hand off the chosen song if there is one (e.g. pressing a song in a playlist while theres no active device should start playing that song, not resume original playback)
+          if (errorData.error?.reason == "NO_ACTIVE_DEVICE") {
+            if (openDeviceSwitcher) {
+              openDeviceSwitcher();
+            }
+          }
+
+          throw new Error(errorMessage);
         }
 
         return true;
@@ -56,7 +70,7 @@ export function useSpotifyPlayerControls(accessToken) {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken, openDeviceSwitcher]
   );
 
   const pausePlayback = useCallback(async () => {

@@ -5,7 +5,6 @@ import { useGradientState } from "../../hooks/useGradientState";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
 import ProgressBar from "./ProgressBar";
-import DeviceSwitcherModal from "./DeviceSwitcherModal";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -19,19 +18,17 @@ import {
   DeviceSwitcherIcon,
 } from "../common/icons";
 
-const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
+const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColors, onOpenDeviceSwitcher }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
   const [realTimeProgress, setRealTimeProgress] = useState(0);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
-  const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
   const progressTimerRef = useRef(null);
   const lastUpdateTimeRef = useRef(Date.now());
   const currentTrackIdRef = useRef(null);
   const containerRef = useRef(null);
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
-  const { updateGradientColors } = useGradientState();
 
   const {
     playTrack,
@@ -218,14 +215,6 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
     setIsProgressScrubbing(scrubbing);
   };
 
-  const handleOpenDeviceSwitcher = () => {
-    setIsDeviceSwitcherOpen(true);
-  };
-
-  const handleCloseDeviceSwitcher = () => {
-    setIsDeviceSwitcherOpen(false);
-  };
-
   return (
     <div
       className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation"
@@ -365,7 +354,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
                     />
                   </div>
                 </MenuItem>
-                <MenuItem onClick={handleOpenDeviceSwitcher}>
+                <MenuItem onClick={onOpenDeviceSwitcher}>
                   <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                     <span className="text-[28px]">Switch Device</span>
                     <DeviceSwitcherIcon
@@ -379,12 +368,6 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose }) => {
           </Menu>
         </div>
       </div>
-
-      <DeviceSwitcherModal
-        isOpen={isDeviceSwitcherOpen}
-        onClose={handleCloseDeviceSwitcher}
-        accessToken={accessToken}
-      />
     </div>
   );
 };
