@@ -5,61 +5,58 @@ import {
   DialogTitle,
   DialogBackdrop,
 } from "@headlessui/react";
+import { useBluetooth } from "../../../hooks/useBluetooth";
 
 const BluetoothDevices = () => {
-  const [devices, setDevices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const {
+    devices,
+    loading,
+    error,
+    fetchDevices,
+    connectDevice,
+    disconnectDevice,
+    forgetDevice,
+    startDiscovery,
+    stopDiscovery,
+  } = useBluetooth();
+  
   const [showForgetDialog, setShowForgetDialog] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const longPressTimer = useRef(null);
   const buttonPressInProgress = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    setTimeout(() => {
-      setDevices([
-        {
-          name: "My Phone",
-          address: "AA:BB:CC:DD:EE:FF",
-          status: "connected",
-        },
-        {
-          name: "Laptop",
-          address: "11:22:33:44:55:66",
-          status: "disconnected",
-        },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    const initialize = async () => {
+      if (!hasInitialized.current) {
+        hasInitialized.current = true;
+        await startDiscovery();
+        await fetchDevices(true);
+      }
+    };
+    
+    initialize();
+    
+    return () => {
+      stopDiscovery();
+    };
+  }, [startDiscovery, fetchDevices, stopDiscovery]);
 
   const handleConnect = async (deviceAddress) => {
-    setDevices(
-      devices.map((device) => {
-        if (device.address === deviceAddress) {
-          return { ...device, status: "connected" };
-        }
-        return { ...device, status: "disconnected" };
-      })
-    );
+    await connectDevice(deviceAddress);
   };
 
   const handleDisconnect = async (deviceAddress) => {
-    setDevices(
-      devices.map((device) => {
-        if (device.address === deviceAddress) {
-          return { ...device, status: "disconnected" };
-        }
-        return device;
-      })
-    );
+    await disconnectDevice(deviceAddress);
   };
 
   const handleForget = async () => {
     if (selectedDevice) {
-      setDevices(devices.filter((device) => device.address !== selectedDevice));
-      setShowForgetDialog(false);
-      setSelectedDevice(null);
+      const success = await forgetDevice(selectedDevice);
+      if (success) {
+        setShowForgetDialog(false);
+        setSelectedDevice(null);
+      }
     }
   };
 
@@ -80,7 +77,7 @@ const BluetoothDevices = () => {
     e.stopPropagation();
     buttonPressInProgress.current = true;
 
-    if (device.status === "connected") {
+    if (device.connected) {
       handleDisconnect(device.address);
     } else {
       handleConnect(device.address);
@@ -136,9 +133,9 @@ const BluetoothDevices = () => {
         <div className="flex justify-between items-center">
           <div className="min-w-0 flex-1">
             <h4 className="text-[28px] font-[580] text-white tracking-tight truncate pr-4">
-              {device.name}
+              {device.name || device.alias}
             </h4>
-            {device.status === "connected" && (
+            {device.connected && (
               <p className="text-[24px] font-[560] text-white/60 tracking-tight mt-1">
                 Connected
               </p>
@@ -149,7 +146,7 @@ const BluetoothDevices = () => {
             className="bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3 min-w-[160px] border border-white/10"
           >
             <span className="text-[24px] font-[580] text-white tracking-tight">
-              {device.status === "connected" ? "Disconnect" : "Connect"}
+              {device.connected ? "Disconnect" : "Connect"}
             </span>
           </button>
         </div>
