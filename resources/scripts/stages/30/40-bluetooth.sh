@@ -1,6 +1,6 @@
 #!/bin/sh
 
-chroot_exec apk add bluez dbus pulseaudio pulseaudio-alsa pulseaudio-bluez alsa-plugins-pulse 
+chroot_exec apk add bluez dbus pulseaudio pulseaudio-alsa pulseaudio-bluez alsa-plugins-pulse
 
 mkdir -p "$ROOTFS_PATH"/lib/firmware/brcm
 cp "$RES_PATH"/firmware/brcm/* "$ROOTFS_PATH"/lib/firmware/brcm/

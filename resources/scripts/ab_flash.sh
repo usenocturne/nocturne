@@ -37,7 +37,7 @@ flash_device="${fdev}${flash_idx}"
 echo "Flashing: $flash_device"
 
 # flash device
-gunzip -c "$image_file" | dd of="$flash_device" status=progress bs=2MB iflag=fullblock
+gunzip -c "$image_file" | dd of="$flash_device" status=progress bs=1M iflag=fullblock
 
 # switch active partition if needed
 if [ "$current_idx" != "$uboot_idx" ]; then
