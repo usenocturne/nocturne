@@ -4,6 +4,7 @@ import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
+import { usePlaybackProgress } from "../../hooks/usePlaybackProgress";
 import ProgressBar from "./ProgressBar";
 import {
   HeartIcon,
@@ -21,12 +22,9 @@ import {
 const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColors, onOpenDeviceSwitcher }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
-  const [realTimeProgress, setRealTimeProgress] = useState(0);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
-  const progressTimerRef = useRef(null);
-  const lastUpdateTimeRef = useRef(Date.now());
-  const currentTrackIdRef = useRef(null);
   const containerRef = useRef(null);
+  const currentTrackIdRef = useRef(null);
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
 
@@ -41,6 +39,14 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     unlikeTrack,
     sendDJSignal,
   } = useSpotifyPlayerControls(accessToken);
+
+  const {
+    progressMs,
+    isPlaying,
+    duration,
+    progressPercentage,
+    updateProgress
+  } = usePlaybackProgress(accessToken);
 
   const handlePlayPause = async () => {
     if (isPlaying) {
@@ -92,9 +98,6 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
         : currentPlayback.item.album.images[0].url
     : "/images/not-playing.webp";
 
-  const isPlaying = currentPlayback?.is_playing || false;
-  const duration = currentPlayback?.item?.duration_ms || 1;
-  const progressPercentage = (realTimeProgress / duration) * 100;
   const trackId = currentPlayback?.item?.id;
 
   useEffect(() => {
@@ -131,40 +134,6 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     checkCurrentTrackLiked();
   }, [trackId, checkIsTrackLiked, currentPlayback?.item?.type]);
 
-  useEffect(() => {
-    if (currentPlayback?.progress_ms !== undefined && !isProgressScrubbing) {
-      setRealTimeProgress(currentPlayback.progress_ms);
-      lastUpdateTimeRef.current = Date.now();
-    }
-  }, [currentPlayback?.progress_ms, isProgressScrubbing]);
-
-  useEffect(() => {
-    if (progressTimerRef.current) {
-      clearInterval(progressTimerRef.current);
-      progressTimerRef.current = null;
-    }
-
-    if (isPlaying && !isProgressScrubbing) {
-      progressTimerRef.current = setInterval(() => {
-        const now = Date.now();
-        const elapsed = now - lastUpdateTimeRef.current;
-        lastUpdateTimeRef.current = now;
-
-        setRealTimeProgress((prev) => {
-          const newProgress = Math.min(prev + elapsed, duration);
-          return newProgress;
-        });
-      }, 100);
-    }
-
-    return () => {
-      if (progressTimerRef.current) {
-        clearInterval(progressTimerRef.current);
-        progressTimerRef.current = null;
-      }
-    };
-  }, [isPlaying, isProgressScrubbing, duration]);
-
   const handleSkipNext = async () => {
     await skipToNext();
   };
@@ -172,10 +141,9 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   const handleSkipPrevious = async () => {
     const RESTART_THRESHOLD_MS = 3000;
 
-    if (realTimeProgress > RESTART_THRESHOLD_MS) {
+    if (progressMs > RESTART_THRESHOLD_MS) {
       await seekToPosition(0);
-      setRealTimeProgress(0);
-      lastUpdateTimeRef.current = Date.now();
+      updateProgress(0);
     } else {
       await skipToPrevious();
     }
@@ -203,8 +171,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     try {
       if (currentPlayback?.item) {
         await seekToPosition(position);
-        setRealTimeProgress(position);
-        lastUpdateTimeRef.current = Date.now();
+        updateProgress(position);
       }
     } catch (error) {
       console.error("Error seeking:", error);

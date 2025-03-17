@@ -1,89 +1,24 @@
 import React, { useState, useEffect, useRef } from "react";
+import { usePlaybackProgressConsumer } from "../../hooks/usePlaybackProgress";
 
 const ProgressBar = ({
-  progress,
-  isPlaying,
-  durationMs,
+  progress: externalProgress,
+  isPlaying: externalIsPlaying,
+  durationMs: externalDurationMs,
   onSeek,
   onPlayPause,
   onScrubbingChange,
-  onProgressUpdate,
 }) => {
-  const [displayProgress, setDisplayProgress] = useState(progress);
+  const progressContext = usePlaybackProgressConsumer();
+
+  const progress = externalProgress ?? progressContext.progressPercentage;
+  const isPlaying = externalIsPlaying ?? progressContext.isPlaying;
+  const durationMs = externalDurationMs ?? progressContext.duration;
+
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubbingProgress, setScrubbingProgress] = useState(null);
-  const animationFrameRef = useRef(null);
   const wasPlayingRef = useRef(false);
   const containerRef = useRef(null);
-  const isMountedRef = useRef(false);
-  const lastTimestampRef = useRef(performance.now());
-
-  const progressUpdateRef = useRef(onProgressUpdate);
-  const displayProgressRef = useRef(displayProgress);
-  const scrubbingProgressRef = useRef(scrubbingProgress);
-
-  useEffect(() => {
-    progressUpdateRef.current = onProgressUpdate;
-  }, [onProgressUpdate]);
-
-  useEffect(() => {
-    displayProgressRef.current = displayProgress;
-  }, [displayProgress]);
-
-  useEffect(() => {
-    scrubbingProgressRef.current = scrubbingProgress;
-  }, [scrubbingProgress]);
-
-  useEffect(() => {
-    if (progressUpdateRef.current) {
-      progressUpdateRef.current(
-        scrubbingProgressRef.current ?? displayProgressRef.current
-      );
-    }
-  }, [displayProgress, scrubbingProgress]);
-
-  useEffect(() => {
-    if (!isScrubbing && progress !== null && progress !== displayProgress) {
-      setDisplayProgress(progress);
-    }
-  }, [progress, isScrubbing, displayProgress]);
-
-  useEffect(() => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    if (isPlaying && !isScrubbing && durationMs > 0) {
-      lastTimestampRef.current = performance.now();
-
-      const animate = (timestamp) => {
-        if (!isPlaying || !durationMs || isScrubbing) {
-          return;
-        }
-
-        const deltaTime = timestamp - lastTimestampRef.current;
-        lastTimestampRef.current = timestamp;
-
-        const progressIncrement = (deltaTime / durationMs) * 100;
-
-        setDisplayProgress((prevProgress) => {
-          return Math.min(prevProgress + progressIncrement, 100);
-        });
-
-        animationFrameRef.current = requestAnimationFrame(animate);
-      };
-
-      animationFrameRef.current = requestAnimationFrame(animate);
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-    };
-  }, [isPlaying, isScrubbing, durationMs]);
 
   const handleClick = () => {
     setIsScrubbing(true);
@@ -102,14 +37,14 @@ const ProgressBar = ({
 
       setScrubbingProgress((prev) => {
         const nextValue =
-          (prev ?? displayProgress) + (delta > 0 ? step : -step);
+          (prev ?? progress) + (delta > 0 ? step : -step);
         return Math.max(0, Math.min(100, nextValue));
       });
     };
 
     window.addEventListener("wheel", handleWheel, { passive: false });
     return () => window.removeEventListener("wheel", handleWheel);
-  }, [isScrubbing, displayProgress]);
+  }, [isScrubbing, progress]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -124,7 +59,9 @@ const ProgressBar = ({
         if (scrubbingProgress !== null) {
           const seekMs = Math.floor((scrubbingProgress / 100) * durationMs);
           onSeek(seekMs);
-          setDisplayProgress(scrubbingProgress);
+          if (progressContext.updateProgress) {
+            progressContext.updateProgress(seekMs);
+          }
         }
 
         setScrubbingProgress(null);
@@ -136,7 +73,6 @@ const ProgressBar = ({
         setIsScrubbing(false);
         onScrubbingChange(false);
         setScrubbingProgress(null);
-        setDisplayProgress(progress);
         return false;
       }
     };
@@ -151,23 +87,21 @@ const ProgressBar = ({
     onSeek,
     onPlayPause,
     onScrubbingChange,
-    progress,
+    progressContext,
   ]);
 
-  const finalProgress = scrubbingProgress ?? displayProgress;
+  const finalProgress = scrubbingProgress ?? progress;
   const shouldShowTimestampOutside = finalProgress < 8;
 
   return (
     <div
       ref={containerRef}
-      className={`relative transition-all duration-200 ease-in-out ${
-        isScrubbing ? "translate-y-8" : ""
-      }`}
+      className={`relative transition-all duration-200 ease-in-out ${isScrubbing ? "translate-y-8" : ""
+        }`}
     >
       <div
-        className={`relative w-full bg-white/20 rounded-full overflow-hidden cursor-pointer transition-all duration-300 ${
-          isScrubbing ? "h-8" : "h-2 mt-4"
-        }`}
+        className={`relative w-full bg-white/20 rounded-full overflow-hidden cursor-pointer transition-all duration-300 ${isScrubbing ? "h-8" : "h-2 mt-4"
+          }`}
         onClick={handleClick}
       >
         <div
@@ -184,11 +118,10 @@ const ProgressBar = ({
             }}
           >
             <span
-              className={`text-lg font-[580] absolute ${
-                shouldShowTimestampOutside
-                  ? "left-2 text-black/40"
-                  : "right-full pr-2 text-black/40"
-              }`}
+              className={`text-lg font-[580] absolute ${shouldShowTimestampOutside
+                ? "left-2 text-black/40"
+                : "right-full pr-2 text-black/40"
+                }`}
             >
               {formatTime(Math.floor((finalProgress / 100) * durationMs))}
             </span>
