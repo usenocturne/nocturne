@@ -31,7 +31,7 @@
     {
       "type": "writeLargeMemory",
       "value": {
-        "address": 1790967808,
+        "address": 1522532352,
         "data": {
           "filePath": "system.ext4"
         },
@@ -41,7 +41,7 @@
     {
       "type": "writeLargeMemory",
       "value": {
-        "address": 3401580544,
+        "address": 2864709632,
         "data": {
           "filePath": "data.ext4"
         },

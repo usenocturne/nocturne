@@ -16,8 +16,8 @@ set -e
 : "${BOOT_SERVICES:="swap"}"
 : "${ARCH:="aarch64"}"
 
-: "${SIZE_ROOT_FS:="1536M"}"
-: "${SIZE_DATA:="480M"}"
+: "${SIZE_ROOT_FS:="1280M"}"
+: "${SIZE_DATA:="990M"}"
 
 : "${OUTPUT_PATH:="/output"}"
 : "${CACHE_PATH:="/cache"}"
