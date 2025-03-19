@@ -11,6 +11,9 @@ export function useSpotifyPlayerControls(accessToken) {
   const [volume, setVolumeState] = useState(50);
   const [isAdjustingVolume, setIsAdjustingVolume] = useState(false);
   const volumeTimeoutRef = useRef(null);
+  const volumeQueueRef = useRef([]);
+  const isVolumeProcessingRef = useRef(false);
+  const lastVolumeUpdateTimeRef = useRef(0);
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
 
   useEffect(() => {
@@ -236,22 +239,24 @@ export function useSpotifyPlayerControls(accessToken) {
     [accessToken]
   );
 
-  const setVolume = useCallback(async (volumePercent) => {
-    if (!accessToken) return false;
-
-    const boundedVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
-    
-    setVolumeState(boundedVolume);
-    setIsAdjustingVolume(true);
-    
-    if (volumeTimeoutRef.current) {
-      clearTimeout(volumeTimeoutRef.current);
+  const processVolumeQueue = useCallback(async () => {
+    if (isVolumeProcessingRef.current || volumeQueueRef.current.length === 0 || !accessToken) {
+      return;
     }
+
+    isVolumeProcessingRef.current = true;
     
-    volumeTimeoutRef.current = setTimeout(async () => {
+    const latestVolume = volumeQueueRef.current.pop();
+    volumeQueueRef.current = [];
+    
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastVolumeUpdateTimeRef.current;
+    const minInterval = 100;
+    
+    const processRequest = async () => {
       try {
         const response = await fetch(
-          `https://api.spotify.com/v1/me/player/volume?volume_percent=${boundedVolume}`,
+          `https://api.spotify.com/v1/me/player/volume?volume_percent=${latestVolume}`,
           {
             method: "PUT",
             headers: {
@@ -259,7 +264,9 @@ export function useSpotifyPlayerControls(accessToken) {
             },
           }
         );
-
+        
+        lastVolumeUpdateTimeRef.current = Date.now();
+        
         if (!response.ok && response.status !== 204) {
           const errorData = await response.json().catch(() => ({
             error: { message: `HTTP error! status: ${response.status}` },
@@ -275,22 +282,49 @@ export function useSpotifyPlayerControls(accessToken) {
             errorData.error?.message || `HTTP error! status: ${response.status}`
           );
         }
-        
-        setVolumeState(boundedVolume);
-        
       } catch (err) {
         console.error("Error setting volume:", err);
         setError(err.message);
-        return false;
       } finally {
-        setTimeout(() => {
-          setIsAdjustingVolume(false);
-        }, 500);
+        const processingDelay = Math.max(0, minInterval - (Date.now() - now));
+        
+        volumeTimeoutRef.current = setTimeout(() => {
+          isVolumeProcessingRef.current = false;
+          if (volumeQueueRef.current.length > 0) {
+            processVolumeQueue();
+          } else {
+            setIsAdjustingVolume(false);
+          }
+        }, processingDelay);
       }
-    }, 150);
+    };
+    
+    if (timeSinceLastUpdate < minInterval) {
+      const delay = minInterval - timeSinceLastUpdate;
+      setTimeout(processRequest, delay);
+    } else {
+      await processRequest();
+    }
+  }, [accessToken, openDeviceSwitcher]);
+
+  const setVolume = useCallback(async (volumePercent) => {
+    if (!accessToken) return false;
+
+    const boundedVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
+    
+    if (boundedVolume !== volume) {
+      setVolumeState(boundedVolume);
+      setIsAdjustingVolume(true);
+      
+      volumeQueueRef.current.push(boundedVolume);
+      
+      if (!isVolumeProcessingRef.current) {
+        processVolumeQueue();
+      }
+    }
 
     return true;
-  }, [accessToken, openDeviceSwitcher]);
+  }, [accessToken, processVolumeQueue, volume]);
 
   const checkIsTrackLiked = useCallback(
     async (trackId) => {

@@ -31,6 +31,8 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   const volumeIndicatorTimeoutRef = useRef(null);
   const volumeHideTimeoutRef = useRef(null);
   const volumeInteractionTimeoutRef = useRef(null);
+  const lastWheelEventRef = useRef(0);
+  const wheelDeltaAccumulatorRef = useRef(0);
   const containerRef = useRef(null);
   const currentTrackIdRef = useRef(null);
   const [volumeIndicatorAnimation, setVolumeIndicatorAnimation] = useState("hidden");
@@ -111,21 +113,35 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   const handleWheel = (e) => {
     if (isProgressScrubbing) return;
     
-    const deltaX = e.deltaX;
-    
-    if (Math.abs(deltaX) > Math.abs(e.deltaY)) {
+    const now = Date.now();
+    if (now - lastWheelEventRef.current < 16) {
       e.preventDefault();
       e.stopPropagation();
-      
+      return;
+    }
+    lastWheelEventRef.current = now;
+    
+    const primaryDelta = Math.abs(e.deltaX) > Math.abs(e.deltaY) / 2 ? e.deltaX : e.deltaY;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    wheelDeltaAccumulatorRef.current += primaryDelta;
+    
+    const volumeStep = 5;
+    const threshold = 1.2;
+    
+    if (Math.abs(wheelDeltaAccumulatorRef.current) >= threshold) {
       setIsAdjustingVolume(true);
       
       if (volumeInteractionTimeoutRef.current) {
         clearTimeout(volumeInteractionTimeoutRef.current);
       }
       
-      const volumeStep = 5;
-      const volumeChange = deltaX > 0 ? volumeStep : -volumeStep;
-      const newVolume = Math.max(0, Math.min(100, volume + volumeChange));
+      const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
+      const newVolume = Math.max(0, Math.min(100, volume + (direction * volumeStep)));
+      
+      wheelDeltaAccumulatorRef.current = 0;
       
       setVolume(newVolume);
       showVolumeIndicatorWithTimeout();
@@ -139,12 +155,12 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: false });
+      container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
     }
     
     return () => {
       if (container) {
-        container.removeEventListener('wheel', handleWheel);
+        container.removeEventListener('wheel', handleWheel, { capture: true });
       }
       
       if (volumeIndicatorTimeoutRef.current) {
