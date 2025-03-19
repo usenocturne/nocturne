@@ -27,7 +27,10 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   const [isCheckingLike, setIsCheckingLike] = useState(false);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
   const [showVolumeIndicator, setShowVolumeIndicator] = useState(false);
+  const [isAdjustingVolume, setIsAdjustingVolume] = useState(false);
   const volumeIndicatorTimeoutRef = useRef(null);
+  const volumeHideTimeoutRef = useRef(null);
+  const volumeInteractionTimeoutRef = useRef(null);
   const containerRef = useRef(null);
   const currentTrackIdRef = useRef(null);
   const [volumeIndicatorAnimation, setVolumeIndicatorAnimation] = useState("hidden");
@@ -76,18 +79,33 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     if (volumeIndicatorTimeoutRef.current) {
       clearTimeout(volumeIndicatorTimeoutRef.current);
     }
+    
+    if (volumeHideTimeoutRef.current) {
+      clearTimeout(volumeHideTimeoutRef.current);
+    }
+    
+    if (volumeInteractionTimeoutRef.current) {
+      clearTimeout(volumeInteractionTimeoutRef.current);
+    }
   
     setVolumeIndicatorAnimation("showing");
     setShowVolumeIndicator(true);
+    setIsAdjustingVolume(true);
     
-    volumeIndicatorTimeoutRef.current = setTimeout(() => {
-      setVolumeIndicatorAnimation("hiding");
-      
-      setTimeout(() => {
-        setShowVolumeIndicator(false);
-        setVolumeIndicatorAnimation("hidden");
-      }, 300);
-    }, 1500);
+    volumeInteractionTimeoutRef.current = setTimeout(() => {
+      setIsAdjustingVolume(false);
+    }, 500);
+    
+    if (!isAdjustingVolume) {
+      volumeIndicatorTimeoutRef.current = setTimeout(() => {
+        setVolumeIndicatorAnimation("hiding");
+        
+        volumeHideTimeoutRef.current = setTimeout(() => {
+          setShowVolumeIndicator(false);
+          setVolumeIndicatorAnimation("hidden");
+        }, 300);
+      }, 1500);
+    }
   };
 
   const handleWheel = (e) => {
@@ -99,12 +117,22 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       e.preventDefault();
       e.stopPropagation();
       
+      setIsAdjustingVolume(true);
+      
+      if (volumeInteractionTimeoutRef.current) {
+        clearTimeout(volumeInteractionTimeoutRef.current);
+      }
+      
       const volumeStep = 5;
       const volumeChange = deltaX > 0 ? volumeStep : -volumeStep;
       const newVolume = Math.max(0, Math.min(100, volume + volumeChange));
       
       setVolume(newVolume);
       showVolumeIndicatorWithTimeout();
+      
+      volumeInteractionTimeoutRef.current = setTimeout(() => {
+        setIsAdjustingVolume(false);
+      }, 800);
     }
   };
 
@@ -122,8 +150,31 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       if (volumeIndicatorTimeoutRef.current) {
         clearTimeout(volumeIndicatorTimeoutRef.current);
       }
+      
+      if (volumeHideTimeoutRef.current) {
+        clearTimeout(volumeHideTimeoutRef.current);
+      }
+      
+      if (volumeInteractionTimeoutRef.current) {
+        clearTimeout(volumeInteractionTimeoutRef.current);
+      }
     };
   }, [volume, isProgressScrubbing]);
+
+  useEffect(() => {
+    if (showVolumeIndicator && !isAdjustingVolume) {
+      const forceHideTimeout = setTimeout(() => {
+        setVolumeIndicatorAnimation("hiding");
+        
+        setTimeout(() => {
+          setShowVolumeIndicator(false);
+          setVolumeIndicatorAnimation("hidden");
+        }, 300);
+      }, 1500);
+      
+      return () => clearTimeout(forceHideTimeout);
+    }
+  }, [showVolumeIndicator, isAdjustingVolume]);
 
   useNavigation({
     containerRef,
@@ -415,9 +466,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       >
         <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
           <div
-            className={`bg-white w-full transition-height duration-300 ${
-              volume < 100 ? "rounded-b-[13px]" : "rounded-[13px]"
-            }`}
+            className="bg-white w-full transition-height duration-300 rounded-b-[13px]"
             style={{ height: `${volume}%` }}
           >
             <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
