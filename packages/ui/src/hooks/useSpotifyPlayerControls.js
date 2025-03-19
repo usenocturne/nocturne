@@ -1,4 +1,4 @@
-import { useCallback, useState, useContext } from "react";
+import { useCallback, useState, useContext, useRef, useEffect } from "react";
 import React from "react";
 
 export const DeviceSwitcherContext = React.createContext({
@@ -8,7 +8,24 @@ export const DeviceSwitcherContext = React.createContext({
 export function useSpotifyPlayerControls(accessToken) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [volume, setVolumeState] = useState(50);
+  const [isAdjustingVolume, setIsAdjustingVolume] = useState(false);
+  const volumeTimeoutRef = useRef(null);
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
+
+  useEffect(() => {
+    return () => {
+      if (volumeTimeoutRef.current) {
+        clearTimeout(volumeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const updateVolumeFromDevice = useCallback((deviceVolume) => {
+    if (!isAdjustingVolume && deviceVolume !== undefined) {
+      setVolumeState(deviceVolume);
+    }
+  }, [isAdjustingVolume]);
 
   const playTrack = useCallback(
     async (trackUri, contextUri = null, uris = null) => {
@@ -51,7 +68,6 @@ export function useSpotifyPlayerControls(accessToken) {
 
           const errorMessage = errorData.error?.message || `HTTP error! status: ${response.status}`;
 
-          // TODO: make this hand off the chosen song if there is one (e.g. pressing a song in a playlist while theres no active device should start playing that song, not resume original playback)
           if (errorData.error?.reason == "NO_ACTIVE_DEVICE") {
             if (openDeviceSwitcher) {
               openDeviceSwitcher();
@@ -220,6 +236,62 @@ export function useSpotifyPlayerControls(accessToken) {
     [accessToken]
   );
 
+  const setVolume = useCallback(async (volumePercent) => {
+    if (!accessToken) return false;
+
+    const boundedVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
+    
+    setVolumeState(boundedVolume);
+    setIsAdjustingVolume(true);
+    
+    if (volumeTimeoutRef.current) {
+      clearTimeout(volumeTimeoutRef.current);
+    }
+    
+    volumeTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://api.spotify.com/v1/me/player/volume?volume_percent=${boundedVolume}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (!response.ok && response.status !== 204) {
+          const errorData = await response.json().catch(() => ({
+            error: { message: `HTTP error! status: ${response.status}` },
+          }));
+          
+          if (errorData.error?.reason === "NO_ACTIVE_DEVICE") {
+            if (openDeviceSwitcher) {
+              openDeviceSwitcher();
+            }
+          }
+          
+          throw new Error(
+            errorData.error?.message || `HTTP error! status: ${response.status}`
+          );
+        }
+        
+        setVolumeState(boundedVolume);
+        
+      } catch (err) {
+        console.error("Error setting volume:", err);
+        setError(err.message);
+        return false;
+      } finally {
+        setTimeout(() => {
+          setIsAdjustingVolume(false);
+        }, 500);
+      }
+    }, 150);
+
+    return true;
+  }, [accessToken, openDeviceSwitcher]);
+
   const checkIsTrackLiked = useCallback(
     async (trackId) => {
       if (!accessToken || !trackId) return false;
@@ -333,47 +405,6 @@ export function useSpotifyPlayerControls(accessToken) {
         return true;
       } catch (err) {
         console.error("Error unliking track:", err);
-        setError(err.message);
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [accessToken]
-  );
-
-  const setVolume = useCallback(
-    async (volumePercent) => {
-      if (!accessToken) return false;
-
-      const volume = Math.max(0, Math.min(100, Math.round(volumePercent)));
-
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `https://api.spotify.com/v1/me/player/volume?volume_percent=${volume}`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-
-        if (!response.ok && response.status !== 204) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-          throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
-          );
-        }
-
-        return true;
-      } catch (err) {
-        console.error("Error setting volume:", err);
         setError(err.message);
         return false;
       } finally {
@@ -570,6 +601,9 @@ export function useSpotifyPlayerControls(accessToken) {
     skipToPrevious,
     seekToPosition,
     setVolume,
+    volume,
+    isAdjustingVolume,
+    updateVolumeFromDevice,
     toggleShuffle,
     setRepeatMode,
     checkIsTrackLiked,

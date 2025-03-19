@@ -58,7 +58,6 @@ function App() {
     refreshPlaybackState,
   } = useSpotifyPlayerState(accessToken);
 
-  // Use the new playback progress hook
   const playbackProgress = usePlaybackProgress(accessToken);
 
   const handleOpenDeviceSwitcher = () => {

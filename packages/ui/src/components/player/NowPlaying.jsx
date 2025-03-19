@@ -17,14 +17,21 @@ import {
   LyricsIcon,
   DJIcon,
   DeviceSwitcherIcon,
+  VolumeLoudIcon,
+  VolumeLowIcon,
+  VolumeOffIcon,
 } from "../common/icons";
 
 const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColors, onOpenDeviceSwitcher }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
+  const [showVolumeIndicator, setShowVolumeIndicator] = useState(false);
+  const volumeIndicatorTimeoutRef = useRef(null);
   const containerRef = useRef(null);
   const currentTrackIdRef = useRef(null);
+  const [volumeIndicatorAnimation, setVolumeIndicatorAnimation] = useState("hidden");
+  const classNames = (...classes) => classes.filter(Boolean).join(' ');
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
 
@@ -38,6 +45,9 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     likeTrack,
     unlikeTrack,
     sendDJSignal,
+    setVolume,
+    volume,
+    updateVolumeFromDevice
   } = useSpotifyPlayerControls(accessToken);
 
   const {
@@ -48,6 +58,12 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     updateProgress
   } = usePlaybackProgress(accessToken);
 
+  useEffect(() => {
+    if (currentPlayback?.device?.volume_percent !== undefined) {
+      updateVolumeFromDevice(currentPlayback.device.volume_percent);
+    }
+  }, [currentPlayback?.device?.volume_percent, updateVolumeFromDevice]);
+
   const handlePlayPause = async () => {
     if (isPlaying) {
       await pausePlayback();
@@ -55,6 +71,59 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       await playTrack();
     }
   };
+
+  const showVolumeIndicatorWithTimeout = () => {
+    if (volumeIndicatorTimeoutRef.current) {
+      clearTimeout(volumeIndicatorTimeoutRef.current);
+    }
+  
+    setVolumeIndicatorAnimation("showing");
+    setShowVolumeIndicator(true);
+    
+    volumeIndicatorTimeoutRef.current = setTimeout(() => {
+      setVolumeIndicatorAnimation("hiding");
+      
+      setTimeout(() => {
+        setShowVolumeIndicator(false);
+        setVolumeIndicatorAnimation("hidden");
+      }, 300);
+    }, 1500);
+  };
+
+  const handleWheel = (e) => {
+    if (isProgressScrubbing) return;
+    
+    const deltaX = e.deltaX;
+    
+    if (Math.abs(deltaX) > Math.abs(e.deltaY)) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const volumeStep = 5;
+      const volumeChange = deltaX > 0 ? volumeStep : -volumeStep;
+      const newVolume = Math.max(0, Math.min(100, volume + volumeChange));
+      
+      setVolume(newVolume);
+      showVolumeIndicatorWithTimeout();
+    }
+  };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+    }
+    
+    return () => {
+      if (container) {
+        container.removeEventListener('wheel', handleWheel);
+      }
+      
+      if (volumeIndicatorTimeoutRef.current) {
+        clearTimeout(volumeIndicatorTimeoutRef.current);
+      }
+    };
+  }, [volume, isProgressScrubbing]);
 
   useNavigation({
     containerRef,
@@ -333,6 +402,34 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
               </div>
             </MenuItems>
           </Menu>
+        </div>
+      </div>
+      <div
+        className={`fixed -right-1.5 top-[4.5rem] transform transition-opacity duration-300 ${
+          !showVolumeIndicator 
+            ? "hidden" 
+            : volumeIndicatorAnimation === "showing" 
+              ? "opacity-100 volumeInScale" 
+              : "opacity-0 volumeOutScale"
+        }`}
+      >
+        <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
+          <div
+            className={`bg-white w-full transition-height duration-300 ${
+              volume < 100 ? "rounded-b-[13px]" : "rounded-[13px]"
+            }`}
+            style={{ height: `${volume}%` }}
+          >
+            <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
+              {volume === 0 ? (
+                <VolumeOffIcon className="w-7 h-7" />
+              ) : volume > 0 && volume <= 60 ? (
+                <VolumeLowIcon className="w-7 h-7 ml-1.5" />
+              ) : (
+                <VolumeLoudIcon className="w-7 h-7" />
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

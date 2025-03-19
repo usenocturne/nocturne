@@ -185,3 +185,43 @@ section {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 200ms;
 }
+
+@keyframes volumeInScale {
+  from {
+    transform: scale(0) translate3d(100%, 0, 0);
+    margin-right: 0;
+  }
+  to {
+    transform: scale(1) translate3d(0, 0, 0);
+    margin-right: 60px;
+  }
+}
+
+.volumeInScale {
+  animation-name: volumeInScale;
+  animation-duration: 0.3s;
+  animation-fill-mode: forwards;
+}
+
+@keyframes volumeOutScale {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+    margin-right: 60px;
+  }
+  to {
+    transform: scale(0) translate3d(100%, 0, 0);
+    margin-right: 0;
+  }
+}
+
+.volumeOutScale {
+  animation-name: volumeOutScale;
+  animation-duration: 0.3s;
+  animation-fill-mode: forwards;
+}
+
+.transition-height {
+  transition-property: height;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
