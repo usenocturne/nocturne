@@ -10,6 +10,7 @@ export default function HorizontalScroll({
   onItemSelect,
 }) {
   const [items, setItems] = useState([]);
+  const hasScrolledToPlayingRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -65,7 +66,8 @@ export default function HorizontalScroll({
         (item) => item.getAttribute("data-id") === currentlyPlayingId
       );
       
-      if (currentItemIndex !== -1) {
+      if (currentItemIndex !== -1 && !hasScrolledToPlayingRef.current) {
+        hasScrolledToPlayingRef.current = true;
         setTimeout(() => {
           scrollItemIntoView(items[currentItemIndex]);
         }, 100);

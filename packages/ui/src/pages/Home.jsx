@@ -189,7 +189,7 @@ export default function Home({
   const renderRecentsSection = () => {
     return (
       <HorizontalScroll
-        key={`recents-${currentlyPlayingAlbum?.id || 'empty'}`}
+        key="recents"
         containerRef={scrollContainerRef}
         currentlyPlayingId={currentlyPlayingAlbum?.id}
         accessToken={accessToken}

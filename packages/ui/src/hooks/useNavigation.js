@@ -49,8 +49,10 @@ export function useNavigation({
     }
   }, [activeSection]);
 
+  const previousPlayingIdRef = useRef(null);
   useEffect(() => {
-    if (currentlyPlayingId) {
+    if (currentlyPlayingId && currentlyPlayingId !== previousPlayingIdRef.current) {
+      previousPlayingIdRef.current = currentlyPlayingId;
       hasScrolledToPlayingRef.current = false;
     }
   }, [currentlyPlayingId]);
@@ -84,7 +86,8 @@ export function useNavigation({
       containerRef.current &&
       !hasScrolledToPlayingRef.current &&
       !isUserScrolling &&
-      enableScrollTracking
+      enableScrollTracking && 
+      currentlyPlayingId === previousPlayingIdRef.current
     ) {
       const currentItemIndex = itemsRef.current.findIndex(
         (item) => item.getAttribute("data-id") === currentlyPlayingId

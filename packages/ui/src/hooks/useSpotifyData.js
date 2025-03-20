@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export function useSpotifyData(
   accessToken,
@@ -34,9 +34,11 @@ export function useSpotifyData(
   });
 
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const lastPlayedAlbumIdRef = useRef(null);
 
   useEffect(() => {
-    if (currentlyPlayingAlbum?.id) {
+    if (currentlyPlayingAlbum?.id && currentlyPlayingAlbum.id !== lastPlayedAlbumIdRef.current) {
+      lastPlayedAlbumIdRef.current = currentlyPlayingAlbum.id;
       setRecentAlbums((prevAlbums) => {
         const filteredAlbums = prevAlbums.filter(
           (album) => album.id !== currentlyPlayingAlbum.id
