@@ -92,25 +92,18 @@ export default function Home({
         setNewAlbumAdded(true);
       }
     }
-  }, [recentAlbums]);
+  }, [recentAlbums, activeSection]);
 
   useEffect(() => {
     if (newAlbumAdded && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({
-        left: itemWidth + 40,
-        behavior: "auto",
+        left: 0,
+        behavior: "smooth",
       });
 
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          scrollContainerRef.current.scrollTo({
-            left: 0,
-            behavior: "smooth",
-          });
-
-          setNewAlbumAdded(false);
-        });
-      });
+      setTimeout(() => {
+        setNewAlbumAdded(false);
+      }, 300);
     }
   }, [newAlbumAdded]);
 

@@ -37,16 +37,27 @@ export function useSpotifyData(
   const lastPlayedAlbumIdRef = useRef(null);
 
   useEffect(() => {
-    if (currentlyPlayingAlbum?.id && currentlyPlayingAlbum.id !== lastPlayedAlbumIdRef.current) {
-      lastPlayedAlbumIdRef.current = currentlyPlayingAlbum.id;
-      setRecentAlbums((prevAlbums) => {
-        const filteredAlbums = prevAlbums.filter(
-          (album) => album.id !== currentlyPlayingAlbum.id
-        );
-        return [currentlyPlayingAlbum, ...filteredAlbums].slice(0, 50);
-      });
+    if (currentlyPlayingAlbum?.id) {
+      if (!recentAlbums.length || recentAlbums[0]?.id !== currentlyPlayingAlbum.id) {
+        lastPlayedAlbumIdRef.current = currentlyPlayingAlbum.id;
+        setRecentAlbums((prevAlbums) => {
+          const filteredAlbums = prevAlbums.filter(
+            (album) => album.id !== currentlyPlayingAlbum.id
+          );
+          return [currentlyPlayingAlbum, ...filteredAlbums].slice(0, 50);
+        });
+        
+        if (activeSection === "recents") {
+          setTimeout(() => {
+            const event = new CustomEvent('albumOrderChanged', { 
+              detail: { albumId: currentlyPlayingAlbum.id } 
+            });
+            window.dispatchEvent(event);
+          }, 50);
+        }
+      }
     }
-  }, [currentlyPlayingAlbum]);
+  }, [currentlyPlayingAlbum, recentAlbums, activeSection]);
 
   const fetchRecentlyPlayed = useCallback(async () => {
     if (!accessToken) return;

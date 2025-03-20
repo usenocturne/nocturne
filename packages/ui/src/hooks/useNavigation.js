@@ -86,19 +86,20 @@ export function useNavigation({
       containerRef.current &&
       !hasScrolledToPlayingRef.current &&
       !isUserScrolling &&
-      enableScrollTracking && 
-      currentlyPlayingId === previousPlayingIdRef.current
+      enableScrollTracking
     ) {
-      const currentItemIndex = itemsRef.current.findIndex(
-        (item) => item.getAttribute("data-id") === currentlyPlayingId
-      );
-
-      if (currentItemIndex !== -1) {
-        scrollItemIntoView(itemsRef.current[currentItemIndex]);
+      const firstItem = itemsRef.current[0];
+      
+      if (firstItem && firstItem.getAttribute("data-id") === currentlyPlayingId) {
+        containerRef.current.scrollTo({
+          left: 0,
+          top: 0,
+          behavior: "smooth"
+        });
         hasScrolledToPlayingRef.current = true;
       }
     }
-  }, [currentlyPlayingId, containerRef, scrollItemIntoView, enableScrollTracking, isUserScrolling]);
+  }, [currentlyPlayingId, containerRef, enableScrollTracking, isUserScrolling]);
 
   const getTrackItems = useCallback(() => {
     if (!containerRef.current) return [];
