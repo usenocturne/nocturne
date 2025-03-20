@@ -335,7 +335,8 @@ export default function Home({
               .filter(
                 (item) =>
                   item?.type === "playlist" &&
-                  item.id !== "37i9dQZF1EYkqdzj48dyYq"
+                  item.id !== "37i9dQZF1EYkqdzj48dyYq" &&
+                  (item.tracks?.total > 0)
               )
               .map((playlist) => (
                 <div
