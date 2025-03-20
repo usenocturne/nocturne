@@ -51,5 +51,13 @@ start() {
     mkdir -p /data/root
   fi
 
+  # swap
+  if [ ! -f /data/swapfile ]; then
+    fallocate -l 256M /data/swapfile
+    mkswap /data/swapfile
+    chmod 600 /data/swapfile
+    swapon /data/swapfile
+  fi
+
   eend 0
 }

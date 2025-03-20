@@ -9,8 +9,8 @@ depend() {
 start() {
   ebegin superbird_init
 
+  # Bluetooth configuration
   name=""
-
   serial="$(tail -c 5 < /sys/class/efuse/usid)"
   bt_mac="$(/usr/bin/awk -F: '/0x00/ { split(toupper($2), s, " ") ; printf("%s:%s:%s:%s:%s:%s\n", s[1], s[2], s[3], s[4], s[5], s[6]) }' /sys/class/efuse/mac_bt)"
   if [ "${#serial}" -eq 4 ] && [ "${#bt_mac}" -eq 17 ]; then
