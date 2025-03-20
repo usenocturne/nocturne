@@ -45,7 +45,7 @@ export default function HorizontalScroll({
     }
   };
 
-  const { selectedIndex } = useNavigation({
+  const { selectedIndex, scrollItemIntoView } = useNavigation({
     containerRef,
     activeSection,
     enableScrollTracking: true,
@@ -58,6 +58,20 @@ export default function HorizontalScroll({
     onItemSelect: handleItemSelect,
     inactivityTimeout: 3000,
   });
+
+  useEffect(() => {
+    if (currentlyPlayingId && containerRef.current && items.length > 0 && scrollItemIntoView) {
+      const currentItemIndex = items.findIndex(
+        (item) => item.getAttribute("data-id") === currentlyPlayingId
+      );
+      
+      if (currentItemIndex !== -1) {
+        setTimeout(() => {
+          scrollItemIntoView(items[currentItemIndex]);
+        }, 100);
+      }
+    }
+  }, [currentlyPlayingId, items, containerRef, scrollItemIntoView]);
 
   return <div className="relative">{children}</div>;
 }

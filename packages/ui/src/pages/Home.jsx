@@ -25,7 +25,6 @@ export default function Home({
 }) {
   const { updateGradientColors } = useGradientState();
   const scrollContainerRef = useRef(null);
-  const hasScrolledToCurrentAlbumRef = useRef(false);
   const itemWidth = 290;
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
   const { playDJMix } = useSpotifyPlayerControls(accessToken);
@@ -38,12 +37,13 @@ export default function Home({
   const { scrollByAmount } = useNavigation({
     containerRef: scrollContainerRef,
     activeSection,
-    enableScrollTracking: false,
+    enableScrollTracking: true,
     enableWheelNavigation: true,
     enableKeyboardNavigation: false,
     enableItemSelection: false,
     itemWidth: itemWidth,
     itemGap: 40,
+    currentlyPlayingId: currentlyPlayingAlbum?.id
   });
 
   useEffect(() => {
@@ -82,12 +82,6 @@ export default function Home({
     radioMixes,
     currentlyPlayingAlbum,
   ]);
-
-  useEffect(() => {
-    if (currentlyPlayingAlbum?.id) {
-      hasScrolledToCurrentAlbumRef.current = false;
-    }
-  }, [currentlyPlayingAlbum?.id]);
 
   useEffect(() => {
     if (
@@ -195,6 +189,7 @@ export default function Home({
   const renderRecentsSection = () => {
     return (
       <HorizontalScroll
+        key={`recents-${currentlyPlayingAlbum?.id || 'empty'}`}
         containerRef={scrollContainerRef}
         currentlyPlayingId={currentlyPlayingAlbum?.id}
         accessToken={accessToken}
@@ -228,6 +223,7 @@ export default function Home({
                 key={album.id}
                 className="min-w-[280px] pl-2 mr-10 snap-start"
                 data-id={album.id}
+                data-playing={album.id === currentlyPlayingAlbum?.id ? "true" : "false"}
               >
                 <div
                   className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] cursor-pointer"

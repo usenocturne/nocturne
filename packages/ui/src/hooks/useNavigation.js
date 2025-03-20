@@ -49,6 +49,12 @@ export function useNavigation({
     }
   }, [activeSection]);
 
+  useEffect(() => {
+    if (currentlyPlayingId) {
+      hasScrolledToPlayingRef.current = false;
+    }
+  }, [currentlyPlayingId]);
+
   const scrollItemIntoView = useCallback(
     (item) => {
       if (!item || !containerRef.current) return;
@@ -89,7 +95,7 @@ export function useNavigation({
         hasScrolledToPlayingRef.current = true;
       }
     }
-  }, [currentlyPlayingId, scrollItemIntoView, enableScrollTracking]);
+  }, [currentlyPlayingId, containerRef, scrollItemIntoView, enableScrollTracking, isUserScrolling]);
 
   const getTrackItems = useCallback(() => {
     if (!containerRef.current) return [];
