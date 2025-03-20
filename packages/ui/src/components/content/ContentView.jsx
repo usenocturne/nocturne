@@ -406,14 +406,14 @@ const ContentView = ({
                 {track.artists &&
                   track.artists.map((artist, artistIndex) => (
                     <p
-                      key={artist.id}
+                      key={artist.id || `artist-${artistIndex}`}
                       className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${
                         artistIndex < track.artists.length - 1
                           ? 'mr-2 after:content-[","]'
                           : ""
                       }`}
                     >
-                      {artist.name}
+                      {artist.name === null && artist.type ? artist.type : artist.name}
                     </p>
                   ))}
               </div>
