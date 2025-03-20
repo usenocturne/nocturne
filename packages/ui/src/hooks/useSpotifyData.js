@@ -1,11 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useAuth } from "./useAuth";
+import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
+import { usePlaybackProgress } from "./usePlaybackProgress";
+import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 
-export function useSpotifyData(
-  accessToken,
-  albumChangeEvent,
-  activeSection,
-  currentlyPlayingAlbum
-) {
+export function useSpotifyData(activeSection) {
+  const {
+    isAuthenticated,
+    accessToken,
+    isLoading: authIsLoading,
+    refreshTokens,
+    error: authError
+  } = useAuth();
+
+  const [isInitializing, setIsInitializing] = useState(true);
   const [recentAlbums, setRecentAlbums] = useState([]);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [topArtists, setTopArtists] = useState([]);
@@ -22,7 +30,7 @@ export function useSpotifyData(
     userPlaylists: true,
     topArtists: true,
     likedSongs: true,
-    radioMixes: true,
+    radioMixes: true
   });
 
   const [errors, setErrors] = useState({
@@ -35,6 +43,32 @@ export function useSpotifyData(
 
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const lastPlayedAlbumIdRef = useRef(null);
+  const effectiveToken = isInitializing ? null : accessToken;
+
+  const {
+    currentPlayback,
+    currentlyPlayingAlbum,
+    albumChangeEvent,
+    isLoading: playerIsLoading,
+    error: playerError,
+    refreshPlaybackState,
+  } = useSpotifyPlayerState(effectiveToken);
+
+  const playbackProgress = usePlaybackProgress(effectiveToken);
+  const playerControls = useSpotifyPlayerControls(effectiveToken);
+
+  const initializeWithFreshToken = useCallback(async () => {
+    if (!isAuthenticated || authIsLoading) return;
+    setIsInitializing(true);
+    await refreshTokens();
+    setIsInitializing(false);
+  }, [isAuthenticated, authIsLoading, refreshTokens]);
+
+  useEffect(() => {
+    if (isAuthenticated && !authIsLoading) {
+      initializeWithFreshToken();
+    }
+  }, [isAuthenticated, authIsLoading, initializeWithFreshToken]);
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.id) {
@@ -60,7 +94,7 @@ export function useSpotifyData(
   }, [currentlyPlayingAlbum, recentAlbums, activeSection]);
 
   const fetchRecentlyPlayed = useCallback(async () => {
-    if (!accessToken) return;
+    if (!effectiveToken) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
@@ -69,7 +103,7 @@ export function useSpotifyData(
         "https://api.spotify.com/v1/me/player/recently-played?limit=50",
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${effectiveToken}`,
           },
         }
       );
@@ -106,10 +140,10 @@ export function useSpotifyData(
     } finally {
       setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
     }
-  }, [accessToken, currentlyPlayingAlbum]);
+  }, [effectiveToken, currentlyPlayingAlbum]);
 
   const fetchUserPlaylists = useCallback(async () => {
-    if (!accessToken) return;
+    if (!effectiveToken) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, userPlaylists: true }));
@@ -118,7 +152,7 @@ export function useSpotifyData(
         "https://api.spotify.com/v1/me/playlists?limit=50",
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${effectiveToken}`,
           },
         }
       );
@@ -136,10 +170,10 @@ export function useSpotifyData(
     } finally {
       setIsLoading((prev) => ({ ...prev, userPlaylists: false }));
     }
-  }, [accessToken]);
+  }, [effectiveToken]);
 
   const fetchTopArtists = useCallback(async () => {
-    if (!accessToken) return;
+    if (!effectiveToken) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, topArtists: true }));
@@ -148,7 +182,7 @@ export function useSpotifyData(
         "https://api.spotify.com/v1/me/top/artists?limit=50",
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${effectiveToken}`,
           },
         }
       );
@@ -166,10 +200,10 @@ export function useSpotifyData(
     } finally {
       setIsLoading((prev) => ({ ...prev, topArtists: false }));
     }
-  }, [accessToken]);
+  }, [effectiveToken]);
 
   const fetchLikedSongs = useCallback(async () => {
-    if (!accessToken) return;
+    if (!effectiveToken) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, likedSongs: true }));
@@ -178,7 +212,7 @@ export function useSpotifyData(
         "https://api.spotify.com/v1/me/tracks?limit=1",
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${effectiveToken}`,
           },
         }
       );
@@ -199,10 +233,10 @@ export function useSpotifyData(
     } finally {
       setIsLoading((prev) => ({ ...prev, likedSongs: false }));
     }
-  }, [accessToken]);
+  }, [effectiveToken]);
 
   const fetchRadioMixes = useCallback(async () => {
-    if (!accessToken) return;
+    if (!effectiveToken) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, radioMixes: true }));
@@ -216,20 +250,20 @@ export function useSpotifyData(
         fetch(
           "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term",
           {
-            headers: { Authorization: `Bearer ${accessToken}` },
+            headers: { Authorization: `Bearer ${effectiveToken}` },
           }
         ).then((res) => (res.ok ? res.json() : { items: [] })),
         fetch(
           "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=long_term",
           {
-            headers: { Authorization: `Bearer ${accessToken}` },
+            headers: { Authorization: `Bearer ${effectiveToken}` },
           }
         ).then((res) => (res.ok ? res.json() : { items: [] })),
         fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: { Authorization: `Bearer ${effectiveToken}` },
         }).then((res) => (res.ok ? res.json() : { items: [] })),
         fetch("https://api.spotify.com/v1/me/top/artists?limit=10", {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: { Authorization: `Bearer ${effectiveToken}` },
         }).then((res) => (res.ok ? res.json() : { items: [] })),
       ]);
 
@@ -401,7 +435,7 @@ export function useSpotifyData(
             `https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=US`,
             {
               headers: {
-                Authorization: `Bearer ${accessToken}`,
+                Authorization: `Bearer ${effectiveToken}`,
               },
             }
           ).then((res) => (res.ok ? res.json() : { tracks: [] }))
@@ -554,7 +588,7 @@ export function useSpotifyData(
     } finally {
       setIsLoading((prev) => ({ ...prev, radioMixes: false }));
     }
-  }, [accessToken]);
+  }, [effectiveToken]);
 
   function getSeasonalMixName() {
     const month = new Date().getMonth();
@@ -573,36 +607,15 @@ export function useSpotifyData(
   }
 
   useEffect(() => {
-    if (albumChangeEvent?.album?.id) {
-      setRecentAlbums((prevAlbums) => {
-        const newAlbum = albumChangeEvent.album;
-        const filteredAlbums = prevAlbums.filter(
-          (album) => album.id !== newAlbum.id
-        );
-        return [newAlbum, ...filteredAlbums].slice(0, 50);
+    if (effectiveToken && !initialDataLoaded) {
+      setIsLoading({
+        recentAlbums: true,
+        userPlaylists: true,
+        topArtists: true,
+        likedSongs: true,
+        radioMixes: true
       });
-    }
-  }, [albumChangeEvent]);
-
-  useEffect(() => {
-    if (
-      initialDataLoaded &&
-      currentlyPlayingAlbum?.id &&
-      recentAlbums.length > 0
-    ) {
-      if (recentAlbums[0]?.id !== currentlyPlayingAlbum.id) {
-        setRecentAlbums((prevAlbums) => {
-          const filteredAlbums = prevAlbums.filter(
-            (album) => album.id !== currentlyPlayingAlbum.id
-          );
-          return [currentlyPlayingAlbum, ...filteredAlbums].slice(0, 50);
-        });
-      }
-    }
-  }, [initialDataLoaded, currentlyPlayingAlbum, recentAlbums]);
-
-  useEffect(() => {
-    if (accessToken && !initialDataLoaded) {
+      
       fetchRecentlyPlayed();
       fetchUserPlaylists();
       fetchTopArtists();
@@ -611,7 +624,7 @@ export function useSpotifyData(
       setInitialDataLoaded(true);
     }
   }, [
-    accessToken,
+    effectiveToken,
     initialDataLoaded,
     fetchRecentlyPlayed,
     fetchUserPlaylists,
@@ -621,19 +634,51 @@ export function useSpotifyData(
   ]);
 
   const refreshData = useCallback(() => {
+    setIsLoading(prev => ({
+      ...prev,
+      userPlaylists: true,
+      topArtists: true,
+      likedSongs: true,
+      radioMixes: true
+    }));
+    
     fetchUserPlaylists();
     fetchTopArtists();
     fetchLikedSongs();
     fetchRadioMixes();
   }, [fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchRadioMixes]);
 
+  const isLoadingData = Object.values(isLoading).some(Boolean);
+  const isLoadingAll = authIsLoading || isInitializing || isLoadingData || playerIsLoading;
+
   return {
+    isAuthenticated,
+    accessToken,
+    authIsLoading,
+    currentPlayback,
+    currentlyPlayingAlbum,
+    albumChangeEvent,
+    playerIsLoading,
+    playerError,
+    refreshPlaybackState,
+    playbackProgress,
+    playerControls,
     recentAlbums,
     userPlaylists,
     topArtists,
     likedSongs,
     radioMixes,
-    isLoading,
+    isLoading: {
+      data: isLoadingData,
+      player: playerIsLoading,
+      auth: authIsLoading || isInitializing,
+      all: isLoadingAll,
+      recentAlbums: isLoading.recentAlbums,
+      userPlaylists: isLoading.userPlaylists,
+      topArtists: isLoading.topArtists,
+      likedSongs: isLoading.likedSongs,
+      radioMixes: isLoading.radioMixes
+    },
     errors,
     refreshData,
     refreshRecentlyPlayed: fetchRecentlyPlayed,

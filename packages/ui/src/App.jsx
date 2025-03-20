@@ -9,14 +9,12 @@ import NowPlaying from "./components/player/NowPlaying";
 import BluetoothPairingModal from "./components/bluetooth/BluetoothPairingModal";
 import BluetoothNetworkModal from "./components/bluetooth/BluetoothNetworkModal";
 import DeviceSwitcherModal from "./components/player/DeviceSwitcherModal";
-import { useAuth } from "./hooks/useAuth";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
-import { useSpotifyData } from "./hooks/useSpotifyData";
-import { useSpotifyPlayerState } from "./hooks/useSpotifyPlayerState";
-import { usePlaybackProgress, PlaybackProgressContext } from "./hooks/usePlaybackProgress";
-import { useSpotifyPlayerControls, DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
+import { PlaybackProgressContext } from "./hooks/usePlaybackProgress";
+import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
 import { useBluetooth } from "./hooks/useBluetooth";
+import { useSpotifyData } from "./hooks/useSpotifyData";
 
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
@@ -26,7 +24,28 @@ function App() {
   const [viewingContent, setViewingContent] = useState(null);
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
 
-  const { isAuthenticated, accessToken, isLoading: authIsLoading } = useAuth();
+  const {
+    isAuthenticated,
+    accessToken,
+    authIsLoading,
+    currentPlayback,
+    currentlyPlayingAlbum,
+    albumChangeEvent,
+    playerIsLoading,
+    playerError,
+    refreshPlaybackState,
+    playbackProgress,
+    playerControls,
+    recentAlbums,
+    userPlaylists,
+    topArtists,
+    likedSongs,
+    radioMixes,
+    isLoading,
+    errors: dataErrors,
+    refreshData
+  } = useSpotifyData(activeSection);
+
   const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
   const {
     pairingRequest,
@@ -49,17 +68,6 @@ function App() {
     updateGradientColors,
   } = useGradientState(activeSection);
 
-  const {
-    currentPlayback,
-    currentlyPlayingAlbum,
-    albumChangeEvent,
-    isLoading: playerIsLoading,
-    error: playerError,
-    refreshPlaybackState,
-  } = useSpotifyPlayerState(accessToken);
-
-  const playbackProgress = usePlaybackProgress(accessToken);
-
   const handleOpenDeviceSwitcher = () => {
     setIsDeviceSwitcherOpen(true);
   };
@@ -71,24 +79,6 @@ function App() {
   const deviceSwitcherContextValue = {
     openDeviceSwitcher: handleOpenDeviceSwitcher
   };
-
-  const playerControls = useSpotifyPlayerControls(accessToken);
-
-  const {
-    recentAlbums,
-    userPlaylists,
-    topArtists,
-    likedSongs,
-    radioMixes,
-    isLoading: dataIsLoading,
-    errors: dataErrors,
-    refreshData,
-  } = useSpotifyData(
-    accessToken,
-    albumChangeEvent,
-    activeSection,
-    currentlyPlayingAlbum
-  );
 
   useEffect(() => {
     checkNetwork();
@@ -242,10 +232,7 @@ function App() {
         radioMixes={radioMixes}
         currentPlayback={currentPlayback}
         currentlyPlayingAlbum={currentlyPlayingAlbum}
-        isLoading={{
-          data: dataIsLoading,
-          player: playerIsLoading,
-        }}
+        isLoading={isLoading}
         refreshData={refreshData}
         refreshPlaybackState={refreshPlaybackState}
         onOpenContent={handleOpenContent}

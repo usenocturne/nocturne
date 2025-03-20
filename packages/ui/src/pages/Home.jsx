@@ -194,7 +194,7 @@ export default function Home({
           className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
           style={{ willChange: "transform" }}
         >
-          {isLoading?.data?.recentAlbums && recentAlbums.length === 0 ? (
+          {isLoading.recentAlbums ? (
             Array(5)
               .fill()
               .map((_, index) => (
@@ -314,7 +314,7 @@ export default function Home({
             </h4>
           </div>
 
-          {isLoading?.data?.userPlaylists && userPlaylists.length === 0 ? (
+          {isLoading.userPlaylists ? (
             Array(3)
               .fill()
               .map((_, index) => (
@@ -412,7 +412,7 @@ export default function Home({
           className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
           style={{ willChange: "transform" }}
         >
-          {isLoading?.data?.topArtists && topArtists.length === 0 ? (
+          {isLoading.topArtists ? (
             Array(5)
               .fill()
               .map((_, index) => (
@@ -486,11 +486,6 @@ export default function Home({
   };
 
   const renderRadioSection = () => {
-    const formatTrackCount = (mix) => {
-      if (!mix.tracks || !mix.tracks.length) return "Mix";
-      return `${mix.tracks.length} Tracks`;
-    };
-
     return (
       <HorizontalScroll
         containerRef={scrollContainerRef}
@@ -549,13 +544,12 @@ export default function Home({
             </h4>
           </div>
 
-          {isLoading?.data?.radioMixes &&
-          (!radioMixes || radioMixes.length === 0) ? (
-            Array(4)
+          {isLoading.radioMixes ? (
+            Array(5)
               .fill()
               .map((_, index) => (
                 <div
-                  key={`loading-mix-${index}`}
+                  key={`loading-${index}`}
                   className="min-w-[280px] pl-2 mr-10 snap-start"
                 >
                   <div
@@ -566,9 +560,13 @@ export default function Home({
                   <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
                 </div>
               ))
-          ) : radioMixes && radioMixes.length > 0 ? (
-            radioMixes.map((mix) => (
-              <div key={mix.id} className="min-w-[280px] pl-2 mr-10 snap-start">
+          ) : radioMixes.length > 0 ? (
+            radioMixes.map((mix, i) => (
+              <div
+                key={`${mix.id}-${i}`}
+                className="min-w-[280px] pl-2 mr-10 snap-start"
+                data-id={mix.id}
+              >
                 <div
                   className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] cursor-pointer"
                   style={{ width: 280, height: 280 }}
@@ -579,7 +577,6 @@ export default function Home({
                       src={mix.images[0].url}
                       alt={`${mix.name} Cover`}
                       className="w-full h-full rounded-[12px] aspect-square"
-                      loading="lazy"
                     />
                   ) : (
                     <div className="w-full h-full rounded-[12px] bg-white/10"></div>
@@ -605,7 +602,7 @@ export default function Home({
                       Now Playing
                     </>
                   ) : (
-                    formatTrackCount(mix)
+                    `${mix.tracks ? mix.tracks.length : 0} Tracks`
                   )}
                 </h4>
               </div>
