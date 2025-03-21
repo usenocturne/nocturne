@@ -23,10 +23,9 @@ export const usePlaybackProgress = (accessToken) => {
   const lastUpdateTimeRef = useRef(Date.now());
   const animationFrameRef = useRef(null);
   const serverProgressRef = useRef(0);
-  const frameStartRef = useRef(0);
-
+  const lastRefreshTimeRef = useRef(0);
+  const frameSkipCounterRef = useRef(0);
   const animationCountRef = useRef(0);
-  const lowFrequencyThreshold = 60;
 
   useEffect(() => {
     if (currentPlayback?.item?.id !== trackId) {
@@ -37,10 +36,7 @@ export const usePlaybackProgress = (accessToken) => {
       lastUpdateTimeRef.current = Date.now();
       animationCountRef.current = 0;
     }
-  }, [currentPlayback?.item?.id, trackId]);
-
-  useEffect(() => {
-    if (currentPlayback?.progress_ms !== undefined) {
+    else if (currentPlayback?.progress_ms !== undefined) {
       serverProgressRef.current = currentPlayback.progress_ms;
       setProgressMs(currentPlayback.progress_ms);
       lastUpdateTimeRef.current = Date.now();
@@ -49,15 +45,7 @@ export const usePlaybackProgress = (accessToken) => {
 
     setIsPlaying(currentPlayback?.is_playing || false);
     setDuration(currentPlayback?.item?.duration_ms || 0);
-  }, [currentPlayback]);
-
-  const getAnimationFrameDelay = useCallback(() => {
-    if (animationCountRef.current < lowFrequencyThreshold) {
-      return 0;
-    } else {
-      return 3;
-    }
-  }, []);
+  }, [currentPlayback, trackId]);
 
   useEffect(() => {
     if (animationFrameRef.current) {
@@ -65,21 +53,12 @@ export const usePlaybackProgress = (accessToken) => {
       animationFrameRef.current = null;
     }
 
-    if (!isPlaying || duration <= 0) {
-      return;
-    }
+    if (!isPlaying || duration <= 0) return;
 
-    let frameSkipCounter = 0;
-
-    const animate = (timestamp) => {
-      if (!frameStartRef.current) {
-        frameStartRef.current = timestamp;
-      }
-
-      const frameDelay = getAnimationFrameDelay();
-      if (frameDelay > 0) {
-        frameSkipCounter = (frameSkipCounter + 1) % frameDelay;
-        if (frameSkipCounter !== 0) {
+    const animate = () => {
+      if (animationCountRef.current > 60) {
+        frameSkipCounterRef.current = (frameSkipCounterRef.current + 1) % 3;
+        if (frameSkipCounterRef.current !== 0) {
           animationFrameRef.current = requestAnimationFrame(animate);
           return;
         }
@@ -88,8 +67,11 @@ export const usePlaybackProgress = (accessToken) => {
       const now = Date.now();
       const elapsed = now - lastUpdateTimeRef.current;
 
-      if (elapsed > 30000) {
+      if (now - lastRefreshTimeRef.current >= 15000) {
+        lastRefreshTimeRef.current = now;
         refreshPlaybackState();
+      } else if (elapsed > 30000) {
+        refreshPlaybackState(true);
       }
 
       setProgressMs((prev) => {
@@ -101,7 +83,6 @@ export const usePlaybackProgress = (accessToken) => {
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
-    frameStartRef.current = 0;
     animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
@@ -110,7 +91,7 @@ export const usePlaybackProgress = (accessToken) => {
         animationFrameRef.current = null;
       }
     };
-  }, [isPlaying, duration, getAnimationFrameDelay, refreshPlaybackState]);
+  }, [isPlaying, duration, refreshPlaybackState]);
 
   const updateProgress = useCallback((newProgressMs) => {
     serverProgressRef.current = newProgressMs;
@@ -118,16 +99,6 @@ export const usePlaybackProgress = (accessToken) => {
     lastUpdateTimeRef.current = Date.now();
     animationCountRef.current = 0;
   }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (isPlaying) {
-        refreshPlaybackState();
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, refreshPlaybackState]);
 
   return {
     progressMs,

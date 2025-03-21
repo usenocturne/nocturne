@@ -191,7 +191,6 @@ function App() {
   const handleNavigateToNowPlaying = () => {
     setViewingContent(null);
     setActiveSection("nowPlaying");
-    refreshPlaybackState();
   };
 
   const handleNetworkCancel = () => {

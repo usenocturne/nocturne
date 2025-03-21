@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
 import { CarThingIcon } from "../common/icons";
+import { useSpotifyPlayerState } from "../../hooks/useSpotifyPlayerState";
 
 const ContentView = ({
   accessToken,
@@ -21,6 +22,7 @@ const ContentView = ({
   const [selectedTrackIndex, setSelectedTrackIndex] = useState(-1);
   const tracksContainerRef = useRef(null);
   const navigate = useNavigate();
+  const { currentPlayback } = useSpotifyPlayerState(accessToken);
 
   const {
     playTrack,
@@ -32,27 +34,10 @@ const ContentView = ({
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
 
   useEffect(() => {
-    const checkShuffleState = async () => {
-      if (!accessToken) return;
-      
-      try {
-        const response = await fetch("https://api.spotify.com/v1/me/player", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setIsShuffleEnabled(data.shuffle_state || false);
-        }
-      } catch (error) {
-        console.error("Error checking shuffle state:", error);
-      }
-    };
-    
-    checkShuffleState();
-  }, [accessToken]);
+    if (currentPlayback?.shuffle_state !== undefined) {
+      setIsShuffleEnabled(currentPlayback.shuffle_state);
+    }
+  }, [currentPlayback?.shuffle_state]);
 
   const handleTrackSelect = (index, trackElement) => {
     if (index >= 0 && index < tracks.length) {

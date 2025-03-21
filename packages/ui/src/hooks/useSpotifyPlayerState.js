@@ -1,3 +1,5 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+
 let globalWebSocket = null;
 let globalConnectionId = null;
 let connectionCount = 0;
@@ -5,8 +7,8 @@ let isConnecting = false;
 let connectionErrors = 0;
 let retryTimeout = null;
 let eventSubscribers = [];
-
-import { useState, useEffect, useRef, useCallback } from "react";
+let lastFetchTimestamp = 0;
+let pendingFetch = null;
 
 export function useSpotifyPlayerState(accessToken) {
   const [currentPlayback, setCurrentPlayback] = useState(null);
@@ -72,10 +74,19 @@ export function useSpotifyPlayerState(accessToken) {
     initialStateLoadedRef.current = true;
   }, []);
 
-  const fetchCurrentPlayback = useCallback(async () => {
+  const fetchCurrentPlayback = useCallback(async (forceRefresh = false) => {
     if (!accessToken) return;
 
+    const now = Date.now();
+    
+    if (!forceRefresh && 
+        (now - lastFetchTimestamp < 1000 || pendingFetch)) {
+      return;
+    }
+
     try {
+      lastFetchTimestamp = now;
+      pendingFetch = true;
       setIsLoading(true);
 
       const response = await fetch(
@@ -106,6 +117,7 @@ export function useSpotifyPlayerState(accessToken) {
       console.error("Error fetching current playback:", err);
       setError(err.message);
     } finally {
+      pendingFetch = false;
       setIsLoading(false);
     }
   }, [accessToken, processPlaybackState, resetPlaybackState]);

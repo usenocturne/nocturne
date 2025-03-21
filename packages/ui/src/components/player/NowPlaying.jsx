@@ -94,77 +94,57 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   };
 
   const showVolumeIndicatorWithTimeout = () => {
-    if (volumeIndicatorTimeoutRef.current) {
-      clearTimeout(volumeIndicatorTimeoutRef.current);
-    }
-    
-    if (volumeHideTimeoutRef.current) {
-      clearTimeout(volumeHideTimeoutRef.current);
-    }
-    
-    if (volumeInteractionTimeoutRef.current) {
-      clearTimeout(volumeInteractionTimeoutRef.current);
-    }
-  
+    [volumeIndicatorTimeoutRef, volumeHideTimeoutRef, volumeInteractionTimeoutRef].forEach(ref => {
+      if (ref.current) {
+        clearTimeout(ref.current);
+        ref.current = null;
+      }
+    });
+
     setVolumeIndicatorAnimation("showing");
     setShowVolumeIndicator(true);
     setIsAdjustingVolume(true);
     
     volumeInteractionTimeoutRef.current = setTimeout(() => {
       setIsAdjustingVolume(false);
-    }, 500);
-    
-    if (!isAdjustingVolume) {
+      
       volumeIndicatorTimeoutRef.current = setTimeout(() => {
         setVolumeIndicatorAnimation("hiding");
-        
+
         volumeHideTimeoutRef.current = setTimeout(() => {
           setShowVolumeIndicator(false);
           setVolumeIndicatorAnimation("hidden");
         }, 300);
-      }, 1500);
-    }
+      }, 1000);
+    }, 500);
   };
 
   const handleWheel = (e) => {
     if (isProgressScrubbing) return;
     
     const now = Date.now();
-    if (now - lastWheelEventRef.current < 16) {
+    if (now - lastWheelEventRef.current < 50) {
       e.preventDefault();
-      e.stopPropagation();
       return;
     }
     lastWheelEventRef.current = now;
     
-    const primaryDelta = Math.abs(e.deltaX) > Math.abs(e.deltaY) / 2 ? e.deltaX : e.deltaY;
-    
     e.preventDefault();
     e.stopPropagation();
     
-    wheelDeltaAccumulatorRef.current += primaryDelta;
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    wheelDeltaAccumulatorRef.current += delta;
     
-    const volumeStep = 5;
-    const threshold = 1.2;
-    
-    if (Math.abs(wheelDeltaAccumulatorRef.current) >= threshold) {
-      setIsAdjustingVolume(true);
-      
-      if (volumeInteractionTimeoutRef.current) {
-        clearTimeout(volumeInteractionTimeoutRef.current);
-      }
-      
+    if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
       const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
-      const newVolume = Math.max(0, Math.min(100, volume + (direction * volumeStep)));
+      const newVolume = Math.max(0, Math.min(100, volume + (direction * 5)));
       
       wheelDeltaAccumulatorRef.current = 0;
       
-      setVolume(newVolume);
-      showVolumeIndicatorWithTimeout();
-      
-      volumeInteractionTimeoutRef.current = setTimeout(() => {
-        setIsAdjustingVolume(false);
-      }, 800);
+      if (newVolume !== volume) {
+        setVolume(newVolume);
+        showVolumeIndicatorWithTimeout();
+      }
     }
   };
 
@@ -338,25 +318,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     try {
       const newShuffleState = !shuffleEnabled;
       setShuffleEnabled(newShuffleState);
-      
       await toggleShuffle(newShuffleState);
-      
-      setTimeout(async () => {
-        try {
-          const response = await fetch("https://api.spotify.com/v1/me/player", {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setShuffleEnabled(data.shuffle_state);
-          }
-        } catch (error) {
-          console.error("Error refreshing shuffle state:", error);
-        }
-      }, 1000);
     } catch (error) {
       console.error("Error toggling shuffle:", error);
       setShuffleEnabled(!shuffleEnabled);
@@ -365,39 +327,11 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
 
   const handleToggleRepeat = async () => {
     try {
-      let newRepeatMode;
-      switch (repeatMode) {
-        case "off":
-          newRepeatMode = "context";
-          break;
-        case "context":
-          newRepeatMode = "track";
-          break;
-        default:
-          newRepeatMode = "off";
-          break;
-      }
+      const nextModeMap = { off: "context", context: "track", track: "off" };
+      const newRepeatMode = nextModeMap[repeatMode] || "off";
       
       setRepeatMode(newRepeatMode);
-      
       await setRepeatModeApi(newRepeatMode);
-      
-      setTimeout(async () => {
-        try {
-          const response = await fetch("https://api.spotify.com/v1/me/player", {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setRepeatMode(data.repeat_state);
-          }
-        } catch (error) {
-          console.error("Error refreshing repeat state:", error);
-        }
-      }, 1000);
     } catch (error) {
       console.error("Error toggling repeat mode:", error);
     }
