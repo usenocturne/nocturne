@@ -20,6 +20,9 @@ import {
   VolumeLoudIcon,
   VolumeLowIcon,
   VolumeOffIcon,
+  ShuffleIcon,
+  RepeatIcon,
+  RepeatOneIcon,
 } from "../common/icons";
 
 const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColors, onOpenDeviceSwitcher }) => {
@@ -28,6 +31,8 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
   const [showVolumeIndicator, setShowVolumeIndicator] = useState(false);
   const [isAdjustingVolume, setIsAdjustingVolume] = useState(false);
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
+  const [repeatMode, setRepeatMode] = useState("off");
   const volumeIndicatorTimeoutRef = useRef(null);
   const volumeHideTimeoutRef = useRef(null);
   const volumeInteractionTimeoutRef = useRef(null);
@@ -52,7 +57,9 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     sendDJSignal,
     setVolume,
     volume,
-    updateVolumeFromDevice
+    updateVolumeFromDevice,
+    toggleShuffle,
+    setRepeatMode: setRepeatModeApi,
   } = useSpotifyPlayerControls(accessToken);
 
   const {
@@ -68,6 +75,15 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       updateVolumeFromDevice(currentPlayback.device.volume_percent);
     }
   }, [currentPlayback?.device?.volume_percent, updateVolumeFromDevice]);
+
+  useEffect(() => {
+    if (currentPlayback?.shuffle_state !== undefined) {
+      setShuffleEnabled(currentPlayback.shuffle_state);
+    }
+    if (currentPlayback?.repeat_state) {
+      setRepeatMode(currentPlayback.repeat_state);
+    }
+  }, [currentPlayback?.shuffle_state, currentPlayback?.repeat_state]);
 
   const handlePlayPause = async () => {
     if (isPlaying) {
@@ -318,6 +334,75 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     setIsProgressScrubbing(scrubbing);
   };
 
+  const handleToggleShuffle = async () => {
+    try {
+      const newShuffleState = !shuffleEnabled;
+      setShuffleEnabled(newShuffleState);
+      
+      await toggleShuffle(newShuffleState);
+      
+      setTimeout(async () => {
+        try {
+          const response = await fetch("https://api.spotify.com/v1/me/player", {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setShuffleEnabled(data.shuffle_state);
+          }
+        } catch (error) {
+          console.error("Error refreshing shuffle state:", error);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Error toggling shuffle:", error);
+      setShuffleEnabled(!shuffleEnabled);
+    }
+  };
+
+  const handleToggleRepeat = async () => {
+    try {
+      let newRepeatMode;
+      switch (repeatMode) {
+        case "off":
+          newRepeatMode = "context";
+          break;
+        case "context":
+          newRepeatMode = "track";
+          break;
+        default:
+          newRepeatMode = "off";
+          break;
+      }
+      
+      setRepeatMode(newRepeatMode);
+      
+      await setRepeatModeApi(newRepeatMode);
+      
+      setTimeout(async () => {
+        try {
+          const response = await fetch("https://api.spotify.com/v1/me/player", {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setRepeatMode(data.repeat_state);
+          }
+        } catch (error) {
+          console.error("Error refreshing repeat state:", error);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Error toggling repeat mode:", error);
+    }
+  };
+
   return (
     <div
       className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation"
@@ -455,6 +540,32 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
                       className={`h-8 w-8 ${showLyrics ? "text-white" : "text-white/60"
                         }`}
                     />
+                  </div>
+                </MenuItem>
+                <MenuItem onClick={handleToggleShuffle}>
+                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                    <span className="text-[28px]">
+                      {shuffleEnabled ? "Disable Shuffle" : "Enable Shuffle"}
+                    </span>
+                    <ShuffleIcon
+                      aria-hidden="true"
+                      className={`h-8 w-8 ${shuffleEnabled ? "text-green-500" : "text-white/60"}`}
+                    />
+                  </div>
+                </MenuItem>
+                <MenuItem onClick={handleToggleRepeat}>
+                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                    <span className="text-[28px]">
+                      {repeatMode === "off" ? "Enable Repeat" : repeatMode === "context" ? "Enable Repeat One" : "Disable Repeat"}
+                    </span>
+                    {repeatMode === "track" ? (
+                      <RepeatOneIcon aria-hidden="true" className="h-8 w-8 text-green-500" />
+                    ) : (
+                      <RepeatIcon 
+                        aria-hidden="true" 
+                        className={`h-8 w-8 ${repeatMode === "context" ? "text-green-500" : "text-white/60"}`} 
+                      />
+                    )}
                   </div>
                 </MenuItem>
                 <MenuItem onClick={onOpenDeviceSwitcher}>

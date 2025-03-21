@@ -26,7 +26,33 @@ const ContentView = ({
     playTrack,
     isLoading: isPlaybackLoading,
     error: playbackError,
+    toggleShuffle,
   } = useSpotifyPlayerControls(accessToken);
+
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+
+  useEffect(() => {
+    const checkShuffleState = async () => {
+      if (!accessToken) return;
+      
+      try {
+        const response = await fetch("https://api.spotify.com/v1/me/player", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setIsShuffleEnabled(data.shuffle_state || false);
+        }
+      } catch (error) {
+        console.error("Error checking shuffle state:", error);
+      }
+    };
+    
+    checkShuffleState();
+  }, [accessToken]);
 
   const handleTrackSelect = (index, trackElement) => {
     if (index >= 0 && index < tracks.length) {
@@ -245,6 +271,7 @@ const ContentView = ({
 
     let contextUri = null;
     let uris = null;
+    let wasShuffleEnabled = isShuffleEnabled;
 
     if (contentType === "album") {
       contextUri = `spotify:album:${contentId}`;
@@ -262,6 +289,11 @@ const ContentView = ({
       localStorage.setItem("currentPlayingMixId", contentId);
     } else if (contentType === "liked-songs") {
       uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+      
+      if (wasShuffleEnabled) {
+        await toggleShuffle(false);
+      }
+      
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
 
@@ -276,6 +308,12 @@ const ContentView = ({
     const success = contextUri
       ? await playTrack(track.uri, contextUri)
       : await playTrack(null, null, uris);
+
+    if (success && contentType === "liked-songs" && wasShuffleEnabled) {
+      setTimeout(async () => {
+        await toggleShuffle(true);
+      }, 500);
+    }
 
     if (success && onNavigateToNowPlaying) {
       onNavigateToNowPlaying();
