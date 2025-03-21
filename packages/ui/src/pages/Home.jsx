@@ -107,6 +107,16 @@ export default function Home({
     }
   }, [newAlbumAdded]);
 
+  useEffect(() => {
+    if (currentlyPlayingAlbum?.images?.[0]?.url) {
+      if (activeSection === "nowPlaying") {
+        updateGradientColors(currentlyPlayingAlbum.images[0].url, "nowPlaying");
+      } else if (activeSection === "recents") {
+        updateGradientColors(currentlyPlayingAlbum.images[0].url, "recents");
+      }
+    }
+  }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
+
   const isPlayingLikedSongs = () => {
     return (
       currentPlayback?.context?.uri?.includes("collection") ||

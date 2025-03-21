@@ -377,8 +377,11 @@ export function useGradientState(activeSection) {
 
   const updateGradientColors = useCallback(
     async (imageUrl, section = null) => {
+      const skipCacheCheck = section === "nowPlaying" || section === "recents";
+      
       const urlSectionKey = `${imageUrl || "none"}-${section || "none"}`;
       if (
+        !skipCacheCheck &&
         urlSectionKey ===
         `${lastProcessedUrlRef.current || "none"}-${
           lastProcessedSectionRef.current || "none"

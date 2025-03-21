@@ -136,6 +136,16 @@ function App() {
     }
   }, [showNetworkPrompt, enableNetworking]);
 
+  useEffect(() => {
+    if (currentlyPlayingAlbum?.images?.[0]?.url) {
+      if (activeSection === "nowPlaying") {
+        updateGradientColors(currentlyPlayingAlbum.images[0].url, "nowPlaying");
+      } else if (activeSection === "recents") {
+        updateGradientColors(currentlyPlayingAlbum.images[0].url, "recents");
+      }
+    }
+  }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
+
   const handleAuthSuccess = () => {
     const storedAccessToken = localStorage.getItem("spotifyAccessToken");
     const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
