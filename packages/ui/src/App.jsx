@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
+import FontLoader from "./components/common/FontLoader";
 import AuthContainer from "./components/auth/AuthContainer";
 import NetworkScreen from "./components/auth/NetworkScreen";
 import Tutorial from "./components/tutorial/Tutorial";
@@ -43,7 +44,7 @@ function App() {
     radioMixes,
     isLoading,
     errors: dataErrors,
-    refreshData
+    refreshData,
   } = useSpotifyData(activeSection);
 
   const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
@@ -77,7 +78,7 @@ function App() {
   };
 
   const deviceSwitcherContextValue = {
-    openDeviceSwitcher: handleOpenDeviceSwitcher
+    openDeviceSwitcher: handleOpenDeviceSwitcher,
   };
 
   useEffect(() => {
@@ -141,7 +142,7 @@ function App() {
 
     if (storedAccessToken && storedRefreshToken) {
       refreshData();
-      
+
       const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
       setShowTutorial(!hasSeenTutorial);
     } else {
@@ -248,7 +249,14 @@ function App() {
     <PlaybackProgressContext.Provider value={playbackProgress}>
       <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
         <Router>
-          <main className="overflow-hidden relative min-h-screen rounded-2xl">
+          <FontLoader />
+          <main
+            className="overflow-hidden relative min-h-screen rounded-2xl"
+            style={{
+              fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
+              fontOpticalSizing: "auto",
+            }}
+          >
             <div
               style={{
                 backgroundImage: generateMeshGradient([

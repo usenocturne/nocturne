@@ -5,7 +5,18 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          "Inter",
+          "var(--font-inter)",
+          "var(--font-noto-sans-sc)",
+          "var(--font-noto-sans-tc)",
+          "var(--font-noto-serif-jp)",
+          "var(--font-noto-sans-kr)",
+          "var(--font-noto-naskh-ar)",
+          "var(--font-noto-sans-bn)",
+          "var(--font-noto-sans-dv)",
+          "var(--font-noto-sans-he)",
+          "var(--font-noto-sans-ta)",
+          "var(--font-noto-sans-th)",
+          "var(--font-noto-sans-gk)",
           "system-ui",
           "-apple-system",
           "BlinkMacSystemFont",
