@@ -238,6 +238,11 @@ const ContentView = ({
   }
 
   const handleTrackPlay = async (track, index) => {
+    if (!track || !track.uri) {
+      console.warn("Attempted to play an invalid track:", track);
+      return;
+    }
+
     let contextUri = null;
     let uris = null;
 
@@ -246,21 +251,26 @@ const ContentView = ({
     } else if (contentType === "playlist") {
       contextUri = `spotify:playlist:${contentId}`;
     } else if (contentType === "artist") {
-      uris = tracks.map((track) => track.uri);
+      uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
     } else if (contentType === "mix") {
-      uris = tracks.map((track) => track.uri);
+      uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
 
       localStorage.setItem("currentPlayingMixId", contentId);
     } else if (contentType === "liked-songs") {
-      uris = tracks.map((track) => track.uri);
+      uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
 
       localStorage.setItem("playingLikedSongs", "true");
+    }
+
+    if (!contextUri && (!uris || uris.length === 0)) {
+      console.warn("No valid context or URIs to play");
+      return;
     }
 
     const success = contextUri
@@ -371,55 +381,61 @@ const ContentView = ({
         className="md:w-2/3 pl-20 h-[calc(100vh-5rem)] overflow-y-auto scroll-container scroll-smooth pb-12"
         ref={tracksContainerRef}
       >
-        {tracks.map((track, index) => (
-          <div
-            key={track.id || `track-${index}`}
-            className={`flex gap-12 items-start mb-4 transition-transform duration-200 ease-out cursor-pointer ${
-              selectedTrackIndex === index ? "scale-105" : ""
-            }`}
-            onClick={() => handleTrackPlay(track, index)}
-            style={{ transition: "transform 0.2s ease-out" }}
-            data-track-index={index}
-          >
-            <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
-              {track.uri === currentlyPlayingTrackUri ? (
-                <div className="w-5">
-                  <section>
-                    <div className="wave0"></div>
-                    <div className="wave1"></div>
-                    <div className="wave2"></div>
-                    <div className="wave3"></div>
-                  </section>
-                </div>
-              ) : (
-                <p>{index + 1}</p>
-              )}
-            </div>
+        {tracks.map((track, index) => {
+          if (!track) return null;
 
-            <div className="flex-grow">
-              <div>
-                <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                  {track.name}
-                </p>
+          return (
+            <div
+              key={track.id || `track-${index}`}
+              className={`flex gap-12 items-start mb-4 transition-transform duration-200 ease-out cursor-pointer ${
+                selectedTrackIndex === index ? "scale-105" : ""
+              }`}
+              onClick={() => (track.uri ? handleTrackPlay(track, index) : null)}
+              style={{ transition: "transform 0.2s ease-out" }}
+              data-track-index={index}
+            >
+              <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
+                {track.uri && track.uri === currentlyPlayingTrackUri ? (
+                  <div className="w-5">
+                    <section>
+                      <div className="wave0"></div>
+                      <div className="wave1"></div>
+                      <div className="wave2"></div>
+                      <div className="wave3"></div>
+                    </section>
+                  </div>
+                ) : (
+                  <p>{index + 1}</p>
+                )}
               </div>
-              <div className="flex flex-wrap">
-                {track.artists &&
-                  track.artists.map((artist, artistIndex) => (
-                    <p
-                      key={artist.id || `artist-${artistIndex}`}
-                      className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${
-                        artistIndex < track.artists.length - 1
-                          ? 'mr-2 after:content-[","]'
-                          : ""
-                      }`}
-                    >
-                      {artist.name === null && artist.type ? artist.type : artist.name}
-                    </p>
-                  ))}
+
+              <div className="flex-grow">
+                <div>
+                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                    {track.name || "Unknown Track"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap">
+                  {track.artists &&
+                    track.artists.map((artist, artistIndex) => (
+                      <p
+                        key={artist?.id || `artist-${artistIndex}`}
+                        className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${
+                          artistIndex < track.artists.length - 1
+                            ? 'mr-2 after:content-[","]'
+                            : ""
+                        }`}
+                      >
+                        {artist?.name === null && artist?.type
+                          ? artist.type
+                          : artist?.name || "Unknown Artist"}
+                      </p>
+                    ))}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {playbackError && (
           <div className="mt-4 p-4 bg-red-500/20 rounded-lg">
