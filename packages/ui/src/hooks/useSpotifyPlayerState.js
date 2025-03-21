@@ -14,7 +14,6 @@ export function useSpotifyPlayerState(accessToken) {
   const connectionErrorsRef = useRef(0);
   const initialStateLoadedRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
-  const lastAccessTokenRef = useRef(null);
 
   const processPlaybackState = useCallback((data) => {
     if (!data) return;
@@ -72,7 +71,6 @@ export function useSpotifyPlayerState(accessToken) {
 
     try {
       setIsLoading(true);
-      setError(null);
 
       const response = await fetch(
         "https://api.spotify.com/v1/me/player?type=episode,track",
@@ -242,32 +240,20 @@ export function useSpotifyPlayerState(accessToken) {
     processPlaybackState,
   ]);
 
-  const resetAndReconnect = useCallback(() => {
-    initialStateLoadedRef.current = false;
-    connectionErrorsRef.current = 0;
-    cleanupWebSocket();
-    setCurrentPlayback(null);
-    setCurrentlyPlayingAlbum(null);
-    fetchCurrentPlayback();
-    connectWebSocket();
-  }, [cleanupWebSocket, fetchCurrentPlayback, connectWebSocket]);
-
   useEffect(() => {
-    if (!accessToken) return;
-    
-    if (lastAccessTokenRef.current && lastAccessTokenRef.current !== accessToken) {
-      resetAndReconnect();
-    } 
-    else if (!lastAccessTokenRef.current) {
-      resetAndReconnect();
+    if (accessToken) {
+      isConnectingRef.current = false;
+      connectionErrorsRef.current = 0;
+      initialStateLoadedRef.current = false;
+
+      fetchCurrentPlayback();
+      connectWebSocket();
     }
-    
-    lastAccessTokenRef.current = accessToken;
 
     return () => {
       cleanupWebSocket();
     };
-  }, [accessToken, resetAndReconnect, cleanupWebSocket]);
+  }, [accessToken, fetchCurrentPlayback, connectWebSocket, cleanupWebSocket]);
 
   return {
     currentPlayback,

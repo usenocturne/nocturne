@@ -40,6 +40,7 @@ export function useAuth() {
       const data = await refreshAccessToken(storedRefreshToken);
 
       if (data.access_token) {
+        setAccessToken(data.access_token);
         localStorage.setItem("spotifyAccessToken", data.access_token);
 
         if (data.refresh_token) {
@@ -53,9 +54,7 @@ export function useAuth() {
         );
         localStorage.setItem("spotifyTokenExpiry", expiryDate.toISOString());
 
-        setAccessToken(data.access_token);
         setIsAuthenticated(true);
-
         scheduleTokenRefresh(expiryDate);
 
         authInitializationState.refreshing = false;

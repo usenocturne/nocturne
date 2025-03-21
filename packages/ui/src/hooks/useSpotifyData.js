@@ -42,6 +42,8 @@ export function useSpotifyData(activeSection) {
   });
 
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const [tokenRefreshed, setTokenRefreshed] = useState(false);
+  const dataLoadingAttemptedRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
   const effectiveToken = isInitializing ? null : accessToken;
 
@@ -60,8 +62,12 @@ export function useSpotifyData(activeSection) {
   const initializeWithFreshToken = useCallback(async () => {
     if (!isAuthenticated || authIsLoading) return;
     setIsInitializing(true);
-    await refreshTokens();
-    setIsInitializing(false);
+    try {
+      const refreshSuccessful = await refreshTokens();
+      setTokenRefreshed(refreshSuccessful);
+    } finally {
+      setIsInitializing(false);
+    }
   }, [isAuthenticated, authIsLoading, refreshTokens]);
 
   useEffect(() => {
@@ -134,9 +140,11 @@ export function useSpotifyData(activeSection) {
 
       setRecentAlbums(uniqueAlbums);
       setErrors((prev) => ({ ...prev, recentAlbums: null }));
+      return uniqueAlbums;
     } catch (err) {
       console.error("Error fetching recently played:", err);
       setErrors((prev) => ({ ...prev, recentAlbums: err.message }));
+      throw err;
     } finally {
       setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
     }
@@ -164,9 +172,11 @@ export function useSpotifyData(activeSection) {
       const data = await response.json();
       setUserPlaylists(data.items);
       setErrors((prev) => ({ ...prev, userPlaylists: null }));
+      return data.items;
     } catch (err) {
       console.error("Error fetching user playlists:", err);
       setErrors((prev) => ({ ...prev, userPlaylists: err.message }));
+      throw err;
     } finally {
       setIsLoading((prev) => ({ ...prev, userPlaylists: false }));
     }
@@ -194,9 +204,11 @@ export function useSpotifyData(activeSection) {
       const data = await response.json();
       setTopArtists(data.items);
       setErrors((prev) => ({ ...prev, topArtists: null }));
+      return data.items;
     } catch (err) {
       console.error("Error fetching top artists:", err);
       setErrors((prev) => ({ ...prev, topArtists: err.message }));
+      throw err;
     } finally {
       setIsLoading((prev) => ({ ...prev, topArtists: false }));
     }
@@ -222,18 +234,21 @@ export function useSpotifyData(activeSection) {
       }
 
       const data = await response.json();
-      setLikedSongs((prev) => ({
-        ...prev,
+      const updatedLikedSongs = {
+        ...likedSongs,
         tracks: { total: data.total },
-      }));
+      };
+      setLikedSongs(updatedLikedSongs);
       setErrors((prev) => ({ ...prev, likedSongs: null }));
+      return updatedLikedSongs;
     } catch (err) {
       console.error("Error fetching liked songs:", err);
       setErrors((prev) => ({ ...prev, likedSongs: err.message }));
+      throw err;
     } finally {
       setIsLoading((prev) => ({ ...prev, likedSongs: false }));
     }
-  }, [effectiveToken]);
+  }, [effectiveToken, likedSongs]);
 
   const fetchRadioMixes = useCallback(async () => {
     if (!effectiveToken) return;
@@ -561,6 +576,7 @@ export function useSpotifyData(activeSection) {
 
       setRadioMixes(sortedMixes);
       setErrors((prev) => ({ ...prev, radioMixes: null }));
+      return sortedMixes;
     } catch (err) {
       console.error("Error fetching radio mixes:", err);
       setErrors((prev) => ({ ...prev, radioMixes: err.message }));
@@ -585,6 +601,7 @@ export function useSpotifyData(activeSection) {
       ];
 
       setRadioMixes(fallbackMixes);
+      return fallbackMixes;
     } finally {
       setIsLoading((prev) => ({ ...prev, radioMixes: false }));
     }
@@ -606,34 +623,61 @@ export function useSpotifyData(activeSection) {
     return "/images/radio-cover/winter.webp";
   }
 
-  useEffect(() => {
-    if (effectiveToken && !initialDataLoaded) {
-      setIsLoading({
-        recentAlbums: true,
-        userPlaylists: true,
-        topArtists: true,
-        likedSongs: true,
-        radioMixes: true
-      });
-      
-      fetchRecentlyPlayed();
-      fetchUserPlaylists();
-      fetchTopArtists();
-      fetchLikedSongs();
-      fetchRadioMixes();
+  const loadInitialData = useCallback(async () => {
+    if (
+      !accessToken || 
+      isInitializing || 
+      initialDataLoaded || 
+      !tokenRefreshed ||
+      dataLoadingAttemptedRef.current
+    ) {
+      return;
+    }
+    
+    dataLoadingAttemptedRef.current = true;
+    
+    setIsLoading({
+      recentAlbums: true,
+      userPlaylists: true,
+      topArtists: true,
+      likedSongs: true,
+      radioMixes: true
+    });
+    
+    try {
+      await fetchRecentlyPlayed();
+      await fetchUserPlaylists();
+      await fetchTopArtists();
+      await fetchLikedSongs();
+      await fetchRadioMixes();
+    } catch (error) {
+      console.error("Error loading initial data:", error);
+    } finally {
       setInitialDataLoaded(true);
     }
   }, [
-    effectiveToken,
-    initialDataLoaded,
+    accessToken, 
+    isInitializing, 
+    initialDataLoaded, 
+    tokenRefreshed,
     fetchRecentlyPlayed,
     fetchUserPlaylists,
     fetchTopArtists,
     fetchLikedSongs,
-    fetchRadioMixes,
+    fetchRadioMixes
   ]);
 
-  const refreshData = useCallback(() => {
+  useEffect(() => {
+    if (accessToken && tokenRefreshed && !initialDataLoaded && !isInitializing) {
+      loadInitialData();
+    }
+  }, [accessToken, tokenRefreshed, initialDataLoaded, isInitializing, loadInitialData]);
+
+  const refreshData = useCallback(async () => {
+    if (!accessToken) return;
+    
+    dataLoadingAttemptedRef.current = false;
+    
     setIsLoading(prev => ({
       ...prev,
       userPlaylists: true,
@@ -642,11 +686,22 @@ export function useSpotifyData(activeSection) {
       radioMixes: true
     }));
     
-    fetchUserPlaylists();
-    fetchTopArtists();
-    fetchLikedSongs();
-    fetchRadioMixes();
-  }, [fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchRadioMixes]);
+    try {
+      const tokenRefreshed = await refreshTokens();
+      
+      if (!tokenRefreshed) {
+        console.error("Token refresh failed during data refresh");
+        return;
+      }
+      
+      await fetchUserPlaylists();
+      await fetchTopArtists();
+      await fetchLikedSongs();
+      await fetchRadioMixes();
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
+  }, [accessToken, refreshTokens, fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchRadioMixes]);
 
   const isLoadingData = Object.values(isLoading).some(Boolean);
   const isLoadingAll = authIsLoading || isInitializing || isLoadingData || playerIsLoading;

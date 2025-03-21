@@ -140,6 +140,8 @@ function App() {
     const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
 
     if (storedAccessToken && storedRefreshToken) {
+      refreshData();
+      
       const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
       setShowTutorial(!hasSeenTutorial);
     } else {
