@@ -86,7 +86,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   }, [currentPlayback?.shuffle_state, currentPlayback?.repeat_state]);
 
   const handlePlayPause = async () => {
-    if (isPlaying) {
+    if (currentPlayback?.is_playing) {
       await pausePlayback();
     } else if (currentPlayback?.item) {
       await playTrack();
@@ -436,8 +436,8 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
           <div onClick={handleSkipPrevious}>
             <BackIcon className="w-14 h-14" />
           </div>
-          <div onClick={handlePlayPause}>
-            {isPlaying ? (
+          <div onClick={handlePlayPause} className="transition-opacity duration-100">
+            {currentPlayback?.is_playing ? (
               <PauseIcon className="w-14 h-14" />
             ) : (
               <PlayIcon className="w-14 h-14" />

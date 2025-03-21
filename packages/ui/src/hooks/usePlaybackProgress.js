@@ -25,26 +25,25 @@ export const usePlaybackProgress = (accessToken) => {
   const serverProgressRef = useRef(0);
   const lastRefreshTimeRef = useRef(0);
   const frameSkipCounterRef = useRef(0);
-  const animationCountRef = useRef(0);
 
   useEffect(() => {
-    if (currentPlayback?.item?.id !== trackId) {
-      setTrackId(currentPlayback?.item?.id);
-      setDuration(currentPlayback?.item?.duration_ms || 0);
-      serverProgressRef.current = currentPlayback?.progress_ms || 0;
-      setProgressMs(currentPlayback?.progress_ms || 0);
-      lastUpdateTimeRef.current = Date.now();
-      animationCountRef.current = 0;
-    }
-    else if (currentPlayback?.progress_ms !== undefined) {
-      serverProgressRef.current = currentPlayback.progress_ms;
-      setProgressMs(currentPlayback.progress_ms);
-      lastUpdateTimeRef.current = Date.now();
-      animationCountRef.current = 0;
-    }
+    if (currentPlayback) {
+      if (currentPlayback?.item?.id !== trackId) {
+        setTrackId(currentPlayback.item?.id);
+        setDuration(currentPlayback.item?.duration_ms || 0);
+        serverProgressRef.current = currentPlayback.progress_ms || 0;
+        setProgressMs(currentPlayback.progress_ms || 0);
+        lastUpdateTimeRef.current = Date.now();
+      }
+      else if (currentPlayback?.progress_ms !== undefined) {
+        serverProgressRef.current = currentPlayback.progress_ms;
+        setProgressMs(currentPlayback.progress_ms);
+        lastUpdateTimeRef.current = Date.now();
+      }
 
-    setIsPlaying(currentPlayback?.is_playing || false);
-    setDuration(currentPlayback?.item?.duration_ms || 0);
+      setIsPlaying(currentPlayback.is_playing || false);
+      setDuration(currentPlayback.item?.duration_ms || 0);
+    }
   }, [currentPlayback, trackId]);
 
   useEffect(() => {
@@ -55,31 +54,28 @@ export const usePlaybackProgress = (accessToken) => {
 
     if (!isPlaying || duration <= 0) return;
 
+    const FRAME_SKIP = 2;
+    const REFRESH_INTERVAL = 15000;
+    const STALE_THRESHOLD = 30000;
+
     const animate = () => {
-      if (animationCountRef.current > 60) {
-        frameSkipCounterRef.current = (frameSkipCounterRef.current + 1) % 3;
-        if (frameSkipCounterRef.current !== 0) {
-          animationFrameRef.current = requestAnimationFrame(animate);
-          return;
+      frameSkipCounterRef.current = (frameSkipCounterRef.current + 1) % FRAME_SKIP;
+      
+      if (frameSkipCounterRef.current === 0) {
+        const now = Date.now();
+        const elapsed = now - lastUpdateTimeRef.current;
+
+        if (now - lastRefreshTimeRef.current >= REFRESH_INTERVAL) {
+          lastRefreshTimeRef.current = now;
+          refreshPlaybackState();
+        } else if (elapsed > STALE_THRESHOLD) {
+          refreshPlaybackState(true);
         }
-      }
 
-      const now = Date.now();
-      const elapsed = now - lastUpdateTimeRef.current;
-
-      if (now - lastRefreshTimeRef.current >= 15000) {
-        lastRefreshTimeRef.current = now;
-        refreshPlaybackState();
-      } else if (elapsed > 30000) {
-        refreshPlaybackState(true);
-      }
-
-      setProgressMs((prev) => {
         const estimated = Math.min(serverProgressRef.current + elapsed, duration);
-        return estimated;
-      });
+        setProgressMs(estimated);
+      }
 
-      animationCountRef.current += 1;
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
@@ -97,7 +93,6 @@ export const usePlaybackProgress = (accessToken) => {
     serverProgressRef.current = newProgressMs;
     setProgressMs(newProgressMs);
     lastUpdateTimeRef.current = Date.now();
-    animationCountRef.current = 0;
   }, []);
 
   return {
