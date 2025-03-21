@@ -542,32 +542,36 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
                     />
                   </div>
                 </MenuItem>
-                <MenuItem onClick={handleToggleShuffle}>
-                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                    <span className="text-[28px]">
-                      {shuffleEnabled ? "Disable Shuffle" : "Enable Shuffle"}
-                    </span>
-                    <ShuffleIcon
-                      aria-hidden="true"
-                      className={`h-8 w-8 ${shuffleEnabled ? "text-green-500" : "text-white/60"}`}
-                    />
-                  </div>
-                </MenuItem>
-                <MenuItem onClick={handleToggleRepeat}>
-                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                    <span className="text-[28px]">
-                      {repeatMode === "off" ? "Enable Repeat" : repeatMode === "context" ? "Enable Repeat One" : "Disable Repeat"}
-                    </span>
-                    {repeatMode === "track" ? (
-                      <RepeatOneIcon aria-hidden="true" className="h-8 w-8 text-green-500" />
-                    ) : (
-                      <RepeatIcon 
-                        aria-hidden="true" 
-                        className={`h-8 w-8 ${repeatMode === "context" ? "text-green-500" : "text-white/60"}`} 
-                      />
-                    )}
-                  </div>
-                </MenuItem>
+                {!isDJPlaylist && (
+                  <>
+                    <MenuItem onClick={handleToggleShuffle}>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">
+                          {shuffleEnabled ? "Disable Shuffle" : "Enable Shuffle"}
+                        </span>
+                        <ShuffleIcon
+                          aria-hidden="true"
+                          className={`h-8 w-8 ${shuffleEnabled ? "text-green-500" : "text-white/60"}`}
+                        />
+                      </div>
+                    </MenuItem>
+                    <MenuItem onClick={handleToggleRepeat}>
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                        <span className="text-[28px]">
+                          {repeatMode === "off" ? "Enable Repeat" : repeatMode === "context" ? "Enable Repeat One" : "Disable Repeat"}
+                        </span>
+                        {repeatMode === "track" ? (
+                          <RepeatOneIcon aria-hidden="true" className="h-8 w-8 text-green-500" />
+                        ) : (
+                          <RepeatIcon 
+                            aria-hidden="true" 
+                            className={`h-8 w-8 ${repeatMode === "context" ? "text-green-500" : "text-white/60"}`} 
+                          />
+                        )}
+                      </div>
+                    </MenuItem>
+                  </>
+                )}
                 <MenuItem onClick={onOpenDeviceSwitcher}>
                   <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                     <span className="text-[28px]">Switch Device</span>
