@@ -149,9 +149,13 @@ function App() {
   const handleAuthSuccess = () => {
     const storedAccessToken = localStorage.getItem("spotifyAccessToken");
     const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+    const storedExpiry = localStorage.getItem("spotifyTokenExpiry");
+    const isTokenValid = storedExpiry && new Date(storedExpiry) > new Date();
 
     if (storedAccessToken && storedRefreshToken) {
-      refreshData();
+      if (isTokenValid) {
+        refreshData();
+      }
 
       const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
       setShowTutorial(!hasSeenTutorial);

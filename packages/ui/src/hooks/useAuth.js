@@ -7,7 +7,8 @@ import {
 
 const authInitializationState = {
   initializing: false,
-  refreshing: false
+  refreshing: false,
+  lastRefreshTime: 0
 };
 
 export function useAuth() {
@@ -27,6 +28,11 @@ export function useAuth() {
     try {
       const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
       if (!storedRefreshToken) return false;
+
+      const now = Date.now();
+      if (now - authInitializationState.lastRefreshTime < 5000) {
+        return true;
+      }
 
       if (authInitializationState.refreshing) return false;
       authInitializationState.refreshing = true;
@@ -58,6 +64,7 @@ export function useAuth() {
         scheduleTokenRefresh(expiryDate);
 
         authInitializationState.refreshing = false;
+        authInitializationState.lastRefreshTime = now;
         return true;
       }
       authInitializationState.refreshing = false;

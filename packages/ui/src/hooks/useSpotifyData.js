@@ -45,6 +45,7 @@ export function useSpotifyData(activeSection) {
   const [tokenRefreshed, setTokenRefreshed] = useState(false);
   const dataLoadingAttemptedRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
+  const lastTokenRefreshTimeRef = useRef(0);
   const effectiveToken = isInitializing ? null : accessToken;
 
   const {
@@ -61,9 +62,23 @@ export function useSpotifyData(activeSection) {
 
   const initializeWithFreshToken = useCallback(async () => {
     if (!isAuthenticated || authIsLoading) return;
+    
+    const now = Date.now();
+    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+    const isTokenValid = tokenExpiry && new Date(tokenExpiry) > new Date();
+    
+    if (isTokenValid && now - lastTokenRefreshTimeRef.current < 5000) {
+      setTokenRefreshed(true);
+      setIsInitializing(false);
+      return;
+    }
+    
     setIsInitializing(true);
     try {
       const refreshSuccessful = await refreshTokens();
+      if (refreshSuccessful) {
+        lastTokenRefreshTimeRef.current = Date.now();
+      }
       setTokenRefreshed(refreshSuccessful);
     } finally {
       setIsInitializing(false);
