@@ -188,22 +188,35 @@ export default function Settings({
   setActiveSection,
 }) {
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState("main");
-  const [activeSubpage, setActiveSubpage] = useState(null);
-  const [isAnimating, setIsAnimating] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [versionInfo, setVersionInfo] = useState("Loading versions...");
-  const [currentView, setCurrentView] = useState({
-    page: "main",
-    subpage: null,
-    item: null,
-  });
+  const [activeParent, setActiveParent] = useState(null);
   const [activeSubItem, setActiveSubItem] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
   const shouldExitToRecents = useRef(false);
   const isProcessingEscape = useRef(false);
+  const scrollContainerRef = useRef(null);
   const { settings, updateSetting } = useSettings();
 
-  const ANIMATION_DURATION = 400;
+  const [showMain, setShowMain] = useState(true);
+  const [showParent, setShowParent] = useState(false);
+  const [showSubpage, setShowSubpage] = useState(false);
+
+  const [mainClasses, setMainClasses] = useState("translate-x-0 opacity-100");
+  const [parentClasses, setParentClasses] = useState(
+    "translate-x-full opacity-0"
+  );
+  const [subpageClasses, setSubpageClasses] = useState(
+    "translate-x-full opacity-0"
+  );
+
+  const ANIMATION_DURATION = 300;
+
+  useEffect(() => {
+    scrollContainerRef.current = document.querySelector(
+      ".settings-scroll-container"
+    );
+  }, []);
 
   useEffect(() => {
     setTimeout(() => {
@@ -260,29 +273,46 @@ export default function Settings({
   };
 
   const navigateTo = (page, subItem = null) => {
-    if (!isAnimating) {
-      setIsAnimating(true);
-      shouldExitToRecents.current = false;
-      setCurrentPage("transitioning-forward");
-      setTimeout(() => {
-        setCurrentView({
-          page,
-          subpage: subItem?.id || null,
-          item: subItem || null,
-        });
-        setActiveSubpage(page);
-        setActiveSubItem(subItem);
-      }, 50);
+    if (isAnimating) return;
+    setIsAnimating(true);
+    shouldExitToRecents.current = false;
+
+    if (showMain) {
+      setMainClasses("-translate-x-full opacity-0");
+      setParentClasses("translate-x-0 opacity-100");
+      setActiveParent(page);
 
       setTimeout(() => {
-        const scrollContainer = document.querySelector(
-          ".settings-scroll-container"
-        );
-        if (scrollContainer) {
-          scrollContainer.scrollTop = 0;
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
         }
+      }, ANIMATION_DURATION / 3);
 
-        setCurrentPage(subItem ? "subpage" : page);
+      setTimeout(() => {
+        setShowMain(false);
+        setShowParent(true);
+        setIsAnimating(false);
+
+        if (subItem) {
+          setTimeout(() => {
+            navigateTo(page, subItem);
+          }, 50);
+        }
+      }, ANIMATION_DURATION);
+    } else if (showParent && subItem) {
+      setParentClasses("-translate-x-full opacity-0");
+      setSubpageClasses("translate-x-0 opacity-100");
+      setActiveSubItem(subItem);
+
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      }, ANIMATION_DURATION / 3);
+
+      setTimeout(() => {
+        setShowParent(false);
+        setShowSubpage(true);
         setIsAnimating(false);
       }, ANIMATION_DURATION);
     }
@@ -290,84 +320,40 @@ export default function Settings({
 
   const navigateBack = () => {
     if (isAnimating) return;
-
     setIsAnimating(true);
-    setCurrentPage("transitioning-back");
 
-    const isInSubpage = currentView.subpage !== null;
+    if (showSubpage) {
+      setSubpageClasses("translate-x-full opacity-0");
+      setParentClasses("translate-x-0 opacity-100");
 
-    setTimeout(() => {
-      if (isInSubpage) {
-        setCurrentView({
-          page: currentView.page,
-          subpage: null,
-          item: null,
-        });
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      }, ANIMATION_DURATION / 3);
+
+      setTimeout(() => {
+        setShowSubpage(false);
+        setShowParent(true);
         setActiveSubItem(null);
-        setCurrentPage(currentView.page);
-      } else {
-        setCurrentView({
-          page: "main",
-          subpage: null,
-          item: null,
-        });
-        setActiveSubpage(null);
-        setActiveSubItem(null);
-        setCurrentPage("main");
-      }
-    }, ANIMATION_DURATION / 2);
+        setIsAnimating(false);
+      }, ANIMATION_DURATION);
+    } else if (showParent) {
+      setParentClasses("translate-x-full opacity-0");
+      setMainClasses("translate-x-0 opacity-100");
 
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, ANIMATION_DURATION);
-  };
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      }, ANIMATION_DURATION / 3);
 
-  const getPageClasses = (type) => {
-    const baseClasses =
-      "w-full transition-all duration-[400ms] ease-in-out absolute top-0 left-0";
-
-    switch (type) {
-      case "main":
-        if (currentPage === "main") {
-          return `${baseClasses} translate-x-0 opacity-100 pointer-events-auto`;
-        }
-        if (currentPage === "transitioning-forward") {
-          return `${baseClasses} -translate-x-full opacity-0 pointer-events-none`;
-        }
-        if (currentPage === "transitioning-back") {
-          return `${baseClasses} -translate-x-full opacity-0 pointer-events-none`;
-        }
-        return `${baseClasses} -translate-x-full opacity-0 pointer-events-none`;
-
-      case "parent":
-        if (currentPage === currentView.page && !currentView.subpage) {
-          return `${baseClasses} translate-x-0 opacity-100 pointer-events-auto`;
-        }
-        if (currentPage === "transitioning-forward" && !currentView.subpage) {
-          return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
-        }
-        if (currentView.subpage) {
-          return `${baseClasses} -translate-x-full opacity-0 pointer-events-none`;
-        }
-        if (currentPage === "transitioning-back") {
-          return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
-        }
-        return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
-
-      case "subpage":
-        if (currentView.subpage && currentPage === "subpage") {
-          return `${baseClasses} translate-x-0 opacity-100 pointer-events-auto`;
-        }
-        if (currentPage === "transitioning-forward") {
-          return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
-        }
-        if (currentPage === "transitioning-back") {
-          return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
-        }
-        return `${baseClasses} translate-x-full opacity-0 pointer-events-none`;
-
-      default:
-        return baseClasses;
+      setTimeout(() => {
+        setShowParent(false);
+        setShowMain(true);
+        setActiveParent(null);
+        setIsAnimating(false);
+      }, ANIMATION_DURATION);
     }
   };
 
@@ -470,9 +456,9 @@ export default function Settings({
       ) {
         isProcessingEscape.current = true;
 
-        if (currentView.subpage) {
+        if (showSubpage) {
           navigateBack();
-        } else if (currentPage !== "main") {
+        } else if (showParent) {
           navigateBack();
         }
 
@@ -486,14 +472,26 @@ export default function Settings({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isAnimating, currentView.subpage, currentPage]);
+  }, [isAnimating, showSubpage, showParent]);
 
   return (
     <div className="h-full overflow-y-auto settings-scroll-container">
+      <style>{`
+        .screen-transition {
+          transition: transform ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1),
+                      opacity ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1);
+          will-change: transform, opacity;
+        }
+      `}</style>
       <div className="min-h-full flex flex-col px-12 pt-12 -ml-12">
         <div className="flex-1 relative">
           <div className="relative w-full" style={{ minHeight: "100%" }}>
-            <div className={getPageClasses("main")}>
+            <div
+              className={`absolute top-0 left-0 w-full screen-transition ${mainClasses}`}
+              style={{
+                visibility: showMain || isAnimating ? "visible" : "hidden",
+              }}
+            >
               <h2 className="text-[46px] font-[580] text-white tracking-tight mb-6">
                 Settings
               </h2>
@@ -527,71 +525,78 @@ export default function Settings({
               </div>
             </div>
 
-            {activeSubpage && (
-              <>
-                <div className={getPageClasses("parent")}>
-                  <div className="flex items-center mb-4">
-                    <button
-                      onClick={navigateBack}
-                      className="mr-4"
-                      disabled={isAnimating}
-                    >
-                      <ChevronLeftIcon className="w-8 h-8 text-white" />
-                    </button>
-                    <h2 className="text-[46px] font-[580] text-white tracking-tight">
-                      {settingsStructure[activeSubpage].title}
-                    </h2>
+            <div
+              className={`absolute top-0 left-0 w-full screen-transition ${parentClasses}`}
+              style={{
+                visibility: showParent || isAnimating ? "visible" : "hidden",
+              }}
+            >
+              <div className="flex items-center mb-4">
+                <button
+                  onClick={navigateBack}
+                  className="mr-4"
+                  disabled={isAnimating}
+                >
+                  <ChevronLeftIcon className="w-8 h-8 text-white" />
+                </button>
+                <h2 className="text-[46px] font-[580] text-white tracking-tight">
+                  {activeParent && settingsStructure[activeParent].title}
+                </h2>
+              </div>
+              <div className="space-y-6 mb-12">
+                {activeParent &&
+                settingsStructure[activeParent].type === "parent" ? (
+                  <div className="space-y-4">
+                    {settingsStructure[activeParent].items?.map((subItem) => (
+                      <button
+                        key={subItem.id}
+                        onClick={() => navigateTo(activeParent, subItem)}
+                        className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
+                        disabled={isAnimating}
+                      >
+                        <div className="flex items-center">
+                          <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                            <subItem.icon className="w-7 h-7 text-white" />
+                          </div>
+                          <span className="text-[32px] ml-4 font-[580] text-white tracking-tight">
+                            {subItem.title}
+                          </span>
+                        </div>
+                        <ChevronRightIcon className="w-8 h-8 text-white/60" />
+                      </button>
+                    ))}
                   </div>
-                  <div className="space-y-6 mb-12">
-                    {settingsStructure[activeSubpage].type === "parent" ? (
-                      <div className="space-y-4">
-                        {settingsStructure[activeSubpage].items?.map(
-                          (subItem) => (
-                            <button
-                              key={subItem.id}
-                              onClick={() => navigateTo(activeSubpage, subItem)}
-                              className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
-                            >
-                              <div className="flex items-center">
-                                <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
-                                  <subItem.icon className="w-7 h-7 text-white" />
-                                </div>
-                                <span className="text-[32px] ml-4 font-[580] text-white tracking-tight">
-                                  {subItem.title}
-                                </span>
-                              </div>
-                              <ChevronRightIcon className="w-8 h-8 text-white/60" />
-                            </button>
-                          )
-                        )}
-                      </div>
-                    ) : (
-                      settingsStructure[activeSubpage].items?.map((item) =>
-                        renderSettingItem(item)
-                      )
-                    )}
-                  </div>
-                </div>
+                ) : (
+                  activeParent &&
+                  settingsStructure[activeParent].items?.map((item) =>
+                    renderSettingItem(item)
+                  )
+                )}
+              </div>
+            </div>
 
-                <div className={getPageClasses("subpage")}>
-                  <div className="flex items-center mb-4">
-                    <button
-                      onClick={navigateBack}
-                      className="mr-4"
-                      disabled={isAnimating}
-                    >
-                      <ChevronLeftIcon className="w-8 h-8 text-white" />
-                    </button>
-                    <h2 className="text-[46px] font-[580] text-white tracking-tight">
-                      {activeSubItem?.title}
-                    </h2>
-                  </div>
-                  <div className="space-y-6 mb-12">
-                    {currentView.subpage && renderSettingItem(currentView.item)}
-                  </div>
-                </div>
-              </>
-            )}
+            <div
+              className={`absolute top-0 left-0 w-full screen-transition ${subpageClasses}`}
+              style={{
+                visibility: showSubpage || isAnimating ? "visible" : "hidden",
+              }}
+            >
+              <div className="flex items-center mb-4">
+                <button
+                  onClick={navigateBack}
+                  className="mr-4"
+                  disabled={isAnimating}
+                >
+                  <ChevronLeftIcon className="w-8 h-8 text-white" />
+                </button>
+                <h2 className="text-[46px] font-[580] text-white tracking-tight">
+                  {activeSubItem?.title}
+                </h2>
+              </div>
+              <div className="space-y-6 mb-12">
+                {activeSubItem && renderSettingItem(activeSubItem)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
