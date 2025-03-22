@@ -536,7 +536,7 @@ const NowPlaying = ({
                         <ShuffleIcon
                           aria-hidden="true"
                           className={`h-8 w-8 ${
-                            shuffleEnabled ? "text-green-500" : "text-white/60"
+                            shuffleEnabled ? "text-white" : "text-white/60"
                           }`}
                         />
                       </div>
@@ -553,14 +553,14 @@ const NowPlaying = ({
                         {repeatMode === "track" ? (
                           <RepeatOneIcon
                             aria-hidden="true"
-                            className="h-8 w-8 text-green-500"
+                            className="h-8 w-8 text-white"
                           />
                         ) : (
                           <RepeatIcon
                             aria-hidden="true"
                             className={`h-8 w-8 ${
                               repeatMode === "context"
-                                ? "text-green-500"
+                                ? "text-white"
                                 : "text-white/60"
                             }`}
                           />
