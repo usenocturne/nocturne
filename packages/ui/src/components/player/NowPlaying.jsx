@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
-import { useGradientState } from "../../hooks/useGradientState";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
 import { usePlaybackProgress } from "../../hooks/usePlaybackProgress";
+import { useGestureControls } from "../../hooks/useGestureControls";
 import ProgressBar from "./ProgressBar";
+import ScrollingText from "../common/ScrollingText";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -25,7 +26,13 @@ import {
   RepeatOneIcon,
 } from "../common/icons";
 
-const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColors, onOpenDeviceSwitcher }) => {
+const NowPlaying = ({
+  accessToken,
+  currentPlayback,
+  onClose,
+  updateGradientColors,
+  onOpenDeviceSwitcher,
+}) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
@@ -40,10 +47,11 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   const wheelDeltaAccumulatorRef = useRef(0);
   const containerRef = useRef(null);
   const currentTrackIdRef = useRef(null);
-  const [volumeIndicatorAnimation, setVolumeIndicatorAnimation] = useState("hidden");
-  const classNames = (...classes) => classes.filter(Boolean).join(' ');
+  const [volumeIndicatorAnimation, setVolumeIndicatorAnimation] =
+    useState("hidden");
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
+  const contentContainerRef = useRef(null);
 
   const {
     playTrack,
@@ -67,7 +75,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     isPlaying,
     duration,
     progressPercentage,
-    updateProgress
+    updateProgress,
   } = usePlaybackProgress(accessToken);
 
   useEffect(() => {
@@ -94,7 +102,11 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   };
 
   const showVolumeIndicatorWithTimeout = () => {
-    [volumeIndicatorTimeoutRef, volumeHideTimeoutRef, volumeInteractionTimeoutRef].forEach(ref => {
+    [
+      volumeIndicatorTimeoutRef,
+      volumeHideTimeoutRef,
+      volumeInteractionTimeoutRef,
+    ].forEach((ref) => {
       if (ref.current) {
         clearTimeout(ref.current);
         ref.current = null;
@@ -104,10 +116,10 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     setVolumeIndicatorAnimation("showing");
     setShowVolumeIndicator(true);
     setIsAdjustingVolume(true);
-    
+
     volumeInteractionTimeoutRef.current = setTimeout(() => {
       setIsAdjustingVolume(false);
-      
+
       volumeIndicatorTimeoutRef.current = setTimeout(() => {
         setVolumeIndicatorAnimation("hiding");
 
@@ -121,26 +133,26 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
 
   const handleWheel = (e) => {
     if (isProgressScrubbing) return;
-    
+
     const now = Date.now();
     if (now - lastWheelEventRef.current < 50) {
       e.preventDefault();
       return;
     }
     lastWheelEventRef.current = now;
-    
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     wheelDeltaAccumulatorRef.current += delta;
-    
+
     if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
       const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
-      const newVolume = Math.max(0, Math.min(100, volume + (direction * 5)));
-      
+      const newVolume = Math.max(0, Math.min(100, volume + direction * 5));
+
       wheelDeltaAccumulatorRef.current = 0;
-      
+
       if (newVolume !== volume) {
         setVolume(newVolume);
         showVolumeIndicatorWithTimeout();
@@ -151,22 +163,25 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+      container.addEventListener("wheel", handleWheel, {
+        passive: false,
+        capture: true,
+      });
     }
-    
+
     return () => {
       if (container) {
-        container.removeEventListener('wheel', handleWheel, { capture: true });
+        container.removeEventListener("wheel", handleWheel, { capture: true });
       }
-      
+
       if (volumeIndicatorTimeoutRef.current) {
         clearTimeout(volumeIndicatorTimeoutRef.current);
       }
-      
+
       if (volumeHideTimeoutRef.current) {
         clearTimeout(volumeHideTimeoutRef.current);
       }
-      
+
       if (volumeInteractionTimeoutRef.current) {
         clearTimeout(volumeInteractionTimeoutRef.current);
       }
@@ -177,13 +192,13 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     if (showVolumeIndicator && !isAdjustingVolume) {
       const forceHideTimeout = setTimeout(() => {
         setVolumeIndicatorAnimation("hiding");
-        
+
         setTimeout(() => {
           setShowVolumeIndicator(false);
           setVolumeIndicatorAnimation("hidden");
         }, 300);
       }, 1500);
-      
+
       return () => clearTimeout(forceHideTimeout);
     }
   }, [showVolumeIndicator, isAdjustingVolume]);
@@ -198,6 +213,27 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     activeSection: "nowPlaying",
   });
 
+  useGestureControls({
+    contentRef: contentContainerRef,
+    onSwipeLeft: () => {
+      handleSkipNext();
+    },
+    onSwipeRight: () => {
+      handleSkipPrevious();
+    },
+    onSwipeUp: () => {
+      if (!showLyrics) {
+        toggleLyrics();
+      }
+    },
+    onSwipeDown: () => {
+      if (showLyrics) {
+        toggleLyrics();
+      }
+    },
+    isActive: true,
+  });
+
   const {
     showLyrics,
     lyrics,
@@ -206,7 +242,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     error: lyricsError,
     lyricsContainerRef,
     toggleLyrics,
-  } = useLyrics(accessToken, currentPlayback);
+  } = useLyrics(accessToken, currentPlayback, contentContainerRef);
 
   const trackName = currentPlayback?.item
     ? currentPlayback.item.type === "episode"
@@ -226,8 +262,8 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       : currentPlayback.item.type === "local" ||
         !currentPlayback.item?.album?.images?.[0]?.url ||
         !currentPlayback.item?.album?.images?.[0]
-        ? "/images/not-playing.webp"
-        : currentPlayback.item.album.images[0].url
+      ? "/images/not-playing.webp"
+      : currentPlayback.item.album.images[0].url
     : "/images/not-playing.webp";
 
   const trackId = currentPlayback?.item?.id;
@@ -329,7 +365,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
     try {
       const nextModeMap = { off: "context", context: "track", track: "off" };
       const newRepeatMode = nextModeMap[repeatMode] || "off";
-      
+
       setRepeatMode(newRepeatMode);
       await setRepeatModeApi(newRepeatMode);
     } catch (error) {
@@ -342,7 +378,7 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation"
       ref={containerRef}
     >
-      <div>
+      <div ref={contentContainerRef}>
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div className="min-w-[280px] mr-8">
             <img
@@ -360,9 +396,15 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
 
           {!showLyrics ? (
             <div className="flex-1 text-center md:text-left">
-              <h4 className="text-[40px] font-[580] text-white truncate tracking-tight max-w-[400px]">
-                {trackName}
-              </h4>
+              <div className="max-w-[400px]">
+                <ScrollingText
+                  text={trackName}
+                  className="text-[40px] font-[580] text-white tracking-tight"
+                  maxWidth="400px"
+                  pauseDuration={1000}
+                  pixelsPerSecond={40}
+                />
+              </div>
               <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
                 {artistName}
               </h4>
@@ -385,13 +427,14 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
                   lyrics.map((lyric, index) => (
                     <p
                       key={index}
-                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${index === currentLyricIndex
-                        ? "text-white current-lyric-animation"
-                        : index === currentLyricIndex - 1 ||
-                          index === currentLyricIndex + 1
+                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
+                        index === currentLyricIndex
+                          ? "text-white current-lyric-animation"
+                          : index === currentLyricIndex - 1 ||
+                            index === currentLyricIndex + 1
                           ? "text-white/40"
                           : "text-white/20"
-                        }`}
+                      }`}
                     >
                       {lyric.text}
                     </p>
@@ -419,10 +462,11 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       </div>
 
       <div
-        className={`flex justify-between items-center w-full px-12 transition-all duration-200 ease-in-out ${isProgressScrubbing
-          ? "translate-y-24 opacity-0"
-          : "translate-y-0 opacity-100"
-          }`}
+        className={`flex justify-between items-center w-full px-12 transition-all duration-200 ease-in-out ${
+          isProgressScrubbing
+            ? "translate-y-24 opacity-0"
+            : "translate-y-0 opacity-100"
+        }`}
       >
         <div className="flex-shrink-0" onClick={handleToggleLike}>
           {isLiked ? (
@@ -436,7 +480,10 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
           <div onClick={handleSkipPrevious}>
             <BackIcon className="w-14 h-14" />
           </div>
-          <div onClick={handlePlayPause} className="transition-opacity duration-100">
+          <div
+            onClick={handlePlayPause}
+            className="transition-opacity duration-100"
+          >
             {currentPlayback?.is_playing ? (
               <PauseIcon className="w-14 h-14" />
             ) : (
@@ -471,8 +518,9 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
                     </span>
                     <LyricsIcon
                       aria-hidden="true"
-                      className={`h-8 w-8 ${showLyrics ? "text-white" : "text-white/60"
-                        }`}
+                      className={`h-8 w-8 ${
+                        showLyrics ? "text-white" : "text-white/60"
+                      }`}
                     />
                   </div>
                 </MenuItem>
@@ -481,25 +529,40 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
                     <MenuItem onClick={handleToggleShuffle}>
                       <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                         <span className="text-[28px]">
-                          {shuffleEnabled ? "Disable Shuffle" : "Enable Shuffle"}
+                          {shuffleEnabled
+                            ? "Disable Shuffle"
+                            : "Enable Shuffle"}
                         </span>
                         <ShuffleIcon
                           aria-hidden="true"
-                          className={`h-8 w-8 ${shuffleEnabled ? "text-green-500" : "text-white/60"}`}
+                          className={`h-8 w-8 ${
+                            shuffleEnabled ? "text-green-500" : "text-white/60"
+                          }`}
                         />
                       </div>
                     </MenuItem>
                     <MenuItem onClick={handleToggleRepeat}>
                       <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                         <span className="text-[28px]">
-                          {repeatMode === "off" ? "Enable Repeat" : repeatMode === "context" ? "Enable Repeat One" : "Disable Repeat"}
+                          {repeatMode === "off"
+                            ? "Enable Repeat"
+                            : repeatMode === "context"
+                            ? "Enable Repeat One"
+                            : "Disable Repeat"}
                         </span>
                         {repeatMode === "track" ? (
-                          <RepeatOneIcon aria-hidden="true" className="h-8 w-8 text-green-500" />
+                          <RepeatOneIcon
+                            aria-hidden="true"
+                            className="h-8 w-8 text-green-500"
+                          />
                         ) : (
-                          <RepeatIcon 
-                            aria-hidden="true" 
-                            className={`h-8 w-8 ${repeatMode === "context" ? "text-green-500" : "text-white/60"}`} 
+                          <RepeatIcon
+                            aria-hidden="true"
+                            className={`h-8 w-8 ${
+                              repeatMode === "context"
+                                ? "text-green-500"
+                                : "text-white/60"
+                            }`}
                           />
                         )}
                       </div>
@@ -522,11 +585,11 @@ const NowPlaying = ({ accessToken, currentPlayback, onClose, updateGradientColor
       </div>
       <div
         className={`fixed -right-1.5 top-[4.5rem] transform transition-opacity duration-300 ${
-          !showVolumeIndicator 
-            ? "hidden" 
-            : volumeIndicatorAnimation === "showing" 
-              ? "opacity-100 volumeInScale" 
-              : "opacity-0 volumeOutScale"
+          !showVolumeIndicator
+            ? "hidden"
+            : volumeIndicatorAnimation === "showing"
+            ? "opacity-100 volumeInScale"
+            : "opacity-0 volumeOutScale"
         }`}
       >
         <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
