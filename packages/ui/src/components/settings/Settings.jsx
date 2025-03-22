@@ -17,21 +17,13 @@ import AccountInfo from "./AccountInfo";
 import SoftwareUpdate from "./SoftwareUpdate";
 import WiFiNetworks from "./network/WiFiNetworks";
 import BluetoothDevices from "./network/BluetoothDevices";
+import { useSettings } from "../../contexts/SettingsContext";
 
 const settingsStructure = {
   general: {
     title: "General",
     icon: SettingsGeneralIcon,
     items: [
-      {
-        id: "idle-redirect",
-        title: "Idle Redirect",
-        type: "toggle",
-        description:
-          "Automatically redirect to the Now Playing screen after one minute of inactivity.",
-        storageKey: "autoRedirectEnabled",
-        defaultValue: false,
-      },
       {
         id: "24-hour-time",
         title: "24-Hour Time",
@@ -93,14 +85,6 @@ const settingsStructure = {
         defaultValue: true,
       },
       {
-        id: "lyrics-menu",
-        title: "Lyrics Menu Option",
-        type: "toggle",
-        description: "Enable or disable the lyrics menu option in the player.",
-        storageKey: "lyricsMenuEnabled",
-        defaultValue: true,
-      },
-      {
         id: "show-lyrics-gesture",
         title: "Swipe to Show Lyrics",
         type: "toggle",
@@ -117,22 +101,6 @@ const settingsStructure = {
           "Enable left/right swipe gestures to skip to the previous or next song.",
         storageKey: "songChangeGestureEnabled",
         defaultValue: true,
-      },
-      {
-        id: "elapsed-time",
-        title: "Show Time Elapsed",
-        type: "toggle",
-        description: "Display the elapsed track time below the progress bar.",
-        storageKey: "elapsedTimeEnabled",
-        defaultValue: false,
-      },
-      {
-        id: "remaining-time",
-        title: "Show Time Remaining",
-        type: "toggle",
-        description: "Display the remaining track time below the progress bar.",
-        storageKey: "remainingTimeEnabled",
-        defaultValue: false,
       },
     ],
   },
@@ -201,22 +169,6 @@ const settingsStructure = {
   },
 };
 
-const getDefaultSettingValue = (categoryKey, storageKey) => {
-  const category = settingsStructure[categoryKey];
-  if (category && category.items) {
-    for (const item of category.items) {
-      if (
-        item.storageKey === storageKey &&
-        item.hasOwnProperty("defaultValue")
-      ) {
-        return item.defaultValue;
-      }
-    }
-  }
-
-  return undefined;
-};
-
 const clearSettings = () => {
   for (const categoryKey in settingsStructure) {
     const category = settingsStructure[categoryKey];
@@ -249,6 +201,7 @@ export default function Settings({
   const [activeSubItem, setActiveSubItem] = useState(null);
   const shouldExitToRecents = useRef(false);
   const isProcessingEscape = useRef(false);
+  const { settings, updateSetting } = useSettings();
 
   const ANIMATION_DURATION = 400;
 
@@ -276,88 +229,8 @@ export default function Settings({
     }
   };
 
-  const [settings, setSettings] = useState(() => {
-    const states = {};
-    Object.values(settingsStructure).forEach((section) => {
-      if (section.items) {
-        section.items.forEach((item) => {
-          if (item.type === "toggle") {
-            const stored = localStorage.getItem(item.storageKey);
-            states[item.storageKey] =
-              stored !== null ? stored === "true" : item.defaultValue;
-          }
-        });
-      }
-    });
-    return states;
-  });
-
-  useEffect(() => {
-    Object.values(settingsStructure).forEach((section) => {
-      if (section.items) {
-        section.items.forEach((item) => {
-          if (
-            item.type === "toggle" &&
-            localStorage.getItem(item.storageKey) === null
-          ) {
-            localStorage.setItem(item.storageKey, item.defaultValue.toString());
-          }
-        });
-      }
-    });
-  }, []);
-
   const handleToggle = (key) => {
-    const newValue = !settings[key];
-
-    setSettings((prev) => {
-      const newSettings = { ...prev };
-
-      const updateLocalStorage = (updates) => {
-        Object.entries(updates).forEach(([key, value]) => {
-          newSettings[key] = value;
-          localStorage.setItem(key, value.toString());
-        });
-      };
-
-      if (key === "elapsedTimeEnabled" || key === "remainingTimeEnabled") {
-        if (newValue) {
-          const isElapsed = key === "elapsedTimeEnabled";
-          updateLocalStorage({
-            elapsedTimeEnabled: isElapsed,
-            remainingTimeEnabled: !isElapsed,
-          });
-        } else {
-          updateLocalStorage({ [key]: false });
-        }
-      } else if (key === "showLyricsGestureEnabled") {
-        if (newValue) {
-          updateLocalStorage({
-            showLyricsGestureEnabled: true,
-            lyricsMenuEnabled: true,
-          });
-        } else {
-          updateLocalStorage({ [key]: false });
-        }
-      } else if (key === "lyricsMenuEnabled") {
-        if (!newValue) {
-          updateLocalStorage({
-            showLyricsGestureEnabled: false,
-            lyricsMenuEnabled: false,
-          });
-        } else {
-          updateLocalStorage({ [key]: true });
-        }
-      } else {
-        updateLocalStorage({ [key]: newValue });
-
-        if (key === "use24HourTime") {
-          window.dispatchEvent(new Event("timeFormatChanged"));
-        }
-      }
-
-      return newSettings;
-    });
+    updateSetting(key, !settings[key]);
   };
 
   const handleSignOut = async () => {
@@ -725,5 +598,3 @@ export default function Settings({
     </div>
   );
 }
-
-export { getDefaultSettingValue };

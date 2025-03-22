@@ -16,6 +16,7 @@ import { PlaybackProgressContext } from "./hooks/usePlaybackProgress";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
 import { useBluetooth } from "./hooks/useBluetooth";
 import { useSpotifyData } from "./hooks/useSpotifyData";
+import { SettingsProvider } from "./contexts/SettingsContext";
 
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
@@ -259,55 +260,57 @@ function App() {
   }
 
   return (
-    <PlaybackProgressContext.Provider value={playbackProgress}>
-      <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
-        <Router>
-          <FontLoader />
-          <main
-            className="overflow-hidden relative min-h-screen rounded-2xl"
-            style={{
-              fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
-              fontOpticalSizing: "auto",
-            }}
-          >
-            <div
+    <SettingsProvider>
+      <PlaybackProgressContext.Provider value={playbackProgress}>
+        <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
+          <Router>
+            <FontLoader />
+            <main
+              className="overflow-hidden relative min-h-screen rounded-2xl"
               style={{
-                backgroundImage: generateMeshGradient([
-                  currentColor1,
-                  currentColor2,
-                  currentColor3,
-                  currentColor4,
-                ]),
-                transition: "background-image 0.5s linear",
+                fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
+                fontOpticalSizing: "auto",
               }}
-              className="absolute inset-0 bg-black"
-            />
+            >
+              <div
+                style={{
+                  backgroundImage: generateMeshGradient([
+                    currentColor1,
+                    currentColor2,
+                    currentColor3,
+                    currentColor4,
+                  ]),
+                  transition: "background-image 0.5s linear",
+                }}
+                className="absolute inset-0 bg-black"
+              />
 
-            <div className="relative z-10">
-              {content}
-              {!isConnected && showNoNetwork && <NetworkScreen />}
-              <BluetoothPairingModal
-                pairingRequest={pairingRequest}
-                isConnecting={isConnecting}
-                onAccept={acceptPairing}
-                onDeny={denyPairing}
-              />
-              <BluetoothNetworkModal
-                show={showNetworkPrompt && !isConnected}
-                deviceName={lastConnectedDevice?.name}
-                onCancel={handleNetworkCancel}
-                isConnecting={isConnecting}
-              />
-              <DeviceSwitcherModal
-                isOpen={isDeviceSwitcherOpen}
-                onClose={handleCloseDeviceSwitcher}
-                accessToken={accessToken}
-              />
-            </div>
-          </main>
-        </Router>
-      </DeviceSwitcherContext.Provider>
-    </PlaybackProgressContext.Provider>
+              <div className="relative z-10">
+                {content}
+                {!isConnected && showNoNetwork && <NetworkScreen />}
+                <BluetoothPairingModal
+                  pairingRequest={pairingRequest}
+                  isConnecting={isConnecting}
+                  onAccept={acceptPairing}
+                  onDeny={denyPairing}
+                />
+                <BluetoothNetworkModal
+                  show={showNetworkPrompt && !isConnected}
+                  deviceName={lastConnectedDevice?.name}
+                  onCancel={handleNetworkCancel}
+                  isConnecting={isConnecting}
+                />
+                <DeviceSwitcherModal
+                  isOpen={isDeviceSwitcherOpen}
+                  onClose={handleCloseDeviceSwitcher}
+                  accessToken={accessToken}
+                />
+              </div>
+            </main>
+          </Router>
+        </DeviceSwitcherContext.Provider>
+      </PlaybackProgressContext.Provider>
+    </SettingsProvider>
   );
 }
 

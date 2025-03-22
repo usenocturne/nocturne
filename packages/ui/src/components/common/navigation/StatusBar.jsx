@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import { BatteryIcon, BluetoothIcon } from "../../common/icons";
+import { useSettings } from "../../../contexts/SettingsContext";
 
 export default function StatusBar() {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
   const [isBluetoothConnected, setIsBluetoothConnected] = useState(true);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
+  const { settings } = useSettings();
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const use24Hour = localStorage.getItem("use24HourTime") === "true";
 
       let hours;
-      if (use24Hour) {
+      if (settings.use24HourTime) {
         hours = now.getHours().toString().padStart(2, "0");
         setIsFourDigits(true);
       } else {
@@ -39,7 +40,7 @@ export default function StatusBar() {
       clearInterval(interval);
       window.removeEventListener("timeFormatChanged", handleTimeFormatChange);
     };
-  }, []);
+  }, [settings.use24HourTime]);
 
   if (!isBluetoothConnected) return null;
 
