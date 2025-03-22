@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
@@ -36,19 +36,22 @@ const NowPlaying = ({
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
-  const [showVolumeIndicator, setShowVolumeIndicator] = useState(false);
-  const [isAdjustingVolume, setIsAdjustingVolume] = useState(false);
+  const [volumeOverlayState, setVolumeOverlayState] = useState({
+    visible: false,
+    animation: "hidden"
+  });
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
-  const volumeIndicatorTimeoutRef = useRef(null);
-  const volumeHideTimeoutRef = useRef(null);
-  const volumeInteractionTimeoutRef = useRef(null);
+  
+  const volumeTimerRef = useRef(null);
+  const volumeLastAdjustedRef = useRef(0);
   const lastWheelEventRef = useRef(0);
   const wheelDeltaAccumulatorRef = useRef(0);
   const containerRef = useRef(null);
   const currentTrackIdRef = useRef(null);
-  const [volumeIndicatorAnimation, setVolumeIndicatorAnimation] =
-    useState("hidden");
+  const prevVolumeRef = useRef(null);
+  const manualVolumeChangeRef = useRef(false);
+  
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
   const contentContainerRef = useRef(null);
@@ -81,9 +84,64 @@ const NowPlaying = ({
 
   useEffect(() => {
     if (currentPlayback?.device?.volume_percent !== undefined) {
+      if (prevVolumeRef.current === null) {
+        prevVolumeRef.current = currentPlayback.device.volume_percent;
+      }
       updateVolumeFromDevice(currentPlayback.device.volume_percent);
     }
   }, [currentPlayback?.device?.volume_percent, updateVolumeFromDevice]);
+  
+  const showVolumeOverlay = useCallback(() => {
+    if (!manualVolumeChangeRef.current) return;
+    
+    volumeLastAdjustedRef.current = Date.now();
+    
+    if (volumeTimerRef.current) {
+      clearTimeout(volumeTimerRef.current);
+    }
+    
+    setVolumeOverlayState({
+      visible: true,
+      animation: "showing"
+    });
+    
+    volumeTimerRef.current = setTimeout(() => {
+      setVolumeOverlayState(prev => ({
+        ...prev,
+        animation: "hiding"
+      }));
+      
+      setTimeout(() => {
+        setVolumeOverlayState({
+          visible: false,
+          animation: "hidden"
+        });
+        
+        manualVolumeChangeRef.current = false;
+      }, 300);
+    }, 1500);
+  }, []);
+  
+  useEffect(() => {
+    return () => {
+      if (volumeTimerRef.current) {
+        clearTimeout(volumeTimerRef.current);
+      }
+    };
+  }, []);
+  
+  useEffect(() => {
+    if (prevVolumeRef.current === null) {
+      prevVolumeRef.current = volume;
+      return;
+    }
+    
+    if (prevVolumeRef.current !== volume && manualVolumeChangeRef.current) {
+      showVolumeOverlay();
+    }
+    
+    prevVolumeRef.current = volume;
+  }, [volume, showVolumeOverlay]);
 
   useEffect(() => {
     if (currentPlayback?.shuffle_state !== undefined) {
@@ -103,37 +161,37 @@ const NowPlaying = ({
     triggerRefresh();
   };
 
-  const showVolumeIndicatorWithTimeout = () => {
-    [
-      volumeIndicatorTimeoutRef,
-      volumeHideTimeoutRef,
-      volumeInteractionTimeoutRef,
-    ].forEach((ref) => {
-      if (ref.current) {
-        clearTimeout(ref.current);
-        ref.current = null;
-      }
-    });
+  const trackInfo = useMemo(() => {
+    const trackName = currentPlayback?.item
+      ? currentPlayback.item.type === "episode"
+        ? currentPlayback.item.name
+        : currentPlayback.item.name || "Not Playing"
+      : "Not Playing";
 
-    setVolumeIndicatorAnimation("showing");
-    setShowVolumeIndicator(true);
-    setIsAdjustingVolume(true);
+    const artistName = currentPlayback?.item
+      ? currentPlayback.item.type === "episode"
+        ? currentPlayback.item.show.name
+        : currentPlayback.item.artists.map((artist) => artist.name).join(", ")
+      : "";
 
-    volumeInteractionTimeoutRef.current = setTimeout(() => {
-      setIsAdjustingVolume(false);
+    const albumArt = currentPlayback?.item
+      ? currentPlayback.item.type === "episode"
+        ? currentPlayback.item.show.images[0]?.url || "/images/not-playing.webp"
+        : currentPlayback.item.type === "local" ||
+          !currentPlayback.item?.album?.images?.[0]?.url ||
+          !currentPlayback.item?.album?.images?.[0]
+        ? "/images/not-playing.webp"
+        : currentPlayback.item.album.images[0].url
+      : "/images/not-playing.webp";
 
-      volumeIndicatorTimeoutRef.current = setTimeout(() => {
-        setVolumeIndicatorAnimation("hiding");
+    const trackId = currentPlayback?.item?.id;
+    
+    return { trackName, artistName, albumArt, trackId };
+  }, [currentPlayback]);
 
-        volumeHideTimeoutRef.current = setTimeout(() => {
-          setShowVolumeIndicator(false);
-          setVolumeIndicatorAnimation("hidden");
-        }, 300);
-      }, 1000);
-    }, 500);
-  };
+  const { trackName, artistName, albumArt, trackId } = trackInfo;
 
-  const handleWheel = (e) => {
+  const handleWheel = useCallback((e) => {
     if (isProgressScrubbing) return;
 
     const now = Date.now();
@@ -156,55 +214,31 @@ const NowPlaying = ({
       wheelDeltaAccumulatorRef.current = 0;
 
       if (newVolume !== volume) {
+        manualVolumeChangeRef.current = true;
         setVolume(newVolume);
-        showVolumeIndicatorWithTimeout();
         triggerRefresh();
       }
     }
-  };
+  }, [isProgressScrubbing, volume, setVolume, triggerRefresh]);
 
   useEffect(() => {
     const container = containerRef.current;
+    let options = { passive: false, capture: true };
+    
+    const handleWheelWithOptions = (e) => {
+      handleWheel(e);
+    };
+    
     if (container) {
-      container.addEventListener("wheel", handleWheel, {
-        passive: false,
-        capture: true,
-      });
+      container.addEventListener("wheel", handleWheelWithOptions, options);
     }
 
     return () => {
       if (container) {
-        container.removeEventListener("wheel", handleWheel, { capture: true });
-      }
-
-      if (volumeIndicatorTimeoutRef.current) {
-        clearTimeout(volumeIndicatorTimeoutRef.current);
-      }
-
-      if (volumeHideTimeoutRef.current) {
-        clearTimeout(volumeHideTimeoutRef.current);
-      }
-
-      if (volumeInteractionTimeoutRef.current) {
-        clearTimeout(volumeInteractionTimeoutRef.current);
+        container.removeEventListener("wheel", handleWheelWithOptions, options);
       }
     };
-  }, [volume, isProgressScrubbing]);
-
-  useEffect(() => {
-    if (showVolumeIndicator && !isAdjustingVolume) {
-      const forceHideTimeout = setTimeout(() => {
-        setVolumeIndicatorAnimation("hiding");
-
-        setTimeout(() => {
-          setShowVolumeIndicator(false);
-          setVolumeIndicatorAnimation("hidden");
-        }, 300);
-      }, 1500);
-
-      return () => clearTimeout(forceHideTimeout);
-    }
-  }, [showVolumeIndicator, isAdjustingVolume]);
+  }, [handleWheel]);
 
   useNavigation({
     containerRef,
@@ -247,30 +281,6 @@ const NowPlaying = ({
     toggleLyrics,
   } = useLyrics(accessToken, currentPlayback, contentContainerRef);
 
-  const trackName = currentPlayback?.item
-    ? currentPlayback.item.type === "episode"
-      ? currentPlayback.item.name
-      : currentPlayback.item.name || "Not Playing"
-    : "Not Playing";
-
-  const artistName = currentPlayback?.item
-    ? currentPlayback.item.type === "episode"
-      ? currentPlayback.item.show.name
-      : currentPlayback.item.artists.map((artist) => artist.name).join(", ")
-    : "";
-
-  const albumArt = currentPlayback?.item
-    ? currentPlayback.item.type === "episode"
-      ? currentPlayback.item.show.images[0]?.url || "/images/not-playing.webp"
-      : currentPlayback.item.type === "local" ||
-        !currentPlayback.item?.album?.images?.[0]?.url ||
-        !currentPlayback.item?.album?.images?.[0]
-      ? "/images/not-playing.webp"
-      : currentPlayback.item.album.images[0].url
-    : "/images/not-playing.webp";
-
-  const trackId = currentPlayback?.item?.id;
-
   useEffect(() => {
     if (albumArt && updateGradientColors) {
       updateGradientColors(albumArt, "nowPlaying");
@@ -303,14 +313,14 @@ const NowPlaying = ({
     };
 
     checkCurrentTrackLiked();
-  }, [trackId, checkIsTrackLiked, currentPlayback?.item?.type]);
+  }, [trackId, currentPlayback?.item?.type, isCheckingLike, checkIsTrackLiked]);
 
-  const handleSkipNext = async () => {
+  const handleSkipNext = useCallback(async () => {
     await skipToNext();
     triggerRefresh();
-  };
+  }, [skipToNext, triggerRefresh]);
 
-  const handleSkipPrevious = async () => {
+  const handleSkipPrevious = useCallback(async () => {
     const RESTART_THRESHOLD_MS = 3000;
 
     if (progressMs > RESTART_THRESHOLD_MS) {
@@ -320,9 +330,9 @@ const NowPlaying = ({
       await skipToPrevious();
     }
     triggerRefresh();
-  };
+  }, [progressMs, seekToPosition, updateProgress, skipToPrevious, triggerRefresh]);
 
-  const handleToggleLike = async () => {
+  const handleToggleLike = useCallback(async () => {
     if (!trackId || currentPlayback?.item?.type !== "track" || isCheckingLike)
       return;
 
@@ -339,9 +349,13 @@ const NowPlaying = ({
       setIsLiked(!isLiked);
       console.error("Error toggling track like:", error);
     }
+  }, [trackId, currentPlayback?.item?.type, isCheckingLike, isLiked, unlikeTrack, likeTrack, triggerRefresh]);
+
+  const handleScrubbingChange = (scrubbing) => {
+    setIsProgressScrubbing(scrubbing);
   };
 
-  const handleSeek = async (position) => {
+  const handleSeek = useCallback(async (position) => {
     try {
       if (currentPlayback?.item) {
         await seekToPosition(position);
@@ -351,13 +365,9 @@ const NowPlaying = ({
     } catch (error) {
       console.error("Error seeking:", error);
     }
-  };
+  }, [currentPlayback?.item, seekToPosition, updateProgress, triggerRefresh]);
 
-  const handleScrubbingChange = (scrubbing) => {
-    setIsProgressScrubbing(scrubbing);
-  };
-
-  const handleToggleShuffle = async () => {
+  const handleToggleShuffle = useCallback(async () => {
     try {
       const newShuffleState = !shuffleEnabled;
       setShuffleEnabled(newShuffleState);
@@ -367,9 +377,9 @@ const NowPlaying = ({
       console.error("Error toggling shuffle:", error);
       setShuffleEnabled(!shuffleEnabled);
     }
-  };
+  }, [shuffleEnabled, toggleShuffle, triggerRefresh]);
 
-  const handleToggleRepeat = async () => {
+  const handleToggleRepeat = useCallback(async () => {
     try {
       const nextModeMap = { off: "context", context: "track", track: "off" };
       const newRepeatMode = nextModeMap[repeatMode] || "off";
@@ -380,7 +390,25 @@ const NowPlaying = ({
     } catch (error) {
       console.error("Error toggling repeat mode:", error);
     }
-  };
+  }, [repeatMode, setRepeatModeApi, triggerRefresh]);
+
+  const VolumeIcon = useMemo(() => {
+    if (volume === 0) {
+      return <VolumeOffIcon className="w-7 h-7" />;
+    } else if (volume > 0 && volume <= 60) {
+      return <VolumeLowIcon className="w-7 h-7 ml-1.5" />;
+    } else {
+      return <VolumeLoudIcon className="w-7 h-7" />;
+    }
+  }, [volume]);
+
+  const PlayPauseIcon = useMemo(() => {
+    return currentPlayback?.is_playing ? (
+      <PauseIcon className="w-14 h-14" />
+    ) : (
+      <PlayIcon className="w-14 h-14" />
+    );
+  }, [currentPlayback?.is_playing]);
 
   return (
     <div
@@ -493,11 +521,7 @@ const NowPlaying = ({
             onClick={handlePlayPause}
             className="transition-opacity duration-100"
           >
-            {currentPlayback?.is_playing ? (
-              <PauseIcon className="w-14 h-14" />
-            ) : (
-              <PlayIcon className="w-14 h-14" />
-            )}
+            {PlayPauseIcon}
           </div>
           <div onClick={handleSkipNext}>
             <ForwardIcon className="w-14 h-14" />
@@ -594,11 +618,13 @@ const NowPlaying = ({
       </div>
       <div
         className={`fixed -right-1.5 top-[4.5rem] transform transition-opacity duration-300 ${
-          !showVolumeIndicator
+          !volumeOverlayState.visible
             ? "hidden"
-            : volumeIndicatorAnimation === "showing"
+            : volumeOverlayState.animation === "showing"
             ? "opacity-100 volumeInScale"
-            : "opacity-0 volumeOutScale"
+            : volumeOverlayState.animation === "hiding"
+            ? "opacity-0 volumeOutScale"
+            : "hidden"
         }`}
       >
         <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
@@ -607,13 +633,7 @@ const NowPlaying = ({
             style={{ height: `${volume}%` }}
           >
             <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
-              {volume === 0 ? (
-                <VolumeOffIcon className="w-7 h-7" />
-              ) : volume > 0 && volume <= 60 ? (
-                <VolumeLowIcon className="w-7 h-7 ml-1.5" />
-              ) : (
-                <VolumeLoudIcon className="w-7 h-7" />
-              )}
+              {VolumeIcon}
             </div>
           </div>
         </div>
