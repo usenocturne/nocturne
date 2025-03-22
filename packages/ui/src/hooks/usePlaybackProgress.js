@@ -13,6 +13,11 @@ export const usePlaybackProgressConsumer = () => {
   return context;
 };
 
+const sharedState = {
+  refreshTimeoutId: null,
+  lastRefreshTime: 0
+};
+
 export const usePlaybackProgress = (accessToken) => {
   const { currentPlayback, refreshPlaybackState } = useSpotifyPlayerState(accessToken);
   const [progressMs, setProgressMs] = useState(0);
@@ -23,8 +28,42 @@ export const usePlaybackProgress = (accessToken) => {
   const lastUpdateTimeRef = useRef(Date.now());
   const animationFrameRef = useRef(null);
   const serverProgressRef = useRef(0);
-  const lastRefreshTimeRef = useRef(0);
   const frameSkipCounterRef = useRef(0);
+
+  const scheduleNextRefresh = useCallback(() => {
+    const REFRESH_INTERVAL = 15000;
+    
+    if (sharedState.refreshTimeoutId) {
+      clearTimeout(sharedState.refreshTimeoutId);
+    }
+    
+    sharedState.refreshTimeoutId = setTimeout(() => {
+      refreshPlaybackState();
+      sharedState.lastRefreshTime = Date.now();
+      scheduleNextRefresh();
+    }, REFRESH_INTERVAL);
+  }, [refreshPlaybackState]);
+
+  const triggerRefresh = useCallback(() => {
+    if (sharedState.refreshTimeoutId) {
+      clearTimeout(sharedState.refreshTimeoutId);
+    }
+    
+    refreshPlaybackState();
+    sharedState.lastRefreshTime = Date.now();
+    scheduleNextRefresh();
+  }, [refreshPlaybackState, scheduleNextRefresh]);
+
+  useEffect(() => {
+    if (accessToken) {
+      const now = Date.now();
+      if (!sharedState.refreshTimeoutId || (now - sharedState.lastRefreshTime > 10000)) {
+        triggerRefresh();
+      }
+    }
+    
+    return () => {};
+  }, [accessToken, triggerRefresh]);
 
   useEffect(() => {
     if (currentPlayback) {
@@ -55,8 +94,6 @@ export const usePlaybackProgress = (accessToken) => {
     if (!isPlaying || duration <= 0) return;
 
     const FRAME_SKIP = 2;
-    const REFRESH_INTERVAL = 15000;
-    const STALE_THRESHOLD = 30000;
 
     const animate = () => {
       frameSkipCounterRef.current = (frameSkipCounterRef.current + 1) % FRAME_SKIP;
@@ -64,14 +101,6 @@ export const usePlaybackProgress = (accessToken) => {
       if (frameSkipCounterRef.current === 0) {
         const now = Date.now();
         const elapsed = now - lastUpdateTimeRef.current;
-
-        if (now - lastRefreshTimeRef.current >= REFRESH_INTERVAL) {
-          lastRefreshTimeRef.current = now;
-          refreshPlaybackState();
-        } else if (elapsed > STALE_THRESHOLD) {
-          refreshPlaybackState(true);
-        }
-
         const estimated = Math.min(serverProgressRef.current + elapsed, duration);
         setProgressMs(estimated);
       }
@@ -87,7 +116,7 @@ export const usePlaybackProgress = (accessToken) => {
         animationFrameRef.current = null;
       }
     };
-  }, [isPlaying, duration, refreshPlaybackState]);
+  }, [isPlaying, duration]);
 
   const updateProgress = useCallback((newProgressMs) => {
     serverProgressRef.current = newProgressMs;
@@ -101,6 +130,7 @@ export const usePlaybackProgress = (accessToken) => {
     duration,
     trackId,
     progressPercentage: duration > 0 ? (progressMs / duration) * 100 : 0,
-    updateProgress
+    updateProgress,
+    triggerRefresh
   };
 }; 

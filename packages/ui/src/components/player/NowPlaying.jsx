@@ -76,6 +76,7 @@ const NowPlaying = ({
     duration,
     progressPercentage,
     updateProgress,
+    triggerRefresh
   } = usePlaybackProgress(accessToken);
 
   useEffect(() => {
@@ -99,6 +100,7 @@ const NowPlaying = ({
     } else if (currentPlayback?.item) {
       await playTrack();
     }
+    triggerRefresh();
   };
 
   const showVolumeIndicatorWithTimeout = () => {
@@ -156,6 +158,7 @@ const NowPlaying = ({
       if (newVolume !== volume) {
         setVolume(newVolume);
         showVolumeIndicatorWithTimeout();
+        triggerRefresh();
       }
     }
   };
@@ -304,6 +307,7 @@ const NowPlaying = ({
 
   const handleSkipNext = async () => {
     await skipToNext();
+    triggerRefresh();
   };
 
   const handleSkipPrevious = async () => {
@@ -315,6 +319,7 @@ const NowPlaying = ({
     } else {
       await skipToPrevious();
     }
+    triggerRefresh();
   };
 
   const handleToggleLike = async () => {
@@ -329,6 +334,7 @@ const NowPlaying = ({
         setIsLiked(true);
         await likeTrack(trackId);
       }
+      triggerRefresh();
     } catch (error) {
       setIsLiked(!isLiked);
       console.error("Error toggling track like:", error);
@@ -340,6 +346,7 @@ const NowPlaying = ({
       if (currentPlayback?.item) {
         await seekToPosition(position);
         updateProgress(position);
+        triggerRefresh();
       }
     } catch (error) {
       console.error("Error seeking:", error);
@@ -355,6 +362,7 @@ const NowPlaying = ({
       const newShuffleState = !shuffleEnabled;
       setShuffleEnabled(newShuffleState);
       await toggleShuffle(newShuffleState);
+      triggerRefresh();
     } catch (error) {
       console.error("Error toggling shuffle:", error);
       setShuffleEnabled(!shuffleEnabled);
@@ -368,6 +376,7 @@ const NowPlaying = ({
 
       setRepeatMode(newRepeatMode);
       await setRepeatModeApi(newRepeatMode);
+      triggerRefresh();
     } catch (error) {
       console.error("Error toggling repeat mode:", error);
     }
