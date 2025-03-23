@@ -16,6 +16,7 @@ import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
 import Drawer, { DrawerTrigger, DrawerContent } from "./Drawer";
 import DeviceSwitcherModal from "./DeviceSwitcherModal";
+import PlaylistDuplicateConfirmationModal from "./PlaylistDuplicateConfirmationModal";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -69,6 +70,10 @@ const NowPlaying = ({
   const contentContainerRef = useRef(null);
 
   const { userPlaylists, refreshUserPlaylists } = useSpotifyData(accessToken);
+  const [showDuplicateConfirmation, setShowDuplicateConfirmation] =
+    useState(false);
+  const [pendingPlaylistAdd, setPendingPlaylistAdd] = useState(null);
+  const [duplicateTrackInfo, setDuplicateTrackInfo] = useState(null);
 
   const {
     playTrack,
@@ -445,14 +450,45 @@ const NowPlaying = ({
       if (!currentPlayback?.item?.uri) return;
 
       try {
-        await addToPlaylist(currentPlayback.item.uri, playlistId);
-        setDrawerOpen(false);
+        const result = await addToPlaylist(
+          currentPlayback.item.uri,
+          playlistId
+        );
+
+        if (result.success) {
+          if (result.isDuplicate) {
+            setPendingPlaylistAdd(playlistId);
+            setDuplicateTrackInfo(true);
+            setShowDuplicateConfirmation(true);
+          } else {
+            setDrawerOpen(false);
+          }
+        } else {
+          console.error("Error adding track to playlist:", result.error);
+        }
       } catch (error) {
         console.error("Error adding track to playlist:", error);
       }
     },
-    [currentPlayback?.item?.uri, addToPlaylist]
+    [currentPlayback?.item, addToPlaylist]
   );
+
+  const handleConfirmDuplicateAdd = useCallback(async () => {
+    if (pendingPlaylistAdd && currentPlayback?.item?.uri) {
+      await addToPlaylist(currentPlayback.item.uri, pendingPlaylistAdd, true);
+
+      setShowDuplicateConfirmation(false);
+      setPendingPlaylistAdd(null);
+      setDuplicateTrackInfo(null);
+      setDrawerOpen(false);
+    }
+  }, [pendingPlaylistAdd, currentPlayback?.item?.uri, addToPlaylist]);
+
+  const handleCancelDuplicateAdd = useCallback(() => {
+    setShowDuplicateConfirmation(false);
+    setPendingPlaylistAdd(null);
+    setDuplicateTrackInfo(null);
+  }, []);
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) {
@@ -755,6 +791,13 @@ const NowPlaying = ({
         onClose={() => setIsDeviceSwitcherOpen(false)}
         accessToken={accessToken}
       />
+
+      {showDuplicateConfirmation && duplicateTrackInfo && (
+        <PlaylistDuplicateConfirmationModal
+          onConfirm={handleConfirmDuplicateAdd}
+          onCancel={handleCancelDuplicateAdd}
+        />
+      )}
     </div>
   );
 };
