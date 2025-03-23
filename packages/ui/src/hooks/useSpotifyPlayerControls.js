@@ -644,40 +644,12 @@ export function useSpotifyPlayerControls(accessToken) {
   }, [accessToken]);
 
   const addToPlaylist = useCallback(
-    async (trackUri, playlistId, forceAdd = false) => {
+    async (trackUri, playlistId) => {
       if (!accessToken || !trackUri || !playlistId) return false;
 
       try {
         setIsLoading(true);
         setError(null);
-
-        if (!forceAdd) {
-          const checkResponse = await fetch(
-            `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=items(track(uri)),name`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-
-          if (!checkResponse.ok) {
-            throw new Error(`HTTP error! status: ${checkResponse.status}`);
-          }
-
-          const playlistData = await checkResponse.json();
-          const trackExists = playlistData.items.some(
-            (item) => item.track && item.track.uri === trackUri
-          );
-
-          if (trackExists) {
-            return {
-              success: true,
-              isDuplicate: true,
-              playlistName: playlistData.name,
-            };
-          }
-        }
 
         const response = await fetch(
           `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
@@ -702,11 +674,11 @@ export function useSpotifyPlayerControls(accessToken) {
           );
         }
 
-        return { success: true, isDuplicate: false };
+        return true;
       } catch (err) {
-        console.error("Error handling playlist addition:", err);
+        console.error("Error adding track to playlist:", err);
         setError(err.message);
-        return { success: false, error: err.message };
+        return false;
       } finally {
         setIsLoading(false);
       }
