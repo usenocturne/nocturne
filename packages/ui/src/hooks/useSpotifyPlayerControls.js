@@ -2,7 +2,7 @@ import { useCallback, useState, useContext, useRef, useEffect } from "react";
 import React from "react";
 
 export const DeviceSwitcherContext = React.createContext({
-  openDeviceSwitcher: () => {},
+  openDeviceSwitcher: () => { },
 });
 
 export function useSpotifyPlayerControls(accessToken) {
@@ -24,14 +24,11 @@ export function useSpotifyPlayerControls(accessToken) {
     };
   }, []);
 
-  const updateVolumeFromDevice = useCallback(
-    (deviceVolume) => {
-      if (!isAdjustingVolume && deviceVolume !== undefined) {
-        setVolumeState(deviceVolume);
-      }
-    },
-    [isAdjustingVolume]
-  );
+  const updateVolumeFromDevice = useCallback((deviceVolume) => {
+    if (!isAdjustingVolume && deviceVolume !== undefined) {
+      setVolumeState(deviceVolume);
+    }
+  }, [isAdjustingVolume]);
 
   const playTrack = useCallback(
     async (trackUri, contextUri = null, uris = null) => {
@@ -72,9 +69,7 @@ export function useSpotifyPlayerControls(accessToken) {
             error: { message: `HTTP error! status: ${response.status}` },
           }));
 
-          const errorMessage =
-            errorData.error?.message ||
-            `HTTP error! status: ${response.status}`;
+          const errorMessage = errorData.error?.message || `HTTP error! status: ${response.status}`;
 
           if (errorData.error?.reason == "NO_ACTIVE_DEVICE") {
             if (openDeviceSwitcher) {
@@ -245,23 +240,19 @@ export function useSpotifyPlayerControls(accessToken) {
   );
 
   const processVolumeQueue = useCallback(async () => {
-    if (
-      isVolumeProcessingRef.current ||
-      volumeQueueRef.current.length === 0 ||
-      !accessToken
-    ) {
+    if (isVolumeProcessingRef.current || volumeQueueRef.current.length === 0 || !accessToken) {
       return;
     }
 
     isVolumeProcessingRef.current = true;
-
+    
     const latestVolume = volumeQueueRef.current.pop();
     volumeQueueRef.current = [];
-
+    
     const now = Date.now();
     const timeSinceLastUpdate = now - lastVolumeUpdateTimeRef.current;
     const minInterval = 100;
-
+    
     const processRequest = async () => {
       try {
         const response = await fetch(
@@ -273,20 +264,20 @@ export function useSpotifyPlayerControls(accessToken) {
             },
           }
         );
-
+        
         lastVolumeUpdateTimeRef.current = Date.now();
-
+        
         if (!response.ok && response.status !== 204) {
           const errorData = await response.json().catch(() => ({
             error: { message: `HTTP error! status: ${response.status}` },
           }));
-
+          
           if (errorData.error?.reason === "NO_ACTIVE_DEVICE") {
             if (openDeviceSwitcher) {
               openDeviceSwitcher();
             }
           }
-
+          
           throw new Error(
             errorData.error?.message || `HTTP error! status: ${response.status}`
           );
@@ -296,7 +287,7 @@ export function useSpotifyPlayerControls(accessToken) {
         setError(err.message);
       } finally {
         const processingDelay = Math.max(0, minInterval - (Date.now() - now));
-
+        
         volumeTimeoutRef.current = setTimeout(() => {
           isVolumeProcessingRef.current = false;
           if (volumeQueueRef.current.length > 0) {
@@ -307,7 +298,7 @@ export function useSpotifyPlayerControls(accessToken) {
         }, processingDelay);
       }
     };
-
+    
     if (timeSinceLastUpdate < minInterval) {
       const delay = minInterval - timeSinceLastUpdate;
       setTimeout(processRequest, delay);
@@ -316,30 +307,24 @@ export function useSpotifyPlayerControls(accessToken) {
     }
   }, [accessToken, openDeviceSwitcher]);
 
-  const setVolume = useCallback(
-    async (volumePercent) => {
-      if (!accessToken) return false;
+  const setVolume = useCallback(async (volumePercent) => {
+    if (!accessToken) return false;
 
-      const boundedVolume = Math.max(
-        0,
-        Math.min(100, Math.round(volumePercent))
-      );
-
-      if (boundedVolume !== volume) {
-        setVolumeState(boundedVolume);
-        setIsAdjustingVolume(true);
-
-        volumeQueueRef.current.push(boundedVolume);
-
-        if (!isVolumeProcessingRef.current) {
-          processVolumeQueue();
-        }
+    const boundedVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
+    
+    if (boundedVolume !== volume) {
+      setVolumeState(boundedVolume);
+      setIsAdjustingVolume(true);
+      
+      volumeQueueRef.current.push(boundedVolume);
+      
+      if (!isVolumeProcessingRef.current) {
+        processVolumeQueue();
       }
+    }
 
-      return true;
-    },
-    [accessToken, processVolumeQueue, volume]
-  );
+    return true;
+  }, [accessToken, processVolumeQueue, volume]);
 
   const checkIsTrackLiked = useCallback(
     async (trackId) => {
@@ -643,50 +628,6 @@ export function useSpotifyPlayerControls(accessToken) {
     }
   }, [accessToken]);
 
-  const addToPlaylist = useCallback(
-    async (trackUri, playlistId) => {
-      if (!accessToken || !trackUri || !playlistId) return false;
-
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              uris: [trackUri],
-              position: 0,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-          throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
-          );
-        }
-
-        return true;
-      } catch (err) {
-        console.error("Error adding track to playlist:", err);
-        setError(err.message);
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [accessToken]
-  );
-
   return {
     playTrack,
     pausePlayback,
@@ -704,7 +645,6 @@ export function useSpotifyPlayerControls(accessToken) {
     unlikeTrack,
     playDJMix,
     sendDJSignal,
-    addToPlaylist,
     isLoading,
     error,
   };

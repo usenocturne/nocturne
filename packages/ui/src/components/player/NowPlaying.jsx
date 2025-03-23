@@ -1,21 +1,12 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
 import { usePlaybackProgress } from "../../hooks/usePlaybackProgress";
 import { useGestureControls } from "../../hooks/useGestureControls";
-import { useSpotifyData } from "../../hooks/useSpotifyData";
 import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
-import Drawer, { DrawerTrigger, DrawerContent } from "./Drawer";
-import DeviceSwitcherModal from "./DeviceSwitcherModal";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -33,7 +24,6 @@ import {
   ShuffleIcon,
   RepeatIcon,
   RepeatOneIcon,
-  PlaylistAddIcon,
 } from "../common/icons";
 
 const NowPlaying = ({
@@ -48,13 +38,11 @@ const NowPlaying = ({
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
   const [volumeOverlayState, setVolumeOverlayState] = useState({
     visible: false,
-    animation: "hidden",
+    animation: "hidden"
   });
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
-
+  
   const volumeTimerRef = useRef(null);
   const volumeLastAdjustedRef = useRef(0);
   const lastWheelEventRef = useRef(0);
@@ -63,12 +51,10 @@ const NowPlaying = ({
   const currentTrackIdRef = useRef(null);
   const prevVolumeRef = useRef(null);
   const manualVolumeChangeRef = useRef(false);
-
+  
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
   const contentContainerRef = useRef(null);
-
-  const { userPlaylists, refreshUserPlaylists } = useSpotifyData(accessToken);
 
   const {
     playTrack,
@@ -85,7 +71,6 @@ const NowPlaying = ({
     updateVolumeFromDevice,
     toggleShuffle,
     setRepeatMode: setRepeatModeApi,
-    addToPlaylist,
   } = useSpotifyPlayerControls(accessToken);
 
   const {
@@ -94,7 +79,7 @@ const NowPlaying = ({
     duration,
     progressPercentage,
     updateProgress,
-    triggerRefresh,
+    triggerRefresh
   } = usePlaybackProgress(accessToken);
 
   useEffect(() => {
@@ -105,38 +90,38 @@ const NowPlaying = ({
       updateVolumeFromDevice(currentPlayback.device.volume_percent);
     }
   }, [currentPlayback?.device?.volume_percent, updateVolumeFromDevice]);
-
+  
   const showVolumeOverlay = useCallback(() => {
     if (!manualVolumeChangeRef.current) return;
-
+    
     volumeLastAdjustedRef.current = Date.now();
-
+    
     if (volumeTimerRef.current) {
       clearTimeout(volumeTimerRef.current);
     }
-
+    
     setVolumeOverlayState({
       visible: true,
-      animation: "showing",
+      animation: "showing"
     });
-
+    
     volumeTimerRef.current = setTimeout(() => {
-      setVolumeOverlayState((prev) => ({
+      setVolumeOverlayState(prev => ({
         ...prev,
-        animation: "hiding",
+        animation: "hiding"
       }));
-
+      
       setTimeout(() => {
         setVolumeOverlayState({
           visible: false,
-          animation: "hidden",
+          animation: "hidden"
         });
-
+        
         manualVolumeChangeRef.current = false;
       }, 300);
     }, 1500);
   }, []);
-
+  
   useEffect(() => {
     return () => {
       if (volumeTimerRef.current) {
@@ -144,17 +129,17 @@ const NowPlaying = ({
       }
     };
   }, []);
-
+  
   useEffect(() => {
     if (prevVolumeRef.current === null) {
       prevVolumeRef.current = volume;
       return;
     }
-
+    
     if (prevVolumeRef.current !== volume && manualVolumeChangeRef.current) {
       showVolumeOverlay();
     }
-
+    
     prevVolumeRef.current = volume;
   }, [volume, showVolumeOverlay]);
 
@@ -167,26 +152,14 @@ const NowPlaying = ({
     }
   }, [currentPlayback?.shuffle_state, currentPlayback?.repeat_state]);
 
-  useEffect(() => {
-    if (drawerOpen && accessToken) {
-      refreshUserPlaylists();
-    }
-  }, [drawerOpen, accessToken, refreshUserPlaylists]);
-
-  const handlePlayPause = useCallback(async () => {
+  const handlePlayPause = async () => {
     if (currentPlayback?.is_playing) {
       await pausePlayback();
     } else if (currentPlayback?.item) {
       await playTrack();
     }
     triggerRefresh();
-  }, [
-    currentPlayback?.is_playing,
-    currentPlayback?.item,
-    pausePlayback,
-    playTrack,
-    triggerRefresh,
-  ]);
+  };
 
   const trackInfo = useMemo(() => {
     const trackName = currentPlayback?.item
@@ -212,54 +185,50 @@ const NowPlaying = ({
       : "/images/not-playing.webp";
 
     const trackId = currentPlayback?.item?.id;
-
+    
     return { trackName, artistName, albumArt, trackId };
   }, [currentPlayback]);
 
   const { trackName, artistName, albumArt, trackId } = trackInfo;
 
-  const handleWheel = useCallback(
-    (e) => {
-      if (isProgressScrubbing) return;
+  const handleWheel = useCallback((e) => {
+    if (isProgressScrubbing) return;
 
-      const now = Date.now();
-      if (now - lastWheelEventRef.current < 50) {
-        e.preventDefault();
-        return;
-      }
-      lastWheelEventRef.current = now;
-
+    const now = Date.now();
+    if (now - lastWheelEventRef.current < 50) {
       e.preventDefault();
-      e.stopPropagation();
+      return;
+    }
+    lastWheelEventRef.current = now;
 
-      const delta =
-        Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-      wheelDeltaAccumulatorRef.current += delta;
+    e.preventDefault();
+    e.stopPropagation();
 
-      if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
-        const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
-        const newVolume = Math.max(0, Math.min(100, volume + direction * 5));
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    wheelDeltaAccumulatorRef.current += delta;
 
-        wheelDeltaAccumulatorRef.current = 0;
+    if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
+      const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
+      const newVolume = Math.max(0, Math.min(100, volume + direction * 5));
 
-        if (newVolume !== volume) {
-          manualVolumeChangeRef.current = true;
-          setVolume(newVolume);
-          triggerRefresh();
-        }
+      wheelDeltaAccumulatorRef.current = 0;
+
+      if (newVolume !== volume) {
+        manualVolumeChangeRef.current = true;
+        setVolume(newVolume);
+        triggerRefresh();
       }
-    },
-    [isProgressScrubbing, volume, setVolume, triggerRefresh]
-  );
+    }
+  }, [isProgressScrubbing, volume, setVolume, triggerRefresh]);
 
   useEffect(() => {
     const container = containerRef.current;
     let options = { passive: false, capture: true };
-
+    
     const handleWheelWithOptions = (e) => {
       handleWheel(e);
     };
-
+    
     if (container) {
       container.addEventListener("wheel", handleWheelWithOptions, options);
     }
@@ -361,13 +330,7 @@ const NowPlaying = ({
       await skipToPrevious();
     }
     triggerRefresh();
-  }, [
-    progressMs,
-    seekToPosition,
-    updateProgress,
-    skipToPrevious,
-    triggerRefresh,
-  ]);
+  }, [progressMs, seekToPosition, updateProgress, skipToPrevious, triggerRefresh]);
 
   const handleToggleLike = useCallback(async () => {
     if (!trackId || currentPlayback?.item?.type !== "track" || isCheckingLike)
@@ -386,34 +349,23 @@ const NowPlaying = ({
       setIsLiked(!isLiked);
       console.error("Error toggling track like:", error);
     }
-  }, [
-    trackId,
-    currentPlayback?.item?.type,
-    isCheckingLike,
-    isLiked,
-    unlikeTrack,
-    likeTrack,
-    triggerRefresh,
-  ]);
+  }, [trackId, currentPlayback?.item?.type, isCheckingLike, isLiked, unlikeTrack, likeTrack, triggerRefresh]);
 
-  const handleScrubbingChange = useCallback((scrubbing) => {
+  const handleScrubbingChange = (scrubbing) => {
     setIsProgressScrubbing(scrubbing);
-  }, []);
+  };
 
-  const handleSeek = useCallback(
-    async (position) => {
-      try {
-        if (currentPlayback?.item) {
-          await seekToPosition(position);
-          updateProgress(position);
-          triggerRefresh();
-        }
-      } catch (error) {
-        console.error("Error seeking:", error);
+  const handleSeek = useCallback(async (position) => {
+    try {
+      if (currentPlayback?.item) {
+        await seekToPosition(position);
+        updateProgress(position);
+        triggerRefresh();
       }
-    },
-    [currentPlayback?.item, seekToPosition, updateProgress, triggerRefresh]
-  );
+    } catch (error) {
+      console.error("Error seeking:", error);
+    }
+  }, [currentPlayback?.item, seekToPosition, updateProgress, triggerRefresh]);
 
   const handleToggleShuffle = useCallback(async () => {
     try {
@@ -439,20 +391,6 @@ const NowPlaying = ({
       console.error("Error toggling repeat mode:", error);
     }
   }, [repeatMode, setRepeatModeApi, triggerRefresh]);
-
-  const handleAddToCurrentPlaylist = useCallback(
-    async (playlistId) => {
-      if (!currentPlayback?.item?.uri) return;
-
-      try {
-        await addToPlaylist(currentPlayback.item.uri, playlistId);
-        setDrawerOpen(false);
-      } catch (error) {
-        console.error("Error adding track to playlist:", error);
-      }
-    },
-    [currentPlayback?.item?.uri, addToPlaylist]
-  );
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) {
@@ -606,25 +544,6 @@ const NowPlaying = ({
               className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
             >
               <div className="py-1">
-                <DrawerTrigger
-                  onClick={(e) => {
-                    if (currentPlayback?.item?.type === "track") {
-                      setDrawerOpen(true);
-                    } else {
-                      e.preventDefault();
-                    }
-                  }}
-                >
-                  <MenuItem>
-                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
-                      <span className="text-[28px]">Add to Playlist</span>
-                      <PlaylistAddIcon
-                        aria-hidden="true"
-                        className="h-8 w-8 text-white/60"
-                      />
-                    </div>
-                  </MenuItem>
-                </DrawerTrigger>
                 <MenuItem onClick={toggleLyrics}>
                   <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
                     <span className="text-[28px]">
@@ -697,7 +616,6 @@ const NowPlaying = ({
           </Menu>
         </div>
       </div>
-
       <div
         className={`fixed -right-1.5 top-[4.5rem] transform transition-opacity duration-300 ${
           !volumeOverlayState.visible
@@ -720,41 +638,6 @@ const NowPlaying = ({
           </div>
         </div>
       </div>
-
-      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <DrawerContent>
-          <div className="mx-auto flex pl-8 pr-4 overflow-x-scroll scroll-container">
-            {userPlaylists &&
-              userPlaylists.map((playlist) => (
-                <div key={playlist.id} className="min-w-[280px] mr-10 mb-4">
-                  <div
-                    onClick={() => handleAddToCurrentPlaylist(playlist.id)}
-                    className="cursor-pointer"
-                  >
-                    <img
-                      src={
-                        playlist?.images?.[0]?.url || "/images/not-playing.webp"
-                      }
-                      alt="Playlist Cover"
-                      width={280}
-                      height={280}
-                      className="mt-8 aspect-square rounded-[12px] drop-shadow-xl"
-                    />
-                    <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                      {playlist.name}
-                    </h4>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </DrawerContent>
-      </Drawer>
-
-      <DeviceSwitcherModal
-        isOpen={isDeviceSwitcherOpen}
-        onClose={() => setIsDeviceSwitcherOpen(false)}
-        accessToken={accessToken}
-      />
     </div>
   );
 };
