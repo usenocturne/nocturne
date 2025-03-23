@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { BatteryIcon, BluetoothIcon } from "../../common/icons";
+import { BatteryIcon, BluetoothIcon, WifiMaxIcon, WifiHighIcon, WifiLowIcon, WifiOffIcon } from "../../common/icons";
 import { useSettings } from "../../../contexts/SettingsContext";
+import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
 
 export default function StatusBar() {
   const [currentTime, setCurrentTime] = useState("");
@@ -8,6 +9,25 @@ export default function StatusBar() {
   const [isBluetoothConnected, setIsBluetoothConnected] = useState(true);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const { settings } = useSettings();
+  const { currentNetwork, availableNetworks } = useWiFiNetworks();
+
+  const getWiFiIcon = () => {
+    if (!currentNetwork) return null;
+
+    const scanNetwork = availableNetworks.find(n => n.ssid === currentNetwork.ssid);
+    if (!scanNetwork) return <WifiOffIcon className="w-8 h-10 text-white" />;
+
+    const signalStrength = parseInt(scanNetwork.signal);
+    const iconClass = "w-8 h-10 text-white";
+
+    if (signalStrength >= -50) {
+      return <WifiMaxIcon className={iconClass} />;
+    } else if (signalStrength >= -70) {
+      return <WifiHighIcon className={iconClass} />;
+    } else {
+      return <WifiLowIcon className={iconClass} />;
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -46,9 +66,8 @@ export default function StatusBar() {
 
   return (
     <div
-      className={`flex justify-between w-full mb-6 pr-10 ${
-        isFourDigits ? "pl-0.5" : "pl-2"
-      } items-start`}
+      className={`flex justify-between w-full mb-6 pr-10 ${isFourDigits ? "pl-0.5" : "pl-2"
+        } items-start`}
     >
       <div
         className="text-[26px] font-[580] text-white tracking-tight leading-none"
@@ -57,16 +76,18 @@ export default function StatusBar() {
         {currentTime}
       </div>
       <div className="flex gap-2.5 h-10" style={{ marginTop: "-10px" }}>
-        <BluetoothIcon
-          className="w-8 h-10 text-white"
-          style={{
-            margin: 0,
-            padding: 0,
-            display: "block",
-            transform: "translateY(-10px)",
-          }}
-        />
-        <BatteryIcon
+        {currentNetwork ? getWiFiIcon() : (
+          <BluetoothIcon
+            className="w-8 h-10 text-white"
+            style={{
+              margin: 0,
+              padding: 0,
+              display: "block",
+              transform: "translateY(-10px)",
+            }}
+          />
+        )}
+        {!currentNetwork && <BatteryIcon
           className="w-10 h-10"
           percentage={batteryPercentage}
           style={{
@@ -75,7 +96,7 @@ export default function StatusBar() {
             display: "block",
             transform: "translateY(-10px)",
           }}
-        />
+        />}
       </div>
     </div>
   );

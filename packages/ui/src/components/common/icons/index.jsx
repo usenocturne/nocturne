@@ -61,3 +61,4 @@ export { default as WifiOffIcon } from "./WifiOffIcon";
 export { default as LockIcon } from "./LockIcon";
 export { default as DJIcon } from "./DJIcon";
 export { default as CarThingIcon } from "./CarThingIcon";
+export { default as RefreshIcon } from "./RefreshIcon";

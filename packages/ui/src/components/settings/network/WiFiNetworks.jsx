@@ -1,75 +1,103 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   WifiMaxIcon,
   WifiHighIcon,
   WifiLowIcon,
+  WifiOffIcon,
   LockIcon,
   CheckIcon,
+  RefreshIcon,
 } from "../../common/icons";
+import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
+
+const NetworkDialog = ({ network, onClose, onConnect }) => {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const { connectToNetwork, hasPasswordSecurity: useWiFiHasPasswordSecurity, isConnecting } = useWiFiNetworks();
+
+  const handleConnect = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      const success = await connectToNetwork(network, password);
+      if (success) {
+        onConnect();
+      } else {
+        setError("Failed to connect to network. Please try again.");
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-[#1A1A1A] rounded-2xl p-8 w-[480px] shadow-lg border border-white/10">
+        <h3 className="text-[32px] font-[580] text-white tracking-tight mb-6">
+          Connect to {network.ssid}
+        </h3>
+
+        <form onSubmit={handleConnect}>
+          {useWiFiHasPasswordSecurity(network.flags) && (
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full bg-white/10 rounded-xl px-6 py-4 text-[28px] text-white placeholder-white/40 border border-white/10 mb-6"
+              autoFocus
+            />
+          )}
+
+          {error && (
+            <div className="text-red-500 text-[24px] mb-6">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 text-[28px] font-[560] text-white/60 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isConnecting || (useWiFiHasPasswordSecurity(network.flags) && !password)}
+              className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isConnecting ? "Connecting..." : "Connect"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const WiFiNetworks = () => {
-  const [currentNetwork, setCurrentNetwork] = useState(null);
-  const [myNetworks, setMyNetworks] = useState([]);
-  const [otherNetworks, setOtherNetworks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [scanResults, setScanResults] = useState([]);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setCurrentNetwork({
-        ssid: "Home Network",
-        flags: ["WPA2", "[CURRENT]"],
-      });
-
-      setMyNetworks([
-        {
-          ssid: "Work Network",
-          flags: ["WPA2"],
-        },
-      ]);
-
-      setScanResults([
-        {
-          ssid: "Home Network",
-          flags: ["WPA2"],
-          signal: "-45",
-        },
-        {
-          ssid: "Work Network",
-          flags: ["WPA2"],
-          signal: "-65",
-        },
-        {
-          ssid: "Coffee Shop",
-          flags: ["WPA2"],
-          signal: "-75",
-        },
-        {
-          ssid: "Guest Network",
-          flags: [],
-          signal: "-60",
-        },
-      ]);
-
-      setOtherNetworks([
-        {
-          ssid: "Coffee Shop",
-          flags: ["WPA2"],
-          signal: "-75",
-        },
-        {
-          ssid: "Guest Network",
-          flags: [],
-          signal: "-60",
-        },
-      ]);
-
-      setLoading(false);
-    }, 1000);
-  }, []);
+  const [selectedNetwork, setSelectedNetwork] = useState(null);
+  const {
+    currentNetwork,
+    savedNetworks,
+    availableNetworks,
+    networkStatus,
+    error,
+    isInitialLoading,
+    isScanning,
+    isForgetting,
+    scanNetworks,
+    connectToSavedNetwork,
+    forgetNetwork,
+    hasPasswordSecurity
+  } = useWiFiNetworks();
 
   const getSignalIcon = (signal) => {
+    if (!signal) return <WifiLowIcon className="w-[24px] h-[24px] text-white" />;
+
     const signalStrength = parseInt(signal);
     const iconClass = "w-[24px] h-[24px] text-white";
 
@@ -82,19 +110,28 @@ const WiFiNetworks = () => {
     }
   };
 
-  const hasPasswordSecurity = (flags) => {
-    return (
-      flags.includes("WPA") || flags.includes("WEP") || flags.includes("WPA2")
-    );
+  const handleNetworkClick = (network) => {
+    setSelectedNetwork(network);
+  };
+
+  const handleConnectToSavedNetwork = async (networkId) => {
+    await connectToSavedNetwork(networkId);
+  };
+
+  const handleForgetNetwork = async (networkId, e) => {
+    e.stopPropagation();
+    await forgetNetwork(networkId);
+  };
+
+  const handleRefresh = () => {
+    scanNetworks(false);
   };
 
   const renderCurrentNetwork = () => {
     if (!currentNetwork) return null;
 
-    const scanNetwork = scanResults.find(
-      (scan) => scan.ssid === currentNetwork.ssid
-    );
-    const securityFlags = scanNetwork?.flags || currentNetwork.flags;
+    const scanNetwork = availableNetworks.find(n => n.ssid === currentNetwork.ssid);
+    const inRange = !!scanNetwork;
 
     return (
       <div className="mb-8">
@@ -104,13 +141,25 @@ const WiFiNetworks = () => {
               <h4 className="text-[28px] font-[580] text-white tracking-tight truncate pr-4">
                 {currentNetwork.ssid}
               </h4>
+              {!networkStatus && (
+                <p className="text-white/60 text-[20px]">
+                  Connecting...
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-3">
-              <CheckIcon className="text-white w-[24px] h-[24px]" />
-              {hasPasswordSecurity(securityFlags) && (
+              <div className="text-green-500 flex items-center gap-1">
+                <CheckIcon className="w-[20px] h-[20px]" />
+                <span className="text-[18px]">Connected</span>
+              </div>
+              {hasPasswordSecurity(currentNetwork.flags) && (
                 <LockIcon className="text-white" size={24} />
               )}
-              {scanNetwork && getSignalIcon(scanNetwork.signal)}
+              {inRange ? (
+                getSignalIcon(scanNetwork.signal)
+              ) : (
+                <WifiOffIcon className="w-[24px] h-[24px] text-white/60" />
+              )}
             </div>
           </div>
         </div>
@@ -118,20 +167,97 @@ const WiFiNetworks = () => {
     );
   };
 
-  const renderOtherNetworks = () => {
-    if (otherNetworks.length === 0) return null;
+  const renderMyNetworks = () => {
+    if (!savedNetworks || savedNetworks.length === 0) return null;
+
+    return (
+      <div className="mb-8">
+        <h3 className="text-[32px] font-[580] text-white tracking-tight mb-4">
+          Saved Networks
+        </h3>
+
+        <div className="space-y-4">
+          {savedNetworks.map((network) => {
+            const scanNetwork = availableNetworks.find(n => n.ssid === network.ssid);
+            const inRange = !!scanNetwork;
+
+            return (
+              <div
+                key={network.networkId}
+                onClick={() => inRange && handleConnectToSavedNetwork(network.networkId)}
+                className={`bg-white/10 rounded-xl p-6 select-none border border-white/10 
+                  ${inRange
+                    ? 'hover:bg-white/20 transition-colors cursor-pointer'
+                    : 'opacity-70'}`}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[28px] font-[580] text-white tracking-tight truncate pr-4">
+                      {network.ssid}
+                    </h4>
+                    {!inRange && (
+                      <p className="text-white/60 text-[20px]">
+                        Out of range
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {hasPasswordSecurity(network.flags) && (
+                      <LockIcon className="text-white" size={24} />
+                    )}
+                    {inRange ? (
+                      getSignalIcon(scanNetwork.signal)
+                    ) : (
+                      <WifiOffIcon className="w-[24px] h-[24px] text-white/60" />
+                    )}
+                    <button
+                      onClick={(e) => handleForgetNetwork(network.networkId, e)}
+                      className="text-white/60 hover:text-white text-[24px] transition-colors px-2 hover:bg-white/10 rounded"
+                      disabled={isForgetting}
+                    >
+                      Forget
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderAvailableNetworks = () => {
+    const otherNetworks = availableNetworks.filter(network => {
+      const isCurrentNetwork = currentNetwork && network.ssid === currentNetwork.ssid;
+      const isSavedNetwork = savedNetworks && savedNetworks.some(saved => saved.ssid === network.ssid);
+      return !isCurrentNetwork && !isSavedNetwork;
+    });
+
+    if (!otherNetworks || otherNetworks.length === 0) return null;
 
     return (
       <div>
-        <h3 className="text-[32px] font-[580] text-white tracking-tight">
-          Other Networks
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[32px] font-[580] text-white tracking-tight">
+            Available Networks
+          </h3>
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+            disabled={isScanning}
+            aria-label="Refresh networks"
+          >
+            <RefreshIcon className={`w-6 h-6 ${isScanning ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
 
-        <div className="space-y-4 pt-4">
+        <div className="space-y-4">
           {otherNetworks.map((network) => (
             <div
-              key={network.ssid}
-              className="bg-white/10 rounded-xl p-6 select-none border border-white/10"
+              key={network.bssid || network.ssid}
+              onClick={() => handleNetworkClick(network)}
+              className="bg-white/10 rounded-xl p-6 select-none border border-white/10 hover:bg-white/20 transition-colors cursor-pointer"
             >
               <div className="flex justify-between items-center">
                 <div className="min-w-0 flex-1">
@@ -143,7 +269,7 @@ const WiFiNetworks = () => {
                   {hasPasswordSecurity(network.flags) && (
                     <LockIcon className="text-white" size={24} />
                   )}
-                  {network.signal && getSignalIcon(network.signal)}
+                  {getSignalIcon(network.signal)}
                 </div>
               </div>
             </div>
@@ -153,60 +279,12 @@ const WiFiNetworks = () => {
     );
   };
 
-  const renderMyNetworks = () => {
-    if (myNetworks.length === 0) return null;
-
-    const networksInRange = myNetworks.filter((network) =>
-      scanResults.some((scan) => scan.ssid === network.ssid)
-    );
-
-    if (networksInRange.length === 0) return null;
-
-    return (
-      <div>
-        <h3 className="text-[32px] font-[580] text-white tracking-tight">
-          My Networks
-        </h3>
-
-        <div className="space-y-4 pt-4">
-          {networksInRange.map((network) => {
-            const scanNetwork = scanResults.find(
-              (scan) => scan.ssid === network.ssid
-            );
-            const securityFlags = scanNetwork?.flags || network.flags;
-
-            return (
-              <div
-                key={network.ssid}
-                className="bg-white/10 rounded-xl p-6 select-none border border-white/10"
-              >
-                <div className="flex justify-between items-center">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-[28px] font-[580] text-white tracking-tight truncate pr-4">
-                      {network.ssid}
-                    </h4>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {hasPasswordSecurity(securityFlags) && (
-                      <LockIcon className="text-white" size={24} />
-                    )}
-                    {scanNetwork && getSignalIcon(scanNetwork.signal)}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-12 bg-white/10 w-1/2 rounded-lg animate-pulse"></div>
+        <div className="h-12 bg-white/10 w-1/3 rounded-lg animate-pulse"></div>
         <div className="h-24 bg-white/10 rounded-xl animate-pulse"></div>
-        <div className="h-12 bg-white/10 w-1/2 rounded-lg animate-pulse mt-8"></div>
+        <div className="h-12 bg-white/10 w-1/3 rounded-lg animate-pulse mt-8"></div>
         <div className="space-y-4">
           <div className="h-24 bg-white/10 rounded-xl animate-pulse"></div>
           <div className="h-24 bg-white/10 rounded-xl animate-pulse"></div>
@@ -215,14 +293,52 @@ const WiFiNetworks = () => {
     );
   }
 
-  return (
-    <div className="space-y-8">
-      {renderCurrentNetwork()}
+  const hasAnyNetworks = currentNetwork ||
+    (savedNetworks && savedNetworks.length > 0) ||
+    (availableNetworks && availableNetworks.length > 0);
 
-      <div className="space-y-8">
-        {renderMyNetworks()}
-        {renderOtherNetworks()}
+  if (!hasAnyNetworks) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <WifiOffIcon className="w-12 h-12 text-white/40 mb-4" />
+        <p className="text-white/60 text-[28px] mb-6">No networks found</p>
+        <button
+          onClick={() => scanNetworks(true)}
+          className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white flex items-center gap-2"
+          disabled={isScanning}
+        >
+          <RefreshIcon className={`w-6 h-6 ${isScanning ? 'animate-spin' : ''}`} />
+          Scan for networks
+        </button>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="bg-red-900/40 border border-red-700/60 rounded-xl p-4 mb-4">
+          <p className="text-white/80 text-[20px]">{error}</p>
+          <button
+            onClick={() => scanNetworks(false)}
+            className="text-white/60 hover:text-white text-[18px] mt-2 underline transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {renderCurrentNetwork()}
+      {renderMyNetworks()}
+      {renderAvailableNetworks()}
+
+      {selectedNetwork && (
+        <NetworkDialog
+          network={selectedNetwork}
+          onClose={() => setSelectedNetwork(null)}
+          onConnect={() => setSelectedNetwork(null)}
+        />
+      )}
     </div>
   );
 };
