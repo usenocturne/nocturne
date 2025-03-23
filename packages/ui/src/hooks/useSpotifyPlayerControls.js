@@ -661,7 +661,6 @@ export function useSpotifyPlayerControls(accessToken) {
             },
             body: JSON.stringify({
               uris: [trackUri],
-              position: 0,
             }),
           }
         );
