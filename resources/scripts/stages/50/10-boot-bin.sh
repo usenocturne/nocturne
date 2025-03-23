@@ -8,7 +8,7 @@ mv "$WORK_PATH"/bootfs-blank.bin "$IMAGE_PATH"/boot.bin
 dd if="$RES_PATH"/flash/logo.bin of="$IMAGE_PATH"/boot.bin bs=1M seek=156 conv=notrunc
 
 mkdir -p /mnt/bootbin
-losetup -o 4194304 /dev/loop0 "$IMAGE_PATH"/boot.bin
+losetup -o 4194304 -f "$IMAGE_PATH"/boot.bin
 mount -t vfat /dev/loop0 /mnt/bootbin
 
 rm -f /mnt/bootbin/*
