@@ -483,7 +483,7 @@ export default function Settings({
   }, [isAnimating, showSubpage, showParent]);
 
   return (
-    <div className="h-full overflow-y-auto settings-scroll-container">
+    <div className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container">
       <style>{`
         .screen-transition {
           transition: transform ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1),
