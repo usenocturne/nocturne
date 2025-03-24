@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   NowPlayingIcon,
   RecentsIcon,
@@ -8,8 +7,11 @@ import {
   SettingsIcon,
 } from "../../common/icons";
 import StatusBar from "./StatusBar";
+import { useSettings } from "../../../contexts/SettingsContext";
 
 export default function Sidebar({ activeSection, setActiveSection }) {
+  const { settings } = useSettings();
+
   const handleSectionClick = (section) => {
     setActiveSection(section);
   };
@@ -40,7 +42,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
 
   return (
     <div className="space-y-7 pt-12">
-      <StatusBar />
+      {settings.showStatusBar && <StatusBar />}
 
       <SidebarItem
         section="nowPlaying"

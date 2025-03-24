@@ -25,6 +25,7 @@ export function SettingsProvider({ children }) {
     lyricsMenuEnabled: getDefaultSettingValue("lyricsMenuEnabled", true),
     elapsedTimeEnabled: getDefaultSettingValue("elapsedTimeEnabled", true),
     remainingTimeEnabled: getDefaultSettingValue("remainingTimeEnabled", false),
+    showStatusBar: getDefaultSettingValue("showStatusBar", true),
   });
 
   useEffect(() => {

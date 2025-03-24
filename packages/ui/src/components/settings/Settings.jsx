@@ -25,11 +25,19 @@ const settingsStructure = {
     icon: SettingsGeneralIcon,
     items: [
       {
+        id: "show-status-bar",
+        title: "Toggle Status Bar",
+        type: "toggle",
+        description: "Show or hide the status bar at the top of the sidebar.",
+        storageKey: "showStatusBar",
+        defaultValue: true,
+      },
+      {
         id: "24-hour-time",
         title: "24-Hour Time",
         type: "toggle",
         description:
-          "Display the clock in 24-hour format instead of 12-hour format. The clock is only shown in the status bar when connected to Bluetooth.",
+          "Display the clock inside of the status bar in 24-hour format instead of 12-hour format.",
         storageKey: "use24HourTime",
         defaultValue: false,
       },
@@ -371,14 +379,16 @@ export default function Settings({
               <Switch
                 checked={settings[item.storageKey]}
                 onChange={() => handleToggle(item.storageKey)}
-                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
-                  }`}
+                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
+                }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings[item.storageKey]
+                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    settings[item.storageKey]
                       ? "translate-x-9"
                       : "translate-x-0"
-                    }`}
+                  }`}
                 />
               </Switch>
               <span className="ml-3 text-[32px] font-[580] text-white tracking-tight">
@@ -543,7 +553,7 @@ export default function Settings({
               </div>
               <div className="space-y-6 mb-12">
                 {activeParent &&
-                  settingsStructure[activeParent].type === "parent" ? (
+                settingsStructure[activeParent].type === "parent" ? (
                   <div className="space-y-4">
                     {settingsStructure[activeParent].items?.map((subItem) => (
                       <button
