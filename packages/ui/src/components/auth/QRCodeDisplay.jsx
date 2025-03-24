@@ -4,7 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 const QRCodeDisplay = ({ verificationUri, isLoading, error }) => {
   if (isLoading) {
     return (
-      <div className="animate-pulse bg-white/10 w-[280px] h-[280px] rounded-xl" />
+      <div className="animate-pulse bg-white/10 w-[260px] h-[260px] rounded-xl" />
     );
   }
 

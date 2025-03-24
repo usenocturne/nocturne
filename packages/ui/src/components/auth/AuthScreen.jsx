@@ -3,10 +3,14 @@ import { useGradientState } from "../../hooks/useGradientState";
 import { useAuth } from "../../hooks/useAuth";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import QRCodeDisplay from "./QRCodeDisplay";
+import { checkNetworkConnectivity } from "../../utils/networkChecker";
 
 const AuthScreen = ({ onAuthSuccess }) => {
   const [error, setError] = useState(null);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [isNetworkConnected, setIsNetworkConnected] = useState(false);
+  const [isCheckingNetwork, setIsCheckingNetwork] = useState(true);
+  const [hasQrCode, setHasQrCode] = useState(false);
   const authAttemptedRef = useRef(false);
 
   const { authData, isLoading, initAuth, pollAuthStatus, isAuthenticated } =
@@ -22,9 +26,45 @@ const AuthScreen = ({ onAuthSuccess }) => {
   } = useGradientState();
 
   useEffect(() => {
+    const checkNetwork = async () => {
+      setIsCheckingNetwork(true);
+      try {
+        const result = await checkNetworkConnectivity();
+        setIsNetworkConnected(result.isConnected);
+        if (!result.isConnected) {
+          setError("Network connection required");
+        } else {
+          if (error === "Network connection required") {
+            setError(null);
+          }
+        }
+      } catch (err) {
+        console.error("Network check error:", err);
+        setIsNetworkConnected(false);
+      } finally {
+        setIsCheckingNetwork(false);
+      }
+    };
+
+    checkNetwork();
+
+    const networkCheckInterval = setInterval(
+      checkNetwork,
+      hasQrCode ? 10000 : 5000
+    );
+
+    return () => clearInterval(networkCheckInterval);
+  }, [error, hasQrCode]);
+
+  useEffect(() => {
     updateGradientColors(null, "auth");
 
-    if (!authInitialized && !isAuthenticated && !authAttemptedRef.current) {
+    if (
+      !authInitialized &&
+      !isAuthenticated &&
+      !authAttemptedRef.current &&
+      isNetworkConnected
+    ) {
       authAttemptedRef.current = true;
 
       const startAuth = async () => {
@@ -38,7 +78,19 @@ const AuthScreen = ({ onAuthSuccess }) => {
             const authResponse = await initAuth();
             if (authResponse?.device_code) {
               setAuthInitialized(true);
-              pollAuthStatus(authResponse.device_code);
+
+              const originalPollAuthStatus = pollAuthStatus;
+              const safePollStatus = async (deviceCode) => {
+                try {
+                  await originalPollAuthStatus(deviceCode);
+                } catch (err) {
+                  if (!err.message?.includes("authorization_pending")) {
+                    setError(err.message);
+                  }
+                }
+              };
+
+              safePollStatus(authResponse.device_code);
             }
           }
         } catch (err) {
@@ -55,13 +107,30 @@ const AuthScreen = ({ onAuthSuccess }) => {
     updateGradientColors,
     isAuthenticated,
     authInitialized,
+    isNetworkConnected,
   ]);
+
+  useEffect(() => {
+    if (authData?.verification_uri_complete) {
+      setHasQrCode(true);
+    }
+  }, [authData]);
 
   useEffect(() => {
     if (isAuthenticated) {
       onAuthSuccess();
     }
   }, [isAuthenticated, onAuthSuccess]);
+
+  const isContentLoading =
+    (isCheckingNetwork && !hasQrCode) || (isLoading && !hasQrCode);
+
+  const displayError =
+    error && !error.includes("authorization_pending")
+      ? error
+      : !isNetworkConnected && !isCheckingNetwork
+      ? "Network connection required"
+      : null;
 
   return (
     <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
@@ -94,15 +163,13 @@ const AuthScreen = ({ onAuthSuccess }) => {
 
         <div className="flex justify-center">
           <QRCodeDisplay
-            verificationUri={authData?.verification_uri_complete}
-            isLoading={isLoading}
-            error={
-              error
-                ? error
-                : authData === null
-                  ? "Failed to generate QR code"
-                  : null
+            verificationUri={
+              hasQrCode && isNetworkConnected
+                ? authData?.verification_uri_complete
+                : null
             }
+            isLoading={isContentLoading || !isNetworkConnected}
+            error={displayError}
           />
         </div>
       </div>
