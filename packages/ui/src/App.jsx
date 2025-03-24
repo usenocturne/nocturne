@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import FontLoader from "./components/common/FontLoader";
 import AuthContainer from "./components/auth/AuthContainer";
@@ -10,6 +10,7 @@ import NowPlaying from "./components/player/NowPlaying";
 import BluetoothPairingModal from "./components/bluetooth/BluetoothPairingModal";
 import BluetoothNetworkModal from "./components/bluetooth/BluetoothNetworkModal";
 import DeviceSwitcherModal from "./components/player/DeviceSwitcherModal";
+import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { PlaybackProgressContext } from "./hooks/usePlaybackProgress";
@@ -17,6 +18,201 @@ import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
 import { useBluetooth } from "./hooks/useBluetooth";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { SettingsProvider } from "./contexts/SettingsContext";
+
+function useGlobalButtonMapping({
+  accessToken,
+  isAuthenticated,
+  playTrack,
+  refreshPlaybackState,
+  setActiveSection,
+}) {
+  const [showMappingOverlay, setShowMappingOverlay] = useState(false);
+  const [activeButton, setActiveButton] = useState(null);
+  const [isProcessingButtonPress, setIsProcessingButtonPress] = useState(false);
+  const ignoreNextReleaseRef = useRef(false);
+
+  const handleButtonPress = useCallback(
+    async (buttonNumber) => {
+      if (!accessToken || !isAuthenticated || isProcessingButtonPress) return;
+
+      const mappedId = localStorage.getItem(`button${buttonNumber}Id`);
+      const mappedType = localStorage.getItem(`button${buttonNumber}Type`);
+
+      if (!mappedId || !mappedType) return;
+
+      setIsProcessingButtonPress(true);
+      setActiveButton(buttonNumber);
+      setShowMappingOverlay(true);
+
+      let contextUri = null;
+      let uris = null;
+
+      try {
+        if (mappedType === "album") {
+          contextUri = `spotify:album:${mappedId}`;
+        } else if (mappedType === "playlist") {
+          contextUri = `spotify:playlist:${mappedId}`;
+        } else if (mappedType === "artist") {
+          const response = await fetch(
+            `https://api.spotify.com/v1/artists/${mappedId}/top-tracks?market=from_token`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.tracks && data.tracks.length > 0) {
+              uris = data.tracks.map((track) => track.uri);
+            }
+          } else {
+            contextUri = `spotify:artist:${mappedId}`;
+          }
+        } else if (mappedType === "mix") {
+          const mixTracksJson = localStorage.getItem(
+            `button${buttonNumber}Tracks`
+          );
+          if (mixTracksJson) {
+            try {
+              const mixTracks = JSON.parse(mixTracksJson);
+              uris = mixTracks;
+              localStorage.setItem("currentPlayingMixId", mappedId);
+            } catch (e) {
+              console.error("Error parsing mix tracks:", e);
+            }
+          }
+        } else if (mappedType === "liked-songs") {
+          const likedTracksJson = localStorage.getItem(
+            `button${buttonNumber}Tracks`
+          );
+          if (likedTracksJson) {
+            try {
+              const likedTracks = JSON.parse(likedTracksJson);
+              uris = likedTracks;
+              localStorage.setItem("playingLikedSongs", "true");
+            } catch (e) {
+              console.error("Error parsing liked tracks:", e);
+
+              const response = await fetch(
+                "https://api.spotify.com/v1/me/tracks?limit=50",
+                {
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              );
+
+              if (response.ok) {
+                const data = await response.json();
+                if (data.items && data.items.length > 0) {
+                  uris = data.items.map((item) => item.track.uri);
+                  localStorage.setItem("playingLikedSongs", "true");
+                }
+              }
+            }
+          } else {
+            const response = await fetch(
+              "https://api.spotify.com/v1/me/tracks?limit=50",
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.items && data.items.length > 0) {
+                uris = data.items.map((item) => item.track.uri);
+                localStorage.setItem("playingLikedSongs", "true");
+              }
+            }
+          }
+        }
+
+        let success = false;
+        if (contextUri) {
+          success = await playTrack(null, contextUri);
+        } else if (uris && uris.length > 0) {
+          success = await playTrack(null, null, uris);
+        }
+
+        if (success) {
+          setTimeout(() => {
+            refreshPlaybackState();
+            setActiveSection("nowPlaying");
+          }, 500);
+        }
+
+        setTimeout(() => {
+          setShowMappingOverlay(false);
+          setActiveButton(null);
+          setIsProcessingButtonPress(false);
+        }, 1500);
+      } catch (error) {
+        console.error("Error playing mapped content:", error);
+        setShowMappingOverlay(false);
+        setActiveButton(null);
+        setIsProcessingButtonPress(false);
+      }
+    },
+    [
+      accessToken,
+      isAuthenticated,
+      playTrack,
+      refreshPlaybackState,
+      setActiveSection,
+      isProcessingButtonPress,
+    ]
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleKeyDown = (e) => {
+      const validButtons = ["1", "2", "3", "4"];
+      const buttonNumber = e.key;
+
+      if (!validButtons.includes(buttonNumber)) return;
+      e.preventDefault();
+    };
+
+    const handleKeyUp = (e) => {
+      const validButtons = ["1", "2", "3", "4"];
+      const buttonNumber = e.key;
+
+      if (!validButtons.includes(buttonNumber)) return;
+
+      if (ignoreNextReleaseRef.current) {
+        ignoreNextReleaseRef.current = false;
+        return;
+      }
+
+      handleButtonPress(buttonNumber);
+      e.preventDefault();
+    };
+
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    window.addEventListener("keyup", handleKeyUp, { capture: true });
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+      window.removeEventListener("keyup", handleKeyUp, { capture: true });
+    };
+  }, [isAuthenticated, handleButtonPress]);
+
+  const setIgnoreNextRelease = useCallback(() => {
+    ignoreNextReleaseRef.current = true;
+  }, []);
+
+  return {
+    showMappingOverlay,
+    activeButton,
+    setIgnoreNextRelease,
+  };
+}
 
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
@@ -69,6 +265,18 @@ function App() {
     generateMeshGradient,
     updateGradientColors,
   } = useGradientState(activeSection);
+
+  const {
+    showMappingOverlay: showGlobalMappingOverlay,
+    activeButton: globalActiveButton,
+    setIgnoreNextRelease,
+  } = useGlobalButtonMapping({
+    accessToken,
+    isAuthenticated,
+    playTrack: playerControls.playTrack,
+    refreshPlaybackState,
+    setActiveSection,
+  });
 
   const handleOpenDeviceSwitcher = () => {
     setIsDeviceSwitcherOpen(true);
@@ -232,8 +440,7 @@ function App() {
         currentlyPlayingTrackUri={currentPlayback?.item?.uri}
         radioMixes={radioMixes}
         updateGradientColors={updateGradientColors}
-        playerControls={playerControls}
-        onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
+        setIgnoreNextRelease={setIgnoreNextRelease}
       />
     );
   } else {
@@ -304,6 +511,11 @@ function App() {
                   isOpen={isDeviceSwitcherOpen}
                   onClose={handleCloseDeviceSwitcher}
                   accessToken={accessToken}
+                />
+
+                <ButtonMappingOverlay
+                  show={showGlobalMappingOverlay}
+                  activeButton={globalActiveButton}
                 />
               </div>
             </main>

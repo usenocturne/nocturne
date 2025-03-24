@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
 import { CarThingIcon } from "../common/icons";
 import { useSpotifyPlayerState } from "../../hooks/useSpotifyPlayerState";
+import { useButtonMapping } from "../../hooks/useButtonMapping";
+import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 
 const ContentView = ({
   accessToken,
@@ -14,6 +16,7 @@ const ContentView = ({
   currentlyPlayingTrackUri,
   radioMixes = [],
   updateGradientColors,
+  setIgnoreNextRelease,
 }) => {
   const [content, setContent] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -32,6 +35,31 @@ const ContentView = ({
   } = useSpotifyPlayerControls(accessToken);
 
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+
+  const { showMappingOverlay, activeButton, mappingInProgress, setTrackUris } =
+    useButtonMapping({
+      accessToken,
+      contentId,
+      contentType,
+      contentImage: content?.images?.[0]?.url || "",
+      contentName: content?.name || "",
+      playTrack,
+      isActive: !!content,
+      setIgnoreNextRelease,
+    });
+
+  useEffect(() => {
+    if (
+      tracks.length > 0 &&
+      (contentType === "mix" || contentType === "liked-songs")
+    ) {
+      const trackUris = tracks
+        .filter((track) => track && track.uri)
+        .map((track) => track.uri);
+
+      setTrackUris(trackUris);
+    }
+  }, [tracks, contentType, setTrackUris]);
 
   useEffect(() => {
     if (currentPlayback?.shuffle_state !== undefined) {
@@ -274,11 +302,11 @@ const ContentView = ({
       localStorage.setItem("currentPlayingMixId", contentId);
     } else if (contentType === "liked-songs") {
       uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-      
+
       if (wasShuffleEnabled) {
         await toggleShuffle(false);
       }
-      
+
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
 
@@ -380,10 +408,21 @@ const ContentView = ({
       : "aspect-square rounded-[12px] drop-shadow-xl";
   };
 
+  const getMappingStatusText = () => {
+    if (mappingInProgress) {
+      return (
+        <div className="absolute top-0 left-0 right-0 bg-black/80 text-white py-2 px-4 text-center rounded-t-[12px]">
+          <span className="text-lg font-medium">Mapping to button...</span>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10">
-        <div className="min-w-[280px] mr-10">
+        <div className="min-w-[280px] mr-10 relative">
           <img
             src={getImageUrl()}
             alt={`${content.name} Cover`}
@@ -391,6 +430,7 @@ const ContentView = ({
             height={280}
             className={getImageStyle()}
           />
+          {getMappingStatusText()}
           <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
             {content.name}
           </h4>
@@ -466,6 +506,11 @@ const ContentView = ({
           </div>
         )}
       </div>
+
+      <ButtonMappingOverlay
+        show={showMappingOverlay}
+        activeButton={activeButton}
+      />
     </div>
   );
 };

@@ -223,3 +223,35 @@ section {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
+
+@keyframes mappingOverlayEnter {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes mappingOverlayExit {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+}
+
+.mapping-overlay-enter {
+  animation: mappingOverlayEnter 300ms ease forwards;
+  display: flex;
+}
+
+.mapping-overlay-exit {
+  animation: mappingOverlayExit 300ms ease forwards;
+  display: flex;
+}
