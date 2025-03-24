@@ -1,5 +1,6 @@
 import React from "react";
 import { SettingsUpdateIcon, CheckCircleIcon } from "../common/icons";
+import { useConnector } from "../../contexts/ConnectorContext";
 
 const SoftwareUpdate = ({
   nocturneCurrentVersion = "3.0.0",
@@ -7,6 +8,7 @@ const SoftwareUpdate = ({
   connectorCurrentVersion = "1.0.0",
   connectorLatestVersion = "1.0.0",
 }) => {
+  const { isConnectorAvailable } = useConnector();
   const hasNocturneUpdate = nocturneCurrentVersion !== nocturneLatestVersion;
   const hasConnectorUpdate = connectorCurrentVersion !== connectorLatestVersion;
 
@@ -81,13 +83,15 @@ const SoftwareUpdate = ({
         imagePath="/images/os/nocturne/3.0.0.webp"
       />
 
-      <UpdateSection
-        name="Connector"
-        currentVersion={connectorCurrentVersion}
-        latestVersion={connectorLatestVersion}
-        hasUpdate={hasConnectorUpdate}
-        imagePath="/images/os/connector/1.0.0.webp"
-      />
+      {isConnectorAvailable && (
+        <UpdateSection
+          name="Connector"
+          currentVersion={connectorCurrentVersion}
+          latestVersion={connectorLatestVersion}
+          hasUpdate={hasConnectorUpdate}
+          imagePath="/images/os/connector/1.0.0.webp"
+        />
+      )}
     </div>
   );
 };

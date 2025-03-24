@@ -7,9 +7,11 @@ import Tutorial from "./components/tutorial/Tutorial";
 import Home from "./pages/Home";
 import ContentView from "./components/content/ContentView";
 import NowPlaying from "./components/player/NowPlaying";
-import BluetoothPairingModal from "./components/bluetooth/BluetoothPairingModal";
-import BluetoothNetworkModal from "./components/bluetooth/BluetoothNetworkModal";
+import BluetoothPairingModal from "./components/common/modals/BluetoothPairingModal";
+import BluetoothNetworkModal from "./components/common/modals/BluetoothNetworkModal";
 import DeviceSwitcherModal from "./components/player/DeviceSwitcherModal";
+import NetworkPasswordModal from "./components/common/modals/NetworkPasswordModal";
+import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
@@ -18,6 +20,18 @@ import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
 import { useBluetooth } from "./hooks/useBluetooth";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import { ConnectorProvider } from "./contexts/ConnectorContext";
+import React from "react";
+
+export const NetworkContext = React.createContext({
+  selectedNetwork: null,
+  setSelectedNetwork: () => { }
+});
+
+export const ConnectorContext = React.createContext({
+  showConnectorModal: false,
+  setShowConnectorModal: () => { }
+});
 
 function useGlobalButtonMapping({
   accessToken,
@@ -221,6 +235,8 @@ function App() {
   });
   const [viewingContent, setViewingContent] = useState(null);
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState(null);
+  const [showConnectorModal, setShowConnectorModal] = useState(false);
 
   const {
     isAuthenticated,
@@ -288,6 +304,20 @@ function App() {
 
   const deviceSwitcherContextValue = {
     openDeviceSwitcher: handleOpenDeviceSwitcher,
+  };
+
+  const handleNetworkClose = () => {
+    setSelectedNetwork(null);
+  };
+
+  const networkContextValue = {
+    selectedNetwork,
+    setSelectedNetwork
+  };
+
+  const connectorContextValue = {
+    showConnectorModal,
+    setShowConnectorModal
   };
 
   useEffect(() => {
@@ -467,62 +497,75 @@ function App() {
   }
 
   return (
-    <SettingsProvider>
-      <PlaybackProgressContext.Provider value={playbackProgress}>
-        <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
-          <Router>
-            <FontLoader />
-            <main
-              className="overflow-hidden relative min-h-screen rounded-2xl"
-              style={{
-                fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
-                fontOpticalSizing: "auto",
-              }}
-            >
-              <div
-                style={{
-                  backgroundImage: generateMeshGradient([
-                    currentColor1,
-                    currentColor2,
-                    currentColor3,
-                    currentColor4,
-                  ]),
-                  transition: "background-image 0.5s linear",
-                }}
-                className="absolute inset-0 bg-black"
-              />
+    <ConnectorProvider>
+      <SettingsProvider>
+        <PlaybackProgressContext.Provider value={playbackProgress}>
+          <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
+            <NetworkContext.Provider value={networkContextValue}>
+              <ConnectorContext.Provider value={connectorContextValue}>
+                <Router>
+                  <FontLoader />
+                  <main
+                    className="overflow-hidden relative min-h-screen rounded-2xl"
+                    style={{
+                      fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
+                      fontOpticalSizing: "auto",
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundImage: generateMeshGradient([
+                          currentColor1,
+                          currentColor2,
+                          currentColor3,
+                          currentColor4,
+                        ]),
+                        transition: "background-image 0.5s linear",
+                      }}
+                      className="absolute inset-0 bg-black"
+                    />
 
-              <div className="relative z-10">
-                {content}
-                {!isConnected && showNoNetwork && <NetworkScreen />}
-                <BluetoothPairingModal
-                  pairingRequest={pairingRequest}
-                  isConnecting={isConnecting}
-                  onAccept={acceptPairing}
-                  onDeny={denyPairing}
-                />
-                <BluetoothNetworkModal
-                  show={showNetworkPrompt && !isConnected}
-                  deviceName={lastConnectedDevice?.name}
-                  onCancel={handleNetworkCancel}
-                  isConnecting={isConnecting}
-                />
-                <DeviceSwitcherModal
-                  isOpen={isDeviceSwitcherOpen}
-                  onClose={handleCloseDeviceSwitcher}
-                  accessToken={accessToken}
-                />
-
-                <ButtonMappingOverlay
-                  show={showGlobalMappingOverlay}
-                  activeButton={globalActiveButton}
-                />
-              </div>
-            </main>
-          </Router>
-        </DeviceSwitcherContext.Provider>
-      </PlaybackProgressContext.Provider>
-    </SettingsProvider>
+                    <div className="relative z-10">
+                      {content}
+                      {!isConnected && showNoNetwork && <NetworkScreen />}
+                      <BluetoothPairingModal
+                        pairingRequest={pairingRequest}
+                        isConnecting={isConnecting}
+                        onAccept={acceptPairing}
+                        onDeny={denyPairing}
+                      />
+                      <BluetoothNetworkModal
+                        show={showNetworkPrompt && !isConnected}
+                        deviceName={lastConnectedDevice?.name}
+                        onCancel={handleNetworkCancel}
+                        isConnecting={isConnecting}
+                      />
+                      <DeviceSwitcherModal
+                        isOpen={isDeviceSwitcherOpen}
+                        onClose={handleCloseDeviceSwitcher}
+                        accessToken={accessToken}
+                      />
+                      <NetworkPasswordModal
+                        network={selectedNetwork}
+                        onClose={handleNetworkClose}
+                        onConnect={handleNetworkClose}
+                      />
+                      {showConnectorModal && (
+                        <ConnectorQRModal onClose={() => setShowConnectorModal(false)} />
+                      )}
+                      <ButtonMappingOverlay
+                        show={showGlobalMappingOverlay}
+                        activeButton={globalActiveButton}
+                      />
+                    </div>
+                  </main>
+                </Router>
+              </ConnectorContext.Provider>
+            </NetworkContext.Provider>
+          </DeviceSwitcherContext.Provider>
+        </PlaybackProgressContext.Provider>
+      </SettingsProvider>
+    </ConnectorProvider>
   );
 }
 
