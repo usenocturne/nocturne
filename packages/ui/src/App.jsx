@@ -25,12 +25,12 @@ import React from "react";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
-  setSelectedNetwork: () => { }
+  setSelectedNetwork: () => {},
 });
 
 export const ConnectorContext = React.createContext({
   showConnectorModal: false,
-  setShowConnectorModal: () => { }
+  setShowConnectorModal: () => {},
 });
 
 function useGlobalButtonMapping({
@@ -39,6 +39,7 @@ function useGlobalButtonMapping({
   playTrack,
   refreshPlaybackState,
   setActiveSection,
+  isTutorialActive,
 }) {
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [activeButton, setActiveButton] = useState(null);
@@ -47,7 +48,13 @@ function useGlobalButtonMapping({
 
   const handleButtonPress = useCallback(
     async (buttonNumber) => {
-      if (!accessToken || !isAuthenticated || isProcessingButtonPress) return;
+      if (
+        !accessToken ||
+        !isAuthenticated ||
+        isProcessingButtonPress ||
+        isTutorialActive
+      )
+        return;
 
       const mappedId = localStorage.getItem(`button${buttonNumber}Id`);
       const mappedType = localStorage.getItem(`button${buttonNumber}Type`);
@@ -179,11 +186,12 @@ function useGlobalButtonMapping({
       refreshPlaybackState,
       setActiveSection,
       isProcessingButtonPress,
+      isTutorialActive,
     ]
   );
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || isTutorialActive) return;
 
     const handleKeyDown = (e) => {
       const validButtons = ["1", "2", "3", "4"];
@@ -215,7 +223,7 @@ function useGlobalButtonMapping({
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
       window.removeEventListener("keyup", handleKeyUp, { capture: true });
     };
-  }, [isAuthenticated, handleButtonPress]);
+  }, [isAuthenticated, handleButtonPress, isTutorialActive]);
 
   const setIgnoreNextRelease = useCallback(() => {
     ignoreNextReleaseRef.current = true;
@@ -292,6 +300,7 @@ function App() {
     playTrack: playerControls.playTrack,
     refreshPlaybackState,
     setActiveSection,
+    isTutorialActive: showTutorial,
   });
 
   const handleOpenDeviceSwitcher = () => {
@@ -312,12 +321,12 @@ function App() {
 
   const networkContextValue = {
     selectedNetwork,
-    setSelectedNetwork
+    setSelectedNetwork,
   };
 
   const connectorContextValue = {
     showConnectorModal,
-    setShowConnectorModal
+    setShowConnectorModal,
   };
 
   useEffect(() => {
@@ -551,12 +560,16 @@ function App() {
                         onConnect={handleNetworkClose}
                       />
                       {showConnectorModal && (
-                        <ConnectorQRModal onClose={() => setShowConnectorModal(false)} />
+                        <ConnectorQRModal
+                          onClose={() => setShowConnectorModal(false)}
+                        />
                       )}
-                      <ButtonMappingOverlay
-                        show={showGlobalMappingOverlay}
-                        activeButton={globalActiveButton}
-                      />
+                      {!showTutorial && showGlobalMappingOverlay && (
+                        <ButtonMappingOverlay
+                          show={showGlobalMappingOverlay}
+                          activeButton={globalActiveButton}
+                        />
+                      )}
                     </div>
                   </main>
                 </Router>
