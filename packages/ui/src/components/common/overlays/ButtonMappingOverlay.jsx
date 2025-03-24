@@ -5,6 +5,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
   activeButton: externalActiveButton,
 }) {
   const [preloadedImages, setPreloadedImages] = useState({});
+  const [imageTypes, setImageTypes] = useState({});
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [internalActiveButton, setInternalActiveButton] = useState(null);
@@ -14,10 +15,13 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
   useEffect(() => {
     const preloadImages = () => {
       const images = {};
+      const types = {};
       let hasChanged = false;
 
       [1, 2, 3, 4].forEach((buttonNum) => {
         const imageUrl = localStorage.getItem(`button${buttonNum}Image`);
+        const contentType = localStorage.getItem(`button${buttonNum}Type`);
+
         if (imageUrl) {
           if (
             !preloadImagesCacheRef.current[buttonNum] ||
@@ -29,6 +33,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
             hasChanged = true;
           }
           images[buttonNum] = imageUrl;
+          types[buttonNum] = contentType;
         }
       });
 
@@ -37,6 +42,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
         Object.keys(images).length !== Object.keys(preloadedImages).length
       ) {
         setPreloadedImages(images);
+        setImageTypes(types);
       }
     };
 
@@ -93,6 +99,8 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
         >
           {[1, 2, 3, 4].map((buttonNum, index) => {
             const image = preloadedImages[buttonNum];
+            const contentType = imageTypes[buttonNum];
+            const isArtist = contentType === "artist";
             const isActive = String(buttonNum) === String(internalActiveButton);
             let marginClass = "";
             if (index === 1) marginClass = "ml-[40px]";
@@ -116,11 +124,13 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
                     {buttonNum}
                   </div>
                   {image && (
-                    <div className="aspect-square w-full rounded-lg p-1 transition-all duration-300">
+                    <div className="aspect-square w-full p-1 transition-all duration-300">
                       <img
                         src={image}
                         alt={`Button ${buttonNum} mapping`}
-                        className="w-full h-full object-cover rounded-lg shadow-lg"
+                        className={`w-full h-full object-cover shadow-lg ${
+                          isArtist ? "rounded-full" : "rounded-lg"
+                        }`}
                       />
                     </div>
                   )}
