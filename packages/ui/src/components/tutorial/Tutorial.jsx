@@ -10,6 +10,10 @@ const Tutorial = ({ onComplete }) => {
   const [isContentVisible, setIsContentVisible] = useState(true);
   const [isFrameVisible, setIsFrameVisible] = useState(false);
   const tutorialContainerRef = useRef(null);
+  const holdTimerRef = useRef(null);
+  const isHoldingButton = useRef(false);
+  const buttonLockRef = useRef(false);
+  const lastPressedKey = useRef(null);
 
   const {
     currentColor1,
@@ -30,6 +34,13 @@ const Tutorial = ({ onComplete }) => {
     } else if (currentScreen === screens.length - 1) {
       setIsFrameVisible(false);
     }
+
+    buttonLockRef.current = true;
+    setTimeout(() => {
+      buttonLockRef.current = false;
+      isHoldingButton.current = false;
+      lastPressedKey.current = null;
+    }, 500);
   }, [currentScreen]);
 
   const screens = [
@@ -75,6 +86,12 @@ const Tutorial = ({ onComplete }) => {
       continueType: "scroll",
     },
     {
+      header: "Playback",
+      subtext:
+        "Tap the progress bar to scrub tracks. Turn the dial, and press to confirm.",
+      continueType: "button",
+    },
+    {
       header: "Mixes",
       subtext: "The Radio tab knows what you'll love next.",
       continueType: "button",
@@ -113,14 +130,6 @@ const Tutorial = ({ onComplete }) => {
     }, 200);
   };
 
-  const handleWheelNavigation = (deltaX) => {
-    if (screens[currentScreen].continueType === "scroll" && deltaX > 0) {
-      handleScreenTransition(currentScreen + 1);
-      return true;
-    }
-    return false;
-  };
-
   useNavigation({
     containerRef: tutorialContainerRef,
     activeSection: "tutorial",
@@ -137,10 +146,11 @@ const Tutorial = ({ onComplete }) => {
   });
 
   useEffect(() => {
-    let holdTimer = null;
     const validPresetButtons = ["1", "2", "3", "4"];
 
-    const handleKeyDown = (e) => {
+    const onKeyDown = (e) => {
+      if (buttonLockRef.current) return;
+
       if (
         screens[currentScreen].continueType === "backPress" &&
         e.key === "Escape"
@@ -148,44 +158,80 @@ const Tutorial = ({ onComplete }) => {
         e.preventDefault();
         e.stopPropagation();
         handleScreenTransition(currentScreen + 1);
-      } else if (
+        return;
+      }
+
+      if (
         screens[currentScreen].continueType === "topButtonPress" &&
-        validPresetButtons.includes(e.key)
+        validPresetButtons.includes(e.key) &&
+        lastPressedKey.current !== e.key
       ) {
+        lastPressedKey.current = e.key;
         handleScreenTransition(currentScreen + 1);
-      } else if (
+        return;
+      }
+
+      if (
         screens[currentScreen].continueType === "brightnessPress" &&
         e.key.toLowerCase() === "m"
       ) {
         handleScreenTransition(currentScreen + 1);
-      } else if (
+        return;
+      }
+
+      if (
         screens[currentScreen].continueType === "hold1" &&
         validPresetButtons.includes(e.key)
       ) {
-        holdTimer = setTimeout(() => {
+        if (isHoldingButton.current && lastPressedKey.current === e.key) return;
+
+        isHoldingButton.current = true;
+        lastPressedKey.current = e.key;
+
+        if (holdTimerRef.current) {
+          clearTimeout(holdTimerRef.current);
+        }
+
+        holdTimerRef.current = setTimeout(() => {
           handleScreenTransition(currentScreen + 1);
+          holdTimerRef.current = null;
         }, 800);
       }
     };
 
-    const handleKeyUp = (e) => {
-      if (validPresetButtons.includes(e.key) && holdTimer) {
-        clearTimeout(holdTimer);
-        holdTimer = null;
+    const onKeyUp = (e) => {
+      const validPresetButtons = ["1", "2", "3", "4"];
+
+      if (
+        validPresetButtons.includes(e.key) &&
+        lastPressedKey.current === e.key
+      ) {
+        isHoldingButton.current = false;
+
+        if (holdTimerRef.current) {
+          clearTimeout(holdTimerRef.current);
+          holdTimerRef.current = null;
+        }
+
+        if (!buttonLockRef.current) {
+          lastPressedKey.current = null;
+        }
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown, { capture: true });
-    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    window.addEventListener("keyup", onKeyUp, { capture: true });
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown, { capture: true });
-      window.removeEventListener("keyup", handleKeyUp);
-      if (holdTimer) {
-        clearTimeout(holdTimer);
+      window.removeEventListener("keydown", onKeyDown, { capture: true });
+      window.removeEventListener("keyup", onKeyUp, { capture: true });
+
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+        holdTimerRef.current = null;
       }
     };
-  }, [currentScreen, screens]);
+  }, [currentScreen]);
 
   useEffect(() => {
     const handleWheel = (event) => {

@@ -1,84 +1,6 @@
 import React from "react";
 
 const TutorialFrame = ({ currentScreen }) => {
-  const getAnimationStyles = (elementType, buttonIndex) => {
-    switch (currentScreen) {
-      case 1:
-        return elementType === "dial"
-          ? {
-              transform: "rotate(0deg)",
-              animation:
-                "spinInPlace 3s cubic-bezier(0.68, -0.6, 0.32, 1.6) infinite",
-              transformBox: "fill-box",
-              transformOrigin: "center",
-            }
-          : {};
-
-      case 2:
-        return elementType === "smallCircle"
-          ? {
-              animation: "pulse 2s ease-in-out infinite",
-            }
-          : {};
-
-      case 3:
-        return elementType === "presetButton"
-          ? {
-              animation: `pressButton 2s ease-in-out infinite`,
-              animationDelay: `${buttonIndex * 2}s`,
-              transformBox: "fill-box",
-              transformOrigin: "bottom",
-              willChange: "transform",
-            }
-          : {};
-
-      case 4:
-        return elementType === "presetButton"
-          ? {
-              animation: `quickPress 4s ease-in-out infinite`,
-              animationDelay: `${buttonIndex * 1}s`,
-              transformBox: "fill-box",
-              transformOrigin: "bottom",
-              willChange: "transform",
-            }
-          : {};
-
-      case 5:
-        return elementType === "brightnessButton"
-          ? {
-              animation: "quickPress 2s ease-in-out infinite",
-              transformBox: "fill-box",
-              transformOrigin: "bottom",
-              willChange: "transform",
-            }
-          : {};
-
-      case 6:
-        return elementType === "dial"
-          ? {
-              transform: "rotate(0deg)",
-              animation:
-                "spinInPlace 3s cubic-bezier(0.68, -0.6, 0.32, 1.6) infinite",
-              transformBox: "fill-box",
-              transformOrigin: "center",
-            }
-          : {};
-
-      case 8:
-        if (elementType === "swipeIndicator") {
-          return {
-            animation: "swipeGestures 4s ease-in-out infinite",
-            transformBox: "fill-box",
-            transformOrigin: "center",
-          };
-        }
-        return {};
-
-      default:
-        return {};
-    }
-  };
-
   return (
     <>
       <style>
@@ -125,10 +47,29 @@ const TutorialFrame = ({ currentScreen }) => {
             }
           }
           
-          @keyframes volumeAdjust {
-            0% { transform: rotate(-20deg); }
-            50% { transform: rotate(20deg); }
-            100% { transform: rotate(-20deg); }
+          @keyframes progressBarExpand {
+            0%, 15% {
+              height: 30px;
+            }
+            25%, 75% {
+              height: 70px;
+              border-radius: 35px;
+            }
+            85%, 100% {
+              height: 30px;
+            }
+          }
+          
+          @keyframes scrubDial {
+            0%, 25% { 
+              transform: rotate(0deg);
+            }
+            75% { 
+              transform: rotate(360deg);
+            }
+            100% { 
+              transform: rotate(360deg);
+            }
           }
 
           @keyframes swipeGestures {
@@ -136,14 +77,100 @@ const TutorialFrame = ({ currentScreen }) => {
                 transform: translateX(0);
             }
             30%, 45% { 
-                transform: translateX(200px); /* Swipe right */
+                transform: translateX(200px);
             }
             55%, 70% { 
-                transform: translateX(-200px); /* Swipe left */
+                transform: translateX(-200px);
             }
             80%, 100% { 
                 transform: translateX(0);
             }
+          }
+
+          .animate-dial {
+            animation: spinInPlace 3s cubic-bezier(0.68, -0.6, 0.32, 1.6) infinite;
+            transform-box: fill-box;
+            transform-origin: center;
+          }
+          
+          .animate-scrub-dial {
+            animation: scrubDial 4s ease-in-out infinite;
+            transform-box: fill-box;
+            transform-origin: center;
+          }
+          
+          .animate-small-circle {
+            animation: pulse 2s ease-in-out infinite;
+          }
+          
+          .animate-preset-button-1 {
+            animation: pressButton 2s ease-in-out infinite;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-preset-button-2 {
+            animation: pressButton 2s ease-in-out infinite;
+            animation-delay: 2s;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-preset-button-3 {
+            animation: pressButton 2s ease-in-out infinite;
+            animation-delay: 4s;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-preset-button-4 {
+            animation: pressButton 2s ease-in-out infinite;
+            animation-delay: 6s;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-quick-press-1 {
+            animation: quickPress 4s ease-in-out infinite;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-quick-press-2 {
+            animation: quickPress 4s ease-in-out infinite;
+            animation-delay: 1s;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-quick-press-3 {
+            animation: quickPress 4s ease-in-out infinite;
+            animation-delay: 2s;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-quick-press-4 {
+            animation: quickPress 4s ease-in-out infinite;
+            animation-delay: 3s;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-brightness-button {
+            animation: quickPress 2s ease-in-out infinite;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-swipe-indicator {
+            animation: swipeGestures 4s ease-in-out infinite;
+            transform-box: fill-box;
+            transform-origin: center;
+          }
+          
+          .animate-progress-bar {
+            animation: progressBarExpand 4s ease-in-out infinite;
           }
         `}
       </style>
@@ -174,7 +201,22 @@ const TutorialFrame = ({ currentScreen }) => {
           strokeWidth="12"
         />
 
-        {currentScreen === 8 && (
+        {currentScreen === 7 && (
+          <foreignObject x="190" y="680" width="1100" height="120">
+            <div
+              xmlns="http://www.w3.org/1999/xhtml"
+              style={{
+                borderRadius: "15px",
+                backgroundColor: "white",
+                height: "30px",
+                width: "1100px",
+                animation: "progressBarExpand 4s ease-in-out infinite",
+              }}
+            />
+          </foreignObject>
+        )}
+
+        {currentScreen === 9 && (
           <>
             <defs>
               <clipPath id="screenBounds">
@@ -195,7 +237,7 @@ const TutorialFrame = ({ currentScreen }) => {
               height="812.945"
               clipPath="url(#screenBounds)"
               fill="url(#swipeGradient)"
-              style={getAnimationStyles("swipeIndicator")}
+              className="animate-swipe-indicator"
             />
 
             <defs>
@@ -211,11 +253,11 @@ const TutorialFrame = ({ currentScreen }) => {
         )}
 
         {[
-          [182.383, "1"],
-          [515.383, "2"],
-          [851.383, "3"],
-          [1184.38, "4"],
-        ].map(([x, key], index) => (
+          [182.383, "1", 0],
+          [515.383, "2", 1],
+          [851.383, "3", 2],
+          [1184.38, "4", 3],
+        ].map(([x, key, index]) => (
           <g key={key} style={{ transform: `translate(${x}px, 6.02734px)` }}>
             <rect
               width="138.829"
@@ -224,7 +266,13 @@ const TutorialFrame = ({ currentScreen }) => {
               fill="white"
               stroke="white"
               strokeWidth="12"
-              style={getAnimationStyles("presetButton", index)}
+              className={
+                currentScreen === 3
+                  ? `animate-preset-button-${index + 1}`
+                  : currentScreen === 4
+                  ? `animate-quick-press-${index + 1}`
+                  : ""
+              }
             />
           </g>
         ))}
@@ -237,11 +285,19 @@ const TutorialFrame = ({ currentScreen }) => {
             fill="white"
             stroke="white"
             strokeWidth="8"
-            style={getAnimationStyles("brightnessButton")}
+            className={currentScreen === 5 ? "animate-brightness-button" : ""}
           />
         </g>
 
-        <g style={getAnimationStyles("dial")}>
+        <g
+          className={
+            currentScreen === 1 || currentScreen === 6
+              ? "animate-dial"
+              : currentScreen === 7
+              ? "animate-scrub-dial"
+              : ""
+          }
+        >
           <circle
             cx="1601.92"
             cy="367.076"
@@ -255,7 +311,7 @@ const TutorialFrame = ({ currentScreen }) => {
           cy="793.891"
           r="79.8281"
           fill="url(#paint1_linear_542_1487)"
-          style={getAnimationStyles("smallCircle")}
+          className={currentScreen === 2 ? "animate-small-circle" : ""}
         />
 
         <defs>
