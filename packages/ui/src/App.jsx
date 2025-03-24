@@ -355,6 +355,8 @@ function App() {
       }
     } else if (activeSection === "radio") {
       updateGradientColors(null, "radio");
+    } else if (activeSection === "settings") {
+      updateGradientColors(null, "settings");
     } else if (activeSection === "nowPlaying" && currentlyPlayingAlbum) {
       const albumImage = currentlyPlayingAlbum?.images?.[0]?.url;
       if (albumImage) {

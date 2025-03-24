@@ -378,14 +378,14 @@ export function useGradientState(activeSection) {
   const updateGradientColors = useCallback(
     async (imageUrl, section = null) => {
       const skipCacheCheck = section === "nowPlaying" || section === "recents";
-      
+
       const urlSectionKey = `${imageUrl || "none"}-${section || "none"}`;
       if (
         !skipCacheCheck &&
         urlSectionKey ===
-        `${lastProcessedUrlRef.current || "none"}-${
-          lastProcessedSectionRef.current || "none"
-        }`
+          `${lastProcessedUrlRef.current || "none"}-${
+            lastProcessedSectionRef.current || "none"
+          }`
       ) {
         return;
       }
@@ -403,6 +403,19 @@ export function useGradientState(activeSection) {
             setTargetColor2(radioColors[1]);
             setTargetColor3(radioColors[2]);
             setTargetColor4(radioColors[3]);
+          }
+        } else if (section === "settings") {
+          const settingsColors = ["#3B518B", "#202F57", "#142045", "#151231"];
+          setSectionGradients((prev) => ({
+            ...prev,
+            [section]: settingsColors,
+          }));
+
+          if (activeSection === "settings") {
+            setTargetColor1(settingsColors[0]);
+            setTargetColor2(settingsColors[1]);
+            setTargetColor3(settingsColors[2]);
+            setTargetColor4(settingsColors[3]);
           }
         } else if (section === "library") {
           const libraryColors = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
@@ -425,19 +438,6 @@ export function useGradientState(activeSection) {
           setTargetColor2(authColors[1]);
           setTargetColor3(authColors[2]);
           setTargetColor4(authColors[3]);
-        } else if (section === "settings") {
-          const settingsColors = ["#1f1e23", "#aeb7ba", "#8c6764", "#968479"];
-          setSectionGradients((prev) => ({
-            ...prev,
-            [section]: settingsColors,
-          }));
-
-          if (activeSection === "settings") {
-            setTargetColor1(settingsColors[0]);
-            setTargetColor2(settingsColors[1]);
-            setTargetColor3(settingsColors[2]);
-            setTargetColor4(settingsColors[3]);
-          }
         } else {
           setTargetColor1("#191414");
           setTargetColor2("#191414");
