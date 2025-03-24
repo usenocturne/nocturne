@@ -161,6 +161,8 @@ const settingsStructure = {
           "danielvaswani",
           "DeanGulBairy",
           "DeepfakeKittens",
+          "Garrett Webb",
+          "HarpMudd",
           "itsamanpret",
           "Jenner Gray",
           "MaydaySilly",
