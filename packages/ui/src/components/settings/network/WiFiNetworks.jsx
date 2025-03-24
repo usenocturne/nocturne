@@ -27,11 +27,12 @@ const WiFiNetworks = () => {
     scanNetworks,
     connectToSavedNetwork,
     forgetNetwork,
-    hasPasswordSecurity
+    hasPasswordSecurity,
   } = useWiFiNetworks();
 
   const getSignalIcon = (signal) => {
-    if (!signal) return <WifiLowIcon className="w-[24px] h-[24px] text-white" />;
+    if (!signal)
+      return <WifiLowIcon className="w-[24px] h-[24px] text-white" />;
 
     const signalStrength = parseInt(signal);
     const iconClass = "w-[24px] h-[24px] text-white";
@@ -65,7 +66,9 @@ const WiFiNetworks = () => {
   const renderCurrentNetwork = () => {
     if (!currentNetwork) return null;
 
-    const scanNetwork = availableNetworks.find(n => n.ssid === currentNetwork.ssid);
+    const scanNetwork = availableNetworks.find(
+      (n) => n.ssid === currentNetwork.ssid
+    );
     const inRange = !!scanNetwork;
 
     return (
@@ -77,9 +80,7 @@ const WiFiNetworks = () => {
                 {currentNetwork.ssid}
               </h4>
               {!networkStatus && (
-                <p className="text-white/60 text-[20px]">
-                  Connecting...
-                </p>
+                <p className="text-white/60 text-[20px]">Connecting...</p>
               )}
             </div>
             <div className="flex items-center gap-3">
@@ -113,17 +114,23 @@ const WiFiNetworks = () => {
 
         <div className="space-y-4">
           {savedNetworks.map((network) => {
-            const scanNetwork = availableNetworks.find(n => n.ssid === network.ssid);
+            const scanNetwork = availableNetworks.find(
+              (n) => n.ssid === network.ssid
+            );
             const inRange = !!scanNetwork;
 
             return (
               <div
                 key={network.networkId}
-                onClick={() => inRange && handleConnectToSavedNetwork(network.networkId)}
+                onClick={() =>
+                  inRange && handleConnectToSavedNetwork(network.networkId)
+                }
                 className={`bg-white/10 rounded-xl p-6 select-none border border-white/10 
-                  ${inRange
-                    ? 'hover:bg-white/20 transition-colors cursor-pointer'
-                    : 'opacity-70'}`}
+                  ${
+                    inRange
+                      ? "hover:bg-white/20 transition-colors cursor-pointer"
+                      : "opacity-70"
+                  }`}
               >
                 <div className="flex justify-between items-center">
                   <div className="min-w-0 flex-1">
@@ -131,9 +138,7 @@ const WiFiNetworks = () => {
                       {network.ssid}
                     </h4>
                     {!inRange && (
-                      <p className="text-white/60 text-[20px]">
-                        Out of range
-                      </p>
+                      <p className="text-white/60 text-[20px]">Out of Range</p>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
@@ -163,9 +168,12 @@ const WiFiNetworks = () => {
   };
 
   const renderAvailableNetworks = () => {
-    const otherNetworks = availableNetworks.filter(network => {
-      const isCurrentNetwork = currentNetwork && network.ssid === currentNetwork.ssid;
-      const isSavedNetwork = savedNetworks && savedNetworks.some(saved => saved.ssid === network.ssid);
+    const otherNetworks = availableNetworks.filter((network) => {
+      const isCurrentNetwork =
+        currentNetwork && network.ssid === currentNetwork.ssid;
+      const isSavedNetwork =
+        savedNetworks &&
+        savedNetworks.some((saved) => saved.ssid === network.ssid);
       return !isCurrentNetwork && !isSavedNetwork;
     });
 
@@ -183,7 +191,9 @@ const WiFiNetworks = () => {
             disabled={isScanning}
             aria-label="Refresh networks"
           >
-            <RefreshIcon className={`w-6 h-6 ${isScanning ? 'animate-spin' : ''}`} />
+            <RefreshIcon
+              className={`w-6 h-6 ${isScanning ? "animate-spin" : ""}`}
+            />
           </button>
         </div>
 
@@ -216,17 +226,21 @@ const WiFiNetworks = () => {
 
   if (!isConnectorAvailable) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
+      <div className="w-full flex flex-col items-center justify-center">
         <WifiOffIcon className="w-12 h-12 text-white/80 mb-4" />
-        <p className="text-white/80 text-[28px] text-center mb-2">Wi-Fi Unavailable</p>
-        <p className="text-white/80 text-[20px] text-center max-w-[600px] mb-6">
-          Wi-Fi support requires Nocturne Connector running on a Raspberry Pi.
+        <p className="text-[36px] font-[580] text-white tracking-tight text-center mb-2 w-full">
+          Wi-Fi Unavailable
+        </p>
+        <p className="text-white/80 text-[28px] tracking-tight text-center w-full mb-6 px-0">
+          Wi-Fi usage requires Nocturne Connector on a Raspberry Pi.
         </p>
         <button
           onClick={() => setShowConnectorModal(true)}
-          className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[20px] font-[560] text-white"
+          className="bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 px-6 py-3"
         >
-          Learn More
+          <span className="text-[28px] font-[560] text-white tracking-tight">
+            Learn More
+          </span>
         </button>
       </div>
     );
@@ -246,7 +260,8 @@ const WiFiNetworks = () => {
     );
   }
 
-  const hasAnyNetworks = currentNetwork ||
+  const hasAnyNetworks =
+    currentNetwork ||
     (savedNetworks && savedNetworks.length > 0) ||
     (availableNetworks && availableNetworks.length > 0);
 
@@ -260,7 +275,9 @@ const WiFiNetworks = () => {
           className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white flex items-center gap-2"
           disabled={isScanning}
         >
-          <RefreshIcon className={`w-6 h-6 ${isScanning ? 'animate-spin' : ''}`} />
+          <RefreshIcon
+            className={`w-6 h-6 ${isScanning ? "animate-spin" : ""}`}
+          />
           Scan for networks
         </button>
       </div>
