@@ -52,8 +52,8 @@ const DonationQRModal = ({ onClose }) => {
             <div className="space-y-2 text-center">
               <p className="text-white text-2xl">Support Nocturne</p>
               <p className="text-white/50 text-lg">
-                This QR code will open a link to the Nocturne donation page on
-                your phone.
+                Nocturne is free and open-source. Please consider donating to
+                support development. Thank you!
               </p>
             </div>
           </div>
