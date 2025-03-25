@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
-const API_BASE = 'http://172.16.42.1:20574';
+const API_BASE = 'https://172.16.42.1:20574';
 
 const ConnectorContext = createContext({
   isConnectorAvailable: false,

@@ -5,7 +5,7 @@ let globalWsRef = null;
 let globalWsListeners = [];
 let wsInitialized = false;
 let reconnectTimeoutRef = null;
-const API_BASE = 'http://172.16.42.1:20574';
+const API_BASE = 'https://172.16.42.1:20574';
 
 const setupGlobalWebSocket = (isConnectorAvailable) => {
   if (globalWsRef || !isConnectorAvailable) return;
