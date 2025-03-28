@@ -6,6 +6,9 @@ let isDevicesFetching = false;
 let globalWsRef = null;
 let globalWsListeners = [];
 let wsInitialized = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_TIMEOUT = 5000;
 
 const setupGlobalWebSocket = () => {
   if (globalWsRef) return;
@@ -14,17 +17,31 @@ const setupGlobalWebSocket = () => {
   globalWsRef = socket;
 
   socket.onopen = () => {
+    console.log('Bluetooth WebSocket connected');
     globalWsListeners.forEach(listener => listener.onOpen && listener.onOpen(socket));
   };
 
   socket.onclose = () => {
+    console.log('Bluetooth WebSocket disconnected');
     globalWsListeners.forEach(listener => listener.onClose && listener.onClose());
     globalWsRef = null;
+    wsInitialized = false;
   };
 
   socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    globalWsListeners.forEach(listener => listener.onMessage && listener.onMessage(data));
+    try {
+      const data = JSON.parse(event.data);
+      console.log('Bluetooth WebSocket message:', data);
+      globalWsListeners.forEach(listener => listener.onMessage && listener.onMessage(data));
+    } catch (err) {
+      console.error('Bluetooth WebSocket message error:', err);
+    }
+  };
+
+  socket.onerror = (err) => {
+    console.error('Bluetooth WebSocket error:', err);
+    globalWsRef = null;
+    wsInitialized = false;
   };
 };
 
@@ -35,17 +52,25 @@ export const useBluetooth = () => {
   const [isConnecting, setIsConnecting] = useState(false)
   const [showNetworkPrompt, setShowNetworkPrompt] = useState(false)
   const [lastConnectedDevice, setLastConnectedDevice] = useState(null)
-  const networkPollRef = useRef(null)
-  const listenerIdRef = useRef(null)
-  const discoveryActive = useRef(false)
+  const [networkStartRef, setNetworkStartRef] = useState(null)
+  const [networkPollRef, setNetworkPollRef] = useState(null)
   const [devices, setDevices] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const isReconnecting = useRef(false)
+  const listenerIdRef = useRef(null)
+  const discoveryActive = useRef(false)
+  const reconnectAttemptsRef = useRef(0)
+  const reconnectTimeoutRef = useRef(null)
 
   const stopNetworkPolling = useCallback(() => {
-    if (networkPollRef.current) {
-      clearInterval(networkPollRef.current)
-      networkPollRef.current = null
+    if (networkPollRef) {
+      clearInterval(networkPollRef)
+      setNetworkPollRef(null)
+    }
+    if (networkStartRef) {
+      clearInterval(networkStartRef)
+      setNetworkStartRef(null)
     }
   }, []);
 
@@ -57,7 +82,15 @@ export const useBluetooth = () => {
     try {
       isDevicesFetching = true;
       setLoading(true)
-      const response = await fetch('http://localhost:5000/bluetooth/devices')
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch('http://localhost:5000/bluetooth/devices', {
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         throw new Error('Failed to fetch devices')
       }
@@ -73,17 +106,95 @@ export const useBluetooth = () => {
     }
   }, [])
 
+  const startNetworkPolling = useCallback(async (deviceAddress) => {
+    if (networkPollRef || networkStartRef) return
+
+    const checkNetworkStatus = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const statusResponse = await fetch('http://localhost:5000/bluetooth/network', {
+          method: 'GET',
+          signal: controller.signal
+        })
+        const data = await statusResponse.json()
+        
+        clearTimeout(timeoutId);
+        return data.status
+      } catch (error) {
+        console.error('Failed to check network status:', error)
+        return 'down'
+      }
+    }
+
+    const startNetwork = async () => {
+      try {
+        const status = await checkNetworkStatus()
+        if (status === 'up') return
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        await fetch(`http://localhost:5000/bluetooth/network/${deviceAddress}`, {
+          method: 'POST',
+          signal: controller.signal
+        })
+
+        clearTimeout(timeoutId);
+      } catch (error) {
+        console.error('Failed to start networking:', error)
+      }
+    }
+
+    const initialStatus = await checkNetworkStatus()
+    
+    if (initialStatus === 'up') {
+      setShowNetworkPrompt(false)
+      setNetworkPollRef(setInterval(async () => {
+        const status = await checkNetworkStatus()
+        if (status === 'down') {
+          setShowNetworkPrompt(true)
+          await startNetwork()
+          setNetworkStartRef(setInterval(startNetwork, 5000))
+        }
+      }, 5000))
+    } else {
+      setShowNetworkPrompt(true)
+      await startNetwork()
+      setNetworkPollRef(setInterval(async () => {
+        const status = await checkNetworkStatus()
+        if (status === 'up') {
+          setShowNetworkPrompt(false)
+          if (networkStartRef) {
+            clearInterval(networkStartRef)
+            setNetworkStartRef(null)
+          }
+        }
+      }, 5000))
+      setNetworkStartRef(setInterval(startNetwork, 5000))
+    }
+  }, [])
+
   const connectDevice = useCallback(async (deviceAddress) => {
     try {
       setLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch(`http://localhost:5000/bluetooth/connect/${deviceAddress}`, {
-        method: 'POST'
+        method: 'POST',
+        signal: controller.signal
       })
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Failed to connect device')
       }
       
+      localStorage.setItem('lastConnectedBluetoothDevice', deviceAddress)
       await fetchDevices(true)
       return true
     } catch (err) {
@@ -96,11 +207,19 @@ export const useBluetooth = () => {
 
   const disconnectDevice = useCallback(async (address) => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch(`http://localhost:5000/bluetooth/disconnect/${address}`, {
-        method: 'POST'
+        method: 'POST',
+        signal: controller.signal
       })
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) throw new Error('Failed to disconnect device')
       
+      localStorage.removeItem('lastConnectedBluetoothDevice')
       await fetchDevices(true)
       return true
     } catch (error) {
@@ -130,6 +249,64 @@ export const useBluetooth = () => {
     }
   }, [fetchDevices])
 
+  const attemptReconnect = useCallback(async () => {
+    if (isReconnecting.current || reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) return;
+    
+    const savedDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
+    if (!savedDeviceAddress) return;
+
+    isReconnecting.current = true;
+
+    try {
+      const devices = await fetchDevices(true);
+      const deviceExists = devices.some(device => device.address === savedDeviceAddress);
+      if (!deviceExists) {
+        isReconnecting.current = false;
+        return;
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(`http://localhost:5000/bluetooth/connect/${savedDeviceAddress}`, {
+        method: 'POST',
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) throw new Error('Reconnection failed');
+      
+      await fetchDevices(true);
+      reconnectAttemptsRef.current = 0;
+      isReconnecting.current = false;
+    } catch (err) {
+      reconnectAttemptsRef.current++;
+      isReconnecting.current = false;
+      
+      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        reconnectTimeoutRef.current = setTimeout(attemptReconnect, RECONNECT_TIMEOUT);
+      }
+    }
+  }, [fetchDevices]);
+
+  useEffect(() => {
+    const savedDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
+    if (savedDeviceAddress) {
+      reconnectAttemptsRef.current = 0;
+      attemptReconnect();
+    }
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+    };
+  }, [attemptReconnect]);
+
   const handleWsMessage = useCallback((data) => {
     switch (data.type) {
       case 'bluetooth/pairing':
@@ -141,6 +318,13 @@ export const useBluetooth = () => {
         setConnectedDevices(prev => [...prev, data.payload.device])
         setLastConnectedDevice(data.payload.device)
         setShowNetworkPrompt(true)
+        localStorage.setItem('lastConnectedBluetoothDevice', data.payload.device.address)
+        startNetworkPolling(data.payload.device.address)
+        break
+
+      case 'bluetooth/connect':
+        setShowNetworkPrompt(true)
+        startNetworkPolling(data.payload.address)
         break
 
       case 'bluetooth/disconnect':
@@ -155,42 +339,13 @@ export const useBluetooth = () => {
         break
 
       case 'bluetooth/network/disconnect':
-        setShowNetworkPrompt(false)
-        stopNetworkPolling()
+        setShowNetworkPrompt(true)
         break
 
       default:
         break
     }
-  }, [lastConnectedDevice, stopNetworkPolling])
-
-  const startNetworkPolling = useCallback(async () => {
-    if (networkPollRef.current) return
-
-    const pollNetwork = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/bluetooth/network')
-        const data = await response.json()
-
-        if (data.status === 'up') {
-          setShowNetworkPrompt(false)
-          stopNetworkPolling()
-          return
-        }
-
-        if (lastConnectedDevice) {
-          await fetch(`http://localhost:5000/bluetooth/network/${lastConnectedDevice.address}`, {
-            method: 'POST'
-          })
-        }
-      } catch (error) {
-        console.error('Network polling error:', error)
-      }
-    }
-
-    await pollNetwork()
-    networkPollRef.current = setInterval(pollNetwork, 2000)
-  }, [lastConnectedDevice, stopNetworkPolling])
+  }, [lastConnectedDevice, stopNetworkPolling, startNetworkPolling])
 
   const startDiscovery = useCallback(async () => {
     if (discoveryActive.current || isInitializingDiscovery) {
@@ -271,7 +426,7 @@ export const useBluetooth = () => {
 
   const enableNetworking = useCallback(async () => {
     if (!lastConnectedDevice) return
-    startNetworkPolling()
+    startNetworkPolling(lastConnectedDevice.address)
   }, [lastConnectedDevice, startNetworkPolling])
 
   useEffect(() => {
@@ -283,19 +438,31 @@ export const useBluetooth = () => {
     const listenerId = Date.now().toString() + Math.random().toString();
     listenerIdRef.current = listenerId;
 
-    globalWsListeners.push({
+    const listener = {
       id: listenerId,
-      onOpen: (socket) => setWs(socket),
-      onClose: () => setWs(null),
-      onMessage: handleWsMessage
-    });
+      onOpen: (socket) => {
+        console.log('Bluetooth hook WebSocket opened');
+        setWs(socket);
+      },
+      onClose: () => {
+        console.log('Bluetooth hook WebSocket closed');
+        setWs(null);
+      },
+      onMessage: (data) => {
+        console.log('Bluetooth hook received message:', data);
+        handleWsMessage(data);
+      }
+    };
+
+    globalWsListeners.push(listener);
 
     if (globalWsRef && globalWsRef.readyState === WebSocket.OPEN) {
       setWs(globalWsRef);
     }
 
     return () => {
-      globalWsListeners = globalWsListeners.filter(listener => listener.id !== listenerId);
+      console.log('Cleaning up Bluetooth hook WebSocket listener');
+      globalWsListeners = globalWsListeners.filter(l => l.id !== listenerId);
       stopNetworkPolling();
     }
   }, [handleWsMessage, stopNetworkPolling]);
