@@ -8,7 +8,7 @@ unzip nocturne-ui.zip -d "$ROOTFS_PATH"/etc/nocturne/ui
 
 mkdir -p "$ROOTFS_PATH"/etc/caddy
 cat > "$ROOTFS_PATH"/etc/caddy/Caddyfile << EOF
-https://localhost:3000 {
+http://localhost:3000 {
   root * /etc/nocturne/ui
   encode
 	file_server

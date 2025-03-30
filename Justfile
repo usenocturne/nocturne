@@ -9,5 +9,8 @@ run: build
 shell: build
     docker run --rm --privileged -v ./cache:/cache -v ./output:/output -it alpine-builder sh
 
+copy:
+    scp output/nocturne_update.img.gz output/nocturne_update.img.gz.sha256 root@172.16.42.2:/root
+
 lint:
     pre-commit run --all-files

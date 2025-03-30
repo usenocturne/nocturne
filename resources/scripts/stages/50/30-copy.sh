@@ -1,6 +1,6 @@
 #!/bin/sh
 
-rm -rf "$OUTPUT_PATH:?"/*
+rm "$OUTPUT_PATH"/*
 cp "$IMAGE_PATH"/boot.bin "$RES_PATH"/flash/env.txt "$RES_PATH"/flash/meta.json "$OUTPUT_PATH"/
 cp "$IMAGE_PATH"/system.ext4 "$IMAGE_PATH"/data.ext4 "$OUTPUT_PATH"/
 
