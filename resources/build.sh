@@ -14,7 +14,6 @@ set -e
 : "${DEFAULT_SERVICES:="hostname local modules networking ntpd syslog"}"
 : "${SYSINIT_SERVICES:="rngd"}"
 : "${BOOT_SERVICES:="swap"}"
-: "${ARCH:="aarch64"}"
 
 : "${SIZE_ROOT_FS:="1280M"}"
 : "${SIZE_DATA:="990M"}"

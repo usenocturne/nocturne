@@ -30,8 +30,8 @@ fi
 _DIRNAME=$(dirname "$CABPATH")
 _CNAME=$(basename "$CABPATH")
 _ARCNAME=$(echo "$CABPATH" | tr '/*' '_')
-_LOCAL_CACHE="${CACHE_PATH}/${ARCH}/$_ARCNAME.tar.gz"
-_CHECKSUMS="${CACHE_PATH}/${ARCH}/checksums.cache"
+_LOCAL_CACHE="${CACHE_PATH}/$_ARCNAME.tar.gz"
+_CHECKSUMS="${CACHE_PATH}/checksums.cache"
 
 if [ -n "${CACHE_PATH}" ]; then
   if echo "$SCRIPT" | grep -qE "^$RES_PATH"; then
