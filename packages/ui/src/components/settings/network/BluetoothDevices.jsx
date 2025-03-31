@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogBackdrop,
 } from "@headlessui/react";
-import { useBluetooth } from "../../../hooks/useBluetooth";
+import { useBluetooth } from "../../../hooks/useNocturned";
 
 const BluetoothDevices = () => {
   const {
@@ -19,7 +19,7 @@ const BluetoothDevices = () => {
     startDiscovery,
     stopDiscovery,
   } = useBluetooth();
-  
+
   const [showForgetDialog, setShowForgetDialog] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const longPressTimer = useRef(null);
@@ -34,9 +34,9 @@ const BluetoothDevices = () => {
         await fetchDevices(true);
       }
     };
-    
+
     initialize();
-    
+
     return () => {
       stopDiscovery();
     };

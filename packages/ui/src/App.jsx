@@ -12,12 +12,13 @@ import BluetoothNetworkModal from "./components/common/modals/BluetoothNetworkMo
 import DeviceSwitcherModal from "./components/player/DeviceSwitcherModal";
 import NetworkPasswordModal from "./components/common/modals/NetworkPasswordModal";
 import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
+import SystemUpdateModal from "./components/common/modals/SystemUpdateModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { PlaybackProgressContext } from "./hooks/usePlaybackProgress";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
-import { useBluetooth } from "./hooks/useBluetooth";
+import { useBluetooth, useSystemUpdate } from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
@@ -25,12 +26,12 @@ import React from "react";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
-  setSelectedNetwork: () => {},
+  setSelectedNetwork: () => { },
 });
 
 export const ConnectorContext = React.createContext({
   showConnectorModal: false,
-  setShowConnectorModal: () => {},
+  setShowConnectorModal: () => { },
 });
 
 function useGlobalButtonMapping({
@@ -282,6 +283,14 @@ function App() {
   } = useBluetooth();
 
   const {
+    updateStatus,
+    progress,
+    isUpdating,
+    isError,
+    errorMessage
+  } = useSystemUpdate();
+
+  const {
     currentColor1,
     currentColor2,
     currentColor3,
@@ -453,6 +462,8 @@ function App() {
     }
   };
 
+  const isFlashing = isUpdating && updateStatus.stage === 'flash';
+
   let content;
   if (authIsLoading) {
     content = null;
@@ -538,7 +549,7 @@ function App() {
 
                     <div className="relative z-10">
                       {content}
-                      {!isConnected && showNoNetwork && <NetworkScreen />}
+                      {!isConnected && showNoNetwork && !isFlashing && <NetworkScreen />}
                       <BluetoothPairingModal
                         pairingRequest={pairingRequest}
                         isConnecting={isConnecting}
@@ -546,10 +557,17 @@ function App() {
                         onDeny={denyPairing}
                       />
                       <BluetoothNetworkModal
-                        show={showNetworkPrompt && !isConnected}
+                        show={showNetworkPrompt && !isConnected && !isFlashing}
                         deviceName={lastConnectedDevice?.name}
                         onCancel={handleNetworkCancel}
                         isConnecting={isConnecting}
+                      />
+                      <SystemUpdateModal
+                        show={isFlashing}
+                        status={updateStatus}
+                        progress={progress}
+                        isError={isError}
+                        errorMessage={errorMessage}
                       />
                       <DeviceSwitcherModal
                         isOpen={isDeviceSwitcherOpen}
