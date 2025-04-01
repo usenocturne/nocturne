@@ -1,6 +1,6 @@
 #!/bin/sh
 
-chroot_exec apk add networkmanager networkmanager-cli
+chroot_exec apk add networkmanager networkmanager-cli networkmanager-dnsmasq dnsmasq openresolv
 
 cat >> "$ROOTFS_PATH"/etc/network/interfaces.alpine-builder << EOF
 
@@ -15,5 +15,12 @@ iface usb0 inet static
 EOF
 
 cp "$ROOTFS_PATH"/etc/network/interfaces.alpine-builder "$DATAFS_PATH"/etc/network/interfaces
+
+cat >> "$ROOTFS_PATH"/etc/NetworkManager/NetworkManager.conf << EOF
+[main]
+dhcp=internal
+dns=dnsmasq
+rc-manager=resolvconf
+EOF
 
 DEFAULT_SERVICES="${DEFAULT_SERVICES} networkmanager"
