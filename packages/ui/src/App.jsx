@@ -7,8 +7,6 @@ import Tutorial from "./components/tutorial/Tutorial";
 import Home from "./pages/Home";
 import ContentView from "./components/content/ContentView";
 import NowPlaying from "./components/player/NowPlaying";
-import BluetoothPairingModal from "./components/common/modals/BluetoothPairingModal";
-import BluetoothNetworkModal from "./components/common/modals/BluetoothNetworkModal";
 import DeviceSwitcherModal from "./components/player/DeviceSwitcherModal";
 import NetworkPasswordModal from "./components/common/modals/NetworkPasswordModal";
 import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
@@ -23,6 +21,8 @@ import { useSpotifyData } from "./hooks/useSpotifyData";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
+import PairingScreen from "./components/auth/PairingScreen";
+import EnableTetheringScreen from "./components/auth/EnableTetheringScreen";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
@@ -280,6 +280,7 @@ function App() {
     setDiscoverable,
     disconnectDevice,
     enableNetworking,
+    stopRetrying
   } = useBluetooth();
 
   const {
@@ -550,18 +551,24 @@ function App() {
                     <div className="relative z-10">
                       {content}
                       {!isConnected && showNoNetwork && !isFlashing && <NetworkScreen />}
-                      <BluetoothPairingModal
-                        pairingRequest={pairingRequest}
-                        isConnecting={isConnecting}
-                        onAccept={acceptPairing}
-                        onDeny={denyPairing}
-                      />
-                      <BluetoothNetworkModal
-                        show={showNetworkPrompt && !isConnected && !isFlashing}
-                        deviceName={lastConnectedDevice?.name}
-                        onCancel={handleNetworkCancel}
-                        isConnecting={isConnecting}
-                      />
+                      {pairingRequest && (
+                        <PairingScreen
+                          pin={pairingRequest.pairingKey}
+                          isConnecting={isConnecting}
+                          onAccept={acceptPairing}
+                          onReject={denyPairing}
+                        />
+                      )}
+                      {showNetworkPrompt && !isConnected && !isFlashing && (
+                        <EnableTetheringScreen
+                          key={`tethering-${Date.now()}-${Math.random()}`}
+                          deviceType={lastConnectedDevice?.name}
+                          message={`Please enable hotspot and Bluetooth tethering on ${lastConnectedDevice?.name || 'your device'} to continue.`}
+                          onDismissRetry={() => {
+                            stopRetrying();
+                          }}
+                        />
+                      )}
                       <SystemUpdateModal
                         show={isFlashing}
                         status={updateStatus}
