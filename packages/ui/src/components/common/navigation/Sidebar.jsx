@@ -18,7 +18,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
 
   const SidebarItem = ({ section, icon: Icon, label }) => (
     <div
-      className="relative flex items-center cursor-pointer group"
+      className="relative flex items-center group"
       onClick={() => handleSectionClick(section)}
     >
       {activeSection === section && (

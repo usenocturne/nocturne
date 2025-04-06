@@ -229,7 +229,7 @@ export default function Home({
                 data-playing={album.id === currentlyPlayingAlbum?.id ? "true" : "false"}
               >
                 <div
-                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] cursor-pointer"
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(album.id, "album")}
                 >
@@ -245,7 +245,7 @@ export default function Home({
                 </div>
 
                 <h4
-                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px] cursor-pointer"
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
                   onClick={() => onOpenContent(album.id, "album")}
                 >
                   {album.name}
@@ -514,7 +514,7 @@ export default function Home({
             className="min-w-[280px] pl-2 mr-10 snap-start"
           >
             <div
-              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 cursor-pointer"
+              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10"
               style={{ width: 280, height: 280 }}
               onClick={() =>
                 playDJMix().then((success) => {
@@ -579,7 +579,7 @@ export default function Home({
                 data-id={mix.id}
               >
                 <div
-                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] cursor-pointer"
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(mix.id, "mix")}
                 >
@@ -594,7 +594,7 @@ export default function Home({
                   )}
                 </div>
                 <h4
-                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px] cursor-pointer"
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
                   onClick={() => onOpenContent(mix.id, "mix")}
                 >
                   {mix.name}

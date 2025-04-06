@@ -381,16 +381,14 @@ export default function Settings({
               <Switch
                 checked={settings[item.storageKey]}
                 onChange={() => handleToggle(item.storageKey)}
-                className={`relative inline-flex h-11 w-20 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
-                }`}
+                className={`relative inline-flex h-11 w-20 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
+                  }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    settings[item.storageKey]
+                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings[item.storageKey]
                       ? "translate-x-9"
                       : "translate-x-0"
-                  }`}
+                    }`}
                 />
               </Switch>
               <span className="ml-3 text-[32px] font-[580] text-white tracking-tight">
@@ -555,7 +553,7 @@ export default function Settings({
               </div>
               <div className="space-y-6 mb-12">
                 {activeParent &&
-                settingsStructure[activeParent].type === "parent" ? (
+                  settingsStructure[activeParent].type === "parent" ? (
                   <div className="space-y-4">
                     {settingsStructure[activeParent].items?.map((subItem) => (
                       <button

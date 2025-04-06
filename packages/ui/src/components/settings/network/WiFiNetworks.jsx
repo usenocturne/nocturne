@@ -126,10 +126,9 @@ const WiFiNetworks = () => {
                   inRange && handleConnectToSavedNetwork(network.networkId)
                 }
                 className={`bg-white/10 rounded-xl p-6 select-none border border-white/10 
-                  ${
-                    inRange
-                      ? "hover:bg-white/20 transition-colors cursor-pointer"
-                      : "opacity-70"
+                  ${inRange
+                    ? "hover:bg-white/20 transition-colors"
+                    : "opacity-70"
                   }`}
               >
                 <div className="flex justify-between items-center">
@@ -202,7 +201,7 @@ const WiFiNetworks = () => {
             <div
               key={network.bssid || network.ssid}
               onClick={() => handleNetworkClick(network)}
-              className="bg-white/10 rounded-xl p-6 select-none border border-white/10 hover:bg-white/20 transition-colors cursor-pointer"
+              className="bg-white/10 rounded-xl p-6 select-none border border-white/10 hover:bg-white/20 transition-colors"
             >
               <div className="flex justify-between items-center">
                 <div className="min-w-0 flex-1">

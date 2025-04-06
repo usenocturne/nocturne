@@ -450,9 +450,8 @@ const ContentView = ({
           return (
             <div
               key={track.id || `track-${index}`}
-              className={`flex gap-12 items-start mb-4 transition-transform duration-200 ease-out cursor-pointer ${
-                selectedTrackIndex === index ? "scale-105" : ""
-              }`}
+              className={`flex gap-12 items-start mb-4 transition-transform duration-200 ease-out ${selectedTrackIndex === index ? "scale-105" : ""
+                }`}
               onClick={() => (track.uri ? handleTrackPlay(track, index) : null)}
               style={{ transition: "transform 0.2s ease-out" }}
               data-track-index={index}
@@ -483,11 +482,10 @@ const ContentView = ({
                     track.artists.map((artist, artistIndex) => (
                       <p
                         key={artist?.id || `artist-${artistIndex}`}
-                        className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${
-                          artistIndex < track.artists.length - 1
+                        className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${artistIndex < track.artists.length - 1
                             ? 'mr-2 after:content-[","]'
                             : ""
-                        }`}
+                          }`}
                       >
                         {artist?.name === null && artist?.type
                           ? artist.type

@@ -100,7 +100,7 @@ const ProgressBar = ({
         }`}
     >
       <div
-        className={`relative w-full bg-white/20 rounded-full overflow-hidden cursor-pointer transition-all duration-300 ${isScrubbing ? "h-8" : "h-2 mt-4"
+        className={`relative w-full bg-white/20 rounded-full overflow-hidden transition-all duration-300 ${isScrubbing ? "h-8" : "h-2 mt-4"
           }`}
         onClick={handleClick}
       >

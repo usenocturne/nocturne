@@ -195,7 +195,7 @@ const SoftwareUpdate = ({
             <button
               className={`w-full p-4 rounded-xl border ${canUpdate
                 ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
-                : "bg-white/5 border-white/5 text-white/40 cursor-not-allowed"}`}
+                : "bg-white/5 border-white/5 text-white/40"}`}
               onClick={canUpdate ? onUpdate : undefined}
               disabled={!canUpdate}
             >

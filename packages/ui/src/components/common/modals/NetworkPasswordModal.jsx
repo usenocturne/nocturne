@@ -68,7 +68,7 @@ export default function NetworkPasswordModal({
               <button
                 type="submit"
                 disabled={isConnecting || (needsPassword && !password)}
-                className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white disabled:opacity-50"
               >
                 {isConnecting ? "Connecting..." : "Connect"}
               </button>
