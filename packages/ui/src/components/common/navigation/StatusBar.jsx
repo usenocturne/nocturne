@@ -2,14 +2,41 @@ import { useState, useEffect } from "react";
 import { BatteryIcon, BluetoothIcon, WifiMaxIcon, WifiHighIcon, WifiLowIcon, WifiOffIcon } from "../../common/icons";
 import { useSettings } from "../../../contexts/SettingsContext";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
+import { useBluetooth } from "../../../hooks/useNocturned";
+import { useConnector } from "../../../contexts/ConnectorContext";
 
 export default function StatusBar() {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
   const [isBluetoothConnected, setIsBluetoothConnected] = useState(true);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
+  const [timezone, setTimezone] = useState(null);
   const { settings } = useSettings();
   const { currentNetwork, availableNetworks } = useWiFiNetworks();
+  const { lastConnectedDevice, connectedDevices } = useBluetooth();
+  const { isConnectorAvailable } = useConnector();
+
+  useEffect(() => {
+    const fetchTimezone = async () => {
+      try {
+        const response = await fetch("https://api.usenocturne.com/v1/timezone");
+        if (!response.ok) {
+          console.error("Failed to fetch timezone from API");
+          return;
+        }
+        
+        const data = await response.json();
+        if (data.timezone) {
+          setTimezone(data.timezone);
+          console.log("Timezone set to:", data.timezone);
+        }
+      } catch (error) {
+        console.error("Error fetching timezone:", error);
+      }
+    };
+    
+    fetchTimezone();
+  }, []);
 
   const getWiFiIcon = () => {
     if (!currentNetwork) return null;
@@ -29,10 +56,55 @@ export default function StatusBar() {
     }
   };
 
+  const fetchBatteryInfo = async (deviceAddress) => {
+    if (!deviceAddress) return;
+    
+    try {
+      const response = await fetch(`http://localhost:5000/bluetooth/info/${deviceAddress}`);
+      if (!response.ok) {
+        console.error("Failed to fetch battery info");
+        return;
+      }
+      
+      const deviceInfo = await response.json();
+      
+      if (deviceInfo.connected && deviceInfo.batteryPercentage !== undefined) {
+        setBatteryPercentage(deviceInfo.batteryPercentage);
+        setIsBluetoothConnected(true);
+      } else if (!deviceInfo.connected) {
+        setIsBluetoothConnected(false);
+      }
+    } catch (error) {
+      console.error("Error fetching battery info:", error);
+    }
+  };
+
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-
+      
+      if (timezone) {
+        try {
+          const options = { timeZone: timezone, hour: 'numeric', minute: 'numeric', hour12: !settings.use24HourTime };
+          const formatter = new Intl.DateTimeFormat('en-US', options);
+          const timeString = formatter.format(now);
+          
+          let parts = timeString.split(':');
+          let hours = parts[0];
+          let minutes = parts[1];
+          
+          if (!settings.use24HourTime) {
+            minutes = minutes.split(' ')[0];
+          }
+          
+          setCurrentTime(`${hours}:${minutes}`);
+          setIsFourDigits(hours.length >= 2);
+          return;
+        } catch (error) {
+          console.error("Error formatting time with timezone:", error);
+        }
+      }
+      
       let hours;
       if (settings.use24HourTime) {
         hours = now.getHours().toString().padStart(2, "0");
@@ -60,9 +132,34 @@ export default function StatusBar() {
       clearInterval(interval);
       window.removeEventListener("timeFormatChanged", handleTimeFormatChange);
     };
-  }, [settings.use24HourTime]);
+  }, [settings.use24HourTime, timezone]);
 
-  if (!isBluetoothConnected) return null;
+  useEffect(() => {
+    let deviceAddress = null;
+    
+    if (lastConnectedDevice && lastConnectedDevice.address) {
+      deviceAddress = lastConnectedDevice.address;
+    } else if (connectedDevices && connectedDevices.length > 0) {
+      deviceAddress = connectedDevices[0].address;
+    }
+    
+    if (deviceAddress) {
+      fetchBatteryInfo(deviceAddress);
+      
+      const interval = setInterval(() => {
+        fetchBatteryInfo(deviceAddress);
+      }, 2 * 60 * 1000);
+      
+      return () => clearInterval(interval);
+    } else {
+      setIsBluetoothConnected(false);
+    }
+  }, [lastConnectedDevice, connectedDevices]);
+
+  const shouldRenderStatusBar = isBluetoothConnected || (isConnectorAvailable && currentNetwork);
+  if (!shouldRenderStatusBar) return null;
+
+  const showBluetoothInfo = isBluetoothConnected && (!isConnectorAvailable || !currentNetwork);
 
   return (
     <div
@@ -76,9 +173,25 @@ export default function StatusBar() {
         {currentTime}
       </div>
       <div className="flex gap-2.5 h-10" style={{ marginTop: "-10px" }}>
-        {currentNetwork ? getWiFiIcon() : (
-          <BluetoothIcon
-            className="w-8 h-10 text-white"
+        {currentNetwork && isConnectorAvailable ? (
+          getWiFiIcon()
+        ) : (
+          showBluetoothInfo && (
+            <BluetoothIcon
+              className="w-8 h-10 text-white"
+              style={{
+                margin: 0,
+                padding: 0,
+                display: "block",
+                transform: "translateY(-10px)",
+              }}
+            />
+          )
+        )}
+        {showBluetoothInfo && (
+          <BatteryIcon
+            className="w-10 h-10"
+            percentage={batteryPercentage}
             style={{
               margin: 0,
               padding: 0,
@@ -87,16 +200,6 @@ export default function StatusBar() {
             }}
           />
         )}
-        {!currentNetwork && <BatteryIcon
-          className="w-10 h-10"
-          percentage={batteryPercentage}
-          style={{
-            margin: 0,
-            padding: 0,
-            display: "block",
-            transform: "translateY(-10px)",
-          }}
-        />}
       </div>
     </div>
   );
