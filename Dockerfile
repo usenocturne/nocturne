@@ -10,7 +10,7 @@ FROM docker.io/alpine:$ALPINE_VER
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 RUN apk add --no-cache --upgrade curl dosfstools e2fsprogs-extra findutils \
-	genimage git m4 mtools pigz tar zstd u-boot-tools
+	genimage git m4 mtools pigz tar zstd zip u-boot-tools
 
 ADD ./resources /resources
 COPY --from=keys /usr/share/apk/keys /usr/share/apk/keys-stable
