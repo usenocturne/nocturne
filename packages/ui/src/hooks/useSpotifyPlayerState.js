@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { generateRandomString } from "../utils/helpers";
 
 let globalWebSocket = null;
 let globalConnectionId = null;
@@ -210,7 +211,7 @@ export function useSpotifyPlayerState(accessToken) {
 
     try {
       globalWebSocket = new WebSocket(
-        `wss://dealer.spotify.com/?access_token=${accessToken}`
+        `wss://gue1-dealer.spotify.com/?access_token=${accessToken}`
       );
       webSocketRef.current = globalWebSocket;
 
@@ -238,16 +239,39 @@ export function useSpotifyPlayerState(accessToken) {
           connectionIdRef.current = globalConnectionId;
 
           try {
-            const url = `https://api.spotify.com/v1/me/notifications/player?connection_id=${encodeURIComponent(
-              globalConnectionId
-            )}`;
+            const deviceId = generateRandomString(40);
+            
+            await fetch("https://gue1-spclient.spotify.com/track-playback/v1/devices", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                device: { device_id: deviceId },
+                connection_id: globalConnectionId
+              })
+            });
 
-            await fetch(url, {
+            await fetch("https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_" + deviceId, {
               method: "PUT",
               headers: {
-                Authorization: `Bearer ${accessToken}`,
+                "Authorization": `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
+                "x-spotify-connection-id": globalConnectionId
               },
+              body: JSON.stringify({
+                member_type: "CONNECT_STATE",
+                device: {
+                  device_info: {
+                    capabilities: {
+                      can_be_player: false,
+                      hidden: true,
+                      needs_full_player_state: true
+                    }
+                  }
+                }
+              })
             });
 
             if (!initialStateLoadedRef.current) {
@@ -258,19 +282,61 @@ export function useSpotifyPlayerState(accessToken) {
           }
         } else if (message.type === "message" && message.payloads) {
           for (const payload of message.payloads) {
-            if (payload.events) {
-              for (const eventData of payload.events) {
-                if (
-                  eventData.type === "PLAYER_STATE_CHANGED" &&
-                  eventData.event?.state
-                ) {
-                  eventSubscribers.forEach((subscriber) => {
-                    if (subscriber.onPlaybackState) {
-                      subscriber.onPlaybackState(eventData.event.state);
+            if (payload.update_reason !== "DEVICE_STATE_CHANGED") {
+              continue;
+            }
+            
+            if (payload.cluster?.player_state) {
+              const state = payload.cluster.player_state;
+              const track = state.track;
+              
+              if (!track) return;
+
+              const imageId = track.metadata?.image_url?.split(":").pop();
+              const imageUrl = imageId ? `https://i.scdn.co/image/${imageId}` : "/images/not-playing.webp";
+              const artistId = track.metadata?.artist_uri?.split(":").pop();
+              let artistName = "";
+
+              if (artistId) {
+                try {
+                  const artistResponse = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
+                    headers: {
+                      "Authorization": `Bearer ${accessToken}`
                     }
                   });
+                  if (artistResponse.ok) {
+                    const artistData = await artistResponse.json();
+                    artistName = artistData.name;
+                  }
+                } catch (error) {
+                  console.error("Error fetching artist details:", error);
                 }
               }
+
+              const currentPlayback = {
+                item: {
+                  id: track.uri?.split(":").pop(),
+                  name: track.metadata?.title || "Not Playing",
+                  type: "track",
+                  artists: [{ name: artistName || "Unknown Artist" }],
+                  album: {
+                    name: track.metadata?.album_title || "",
+                    images: [{ url: imageUrl }]
+                  },
+                  duration_ms: parseInt(state.duration) || 0
+                },
+                is_playing: state.is_playing && !state.is_paused,
+                progress_ms: parseInt(state.position_as_of_timestamp) || 0,
+                shuffle_state: state.options?.shuffling_context || false,
+                repeat_state: state.options?.repeating_track ? "track" : 
+                            state.options?.repeating_context ? "context" : "off",
+              };
+
+              eventSubscribers.forEach((subscriber) => {
+                if (subscriber.onPlaybackState) {
+                  subscriber.onPlaybackState(currentPlayback);
+                }
+              });
             }
           }
         }
