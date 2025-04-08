@@ -302,7 +302,7 @@ export const useBluetooth = () => {
   const [pairingRequest, setPairingRequest] = useState(null);
   const [connectedDevices, setConnectedDevices] = useState([]);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [showNetworkPrompt, setShowNetworkPrompt] = useState(false);
+  const [showTetheringScreen, setShowTetheringScreen] = useState(false);
   const [lastConnectedDevice, setLastConnectedDevice] = useState(null);
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -341,7 +341,7 @@ export const useBluetooth = () => {
     
     retryDeviceAddressRef.current = null;
     
-    setShowNetworkPrompt(false);
+    setShowTetheringScreen(false);
   }, []);
 
   const cleanup = useCallback(() => {
@@ -392,6 +392,10 @@ export const useBluetooth = () => {
     isNetworkPollingActive = true;
 
     const singleNetworkCheck = async () => {
+      if (!isNetworkPollingActive) {
+        return false;
+      }
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -405,22 +409,26 @@ export const useBluetooth = () => {
         
         if (!statusResponse.ok) {
           console.error('Network status check failed');
-          setShowNetworkPrompt(true);
+          setShowTetheringScreen(true);
           return false;
         }
         
         const data = await statusResponse.json();
         
         if (data.status === 'up') {
-          setShowNetworkPrompt(false);
+          setShowTetheringScreen(false);
           return true;
         }
         
-        setShowNetworkPrompt(true);
+        if (!isNetworkPollingActive) {
+          return false;
+        }
+
+        setShowTetheringScreen(true);
         const startController = new AbortController();
         const startTimeoutId = setTimeout(() => startController.abort(), 5000);
         
-        await fetch(`${API_BASE}/bluetooth/network/${deviceAddress}`, {
+        await fetch(`${API_BASE}/bluetooth/connect/${deviceAddress}`, {
           method: 'POST',
           signal: startController.signal
         });
@@ -430,14 +438,21 @@ export const useBluetooth = () => {
         return false;
       } catch (error) {
         console.error('Network check/start failed:', error);
-        setShowNetworkPrompt(true);
+        setShowTetheringScreen(true);
         return false;
       }
     };
 
     await singleNetworkCheck();
 
-    const intervalId = setInterval(singleNetworkCheck, 5000);
+    const intervalId = setInterval(() => {
+      if (!isNetworkPollingActive) {
+        clearInterval(intervalId);
+        return;
+      }
+      singleNetworkCheck();
+    }, 5000);
+    
     setNetworkPollRef(intervalId);
 
     return () => {
@@ -452,6 +467,7 @@ export const useBluetooth = () => {
       stopRetrying();
       retryIsCancelled = false;
       retryDeviceAddressRef.current = deviceAddress;
+      setShowTetheringScreen(false);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -467,7 +483,7 @@ export const useBluetooth = () => {
         const errorData = await response.json().catch(() => ({}));
         
         if (errorData.error === "Failed to connect to device: exit status 4") {
-          startNetworkPolling(deviceAddress);
+          setShowTetheringScreen(true);
           
           const retryConnection = () => {
             if (retryIsCancelled) return;
@@ -481,6 +497,7 @@ export const useBluetooth = () => {
               if (retryResponse.ok) {
                 localStorage.setItem('lastConnectedBluetoothDevice', deviceAddress);
                 fetchDevices(true);
+                startNetworkPolling(deviceAddress);
                 retryIsCancelled = true;
               } else {
                 if (!retryIsCancelled) {
@@ -500,7 +517,7 @@ export const useBluetooth = () => {
           const timeout = setTimeout(retryConnection, 5000);
           setRetryTimeoutRef(timeout);
           
-          throw new Error(errorData.error);
+          return false;
         }
         throw new Error(errorData.error || 'Failed to connect device');
       }
@@ -520,6 +537,12 @@ export const useBluetooth = () => {
 
   const disconnectDevice = useCallback(async (address) => {
     try {
+      stopNetworkPolling();
+      stopRetrying();
+      setShowTetheringScreen(false);
+      retryIsCancelled = true;
+      isNetworkPollingActive = false;
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -533,20 +556,27 @@ export const useBluetooth = () => {
       if (!response.ok) throw new Error('Failed to disconnect device');
 
       localStorage.removeItem('lastConnectedBluetoothDevice');
+      
+      setTimeout(() => {
+        stopNetworkPolling();
+        stopRetrying();
+        setShowTetheringScreen(false);
+      }, 100);
+      
       await fetchDevices(true);
       return true;
     } catch (error) {
       console.error('Error disconnecting:', error);
       return false;
     }
-  }, [fetchDevices]);
+  }, [fetchDevices, stopNetworkPolling, stopRetrying]);
 
   const forgetDevice = useCallback(async (deviceAddress) => {
     try {
       setLoading(true);
       stopNetworkPolling();
       stopRetrying();
-      setShowNetworkPrompt(false);
+      setShowTetheringScreen(false);
       retryDeviceAddressRef.current = null;
       
       const controller = new AbortController();
@@ -588,13 +618,13 @@ export const useBluetooth = () => {
         setPairingRequest(null);
         setConnectedDevices(prev => [...prev, data.payload.device]);
         setLastConnectedDevice(data.payload.device);
-        setShowNetworkPrompt(true);
+        setShowTetheringScreen(true);
         localStorage.setItem('lastConnectedBluetoothDevice', data.payload.device.address);
         startNetworkPolling(data.payload.device.address);
         break;
 
       case 'bluetooth/connect':
-        setShowNetworkPrompt(true);
+        setShowTetheringScreen(true);
         startNetworkPolling(data.payload.address);
         break;
 
@@ -603,20 +633,23 @@ export const useBluetooth = () => {
           prev.filter(device => device.address !== data.payload.address)
         );
         if (lastConnectedDevice?.address === data.payload.address) {
-          setShowNetworkPrompt(false);
+          setShowTetheringScreen(false);
           setLastConnectedDevice(null);
           stopNetworkPolling();
+          stopRetrying();
         }
         break;
 
       case 'bluetooth/network/disconnect':
-        setShowNetworkPrompt(true);
+        if (!retryIsCancelled) {
+          setShowTetheringScreen(true);
+        }
         break;
 
       default:
         break;
     }
-  }, [lastConnectedDevice, stopNetworkPolling, startNetworkPolling]);
+  }, [lastConnectedDevice, stopNetworkPolling, startNetworkPolling, stopRetrying]);
 
   const startDiscovery = useCallback(async () => {
     if (discoveryActive.current || isInitializingDiscovery) {
@@ -746,7 +779,7 @@ export const useBluetooth = () => {
     pairingRequest,
     connectedDevices,
     isConnecting,
-    showNetworkPrompt,
+    showTetheringScreen,
     lastConnectedDevice,
     acceptPairing,
     denyPairing,
@@ -760,4 +793,4 @@ export const useBluetooth = () => {
     wsConnected,
     stopRetrying
   };
-}; 
+};

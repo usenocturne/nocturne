@@ -273,7 +273,7 @@ function App() {
   const {
     pairingRequest,
     isConnecting,
-    showNetworkPrompt,
+    showTetheringScreen,
     lastConnectedDevice,
     acceptPairing,
     denyPairing,
@@ -391,10 +391,10 @@ function App() {
   }, [isConnected, setDiscoverable]);
 
   useEffect(() => {
-    if (showNetworkPrompt) {
+    if (showTetheringScreen) {
       enableNetworking();
     }
-  }, [showNetworkPrompt, enableNetworking]);
+  }, [showTetheringScreen, enableNetworking]);
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.images?.[0]?.url) {
@@ -559,7 +559,7 @@ function App() {
                           onReject={denyPairing}
                         />
                       )}
-                      {showNetworkPrompt && !isConnected && !isFlashing && (
+                      {showTetheringScreen && !isConnected && !isFlashing && (
                         <EnableTetheringScreen
                           key={`tethering-${Date.now()}-${Math.random()}`}
                           deviceType={lastConnectedDevice?.name}
