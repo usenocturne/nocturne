@@ -313,6 +313,7 @@ export const useBluetooth = () => {
   const [networkStartRef, setNetworkStartRef] = useState(null);
   const [networkPollRef, setNetworkPollRef] = useState(null);
   const [retryTimeoutRef, setRetryTimeoutRef] = useState(null);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
   const isReconnecting = useRef(false);
   const listenerIdRef = useRef(null);
@@ -320,6 +321,83 @@ export const useBluetooth = () => {
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef(null);
   const retryDeviceAddressRef = useRef(null);
+
+  const MAX_RECONNECT_ATTEMPTS = 5;
+  const RECONNECT_INTERVAL = 3000;
+
+  const cleanupReconnectTimer = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+  }, []);
+
+  const attemptReconnect = useCallback(async () => {
+    const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
+    if (!lastDeviceAddress || reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+      cleanupReconnectTimer();
+      reconnectAttemptsRef.current = 0;
+      setReconnectAttempt(0);
+      return;
+    }
+
+    try {
+      const devicesResponse = await fetch(`${API_BASE}/bluetooth/devices`, { 
+        signal: AbortSignal.timeout(5000) 
+      });
+      const devices = await devicesResponse.json();
+      
+      const isAlreadyConnected = devices.some(device => 
+        device.address === lastDeviceAddress && device.connected
+      );
+      
+      if (isAlreadyConnected) {
+        cleanupReconnectTimer();
+        reconnectAttemptsRef.current = 0;
+        setReconnectAttempt(0);
+        return;
+      }
+
+      reconnectAttemptsRef.current++;
+      setReconnectAttempt(reconnectAttemptsRef.current);
+
+      await fetch(`${API_BASE}/bluetooth/connect/${lastDeviceAddress}`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        reconnectTimeoutRef.current = setTimeout(attemptReconnect, RECONNECT_INTERVAL);
+      }
+    } catch (error) {
+      console.error('Reconnect attempt failed:', error);
+      reconnectAttemptsRef.current++;
+      setReconnectAttempt(reconnectAttemptsRef.current);
+      
+      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        reconnectTimeoutRef.current = setTimeout(attemptReconnect, RECONNECT_INTERVAL);
+      }
+    }
+  }, [cleanupReconnectTimer]);
+
+  useEffect(() => {
+    const handleConnectionLost = () => {
+      reconnectAttemptsRef.current = 0;
+      setReconnectAttempt(0);
+      attemptReconnect();
+    };
+
+    const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
+    if (lastDeviceAddress) {
+      handleConnectionLost();
+    }
+
+    return () => {
+      cleanupReconnectTimer();
+      reconnectAttemptsRef.current = 0;
+      setReconnectAttempt(0);
+    };
+  }, [attemptReconnect, cleanupReconnectTimer]);
 
   const stopNetworkPolling = useCallback(() => {
     isNetworkPollingActive = false;
@@ -794,6 +872,7 @@ export const useBluetooth = () => {
     forgetDevice,
     enableNetworking,
     wsConnected,
-    stopRetrying
+    stopRetrying,
+    reconnectAttempt
   };
 };

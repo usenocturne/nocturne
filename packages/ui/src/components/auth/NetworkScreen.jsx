@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useGradientState } from "../../hooks/useGradientState";
+import { useBluetooth } from "../../hooks/useNocturned";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import {
   ChevronLeftIcon,
@@ -16,6 +17,45 @@ const NetworkScreen = () => {
   const [showSubpage, setShowSubpage] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [activeSubItem, setActiveSubItem] = React.useState(null);
+  const lastDeviceNameRef = React.useRef('');
+  const { reconnectAttempt } = useBluetooth();
+
+  useEffect(() => {
+    const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
+    if (lastDeviceAddress) {
+      fetch('http://localhost:5000/bluetooth/devices')
+        .then(res => res.json())
+        .then(devices => {
+          const device = devices.find(d => d.address === lastDeviceAddress);
+          if (device) {
+            lastDeviceNameRef.current = device.name || device.alias;
+          }
+        })
+        .catch(console.error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleReconnectAttempt = (event) => {
+      setReconnectAttempt(event.detail.attempt);
+    };
+
+    window.addEventListener('bluetoothReconnectAttempt', handleReconnectAttempt);
+    return () => {
+      window.removeEventListener('bluetoothReconnectAttempt', handleReconnectAttempt);
+    };
+  }, []);
+
+  useEffect(() => {
+    const cleanup = () => {
+      setReconnectAttempt(0);
+    };
+    window.addEventListener('online', cleanup);
+
+    return () => {
+      window.removeEventListener('online', cleanup);
+    };
+  }, []);
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100"
@@ -181,9 +221,17 @@ const NetworkScreen = () => {
                   <h2 className="text-5xl text-white tracking-tight font-semibold w-[24rem]">
                     Connection Lost
                   </h2>
-                  <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                    Connect to "Nocturne" in your phone's Bluetooth settings.
-                  </p>
+                  {lastDeviceNameRef.current ? (
+                    <div className="space-y-2">
+                      <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
+                        Attempting to reconnect to "{lastDeviceNameRef.current}"...
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
+                      Connect to "Nocturne" in your phone's Bluetooth settings.
+                    </p>
+                  )}
 
                   <button
                     onClick={openNetworkSettings}
