@@ -3,6 +3,7 @@ import { useAuth } from "./useAuth";
 import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
 import { usePlaybackProgress } from "./usePlaybackProgress";
 import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
+import { networkAwareRequest } from "../utils/networkAwareRequest";
 
 export function useSpotifyData(activeSection) {
   const {
@@ -120,13 +121,12 @@ export function useSpotifyData(activeSection) {
     try {
       setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
 
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/player/recently-played?limit=50",
-        {
+      const response = await networkAwareRequest(
+        () => fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", {
           headers: {
             Authorization: `Bearer ${effectiveToken}`,
           },
-        }
+        })
       );
 
       if (!response.ok) {
@@ -171,13 +171,12 @@ export function useSpotifyData(activeSection) {
     try {
       setIsLoading((prev) => ({ ...prev, userPlaylists: true }));
 
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/playlists?limit=50",
-        {
+      const response = await networkAwareRequest(
+        () => fetch("https://api.spotify.com/v1/me/playlists?limit=50", {
           headers: {
             Authorization: `Bearer ${effectiveToken}`,
           },
-        }
+        })
       );
 
       if (!response.ok) {
@@ -203,13 +202,12 @@ export function useSpotifyData(activeSection) {
     try {
       setIsLoading((prev) => ({ ...prev, topArtists: true }));
 
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/top/artists?limit=50",
-        {
+      const response = await networkAwareRequest(
+        () => fetch("https://api.spotify.com/v1/me/top/artists?limit=50", {
           headers: {
             Authorization: `Bearer ${effectiveToken}`,
           },
-        }
+        })
       );
 
       if (!response.ok) {
@@ -235,13 +233,12 @@ export function useSpotifyData(activeSection) {
     try {
       setIsLoading((prev) => ({ ...prev, likedSongs: true }));
 
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/tracks?limit=1",
-        {
+      const response = await networkAwareRequest(
+        () => fetch("https://api.spotify.com/v1/me/tracks?limit=1", {
           headers: {
             Authorization: `Bearer ${effectiveToken}`,
           },
-        }
+        })
       );
 
       if (!response.ok) {
@@ -277,24 +274,26 @@ export function useSpotifyData(activeSection) {
         recentlyPlayed,
         topArtists,
       ] = await Promise.all([
-        fetch(
-          "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term",
-          {
+        networkAwareRequest(() => 
+          fetch("https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term", {
             headers: { Authorization: `Bearer ${effectiveToken}` },
-          }
+          })
         ).then((res) => (res.ok ? res.json() : { items: [] })),
-        fetch(
-          "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=long_term",
-          {
+        networkAwareRequest(() => 
+          fetch("https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=long_term", {
             headers: { Authorization: `Bearer ${effectiveToken}` },
-          }
+          })
         ).then((res) => (res.ok ? res.json() : { items: [] })),
-        fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", {
-          headers: { Authorization: `Bearer ${effectiveToken}` },
-        }).then((res) => (res.ok ? res.json() : { items: [] })),
-        fetch("https://api.spotify.com/v1/me/top/artists?limit=10", {
-          headers: { Authorization: `Bearer ${effectiveToken}` },
-        }).then((res) => (res.ok ? res.json() : { items: [] })),
+        networkAwareRequest(() => 
+          fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", {
+            headers: { Authorization: `Bearer ${effectiveToken}` },
+          })
+        ).then((res) => (res.ok ? res.json() : { items: [] })),
+        networkAwareRequest(() => 
+          fetch("https://api.spotify.com/v1/me/top/artists?limit=10", {
+            headers: { Authorization: `Bearer ${effectiveToken}` },
+          })
+        ).then((res) => (res.ok ? res.json() : { items: [] })),
       ]);
 
       const mixes = [];
@@ -461,13 +460,15 @@ export function useSpotifyData(activeSection) {
         const artistsToFetch = topArtists.items.slice(0, 5);
 
         const artistTracksPromises = artistsToFetch.map((artist) =>
-          fetch(
-            `https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=US`,
-            {
-              headers: {
-                Authorization: `Bearer ${effectiveToken}`,
-              },
-            }
+          networkAwareRequest(() => 
+            fetch(
+              `https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=US`,
+              {
+                headers: {
+                  Authorization: `Bearer ${effectiveToken}`,
+                },
+              }
+            )
           ).then((res) => (res.ok ? res.json() : { tracks: [] }))
         );
 

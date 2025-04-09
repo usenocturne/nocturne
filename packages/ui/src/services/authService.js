@@ -1,8 +1,10 @@
+import { networkAwareRequest } from '../utils/networkAwareRequest';
+
 const SPOTIFY_CLIENT_ID = "65b708073fc0480ea92a077233ca87bd";
 
 export async function oauthAuthorize() {
   try {
-    const response = await fetch(
+    const response = await networkAwareRequest(async () => fetch(
       "https://accounts.spotify.com/oauth2/device/authorize",
       {
         method: "POST",
@@ -20,7 +22,7 @@ export async function oauthAuthorize() {
             "app-remote-control,playlist-modify,playlist-modify-private,playlist-modify-public,playlist-read,playlist-read-collaborative,playlist-read-private,streaming,ugc-image-upload,user-follow-modify,user-follow-read,user-library-modify,user-library-read,user-modify,user-modify-playback-state,user-modify-private,user-personalized,user-read-birthdate,user-read-currently-playing,user-read-email,user-read-play-history,user-read-playback-position,user-read-playback-state,user-read-private,user-read-recently-played,user-top-read",
         }).toString(),
       }
-    );
+    ));
 
     if (!response.ok) {
       throw new Error("Failed to authorize oauth2 device");
@@ -35,7 +37,7 @@ export async function oauthAuthorize() {
 
 export async function checkAuthStatus(deviceCode) {
   try {
-    const response = await fetch("https://accounts.spotify.com/api/token", {
+    const response = await networkAwareRequest(async () => fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
@@ -45,7 +47,7 @@ export async function checkAuthStatus(deviceCode) {
         device_code: deviceCode,
         grant_type: "urn:ietf:params:oauth:grant-type:device_code",
       }).toString(),
-    });
+    }));
 
     if (response.status === 400) {
       const errorData = await response.json();
@@ -72,7 +74,7 @@ export async function checkAuthStatus(deviceCode) {
 
 export async function refreshAccessToken(refreshToken) {
   try {
-    const response = await fetch("https://accounts.spotify.com/api/token", {
+    const response = await networkAwareRequest(async () => fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
@@ -82,7 +84,7 @@ export async function refreshAccessToken(refreshToken) {
         refresh_token: refreshToken,
         client_id: SPOTIFY_CLIENT_ID,
       }).toString(),
-    });
+    }));
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

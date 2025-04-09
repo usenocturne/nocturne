@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { networkAwareRequest, waitForNetwork } from '../utils/networkAwareRequest';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -13,12 +14,11 @@ let isDevicesFetching = false;
 let retryIsCancelled = false;
 let isNetworkPollingActive = false;
 
-const setupGlobalWebSocket = () => {
+const setupGlobalWebSocket = async () => {
   if (globalWsRef) return;
 
   try {
     console.log('Connecting to WebSocket...');
-
     const socket = new WebSocket(`ws://${API_BASE.replace('http://', '')}/ws`);
     globalWsRef = socket;
 
@@ -103,7 +103,10 @@ export const useNocturned = () => {
         options.body = JSON.stringify(body);
       }
 
-      const response = await fetch(url, options);
+      const response = await networkAwareRequest(
+        () => fetch(url, options),
+        { skipNetworkCheck: true }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

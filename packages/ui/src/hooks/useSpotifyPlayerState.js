@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { networkAwareRequest } from '../utils/networkAwareRequest';
 
 let globalWebSocket = null;
 let globalConnectionId = null;
@@ -89,13 +90,12 @@ export function useSpotifyPlayerState(accessToken) {
       pendingFetch = true;
       setIsLoading(true);
 
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/player?type=episode,track",
-        {
+      const response = await networkAwareRequest(() => 
+        fetch("https://api.spotify.com/v1/me/player?type=episode,track", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
+        })
       );
 
       if (response.status === 204) {
@@ -180,7 +180,7 @@ export function useSpotifyPlayerState(accessToken) {
       connectionIdRef.current = globalConnectionId;
 
       if (!initialStateLoadedRef.current) {
-        fetchCurrentPlayback();
+        networkAwareRequest(() => fetchCurrentPlayback());
       }
       return;
     }
@@ -209,46 +209,47 @@ export function useSpotifyPlayerState(accessToken) {
     }
 
     try {
-      globalWebSocket = new WebSocket(
-        `wss://dealer.spotify.com/?access_token=${accessToken}`
-      );
-      webSocketRef.current = globalWebSocket;
+      networkAwareRequest(async () => {
+        globalWebSocket = new WebSocket(
+          `wss://dealer.spotify.com/?access_token=${accessToken}`
+        );
+        webSocketRef.current = globalWebSocket;
 
-      globalWebSocket.onopen = () => {
-        isConnecting = false;
-        connectionErrors = 0;
+        globalWebSocket.onopen = () => {
+          isConnecting = false;
+          connectionErrors = 0;
 
-        const pingIntervalId = setInterval(() => {
-          if (
-            globalWebSocket &&
-            globalWebSocket.readyState === WebSocket.OPEN
-          ) {
-            globalWebSocket.send(JSON.stringify({ type: "ping" }));
-          } else {
-            clearInterval(pingIntervalId);
-          }
-        }, 15000);
-      };
+          const pingIntervalId = setInterval(() => {
+            if (
+              globalWebSocket &&
+              globalWebSocket.readyState === WebSocket.OPEN
+            ) {
+              globalWebSocket.send(JSON.stringify({ type: "ping" }));
+            } else {
+              clearInterval(pingIntervalId);
+            }
+          }, 15000);
+        };
 
-      globalWebSocket.onmessage = async (event) => {
-        const message = JSON.parse(event.data);
+        globalWebSocket.onmessage = async (event) => {
+          const message = JSON.parse(event.data);
 
-        if ("headers" in message && message.headers["Spotify-Connection-Id"]) {
-          globalConnectionId = message.headers["Spotify-Connection-Id"];
-          connectionIdRef.current = globalConnectionId;
+          if ("headers" in message && message.headers["Spotify-Connection-Id"]) {
+            globalConnectionId = message.headers["Spotify-Connection-Id"];
+            connectionIdRef.current = globalConnectionId;            try {
+              const url = `https://api.spotify.com/v1/me/notifications/player?connection_id=${encodeURIComponent(
+                globalConnectionId
+              )}`;
 
-          try {
-            const url = `https://api.spotify.com/v1/me/notifications/player?connection_id=${encodeURIComponent(
-              globalConnectionId
-            )}`;
-
-            await fetch(url, {
-              method: "PUT",
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
-              },
-            });
+              await networkAwareRequest(() => 
+                fetch(url, {
+                  method: "PUT",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                })
+              );
 
             if (!initialStateLoadedRef.current) {
               await fetchCurrentPlayback();
@@ -276,34 +277,33 @@ export function useSpotifyPlayerState(accessToken) {
         }
       };
 
-      globalWebSocket.onerror = () => {
-        isConnecting = false;
-        connectionErrors += 1;
+        globalWebSocket.onerror = () => {
+          isConnecting = false;
+          connectionErrors += 1;
 
-        if (connectionErrors > 3) {
-          cleanupWebSocket();
-        }
-      };
+          if (connectionErrors > 3) {
+            cleanupWebSocket();
+          }
+        };
 
-      globalWebSocket.onclose = () => {
-        isConnecting = false;
+        globalWebSocket.onclose = () => {
+          isConnecting = false;
 
-        if (connectionErrors <= 3 && connectionCount > 0) {
-          const backoffTime = Math.min(
-            1000 * Math.pow(2, connectionErrors),
-            30000
-          );
+          if (connectionErrors <= 3 && connectionCount > 0) {
+            const backoffTime = Math.min(
+              1000 * Math.pow(2, connectionErrors),
+              30000
+            );
 
-          retryTimeout = setTimeout(() => {
             if (!initialStateLoadedRef.current) {
-              fetchCurrentPlayback();
+              retryTimeout = setTimeout(() => {
+                networkAwareRequest(() => fetchCurrentPlayback());
+                connectWebSocket();
+              }, backoffTime);
             }
-            connectWebSocket();
-          }, backoffTime);
-        } else if (!initialStateLoadedRef.current) {
-          fetchCurrentPlayback();
-        }
-      };
+          }
+        };
+      });
     } catch (error) {
       isConnecting = false;
       connectionErrors += 1;

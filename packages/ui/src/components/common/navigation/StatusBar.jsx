@@ -4,6 +4,7 @@ import { useSettings } from "../../../contexts/SettingsContext";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
 import { useBluetooth } from "../../../hooks/useNocturned";
 import { useConnector } from "../../../contexts/ConnectorContext";
+import { networkAwareRequest } from '../../../utils/networkAwareRequest';
 
 export default function StatusBar() {
   const [currentTime, setCurrentTime] = useState("");
@@ -19,7 +20,10 @@ export default function StatusBar() {
   useEffect(() => {
     const fetchTimezone = async () => {
       try {
-        const response = await fetch("https://api.usenocturne.com/v1/timezone");
+        const response = await networkAwareRequest(
+          () => fetch("https://api.usenocturne.com/v1/timezone")
+        );
+        
         if (!response.ok) {
           console.error("Failed to fetch timezone from API");
           return;
