@@ -292,6 +292,8 @@ export function useSpotifyPlayerControls(accessToken) {
           isVolumeProcessingRef.current = false;
           if (volumeQueueRef.current.length > 0) {
             processVolumeQueue();
+          } else {
+            setIsAdjustingVolume(false);
           }
         }, processingDelay);
       }
