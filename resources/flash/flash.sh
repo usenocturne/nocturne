@@ -1,0 +1,57 @@
+#!/usr/bin/env sh
+
+set -e
+
+if [ ! -f nocturne_image.zip ] || [ ! -f nocturne_image.zip.sha256 ]; then
+  echo "nocturne_image.zip or nocturne_image.zip.sha256 is missing"
+  exit 1
+fi
+
+if [ ! -f ./flashthing-cli ]; then
+  ARCH=$(uname -m)
+  if [ "$ARCH" = "x86_64" ]; then
+    echo "Downloading flashthing-cli-linux-x86_64"
+    URL="https://github.com/JoeyEamigh/flashthing/releases/latest/download/flashthing-cli-linux-x86_64"
+  elif [ "$ARCH" = "aarch64" ]; then
+    echo "Downloading flashthing-cli-linux-aarch64"
+    URL="https://github.com/JoeyEamigh/flashthing/releases/latest/download/flashthing-cli-linux-aarch64"
+  else
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+  fi
+
+  if command -v wget > /dev/null 2>&1; then
+    wget -O flashthing-cli "$URL"
+  elif command -v curl > /dev/null 2>&1; then
+    curl -Lo flashthing-cli "$URL"
+  else
+    echo "wget or curl is installed. Please install one to proceed."
+    exit 1
+  fi
+
+  if [ -f ./flashthing-cli ]; then
+    echo "Download complete"
+  else
+    echo "Failed to download flashthing-cli"
+    exit 1
+  fi
+
+  chmod +x flashthing-cli
+fi
+
+if [ -z "$1" ]; then
+  echo "This script will flash Nocturne onto your Car Thing. Continue? (y/n)"
+  read -r answer
+  if [ "$answer" != "y" ]; then
+    echo "Aborting."
+    exit 1
+  fi
+fi
+
+echo "Verifying checksum..."
+if ! sha256sum -c nocturne_image.zip.sha256; then
+  echo "Checksum verification failed"
+  exit 1
+fi
+
+./flashthing-cli ./nocturne_image.zip
