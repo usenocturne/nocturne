@@ -17,8 +17,9 @@ const NetworkScreen = () => {
   const [showSubpage, setShowSubpage] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [activeSubItem, setActiveSubItem] = React.useState(null);
+  const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
   const lastDeviceNameRef = React.useRef('');
-  const { reconnectAttempt } = useBluetooth();
+  const { reconnectAttempt: bluetoothReconnectAttempt } = useBluetooth();
 
   useEffect(() => {
     const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
@@ -56,6 +57,9 @@ const NetworkScreen = () => {
       window.removeEventListener('online', cleanup);
     };
   }, []);
+
+  const MAX_RECONNECT_ATTEMPTS = 5;
+  const showReconnectMessage = lastDeviceNameRef.current && bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100"
@@ -221,7 +225,7 @@ const NetworkScreen = () => {
                   <h2 className="text-5xl text-white tracking-tight font-semibold w-[24rem]">
                     Connection Lost
                   </h2>
-                  {lastDeviceNameRef.current ? (
+                  {showReconnectMessage ? (
                     <div className="space-y-2">
                       <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
                         Attempting to reconnect to "{lastDeviceNameRef.current}"...
