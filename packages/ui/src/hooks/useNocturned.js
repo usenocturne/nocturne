@@ -718,12 +718,14 @@ export const useBluetooth = () => {
           setLastConnectedDevice(null);
           stopNetworkPolling();
           stopRetrying();
+          window.dispatchEvent(new Event('offline'));
         }
         break;
 
       case 'bluetooth/network/disconnect':
         if (!retryIsCancelled) {
           setShowTetheringScreen(true);
+          window.dispatchEvent(new Event('offline'));
         }
         break;
 

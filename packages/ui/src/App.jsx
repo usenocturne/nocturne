@@ -550,7 +550,7 @@ function App() {
 
                     <div className="relative z-10">
                       {content}
-                      {!isConnected && showNoNetwork && !isFlashing && <NetworkScreen />}
+                      {(!isConnected || showNoNetwork) && !isFlashing && !showTetheringScreen && <NetworkScreen />}
                       {pairingRequest && (
                         <PairingScreen
                           pin={pairingRequest.pairingKey}
