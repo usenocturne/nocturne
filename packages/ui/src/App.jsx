@@ -345,6 +345,22 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
+      const handleNetworkRestored = () => {
+        refreshPlaybackState(true);
+      };
+
+      window.addEventListener('online', handleNetworkRestored);
+      window.addEventListener('networkRestored', handleNetworkRestored);
+      
+      return () => {
+        window.removeEventListener('online', handleNetworkRestored);
+        window.removeEventListener('networkRestored', handleNetworkRestored);
+      };
+    }
+  }, [isAuthenticated, refreshPlaybackState]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
       const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
       setShowTutorial(!hasSeenTutorial);
     }

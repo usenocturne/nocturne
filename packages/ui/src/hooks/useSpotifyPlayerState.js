@@ -315,8 +315,20 @@ export function useSpotifyPlayerState(accessToken) {
       connectionErrors = 0;
       initialStateLoadedRef.current = false;
 
+      const handleNetworkRestored = () => {
+        if (accessToken) {
+          fetchCurrentPlayback(true);
+        }
+      };
+
+      window.addEventListener('networkRestored', handleNetworkRestored);
       fetchCurrentPlayback();
       connectWebSocket();
+
+      return () => {
+        window.removeEventListener('networkRestored', handleNetworkRestored);
+        cleanupWebSocket();
+      };
     }
 
     return () => {

@@ -7,9 +7,17 @@ function isLocalRequest(url) {
 }
 
 export async function waitForNetwork(checkIntervalMs = 1000) {
+  let wasOffline = false;
+  
   while (true) {
     const status = await checkNetworkConnectivity();
-    if (status.isConnected) return true;
+    if (status.isConnected) {
+      if (wasOffline) {
+        window.dispatchEvent(new CustomEvent('networkRestored'));
+      }
+      return true;
+    }
+    wasOffline = true;
     await new Promise(resolve => setTimeout(resolve, checkIntervalMs));
   }
 }
