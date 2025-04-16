@@ -85,4 +85,4 @@ run_stage_scripts() {
 for _stage in ${STAGES}; do
   run_stage_scripts "$_stage"
 done
-color_echo ">> Finished <<"
+echo ">> Finished <<"
