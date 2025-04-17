@@ -6,6 +6,8 @@ import { useBluetooth } from "../../../hooks/useNocturned";
 import { useConnector } from "../../../contexts/ConnectorContext";
 import { networkAwareRequest } from '../../../utils/networkAwareRequest';
 
+let cachedTimezone = null;
+
 export default function StatusBar() {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
@@ -19,6 +21,11 @@ export default function StatusBar() {
 
   useEffect(() => {
     const fetchTimezone = async () => {
+      if (cachedTimezone) {
+        setTimezone(cachedTimezone);
+        return;
+      }
+
       try {
         const response = await networkAwareRequest(
           () => fetch("https://api.usenocturne.com/v1/timezone")
@@ -28,9 +35,10 @@ export default function StatusBar() {
           console.error("Failed to fetch timezone from API");
           return;
         }
-        
+
         const data = await response.json();
         if (data.timezone) {
+          cachedTimezone = data.timezone;
           setTimezone(data.timezone);
           console.log("Timezone set to:", data.timezone);
         }
@@ -38,7 +46,7 @@ export default function StatusBar() {
         console.error("Error fetching timezone:", error);
       }
     };
-    
+
     fetchTimezone();
   }, []);
 
@@ -63,21 +71,21 @@ export default function StatusBar() {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      
+
       if (timezone) {
         try {
           const options = { timeZone: timezone, hour: 'numeric', minute: 'numeric', hour12: !settings.use24HourTime };
           const formatter = new Intl.DateTimeFormat('en-US', options);
           const timeString = formatter.format(now);
-          
+
           let parts = timeString.split(':');
           let hours = parts[0];
           let minutes = parts[1];
-          
+
           if (!settings.use24HourTime) {
             minutes = minutes.split(' ')[0];
           }
-          
+
           setCurrentTime(`${hours}:${minutes}`);
           setIsFourDigits(hours.length >= 2);
           return;
@@ -85,7 +93,7 @@ export default function StatusBar() {
           console.error("Error formatting time with timezone:", error);
         }
       }
-      
+
       let hours;
       if (settings.use24HourTime) {
         hours = now.getHours().toString().padStart(2, "0");
@@ -117,7 +125,7 @@ export default function StatusBar() {
 
   useEffect(() => {
     let deviceAddress = null;
-    
+
     if (lastConnectedDevice && lastConnectedDevice.address) {
       deviceAddress = lastConnectedDevice.address;
     } else if (connectedDevices && connectedDevices.length > 0) {
