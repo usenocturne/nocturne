@@ -60,29 +60,6 @@ export default function StatusBar() {
     }
   };
 
-  const fetchBatteryInfo = async (deviceAddress) => {
-    if (!deviceAddress) return;
-    
-    try {
-      const response = await fetch(`http://localhost:5000/bluetooth/info/${deviceAddress}`);
-      if (!response.ok) {
-        console.error("Failed to fetch battery info");
-        return;
-      }
-      
-      const deviceInfo = await response.json();
-      
-      if (deviceInfo.connected && deviceInfo.batteryPercentage !== undefined) {
-        setBatteryPercentage(deviceInfo.batteryPercentage);
-        setIsBluetoothConnected(true);
-      } else if (!deviceInfo.connected) {
-        setIsBluetoothConnected(false);
-      }
-    } catch (error) {
-      console.error("Error fetching battery info:", error);
-    }
-  };
-
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -146,18 +123,7 @@ export default function StatusBar() {
     } else if (connectedDevices && connectedDevices.length > 0) {
       deviceAddress = connectedDevices[0].address;
     }
-    
-    if (deviceAddress) {
-      fetchBatteryInfo(deviceAddress);
-      
-      const interval = setInterval(() => {
-        fetchBatteryInfo(deviceAddress);
-      }, 2 * 60 * 1000);
-      
-      return () => clearInterval(interval);
-    } else {
-      setIsBluetoothConnected(false);
-    }
+
   }, [lastConnectedDevice, connectedDevices]);
 
   const shouldRenderStatusBar = isBluetoothConnected || (isConnectorAvailable && currentNetwork);
@@ -191,18 +157,6 @@ export default function StatusBar() {
               }}
             />
           )
-        )}
-        {showBluetoothInfo && (
-          <BatteryIcon
-            className="w-10 h-10"
-            percentage={batteryPercentage}
-            style={{
-              margin: 0,
-              padding: 0,
-              display: "block",
-              transform: "translateY(-10px)",
-            }}
-          />
         )}
       </div>
     </div>
