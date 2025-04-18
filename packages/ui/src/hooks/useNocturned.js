@@ -809,8 +809,10 @@ export const useBluetooth = () => {
       clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error('Failed to accept pairing');
+      setPairingRequest(null);
     } catch (error) {
       console.error('Error accepting pair:', error);
+      setPairingRequest(null);
     } finally {
       setIsConnecting(false);
     }
@@ -834,6 +836,7 @@ export const useBluetooth = () => {
       setPairingRequest(null);
     } catch (error) {
       console.error('Error denying pair:', error);
+      setPairingRequest(null);
     }
   }, [pairingRequest]);
 
