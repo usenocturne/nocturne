@@ -2,15 +2,15 @@
 
 Disclaimer: Bricking the Car Thing is nearly impossible, but the risk is always there when flashing custom partition tables.
 
-Use https://github.com/JoeyEamigh/flashthing to flash the zip to your Car Thing: 
-flashthing-cli /path/to/nocturne_installer.zip
+Use "sudo ./flash.sh" (Linux/macOS) or double click flash.bat (Windows) to flash Nocturne to your Car Thing.
 
 ---
 
 To Uninstall:
-flashthing-cli --unbrick
-
-Then, use a tool of your choice (Terbium or FlashThing recommended) to flash stock or a different firmware.
+Use a tool of your choice to flash stock or a different firmware.
+If it's failing, use:
+Windows: .\flashthing-cli.exe --unbrick
+Linux/macOS: sudo ./flashthing-cli --unbrick
 
 ---
 
