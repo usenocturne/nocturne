@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect } from "react";
 import { useGradientState } from "../../hooks/useGradientState";
 import { NocturneIcon } from "../common/icons";
 
@@ -9,10 +9,16 @@ const PairingScreen = ({ onAccept, onReject, pin, isConnecting }) => {
     currentColor3,
     currentColor4,
     generateMeshGradient,
+    updateGradientColors,
   } = useGradientState();
+
+  useEffect(() => {
+    updateGradientColors(null, "auth");
+  }, [updateGradientColors]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 bg-black"></div>
       <div
         style={{
           backgroundImage: generateMeshGradient([
@@ -64,4 +70,4 @@ const PairingScreen = ({ onAccept, onReject, pin, isConnecting }) => {
   );
 };
 
-export default PairingScreen; 
+export default PairingScreen;

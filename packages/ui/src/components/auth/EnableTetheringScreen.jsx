@@ -11,13 +11,14 @@ const EnableTetheringScreen = ({ deviceType, message, onDismiss, onDismissRetry 
     currentColor3,
     currentColor4,
     generateMeshGradient,
+    updateGradientColors,
   } = useGradientState();
 
   useEffect(() => {
     setIsVisible(true);
-    
+    updateGradientColors(null, "auth");
     return () => {};
-  }, [deviceType]);
+  }, [deviceType, updateGradientColors]);
 
   const handleDismiss = () => {
     setIsVisible(false);
@@ -37,6 +38,7 @@ const EnableTetheringScreen = ({ deviceType, message, onDismiss, onDismissRetry 
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 bg-black"></div>
       <div
         style={{
           backgroundImage: generateMeshGradient([
@@ -77,4 +79,4 @@ const EnableTetheringScreen = ({ deviceType, message, onDismiss, onDismissRetry 
   );
 };
 
-export default EnableTetheringScreen; 
+export default EnableTetheringScreen;
