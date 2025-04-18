@@ -16,7 +16,7 @@ if [ ! -f ./flashthing-cli ]; then
       URL="https://github.com/JoeyEamigh/flashthing/releases/latest/download/flashthing-cli-macos-x86_64"
     elif [ "$ARCH" = "arm64" ]; then
       echo "Downloading flashthing-cli-macos-arm64"
-      URL="https://github.com/JoeyEamigh/flashthing/releases/latest/download/flashthing-cli-macos-arm64"
+      URL="https://github.com/JoeyEamigh/flashthing/releases/latest/download/flashthing-cli-macos-aarch64"
     else
       echo "Unsupported architecture: $ARCH"
       exit 1
