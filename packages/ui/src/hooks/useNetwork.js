@@ -8,7 +8,9 @@ export function useNetwork() {
   const [isConnected, setIsConnected] = useState(true);
   const [isChecking, setIsChecking] = useState(true);
   const [showNoNetwork, setShowNoNetwork] = useState(false);
+  const [showNetworkBanner, setShowNetworkBanner] = useState(false);
   const checkCountRef = useRef(0);
+  const consecutiveFailuresRef = useRef(0);
   const monitorCleanupRef = useRef(null);
 
   const checkNetwork = useCallback(async () => {
@@ -21,15 +23,30 @@ export function useNetwork() {
 
         if (response.isConnected) {
           checkCountRef.current = 0;
+          consecutiveFailuresRef.current = 0;
           setShowNoNetwork(false);
+          setShowNetworkBanner(false);
         } else {
           checkCountRef.current++;
+          consecutiveFailuresRef.current++;
+
+          if (consecutiveFailuresRef.current >= 3) {
+            setShowNetworkBanner(true);
+          }
+
           if (checkCountRef.current >= 2) {
             setShowNoNetwork(true);
           }
         }
       } else if (response.isConnected) {
         checkCountRef.current = 0;
+        consecutiveFailuresRef.current = 0;
+        setShowNetworkBanner(false);
+      } else {
+        consecutiveFailuresRef.current++;
+        if (consecutiveFailuresRef.current >= 3) {
+          setShowNetworkBanner(true);
+        }
       }
 
       return response.isConnected;
@@ -39,8 +56,19 @@ export function useNetwork() {
       if (isConnected) {
         setIsConnected(false);
         checkCountRef.current++;
+        consecutiveFailuresRef.current++;
+
+        if (consecutiveFailuresRef.current >= 3) {
+          setShowNetworkBanner(true);
+        }
+
         if (checkCountRef.current >= 2) {
           setShowNoNetwork(true);
+        }
+      } else {
+        consecutiveFailuresRef.current++;
+        if (consecutiveFailuresRef.current >= 3) {
+          setShowNetworkBanner(true);
         }
       }
 
@@ -50,6 +78,10 @@ export function useNetwork() {
     }
   }, [isConnected]);
 
+  const dismissNetworkBanner = useCallback(() => {
+    setShowNetworkBanner(false);
+  }, []);
+
   useEffect(() => {
     const initialCheckId = setTimeout(() => {
       checkNetwork();
@@ -58,11 +90,19 @@ export function useNetwork() {
     monitorCleanupRef.current = startNetworkMonitoring((connected) => {
       if (connected) {
         checkCountRef.current = 0;
+        consecutiveFailuresRef.current = 0;
         setIsConnected(true);
         setShowNoNetwork(false);
+        setShowNetworkBanner(false);
       } else {
         checkCountRef.current++;
+        consecutiveFailuresRef.current++;
         setIsConnected(false);
+
+        if (consecutiveFailuresRef.current >= 3) {
+          setShowNetworkBanner(true);
+        }
+
         if (checkCountRef.current >= 2) {
           setShowNoNetwork(true);
         }
@@ -84,6 +124,8 @@ export function useNetwork() {
     isConnected,
     isChecking,
     showNoNetwork,
+    showNetworkBanner,
+    dismissNetworkBanner,
     checkNetwork,
   };
 }

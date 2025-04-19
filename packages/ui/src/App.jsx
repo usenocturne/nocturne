@@ -12,6 +12,7 @@ import NetworkPasswordModal from "./components/common/modals/NetworkPasswordModa
 import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
 import SystemUpdateModal from "./components/common/modals/SystemUpdateModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
+import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { PlaybackProgressContext } from "./hooks/usePlaybackProgress";
@@ -26,12 +27,12 @@ import EnableTetheringScreen from "./components/auth/EnableTetheringScreen";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
-  setSelectedNetwork: () => { },
+  setSelectedNetwork: () => {},
 });
 
 export const ConnectorContext = React.createContext({
   showConnectorModal: false,
-  setShowConnectorModal: () => { },
+  setShowConnectorModal: () => {},
 });
 
 function useGlobalButtonMapping({
@@ -269,7 +270,14 @@ function App() {
     refreshData,
   } = useSpotifyData(activeSection);
 
-  const { isConnected, showNoNetwork, checkNetwork } = useNetwork();
+  const {
+    isConnected,
+    showNoNetwork,
+    showNetworkBanner,
+    dismissNetworkBanner,
+    checkNetwork,
+  } = useNetwork();
+
   const {
     pairingRequest,
     isConnecting,
@@ -280,16 +288,11 @@ function App() {
     setDiscoverable,
     disconnectDevice,
     enableNetworking,
-    stopRetrying
+    stopRetrying,
   } = useBluetooth();
 
-  const {
-    updateStatus,
-    progress,
-    isUpdating,
-    isError,
-    errorMessage
-  } = useSystemUpdate();
+  const { updateStatus, progress, isUpdating, isError, errorMessage } =
+    useSystemUpdate();
 
   const {
     currentColor1,
@@ -349,12 +352,12 @@ function App() {
         refreshPlaybackState(true);
       };
 
-      window.addEventListener('online', handleNetworkRestored);
-      window.addEventListener('networkRestored', handleNetworkRestored);
-      
+      window.addEventListener("online", handleNetworkRestored);
+      window.addEventListener("networkRestored", handleNetworkRestored);
+
       return () => {
-        window.removeEventListener('online', handleNetworkRestored);
-        window.removeEventListener('networkRestored', handleNetworkRestored);
+        window.removeEventListener("online", handleNetworkRestored);
+        window.removeEventListener("networkRestored", handleNetworkRestored);
       };
     }
   }, [isAuthenticated, refreshPlaybackState]);
@@ -479,7 +482,7 @@ function App() {
     }
   };
 
-  const isFlashing = isUpdating && updateStatus.stage === 'flash';
+  const isFlashing = isUpdating && updateStatus.stage === "flash";
 
   let content;
   if (authIsLoading) {
@@ -564,9 +567,16 @@ function App() {
                       className="absolute inset-0 bg-black"
                     />
 
+                    <NetworkBanner
+                      visible={showNetworkBanner}
+                      onClose={dismissNetworkBanner}
+                    />
+
                     <div className="relative z-10">
                       {content}
-                      {(!isConnected || showNoNetwork) && !isFlashing && !showTetheringScreen && <NetworkScreen />}
+                      {(!isConnected || showNoNetwork) &&
+                        !isFlashing &&
+                        !showTetheringScreen && <NetworkScreen />}
                       {pairingRequest && (
                         <PairingScreen
                           pin={pairingRequest.pairingKey}
@@ -579,7 +589,9 @@ function App() {
                         <EnableTetheringScreen
                           key={`tethering-${Date.now()}-${Math.random()}`}
                           deviceType={lastConnectedDevice?.name}
-                          message={`Please enable hotspot and Bluetooth tethering on ${lastConnectedDevice?.name || 'your device'} to continue.`}
+                          message={`Please enable hotspot and Bluetooth tethering on ${
+                            lastConnectedDevice?.name || "your device"
+                          } to continue.`}
                           onDismissRetry={() => {
                             stopRetrying();
                           }}
