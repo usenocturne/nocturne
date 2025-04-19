@@ -368,14 +368,14 @@ function App() {
 
   useEffect(() => {
     if (activeSection === "recents" && recentAlbums.length > 0) {
-      const firstAlbumImage = recentAlbums[0]?.images?.[0]?.url;
+      const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url;
       if (firstAlbumImage) {
         updateGradientColors(firstAlbumImage, "recents");
       }
     } else if (activeSection === "library" && userPlaylists.length > 0) {
       updateGradientColors(null, "library");
     } else if (activeSection === "artists" && topArtists.length > 0) {
-      const firstArtistImage = topArtists[0]?.images?.[0]?.url;
+      const firstArtistImage = topArtists[0]?.images?.[1]?.url;
       if (firstArtistImage) {
         updateGradientColors(firstArtistImage, "artists");
       }
@@ -384,7 +384,7 @@ function App() {
     } else if (activeSection === "settings") {
       updateGradientColors(null, "settings");
     } else if (activeSection === "nowPlaying" && currentlyPlayingAlbum) {
-      const albumImage = currentlyPlayingAlbum?.images?.[0]?.url;
+      const albumImage = currentlyPlayingAlbum?.images?.[1]?.url;
       if (albumImage) {
         updateGradientColors(albumImage, "nowPlaying");
       }
@@ -413,11 +413,11 @@ function App() {
   }, [showTetheringScreen, enableNetworking]);
 
   useEffect(() => {
-    if (currentlyPlayingAlbum?.images?.[0]?.url) {
+    if (currentlyPlayingAlbum?.images?.[1]?.url) {
       if (activeSection === "nowPlaying") {
-        updateGradientColors(currentlyPlayingAlbum.images[0].url, "nowPlaying");
+        updateGradientColors(currentlyPlayingAlbum.images[1].url, "nowPlaying");
       } else if (activeSection === "recents") {
-        updateGradientColors(currentlyPlayingAlbum.images[0].url, "recents");
+        updateGradientColors(currentlyPlayingAlbum.images[1].url, "recents");
       }
     }
   }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
@@ -456,13 +456,13 @@ function App() {
       activeSection === "nowPlaying" &&
       currentlyPlayingAlbum?.images?.[0]?.url
     ) {
-      updateGradientColors(currentlyPlayingAlbum.images[0].url, "nowPlaying");
+      updateGradientColors(currentlyPlayingAlbum.images[1].url, "nowPlaying");
     } else if (activeSection === "recents" && recentAlbums.length > 0) {
-      updateGradientColors(recentAlbums[0]?.images?.[0]?.url, "recents");
+      updateGradientColors(recentAlbums[0]?.images?.[1]?.url, "recents");
     } else if (activeSection === "library" && userPlaylists.length > 0) {
       updateGradientColors(null, "library");
     } else if (activeSection === "artists" && topArtists.length > 0) {
-      updateGradientColors(topArtists[0]?.images?.[0]?.url, "artists");
+      updateGradientColors(topArtists[0]?.images?.[1]?.url, "artists");
     } else if (activeSection === "radio") {
       updateGradientColors(null, "radio");
     }

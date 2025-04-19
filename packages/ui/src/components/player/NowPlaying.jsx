@@ -179,12 +179,12 @@ const NowPlaying = ({
 
     const albumArt = currentPlayback?.item
       ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.show.images[0]?.url || "/images/not-playing.webp"
+        ? currentPlayback.item.show.images[1]?.url || "/images/not-playing.webp"
         : currentPlayback.item.type === "local" ||
-          !currentPlayback.item?.album?.images?.[0]?.url ||
-          !currentPlayback.item?.album?.images?.[0]
+          !currentPlayback.item?.album?.images?.[1]?.url ||
+          !currentPlayback.item?.album?.images?.[1]
         ? "/images/not-playing.webp"
-        : currentPlayback.item.album.images[0].url
+        : currentPlayback.item.album.images[1].url
       : "/images/not-playing.webp";
 
     const trackId = currentPlayback?.item?.id;

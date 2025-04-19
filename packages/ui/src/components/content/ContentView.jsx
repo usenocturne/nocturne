@@ -41,7 +41,7 @@ const ContentView = ({
       accessToken,
       contentId,
       contentType,
-      contentImage: content?.images?.[0]?.url || "",
+      contentImage: content?.images?.[1]?.url || "",
       contentName: content?.name || "",
       playTrack,
       isActive: !!content,
@@ -217,7 +217,7 @@ const ContentView = ({
               name: "Liked Songs",
               type: "liked-songs",
               images: [
-                { url: "https://misc.scdn.co/liked-songs/liked-songs-640.png" },
+                { url: "https://misc.scdn.co/liked-songs/liked-songs-300.png" },
               ],
               tracks: { total: likedSongsData.total },
               owner: { display_name: "You" },
@@ -255,7 +255,7 @@ const ContentView = ({
           contentData.images.length > 0 &&
           updateGradientColors
         ) {
-          updateGradientColors(contentData.images[0].url, contentType);
+          updateGradientColors(contentData.images[1].url, contentType);
         }
       } catch (err) {
         console.error(`Error fetching ${contentType} data:`, err);
@@ -382,7 +382,7 @@ const ContentView = ({
     if (!content.images || !content.images.length) {
       return "/images/not-playing.webp";
     }
-    return content.images[0].url;
+    return content.images[1].url;
   };
 
   const getSubtitle = () => {

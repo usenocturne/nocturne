@@ -55,18 +55,18 @@ export default function Home({
 
   useEffect(() => {
     if (activeSection === "recents" && recentAlbums.length > 0) {
-      const firstAlbumImage = recentAlbums[0]?.images?.[0]?.url;
+      const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url;
       updateGradientColors(firstAlbumImage || null, "recents");
     } else if (activeSection === "library" && userPlaylists.length > 0) {
-      const firstPlaylistImage = userPlaylists[0]?.images?.[0]?.url;
+      const firstPlaylistImage = userPlaylists[0]?.images?.[1]?.url;
       updateGradientColors(firstPlaylistImage || null, "library");
     } else if (activeSection === "artists" && topArtists.length > 0) {
-      const firstArtistImage = topArtists[0]?.images?.[0]?.url;
+      const firstArtistImage = topArtists[0]?.images?.[1]?.url;
       updateGradientColors(firstArtistImage || null, "artists");
     } else if (activeSection === "radio" && radioMixes.length > 0) {
       updateGradientColors(null, "radio");
     } else if (activeSection === "nowPlaying" && currentlyPlayingAlbum) {
-      const albumImage = currentlyPlayingAlbum?.images?.[0]?.url;
+      const albumImage = currentlyPlayingAlbum?.images?.[1]?.url;
       updateGradientColors(albumImage || null, "nowPlaying");
     } else if (activeSection === "settings") {
       updateGradientColors(null, "settings");
@@ -108,11 +108,11 @@ export default function Home({
   }, [newAlbumAdded]);
 
   useEffect(() => {
-    if (currentlyPlayingAlbum?.images?.[0]?.url) {
+    if (currentlyPlayingAlbum?.images?.[1]?.url) {
       if (activeSection === "nowPlaying") {
-        updateGradientColors(currentlyPlayingAlbum.images[0].url, "nowPlaying");
+        updateGradientColors(currentlyPlayingAlbum.images[1].url, "nowPlaying");
       } else if (activeSection === "recents") {
-        updateGradientColors(currentlyPlayingAlbum.images[0].url, "recents");
+        updateGradientColors(currentlyPlayingAlbum.images[1].url, "recents");
       }
     }
   }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
@@ -233,9 +233,9 @@ export default function Home({
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(album.id, "album")}
                 >
-                  {album.images?.[0]?.url ? (
+                  {album.images?.[1]?.url ? (
                     <img
-                      src={album.images[0].url}
+                      src={album.images[1].url}
                       alt="Album Cover"
                       className="w-full h-full rounded-[12px] aspect-square"
                     />
@@ -358,9 +358,9 @@ export default function Home({
                     style={{ width: 280, height: 280 }}
                     onClick={() => onOpenContent(playlist.id, "playlist")}
                   >
-                    {playlist?.images?.[0]?.url ? (
+                    {playlist?.images?.[1]?.url ? (
                       <img
-                        src={playlist.images[0].url}
+                        src={playlist.images[1].url}
                         alt={`${playlist.name} Cover`}
                         className="w-full h-full rounded-[12px] aspect-square"
                       />
@@ -451,9 +451,9 @@ export default function Home({
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(artist.id, "artist")}
                 >
-                  {artist.images?.[0]?.url ? (
+                  {artist.images?.[1]?.url ? (
                     <img
-                      src={artist.images[0].url}
+                      src={artist.images[1].url}
                       alt={`${artist.name} Profile`}
                       className="w-full h-full rounded-full aspect-square object-cover"
                     />
