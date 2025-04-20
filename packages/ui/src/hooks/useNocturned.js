@@ -579,8 +579,10 @@ export const useBluetooth = () => {
                 fetchDevices(true);
                 startNetworkPolling(deviceAddress);
                 retryIsCancelled = true;
+                window.dispatchEvent(new Event('networkBannerHide'));
               } else {
                 if (!retryIsCancelled) {
+                  window.dispatchEvent(new Event('networkBannerShow'));
                   const newTimeout = setTimeout(retryConnection, 5000);
                   setRetryTimeoutRef(newTimeout);
                 }
@@ -588,26 +590,31 @@ export const useBluetooth = () => {
             })
             .catch(error => {
               if (!retryIsCancelled) {
+                window.dispatchEvent(new Event('networkBannerShow'));
                 const newTimeout = setTimeout(retryConnection, 5000);
                 setRetryTimeoutRef(newTimeout);
               }
             });
           };
 
+          window.dispatchEvent(new Event('networkBannerShow'));
           const timeout = setTimeout(retryConnection, 5000);
           setRetryTimeoutRef(timeout);
           
           return false;
         }
+        window.dispatchEvent(new Event('networkBannerShow'));
         throw new Error(errorData.error || 'Failed to connect device');
       }
 
       localStorage.setItem('lastConnectedBluetoothDevice', deviceAddress);
       await fetchDevices(true);
       startNetworkPolling(deviceAddress);
+      window.dispatchEvent(new Event('networkBannerHide'));
       return true;
 
     } catch (err) {
+      window.dispatchEvent(new Event('networkBannerShow'));
       setError(err.message);
       return false;
     } finally {
