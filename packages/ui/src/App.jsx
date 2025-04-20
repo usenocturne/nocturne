@@ -23,7 +23,7 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
 import PairingScreen from "./components/auth/PairingScreen";
-import EnableTetheringScreen from "./components/auth/EnableTetheringScreen";
+
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
@@ -585,16 +585,11 @@ function App() {
                           onReject={denyPairing}
                         />
                       )}
-                      {showTetheringScreen && !isConnected && !isFlashing && (
-                        <EnableTetheringScreen
-                          key={`tethering-${Date.now()}-${Math.random()}`}
-                          deviceType={lastConnectedDevice?.name}
-                          message={`Please enable hotspot and Bluetooth tethering on ${
-                            lastConnectedDevice?.name || "your device"
-                          } to continue.`}
-                          onDismissRetry={() => {
-                            stopRetrying();
-                          }}
+                      {!isConnected && !isFlashing && lastConnectedDevice && (
+                        <NetworkScreen
+                          key={`network-${Date.now()}`}
+                          deviceName={lastConnectedDevice.name}
+                          onRetryDismiss={stopRetrying}
                         />
                       )}
                       <SystemUpdateModal
