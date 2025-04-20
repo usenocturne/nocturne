@@ -155,7 +155,7 @@ const BluetoothDevices = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-bluetooth-settings>
       <h3 className="text-[32px] font-[580] text-white tracking-tight">
         Devices
       </h3>

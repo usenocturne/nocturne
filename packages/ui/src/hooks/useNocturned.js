@@ -394,8 +394,9 @@ export const useBluetooth = () => {
       attemptReconnect();
     };
 
+    const inBluetoothSettings = document.querySelector('[data-bluetooth-settings]');
     const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
-    if (lastDeviceAddress) {
+    if (lastDeviceAddress && !inBluetoothSettings) {
       handleConnectionLost();
     }
 

@@ -11,7 +11,7 @@ import {
 import WiFiNetworks from "../settings/network/WiFiNetworks";
 import BluetoothDevices from "../settings/network/BluetoothDevices";
 
-const NetworkScreen = () => {
+const NetworkScreen = ({ isConnectionLost = true }) => {
   const [showMain, setShowMain] = React.useState(true);
   const [showParent, setShowParent] = React.useState(false);
   const [showSubpage, setShowSubpage] = React.useState(false);
@@ -59,7 +59,7 @@ const NetworkScreen = () => {
   }, []);
 
   const MAX_RECONNECT_ATTEMPTS = 5;
-  const showReconnectMessage = lastDeviceNameRef.current && bluetoothReconnectAttempt > 0 && bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
+  const showReconnectMessage = isConnectionLost && lastDeviceNameRef.current && bluetoothReconnectAttempt > 0 && bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100"
