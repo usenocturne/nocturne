@@ -18,23 +18,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [activeSubItem, setActiveSubItem] = React.useState(null);
   const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
-  const lastDeviceNameRef = React.useRef('');
   const { reconnectAttempt: bluetoothReconnectAttempt } = useBluetooth();
-
-  useEffect(() => {
-    const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
-    if (lastDeviceAddress) {
-      fetch('http://localhost:5000/bluetooth/devices')
-        .then(res => res.json())
-        .then(devices => {
-          const device = devices.find(d => d.address === lastDeviceAddress);
-          if (device) {
-            lastDeviceNameRef.current = device.name || device.alias;
-          }
-        })
-        .catch(console.error);
-    }
-  }, []);
 
   useEffect(() => {
     const handleReconnectAttempt = (event) => {
@@ -59,7 +43,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
   }, []);
 
   const MAX_RECONNECT_ATTEMPTS = 5;
-  const showReconnectMessage = isConnectionLost && lastDeviceNameRef.current && bluetoothReconnectAttempt > 0 && bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
+  const showReconnectMessage = isConnectionLost && bluetoothReconnectAttempt > 0 && bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100"
@@ -228,7 +212,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
                   {showReconnectMessage ? (
                     <div className="space-y-2">
                       <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                        Attempting to reconnect to "{lastDeviceNameRef.current}"...
+                        Attempting to reconnect...
                       </p>
                     </div>
                   ) : (

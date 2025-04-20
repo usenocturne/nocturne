@@ -600,7 +600,6 @@ function App() {
                       )}
                       {!isConnected && !isFlashing && lastConnectedDevice && (
                         <NetworkScreen
-                          key={`network-${Date.now()}`}
                           deviceName={lastConnectedDevice.name}
                           onRetryDismiss={stopRetrying}
                         />
