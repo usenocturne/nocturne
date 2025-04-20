@@ -24,7 +24,6 @@ import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
 import PairingScreen from "./components/auth/PairingScreen";
 
-
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
   setSelectedNetwork: () => {},
@@ -574,9 +573,9 @@ function App() {
 
                     <div className="relative z-10">
                       {content}
-                      {(!isConnected || showNoNetwork) &&
-                        !isFlashing &&
-                        !showTetheringScreen && <NetworkScreen />}
+                      {showNoNetwork && !isFlashing && !showTetheringScreen && (
+                        <NetworkScreen />
+                      )}
                       {pairingRequest && (
                         <PairingScreen
                           pin={pairingRequest.pairingKey}

@@ -12,11 +12,17 @@ export function useNetwork() {
   const checkCountRef = useRef(0);
   const consecutiveFailuresRef = useRef(0);
   const monitorCleanupRef = useRef(null);
+  const initialCheckCompleteRef = useRef(false);
+  const hasEstablishedConnectionRef = useRef(false);
 
   const checkNetwork = useCallback(async () => {
     try {
       setIsChecking(true);
       const response = await checkNetworkConnectivity();
+
+      if (response.isConnected) {
+        hasEstablishedConnectionRef.current = true;
+      }
 
       if (response.isConnected !== isConnected) {
         setIsConnected(response.isConnected);
@@ -30,12 +36,19 @@ export function useNetwork() {
           checkCountRef.current++;
           consecutiveFailuresRef.current++;
 
-          if (consecutiveFailuresRef.current >= 3) {
-            setShowNetworkBanner(true);
-          }
-
-          if (checkCountRef.current >= 2) {
-            setShowNoNetwork(true);
+          if (
+            !hasEstablishedConnectionRef.current ||
+            !initialCheckCompleteRef.current
+          ) {
+            if (checkCountRef.current >= 2) {
+              setShowNoNetwork(true);
+              setShowNetworkBanner(false);
+            }
+          } else {
+            if (consecutiveFailuresRef.current >= 3) {
+              setShowNetworkBanner(true);
+              setShowNoNetwork(false);
+            }
           }
         }
       } else if (response.isConnected) {
@@ -44,31 +57,42 @@ export function useNetwork() {
         setShowNetworkBanner(false);
       } else {
         consecutiveFailuresRef.current++;
-        if (consecutiveFailuresRef.current >= 3) {
-          setShowNetworkBanner(true);
+
+        if (
+          !hasEstablishedConnectionRef.current ||
+          !initialCheckCompleteRef.current
+        ) {
+          if (checkCountRef.current >= 2) {
+            setShowNoNetwork(true);
+            setShowNetworkBanner(false);
+          }
+        } else {
+          if (consecutiveFailuresRef.current >= 3) {
+            setShowNetworkBanner(true);
+            setShowNoNetwork(false);
+          }
         }
       }
 
       return response.isConnected;
-    } catch (error) {
-      console.error("Network connectivity check failed:", error);
+    } catch (err) {
+      console.error("Network connectivity check failed:", err);
 
-      if (isConnected) {
-        setIsConnected(false);
+      consecutiveFailuresRef.current++;
+
+      if (
+        !hasEstablishedConnectionRef.current ||
+        !initialCheckCompleteRef.current
+      ) {
         checkCountRef.current++;
-        consecutiveFailuresRef.current++;
-
-        if (consecutiveFailuresRef.current >= 3) {
-          setShowNetworkBanner(true);
-        }
-
         if (checkCountRef.current >= 2) {
           setShowNoNetwork(true);
+          setShowNetworkBanner(false);
         }
       } else {
-        consecutiveFailuresRef.current++;
         if (consecutiveFailuresRef.current >= 3) {
           setShowNetworkBanner(true);
+          setShowNoNetwork(false);
         }
       }
 
@@ -83,9 +107,14 @@ export function useNetwork() {
   }, []);
 
   useEffect(() => {
-    const initialCheckId = setTimeout(() => {
-      checkNetwork();
-    }, 500);
+    const initialCheck = async () => {
+      await checkNetwork();
+      setTimeout(() => {
+        initialCheckCompleteRef.current = true;
+      }, 2000);
+    };
+
+    initialCheck();
 
     monitorCleanupRef.current = startNetworkMonitoring((connected) => {
       if (connected) {
@@ -94,25 +123,31 @@ export function useNetwork() {
         setIsConnected(true);
         setShowNoNetwork(false);
         setShowNetworkBanner(false);
+        hasEstablishedConnectionRef.current = true;
       } else {
-        checkCountRef.current++;
-        consecutiveFailuresRef.current++;
+        if (
+          !hasEstablishedConnectionRef.current ||
+          !initialCheckCompleteRef.current
+        ) {
+          checkCountRef.current++;
+          if (checkCountRef.current >= 2) {
+            setShowNoNetwork(true);
+            setShowNetworkBanner(false);
+          }
+        } else {
+          consecutiveFailuresRef.current++;
+          if (consecutiveFailuresRef.current >= 3) {
+            setShowNetworkBanner(true);
+            setShowNoNetwork(false);
+          }
+        }
         setIsConnected(false);
-
-        if (consecutiveFailuresRef.current >= 3) {
-          setShowNetworkBanner(true);
-        }
-
-        if (checkCountRef.current >= 2) {
-          setShowNoNetwork(true);
-        }
       }
     });
 
     const intervalId = setInterval(checkNetwork, 1000);
 
     return () => {
-      clearTimeout(initialCheckId);
       clearInterval(intervalId);
       if (monitorCleanupRef.current) {
         monitorCleanupRef.current();
