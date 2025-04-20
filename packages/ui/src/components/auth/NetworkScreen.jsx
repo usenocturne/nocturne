@@ -59,7 +59,7 @@ const NetworkScreen = () => {
   }, []);
 
   const MAX_RECONNECT_ATTEMPTS = 5;
-  const showReconnectMessage = lastDeviceNameRef.current && bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
+  const showReconnectMessage = lastDeviceNameRef.current && bluetoothReconnectAttempt > 0 && bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100"

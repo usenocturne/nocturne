@@ -246,6 +246,25 @@ function App() {
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState(null);
   const [showConnectorModal, setShowConnectorModal] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    const handleNetworkBannerShow = () => {
+      setShowBanner(true);
+    };
+
+    const handleNetworkBannerHide = () => {
+      setShowBanner(false);
+    };
+
+    window.addEventListener('networkBannerShow', handleNetworkBannerShow);
+    window.addEventListener('networkBannerHide', handleNetworkBannerHide);
+
+    return () => {
+      window.removeEventListener('networkBannerShow', handleNetworkBannerShow);
+      window.removeEventListener('networkBannerHide', handleNetworkBannerHide);
+    };
+  }, []);
 
   const {
     isAuthenticated,
@@ -566,11 +585,6 @@ function App() {
                       className="absolute inset-0 bg-black"
                     />
 
-                    <NetworkBanner
-                      visible={showNetworkBanner}
-                      onClose={dismissNetworkBanner}
-                    />
-
                     <div className="relative z-10">
                       {content}
                       {showNoNetwork && !isFlashing && !showTetheringScreen && (
@@ -591,6 +605,10 @@ function App() {
                           onRetryDismiss={stopRetrying}
                         />
                       )}
+                      <NetworkBanner 
+                        visible={showBanner} 
+                        onClose={dismissNetworkBanner}
+                      />
                       <SystemUpdateModal
                         show={isFlashing}
                         status={updateStatus}
