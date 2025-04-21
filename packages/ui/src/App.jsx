@@ -605,7 +605,7 @@ function App() {
                         />
                       )}
                       <NetworkBanner 
-                        visible={showBanner} 
+                        visible={showNetworkBanner} 
                         onClose={dismissNetworkBanner}
                       />
                       <SystemUpdateModal

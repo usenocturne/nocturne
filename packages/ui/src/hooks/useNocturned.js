@@ -332,13 +332,22 @@ export const useBluetooth = () => {
     }
   }, []);
 
-  const attemptReconnect = useCallback(async () => {
+  const attemptReconnect = useCallback(async (continuous = false) => {
     if (isReconnecting.current) {
       return;
     }
 
     const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
-    if (!lastDeviceAddress || reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+    if (!lastDeviceAddress) {
+      cleanupReconnectTimer();
+      reconnectAttemptsRef.current = 0;
+      setReconnectAttempt(0);
+      isReconnecting.current = false;
+      window.dispatchEvent(new Event('networkBannerHide'));
+      return;
+    }
+    
+    if (!continuous && reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
       cleanupReconnectTimer();
       reconnectAttemptsRef.current = 0;
       setReconnectAttempt(0);
@@ -373,6 +382,7 @@ export const useBluetooth = () => {
           setReconnectAttempt(0);
           isReconnecting.current = false;
           window.dispatchEvent(new Event('networkBannerHide'));
+          retryIsCancelled = true;
           return;
         }
       }
@@ -397,16 +407,22 @@ export const useBluetooth = () => {
           reconnectAttemptsRef.current = 0;
           setReconnectAttempt(0);
           isReconnecting.current = false;
+          retryIsCancelled = true;
           window.dispatchEvent(new Event('networkBannerHide'));
           return;
         }
       }
 
-      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+      if (continuous || reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        const delayTime = continuous ? Math.max(RECONNECT_INTERVAL, 5000) : RECONNECT_INTERVAL;
         reconnectTimeoutRef.current = setTimeout(() => {
           isReconnecting.current = false;
-          attemptReconnect();
-        }, RECONNECT_INTERVAL);
+          if (continuous) {
+            attemptReconnect(true);
+          } else {
+            attemptReconnect();
+          }
+        }, delayTime);
       } else {
         cleanupReconnectTimer();
         isReconnecting.current = false;
@@ -417,11 +433,16 @@ export const useBluetooth = () => {
       reconnectAttemptsRef.current++;
       setReconnectAttempt(reconnectAttemptsRef.current);
 
-      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+      if (continuous || reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        const delayTime = continuous ? Math.max(RECONNECT_INTERVAL, 5000) : RECONNECT_INTERVAL;
         reconnectTimeoutRef.current = setTimeout(() => {
           isReconnecting.current = false;
-          attemptReconnect();
-        }, RECONNECT_INTERVAL);
+          if (continuous) {
+            attemptReconnect(true);
+          } else {
+            attemptReconnect();
+          }
+        }, delayTime);
       } else {
         cleanupReconnectTimer();
         isReconnecting.current = false;
@@ -917,6 +938,7 @@ export const useBluetooth = () => {
     enableNetworking,
     wsConnected,
     stopRetrying,
-    reconnectAttempt
+    reconnectAttempt,
+    attemptReconnect
   };
 };

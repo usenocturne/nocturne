@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { XIcon, WifiOffIcon } from "../icons";
+import { useBluetooth } from "../../../hooks/useNocturned";
 
 const NetworkBanner = ({ visible, onClose }) => {
   const [isExiting, setIsExiting] = useState(false);
+  const { attemptReconnect, stopRetrying } = useBluetooth();
 
   const handleClose = () => {
     setIsExiting(true);
@@ -14,8 +16,15 @@ const NetworkBanner = ({ visible, onClose }) => {
   useEffect(() => {
     if (visible) {
       setIsExiting(false);
+      attemptReconnect(true);
     }
-  }, [visible]);
+    
+    return () => {
+      if (!visible) {
+        stopRetrying();
+      }
+    };
+  }, [visible, attemptReconnect, stopRetrying]);
 
   if (!visible) return null;
 

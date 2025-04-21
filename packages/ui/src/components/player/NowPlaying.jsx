@@ -44,7 +44,7 @@ const NowPlaying = ({
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
   
-  const { isConnected } = useNetwork();
+  const { isConnected, showNetworkBanner } = useNetwork();
   
   const volumeTimerRef = useRef(null);
   const volumeLastAdjustedRef = useRef(0);
