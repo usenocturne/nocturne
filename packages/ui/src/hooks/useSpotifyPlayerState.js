@@ -315,18 +315,36 @@ export function useSpotifyPlayerState(accessToken) {
       connectionErrors = 0;
       initialStateLoadedRef.current = false;
 
-      const handleNetworkRestored = () => {
+      const handleNetworkRestored = async () => {
         if (accessToken) {
-          fetchCurrentPlayback(true);
+          connectionErrors = 0;
+          isConnecting = false;
+          initialStateLoadedRef.current = false;
+          
+          cleanupWebSocket();
+          
+          try {
+            await fetchCurrentPlayback(true);
+
+            setTimeout(() => {
+              connectWebSocket();
+            }, 500);
+
+          } catch (error) {
+            connectWebSocket();
+          }
         }
       };
 
       window.addEventListener('networkRestored', handleNetworkRestored);
+      window.addEventListener('online', handleNetworkRestored);
+      
       fetchCurrentPlayback();
       connectWebSocket();
 
       return () => {
         window.removeEventListener('networkRestored', handleNetworkRestored);
+        window.removeEventListener('online', handleNetworkRestored);
         cleanupWebSocket();
       };
     }
