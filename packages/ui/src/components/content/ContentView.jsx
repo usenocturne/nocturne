@@ -255,7 +255,7 @@ const ContentView = ({
           contentData.images.length > 0 &&
           updateGradientColors
         ) {
-          updateGradientColors(contentData.images[1].url, contentType);
+          updateGradientColors(contentData.images[0].url, contentType);
         }
       } catch (err) {
         console.error(`Error fetching ${contentType} data:`, err);
@@ -382,7 +382,7 @@ const ContentView = ({
     if (!content.images || !content.images.length) {
       return "/images/not-playing.webp";
     }
-    return content.images[1].url;
+    return content.images[0].url;
   };
 
   const getSubtitle = () => {
