@@ -2,7 +2,15 @@
 
 Disclaimer: Bricking the Car Thing is nearly impossible, but the risk is always there when flashing custom partition tables.
 
-Use "sudo ./flash.sh" (Linux/macOS) or double click flash.bat (Windows) to flash Nocturne to your Car Thing.
+libusb is required on macOS: "brew install libusb"
+
+Terbium driver is required on Windows: "irm https://driver.terbium.app/get | iex" (Powershell)
+
+Plug in your Car Thing's USB while holding 1+4 (buttons at the top).
+
+Use "sudo ./flash.sh" (Linux/macOS) or double click "flash.bat" (Windows) to flash Nocturne to your Car Thing.
+
+Flashing will likely take about 30 minutes depending on your USB ports and some other factors. It’ll look like it’s going fast but then will flash other stuff after. Please try multiple ports if one isn’t working (Rear IO USB 3/2, BIOS flash port if on AMD, etc).
 
 ---
 
