@@ -17,7 +17,7 @@ jobs:
         run: echo "VERSION=$(git describe --tags --dirty)" >> $GITHUB_OUTPUT
 
       - name: Install build dependencies
-        run: apt install just
+        run: sudo apt install just
 
       - name: Build kernel
         working-directory: ./resources/kernel
