@@ -2,6 +2,14 @@
 set -e
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Image build config
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+: "${NOCTURNE_IMAGE_VERSION:="3.0.0-beta2"}"
+: "${NOCTURNE_UI_TAG:="v3.0.0-beta1"}"
+: "${NOCTURNED_TAG:="v1.0.3"}"
+: "${NOCTURNE_UBOOT_TOOL_TAG:="v1.0.2"}"
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # User config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 : "${ALPINE_BRANCH:="v3.21"}"
