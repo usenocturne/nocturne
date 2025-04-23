@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build development image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version name
+        id: version
+        run: echo "VERSION=$(git describe --tags --dirty)" >> $GITHUB_OUTPUT
+
+      - name: Install build dependencies
+        run: apt install just
+
+      - name: Build kernel
+        working-directory: ./resources/kernel
+        run: just run
+
+      - name: Build image
+        env:
+          NOCTURNE_IMAGE_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: just run
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nocturne-${{ steps.version.outputs.VERSION }}
+          # TODO: figure out a way to fail if at least one file not found, instead of all
+          if-no-files-found: error
+          path: |
+            output/nocturne_installer.img.gz
+            output/nocturne_installer.img.gz.sha256
+            output/nocturne_update.img.gz
+            output/nocturne_update.img.gz.sha256
