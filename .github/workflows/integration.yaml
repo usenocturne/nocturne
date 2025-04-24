@@ -25,6 +25,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
+        with:
+          # needed for `git describe --tags`
+          fetch-depth: 0
 
       - name: Get version name
         id: version
