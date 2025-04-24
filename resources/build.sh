@@ -8,6 +8,7 @@ set -e
 : "${NOCTURNE_UI_TAG:="v3.0.0-beta1"}"
 : "${NOCTURNED_TAG:="v1.0.3"}"
 : "${NOCTURNE_UBOOT_TOOL_TAG:="v1.0.2"}"
+: "${NOCTURNE_UBOOT_TAG:="v2025.04-nocturne1"}"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # User config

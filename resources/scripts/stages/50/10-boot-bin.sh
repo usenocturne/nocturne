@@ -14,8 +14,7 @@ mount -t vfat /dev/loop0 /mnt/bootbin
 rm -f /mnt/bootbin/*
 cp "$RES_PATH"/flash/fastboot.bin /mnt/bootbin/
 
-curl -LO https://nightly.link/usenocturne/u-boot/workflows/build/master/u-boot.zip
-unzip u-boot.zip -d /mnt/bootbin/
+github_releases -r usenocturne/u-boot -d /mnt/bootbin/ -a u-boot.bin -v "$NOCTURNE_UBOOT_TAG"
 
 mkimage -A arm64 -T script -C none -n "Boot script" -d "$RES_PATH"/flash/boot.cmd /mnt/bootbin/boot.scr
 
