@@ -1,0 +1,19 @@
+name: nocturne-image-kernel
+
+services:
+  build:
+    volumes:
+      - nix-store:/nix
+      - nix-root:/root
+      - ./:/workdir
+    build:
+      context: .
+    command: /usr/bin/env bash -xc "
+      rm -r /workdir/output &&
+      mkdir /workdir/output &&
+      nix build github:JoeyEamigh/nixos-superbird#nixosConfigurations.headless-example.config.system.build.kernel --print-out-paths && cp -r result/* output/
+      "
+
+volumes:
+  nix-store:
+  nix-root:
