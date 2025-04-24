@@ -34,11 +34,8 @@ jobs:
         run: sudo apt install just
 
       - name: Build kernel
-        # TODO: figure out why `working-directory` key doesn't work: it just runs the Justfile
-        #       in the root of the repo anyways
-        run: |
-          cd ./resources/kernel
-          just run
+        working-directory: ./resources/kernel
+        run: ./build.sh
 
       - name: Build image
         env:
