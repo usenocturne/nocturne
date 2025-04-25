@@ -1,0 +1,20 @@
+on:
+  issues:
+    types: [opened, reopened]
+
+jobs:
+  add-to-project:
+    name: Add issue to project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1.11.0
+        with:
+          app-id: ${{ vars.NOCTURNE_BOT_APP_ID }}
+          private-key: ${{ secrets.NOCTURNE_BOT_PRIVATE_KEY }}
+
+      - uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/orgs/usenocturne/projects/1
+          github-token: ${{ steps.generate-token.outputs.token }}
