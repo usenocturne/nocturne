@@ -7,4 +7,6 @@ install "$RES_PATH"/scripts/services/nocturned.sh "$ROOTFS_PATH"/etc/init.d/noct
 mkdir -p "$ROOTFS_PATH"/etc/nocturne
 printf "%s" "3.0.0" > "$ROOTFS_PATH"/etc/nocturne/version.txt
 
+mkdir -p "$DATAFS_PATH"/etc/nocturne
+
 DEFAULT_SERVICES="${DEFAULT_SERVICES} nocturned"
