@@ -1,12 +1,12 @@
-name: Add issues to triage
+name: Add PRs to triage
 
 on:
-  issues:
+  pull_request_target:
     types: [opened, reopened]
 
 jobs:
   add-to-project:
-    name: Add issue to project
+    name: Add PR to project
     runs-on: ubuntu-latest
     steps:
       - name: Generate token
@@ -18,5 +18,5 @@ jobs:
 
       - uses: actions/add-to-project@v1.0.2
         with:
-          project-url: https://github.com/orgs/usenocturne/projects/1
+          project-url: https://github.com/orgs/usenocturne/projects/5
           github-token: ${{ steps.generate-token.outputs.token }}
