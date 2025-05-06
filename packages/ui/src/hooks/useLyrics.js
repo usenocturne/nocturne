@@ -29,11 +29,52 @@ export function useLyrics(accessToken, currentPlayback) {
       .sort((a, b) => a.time - b.time);
   };
 
-  const fetchLyrics = async (trackName, artistName) => {
+  const fetchSpotifyLyrics = async (trackId, imageUrl) => {
+    try {
+      const encodedImageUrl = encodeURIComponent(imageUrl);
+      const response = await fetch(
+        `https://spclient.wg.spotify.com/color-lyrics/v2/track/${trackId}/image/${encodedImageUrl}?format=json&vocalRemoval=false&market=from_token`,
+        {
+          headers: {
+            'accept': 'application/json',
+            'app-platform': 'WebPlayer',
+            'authorization': `Bearer ${accessToken}`,
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data && data.lyrics && data.lyrics.lines) {
+        return data.lyrics.lines.map(line => ({
+          time: line.startTimeMs / 1000,
+          text: line.words
+        }));
+      }
+      throw new Error('No lyrics in response');
+    } catch (err) {
+      console.log('Failed to fetch Spotify lyrics:', err);
+      return null;
+    }
+  };
+
+  const tryFetchLyrics = async (trackName, artistName, trackId, imageUrl) => {
     setIsLoading(true);
     setError(null);
 
     try {
+      if (trackId && imageUrl) {
+        const spotifyLyrics = await fetchSpotifyLyrics(trackId, imageUrl);
+        if (spotifyLyrics) {
+          setLyrics(spotifyLyrics);
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       const encodedTrack = encodeURIComponent(trackName);
       const encodedArtist = encodeURIComponent(artistName);
 
@@ -100,9 +141,11 @@ export function useLyrics(accessToken, currentPlayback) {
         (lyrics.length === 0 || trackIdRef.current !== currentPlayback.item.id)
       ) {
         trackIdRef.current = currentPlayback.item.id;
-        await fetchLyrics(
+        await tryFetchLyrics(
           currentPlayback.item.name,
-          currentPlayback.item.artists[0].name
+          currentPlayback.item.artists[0].name,
+          currentPlayback.item.id,
+          currentPlayback.item.album.images[0]?.url
         );
       }
     } else {
@@ -189,9 +232,11 @@ export function useLyrics(accessToken, currentPlayback) {
       setLyrics([]);
       setCurrentLyricIndex(-1);
 
-      fetchLyrics(
+      tryFetchLyrics(
         currentPlayback.item.name,
-        currentPlayback.item.artists[0].name
+        currentPlayback.item.artists[0].name,
+        currentPlayback.item.id,
+        currentPlayback.item.album.images[0]?.url
       );
 
       setEstimatedProgress(currentPlayback.progress_ms || 0);
