@@ -15,6 +15,8 @@ export function useNetwork() {
   const initialCheckCompleteRef = useRef(false);
   const hasEstablishedConnectionRef = useRef(false);
 
+  const isInTutorial = !localStorage.getItem("hasSeenTutorial");
+
   const checkNetwork = useCallback(async () => {
     try {
       setIsChecking(true);
@@ -36,15 +38,12 @@ export function useNetwork() {
           checkCountRef.current++;
           consecutiveFailuresRef.current++;
 
-          if (
-            !hasEstablishedConnectionRef.current ||
-            !initialCheckCompleteRef.current
-          ) {
+          if (!hasEstablishedConnectionRef.current) {
             if (checkCountRef.current >= 2) {
               setShowNoNetwork(true);
               setShowNetworkBanner(false);
             }
-          } else {
+          } else if (!isInTutorial) {
             if (consecutiveFailuresRef.current >= 3) {
               setShowNetworkBanner(true);
               setShowNoNetwork(false);
@@ -58,15 +57,12 @@ export function useNetwork() {
       } else {
         consecutiveFailuresRef.current++;
 
-        if (
-          !hasEstablishedConnectionRef.current ||
-          !initialCheckCompleteRef.current
-        ) {
+        if (!hasEstablishedConnectionRef.current) {
           if (checkCountRef.current >= 2) {
             setShowNoNetwork(true);
             setShowNetworkBanner(false);
           }
-        } else {
+        } else if (!isInTutorial) {
           if (consecutiveFailuresRef.current >= 3) {
             setShowNetworkBanner(true);
             setShowNoNetwork(false);
@@ -77,19 +73,15 @@ export function useNetwork() {
       return response.isConnected;
     } catch (err) {
       console.error("Network connectivity check failed:", err);
-
       consecutiveFailuresRef.current++;
 
-      if (
-        !hasEstablishedConnectionRef.current ||
-        !initialCheckCompleteRef.current
-      ) {
+      if (!hasEstablishedConnectionRef.current) {
         checkCountRef.current++;
         if (checkCountRef.current >= 2) {
           setShowNoNetwork(true);
           setShowNetworkBanner(false);
         }
-      } else {
+      } else if (!isInTutorial) {
         if (consecutiveFailuresRef.current >= 3) {
           setShowNetworkBanner(true);
           setShowNoNetwork(false);
@@ -134,7 +126,7 @@ export function useNetwork() {
             setShowNoNetwork(true);
             setShowNetworkBanner(false);
           }
-        } else {
+        } else if (!isInTutorial) {
           consecutiveFailuresRef.current++;
           if (consecutiveFailuresRef.current >= 3) {
             setShowNetworkBanner(true);
