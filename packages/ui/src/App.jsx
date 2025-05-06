@@ -13,6 +13,7 @@ import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
 import SystemUpdateModal from "./components/common/modals/SystemUpdateModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
+import BrightnessOverlay from "./components/common/overlays/BrightnessOverlay";
 import GradientBackground from "./components/common/GradientBackground";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
@@ -247,6 +248,32 @@ function App() {
   const [selectedNetwork, setSelectedNetwork] = useState(null);
   const [showConnectorModal, setShowConnectorModal] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+  const [brightness, setBrightness] = useState(160);
+  const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
+
+  useEffect(() => {
+    const handleBrightnessKeyDown = (e) => {
+      if (showTutorial || (e.key.toLowerCase() === 'm' && !showBrightnessOverlay)) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key.toLowerCase() === 'm' && !showBrightnessOverlay && !showTutorial) {
+          setShowBrightnessOverlay(true);
+        }
+      }
+    };
+    
+    const handleOverlayDismiss = () => {
+      setShowBrightnessOverlay(false);
+    };
+
+    document.addEventListener('keydown', handleBrightnessKeyDown, { capture: true });
+    window.addEventListener('brightness-overlay-dismiss', handleOverlayDismiss);
+    
+    return () => {
+      document.removeEventListener('keydown', handleBrightnessKeyDown, { capture: true });
+      window.removeEventListener('brightness-overlay-dismiss', handleOverlayDismiss);
+    };
+  }, [showBrightnessOverlay, showTutorial]);
 
   useEffect(() => {
     const handleNetworkBannerShow = () => {
@@ -623,6 +650,12 @@ function App() {
                         activeButton={globalActiveButton}
                       />
                     )}
+                    <BrightnessOverlay 
+                      isVisible={showBrightnessOverlay}
+                      brightness={brightness}
+                      onBrightnessChange={setBrightness}
+                      onDismiss={() => setShowBrightnessOverlay(false)}
+                    />
                   </div>
                 </main>
               </Router>
