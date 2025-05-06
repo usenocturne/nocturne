@@ -13,6 +13,7 @@ import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
 import SystemUpdateModal from "./components/common/modals/SystemUpdateModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
+import GradientBackground from "./components/common/GradientBackground";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
@@ -310,14 +311,7 @@ function App() {
   const { updateStatus, progress, isUpdating, isError, errorMessage } =
     useSystemUpdate();
 
-  const {
-    currentColor1,
-    currentColor2,
-    currentColor3,
-    currentColor4,
-    generateMeshGradient,
-    updateGradientColors,
-  } = useGradientState(activeSection);
+  const [gradientState, updateGradientColors] = useGradientState(activeSection);
 
   const {
     showMappingOverlay: showGlobalMappingOverlay,
@@ -569,18 +563,7 @@ function App() {
                     fontOpticalSizing: "auto",
                   }}
                 >
-                  <div
-                    style={{
-                      backgroundImage: generateMeshGradient([
-                        currentColor1,
-                        currentColor2,
-                        currentColor3,
-                        currentColor4,
-                      ]),
-                      transition: "background-image 0.5s linear",
-                    }}
-                    className="absolute inset-0 bg-black"
-                  />
+                  <GradientBackground gradientState={gradientState} className="bg-black" />
 
                   <div className="relative z-10">
                     {content}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import TutorialFrame from "./TutorialFrame";
 import NocturneIcon from "../common/icons/NocturneIcon";
+import GradientBackground from "../common/GradientBackground";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useNavigation } from "../../hooks/useNavigation";
 
@@ -15,14 +16,7 @@ const Tutorial = ({ onComplete }) => {
   const buttonLockRef = useRef(false);
   const lastPressedKey = useRef(null);
 
-  const {
-    currentColor1,
-    currentColor2,
-    currentColor3,
-    currentColor4,
-    generateMeshGradient,
-    updateGradientColors,
-  } = useGradientState();
+  const [gradientState, updateGradientColors] = useGradientState();
 
   useEffect(() => {
     updateGradientColors(null, "auth");
@@ -268,18 +262,7 @@ const Tutorial = ({ onComplete }) => {
 
   return (
     <div className="fixed inset-0 w-full h-full" ref={tutorialContainerRef}>
-      <div
-        style={{
-          backgroundImage: generateMeshGradient([
-            currentColor1,
-            currentColor2,
-            currentColor3,
-            currentColor4,
-          ]),
-          transition: "background-image 0.5s linear",
-        }}
-        className="absolute inset-0 rounded-2xl"
-      />
+      <GradientBackground gradientState={gradientState} className="rounded-2xl" />
 
       <div className="relative h-full z-10 flex justify-between px-6">
         <div className="flex flex-col items-start w-1/2 -mr-6 ml-12 flex-1 justify-center">

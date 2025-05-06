@@ -10,6 +10,7 @@ import {
 } from "../common/icons";
 import WiFiNetworks from "../settings/network/WiFiNetworks";
 import BluetoothDevices from "../settings/network/BluetoothDevices";
+import GradientBackground from "../common/GradientBackground";
 
 const NetworkScreen = ({ isConnectionLost = true }) => {
   const [showMain, setShowMain] = React.useState(true);
@@ -57,14 +58,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
 
   const ANIMATION_DURATION = 300;
 
-  const {
-    currentColor1,
-    currentColor2,
-    currentColor3,
-    currentColor4,
-    generateMeshGradient,
-    updateGradientColors,
-  } = useGradientState();
+  const [gradientState, updateGradientColors] = useGradientState();
 
   useEffect(() => {
     updateGradientColors(null, "auth");
@@ -179,18 +173,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
   return (
     <div className="h-screen w-full flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl z-50">
       <div className="absolute inset-0 bg-black"></div>
-      <div
-        style={{
-          backgroundImage: generateMeshGradient([
-            currentColor1,
-            currentColor2,
-            currentColor3,
-            currentColor4,
-          ]),
-          transition: "background-image 0.5s linear",
-        }}
-        className="absolute inset-0"
-      />
+      <GradientBackground gradientState={gradientState} />
 
       <div className="relative z-10 w-full h-full settings-scroll-container overflow-hidden">
         <div

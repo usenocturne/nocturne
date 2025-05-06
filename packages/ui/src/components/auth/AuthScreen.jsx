@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useAuth } from "../../hooks/useAuth";
 import NocturneIcon from "../common/icons/NocturneIcon";
+import GradientBackground from "../common/GradientBackground";
 import QRCodeDisplay from "./QRCodeDisplay";
 import { checkNetworkConnectivity } from "../../utils/networkChecker";
 
@@ -16,14 +17,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
   const { authData, isLoading, initAuth, pollAuthStatus, isAuthenticated } =
     useAuth();
 
-  const {
-    currentColor1,
-    currentColor2,
-    currentColor3,
-    currentColor4,
-    generateMeshGradient,
-    updateGradientColors,
-  } = useGradientState();
+  const [gradientState, updateGradientColors] = useGradientState();
 
   useEffect(() => {
     const checkNetwork = async () => {
@@ -134,18 +128,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
 
   return (
     <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
-      <div
-        style={{
-          backgroundImage: generateMeshGradient([
-            currentColor1,
-            currentColor2,
-            currentColor3,
-            currentColor4,
-          ]),
-          transition: "background-image 0.5s linear",
-        }}
-        className="absolute inset-0"
-      />
+      <GradientBackground gradientState={gradientState} />
 
       <div className="relative z-10 w-full max-w-6xl px-6 grid grid-cols-2 gap-16 items-center">
         <div className="flex flex-col items-start space-y-8 ml-12">

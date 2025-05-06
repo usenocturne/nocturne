@@ -23,7 +23,7 @@ export default function Home({
   refreshPlaybackState,
   onOpenContent,
 }) {
-  const { updateGradientColors } = useGradientState();
+  const [, updateGradientColors] = useGradientState();
   const scrollContainerRef = useRef(null);
   const itemWidth = 290;
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
