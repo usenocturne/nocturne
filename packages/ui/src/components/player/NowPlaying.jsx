@@ -25,7 +25,6 @@ import {
   RepeatIcon,
   RepeatOneIcon,
 } from "../common/icons";
-import { useNetwork } from "../../hooks/useNetwork";
 
 const NowPlaying = ({
   accessToken,
@@ -43,8 +42,6 @@ const NowPlaying = ({
   });
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
-  
-  const { isConnected, showNetworkBanner } = useNetwork();
   
   const volumeTimerRef = useRef(null);
   const volumeLastAdjustedRef = useRef(0);
