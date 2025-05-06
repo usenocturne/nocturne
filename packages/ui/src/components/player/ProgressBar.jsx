@@ -27,7 +27,7 @@ const ProgressBar = ({
       event.preventDefault();
       event.stopPropagation();
       const delta = event.deltaX;
-      const step = 0.5;
+      const step = 1.5;
 
       setScrubbingProgress((prev) => {
         const nextValue =
