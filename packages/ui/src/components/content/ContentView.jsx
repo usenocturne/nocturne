@@ -36,6 +36,29 @@ const ContentView = ({
 
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
 
+  const fetchPlaylistTracks = async (playlistId, initialTracks, initialNext) => {
+    let allTracks = [...initialTracks];
+    let nextUrl = initialNext;
+
+    while (nextUrl) {
+      const response = await fetch(nextUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch additional tracks: ${response.status}`);
+      }
+
+      const data = await response.json();
+      allTracks = [...allTracks, ...data.items.map(item => item.track)];
+      nextUrl = data.next;
+    }
+
+    return allTracks;
+  };
+
   const { showMappingOverlay, activeButton, mappingInProgress, setTrackUris } =
     useButtonMapping({
       accessToken,
@@ -189,8 +212,8 @@ const ContentView = ({
             }
 
             contentData = await playlistResponse.json();
-
-            tracksData = contentData.tracks.items.map((item) => item.track);
+            const initialTracks = contentData.tracks.items.map((item) => item.track);
+            tracksData = await fetchPlaylistTracks(contentId, initialTracks, contentData.tracks.next);
             break;
           }
 
