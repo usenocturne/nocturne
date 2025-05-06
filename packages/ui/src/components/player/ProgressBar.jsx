@@ -1,20 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { usePlaybackProgressConsumer } from "../../hooks/usePlaybackProgress";
 
 const ProgressBar = ({
-  progress: externalProgress,
-  isPlaying: externalIsPlaying,
-  durationMs: externalDurationMs,
+  progress,
+  isPlaying,
+  durationMs,
   onSeek,
   onPlayPause,
   onScrubbingChange,
+  updateProgress,
 }) => {
-  const progressContext = usePlaybackProgressConsumer();
-
-  const progress = externalProgress ?? progressContext.progressPercentage;
-  const isPlaying = externalIsPlaying ?? progressContext.isPlaying;
-  const durationMs = externalDurationMs ?? progressContext.duration;
-
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubbingProgress, setScrubbingProgress] = useState(null);
   const wasPlayingRef = useRef(false);
@@ -59,9 +53,7 @@ const ProgressBar = ({
         if (scrubbingProgress !== null) {
           const seekMs = Math.floor((scrubbingProgress / 100) * durationMs);
           onSeek(seekMs);
-          if (progressContext.updateProgress) {
-            progressContext.updateProgress(seekMs);
-          }
+          updateProgress?.(seekMs);
         }
 
         setScrubbingProgress(null);
@@ -87,7 +79,7 @@ const ProgressBar = ({
     onSeek,
     onPlayPause,
     onScrubbingChange,
-    progressContext,
+    updateProgress,
   ]);
 
   const finalProgress = scrubbingProgress ?? progress;

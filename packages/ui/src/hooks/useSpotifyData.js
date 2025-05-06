@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./useAuth";
 import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
-import { usePlaybackProgress } from "./usePlaybackProgress";
 import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { networkAwareRequest } from "../utils/networkAwareRequest";
 
@@ -58,7 +57,6 @@ export function useSpotifyData(activeSection) {
     refreshPlaybackState,
   } = useSpotifyPlayerState(effectiveToken);
 
-  const playbackProgress = usePlaybackProgress(effectiveToken);
   const playerControls = useSpotifyPlayerControls(effectiveToken);
 
   const initializeWithFreshToken = useCallback(async () => {
@@ -732,7 +730,6 @@ export function useSpotifyData(activeSection) {
     playerIsLoading,
     playerError,
     refreshPlaybackState,
-    playbackProgress,
     playerControls,
     recentAlbums,
     userPlaylists,

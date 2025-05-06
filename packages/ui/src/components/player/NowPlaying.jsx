@@ -498,6 +498,7 @@ const NowPlaying = ({
           onSeek={handleSeek}
           onPlayPause={handlePlayPause}
           onScrubbingChange={handleScrubbingChange}
+          updateProgress={updateProgress}
         />
       </div>
 

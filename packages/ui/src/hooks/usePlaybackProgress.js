@@ -1,17 +1,5 @@
-import { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSpotifyPlayerState } from './useSpotifyPlayerState';
-
-export const PlaybackProgressContext = createContext(null);
-
-export const usePlaybackProgressConsumer = () => {
-  const context = useContext(PlaybackProgressContext);
-
-  if (!context) {
-    throw new Error('usePlaybackProgressConsumer must be used within a PlaybackProgressContext.Provider');
-  }
-
-  return context;
-};
 
 const sharedState = {
   refreshTimeoutId: null,
