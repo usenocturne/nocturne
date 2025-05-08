@@ -9,8 +9,6 @@ usage() {
 }
 
 while getopts "r:d:v:" OPTS; do
-  echo "opts: ${OPTS}"
-  echo "${OPTARG}"
   case ${OPTS} in
     r) REPO=${OPTARG} ;;
     d) DEST=${OPTARG} ;;
