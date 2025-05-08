@@ -12,7 +12,6 @@ const ContentView = ({
   contentId,
   contentType = "album",
   onClose,
-  onNavigateToNowPlaying,
   currentlyPlayingTrackUri,
   radioMixes = [],
   updateGradientColors,
@@ -297,10 +296,6 @@ const ContentView = ({
     } else {
       navigate(-1);
     }
-
-    if (currentPlayback?.item) {
-      onNavigateToNowPlaying();
-    }
   }
 
   const handleTrackPlay = async (track, index) => {
@@ -353,10 +348,6 @@ const ContentView = ({
       setTimeout(async () => {
         await toggleShuffle(true);
       }, 500);
-    }
-
-    if (success && onNavigateToNowPlaying) {
-      onNavigateToNowPlaying();
     }
   };
 

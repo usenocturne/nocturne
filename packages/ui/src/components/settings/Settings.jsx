@@ -465,31 +465,31 @@ export default function Settings({
   };
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (
-        event.key === "Escape" &&
-        !isAnimating &&
-        !isProcessingEscape.current
-      ) {
-        isProcessingEscape.current = true;
-
+    const handleKeyDown = (e) => {
+      if (isAnimating) return;
+      
+      if (e.key === "Escape") {
         if (showSubpage) {
           navigateBack();
         } else if (showParent) {
           navigateBack();
+        } else {
+          shouldExitToRecents.current = true;
+          setActiveSection("recents");
         }
 
         setTimeout(() => {
-          isProcessingEscape.current = false;
-        }, 100);
+          setIsAnimating(false);
+        }, ANIMATION_DURATION);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isAnimating, showSubpage, showParent]);
+  }, [isAnimating, showSubpage, showParent, setActiveSection]);
 
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container">

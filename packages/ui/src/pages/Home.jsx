@@ -73,6 +73,21 @@ export default function Home({
   ]);
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        if (activeSection === "recents") {
+          setActiveSection("nowPlaying");
+        } else if (activeSection !== "nowPlaying" && activeSection !== "settings") {
+          setActiveSection("recents");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeSection, setActiveSection]);
+
+  useEffect(() => {
     if (activeSection === "nowPlaying") {
       refreshPlaybackState();
     }
