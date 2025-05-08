@@ -8,9 +8,11 @@ usage() {
   exit 1
 }
 
-while getopts "r:d:v" OPTS; do
+while getopts "r:d:v:" OPTS; do
+  echo "opts: ${OPTS}"
+  echo "${OPTARG}"
   case ${OPTS} in
-r) REPO=${OPTARG} ;;
+    r) REPO=${OPTARG} ;;
     d) DEST=${OPTARG} ;;
     v) VER=${OPTARG} ;;
     *) usage ;;
@@ -18,7 +20,7 @@ r) REPO=${OPTARG} ;;
 done
 
 [ -z "$REPO" ] && echo "Need a repo to download from in username/repo format (-r)" && usage
-[ -z "$VER" ] && echo "Need a specific version (tag) to download" && usage
+[ -z "$VER" ] && echo "Need a specific version (tag) to download (-v)" && usage
 [ -z "$DEST" ] && DEST="$(pwd)"
 
 echo "Fetching $VER version of $REPO"
