@@ -2,7 +2,7 @@
 
 chroot_exec apk add caddy
 
-github_releases -r usenocturne/nocturne-ui -a nocturne-ui -d /etc/nocturne/ui -v "$NOCTURNE_UI_TAG"
+github_release_source -r usenocturne/nocturne-ui -d /etc/nocturne/ui -v "$NOCTURNE_UI_TAG"
 
 mkdir -p "$ROOTFS_PATH"/etc/caddy
 cat > "$ROOTFS_PATH"/etc/caddy/Caddyfile << EOF
