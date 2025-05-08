@@ -10,16 +10,14 @@ export async function checkNetworkConnectivity() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    const response = await fetch("https://api.spotify.com/v1/", {
-      method: "OPTIONS",
+    const response = await fetch("https://1.1.1.1/", {
+      method: "HEAD",
+      mode: "no-cors",
+      cache: "no-store",
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new NetworkError(`HTTP error! status: ${response.status}`);
-    }
 
     return {
       isConnected: true,

@@ -20,7 +20,7 @@ import { useGradientState } from "./hooks/useGradientState";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
 import { useBluetooth, useSystemUpdate } from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
-import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
+import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
 import PairingScreen from "./components/auth/PairingScreen";
@@ -245,7 +245,6 @@ function App() {
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState(null);
   const [showConnectorModal, setShowConnectorModal] = useState(false);
-  const [showBanner, setShowBanner] = useState(false);
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
 
@@ -267,37 +266,19 @@ function App() {
         }
       }
     };
-    
+
     const handleOverlayDismiss = () => {
       setShowBrightnessOverlay(false);
     };
 
     document.addEventListener('keydown', handleBrightnessKeyDown, { capture: true });
     window.addEventListener('brightness-overlay-dismiss', handleOverlayDismiss);
-    
+
     return () => {
       document.removeEventListener('keydown', handleBrightnessKeyDown, { capture: true });
       window.removeEventListener('brightness-overlay-dismiss', handleOverlayDismiss);
     };
   }, [showBrightnessOverlay, showTutorial]);
-
-  useEffect(() => {
-    const handleNetworkBannerShow = () => {
-      setShowBanner(true);
-    };
-
-    const handleNetworkBannerHide = () => {
-      setShowBanner(false);
-    };
-
-    window.addEventListener('networkBannerShow', handleNetworkBannerShow);
-    window.addEventListener('networkBannerHide', handleNetworkBannerHide);
-
-    return () => {
-      window.removeEventListener('networkBannerShow', handleNetworkBannerShow);
-      window.removeEventListener('networkBannerHide', handleNetworkBannerHide);
-    };
-  }, []);
 
   const {
     isAuthenticated,
@@ -321,11 +302,11 @@ function App() {
   } = useSpotifyData(activeSection);
 
   const {
-    isConnected,
-    showNoNetwork,
+    isConnected: isInternetConnected,
     showNetworkBanner,
-    dismissNetworkBanner,
-    checkNetwork,
+    initialCheckDone,
+    initialConnectionFailed,
+    hasEverConnectedThisSession,
   } = useNetwork();
 
   const {
@@ -386,8 +367,16 @@ function App() {
   };
 
   useEffect(() => {
-    checkNetwork();
-  }, [checkNetwork]);
+    if (isAuthenticated) {
+      const handleNetworkRestored = () => {
+        refreshPlaybackState(true);
+      };
+      window.addEventListener("online", handleNetworkRestored);
+      return () => {
+        window.removeEventListener("online", handleNetworkRestored);
+      };
+    }
+  }, [isAuthenticated, refreshPlaybackState]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -395,15 +384,6 @@ function App() {
       setShowTutorial(!hasSeenTutorial);
     }
   }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const startWithNowPlaying = localStorage.getItem("startWithNowPlaying") === "true";
-      if (startWithNowPlaying && !viewingContent) {
-        setActiveSection("nowPlaying");
-      }
-    }
-  }, [isAuthenticated, viewingContent]);
 
   useEffect(() => {
     if (activeSection === "recents" && recentAlbums.length > 0) {
@@ -438,12 +418,12 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (!isConnected) {
-      setDiscoverable(true);
-    } else {
+    if (lastConnectedDevice && isInternetConnected) {
       setDiscoverable(false);
+    } else {
+      setDiscoverable(true);
     }
-  }, [isConnected, setDiscoverable]);
+  }, [lastConnectedDevice, isInternetConnected, setDiscoverable]);
 
   useEffect(() => {
     if (showTetheringScreen) {
@@ -520,11 +500,26 @@ function App() {
 
   const isFlashing = isUpdating && updateStatus.stage === "flash";
 
+  const showConnectionLostScreen = initialCheckDone &&
+    !isFlashing &&
+    !pairingRequest &&
+    !showTetheringScreen &&
+    (
+      (initialConnectionFailed && !isInternetConnected && !hasEverConnectedThisSession) ||
+      (lastConnectedDevice && !isInternetConnected && hasEverConnectedThisSession)
+    );
+
+  const displayNetworkBanner = initialCheckDone && !showConnectionLostScreen && showNetworkBanner;
+
   let content;
   if (authIsLoading) {
     content = null;
   } else if (!isAuthenticated) {
     content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
+  } else if (!initialCheckDone) {
+    content = null;
+  } else if (showConnectionLostScreen) {
+    content = <NetworkScreen isConnectionLost={true} deviceName={lastConnectedDevice?.name} />;
   } else if (showTutorial) {
     content = <Tutorial onComplete={handleTutorialComplete} />;
   } else if (activeSection === "nowPlaying") {
@@ -593,7 +588,7 @@ function App() {
 
                   <div className="relative z-10">
                     {content}
-                    {!isFlashing && !showTetheringScreen && (
+                    {!isFlashing && !showTetheringScreen && !showConnectionLostScreen && (
                       <>
                         {pairingRequest ? (
                           <PairingScreen
@@ -602,24 +597,11 @@ function App() {
                             onAccept={acceptPairing}
                             onReject={denyPairing}
                           />
-                        ) : !isConnected && lastConnectedDevice ? (
-                          <NetworkScreen
-                            deviceName={lastConnectedDevice.name}
-                            isConnectionLost={true}
-                            isTetheringRequired={isTetheringRequired}
-                            onRetryDismiss={stopRetrying}
-                          />
-                        ) : showNoNetwork ? (
-                          <NetworkScreen
-                            isConnectionLost={true}
-                            isTetheringRequired={isTetheringRequired}
-                          />
                         ) : null}
                       </>
                     )}
                     <NetworkBanner
-                      visible={showNetworkBanner}
-                      onClose={dismissNetworkBanner}
+                      visible={displayNetworkBanner}
                     />
                     <SystemUpdateModal
                       show={isFlashing}
@@ -649,7 +631,7 @@ function App() {
                         activeButton={globalActiveButton}
                       />
                     )}
-                    <BrightnessOverlay 
+                    <BrightnessOverlay
                       isVisible={showBrightnessOverlay}
                       brightness={brightness}
                       onBrightnessChange={setBrightness}
