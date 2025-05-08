@@ -26,6 +26,7 @@ export function SettingsProvider({ children }) {
     elapsedTimeEnabled: getDefaultSettingValue("elapsedTimeEnabled", true),
     remainingTimeEnabled: getDefaultSettingValue("remainingTimeEnabled", false),
     showStatusBar: getDefaultSettingValue("showStatusBar", true),
+    startWithNowPlaying: getDefaultSettingValue("startWithNowPlaying", false),
   });
 
   useEffect(() => {

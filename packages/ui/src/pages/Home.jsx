@@ -23,7 +23,7 @@ export default function Home({
   refreshPlaybackState,
   onOpenContent,
 }) {
-  const [, updateGradientColors] = useGradientState();
+  const [gradientState, updateGradientColors] = useGradientState();
   const scrollContainerRef = useRef(null);
   const itemWidth = 290;
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
@@ -47,35 +47,24 @@ export default function Home({
   });
 
   useEffect(() => {
-    const storedSection = localStorage.getItem("lastActiveSection");
-    if (storedSection && storedSection !== activeSection) {
-      setActiveSection(storedSection);
-    }
-  }, []);
-
-  useEffect(() => {
     if (activeSection === "recents" && recentAlbums.length > 0) {
       const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url;
       updateGradientColors(firstAlbumImage || null, "recents");
     } else if (activeSection === "library" && userPlaylists.length > 0) {
       const firstPlaylistImage = userPlaylists[0]?.images?.[1]?.url;
       updateGradientColors(firstPlaylistImage || null, "library");
+    } else if (activeSection === "radio" && radioMixes.length > 0) {
+      const firstMixImage = radioMixes[0]?.image?.url;
+      updateGradientColors(firstMixImage || null, "radio");
     } else if (activeSection === "artists" && topArtists.length > 0) {
       const firstArtistImage = topArtists[0]?.images?.[1]?.url;
       updateGradientColors(firstArtistImage || null, "artists");
-    } else if (activeSection === "radio" && radioMixes.length > 0) {
-      updateGradientColors(null, "radio");
-    } else if (activeSection === "nowPlaying" && currentlyPlayingAlbum) {
-      const albumImage = currentlyPlayingAlbum?.images?.[1]?.url;
-      updateGradientColors(albumImage || null, "nowPlaying");
     } else if (activeSection === "settings") {
       updateGradientColors(null, "settings");
     }
-
-    localStorage.setItem("lastActiveSection", activeSection);
   }, [
     activeSection,
-    updateGradientColors,
+    updateGradientColors,  
     recentAlbums,
     userPlaylists,
     topArtists,
@@ -84,13 +73,14 @@ export default function Home({
   ]);
 
   useEffect(() => {
-    if (
-      scrollContainerRef.current &&
-      scrollContainerRef.current.scrollLeft <= 10
-    ) {
-      if (recentAlbums.length > 0 && activeSection === "recents") {
-        setNewAlbumAdded(true);
-      }
+    if (activeSection === "nowPlaying") {
+      refreshPlaybackState();
+    }
+  }, [activeSection, refreshPlaybackState]);
+
+  useEffect(() => {
+    if (recentAlbums.length > 0 && activeSection === "recents") {
+      setNewAlbumAdded(true);
     }
   }, [recentAlbums, activeSection]);
 

@@ -25,6 +25,15 @@ const settingsStructure = {
     icon: SettingsGeneralIcon,
     items: [
       {
+        id: "start-with-now-playing",
+        title: "Start with Now Playing",
+        type: "toggle",
+        description:
+          "When enabled, the app will open directly to Now Playing instead of Recents when you start it.",
+        storageKey: "startWithNowPlaying",
+        defaultValue: false,
+      },
+      {
         id: "show-status-bar",
         title: "Toggle Status Bar",
         type: "toggle",

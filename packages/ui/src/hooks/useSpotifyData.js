@@ -55,7 +55,7 @@ export function useSpotifyData(activeSection) {
     isLoading: playerIsLoading,
     error: playerError,
     refreshPlaybackState,
-  } = useSpotifyPlayerState(effectiveToken);
+  } = useSpotifyPlayerState(effectiveToken, !isInitializing);
 
   const playerControls = useSpotifyPlayerControls(effectiveToken);
 
