@@ -48,16 +48,16 @@ export default function Home({
 
   useEffect(() => {
     if (activeSection === "recents" && recentAlbums.length > 0) {
-      const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url;
+      const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url || recentAlbums[0]?.images?.[0]?.url;
       updateGradientColors(firstAlbumImage || null, "recents");
     } else if (activeSection === "library" && userPlaylists.length > 0) {
-      const firstPlaylistImage = userPlaylists[0]?.images?.[1]?.url;
+      const firstPlaylistImage = userPlaylists[0]?.images?.[1]?.url || userPlaylists[0]?.images?.[0]?.url;
       updateGradientColors(firstPlaylistImage || null, "library");
     } else if (activeSection === "radio" && radioMixes.length > 0) {
-      const firstMixImage = radioMixes[0]?.image?.url;
+      const firstMixImage = radioMixes[0]?.images?.[0]?.url;
       updateGradientColors(firstMixImage || null, "radio");
     } else if (activeSection === "artists" && topArtists.length > 0) {
-      const firstArtistImage = topArtists[0]?.images?.[1]?.url;
+      const firstArtistImage = topArtists[0]?.images?.[1]?.url || topArtists[0]?.images?.[0]?.url;
       updateGradientColors(firstArtistImage || null, "artists");
     } else if (activeSection === "settings") {
       updateGradientColors(null, "settings");
@@ -209,24 +209,25 @@ export default function Home({
           className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
           style={{ willChange: "transform" }}
         >
-          {isLoading.recentAlbums ? (
-            Array(5)
-              .fill()
-              .map((_, index) => (
-                <div
-                  key={`loading-${index}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                >
+          {isLoading.recentAlbums 
+            ? (Array(5)
+                .fill()
+                .map((_, index) => (
                   <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
-                    style={{ width: 280, height: 280 }}
-                  ></div>
-                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
-                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
-                </div>
-              ))
-          ) : recentAlbums.length > 0 ? (
-            recentAlbums.map((album) => (
+                    key={`loading-${index}`}
+                    className="min-w-[280px] pl-2 mr-10 snap-start"
+                  >
+                    <div
+                      className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
+                      style={{ width: 280, height: 280 }}
+                    ></div>
+                    <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
+                    <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
+                  </div>
+                ))
+              ) 
+            : recentAlbums.length > 0 
+            ? (recentAlbums.map((album) => (
               <div
                 key={album.id}
                 className="min-w-[280px] pl-2 mr-10 snap-start"
@@ -363,9 +364,9 @@ export default function Home({
                     style={{ width: 280, height: 280 }}
                     onClick={() => onOpenContent(playlist.id, "playlist")}
                   >
-                    {playlist?.images?.[1]?.url ? (
+                    {playlist?.images?.length > 0 ? (
                       <img
-                        src={playlist.images[1].url}
+                        src={playlist.images[1]?.url || playlist.images[0].url}
                         alt={`${playlist.name} Cover`}
                         className="w-full h-full rounded-[12px] aspect-square"
                       />

@@ -137,60 +137,16 @@ const ContentView = ({
             }
 
             contentData = await albumResponse.json();
-
-            const albumTracksResponse = await fetch(
-              `https://api.spotify.com/v1/albums/${contentId}/tracks?limit=50`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              }
-            );
-
-            if (!albumTracksResponse.ok) {
-              throw new Error(
-                `Failed to fetch album tracks: ${albumTracksResponse.status}`
-              );
+            
+            if (
+              contentData?.images &&
+              contentData.images.length > 0 &&
+              updateGradientColors
+            ) {
+              updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
             }
 
-            tracksData = (await albumTracksResponse.json()).items;
-            break;
-          }
-
-          case "artist": {
-            const artistResponse = await fetch(
-              `https://api.spotify.com/v1/artists/${contentId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              }
-            );
-
-            if (!artistResponse.ok) {
-              throw new Error(
-                `Failed to fetch artist data: ${artistResponse.status}`
-              );
-            }
-
-            contentData = await artistResponse.json();
-
-            const artistTracksResponse = await fetch(
-              `https://api.spotify.com/v1/artists/${contentId}/top-tracks?market=from_token`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              }
-            );
-
-            if (!artistTracksResponse.ok) {
-              throw new Error(
-                `Failed to fetch artist tracks: ${artistTracksResponse.status}`
-              );
-            }
-
-            tracksData = (await artistTracksResponse.json()).tracks;
+            tracksData = contentData.tracks.items;
             break;
           }
 
@@ -211,8 +167,65 @@ const ContentView = ({
             }
 
             contentData = await playlistResponse.json();
-            const initialTracks = contentData.tracks.items.map((item) => item.track);
-            tracksData = await fetchPlaylistTracks(contentId, initialTracks, contentData.tracks.next);
+
+            if (
+              contentData?.images &&
+              contentData.images.length > 0 &&
+              updateGradientColors
+            ) {
+              updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+            }
+
+            tracksData = contentData.tracks.items.map((item) => item.track);
+
+            if (contentData.tracks.next) {
+              const additionalTracks = await fetchPlaylistTracks(
+                contentId,
+                tracksData,
+                contentData.tracks.next
+              );
+              tracksData = additionalTracks;
+            }
+            break;
+          }
+
+          case "artist": {
+            const [artistResponse, topTracksResponse] = await Promise.all([
+              fetch(`https://api.spotify.com/v1/artists/${contentId}`, {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              }),
+              fetch(
+                `https://api.spotify.com/v1/artists/${contentId}/top-tracks?market=from_token`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              ),
+            ]);
+
+            if (!artistResponse.ok || !topTracksResponse.ok) {
+              throw new Error(
+                `Failed to fetch artist data: ${
+                  !artistResponse.ok ? artistResponse.status : topTracksResponse.status
+                }`
+              );
+            }
+
+            contentData = await artistResponse.json();
+            const topTracksData = await topTracksResponse.json();
+
+            if (
+              contentData?.images &&
+              contentData.images.length > 0 &&
+              updateGradientColors
+            ) {
+              updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+            }
+
+            tracksData = topTracksData.tracks;
             break;
           }
 
@@ -235,7 +248,7 @@ const ContentView = ({
             const likedSongsData = await likedSongsResponse.json();
 
             contentData = {
-              id: "liked-songs",
+              id: "liked-songs", 
               name: "Liked Songs",
               type: "liked-songs",
               images: [
@@ -244,6 +257,10 @@ const ContentView = ({
               tracks: { total: likedSongsData.total },
               owner: { display_name: "You" },
             };
+
+            if (updateGradientColors) {
+              updateGradientColors(contentData.images[1].url, contentType);
+            }
 
             tracksData = likedSongsData.items.map((item) => item.track);
             break;
@@ -256,11 +273,22 @@ const ContentView = ({
               contentData = {
                 ...foundMix,
                 type: "mix",
+                images: foundMix.images?.[1] 
+                  ? foundMix.images 
+                  : [foundMix.images?.[0], foundMix.images?.[0]]
               };
+
+              if (
+                contentData?.images &&
+                contentData.images.length > 0 &&
+                updateGradientColors
+              ) {
+                updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+              }
 
               tracksData = foundMix.tracks || [];
             } else {
-              throw new Error(`Mix not found: ${contentId}`);
+              throw new Error(`Mix not found: ${contentId}`); 
             }
             break;
           }
@@ -271,14 +299,6 @@ const ContentView = ({
 
         setContent(contentData);
         setTracks(tracksData);
-
-        if (
-          contentData?.images &&
-          contentData.images.length > 0 &&
-          updateGradientColors
-        ) {
-          updateGradientColors(contentData.images[0].url, contentType);
-        }
       } catch (err) {
         console.error(`Error fetching ${contentType} data:`, err);
         setError(err.message);
@@ -400,7 +420,7 @@ const ContentView = ({
     if (!content.images || !content.images.length) {
       return "/images/not-playing.webp";
     }
-    return content.images[0].url;
+    return content.images[1]?.url || content.images[0].url;
   };
 
   const getSubtitle = () => {
