@@ -109,7 +109,7 @@ After setting up your local server, you may follow these steps to see your chang
    - Your changes should be based off the `main` branch.
 2. Create a feature branch: `git checkout -b feature/new-feature`
 3. Commit your changes: `git commit -m 'chore/feat/fix: add new feature'`
-   - Please label your commits with chore, feat, fix, and optionally add a 
+   - Please label your commits with chore, feat, fix, and optionally add which module you changed in parenthesis and a short description of the change (i.e. `chore(ui): add new button`).
 4. Push to the branch: `git push origin feature/new-feature`
 5. Open a Pull Request
 
