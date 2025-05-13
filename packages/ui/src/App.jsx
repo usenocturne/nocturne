@@ -514,10 +514,12 @@ function App() {
   let content;
   if (authIsLoading) {
     content = null;
-  } else if (!isAuthenticated) {
-    content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (!initialCheckDone) {
     content = null;
+  } else if (!isInternetConnected && !hasEverConnectedThisSession) {
+    content = <NetworkScreen isConnectionLost={true} />;
+  } else if (!isAuthenticated) {
+    content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showConnectionLostScreen) {
     content = <NetworkScreen isConnectionLost={true} deviceName={lastConnectedDevice?.name} />;
   } else if (showTutorial) {

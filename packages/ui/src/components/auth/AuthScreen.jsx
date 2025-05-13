@@ -1,72 +1,44 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useAuth } from "../../hooks/useAuth";
+import { useNetwork } from "../../hooks/useNetwork";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import GradientBackground from "../common/GradientBackground";
 import QRCodeDisplay from "./QRCodeDisplay";
-import { checkNetworkConnectivity } from "../../utils/networkChecker";
+import NetworkScreen from "./NetworkScreen";
 
 const AuthScreen = ({ onAuthSuccess }) => {
   const [error, setError] = useState(null);
   const [authInitialized, setAuthInitialized] = useState(false);
-  const [isNetworkConnected, setIsNetworkConnected] = useState(false);
-  const [isCheckingNetwork, setIsCheckingNetwork] = useState(true);
   const [hasQrCode, setHasQrCode] = useState(false);
   const authAttemptedRef = useRef(false);
+  const authTimerRef = useRef(null);
 
   const { authData, isLoading, initAuth, pollAuthStatus, isAuthenticated } =
     useAuth();
-
+  const { isConnected: isNetworkConnected, initialCheckDone } = useNetwork();
   const [gradientState, updateGradientColors] = useGradientState();
 
   useEffect(() => {
-    const checkNetwork = async () => {
-      setIsCheckingNetwork(true);
-      try {
-        const result = await checkNetworkConnectivity();
-        setIsNetworkConnected(result.isConnected);
-        if (!result.isConnected) {
-          setError("Network connection required");
-        } else {
-          if (error === "Network connection required") {
-            setError(null);
-          }
-        }
-      } catch (err) {
-        console.error("Network check error:", err);
-        setIsNetworkConnected(false);
-      } finally {
-        setIsCheckingNetwork(false);
-      }
-    };
-
-    checkNetwork();
-
-    const networkCheckInterval = setInterval(
-      checkNetwork,
-      hasQrCode ? 10000 : 5000
-    );
-
-    return () => clearInterval(networkCheckInterval);
-  }, [error, hasQrCode]);
+    updateGradientColors(null, "auth");
+  }, [updateGradientColors]);
 
   useEffect(() => {
-    updateGradientColors(null, "auth");
-
     if (
       !authInitialized &&
       !isAuthenticated &&
       !authAttemptedRef.current &&
       isNetworkConnected
     ) {
-      authAttemptedRef.current = true;
+      if (authTimerRef.current) {
+        clearTimeout(authTimerRef.current);
+      }
 
-      const startAuth = async () => {
+      authTimerRef.current = setTimeout(async () => {
+        authAttemptedRef.current = true;
         try {
           const storedAccessToken = localStorage.getItem("spotifyAccessToken");
-          const storedRefreshToken = localStorage.getItem(
-            "spotifyRefreshToken"
-          );
+          const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
 
           if (!storedAccessToken || !storedRefreshToken) {
             const authResponse = await initAuth();
@@ -91,14 +63,17 @@ const AuthScreen = ({ onAuthSuccess }) => {
           setError("Failed to initialize authentication");
           console.error("Auth init error:", err);
         }
-      };
-
-      startAuth();
+      }, 2000);
     }
+
+    return () => {
+      if (authTimerRef.current) {
+        clearTimeout(authTimerRef.current);
+      }
+    };
   }, [
     initAuth,
     pollAuthStatus,
-    updateGradientColors,
     isAuthenticated,
     authInitialized,
     isNetworkConnected,
@@ -116,13 +91,28 @@ const AuthScreen = ({ onAuthSuccess }) => {
     }
   }, [isAuthenticated, onAuthSuccess]);
 
+  if (!initialCheckDone) {
+    return (
+      <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
+        <GradientBackground gradientState={gradientState} />
+        <div className="relative z-10 flex flex-col items-center justify-center">
+          <NocturneIcon className="h-12 w-auto animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isNetworkConnected) {
+    return <NetworkScreen isConnectionLost={true} />;
+  }
+
   const isContentLoading =
-    (isCheckingNetwork && !hasQrCode) || (isLoading && !hasQrCode);
+    (isLoading && !hasQrCode) || (isNetworkConnected === false && !hasQrCode);
 
   const displayError =
     error && !error.includes("authorization_pending")
       ? error
-      : !isNetworkConnected && !isCheckingNetwork
+      : !isNetworkConnected
       ? "Network connection required"
       : null;
 

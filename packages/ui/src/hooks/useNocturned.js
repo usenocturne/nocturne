@@ -11,6 +11,23 @@ let isInitializingDiscovery = false;
 let isStoppingDiscovery = false;
 let isDevicesFetching = false;
 
+export const addGlobalWsListener = (id, handlers) => {
+  const listener = {
+    id,
+    ...handlers
+  };
+  globalWsListeners.push(listener);
+
+  if (!wsInitialized) {
+    setupGlobalWebSocket();
+    wsInitialized = true;
+  }
+  
+  return () => {
+    globalWsListeners = globalWsListeners.filter(l => l.id !== id);
+  };
+};
+
 let retryIsCancelled = false;
 let isNetworkPollingActive = false;
 

@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./useAuth";
 import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
 import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
-import { networkAwareRequest } from "../utils/networkAwareRequest";
+import { networkAwareRequest, waitForNetwork } from "../utils/networkAwareRequest";
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000;
 
 export function useSpotifyData(activeSection) {
   const {
@@ -13,7 +16,7 @@ export function useSpotifyData(activeSection) {
     error: authError
   } = useAuth();
 
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [recentAlbums, setRecentAlbums] = useState([]);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [topArtists, setTopArtists] = useState([]);
@@ -24,6 +27,7 @@ export function useSpotifyData(activeSection) {
     type: "liked-songs",
   });
   const [radioMixes, setRadioMixes] = useState([]);
+  const [retryCount, setRetryCount] = useState(0);
 
   const [isLoading, setIsLoading] = useState({
     recentAlbums: true,
@@ -42,11 +46,11 @@ export function useSpotifyData(activeSection) {
   });
 
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
-  const [tokenRefreshed, setTokenRefreshed] = useState(false);
   const dataLoadingAttemptedRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
-  const lastTokenRefreshTimeRef = useRef(0);
   const effectiveToken = isInitializing ? null : accessToken;
+  const retryTimeoutRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const {
     currentPlayback,
@@ -59,36 +63,11 @@ export function useSpotifyData(activeSection) {
 
   const playerControls = useSpotifyPlayerControls(effectiveToken);
 
-  const initializeWithFreshToken = useCallback(async () => {
-    if (!isAuthenticated || authIsLoading) return;
-    
-    const now = Date.now();
-    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
-    const isTokenValid = tokenExpiry && new Date(tokenExpiry) > new Date();
-    
-    if (isTokenValid && now - lastTokenRefreshTimeRef.current < 5000) {
-      setTokenRefreshed(true);
-      setIsInitializing(false);
-      return;
-    }
-    
-    setIsInitializing(true);
-    try {
-      const refreshSuccessful = await refreshTokens();
-      if (refreshSuccessful) {
-        lastTokenRefreshTimeRef.current = Date.now();
-      }
-      setTokenRefreshed(refreshSuccessful);
-    } finally {
-      setIsInitializing(false);
-    }
-  }, [isAuthenticated, authIsLoading, refreshTokens]);
-
   useEffect(() => {
-    if (isAuthenticated && !authIsLoading) {
-      initializeWithFreshToken();
+    if (isAuthenticated && !authIsLoading && !initialDataLoaded) {
+      loadInitialData();
     }
-  }, [isAuthenticated, authIsLoading, initializeWithFreshToken]);
+  }, [isAuthenticated, authIsLoading]);
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.id) {
@@ -637,17 +616,53 @@ export function useSpotifyData(activeSection) {
     return "/images/radio-cover/winter.webp";
   }
 
+  const isTokenValid = useCallback(() => {
+    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+    if (!tokenExpiry) return false;
+    
+    const expiryTime = new Date(tokenExpiry);
+    const now = new Date();
+    const tenMinutes = 10 * 60 * 1000;
+    return expiryTime.getTime() - now.getTime() > tenMinutes;
+  }, []);
+
+  const waitForValidToken = useCallback(async () => {
+    if (!isAuthenticated || !accessToken) return false;
+    if (isTokenValid()) return true;
+
+    try {
+      await refreshTokens();
+      return isTokenValid();
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      return false;
+    }
+  }, [isAuthenticated, accessToken, refreshTokens, isTokenValid]);
+
   const loadInitialData = useCallback(async () => {
     if (
       !accessToken || 
       isInitializing || 
-      initialDataLoaded || 
-      !tokenRefreshed ||
+      initialDataLoaded ||
       dataLoadingAttemptedRef.current
     ) {
       return;
     }
-    
+
+    const hasValidToken = await waitForValidToken();
+    if (!hasValidToken) {
+      return;
+    }
+
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     dataLoadingAttemptedRef.current = true;
     
     setIsLoading({
@@ -659,21 +674,52 @@ export function useSpotifyData(activeSection) {
     });
     
     try {
-      await fetchRecentlyPlayed();
-      await fetchUserPlaylists();
-      await fetchTopArtists();
-      await fetchLikedSongs();
-      await fetchRadioMixes();
+      await waitForNetwork();
+
+      abortControllerRef.current = new AbortController();
+
+      const results = await Promise.allSettled([
+        fetchRecentlyPlayed(),
+        fetchUserPlaylists(),
+        fetchTopArtists(),
+        fetchLikedSongs(),
+        fetchRadioMixes()
+      ]);
+
+      const failedRequests = results.filter(result => result.status === 'rejected');
+      
+      if (failedRequests.length > 0) {
+        console.error('Some data fetching operations failed:', 
+          failedRequests.map(f => f.reason));
+        
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          retryTimeoutRef.current = setTimeout(() => {
+            dataLoadingAttemptedRef.current = false;
+            loadInitialData();
+          }, RETRY_DELAY * Math.pow(2, retryCount));
+          return;
+        }
+      }
+
+      setInitialDataLoaded(true);
+      setRetryCount(0);
     } catch (error) {
       console.error("Error loading initial data:", error);
-    } finally {
-      setInitialDataLoaded(true);
+      
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        retryTimeoutRef.current = setTimeout(() => {
+          dataLoadingAttemptedRef.current = false;
+          loadInitialData();
+        }, RETRY_DELAY * Math.pow(2, retryCount));
+      }
     }
   }, [
     accessToken, 
     isInitializing, 
     initialDataLoaded, 
-    tokenRefreshed,
+    retryCount,
     fetchRecentlyPlayed,
     fetchUserPlaylists,
     fetchTopArtists,
@@ -682,13 +728,27 @@ export function useSpotifyData(activeSection) {
   ]);
 
   useEffect(() => {
-    if (accessToken && tokenRefreshed && !initialDataLoaded && !isInitializing) {
+    if (accessToken && !initialDataLoaded && !isInitializing) {
       loadInitialData();
     }
-  }, [accessToken, tokenRefreshed, initialDataLoaded, isInitializing, loadInitialData]);
+
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [accessToken, initialDataLoaded, isInitializing, loadInitialData]);
 
   const refreshData = useCallback(async () => {
     if (!accessToken) return;
+    
+    const hasValidToken = await waitForValidToken();
+    if (!hasValidToken) {
+      return;
+    }
     
     dataLoadingAttemptedRef.current = false;
     
@@ -699,15 +759,8 @@ export function useSpotifyData(activeSection) {
       likedSongs: true,
       radioMixes: true
     }));
-    
+
     try {
-      const tokenRefreshed = await refreshTokens();
-      
-      if (!tokenRefreshed) {
-        console.error("Token refresh failed during data refresh");
-        return;
-      }
-      
       await fetchUserPlaylists();
       await fetchTopArtists();
       await fetchLikedSongs();
@@ -715,7 +768,7 @@ export function useSpotifyData(activeSection) {
     } catch (error) {
       console.error("Error refreshing data:", error);
     }
-  }, [accessToken, refreshTokens, fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchRadioMixes]);
+  }, [accessToken, waitForValidToken, fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchRadioMixes]);
 
   const isLoadingData = Object.values(isLoading).some(Boolean);
   const isLoadingAll = authIsLoading || isInitializing || isLoadingData || playerIsLoading;

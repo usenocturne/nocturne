@@ -5,55 +5,83 @@ export class NetworkError extends Error {
   }
 }
 
+const STATUS_ENDPOINT = "http://localhost:5000/network/status";
+let hasDaemonFailed = false;
+
 export async function checkNetworkConnectivity() {
+  if (hasDaemonFailed) {
+    return { isConnected: navigator.onLine, source: "browser" };
+  }
+
+  if (!navigator.onLine) {
+    return { isConnected: false, source: "browser" };
+  }
+
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 300);
 
-    const response = await fetch("https://1.1.1.1/", {
-      method: "HEAD",
-      mode: "no-cors",
+    const response = await fetch(STATUS_ENDPOINT, {
+      method: "GET",
       cache: "no-store",
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
-    return {
-      isConnected: true,
-    };
-  } catch (error) {
-    if (error.name === "AbortError") {
-      return {
-        isConnected: false,
-        error: "Network request timed out",
-      };
+    if (!response.ok) {
+      hasDaemonFailed = true;
+      return { isConnected: navigator.onLine, source: "browser" };
     }
 
+    const data = await response.json();
     return {
-      isConnected: false,
-      error: error.message || "Network connectivity check failed",
+      isConnected: data.status === "online",
+      source: "daemon",
+    };
+  } catch (error) {
+    hasDaemonFailed = true;
+    return {
+      isConnected: navigator.onLine,
+      source: "browser",
     };
   }
 }
 
-export function startNetworkMonitoring(onStatusChange) {
-  const handleOnline = async () => {
-    const status = await checkNetworkConnectivity();
-    if (status.isConnected) {
-      onStatusChange?.(true);
+export async function checkNetworkConnectivitySync() {
+  if (hasDaemonFailed) {
+    return { isConnected: navigator.onLine, source: "browser" };
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300);
+
+    const response = await fetch(STATUS_ENDPOINT, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      hasDaemonFailed = true;
+      return { isConnected: navigator.onLine, source: "browser" };
     }
-  };
 
-  const handleOffline = () => {
-    onStatusChange?.(false);
-  };
-
-  window.addEventListener("online", handleOnline);
-  window.addEventListener("offline", handleOffline);
-
-  return () => {
-    window.removeEventListener("online", handleOnline);
-    window.removeEventListener("offline", handleOffline);
-  };
+    const data = await response.json();
+    return {
+      isConnected: data.status === "online",
+      source: "daemon",
+    };
+  } catch (error) {
+    hasDaemonFailed = true;
+    return {
+      isConnected: navigator.onLine,
+      source: "browser",
+    };
+  }
 }
+
+let networkWebSocket = null;

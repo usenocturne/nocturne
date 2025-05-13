@@ -4,11 +4,14 @@ import {
   checkAuthStatus,
   refreshAccessToken,
 } from "../services/authService";
+import { networkAwareRequest, waitForNetwork } from '../utils/networkAwareRequest';
 
 const authInitializationState = {
   initializing: false,
   refreshing: false,
-  lastRefreshTime: 0
+  lastRefreshTime: 0,
+  lastRefreshAttemptFailed: false,
+  networkRestoreTimeout: null
 };
 
 export function useAuth() {
@@ -24,6 +27,15 @@ export function useAuth() {
   const currentDeviceCodeRef = useRef(null);
   const initCalledRef = useRef(false);
 
+  const shouldRefreshToken = useCallback(() => {
+    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
+    if (!tokenExpiry) return true;
+
+    const expiryTime = new Date(tokenExpiry);
+    const now = new Date();
+    return expiryTime <= now || authInitializationState.lastRefreshAttemptFailed;
+  }, []);
+
   const refreshTokens = useCallback(async () => {
     try {
       const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
@@ -35,6 +47,9 @@ export function useAuth() {
       }
 
       if (authInitializationState.refreshing) return false;
+      
+      await waitForNetwork();
+      
       authInitializationState.refreshing = true;
 
       if (pollingIntervalRef.current) {
@@ -65,9 +80,11 @@ export function useAuth() {
 
         authInitializationState.refreshing = false;
         authInitializationState.lastRefreshTime = now;
+        authInitializationState.lastRefreshAttemptFailed = false;
         return true;
       }
       authInitializationState.refreshing = false;
+      authInitializationState.lastRefreshAttemptFailed = true;
       return false;
     } catch (err) {
       console.error("Token refresh failed:", err);
@@ -75,6 +92,7 @@ export function useAuth() {
         logout();
       }
       authInitializationState.refreshing = false;
+      authInitializationState.lastRefreshAttemptFailed = true;
       return false;
     }
   }, []);
@@ -141,7 +159,14 @@ export function useAuth() {
         setRefreshToken(storedRefreshToken);
         setIsAuthenticated(true);
 
-        await refreshTokens();
+        if (navigator.onLine) {
+          try {
+            await waitForNetwork();
+            await refreshTokens();
+          } catch (error) {
+            console.error("Initial token refresh failed:", error);
+          }
+        }
       }
 
       setIsLoading(false);
@@ -299,6 +324,33 @@ export function useAuth() {
       setIsAuthenticated(false);
     }
   }, [accessToken, refreshToken]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleNetworkRestored = () => {
+      if (authInitializationState.networkRestoreTimeout) {
+        clearTimeout(authInitializationState.networkRestoreTimeout);
+      }
+
+      authInitializationState.networkRestoreTimeout = setTimeout(async () => {
+        if (shouldRefreshToken()) {
+          await refreshTokens();
+        }
+      }, 5000);
+    };
+
+    window.addEventListener("networkRestored", handleNetworkRestored);
+    window.addEventListener("online", handleNetworkRestored);
+
+    return () => {
+      window.removeEventListener("networkRestored", handleNetworkRestored);
+      window.removeEventListener("online", handleNetworkRestored);
+      if (authInitializationState.networkRestoreTimeout) {
+        clearTimeout(authInitializationState.networkRestoreTimeout);
+      }
+    };
+  }, [isAuthenticated, shouldRefreshToken, refreshTokens]);
 
   return {
     isAuthenticated,
