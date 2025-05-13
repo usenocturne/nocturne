@@ -408,6 +408,22 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     }
   }, [accessToken, immediateLoad, fetchCurrentPlayback]);
 
+  useEffect(() => {
+    const handleNetworkRestored = async () => {
+      cleanupWebSocket();
+      connectionErrors = 0;
+      isAttemptingReconnect = false;
+      setupWebSocket();
+      await fetchCurrentPlayback(true);
+    };
+
+    window.addEventListener('networkRestored', handleNetworkRestored);
+
+    return () => {
+      window.removeEventListener('networkRestored', handleNetworkRestored);
+    };
+  }, [setupWebSocket, fetchCurrentPlayback, cleanupWebSocket]);
+
   return {
     currentPlayback,
     currentlyPlayingAlbum,

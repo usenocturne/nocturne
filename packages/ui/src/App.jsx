@@ -506,10 +506,14 @@ function App() {
     !showTetheringScreen &&
     (
       (initialConnectionFailed && !isInternetConnected && !hasEverConnectedThisSession) ||
-      (lastConnectedDevice && !isInternetConnected && hasEverConnectedThisSession)
+      (!hasEverConnectedThisSession && !isInternetConnected)
     );
 
-  const displayNetworkBanner = initialCheckDone && !showConnectionLostScreen && showNetworkBanner;
+  const displayNetworkBanner = initialCheckDone &&
+    !showConnectionLostScreen &&
+    !pairingRequest &&
+    showNetworkBanner &&
+    hasEverConnectedThisSession;
 
   let content;
   if (authIsLoading) {

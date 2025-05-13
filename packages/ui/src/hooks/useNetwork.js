@@ -31,6 +31,7 @@ export function useNetwork() {
         }
         setShowNetworkBanner(false);
         window.dispatchEvent(new Event('networkBannerHide'));
+        window.dispatchEvent(new Event('networkRestored'));
       } else if (!isInTutorial) {
         setShowNetworkBanner(true);
         window.dispatchEvent(new Event('networkBannerShow'));

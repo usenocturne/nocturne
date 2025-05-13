@@ -364,6 +364,23 @@ export const useBluetooth = () => {
       return;
     }
     
+    try {
+      const networkStatus = await fetch(`${API_BASE}/network/status`);
+      if (networkStatus.ok) {
+        const status = await networkStatus.json();
+        if (status.status === "online") {
+          cleanupReconnectTimer();
+          reconnectAttemptsRef.current = 0;
+          setReconnectAttempt(0);
+          isReconnecting.current = false;
+          window.dispatchEvent(new Event('networkBannerHide'));
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Network status check failed:', error);
+    }
+
     if (!continuous && reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
       cleanupReconnectTimer();
       reconnectAttemptsRef.current = 0;
