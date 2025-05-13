@@ -259,7 +259,7 @@ const ContentView = ({
             };
 
             if (updateGradientColors) {
-              updateGradientColors(contentData.images[1].url, contentType);
+              updateGradientColors(contentData.images[0].url, contentType);
             }
 
             tracksData = likedSongsData.items.map((item) => item.track);
