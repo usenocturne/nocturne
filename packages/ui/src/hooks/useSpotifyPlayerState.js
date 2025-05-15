@@ -413,7 +413,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
       cleanupWebSocket();
       connectionErrors = 0;
       isAttemptingReconnect = false;
-      setupWebSocket();
+      connectWebSocket();
       await fetchCurrentPlayback(true);
     };
 
@@ -422,7 +422,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     return () => {
       window.removeEventListener('networkRestored', handleNetworkRestored);
     };
-  }, [setupWebSocket, fetchCurrentPlayback, cleanupWebSocket]);
+  }, [connectWebSocket, fetchCurrentPlayback, cleanupWebSocket]);
 
   return {
     currentPlayback,
