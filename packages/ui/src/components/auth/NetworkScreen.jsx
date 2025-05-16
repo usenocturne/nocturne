@@ -200,7 +200,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
                     </div>
                   ) : (
                     <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                      Connect to "Nocturne" in your phone's Bluetooth settings.
+                      Enable Bluetooth Tethering and connect to "Nocturne" in your phone's settings.
                     </p>
                   )}
 
