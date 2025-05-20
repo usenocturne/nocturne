@@ -4,7 +4,7 @@ import { useSettings } from "../../../contexts/SettingsContext";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
 import { useBluetooth } from "../../../hooks/useNocturned";
 import { useConnector } from "../../../contexts/ConnectorContext";
-import { networkAwareRequest } from '../../../utils/networkAwareRequest';
+import { networkAwareRequest, waitForNetwork } from '../../../utils/networkAwareRequest';
 
 let cachedTimezone = null;
 
@@ -13,7 +13,7 @@ export default function StatusBar() {
   const [isFourDigits, setIsFourDigits] = useState(false);
   const [isBluetoothConnected, setIsBluetoothConnected] = useState(true);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
-  const [timezone, setTimezone] = useState(null);
+  const [timezone, setTimezone] = useState(cachedTimezone);
   const { settings } = useSettings();
   const { currentNetwork, availableNetworks } = useWiFiNetworks();
   const { lastConnectedDevice, connectedDevices } = useBluetooth();
@@ -27,12 +27,13 @@ export default function StatusBar() {
       }
 
       try {
+        await waitForNetwork();
         const response = await networkAwareRequest(
           () => fetch("https://api.usenocturne.com/v1/timezone")
         );
         
         if (!response.ok) {
-          console.error("Failed to fetch timezone from API");
+          console.error("Failed to fetch timezone from API, status:", response.status);
           return;
         }
 
