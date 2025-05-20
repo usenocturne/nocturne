@@ -237,12 +237,18 @@ export default function Home({
                 <div
                   className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                   style={{ width: 280, height: 280 }}
-                  onClick={() => onOpenContent(album.id, "album")}
+                  onClick={() => album.type !== 'local-track' && onOpenContent(album.id, "album")}
                 >
-                  {album.images?.[1]?.url ? (
+                  {album.images?.[1]?.url && album.type !== 'local-track' ? (
                     <img
                       src={album.images[1].url}
                       alt="Album Cover"
+                      className="w-full h-full rounded-[12px] aspect-square"
+                    />
+                  ) : album.type === 'local-track' ? (
+                    <img
+                      src="/images/not-playing.webp"
+                      alt="Local File"
                       className="w-full h-full rounded-[12px] aspect-square"
                     />
                   ) : (
@@ -252,7 +258,7 @@ export default function Home({
 
                 <h4
                   className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-                  onClick={() => onOpenContent(album.id, "album")}
+                  onClick={() => album.type !== 'local-track' && onOpenContent(album.id, "album")}
                 >
                   {album.name}
                 </h4>

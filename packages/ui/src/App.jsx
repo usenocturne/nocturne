@@ -439,6 +439,10 @@ function App() {
       } else if (activeSection === "recents") {
         updateGradientColors(currentlyPlayingAlbum.images[1].url, "recents");
       }
+    } else if (currentlyPlayingAlbum?.type === "local-track") {
+      if (activeSection === "recents" || activeSection === "nowPlaying") {
+        updateGradientColors(null, "radio");
+      }
     }
   }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
 

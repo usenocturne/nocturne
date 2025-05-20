@@ -31,7 +31,9 @@ const GradientBackground = ({
           currentColor3,
           currentColor4,
         ]),
-        transition: 'background-image 0.5s linear',
+        transitionProperty: 'background-image',
+        transitionDuration: '0.5s',
+        transitionTimingFunction: 'linear',
       }}
       className={classNames("absolute", "inset-0", className)}
     />

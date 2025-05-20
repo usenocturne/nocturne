@@ -51,11 +51,11 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     if (data?.item && data.item.type === "track") {
       const currentAlbum = data.item.is_local
         ? {
-            id: null,
-            name: data.item.name,
+            id: `local-${data.item.uri}`,
+            name: data.item.album?.name || data.item.name,
             images: [{ url: "/images/not-playing.webp" }],
             artists: data.item.artists,
-            type: "local",
+            type: "local-track",
             uri: data.item.uri,
           }
         : data.item.album;
