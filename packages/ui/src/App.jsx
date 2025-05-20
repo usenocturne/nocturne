@@ -242,6 +242,7 @@ function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [activeSection, setActiveSection] = useState("recents");
   const [viewingContent, setViewingContent] = useState(null);
+  const [contentSourceSection, setContentSourceSection] = useState(null);
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState(null);
   const [showConnectorModal, setShowConnectorModal] = useState(false);
@@ -465,31 +466,45 @@ function App() {
   };
 
   const handleOpenContent = (id, type) => {
+    setContentSourceSection(activeSection);
     setViewingContent({ id, type });
+    if (type === "artist") {
+      setActiveSection("artists");
+    } else if (type === "album") {
+      setActiveSection("recents");
+    }
+  };
+
+  const handleNavigateToArtistFromNowPlaying = (artistId, contentType) => {
+    setContentSourceSection("nowPlaying");
+    setViewingContent({ id: artistId, type: contentType });
+    setActiveSection("artists");
+  };
+
+  const handleNavigateToAlbumFromNowPlaying = (albumId, contentType) => {
+    setContentSourceSection("nowPlaying");
+    setViewingContent({ id: albumId, type: contentType });
+    setActiveSection("recents");
   };
 
   const handleCloseContent = () => {
+    const source = contentSourceSection;
     setViewingContent(null);
+    setContentSourceSection(null);
 
-    if (
-      activeSection === "nowPlaying" &&
-      currentlyPlayingAlbum?.images?.[0]?.url
-    ) {
-      updateGradientColors(currentlyPlayingAlbum.images[1].url, "nowPlaying");
-    } else if (activeSection === "recents" && recentAlbums.length > 0) {
-      updateGradientColors(recentAlbums[0]?.images?.[1]?.url, "recents");
-    } else if (activeSection === "library" && userPlaylists.length > 0) {
-      updateGradientColors(null, "library");
-    } else if (activeSection === "artists" && topArtists.length > 0) {
-      updateGradientColors(topArtists[0]?.images?.[1]?.url, "artists");
-    } else if (activeSection === "radio") {
-      updateGradientColors(null, "radio");
+    if (source) {
+      setActiveSection(source);
     }
   };
 
   const handleNavigateToNowPlaying = () => {
     setViewingContent(null);
     setActiveSection("nowPlaying");
+  };
+
+  const handleNavigateToArtist = (id, type) => {
+    setViewingContent({ id, type });
+    setActiveSection("artists");
   };
 
   const handleNetworkCancel = () => {
@@ -534,6 +549,8 @@ function App() {
         onClose={() => setActiveSection("recents")}
         updateGradientColors={updateGradientColors}
         onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
+        onNavigateToArtist={handleNavigateToArtistFromNowPlaying}
+        onNavigateToAlbum={handleNavigateToAlbumFromNowPlaying}
       />
     );
   } else if (viewingContent) {

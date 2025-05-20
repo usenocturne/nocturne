@@ -31,7 +31,9 @@ export default function NowPlaying({
   currentPlayback,
   onClose,
   updateGradientColors,
-  onOpenDeviceSwitcher
+  onOpenDeviceSwitcher,
+  onNavigateToArtist,
+  onNavigateToAlbum,
 }) {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
@@ -174,6 +176,12 @@ export default function NowPlaying({
         : currentPlayback.item.artists.map((artist) => artist.name).join(", ")
       : "";
 
+    const firstArtistId =
+      currentPlayback?.item?.type === "track" &&
+      currentPlayback?.item?.artists?.[0]?.id;
+
+    const albumId = currentPlayback?.item?.album?.id;
+
     const albumArt = currentPlayback?.item
       ? currentPlayback.item.type === "episode"
         ? currentPlayback.item.show.images[1]?.url || "/images/not-playing.webp"
@@ -186,10 +194,10 @@ export default function NowPlaying({
 
     const trackId = currentPlayback?.item?.id;
     
-    return { trackName, artistName, albumArt, trackId };
+    return { trackName, artistName, albumArt, trackId, firstArtistId, albumId };
   }, [currentPlayback]);
 
-  const { trackName, artistName, albumArt, trackId } = trackInfo;
+  const { trackName, artistName, albumArt, trackId, firstArtistId, albumId } = trackInfo;
 
   const handleWheel = useCallback((e) => {
     if (isProgressScrubbing) return;
@@ -439,7 +447,7 @@ export default function NowPlaying({
     >
       <div ref={contentContainerRef}>
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
-          <div className="min-w-[280px] mr-8">
+          <div className={`min-w-[280px] mr-8 ${albumId ? 'cursor-pointer' : ''}`} onClick={() => albumId && onNavigateToAlbum && onNavigateToAlbum(albumId, "album")}>
             <img
               src={albumArt}
               alt={
@@ -464,7 +472,10 @@ export default function NowPlaying({
                   pixelsPerSecond={40}
                 />
               </div>
-              <h4 className="text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px]">
+              <h4
+                className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId ? 'cursor-pointer' : ''}`}
+                onClick={() => firstArtistId && onNavigateToArtist && onNavigateToArtist(firstArtistId, "artist")}
+              >
                 {artistName}
               </h4>
             </div>
