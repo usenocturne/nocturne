@@ -6,7 +6,7 @@ let currentNetworkCheckPromise = null;
 let isConnected = true;
 let listeners = new Set();
 let lastNetworkRestoredTime = 0;
-const DNS_READY_DELAY = 5000;
+export const DNS_READY_DELAY = 5000;
 
 function isLocalRequest(url) {
   if (!url) return false;

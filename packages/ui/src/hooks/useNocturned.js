@@ -363,7 +363,9 @@ export const useBluetooth = () => {
       window.dispatchEvent(new Event('networkBannerHide'));
       return;
     }
-    
+
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
     try {
       const networkStatus = await fetch(`${API_BASE}/network/status`);
       if (networkStatus.ok) {
@@ -811,17 +813,19 @@ export const useBluetooth = () => {
         break;
 
       case 'bluetooth/network/disconnect':
-        if (!retryIsCancelled) {
-          window.dispatchEvent(new Event('offline'));
-          if (!isReconnecting.current) {
-            reconnectAttemptsRef.current = 0;
-            setReconnectAttempt(0);
-            isReconnecting.current = false;
-            setTimeout(() => {
-              attemptReconnect();
-            }, INITIAL_RECONNECT_DELAY);
-          }
+        window.dispatchEvent(new Event('offline'));
+
+        if (isReconnecting.current) {
+          cleanupReconnectTimer();
+          isReconnecting.current = false;
         }
+
+        reconnectAttemptsRef.current = 0;
+        setReconnectAttempt(0);
+
+        setTimeout(() => {
+          attemptReconnect();
+        }, INITIAL_RECONNECT_DELAY);
         break;
 
       default:

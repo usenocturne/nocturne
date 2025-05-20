@@ -16,7 +16,6 @@ const NetworkBanner = ({ visible, onClose }) => {
   useEffect(() => {
     if (visible) {
       setIsExiting(false);
-      attemptReconnect(true);
     }
     
     return () => {

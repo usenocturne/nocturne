@@ -14,6 +14,8 @@ const authInitializationState = {
   networkRestoreTimeout: null
 };
 
+const DNS_READY_DELAY = 5000;
+
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessToken, setAccessToken] = useState(null);
@@ -77,6 +79,8 @@ export function useAuth() {
 
         setIsAuthenticated(true);
         scheduleTokenRefresh(expiryDate);
+
+        window.dispatchEvent(new CustomEvent('accessTokenUpdated', { detail: { accessToken: data.access_token } }));
 
         authInitializationState.refreshing = false;
         authInitializationState.lastRefreshTime = now;
@@ -159,13 +163,10 @@ export function useAuth() {
         setRefreshToken(storedRefreshToken);
         setIsAuthenticated(true);
 
-        if (navigator.onLine) {
-          try {
-            await waitForNetwork();
-            await refreshTokens();
-          } catch (error) {
-            console.error("Initial token refresh failed:", error);
-          }
+        try {
+          await refreshTokens();
+        } catch (error) {
+          console.error("Initial token refresh attempt failed during initAuthState:", error);
         }
       }
 
@@ -328,16 +329,21 @@ export function useAuth() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const handleNetworkRestored = () => {
+    const handleNetworkRestored = async () => {
       if (authInitializationState.networkRestoreTimeout) {
         clearTimeout(authInitializationState.networkRestoreTimeout);
       }
 
       authInitializationState.networkRestoreTimeout = setTimeout(async () => {
         if (shouldRefreshToken()) {
-          await refreshTokens();
+          try {
+            await waitForNetwork();
+            await refreshTokens();
+          } catch (error) {
+            console.error("Error refreshing token after network restored:", error);
+          }
         }
-      }, 5000);
+      }, DNS_READY_DELAY);
     };
 
     window.addEventListener("networkRestored", handleNetworkRestored);

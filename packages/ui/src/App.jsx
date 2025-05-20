@@ -516,16 +516,14 @@ function App() {
     hasEverConnectedThisSession;
 
   let content;
-  if (authIsLoading) {
+  if (authIsLoading && !initialCheckDone) {
     content = null;
-  } else if (!initialCheckDone) {
-    content = null;
-  } else if (!isInternetConnected && !hasEverConnectedThisSession) {
+  } else if (!isInternetConnected && !hasEverConnectedThisSession && initialCheckDone) {
     content = <NetworkScreen isConnectionLost={true} />;
-  } else if (!isAuthenticated) {
-    content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showConnectionLostScreen) {
     content = <NetworkScreen isConnectionLost={true} deviceName={lastConnectedDevice?.name} />;
+  } else if (!isAuthenticated && initialCheckDone) {
+    content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showTutorial) {
     content = <Tutorial onComplete={handleTutorialComplete} />;
   } else if (activeSection === "nowPlaying") {

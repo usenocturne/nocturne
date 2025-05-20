@@ -13,6 +13,7 @@ let lastFetchTimestamp = 0;
 let pendingFetch = null;
 let keepAliveInterval = null;
 let isInitialized = false;
+let currentAccessToken = null;
 
 export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   const [currentPlayback, setCurrentPlayback] = useState(null);
@@ -28,6 +29,11 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   const subscriberIdRef = useRef(`subscriber-${Date.now()}-${Math.random()}`);
   const reconnectTimeoutRef = useRef(null);
   const maxRetryAttempts = 5;
+  const accessTokenRef = useRef(accessToken);
+
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
 
   const processPlaybackState = useCallback((data) => {
     if (!data) return;
@@ -78,7 +84,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   }, []);
 
   const fetchCurrentPlayback = useCallback(async (forceRefresh = false) => {
-    if (!accessToken || !navigator.onLine) {
+    if (!accessTokenRef.current || !navigator.onLine) {
       setCurrentPlayback(null);
       return;
     }
@@ -97,7 +103,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
       const response = await networkAwareRequest(() => 
         fetch("https://api.spotify.com/v1/me/player?type=episode,track", {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessTokenRef.current}`,
           },
         })
       );
@@ -167,7 +173,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   }, []);
 
   const connectWebSocket = useCallback(async () => {
-    if (!accessToken || isConnecting || isAttemptingReconnect || !navigator.onLine) {
+    if (!accessTokenRef.current || isConnecting || isAttemptingReconnect || !navigator.onLine) {
       return;
     }
 
@@ -217,7 +223,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     }
 
     isConnecting = true;
-    isInitialized = true;
+    currentAccessToken = accessTokenRef.current;
 
     try {
       await networkAwareRequest(async () => {
@@ -227,7 +233,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
           return;
         }
 
-        globalWebSocket = new WebSocket(`wss://dealer.spotify.com/?access_token=${accessToken}`);
+        globalWebSocket = new WebSocket(`wss://dealer.spotify.com/?access_token=${accessTokenRef.current}`);
         webSocketRef.current = globalWebSocket;
 
         globalWebSocket.onopen = () => {
@@ -262,7 +268,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
                 fetch(url, {
                   method: "PUT",
                   headers: {
-                    Authorization: `Bearer ${accessToken}`,
+                    Authorization: `Bearer ${currentAccessToken}`,
                     "Content-Type": "application/json",
                   },
                 })
@@ -421,6 +427,27 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
 
     return () => {
       window.removeEventListener('networkRestored', handleNetworkRestored);
+    };
+  }, [connectWebSocket, fetchCurrentPlayback, cleanupWebSocket]);
+
+  useEffect(() => {
+    const handleAccessTokenUpdate = (event) => {
+      const newAccessToken = event.detail.accessToken;
+      if (newAccessToken && newAccessToken !== accessTokenRef.current) {
+        accessTokenRef.current = newAccessToken;
+        if (globalWebSocket && globalWebSocket.readyState === WebSocket.OPEN) {
+          cleanupWebSocket(); 
+          setTimeout(() => connectWebSocket(), 100);
+        } else {
+          fetchCurrentPlayback(true); 
+        }
+      }
+    };
+
+    window.addEventListener('accessTokenUpdated', handleAccessTokenUpdate);
+
+    return () => {
+      window.removeEventListener('accessTokenUpdated', handleAccessTokenUpdate);
     };
   }, [connectWebSocket, fetchCurrentPlayback, cleanupWebSocket]);
 
