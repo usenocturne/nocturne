@@ -16,6 +16,7 @@ const ContentView = ({
   radioMixes = [],
   updateGradientColors,
   setIgnoreNextRelease,
+  onNavigateToNowPlaying,
 }) => {
   const [content, setContent] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -328,6 +329,10 @@ const ContentView = ({
     let uris = null;
     let wasShuffleEnabled = isShuffleEnabled;
 
+    if (wasShuffleEnabled) {
+      await toggleShuffle(false);
+    }
+
     if (contentType === "album") {
       contextUri = `spotify:album:${contentId}`;
     } else if (contentType === "playlist") {
@@ -340,31 +345,51 @@ const ContentView = ({
       uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
-
       localStorage.setItem("currentPlayingMixId", contentId);
     } else if (contentType === "liked-songs") {
       uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-
-      if (wasShuffleEnabled) {
-        await toggleShuffle(false);
-      }
-
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
-
       localStorage.setItem("playingLikedSongs", "true");
     }
 
-    if (!contextUri && (!uris || uris.length === 0)) {
-      console.warn("No valid context or URIs to play");
+    const success = await playTrack(
+      track.uri,
+      contextUri,
+      uris
+    );
+
+    if (success) {
+      if (wasShuffleEnabled) {
+        setTimeout(async () => {
+          await toggleShuffle(true);
+        }, 500);
+      }
+      if (onNavigateToNowPlaying) {
+        onNavigateToNowPlaying();
+      }
+    } else {
+      if (wasShuffleEnabled) {
+        await toggleShuffle(true);
+      }
+    }
+  };
+
+  const handleShufflePlay = async () => {
+    if (tracks.length === 0) {
+      console.warn("No tracks available to shuffle play");
       return;
     }
 
-    const success = contextUri
-      ? await playTrack(track.uri, contextUri)
-      : await playTrack(null, null, uris);
+    const uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
 
-    if (success && contentType === "liked-songs" && wasShuffleEnabled) {
+    if (contentType === "liked-songs") {
+      localStorage.setItem("playingLikedSongs", "true");
+    }
+
+    await playTrack(null, null, uris);
+
+    if (contentType === "liked-songs" && isShuffleEnabled) {
       setTimeout(async () => {
         await toggleShuffle(true);
       }, 500);
