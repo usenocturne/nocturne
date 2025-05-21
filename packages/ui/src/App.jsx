@@ -441,7 +441,7 @@ function App() {
       }
     } else if (currentlyPlayingAlbum?.type === "local-track") {
       if (activeSection === "recents" || activeSection === "nowPlaying") {
-        updateGradientColors(null, "radio");
+        updateGradientColors("/images/not-playing.webp", activeSection);
       }
     }
   }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
