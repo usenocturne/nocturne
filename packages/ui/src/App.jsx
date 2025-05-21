@@ -248,6 +248,7 @@ function App() {
   const [showConnectorModal, setShowConnectorModal] = useState(false);
   const [brightness, setBrightness] = useState(160);
   const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
+  const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] = useState(null);
 
   useEffect(() => {
     fetch('http://localhost:5000/device/resetcounter', {
@@ -341,12 +342,38 @@ function App() {
     isTutorialActive: showTutorial,
   });
 
-  const handleOpenDeviceSwitcher = () => {
+  const handleOpenDeviceSwitcher = (playbackIntent = null) => {
+    if (playbackIntent) {
+      setPlaybackIntentOnDeviceSwitch(playbackIntent);
+    }
     setIsDeviceSwitcherOpen(true);
   };
 
-  const handleCloseDeviceSwitcher = () => {
+  const handleCloseDeviceSwitcher = (selectedDeviceId = null) => {
     setIsDeviceSwitcherOpen(false);
+    if (selectedDeviceId && playbackIntentOnDeviceSwitch) {
+      const { trackUriToPlay, contextUriToPlay, urisToPlay } = playbackIntentOnDeviceSwitch;
+      (async () => {
+        let success = false;
+        if (contextUriToPlay) {
+          success = await playerControls.playTrack(trackUriToPlay, contextUriToPlay, null, selectedDeviceId);
+        } else if (urisToPlay && urisToPlay.length > 0) {
+          success = await playerControls.playTrack(null, null, urisToPlay, selectedDeviceId);
+        } else if (trackUriToPlay) {
+          success = await playerControls.playTrack(trackUriToPlay, null, null, selectedDeviceId);
+        }
+
+        if (success) {
+          setTimeout(() => {
+            refreshPlaybackState();
+            setActiveSection("nowPlaying");
+          }, 1500);
+        }
+        setPlaybackIntentOnDeviceSwitch(null);
+      })();
+    } else {
+      setPlaybackIntentOnDeviceSwitch(null);
+    }
   };
 
   const deviceSwitcherContextValue = {

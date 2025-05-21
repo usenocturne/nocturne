@@ -2,7 +2,7 @@ import { useCallback, useState, useContext, useRef, useEffect } from "react";
 import React from "react";
 
 export const DeviceSwitcherContext = React.createContext({
-  openDeviceSwitcher: () => { },
+  openDeviceSwitcher: (playbackIntent = null) => { },
 });
 
 export function useSpotifyPlayerControls(accessToken) {
@@ -31,7 +31,7 @@ export function useSpotifyPlayerControls(accessToken) {
   }, [isAdjustingVolume]);
 
   const playTrack = useCallback(
-    async (trackUri, contextUri = null, uris = null) => {
+    async (trackUri, contextUri = null, uris = null, deviceId = null) => {
       if (!accessToken) return false;
 
       try {
@@ -42,7 +42,6 @@ export function useSpotifyPlayerControls(accessToken) {
 
         if (contextUri) {
           payload.context_uri = contextUri;
-
           if (trackUri) {
             payload.offset = { uri: trackUri };
           }
@@ -52,8 +51,13 @@ export function useSpotifyPlayerControls(accessToken) {
           payload.uris = [trackUri];
         }
 
+        let playUrl = "https://api.spotify.com/v1/me/player/play";
+        if (deviceId) {
+          playUrl += `?device_id=${deviceId}`;
+        }
+
         const response = await fetch(
-          "https://api.spotify.com/v1/me/player/play",
+          playUrl,
           {
             method: "PUT",
             headers: {
@@ -71,25 +75,39 @@ export function useSpotifyPlayerControls(accessToken) {
 
           const errorMessage = errorData.error?.message || `HTTP error! status: ${response.status}`;
 
-          if (errorData.error?.reason == "NO_ACTIVE_DEVICE") {
+          if (errorData.error?.reason === "NO_ACTIVE_DEVICE" && !deviceId) {
             if (openDeviceSwitcher) {
-              openDeviceSwitcher();
+              console.log("No active device, opening device switcher with playback intent.");
+              openDeviceSwitcher({
+                trackUriToPlay: trackUri,
+                contextUriToPlay: contextUri,
+                urisToPlay: uris,
+              });
+              return false;
+            } else {
+              setError(errorMessage);
+              throw new Error(errorMessage);
             }
+          } else {
+            setError(errorMessage);
+            throw new Error(errorMessage);
           }
-
-          throw new Error(errorMessage);
         }
 
         return true;
       } catch (err) {
-        console.error("Error playing track:", err);
-        setError(err.message);
+        if (!error && err && err.message) {
+            setError(err.message);
+        } else if (!error) {
+            setError("An unknown error occurred while trying to play.");
+        }
+        console.error("Error playing track (caught):", err && err.message ? err.message : err);
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    [accessToken, openDeviceSwitcher]
+    [accessToken, openDeviceSwitcher, error]
   );
 
   const pausePlayback = useCallback(async () => {

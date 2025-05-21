@@ -71,7 +71,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
   const handleDeviceSelect = async (deviceId) => {
     try {
       setIsTransferring(true);
-      const response = await fetch("https://api.spotify.com/v1/me/player", {
+      const transferResponse = await fetch("https://api.spotify.com/v1/me/player", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -79,17 +79,20 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
         },
         body: JSON.stringify({
           device_ids: [deviceId],
-          play: true,
+          play: false,
         }),
       });
 
-      if (!response.ok) {
+      if (!transferResponse.ok) {
+        const errorData = await transferResponse.json().catch(() => ({}));
+        console.error("Failed to transfer playback to device:", deviceId, errorData);
         throw new Error("Failed to transfer playback");
       }
 
-      onClose();
+      onClose(deviceId);
     } catch (error) {
       console.error("Error transferring playback:", error);
+      onClose(null);
     } finally {
       setIsTransferring(false);
     }
@@ -117,7 +120,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
   };
 
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-40">
+    <Dialog open={isOpen} onClose={() => onClose(false)} className="relative z-40">
       <DialogBackdrop
         transition
         className="fixed inset-0 bg-black/40 transition-opacity data-[closed]:opacity-0 data-[enter]:opacity-100 data-[enter]:duration-300 data-[leave]:duration-300 data-[enter]:ease-out data-[leave]:ease-in"
@@ -188,7 +191,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
             <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-1 sm:gap-0 border-t border-slate-100/25">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => onClose(null)}
                 className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm"
               >
                 Cancel
