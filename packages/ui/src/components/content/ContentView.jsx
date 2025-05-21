@@ -63,7 +63,7 @@ const ContentView = ({
       accessToken,
       contentId,
       contentType,
-      contentImage: content?.images?.[1]?.url || "",
+      contentImage: content?.images?.[1]?.url || content?.images?.[0]?.url || "",
       contentName: content?.name || "",
       playTrack,
       isActive: !!content,

@@ -29,7 +29,11 @@ export function useButtonMapping({
 
       localStorage.setItem(`button${buttonNumber}Id`, contentId);
       localStorage.setItem(`button${buttonNumber}Type`, contentType);
-      localStorage.setItem(`button${buttonNumber}Image`, contentImage || "");
+      let imageToSave = contentImage;
+      if (contentType === "liked-songs" && !imageToSave) {
+        imageToSave = "https://misc.scdn.co/liked-songs/liked-songs-300.png";
+      }
+      localStorage.setItem(`button${buttonNumber}Image`, imageToSave || "");
       localStorage.setItem(`button${buttonNumber}Name`, contentName || "");
 
       if (
