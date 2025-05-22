@@ -31,16 +31,7 @@ if not exist "flashthing-cli.exe" (
 
 set /p proceed=This script will flash Nocturne onto your Car Thing. Continue? (y/n): 
 if /i "%proceed%"=="y" (
-    echo Verifying checksum...
-    for /f "tokens=1,2" %%A in ('type nocturne_image.zip.sha256') do (
-        certutil -hashfile nocturne_image.zip SHA256 | find "%%A" >nul
-        if errorlevel 1 (
-            echo Checksum verification failed
-            exit /b 1
-        )
-    )
-
-    flashthing-cli.exe .\nocturne_image.zip
+    flashthing-cli.exe .\nocturne_image
 ) else (
     echo Operation cancelled.
 )

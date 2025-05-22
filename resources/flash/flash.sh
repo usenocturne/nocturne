@@ -65,10 +65,4 @@ if [ -z "$1" ]; then
   fi
 fi
 
-echo "Verifying checksum..."
-if ! sha256sum -c nocturne_image.zip.sha256; then
-  echo "Checksum verification failed"
-  exit 1
-fi
-
-./flashthing-cli ./nocturne_image.zip
+./flashthing-cli ./nocturne_image
