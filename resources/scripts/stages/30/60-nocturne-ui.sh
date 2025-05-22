@@ -2,7 +2,7 @@
 
 chroot_exec apk add caddy
 
-curl -LO https://nightly.link/usenocturne/nocturne-ui/workflows/build/main/nocturne-ui.zip
+curl -LO https://nightly.link/usenocturne/nocturne-ui/workflows/build/"$NOCTURNE_UI_TAG"/nocturne-ui.zip
 mkdir -p "$ROOTFS_PATH"/etc/nocturne/ui
 unzip nocturne-ui.zip -d "$ROOTFS_PATH"/etc/nocturne/ui
 
