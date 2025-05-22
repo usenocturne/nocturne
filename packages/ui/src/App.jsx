@@ -20,6 +20,7 @@ import { useGradientState } from "./hooks/useGradientState";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
 import { useBluetooth, useSystemUpdate } from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
+import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
@@ -329,6 +330,8 @@ function App() {
 
   const [gradientState, updateGradientColors] = useGradientState(activeSection);
 
+  const playbackProgress = usePlaybackProgress(accessToken);
+
   const {
     showMappingOverlay: showGlobalMappingOverlay,
     activeButton: globalActiveButton,
@@ -588,6 +591,7 @@ function App() {
       <NowPlaying
         accessToken={accessToken}
         currentPlayback={currentPlayback}
+        playbackProgress={playbackProgress}
         onClose={() => setActiveSection("recents")}
         updateGradientColors={updateGradientColors}
         onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
@@ -607,6 +611,7 @@ function App() {
         radioMixes={radioMixes}
         updateGradientColors={updateGradientColors}
         setIgnoreNextRelease={setIgnoreNextRelease}
+        playbackProgress={playbackProgress}
       />
     );
   } else {
@@ -622,6 +627,7 @@ function App() {
         radioMixes={radioMixes}
         currentPlayback={currentPlayback}
         currentlyPlayingAlbum={currentlyPlayingAlbum}
+        playbackProgress={playbackProgress}
         isLoading={isLoading}
         refreshData={refreshData}
         refreshPlaybackState={refreshPlaybackState}

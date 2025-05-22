@@ -3,7 +3,6 @@ import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
-import { usePlaybackProgress } from "../../hooks/usePlaybackProgress";
 import { useGestureControls } from "../../hooks/useGestureControls";
 import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
@@ -29,6 +28,7 @@ import {
 export default function NowPlaying({
   accessToken,
   currentPlayback,
+  playbackProgress,
   onClose,
   updateGradientColors,
   onOpenDeviceSwitcher,
@@ -82,7 +82,7 @@ export default function NowPlaying({
     progressPercentage,
     updateProgress,
     triggerRefresh
-  } = usePlaybackProgress(accessToken);
+  } = playbackProgress;
 
   useEffect(() => {
     if (currentPlayback?.device?.volume_percent !== undefined) {

@@ -455,14 +455,23 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
         accessTokenRef.current = newAccessToken;
 
         if (globalWebSocket && (globalWebSocket.readyState === WebSocket.OPEN || globalWebSocket.readyState === WebSocket.CONNECTING)) {
-          cleanupWebSocket(); 
-          setTimeout(() => connectWebSocket(), 100);
+          cleanupWebSocket();
+          setTimeout(() => {
+            connectWebSocket();
+            fetchCurrentPlayback(true);
+          }, 100);
         } else {
-          fetchCurrentPlayback(true); 
+          connectWebSocket();
+          fetchCurrentPlayback(true);
 
           if (!isConnecting && !isAttemptingReconnect) {
             if (!globalWebSocket || globalWebSocket.readyState === WebSocket.CLOSED) {
-              setTimeout(() => connectWebSocket(), 100);
+              setTimeout(() => {
+                if (!globalWebSocket || globalWebSocket.readyState !== WebSocket.OPEN) {
+                  connectWebSocket();
+                }
+                fetchCurrentPlayback(true);
+              }, 100);
             }
           }
         }
