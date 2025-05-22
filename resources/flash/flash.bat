@@ -1,24 +1,26 @@
 @echo off
 
-if not exist "nocturne_image.zip" (
-    echo nocturne_image.zip is missing
+if not exist "nocturne_image" (
+    echo nocturne_image is missing
     exit /b 1
 )
 
-if not exist "nocturne_image.zip.sha256" (
-    echo nocturne_image.zip.sha256 is missing
-    exit /b 1
+set "arch="
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
+    set "arch=ARM64"
+) else if /i "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
+    set "arch=AMD64"
+) else (
+    set "arch=AMD64"
 )
-
-for /f "tokens=2 delims==" %%A in ('wmic os get osarchitecture /value ^| find "="') do set arch=%%A
 
 if not exist "flashthing-cli.exe" (
-    if /i "%arch%"=="64-bit" (
-        echo Downloading flashthing-cli-windows-x86_64.exe
-        powershell -Command "Invoke-WebRequest -Uri 'https://github.com/JoeyEamigh/flashthing/releases/latest/download/flashthing-cli-windows-x86_64.exe' -OutFile 'flashthing-cli.exe'"
-    ) else (
+    if /i "%arch%"=="ARM64" (
         echo Downloading flashthing-cli-windows-aarch64.exe
         powershell -Command "Invoke-WebRequest -Uri 'https://github.com/JoeyEamigh/flashthing/releases/latest/download/flashthing-cli-windows-aarch64.exe' -OutFile 'flashthing-cli.exe'"
+    ) else (
+        echo Downloading flashthing-cli-windows-x86_64.exe
+        powershell -Command "Invoke-WebRequest -Uri 'https://github.com/JoeyEamigh/flashthing/releases/latest/download/flashthing-cli-windows-x86_64.exe' -OutFile 'flashthing-cli.exe'"
     )
 
     if exist "flashthing-cli.exe" (

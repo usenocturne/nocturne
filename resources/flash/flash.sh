@@ -2,8 +2,8 @@
 
 set -e
 
-if [ ! -f nocturne_image.zip ] || [ ! -f nocturne_image.zip.sha256 ]; then
-  echo "nocturne_image.zip or nocturne_image.zip.sha256 is missing"
+if [ ! -d nocturne_image.zip ]; then
+  echo "nocturne_image is missing"
   exit 1
 fi
 
