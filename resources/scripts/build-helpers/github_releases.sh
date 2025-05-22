@@ -43,7 +43,7 @@ else
   fi
 fi
 
-if [ ! -d "$DEST" ]; then
+if [ -n "$DEST" ]; then
   mkdir -p "$DEST"
   cp "$ASSET" "$DEST"
 fi

@@ -25,7 +25,7 @@ echo "Fetching $VER version of $REPO"
 
 wget "https://github.com/$REPO/archive/refs/tags/$VER.zip"
 
-if [ ! -d "$DEST" ]; then
+if [ -n "$DEST" ]; then
   mkdir -p "$DEST"
   unzip -d "$DEST" "$VER.zip"
 fi
