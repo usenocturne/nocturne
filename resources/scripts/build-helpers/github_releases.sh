@@ -14,7 +14,7 @@ while getopts "r:a:sd:v:" OPTS; do
   case ${OPTS} in
     r) REPO=${OPTARG} ;;
     a) ASSET=${OPTARG} ;;
-    s) NOSUM=${OPTARG} ;;
+    s) NOSUM=yes ;;
     d) DEST=${OPTARG} ;;
     v) VER=${OPTARG} ;;
     *) usage ;;
