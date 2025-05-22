@@ -23,7 +23,10 @@ done
 
 [ -z "$REPO" ] && echo "Need a repo to download from in username/repo format (-r)" && usage
 [ -z "$ASSET" ] && echo "Need an asset name to download (-a)" && usage
-[ -z "$DEST" ] && DEST="$(pwd)"
+if [ -z "$DEST" ]; then
+  nocopy=yes
+  DEST="$(pwd)"
+fi
 
 echo "Fetching $VER version of $ASSET from $REPO"
 
@@ -43,7 +46,7 @@ else
   fi
 fi
 
-if [ -n "$DEST" ]; then
+if [ -z "$nocopy" ]; then
   mkdir -p "$DEST"
   cp "$ASSET" "$DEST"
 fi

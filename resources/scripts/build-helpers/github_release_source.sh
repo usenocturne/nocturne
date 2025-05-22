@@ -19,13 +19,16 @@ done
 
 [ -z "$REPO" ] && echo "Need a repo to download from in username/repo format (-r)" && usage
 [ -z "$VER" ] && echo "Need a specific version (tag) to download (-v)" && usage
-[ -z "$DEST" ] && DEST="$(pwd)"
+if [ -z "$DEST" ]; then
+  nocopy=yes
+  DEST="$(pwd)"
+fi
 
 echo "Fetching $VER version of $REPO"
 
 wget "https://github.com/$REPO/archive/refs/tags/$VER.zip"
 
-if [ -n "$DEST" ]; then
+if [ -z "$nocopy" ]; then
   mkdir -p "$DEST"
   unzip -d "$DEST" "$VER.zip"
 fi
