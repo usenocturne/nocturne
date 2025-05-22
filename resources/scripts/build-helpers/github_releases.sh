@@ -10,7 +10,7 @@ usage() {
   exit 1
 }
 
-while getopts "r:a:s:d:v:" OPTS; do
+while getopts "r:a:sd:v:" OPTS; do
   case ${OPTS} in
     r) REPO=${OPTARG} ;;
     a) ASSET=${OPTARG} ;;
