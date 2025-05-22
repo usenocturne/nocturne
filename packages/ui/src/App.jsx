@@ -408,10 +408,18 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
-      setShowTutorial(!hasSeenTutorial);
+      const hasSeenTutorial = localStorage.getItem("hasSeenTutorial") === 'true';
+      if (hasSeenTutorial) {
+        setShowTutorial(false);
+        const shouldStartWithNowPlaying = localStorage.getItem('startWithNowPlaying') === 'true';
+        if (shouldStartWithNowPlaying) {
+          setActiveSection('nowPlaying');
+        }
+      } else {
+        setShowTutorial(true);
+      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, setActiveSection]);
 
   useEffect(() => {
     if (activeSection === "recents" && recentAlbums.length > 0) {
@@ -483,9 +491,6 @@ function App() {
       if (isTokenValid) {
         refreshData();
       }
-
-      const hasSeenTutorial = localStorage.getItem("hasSeenTutorial");
-      setShowTutorial(!hasSeenTutorial);
     } else {
       console.warn("No valid tokens found after auth success");
     }
@@ -494,6 +499,12 @@ function App() {
   const handleTutorialComplete = () => {
     setShowTutorial(false);
     localStorage.setItem("hasSeenTutorial", "true");
+    const shouldStartWithNowPlaying = localStorage.getItem('startWithNowPlaying') === 'true';
+    if (shouldStartWithNowPlaying) {
+      setActiveSection('nowPlaying');
+    } else {
+      setActiveSection('recents');
+    }
   };
 
   const handleOpenContent = (id, type) => {
