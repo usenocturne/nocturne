@@ -2,6 +2,7 @@
 
 if not exist "nocturne_image" (
     echo nocturne_image is missing
+    pause
     exit /b 1
 )
 
@@ -27,6 +28,7 @@ if not exist "flashthing-cli.exe" (
         echo Download complete
     ) else (
         echo Failed to download flashthing-cli.exe
+        pause
         exit /b 1
     )
 )
