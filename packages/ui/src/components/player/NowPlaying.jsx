@@ -4,6 +4,7 @@ import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
 import { useGestureControls } from "../../hooks/useGestureControls";
+import { useElapsedTime } from "../../hooks/useElapsedTime";
 import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
 import {
@@ -58,6 +59,8 @@ export default function NowPlaying({
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
   const contentContainerRef = useRef(null);
 
+  const { elapsedTimeEnabled } = useElapsedTime();
+
   const {
     playTrack,
     pausePlayback,
@@ -84,6 +87,25 @@ export default function NowPlaying({
     triggerRefresh
   } = playbackProgress;
 
+  const convertTimeToLength = (ms, elapsed) => {
+    let totalSeconds = Math.floor(ms / 1000);
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const formattedMinutes = minutes.toString().padStart(2, "0");
+    const formattedSeconds = seconds.toString().padStart(2, "0");
+
+    if (hours > 0) {
+      return `${
+        !elapsed ? "-" : ""
+      }${hours}:${formattedMinutes}:${formattedSeconds}`;
+    }
+
+    return `${!elapsed ? "-" : ""}${formattedMinutes}:${formattedSeconds}`;
+  };
+  
   useEffect(() => {
     if (currentPlayback?.device?.volume_percent !== undefined) {
       if (prevVolumeRef.current === null) {
@@ -520,7 +542,7 @@ export default function NowPlaying({
         </div>
       </div>
 
-      <div className="px-12 pt-3 pb-7">
+      <div className={`px-12 ${!elapsedTimeEnabled ? "pb-7 pt-3" : ""}`}>
         <ProgressBar
           progress={progressPercentage}
           isPlaying={isPlaying}
@@ -531,6 +553,35 @@ export default function NowPlaying({
           updateProgress={updateProgress}
         />
       </div>
+
+      {elapsedTimeEnabled && (
+        <div className={`w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden transition-all duration-200 ease-in-out ${
+          isProgressScrubbing
+            ? "translate-y-24 opacity-0"
+            : "translate-y-0 opacity-100"
+        }`}>
+          <div className="flex justify-between">
+            {currentPlayback && currentPlayback.item ? (
+              <>
+                <span className="text-white/60 text-[20px]">
+                  {convertTimeToLength(progressMs, true)}
+                </span>
+                <span className="text-white/60 text-[20px]">
+                  {convertTimeToLength(
+                    currentPlayback.item.duration_ms,
+                    true
+                  )}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-white/60 text-[20px]">--:--</span>
+                <span className="text-white/60 text-[20px]">--:--</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div
         className={`flex justify-between items-center w-full px-12 transition-all duration-200 ease-in-out ${

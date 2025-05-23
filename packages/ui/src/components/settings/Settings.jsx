@@ -119,6 +119,15 @@ const settingsStructure = {
         storageKey: "songChangeGestureEnabled",
         defaultValue: true,
       },
+      {
+        id: "elapsed-time",
+        title: "Show Time Elapsed",
+        type: "toggle",
+        description:
+          "Display the elapsed track time below the progress bar.",
+        storageKey: "elapsedTimeEnabled",
+        defaultValue: true,
+      },
     ],
   },
   account: {
