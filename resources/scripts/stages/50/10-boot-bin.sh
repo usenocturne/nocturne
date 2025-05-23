@@ -14,7 +14,6 @@ losetup -o 4194304 "$loop_name" "$IMAGE_PATH"/boot.bin
 mount -t vfat "$loop_name" /mnt/bootbin
 
 rm -f /mnt/bootbin/*
-cp "$RES_PATH"/flash/fastboot.bin /mnt/bootbin/
 
 github_releases -r usenocturne/u-boot -d /mnt/bootbin/ -a u-boot.bin -v "$NOCTURNE_UBOOT_TAG" -s
 
