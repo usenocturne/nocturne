@@ -2,7 +2,7 @@
 
 set -e
 
-if [ ! -d nocturne_image.zip ]; then
+if [ ! -d nocturne_image ]; then
   echo "nocturne_image is missing"
   exit 1
 fi
