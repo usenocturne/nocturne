@@ -23,6 +23,11 @@ const ContentView = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTrackIndex, setSelectedTrackIndex] = useState(-1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [nextUrl, setNextUrl] = useState(null);
+  const [hasMoreTracks, setHasMoreTracks] = useState(false);
+  const [tracksPerPage, setTracksPerPage] = useState(0);
+  const [loadedPages, setLoadedPages] = useState(0);
   const tracksContainerRef = useRef(null);
   const navigate = useNavigate();
   const { currentPlayback } = useSpotifyPlayerState(accessToken);
@@ -58,6 +63,76 @@ const ContentView = ({
 
     return allTracks;
   };
+
+  const loadMoreTracks = useCallback(async () => {
+    if (!nextUrl || isLoadingMore || contentType !== "playlist") return;
+
+    try {
+      setIsLoadingMore(true);
+      const response = await fetch(nextUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch more tracks: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const newTracks = data.items.map(item => item.track);
+      
+      setTracks(prevTracks => [...prevTracks, ...newTracks]);
+      setNextUrl(data.next);
+      setHasMoreTracks(!!data.next);
+      setLoadedPages(prev => prev + 1);
+    } catch (err) {
+      console.error("Error loading more tracks:", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [nextUrl, isLoadingMore, contentType, accessToken]);
+
+  useEffect(() => {
+    const container = tracksContainerRef.current;
+    if (!container || contentType !== "playlist" || tracksPerPage === 0) return;
+
+    const handleScroll = () => {
+      const trackElements = container.querySelectorAll('[data-track-index]');
+      if (trackElements.length === 0) return;
+
+      const containerRect = container.getBoundingClientRect();
+      let currentVisibleTrackIndex = -1;
+
+      for (let i = 0; i < trackElements.length; i++) {
+        const trackRect = trackElements[i].getBoundingClientRect();
+        const trackCenter = trackRect.top + trackRect.height / 2;
+        const containerCenter = containerRect.top + containerRect.height / 2;
+        
+        if (trackCenter <= containerCenter) {
+          currentVisibleTrackIndex = i;
+        } else {
+          break;
+        }
+      }
+
+      if (currentVisibleTrackIndex >= 0) {
+        const currentPage = Math.floor(currentVisibleTrackIndex / tracksPerPage);
+        const currentPageStart = currentPage * tracksPerPage;
+        const currentPageMidpoint = currentPageStart + Math.floor(tracksPerPage / 2);
+        
+        if (currentVisibleTrackIndex >= currentPageMidpoint && 
+            currentPage >= loadedPages - 1 && 
+            hasMoreTracks && 
+            !isLoadingMore) {
+          loadMoreTracks();
+        }
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [hasMoreTracks, isLoadingMore, loadMoreTracks, contentType, tracksPerPage, loadedPages]);
 
   const { showMappingOverlay, activeButton, mappingInProgress, setTrackUris } =
     useButtonMapping({
@@ -117,6 +192,12 @@ const ContentView = ({
 
       try {
         setIsLoading(true);
+        setNextUrl(null);
+        setHasMoreTracks(false);
+        setIsLoadingMore(false);
+        setTracksPerPage(0);
+        setLoadedPages(0);
+        
         let contentData;
         let tracksData = [];
 
@@ -178,15 +259,10 @@ const ContentView = ({
             }
 
             tracksData = contentData.tracks.items.map((item) => item.track);
-
-            if (contentData.tracks.next) {
-              const additionalTracks = await fetchPlaylistTracks(
-                contentId,
-                tracksData,
-                contentData.tracks.next
-              );
-              tracksData = additionalTracks;
-            }
+            setNextUrl(contentData.tracks.next);
+            setHasMoreTracks(!!contentData.tracks.next);
+            setTracksPerPage(tracksData.length);
+            setLoadedPages(1);
             break;
           }
 
@@ -512,7 +588,7 @@ const ContentView = ({
 
           return (
             <div
-              key={track.id || `track-${index}`}
+              key={`${track.id || 'track'}-${index}`}
               className={`flex gap-12 items-start mb-4 transition-transform duration-200 ease-out ${selectedTrackIndex === index ? "scale-105" : ""
                 }`}
               onClick={() => (track.uri ? handleTrackPlay(track, index) : null)}
@@ -560,6 +636,15 @@ const ContentView = ({
             </div>
           );
         })}
+
+        {isLoadingMore && contentType === "playlist" && (
+          <div className="flex justify-center items-center py-8">
+            <div className="flex gap-4 items-center">
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <p className="text-[24px] font-[560] text-white/60">Loading more tracks...</p>
+            </div>
+          </div>
+        )}
 
         {playbackError && (
           <div className="mt-4 p-4 bg-red-500/20 rounded-lg">
