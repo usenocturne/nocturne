@@ -126,7 +126,7 @@ const settingsStructure = {
         description:
           "Display the elapsed track time below the progress bar.",
         storageKey: "elapsedTimeEnabled",
-        defaultValue: true,
+        defaultValue: false,
       },
     ],
   },
