@@ -194,12 +194,12 @@ section {
 
 @keyframes volumeInScale {
   from {
-    transform: scale(0) translate3d(100%, 0, 0);
+    transform: scale(0) translateX(100%);
     margin-right: 0;
   }
 
   to {
-    transform: scale(1) translate3d(0, 0, 0);
+    transform: scale(1) translateX(0);
     margin-right: 60px;
   }
 }
@@ -212,12 +212,12 @@ section {
 
 @keyframes volumeOutScale {
   from {
-    transform: scale(1) translate3d(0, 0, 0);
+    transform: scale(1) translateX(0);
     margin-right: 60px;
   }
 
   to {
-    transform: scale(0) translate3d(100%, 0, 0);
+    transform: scale(0) translateX(100%);
     margin-right: 0;
   }
 }
@@ -266,4 +266,10 @@ section {
 .mapping-overlay-exit {
   animation: mappingOverlayExit 300ms ease forwards;
   display: flex;
+}
+
+.volumeInScale,
+.volumeOutScale {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }

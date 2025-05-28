@@ -542,7 +542,7 @@ export default function NowPlaying({
         </div>
       </div>
 
-      <div className={`px-12 ${!elapsedTimeEnabled ? "pb-7 pt-3" : ""}`}>
+      <div className={`px-12 ${!elapsedTimeEnabled ? "pb-7 pt-5" : ""}`}>
         <ProgressBar
           progress={progressPercentage}
           isPlaying={isPlaying}
@@ -590,7 +590,7 @@ export default function NowPlaying({
             : "translate-y-0 opacity-100"
         }`}
       >
-        <div className="flex-shrink-0" onClick={handleToggleLike}>
+        <div className="flex-shrink-0 focus:outline-none outline-none border-none bg-transparent appearance-none" onClick={handleToggleLike} style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
           {isLiked ? (
             <HeartIconFilled className="w-14 h-14" />
           ) : (
@@ -598,29 +598,38 @@ export default function NowPlaying({
           )}
         </div>
 
-        <div className="flex justify-center gap-12 flex-1">
-          <div onClick={handleSkipPrevious}>
+        <div className="flex justify-center items-center flex-1">
+          <div onClick={handleSkipPrevious} className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none" style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
             <BackIcon className="w-14 h-14" />
           </div>
           <div
             onClick={handlePlayPause}
-            className="transition-opacity duration-100"
+            className="transition-opacity duration-100 mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
+            style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}
           >
             {PlayPauseIcon}
           </div>
-          <div onClick={handleSkipNext}>
+          <div onClick={handleSkipNext} className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none" style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
             <ForwardIcon className="w-14 h-14" />
           </div>
         </div>
 
         <div className="flex items-center">
           {isDJPlaylist && (
-            <div onClick={sendDJSignal}>
+            <div onClick={sendDJSignal} className="focus:outline-none outline-none border-none bg-transparent appearance-none" style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
               <DJIcon className="w-14 h-14 fill-white/60 mr-4 mb-1" />
             </div>
           )}
           <Menu as="div" className="relative inline-block text-left">
-            <MenuButton className="focus:outline-none">
+            <MenuButton 
+              className="focus:outline-none outline-none border-none bg-transparent appearance-none"
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                boxShadow: 'none',
+                WebkitTapHighlightColor: 'transparent'
+              }}
+            >
               <MenuIcon className="w-14 h-14 fill-white/60" />
             </MenuButton>
 
@@ -630,7 +639,7 @@ export default function NowPlaying({
             >
               <div className="py-1">
                 <MenuItem onClick={toggleLyrics}>
-                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
                     <span className="text-[28px]">
                       {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
                     </span>
@@ -645,7 +654,7 @@ export default function NowPlaying({
                 {!isDJPlaylist && (
                   <>
                     <MenuItem onClick={handleToggleShuffle}>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
                         <span className="text-[28px]">
                           {shuffleEnabled
                             ? "Disable Shuffle"
@@ -660,7 +669,7 @@ export default function NowPlaying({
                       </div>
                     </MenuItem>
                     <MenuItem onClick={handleToggleRepeat}>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
                         <span className="text-[28px]">
                           {repeatMode === "off"
                             ? "Enable Repeat"
@@ -688,7 +697,7 @@ export default function NowPlaying({
                   </>
                 )}
                 <MenuItem onClick={onOpenDeviceSwitcher}>
-                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight">
+                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
                     <span className="text-[28px]">Switch Device</span>
                     <DeviceSwitcherIcon
                       aria-hidden="true"
@@ -702,7 +711,7 @@ export default function NowPlaying({
         </div>
       </div>
       <div
-        className={`fixed -right-1.5 top-[4.5rem] transform transition-opacity duration-300 ${
+        className={`fixed top-[4.5rem] transform transition-opacity duration-300 ${
           !volumeOverlayState.visible
             ? "hidden"
             : volumeOverlayState.animation === "showing"
@@ -711,6 +720,10 @@ export default function NowPlaying({
             ? "opacity-0 volumeOutScale"
             : "hidden"
         }`}
+        style={{
+          right: '-6px',
+          zIndex: 50
+        }}
       >
         <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
           <div
