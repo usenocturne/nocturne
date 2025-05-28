@@ -105,17 +105,17 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
   const getDeviceIcon = (type) => {
     type = type?.toLowerCase() || "";
     if (type.includes("computer") || type.includes("laptop")) {
-      return <LaptopIcon className="h-8 w-8 text-white/60" />;
+      return <LaptopIcon className="h-8 w-8 text-white opacity-60" />;
     } else if (type.includes("smartphone") || type.includes("phone")) {
-      return <SmartphoneIcon className="h-8 w-8 text-white/60" />;
+      return <SmartphoneIcon className="h-8 w-8 text-white opacity-60" />;
     } else if (type.includes("tv") || type.includes("television")) {
-      return <TvIcon className="h-8 w-8 text-white/60" />;
+      return <TvIcon className="h-8 w-8 text-white opacity-60" />;
     } else if (type.includes("game") || type.includes("console")) {
-      return <GamepadIcon className="h-8 w-8 text-white/60" />;
+      return <GamepadIcon className="h-8 w-8 text-white opacity-60" />;
     } else if (type.includes("car") || type.includes("auto")) {
-      return <CarIcon className="h-8 w-8 text-white/60" />;
+      return <CarIcon className="h-8 w-8 text-white opacity-60" />;
     } else {
-      return <SpeakerIcon className="h-8 w-8 text-white/60" />;
+      return <SpeakerIcon className="h-8 w-8 text-white opacity-60" />;
     }
   };
 
@@ -123,7 +123,8 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
     <Dialog open={isOpen} onClose={() => onClose(false)} className="relative z-40">
       <DialogBackdrop
         transition
-        className="fixed inset-0 bg-black/40 transition-opacity data-[closed]:opacity-0 data-[enter]:opacity-100 data-[enter]:duration-300 data-[leave]:duration-300 data-[enter]:ease-out data-[leave]:ease-in"
+        className="fixed inset-0 bg-black transition-opacity data-[closed]:opacity-0 data-[enter]:opacity-100 data-[enter]:duration-300 data-[leave]:duration-300 data-[enter]:ease-out data-[leave]:ease-in"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
       />
 
       <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
@@ -138,43 +139,48 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
                   <div className="w-8"></div>
                   <DialogTitle
                     as="h3"
-                    className="text-[36px] font-[560] tracking-tight text-white"
+                    className="text-4xl font-medium text-white"
+                    style={{ fontSize: '36px', fontWeight: 560, letterSpacing: '-0.025em' }}
                   >
                     Switch Device
                   </DialogTitle>
                   <button
                     onClick={handleRefresh}
-                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:bg-opacity-10 transition-colors"
                     disabled={isLoading}
+                    style={{ backgroundColor: 'transparent' }}
                   >
-                    <RefreshIcon className={`w-6 h-6 text-white/60 ${isLoading ? 'animate-spin' : ''}`} />
+                    <RefreshIcon className={`w-6 h-6 text-white opacity-60 ${isLoading ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
                 {isLoading ? (
                   <div className="mt-2">
-                    <p className="text-[28px] font-[560] tracking-tight text-white/60">
+                    <p className="text-white opacity-60" style={{ fontSize: '28px', fontWeight: 560, letterSpacing: '-0.025em' }}>
                       Loading available devices...
                     </p>
                   </div>
                 ) : devices.length === 0 ? (
                   <div className="mt-2">
-                    <p className="text-[28px] font-[560] tracking-tight text-white/60">
+                    <p className="text-white opacity-60" style={{ fontSize: '28px', fontWeight: 560, letterSpacing: '-0.025em' }}>
                       No devices found
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-2 space-y-2 px-6 max-h-[60vh] overflow-y-auto">
+                  <div className="mt-2 px-6" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
                     {devices.map((device) => (
                       <button
                         key={device.id}
                         onClick={() => handleDeviceSelect(device.device_id)}
                         disabled={isTransferring}
-                        className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors disabled:opacity-50"
+                        className="w-full flex items-center justify-between p-4 mb-2 rounded-xl hover:bg-white hover:bg-opacity-5 transition-colors disabled:opacity-50"
+                        style={{ backgroundColor: 'transparent' }}
                       >
-                        <div className="flex items-center space-x-3">
-                          {getDeviceIcon(device.device_type)}
+                        <div className="flex items-center">
+                          <div style={{ marginRight: '12px' }}>
+                            {getDeviceIcon(device.device_type)}
+                          </div>
                           <div className="text-left">
-                            <p className="text-[28px] font-[560] tracking-tight text-white">
+                            <p className="text-white" style={{ fontSize: '28px', fontWeight: 560, letterSpacing: '-0.025em' }}>
                               {device.name}
                             </p>
                           </div>
@@ -188,11 +194,18 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
                 )}
               </div>
             </div>
-            <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-1 sm:gap-0 border-t border-slate-100/25">
+            <div className="mt-5 border-t border-slate-100 border-opacity-25">
               <button
                 type="button"
                 onClick={() => onClose(null)}
-                className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm"
+                className="flex w-full justify-center items-center px-3 py-3 hover:bg-white hover:bg-opacity-5 transition-colors"
+                style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 560, 
+                  letterSpacing: '-0.025em', 
+                  color: '#6c8bd5',
+                  backgroundColor: 'transparent'
+                }}
               >
                 Cancel
               </button>
