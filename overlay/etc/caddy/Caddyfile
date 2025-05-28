@@ -1,0 +1,5 @@
+http://localhost:3000 {
+  root * /etc/nocturne/ui
+  encode
+  file_server
+}
