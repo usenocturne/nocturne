@@ -37,6 +37,7 @@ const ConnectorQRModal = ({ onClose }) => {
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+            style={{ background: 'none' }}
           >
             <XIcon size={24} />
           </button>

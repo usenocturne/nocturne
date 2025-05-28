@@ -508,6 +508,9 @@ export default function Settings({
                       opacity ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1);
           will-change: transform, opacity;
         }
+        .settings-scroll-container::-webkit-scrollbar {
+          display: none;
+        }
       `}</style>
       <div className="min-h-full flex flex-col px-12 pt-12 -ml-12">
         <div className="flex-1 relative">
@@ -561,6 +564,7 @@ export default function Settings({
                 <button
                   onClick={navigateBack}
                   className="mr-4"
+                  style={{ background: 'none' }}
                   disabled={isAnimating}
                 >
                   <ChevronLeftIcon className="w-8 h-8 text-white" />
@@ -611,6 +615,7 @@ export default function Settings({
                 <button
                   onClick={navigateBack}
                   className="mr-4"
+                  style={{ background: 'none'}}
                   disabled={isAnimating}
                 >
                   <ChevronLeftIcon className="w-8 h-8 text-white" />

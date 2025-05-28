@@ -62,6 +62,7 @@ export default function NetworkPasswordModal({
                 type="button"
                 onClick={onClose}
                 className="px-6 py-3 text-[28px] font-[560] text-white/60 hover:text-white transition-colors"
+                style={{ background: 'none' }}
               >
                 Cancel
               </button>

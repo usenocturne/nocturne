@@ -128,6 +128,7 @@ const SoftwareUpdate = ({
             <button
               onClick={checkForUpdates}
               className="text-white/60 hover:text-white/80 text-[20px] font-[560] transition-colors"
+              style={{ background: 'none' }}
             >
               Check
             </button>
