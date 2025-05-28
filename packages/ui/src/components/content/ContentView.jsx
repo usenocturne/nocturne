@@ -589,13 +589,13 @@ const ContentView = ({
           return (
             <div
               key={`${track.id || 'track'}-${index}`}
-              className={`flex gap-12 items-start mb-4 transition-transform duration-200 ease-out ${selectedTrackIndex === index ? "scale-105" : ""
+              className={`flex items-start mb-4 transition-transform duration-200 ease-out ${selectedTrackIndex === index ? "scale-105" : ""
                 }`}
               onClick={() => (track.uri ? handleTrackPlay(track, index) : null)}
               style={{ transition: "transform 0.2s ease-out" }}
               data-track-index={index}
             >
-              <div className="text-[32px] font-[580] text-center text-white/60 w-6 mt-3">
+              <div className="text-[32px] font-[580] text-center text-white/60 min-w-[3rem] mr-6 mt-3 flex justify-center">
                 {track.uri && track.uri === currentlyPlayingTrackUri ? (
                   <div className="w-5">
                     <section>
