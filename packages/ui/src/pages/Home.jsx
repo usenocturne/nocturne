@@ -139,6 +139,13 @@ export default function Home({
   };
 
   const isPlayingFromMix = (mixId) => {
+    if (mixId.startsWith('spotify-')) {
+      const spotifyMix = radioMixes.find(mix => mix.id === mixId && mix.type === "spotify-radio");
+      if (spotifyMix) {
+        return currentPlayback?.context?.uri === spotifyMix.uri;
+      }
+    }
+    
     const playingMixId = localStorage.getItem(`playingMix-${mixId}`);
     return currentPlayback?.context?.uri === playingMixId;
   };

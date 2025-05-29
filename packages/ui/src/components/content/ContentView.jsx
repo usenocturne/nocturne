@@ -418,9 +418,14 @@ const ContentView = ({
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
     } else if (contentType === "mix") {
-      uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-      const startIndex = index || 0;
-      uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+      const currentMix = radioMixes.find((m) => m.id === contentId);
+      if (currentMix && currentMix.type === "spotify-radio") {
+        contextUri = currentMix.uri;
+      } else {
+        uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+        const startIndex = index || 0;
+        uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+      }
       localStorage.setItem("currentPlayingMixId", contentId);
     } else if (contentType === "liked-songs") {
       uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
@@ -457,13 +462,25 @@ const ContentView = ({
       return;
     }
 
-    const uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+    let contextUri = null;
+    let uris = null;
+
+    if (contentType === "mix") {
+      const currentMix = radioMixes.find((m) => m.id === contentId);
+      if (currentMix && currentMix.type === "spotify-radio") {
+        contextUri = currentMix.uri;
+      } else {
+        uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+      }
+    } else {
+      uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+    }
 
     if (contentType === "liked-songs") {
       localStorage.setItem("playingLikedSongs", "true");
     }
 
-    await playTrack(null, null, uris);
+    await playTrack(null, contextUri, uris);
 
     if (contentType === "liked-songs" && isShuffleEnabled) {
       setTimeout(async () => {

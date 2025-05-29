@@ -299,6 +299,7 @@ function App() {
     topArtists,
     likedSongs,
     radioMixes,
+    initialDataLoaded,
     isLoading,
     errors: dataErrors,
     refreshData,
@@ -490,9 +491,12 @@ function App() {
     const storedExpiry = localStorage.getItem("spotifyTokenExpiry");
     const isTokenValid = storedExpiry && new Date(storedExpiry) > new Date();
 
-    if (storedAccessToken && storedRefreshToken) {
-      if (isTokenValid) {
+    if (storedAccessToken && storedRefreshToken && isTokenValid) {
+      if (initialDataLoaded) {
+        console.log("Refreshing data after auth success");
         refreshData();
+      } else {
+        console.log("Skipping refresh - letting initial data load handle the fetch");
       }
     } else {
       console.warn("No valid tokens found after auth success");
