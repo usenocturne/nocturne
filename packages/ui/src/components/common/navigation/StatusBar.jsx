@@ -8,6 +8,8 @@ import { networkAwareRequest, waitForNetwork } from '../../../utils/networkAware
 
 let cachedTimezone = null;
 
+export const getCachedTimezone = () => cachedTimezone;
+
 export default function StatusBar() {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
