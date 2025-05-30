@@ -42,7 +42,7 @@ trap cleanup EXIT
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 REQUIRED_CMDS=(curl jq zip)
 for cmd in "${REQUIRED_CMDS[@]}"; do
-    if ! command -v "$cmd" >/dev/null 2>&1; then
+    if ! command -v "$cmd" > /dev/null 2>&1; then
         echo "$cmd is required to run this script."
         exit 1
     fi

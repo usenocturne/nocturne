@@ -1,0 +1,17 @@
+repos:
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.7.2
+    hooks:
+    - id: shellcheck
+
+  - repo: https://github.com/pecigonzalo/pre-commit-shfmt
+    rev: v2.2.0
+    hooks:
+      - id: shell-fmt
+        args:
+          - -i
+          - "4"
+          - -ci
+          - -sr
+          - -d
+          - "."

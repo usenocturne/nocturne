@@ -4,21 +4,21 @@ printToKmsg() { echo "USB_GADGET: $1" && echo "USB_GADGET: $1" > /dev/kmsg; }
 
 printToKmsg "Starting SSH server"
 
-mkdir -p /var/dropbear 2>/dev/null || true
+mkdir -p /var/dropbear 2> /dev/null || true
 
 if [ ! -f /var/dropbear/dropbear_rsa_host_key ]; then
-	printToKmsg "Generating RSA host key"
-	/usr/bin/dropbearkey -t rsa -f /var/dropbear/dropbear_rsa_host_key
+    printToKmsg "Generating RSA host key"
+    /usr/bin/dropbearkey -t rsa -f /var/dropbear/dropbear_rsa_host_key
 fi
 
 if [ ! -f /var/dropbear/dropbear_ecdsa_host_key ]; then
-	printToKmsg "Generating ECDSA host key"
-	/usr/bin/dropbearkey -t ecdsa -f /var/dropbear/dropbear_ecdsa_host_key
+    printToKmsg "Generating ECDSA host key"
+    /usr/bin/dropbearkey -t ecdsa -f /var/dropbear/dropbear_ecdsa_host_key
 fi
 
 if [ ! -f /var/dropbear/dropbear_ed25519_host_key ]; then
-	printToKmsg "Generating Ed25519 host key"
-	/usr/bin/dropbearkey -t ed25519 -f /var/dropbear/dropbear_ed25519_host_key
+    printToKmsg "Generating Ed25519 host key"
+    /usr/bin/dropbearkey -t ed25519 -f /var/dropbear/dropbear_ed25519_host_key
 fi
 
 /usr/bin/dropbear -r /var/dropbear/dropbear_rsa_host_key -r /var/dropbear/dropbear_ecdsa_host_key -r /var/dropbear/dropbear_ed25519_host_key &
