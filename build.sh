@@ -24,6 +24,7 @@ WORK_PATH=$(mktemp -d)
 MNT_PATH="${WORK_PATH}/mnt"
 EXTRACT_PATH="${WORK_PATH}/extract"
 export OUTPUT_PATH="${SAVED_PWD}/output"
+CACHE_PATH="${SAVED_PWD}/cache" # Added cache path
 
 PRE_STAGES_PATH="${SAVED_PWD}/scripts/01-pre-stages"
 POST_STAGES_PATH="${SAVED_PWD}/scripts/02-post-stages"
@@ -79,10 +80,38 @@ run_stages() {
     for S in "${stage_path}"/*.sh; do
         _sname=$(basename "$S")
         [ "$_sname" = "*.sh" ] && break
-        color_echo -Cyan "  Running $_sname"
+        color_echo -Cyan "Running $_sname"
         # shellcheck disable=SC1090
         . "$S"
     done
+}
+
+cached_download() {
+    local url="$1"
+    local basename="$2"
+    local output_file="$3"
+
+    local cached_file="${CACHE_PATH}/${basename}"
+
+    if [ -f "${cached_file}" ]; then
+        echo "Using cached file: ${cached_file}"
+        if ! cp "${cached_file}" "${output_file}"; then
+            color_echo -Red "Failed to copy ${basename} from cache to ${output_file}."
+            return 1
+        fi
+    else
+        echo "Downloading ${url} to ${output_file}..."
+        if curl -fSL -o "${output_file}" "${url}"; then
+            if ! cp "${output_file}" "${cached_file}"; then
+                color_echo -Red "Warning: Failed to cache ${basename}."
+            fi
+        else
+            color_echo -Red "Failed to download ${url}"
+            return 1
+        fi
+    fi
+
+    return 0
 }
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -90,11 +119,15 @@ run_stages() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 color_echo ">> Prepare firmware"
 FIRMWARE_URL="https://thingify.tools/files/blob/${FIRMWARE_ID}/${VERSION_ID}/${FILE_ID}?name=8.9.2-thinglabs.zip"
-FIRMWARE_FILE="${WORK_PATH}/8.9.2-thinglabs.zip"
-echo "$FIRMWARE_URL"
-echo "$FIRMWARE_FILE"
+FIRMWARE_BASENAME="8.9.2-thinglabs.zip"
+FIRMWARE_FILE="${WORK_PATH}/${FIRMWARE_BASENAME}"
 
-curl -fSL -o "${FIRMWARE_FILE}" "${FIRMWARE_URL}"
+mkdir -p "${CACHE_PATH}"
+
+if ! cached_download "${FIRMWARE_URL}" "${FIRMWARE_BASENAME}" "${FIRMWARE_FILE}"; then
+    color_echo -Red "Failed to download firmware."
+    exit 1
+fi
 
 mkdir -p "${EXTRACT_PATH}"
 unzip -q "${FIRMWARE_FILE}" -d "${EXTRACT_PATH}"
