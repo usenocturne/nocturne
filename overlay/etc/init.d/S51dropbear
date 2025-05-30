@@ -1,0 +1,27 @@
+#!/bin/sh
+
+echo "Starting dropbear SSH server..."
+		
+mkdir -p /var/dropbear 2>/dev/null || true
+		
+# Generate host keys if they don't exist
+if [ ! -f /var/dropbear/dropbear_rsa_host_key ]; then
+	echo "Generating RSA host key..."
+	/usr/bin/dropbearkey -t rsa -f /var/dropbear/dropbear_rsa_host_key
+fi
+		
+if [ ! -f /var/dropbear/dropbear_ecdsa_host_key ]; then
+	echo "Generating ECDSA host key..."
+	/usr/bin/dropbearkey -t ecdsa -f /var/dropbear/dropbear_ecdsa_host_key
+fi
+		
+if [ ! -f /var/dropbear/dropbear_ed25519_host_key ]; then
+	echo "Generating Ed25519 host key..."
+	/usr/bin/dropbearkey -t ed25519 -f /var/dropbear/dropbear_ed25519_host_key
+fi
+		
+/usr/bin/dropbear -r /var/dropbear/dropbear_rsa_host_key -r /var/dropbear/dropbear_ecdsa_host_key -r /var/dropbear/dropbear_ed25519_host_key &
+
+/usr/libexec/sftp-server &
+		
+echo "SSH/SFTP services started"
