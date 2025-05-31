@@ -24,7 +24,8 @@ WORK_PATH=$(mktemp -d)
 MNT_PATH="${WORK_PATH}/mnt"
 EXTRACT_PATH="${WORK_PATH}/extract"
 export OUTPUT_PATH="${SAVED_PWD}/output"
-CACHE_PATH="${SAVED_PWD}/cache" # Added cache path
+CACHE_PATH="${SAVED_PWD}/cache"
+export RES_PATH="${SAVED_PWD}/resources"
 
 PRE_STAGES_PATH="${SAVED_PWD}/scripts/01-pre-stages"
 POST_STAGES_PATH="${SAVED_PWD}/scripts/02-post-stages"
