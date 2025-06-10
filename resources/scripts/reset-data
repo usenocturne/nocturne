@@ -1,0 +1,30 @@
+#!/bin/sh
+set -e
+
+PARTITION="/dev/data"
+MOUNT="/mnt"
+
+if ! /sbin/grep -q "${PARTITION}" /proc/mounts; then
+  /sbin/mkfs.ext4 ${PARTITION} -d /var -L data -F
+
+  /sbin/mount -t ext4 -o rw ${PARTITION} ${MOUNT}
+
+  /sbin/mkdir -p ${MOUNT}/cache
+  /sbin/mkdir -p ${MOUNT}/local/etc
+  /sbin/mkdir -p ${MOUNT}/local/root
+  /sbin/touch ${MOUNT}/local/etc/resolv.conf
+
+  /sbin/fallocate -l 256M ${MOUNT}/swapfile
+  /sbin/mkswap ${MOUNT}/swapfile
+  /sbin/chmod 600 ${MOUNT}/swapfile
+  /sbin/swapon ${MOUNT}/swapfile
+
+  /sbin/sync
+
+  /sbin/umount ${MOUNT}
+
+  echo "${PARTITION} was reset successfully."
+else
+  echo "${PARTITION} is mounted, exiting..."
+  exit 1
+fi

@@ -1,0 +1,10 @@
+Welcome to Nocturne!
+
+If you are experienced and you want to change something, you may
+remount the rootfs as read-write with: mount -o remount,rw /
+
+You can set the active boot slot using the uboot_tool utility,
+or flash an image to the inactive slot using the ab_flash utility.
+
+* GitHub: https://github.com/usenocturne/nocturne-image
+

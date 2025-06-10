@@ -1,0 +1,23 @@
+#!/bin/sh
+
+exec 2>&1
+sv check superbird_init > /dev/null || exit 1
+
+# Setup GPIO
+GPIOX_17=493
+if [ ! -f /sys/class/gpio/gpio493/direction ]; then
+  echo "${GPIOX_17}" > /sys/class/gpio/export
+  echo out > /sys/class/gpio/gpio493/direction
+fi
+
+# Pull the gpio pin down to reset chip
+echo 0 > /sys/class/gpio/gpio493/value
+sleep 0.1
+
+# Turn off reset
+echo 1 > /sys/class/gpio/gpio493/value
+
+# Give the chip some time to start
+sleep 0.3
+
+exec /usr/bin/btattach -P bcm -B /dev/ttyS1 > /dev/null 2>&1

@@ -1,0 +1,39 @@
+#!/bin/sh
+
+get_opt() {
+  echo "$@" | cut -d "=" -f 2
+}
+
+/sbin/mountpoint -q /proc || /sbin/mount -o nosuid,noexec,nodev -t proc proc /proc
+/sbin/mountpoint -q /sys || /sbin/mount -o nosuid,noexec,nodev -t sysfs sys /sys
+/sbin/mountpoint -q /run || /sbin/mount -o mode=0755,nosuid,nodev -t tmpfs run /run
+/sbin/mountpoint -q /dev || /sbin/mount -o mode=0755,nosuid -t devtmpfs dev /dev
+# shellcheck disable=SC2174
+/sbin/mkdir -p -m0755 /dev/pts /dev/shm
+/sbin/mountpoint -q /dev/pts || /sbin/mount -o mode=0620,gid=5,nosuid,noexec -n -t devpts devpts /dev/pts
+/sbin/mountpoint -q /dev/shm || /sbin/mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
+
+/sbin/udevd --daemon
+/sbin/udevadm trigger --action=add --type=subsystems
+/sbin/udevadm trigger --action=add --type=devices
+/sbin/udevadm settle
+
+firstboot=0
+
+# shellcheck disable=SC2013
+# shellcheck disable=SC1001
+for i in $(cat /proc/cmdline); do
+  case $i in
+    nocturne.firstboot\=*)
+      firstboot=$(get_opt "$i")
+      ;;
+  esac
+done
+
+if [ "${firstboot}" -eq 1 ]; then
+  /sbin/reset-data
+  /sbin/reset-settings
+  /usr/bin/uenv set firstboot 0
+fi
+
+exec /sbin/init "$@"

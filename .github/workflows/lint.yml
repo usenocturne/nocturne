@@ -1,0 +1,21 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Run lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install shfmt
+        uses: mfinelli/setup-shfmt@v3
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
