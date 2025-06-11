@@ -44,7 +44,7 @@ rm "$OUTPUT_PATH"/* 2> /dev/null || true
 (
   mkdir -p "$OUTPUT_PATH"
   cd "$OUTPUT_PATH" || exit 1
-  mkdir -p lib bin usr/{bin,lib,libexec,share}
+  mkdir -p lib usr/{bin,lib,libexec,share}
 )
 
 cp -a "$MNT_PATH"/lib/modules "$OUTPUT_PATH"/lib/

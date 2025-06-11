@@ -1,19 +1,21 @@
 #!/bin/sh
 set -e
 
-PARTITION="/dev/settings"
+PATH=/usr/bin:/usr/sbin
+
+PARTITION="/dev/mmcblk0p17"
 MOUNT="/mnt"
 
-if ! /sbin/grep -q "${PARTITION}" /proc/mounts; then
-  /sbin/mkfs.ext4 ${PARTITION} -L settings -F
+if ! grep -q "${PARTITION}" /proc/mounts; then
+  mkfs.ext4 ${PARTITION} -L settings -F
 
-  /sbin/mount -t ext4 -o rw ${PARTITION} ${MOUNT}
+  mount -t ext4 -o rw ${PARTITION} ${MOUNT}
 
-  /sbin/chmod 755 -R ${MOUNT}
+  chmod 755 -R ${MOUNT}
 
-  /sbin/sync
+  sync
 
-  /sbin/umount ${MOUNT}
+  umount ${MOUNT}
 
   echo "${PARTITION} was reset successfully."
 else
