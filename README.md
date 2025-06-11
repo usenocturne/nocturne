@@ -22,7 +22,8 @@
 
 ## Flashing
 
-Disclaimer: Bricking the Car Thing is nearly impossible, but the risk is always there when flashing custom firmware.
+> [!WARNING]
+> Bricking the Car Thing is nearly impossible, but the risk is always there when flashing custom firmware.
 
 ### Requirements
 
@@ -50,9 +51,15 @@ All donations are split between the four members of the Nocturne team, and go to
 
 ## Building
 
-Docker is required. If you are on an architecture other than arm64, qemu-user-static (`docker run --rm --privileged multiarch/qemu-user-static --reset -p yes`) is required.
+`curl`, `zip/unzip`, `genimage`, `m4`, `xbps-install`, and `mkpasswd` binaries are required. xbps-install can be installed on any distro by using the [static binaries](https://docs.voidlinux.org/xbps/troubleshooting/static.html).
 
-Use the `Justfile`. `just run` will build the Docker image, and output the Car Thing image in `output`.
+> [!CAUTION]
+> Do not extract the xbps-static tar to your rootfs without being careful or else you may end up with a broken system. The following command has worked for me, but you have been warned.
+> `sudo tar --no-overwrite-dir --no-same-owner --no-same-permissions -xvf xbps-static-latest.x86_64-musl.tar.xz -C /` 
+
+If you are on an architecture other than arm64, qemu-user-static (+ binfmt, or use `docker run --rm --privileged multiarch/qemu-user-static --reset -p yes`) is required.
+
+Use the `Justfile`. `just run` will output a flashable Car Thing image in `output`.
 
 ```
 $ just -l

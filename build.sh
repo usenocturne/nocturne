@@ -1,10 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env bash
 set -e
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Image build config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
 : "${NOCTURNE_IMAGE_VERSION:="v3.0.0-beta3"}"
 
 : "${NOCTURNE_UI_TAG:="chrome-69"}"
@@ -15,7 +14,6 @@ set -e
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 : "${VOID_BUILD:="20250202"}"
 
-: "${DEFAULT_TIMEZONE:="Etc/UTC"}"
 : "${DEFAULT_HOSTNAME:="nocturne"}"
 : "${DEFAULT_ROOT_PASSWORD:="nocturne"}"
 : "${DEFAULT_SERVICES:=""}"
@@ -25,30 +23,69 @@ set -e
 : "${STAGES:="00 10 20 30 40"}"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# static config
+# Static config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-WORK_PATH="/work"
+REQUIRED_CMDS=(curl zip unzip genimage m4 xbps-install mkpasswd)
+for cmd in "${REQUIRED_CMDS[@]}"; do
+  if ! command -v "$cmd" > /dev/null 2>&1; then
+    echo "$cmd is required to run this script."
+    exit 1
+  fi
+done
+
+SAVED_PWD="$(pwd)"
+
+WORK_PATH=$(mktemp -d)
+export ROOTFS_PATH="${WORK_PATH}/rootfs"
 IMAGE_PATH="${WORK_PATH}/img"
-export RES_PATH=/resources/
-DEF_STAGE_PATH="${RES_PATH}/scripts/stages"
-export ROOTFS_PATH="${WORK_PATH}/root_fs"
-export OUTPUT_PATH="/output"
-export CACHE_PATH="/cache"
+export OUTPUT_PATH="${SAVED_PWD}/output"
+export CACHE_PATH="${SAVED_PWD}/cache"
 
-# ensure work directory is clean
-rm -rf ${WORK_PATH:?}/*
+export SCRIPTS_PATH="${SAVED_PWD}/scripts"
+export HELPERS_PATH="${SAVED_PWD}/scripts/build-helpers"
+export M4_PATH="${SAVED_PWD}/m4"
+export RES_PATH="${SAVED_PWD}/resources"
+DEF_STAGE_PATH="${SAVED_PWD}/scripts/stages"
+
+mkdir -p "$IMAGE_PATH" "$ROOTFS_PATH" "$OUTPUT_PATH" "$CACHE_PATH"
+
+export XBPS_ARCH="armv7l"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# functions
+# Functions
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
 make_image() {
   [ -d /tmp/genimage ] && rm -rf /tmp/genimage
   genimage --rootpath "$1" \
     --tmppath /tmp/genimage \
-    --inputpath ${IMAGE_PATH} \
-    --outputpath ${IMAGE_PATH} \
+    --inputpath "${IMAGE_PATH}" \
+    --outputpath "${IMAGE_PATH}" \
     --config "$2"
+}
+
+color_echo() {
+  ColourOff='\033[0m'
+  Prefix='\033[0;'
+  Index=31
+  Colours_Name="Red Green Yellow Blue Purple Cyan White"
+  COLOUR="Green"
+  Text=""
+
+  while [ $# -gt 0 ]; do
+    if echo "$1" | grep -q "^-"; then
+      COLOUR="${1#-}"
+    else
+      Text="$1"
+    fi
+    shift
+  done
+
+  for col in ${Colours_Name}; do
+    [ "$col" = "$COLOUR" ] && break
+    Index=$((Index + 1))
+  done
+
+  printf "%b\n" "${Prefix}${Index}m${Text}${ColourOff}"
 }
 
 run_stage_scripts() {
@@ -78,5 +115,3 @@ for _stage in ${STAGES}; do
   run_stage_scripts "$_stage"
 done
 color_echo ">> Finished <<"
-
-exec /bin/sh

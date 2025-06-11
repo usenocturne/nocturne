@@ -1,6 +1,6 @@
 #!/bin/sh
 
-xbps-install -r "$ROOTFS_PATH" -y seatd fontconfig libinput
+#xbps-install -r "$ROOTFS_PATH" -y seatd fontconfig libinput
 
 echo "KERNEL==\"event0\", SUBSYSTEM==\"input\", GROUP=\"input\", MODE=\"0660\", ENV{ID_INPUT_KEYBOARD}=\"1\", ENV{LIBINPUT_DEVICE_GROUP}=\"gpio-keys\"" > "$ROOTFS_PATH"/usr/lib/udev/rules.d/97-keys.rules
 echo "KERNEL==\"event1\", SUBSYSTEM==\"input\", GROUP=\"input\", MODE=\"0660\", ENV{ID_INPUT_KEYBOARD}=\"1\", ENV{LIBINPUT_DEVICE_GROUP}=\"rotary-input\"" > "$ROOTFS_PATH"/usr/lib/udev/rules.d/97-rotary.rules
@@ -10,6 +10,6 @@ mkdir -p "$ROOTFS_PATH"/etc/weston
 rm -f "$ROOTFS_PATH"/etc/weston/weston.ini
 cp "$RES_PATH"/config/weston.ini "$RES_PATH"/config/background.png "$ROOTFS_PATH"/etc/weston/
 
-cp -a "$RES_PATH"/scripts/services/weston "$ROOTFS_PATH"/etc/sv/
+cp -a "$SCRIPTS_PATH"/services/weston "$ROOTFS_PATH"/etc/sv/
 
-DEFAULT_SERVICES="${DEFAULT_SERVICES} seatd"
+#DEFAULT_SERVICES="${DEFAULT_SERVICES} seatd"

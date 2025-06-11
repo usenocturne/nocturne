@@ -2,7 +2,7 @@
 
 #xbps-install -r "$ROOTFS_PATH" -y NetworkManager
 
-cp -a "$RES_PATH"/scripts/services/usb-gadget "$ROOTFS_PATH"/etc/sv/
+cp -a "$SCRIPTS_PATH"/services/usb-gadget "$ROOTFS_PATH"/etc/sv/
 DEFAULT_SERVICES="${DEFAULT_SERVICES} usb-gadget"
 
 #cat > "$ROOTFS_PATH"/etc/NetworkManager/NetworkManager.conf << EOF
