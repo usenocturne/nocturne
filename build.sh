@@ -25,7 +25,7 @@ set -e
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Static config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-REQUIRED_CMDS=(curl zip unzip genimage m4 xbps-install mkpasswd)
+REQUIRED_CMDS=(curl zip unzip genimage m4 xbps-install mkpasswd execstack)
 for cmd in "${REQUIRED_CMDS[@]}"; do
   if ! command -v "$cmd" > /dev/null 2>&1; then
     echo "$cmd is required to run this script."
