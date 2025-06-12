@@ -22,8 +22,8 @@ echo 0x0100 > "${usbGadgetDir}"/bcdDevice                                       
 echo 0x0200 > "${usbGadgetDir}"/bcdUSB                                                                                                                  # USB Version
 mkdir -p "${usbGadgetDir}"/strings/0x409                                                                                                                # English strings
 cat /sys/class/efuse/usid > "${usbGadgetDir}"/strings/0x409/serialnumber 2> /dev/null || echo "12345678" > "${usbGadgetDir}"/strings/0x409/serialnumber # Serial Number
-echo "Vanta Labs" > "${usbGadgetDir}"/strings/0x409/manufacturer                                                                                          # Manufacturer string
-echo "Nocturne" > "${usbGadgetDir}"/strings/0x409/product                                                                                      # Device string
+echo "Vanta Labs" > "${usbGadgetDir}"/strings/0x409/manufacturer                                                                                        # Manufacturer string
+echo "Nocturne" > "${usbGadgetDir}"/strings/0x409/product                                                                                               # Device string
 
 # Convinces Windows to properly load RNDIS driver
 echo 1 > "${usbGadgetDir}"/os_desc/use # Tells gadget to use values in os_desc
