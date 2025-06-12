@@ -82,6 +82,7 @@ cp "$MNT_PATH"/usr/lib/libwayland-server.so.0.1.0 "$OUTPUT_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libwebp.so.7.0.3 "$OUTPUT_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libweston-3.so.0.0.0 "$OUTPUT_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libweston-desktop-3.so.0.0.0 "$OUTPUT_PATH"/usr/lib/
+cp "$MNT_PATH"/usr/lib/libxkbcommon.so.0.0.0 "$OUTPUT_PATH"/usr/lib/
 
 cp "$MNT_PATH"/usr/libexec/weston* "$OUTPUT_PATH"/usr/libexec/
 
