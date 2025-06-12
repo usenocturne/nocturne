@@ -18,12 +18,18 @@ ln -sf libMali.so "$ROOTFS_PATH"/usr/lib/libGLESv2.so.2.0
 ln -sf libMali.so "$ROOTFS_PATH"/usr/lib/libwayland-egl.so
 ln -sf libwayland-client.so.0.3.0 "$ROOTFS_PATH"/usr/lib/libwayland-client.so.0
 ln -sf libEGL.so.1.4 "$ROOTFS_PATH"/usr/lib/libEGL.so
+ln -sf libEGL.so.1.4 "$ROOTFS_PATH"/usr/lib/libEGL.so.1
 ln -sf libGLESv2.so.2.0 "$ROOTFS_PATH"/usr/lib/libGLESv2.so
+ln -sf libGLESv2.so.2.0 "$ROOTFS_PATH"/usr/lib/libGLESv2.so.2
 ln -sf libweston-desktop-3.so.0.0.0 "$ROOTFS_PATH"/usr/lib/libweston-desktop-3.so.0
 ln -sf libwayland-cursor.so.0.0.0 "$ROOTFS_PATH"/usr/lib/libwayland-cursor.so.0
 ln -sf libcairo.so.2.11512.0 "$ROOTFS_PATH"/usr/lib/libcairo.so.2
 ln -sf libatomic.so.1.2.0 "$ROOTFS_PATH"/usr/lib/libatomic.so.1
 ln -sf libwebp.so.7.0.3 "$ROOTFS_PATH"/usr/lib/libwebp.so.7
 ln -sf libjpeg.so.9.3.0 "$ROOTFS_PATH"/usr/lib/libjpeg.so.9
+ln -sf libasound.so.2.0.0 "$ROOTFS_PATH"/usr/lib/libasound.so.2
+ln -sf libfontconfig.so.1.12.0 "$ROOTFS_PATH"/usr/lib/libfontconfig.so.1
+ln -sf libfreetype.so.6.16.1 "$ROOTFS_PATH"/usr/lib/libfreetype.so.6
+ln -sf libpng16.so.16.36.0 "$ROOTFS_PATH"/usr/lib/libpng16.so.16
 
 execstack -c "$ROOTFS_PATH"/usr/lib/libMali.so

@@ -7,7 +7,5 @@ sv check dbus > /dev/null || exit 1
 chmod 0700 /run/wayland
 
 export XDG_RUNTIME_DIR="/run/wayland/"
-export XDG_CACHE_HOME="/var/cache"
-export BREAKPAD_DUMP_LOCATION="/var/cache/chrome_storage/Crash Reports"
 
-exec /usr/bin/weston --tty=4 --config=/etc/weston/weston.ini -- chromium --no-sandbox --in-process-gpu --remote-debugging-port=2222 --user-data-dir=/var/cache/chrome_storage --kiosk --disable-pinch --allow-file-access-from-files --ignore-certificate-errors --app=http://localhost:3000 > /dev/null 2>&1
+exec /usr/bin/weston --tty=4 --config=/etc/weston/weston.ini > /dev/null 2>&1

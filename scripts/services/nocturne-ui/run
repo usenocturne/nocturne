@@ -1,0 +1,5 @@
+#!/bin/sh
+
+exec 2>&1
+
+exec /usr/bin/static-web-server --host 127.0.0.1 --port 80 --root /etc/nocturne/ui --compression false
