@@ -1,5 +1,4 @@
-#!/bin/sh
-
+# shellcheck disable=SC2148
 PATH=/usr/bin:/usr/sbin
 
 get_opt() {
@@ -23,5 +22,3 @@ if [ "${firstboot}" -eq 1 ]; then
   /sbin/reset-settings
   /usr/bin/uenv set firstboot 0
 fi
-
-exec /sbin/init "$@"
