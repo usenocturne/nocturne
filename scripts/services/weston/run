@@ -2,10 +2,16 @@
 
 exec 2>&1
 sv check dbus > /dev/null || exit 1
+sv check seatd > /dev/null || exit 1
 
 [ -d /run/wayland ] || mkdir -p /run/wayland
 chmod 0700 /run/wayland
 
 export XDG_RUNTIME_DIR="/run/wayland/"
+export XDG_CACHE_HOME="/var/cache"
+export BREAKPAD_DUMP_LOCATION="/var/cache/chrome_storage/Crash Reports"
+
+udevadm trigger --subsystem-match=input > /dev/null 2>&1
+udevadm settle > /dev/null 2>&1
 
 exec /usr/bin/weston --tty=4 --config=/etc/weston/weston.ini > /dev/null 2>&1

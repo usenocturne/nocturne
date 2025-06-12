@@ -12,4 +12,4 @@ mkdir -p "$ROOTFS_PATH"/etc/bluetooth
 rm -f "$ROOTFS_PATH"/etc/bluetooth/main.conf
 cp "$RES_PATH"/config/bluetooth.conf "$ROOTFS_PATH"/etc/bluetooth/main.conf
 
-DEFAULT_SERVICES="${DEFAULT_SERVICES} dbus bluetooth bluetooth_adapter superbird_init"
+DEFAULT_SERVICES="${DEFAULT_SERVICES} dbus bluetoothd bluetooth_adapter superbird_init"

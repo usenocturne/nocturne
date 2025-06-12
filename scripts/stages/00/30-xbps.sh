@@ -5,6 +5,7 @@ curl -L https://repo-default.voidlinux.org/live/current/void-armv7l-ROOTFS-"$VOI
 xbps-install -r "$ROOTFS_PATH" -Suy xbps
 xbps-install -r "$ROOTFS_PATH" -uy
 xbps-install -r "$ROOTFS_PATH" -y base-system
+xbps-remove -r "$ROOTFS_PATH" -Ry base-container-full
 
 {
   echo "ignorepkg=wifi-firmware"

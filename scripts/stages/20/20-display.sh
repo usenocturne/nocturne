@@ -10,6 +10,9 @@ mkdir -p "$ROOTFS_PATH"/etc/weston
 rm -f "$ROOTFS_PATH"/etc/weston/weston.ini
 cp "$RES_PATH"/config/weston.ini "$RES_PATH"/config/background.png "$ROOTFS_PATH"/etc/weston/
 
-cp -a "$SCRIPTS_PATH"/services/weston "$ROOTFS_PATH"/etc/sv/
+echo "/lib/modules/4.9.113/hardware/aml-4.9/arm/gpu/mali.ko" > "$ROOTFS_PATH"/etc/modules-load.d/mali.conf
 
-DEFAULT_SERVICES="${DEFAULT_SERVICES} seatd"
+cp -a "$SCRIPTS_PATH"/services/weston "$ROOTFS_PATH"/etc/sv/
+cp -a "$SCRIPTS_PATH"/services/chromium "$ROOTFS_PATH"/etc/sv/
+
+DEFAULT_SERVICES="${DEFAULT_SERVICES} seatd weston chromium"

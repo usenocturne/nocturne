@@ -44,7 +44,7 @@ rm "$OUTPUT_PATH"/* 2> /dev/null || true
 (
   mkdir -p "$OUTPUT_PATH"
   cd "$OUTPUT_PATH" || exit 1
-  mkdir -p usr/{bin,lib,libexec,share} etc
+  mkdir -p usr/{bin,lib,libexec,share} usr/share/fonts etc
 )
 
 cp -a "$MNT_PATH"/lib/modules "$OUTPUT_PATH"/usr/lib/
@@ -86,9 +86,10 @@ cp "$MNT_PATH"/usr/lib/libxkbcommon.so.0.0.0 "$OUTPUT_PATH"/usr/lib/
 
 cp "$MNT_PATH"/usr/libexec/weston* "$OUTPUT_PATH"/usr/libexec/
 
-cp -a "$MNT_PATH"/usr/share/{X11,fontconfig,fonts} "$OUTPUT_PATH"/usr/share/
+cp -a "$MNT_PATH"/usr/share/{X11,fontconfig} "$OUTPUT_PATH"/usr/share/
+cp -a "$MNT_PATH"/usr/share/fonts/ttf-bitstream-vera "$OUTPUT_PATH"/usr/share/fonts/
 
-# cp -a "$MNT_PATH"/etc/fonts "$OUTPUT_PATH"/etc/
+cp -a "$MNT_PATH"/etc/fonts "$OUTPUT_PATH"/etc/
 
 chown -R root:root "$OUTPUT_PATH"/*
 
