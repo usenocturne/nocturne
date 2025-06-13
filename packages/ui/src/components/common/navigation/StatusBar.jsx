@@ -75,7 +75,7 @@ export default function StatusBar() {
     const updateTime = () => {
       const now = new Date();
 
-      if (timezone) {
+      if (timezone && typeof Intl !== 'undefined') {
         try {
           const options = { timeZone: timezone, hour: 'numeric', minute: 'numeric', hour12: !settings.use24HourTime };
           const formatter = new Intl.DateTimeFormat('en-US', options);
