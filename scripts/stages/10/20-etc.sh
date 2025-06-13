@@ -9,6 +9,7 @@ echo "$DEFAULT_HOSTNAME" > "$ROOTFS_PATH"/etc/hostname
 root_pw=$(mkpasswd -m sha-512 -s "$DEFAULT_ROOT_PASSWORD")
 sed -i "/^root/d" "$ROOTFS_PATH"/etc/shadow
 echo "root:${root_pw}:19000:0:99999::::" >> "$ROOTFS_PATH"/etc/shadow
+"$HELPERS_PATH"/chroot_exec.sh chsh -s /bin/bash root
 
 cat > "$ROOTFS_PATH"/etc/network/interfaces << EOF
 auto lo
