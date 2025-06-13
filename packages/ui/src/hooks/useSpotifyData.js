@@ -441,136 +441,6 @@ export function useSpotifyData(activeSection) {
         });
       }
 
-      if (recentlyPlayed.items && recentlyPlayed.items.length > 0) {
-        const recentTracks = recentlyPlayed.items.map((item) => item.track);
-        const uniqueRecentTracks = getUniqueTracksById(recentTracks);
-        mixes.push({
-          id: "recent-mix",
-          name: "Recent Mix",
-          images: [{ url: "/images/radio-cover/recent.webp" }],
-          tracks: addUniqueIds(uniqueRecentTracks, "recent-mix"),
-          type: "static",
-          sortOrder: 4,
-        });
-      }
-
-      const hour = new Date().getHours();
-      let timeMix;
-
-      if (hour >= 5 && hour < 12) {
-        timeMix = {
-          id: "morning-mix",
-          name: "Morning Mix",
-          images: [{ url: "/images/radio-cover/morning.webp" }],
-          type: "time",
-          sortOrder: 3,
-        };
-      } else if (hour >= 12 && hour < 17) {
-        timeMix = {
-          id: "afternoon-mix",
-          name: "Afternoon Mix",
-          images: [{ url: "/images/radio-cover/afternoon.webp" }],
-          type: "time",
-          sortOrder: 3,
-        };
-      } else {
-        timeMix = {
-          id: "evening-mix",
-          name: "Evening Mix",
-          images: [{ url: "/images/radio-cover/evening.webp" }],
-          type: "time",
-          sortOrder: 3,
-        };
-      }
-
-      if (
-        recentlyPlayed.items &&
-        topTracksMediumTerm.items &&
-        topTracksLongTerm.items
-      ) {
-        const trackPlayMap = new Map();
-
-        recentlyPlayed.items.forEach((item) => {
-          const playedHour = new Date(item.played_at).getHours();
-          const trackId = item.track.id;
-
-          if (!trackPlayMap.has(trackId)) {
-            trackPlayMap.set(trackId, {
-              track: item.track,
-              playTimes: new Set(),
-              count: 0,
-            });
-          }
-
-          const trackData = trackPlayMap.get(trackId);
-          trackData.playTimes.add(playedHour);
-          trackData.count++;
-        });
-
-        const allTracks = [
-          ...topTracksMediumTerm.items.map((track) => ({
-            ...track,
-            weight: 0.6,
-          })),
-          ...topTracksLongTerm.items.map((track) => ({
-            ...track,
-            weight: 0.4,
-          })),
-        ];
-
-        const scoredTracks = allTracks.map((track) => {
-          const playData = trackPlayMap.get(track.id);
-          let timeScore = 0;
-
-          if (playData) {
-            const timeRange =
-              timeMix.id === "morning-mix"
-                ? { start: 5, end: 12 }
-                : timeMix.id === "afternoon-mix"
-                ? { start: 12, end: 17 }
-                : { start: 17, end: 5 };
-
-            const relevantHours = Array.from(playData.playTimes).filter(
-              (hour) => {
-                if (timeRange.start < timeRange.end) {
-                  return hour >= timeRange.start && hour < timeRange.end;
-                } else {
-                  return hour >= timeRange.start || hour < timeRange.end;
-                }
-              }
-            );
-
-            timeScore =
-              (relevantHours.length / playData.playTimes.size) * playData.count;
-          }
-
-          return {
-            ...track,
-            timeScore: timeScore * (track.weight || 1),
-          };
-        });
-
-        let timeSortedTracks = scoredTracks
-          .sort((a, b) => b.timeScore - a.timeScore)
-          .filter(
-            (track, index, self) =>
-              index === self.findIndex((t) => t.id === track.id)
-          )
-          .slice(0, 50);
-
-        if (timeSortedTracks.length < 50) {
-          const remainingTracks = allTracks
-            .filter((track) => !timeSortedTracks.some((t) => t.id === track.id))
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 50 - timeSortedTracks.length);
-
-          timeSortedTracks = [...timeSortedTracks, ...remainingTracks];
-        }
-
-        timeMix.tracks = addUniqueIds(timeSortedTracks, timeMix.id);
-        mixes.push(timeMix);
-      }
-
       if (topArtists.items && topArtists.items.length > 0) {
         const artistsToFetch = topArtists.items.slice(0, 5);
 
@@ -609,100 +479,6 @@ export function useSpotifyData(activeSection) {
         }
       }
 
-      if (topTracksLongTerm.items && topTracksMediumTerm.items) {
-        const uniqueThrowbackTracks = topTracksLongTerm.items.filter(
-          (track) =>
-            !topTracksMediumTerm.items.some(
-              (topTrack) => topTrack.id === track.id
-            )
-        );
-
-        if (uniqueThrowbackTracks.length > 0) {
-          mixes.push({
-            id: "throwback-mix",
-            name: "Throwbacks",
-            images: [{ url: "/images/radio-cover/throwback.webp" }],
-            tracks: addUniqueIds(uniqueThrowbackTracks, "throwback-mix"),
-            type: "static",
-            sortOrder: 5,
-          });
-        }
-      }
-
-      const getSeasonalInfo = () => {
-        const now = new Date();
-        const month = now.getMonth();
-        const currentYear = now.getFullYear();
-        const lastYear = currentYear - 1;
-
-        if (month >= 2 && month <= 4) {
-          return {
-            id: "spring-mix",
-            name: "Spring Mix",
-            images: [{ url: "/images/radio-cover/spring.webp" }],
-            sortOrder: 6,
-          };
-        } else if (month >= 5 && month <= 7) {
-          return {
-            id: "summer-mix",
-            name: "Summer Mix",
-            images: [{ url: "/images/radio-cover/summer.webp" }],
-            sortOrder: 6,
-          };
-        } else if (month >= 8 && month <= 10) {
-          return {
-            id: "fall-mix",
-            name: "Fall Mix",
-            images: [{ url: "/images/radio-cover/fall.webp" }],
-            sortOrder: 6,
-          };
-        } else {
-          return {
-            id: "winter-mix",
-            name: "Winter Mix",
-            images: [{ url: "/images/radio-cover/winter.webp" }],
-            sortOrder: 6,
-          };
-        }
-      };
-
-      if (topTracksMediumTerm.items && topTracksLongTerm.items) {
-        const seasonalInfo = getSeasonalInfo();
-
-        const weightedTracks = [
-          ...topTracksMediumTerm.items.map((track) => ({
-            ...track,
-            weight: 0.6,
-          })),
-          ...topTracksLongTerm.items.map((track) => ({
-            ...track,
-            weight: 0.4,
-          })),
-        ];
-
-        const uniqueTracks = Array.from(
-          weightedTracks.reduce((map, track) => {
-            const existing = map.get(track.id);
-            if (!existing || existing.weight < track.weight) {
-              map.set(track.id, track);
-            }
-            return map;
-          }, new Map())
-        ).map(([_, track]) => track);
-
-        const seasonalTracks = uniqueTracks
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 50);
-
-        if (seasonalTracks.length > 0) {
-          mixes.push({
-            ...seasonalInfo,
-            tracks: addUniqueIds(seasonalTracks, seasonalInfo.id),
-            type: "seasonal",
-          });
-        }
-      }
-
       const allMixes = [...mixes, ...spotifyMixes];
       const sortedMixes = allMixes.sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -723,12 +499,12 @@ export function useSpotifyData(activeSection) {
           sortOrder: 1,
         },
         {
-          id: "seasonal-mix",
-          name: getSeasonalMixName(),
-          images: [{ url: getSeasonalMixImage() }],
+          id: "discoveries-mix",
+          name: "Discoveries",
+          images: [{ url: "/images/radio-cover/discoveries.webp" }],
           tracks: [],
-          type: "seasonal",
-          sortOrder: 6,
+          type: "static",
+          sortOrder: 2,
         },
         ...spotifyMixes,
       ];
@@ -739,22 +515,6 @@ export function useSpotifyData(activeSection) {
       setIsLoading((prev) => ({ ...prev, radioMixes: false }));
     }
   }, [effectiveToken]);
-
-  function getSeasonalMixName() {
-    const month = new Date().getMonth();
-    if (month >= 2 && month <= 4) return "Spring Mix";
-    if (month >= 5 && month <= 7) return "Summer Mix";
-    if (month >= 8 && month <= 10) return "Fall Mix";
-    return "Winter Mix";
-  }
-
-  function getSeasonalMixImage() {
-    const month = new Date().getMonth();
-    if (month >= 2 && month <= 4) return "/images/radio-cover/spring.webp";
-    if (month >= 5 && month <= 7) return "/images/radio-cover/summer.webp";
-    if (month >= 8 && month <= 10) return "/images/radio-cover/fall.webp";
-    return "/images/radio-cover/winter.webp";
-  }
 
   const isTokenValid = useCallback(() => {
     const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
