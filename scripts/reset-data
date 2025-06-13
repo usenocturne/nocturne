@@ -14,6 +14,9 @@ if ! grep -q "${PARTITION}" /proc/mounts; then
   mkdir -p ${MOUNT}/local/root
   touch ${MOUNT}/local/etc/resolv.conf
 
+  cp /etc/skel/.bashrc ${MOUNT}/local/root/.bashrc
+  cp /etc/skel/.bash_profile ${MOUNT}/local/root/.bash_profile
+
   fallocate -l 256M ${MOUNT}/swapfile
   mkswap ${MOUNT}/swapfile
   chmod 600 ${MOUNT}/swapfile
