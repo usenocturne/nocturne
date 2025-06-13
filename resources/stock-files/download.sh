@@ -8,7 +8,7 @@ set -x
 
 WORK_PATH=$(mktemp -d)
 MNT_PATH="$WORK_PATH/mnt"
-EXTRACT_PATH="$WORK_PATH/extract"
+EXTRACT_PATH="$(pwd)/extract"
 OUTPUT_PATH="$(pwd)/output"
 
 cleanup() {
@@ -29,6 +29,7 @@ echo "Downloading ${FIRMWARE_URL}"
 curl -Lo "$FIRMWARE_FILE" "$FIRMWARE_URL"
 
 echo "Unzipping firmware"
+rm "$EXTRACT_PATH"/* 2> /dev/null || true
 mkdir -p "${EXTRACT_PATH}"
 unzip -q "${FIRMWARE_FILE}" -d "${EXTRACT_PATH}"
 
