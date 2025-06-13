@@ -501,7 +501,7 @@ export default function Settings({
   }, [isAnimating, showSubpage, showParent, setActiveSection]);
 
   return (
-    <div className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container">
+    <div className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container" style={{ touchAction: "pan-y", overflowX: "hidden" }}>
       <style>{`
         .screen-transition {
           transition: transform ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1),
@@ -519,6 +519,8 @@ export default function Settings({
               className={`absolute top-0 left-0 w-full screen-transition ${mainClasses}`}
               style={{
                 visibility: showMain || isAnimating ? "visible" : "hidden",
+                touchAction: "pan-y",
+                overflowX: "hidden",
               }}
             >
               <h2 className="text-[46px] font-[580] text-white tracking-tight mb-6">
@@ -558,6 +560,8 @@ export default function Settings({
               className={`absolute top-0 left-0 w-full screen-transition ${parentClasses}`}
               style={{
                 visibility: showParent || isAnimating ? "visible" : "hidden",
+                touchAction: "pan-y",
+                overflowX: "hidden",
               }}
             >
               <div className="flex items-center mb-4">
@@ -609,6 +613,8 @@ export default function Settings({
               className={`absolute top-0 left-0 w-full screen-transition ${subpageClasses}`}
               style={{
                 visibility: showSubpage || isAnimating ? "visible" : "hidden",
+                touchAction: "pan-y",
+                overflowX: "hidden",
               }}
             >
               <div className="flex items-center mb-4">
