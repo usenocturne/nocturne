@@ -285,6 +285,7 @@ export default function Home({
               No recent albums found
             </div>
           )}
+          <div className="min-w-4 flex-shrink-0"></div>
         </div>
       </HorizontalScroll>
     );
@@ -414,6 +415,7 @@ export default function Home({
               No playlists found
             </div>
           )}
+          <div className="min-w-4 flex-shrink-0"></div>
         </div>
       </HorizontalScroll>
     );
@@ -510,6 +512,7 @@ export default function Home({
               No artists found
             </div>
           )}
+          <div className="min-w-4 flex-shrink-0"></div>
         </div>
       </HorizontalScroll>
     );
@@ -642,6 +645,7 @@ export default function Home({
               No mixes found
             </div>
           )}
+          <div className="min-w-4 flex-shrink-0"></div>
         </div>
       </HorizontalScroll>
     );
