@@ -3,6 +3,7 @@
 rm "$OUTPUT_PATH"/* 2> /dev/null || true
 
 mv "$IMAGE_PATH"/system.ext4 "$IMAGE_PATH"/system_a.ext2
+cp "$IMAGE_PATH"/system_a.ext2 "$OUTPUT_PATH"/system.ext4
 cp "$IMAGE_PATH"/system_a.ext2 "$IMAGE_PATH"/system_b.ext2
 
 cd "$RES_PATH"/stock-files/extract/ || exit 1

@@ -9,4 +9,4 @@ mkdir -p "$ROOTFS_PATH"/etc/nocturne
 
 echo "$NOCTURNE_IMAGE_VERSION" > "$ROOTFS_PATH"/etc/nocturne/version.txt
 
-# DEFAULT_SERVICES="${DEFAULT_SERVICES} nocturned"
+DEFAULT_SERVICES="${DEFAULT_SERVICES} nocturned"

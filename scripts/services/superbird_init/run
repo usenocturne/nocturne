@@ -18,5 +18,4 @@ if [ ! -f "${bt_settings_path}/settings" ]; then
   printf "[General]\nAlias=%s\n" "$name" > "${bt_settings_path}/settings"
 fi
 
-touch /tmp/superbird_init_done
 exec sleep infinity

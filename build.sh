@@ -9,11 +9,12 @@ set -e
 : "${NOCTURNE_UI_TAG:="chrome-69"}"
 : "${NOCTURNED_TAG:="v1.0.6"}"
 
+: "${VOID_BUILD:="20250202"}"
+: "${STATIC_WEB_SERVER_VERSION:="v2.37.0"}"
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # System config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-: "${VOID_BUILD:="20250202"}"
-
 : "${DEFAULT_HOSTNAME:="nocturne"}"
 : "${DEFAULT_ROOT_PASSWORD:="nocturne"}"
 : "${DEFAULT_SERVICES:=""}"

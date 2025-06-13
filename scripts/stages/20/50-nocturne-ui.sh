@@ -1,6 +1,6 @@
 #!/bin/sh
 
-curl -Lo "$WORK_PATH"/static-web-server.tar.gz https://github.com/static-web-server/static-web-server/releases/download/v2.37.0/static-web-server-v2.37.0-armv7-unknown-linux-musleabihf.tar.gz
+curl -Lo "$WORK_PATH"/static-web-server.tar.gz https://github.com/static-web-server/static-web-server/releases/download/"$STATIC_WEB_SERVER_VERSION"/static-web-server-"$STATIC_WEB_SERVER_VERSION"-armv7-unknown-linux-musleabihf.tar.gz
 tar -xvf "$WORK_PATH"/static-web-server.tar.gz --strip-components=1 --wildcards '*/static-web-server'
 mv static-web-server "$ROOTFS_PATH"/usr/bin/static-web-server
 chmod +x "$ROOTFS_PATH"/usr/bin/static-web-server

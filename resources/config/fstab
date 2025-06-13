@@ -1,5 +1,5 @@
-/dev/system_a   /           ext4     rw,noload,noauto,noatime,errors=remount-ro  0 1
-/dev/system_b   /           ext4     rw,noload,noauto,noatime,errors=remount-ro  0 1
+/dev/system_a   /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
+/dev/system_b   /           ext4     ro,noload,noauto,noatime,errors=remount-ro  0 1
 /dev/data       /var        ext4     rw                  0 0
 /dev/settings   /var/lib    ext4     rw                  0 0
 

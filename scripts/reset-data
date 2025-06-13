@@ -17,6 +17,10 @@ if ! grep -q "${PARTITION}" /proc/mounts; then
   cp /etc/skel/.bashrc ${MOUNT}/local/root/.bashrc
   cp /etc/skel/.bash_profile ${MOUNT}/local/root/.bash_profile
 
+  mkdir -p ${MOUNT}/local/etc/ssh
+  ssh-keygen -A -f ${MOUNT}/local
+  cp /etc/sshd_config ${MOUNT}/local/etc/ssh/sshd_config
+
   fallocate -l 256M ${MOUNT}/swapfile
   mkswap ${MOUNT}/swapfile
   chmod 600 ${MOUNT}/swapfile
