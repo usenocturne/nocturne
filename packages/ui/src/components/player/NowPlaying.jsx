@@ -542,7 +542,7 @@ export default function NowPlaying({
         </div>
       </div>
 
-      <div className={`px-12 ${!elapsedTimeEnabled ? "pb-7 pt-5" : ""}`}>
+      <div className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}>
         <ProgressBar
           progress={progressPercentage}
           isPlaying={isPlaying}
@@ -584,7 +584,7 @@ export default function NowPlaying({
       )}
 
       <div
-        className={`flex justify-between items-center w-full px-12 transition-all duration-200 ease-in-out ${
+        className={`flex justify-between items-center w-full px-12 mt-1 transition-all duration-200 ease-in-out ${
           isProgressScrubbing
             ? "translate-y-24 opacity-0"
             : "translate-y-0 opacity-100"
