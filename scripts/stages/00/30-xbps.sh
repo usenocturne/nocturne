@@ -4,15 +4,12 @@ curl -L https://repo-default.voidlinux.org/live/current/void-armv7l-ROOTFS-"$VOI
 
 xbps-install -r "$ROOTFS_PATH" -Suy xbps
 xbps-install -r "$ROOTFS_PATH" -uy
-xbps-install -r "$ROOTFS_PATH" -y base-system
-xbps-remove -r "$ROOTFS_PATH" -Ry base-container-full
+xbps-install -r "$ROOTFS_PATH" -y base-files coreutils findutils diffutils libgcc dash bash grep gzip file sed gawk less \
+  util-linux which tar shadow e2fsprogs dosfstools procps-ng tzdata usbutils kbd iproute2 iputils sudo kmod acpid eudev \
+  runit-void ifupdown curl nano
 
 {
   echo "ignorepkg=wifi-firmware"
   echo "ignorepkg=iw"
   echo "ignorepkg=wpa_supplicant"
 } >> "$ROOTFS_PATH"/etc/xbps.d/ignore.conf
-
-xbps-remove -ROoy -r "$ROOTFS_PATH" wifi-firmware iw wpa_supplicant
-
-xbps-install -r "$ROOTFS_PATH" -y ifupdown util-linux curl nano
