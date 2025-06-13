@@ -294,7 +294,7 @@ const Tutorial = ({ onComplete }) => {
               {screens[currentScreen].continueType === "button" && (
                 <button
                   onClick={handleContinue}
-                  className="mt-4 bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3"
+                  className="mt-4 bg-white/10 hover:bg-white/20 focus:outline-none transition-colors duration-200 rounded-xl px-6 py-3"
                 >
                   <span className="text-[28px] font-[560] text-white tracking-tight">
                     {currentScreen === screens.length - 1
