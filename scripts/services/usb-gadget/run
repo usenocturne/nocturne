@@ -50,12 +50,6 @@ printToKmsg "Binding gadget to USB device"
 UDC_DEVICE=$(ls -1 /sys/class/udc/)
 echo "$UDC_DEVICE" > /sys/kernel/config/usb_gadget/g1/UDC
 
-printToKmsg "Configuring usb0"
-sleep 3 # Wait a few seconds to allow the interface to come up
-ip link set usb0 up
-ip addr add 172.16.42.2/24 dev usb0
-ip route add default via 172.16.42.1 dev usb0 metric 100 2> /dev/null || true
-
 printToKmsg "USB gadget setup complete"
 
 exec sleep infinity
