@@ -50,7 +50,7 @@ rm "$OUTPUT_PATH"/* 2> /dev/null || true
 
 cp -a "$MNT_PATH"/lib/modules "$OUTPUT_PATH"/usr/lib/
 
-cp "$MNT_PATH"/usr/bin/{phb,uenv} "$OUTPUT_PATH"/usr/bin/
+cp "$MNT_PATH"/usr/bin/{phb,uenv,sp-als-backlight} "$OUTPUT_PATH"/usr/bin/
 cp -a "$MNT_PATH"/usr/bin/chromium-browser "$OUTPUT_PATH"/usr/bin/
 cp "$MNT_PATH"/usr/bin/weston* "$OUTPUT_PATH"/usr/bin/
 

@@ -14,5 +14,6 @@ echo "/lib/modules/4.9.113/hardware/aml-4.9/arm/gpu/mali.ko" > "$ROOTFS_PATH"/et
 
 cp -a "$SCRIPTS_PATH"/services/weston "$ROOTFS_PATH"/etc/sv/
 cp -a "$SCRIPTS_PATH"/services/chromium "$ROOTFS_PATH"/etc/sv/
+cp -a "$SCRIPTS_PATH"/services/auto_brightness "$ROOTFS_PATH"/etc/sv/
 
-DEFAULT_SERVICES="${DEFAULT_SERVICES} seatd weston chromium"
+DEFAULT_SERVICES="${DEFAULT_SERVICES} seatd weston chromium auto_brightness"
