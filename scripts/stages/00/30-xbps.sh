@@ -15,4 +15,4 @@ xbps-remove -r "$ROOTFS_PATH" -Ry base-container-full
 
 xbps-remove -ROoy -r "$ROOTFS_PATH" wifi-firmware iw wpa_supplicant
 
-xbps-install -r "$ROOTFS_PATH" -y ifupdown util-linux curl vim
+xbps-install -r "$ROOTFS_PATH" -y ifupdown util-linux curl nano
