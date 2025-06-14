@@ -8,3 +8,5 @@ for S in ${DEFAULT_SERVICES}; do
   ln -sf /run/runit/supervise."$S" "$ROOTFS_PATH"/etc/sv/"$S"/supervise
   ln -sf /etc/sv/"$S" "$ROOTFS_PATH"/etc/runit/runsvdir/default/
 done
+
+rm "$ROOTFS_PATH"/etc/runit/runsvdir/default/agetty-*
