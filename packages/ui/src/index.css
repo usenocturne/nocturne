@@ -73,7 +73,6 @@ body {
 
 section {
   display: flex;
-  gap: 3px;
   padding-top: 8px;
 }
 
@@ -83,7 +82,7 @@ section {
   }
 
   50% {
-    transform: scaleY(1.5);
+    transform: scaleY(2);
   }
 
   100% {
@@ -92,12 +91,17 @@ section {
 }
 
 [class*="wave"] {
-  aspect-ratio: 0.125/1;
+  width: 2.5px;
+  height: 16px;
+  margin-right: 3px;
   animation: waveform var(--wavefreq) ease-in-out infinite forwards;
   animation-delay: var(--wave-offset);
   background-color: rgba(255, 255, 255, 0.6);
   border-radius: 15px;
-  width: 1vw;
+}
+
+[class*="wave"]:last-child {
+  margin-right: 0;
 }
 
 :root {
