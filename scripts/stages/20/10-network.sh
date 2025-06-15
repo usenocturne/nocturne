@@ -1,12 +1,12 @@
 #!/bin/sh
 
-xbps-install -r "$ROOTFS_PATH" -y NetworkManager
+xbps-install -r "$ROOTFS_PATH" -y NetworkManager dhclient
 
 cp -a "$SCRIPTS_PATH"/services/usb-gadget "$ROOTFS_PATH"/etc/sv/
 
 cat > "$ROOTFS_PATH"/etc/NetworkManager/NetworkManager.conf << EOF
 [main]
-dhcp=internal
+dhcp=dhclient
 dns=default
 rc-manager=file
 EOF
