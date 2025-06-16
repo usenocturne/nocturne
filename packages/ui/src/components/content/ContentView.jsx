@@ -6,6 +6,7 @@ import { CarThingIcon } from "../common/icons";
 import { useSpotifyPlayerState } from "../../hooks/useSpotifyPlayerState";
 import { useButtonMapping } from "../../hooks/useButtonMapping";
 import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
+import ScrollingText from "../common/ScrollingText";
 
 const ContentView = ({
   accessToken,
@@ -633,9 +634,19 @@ const ContentView = ({
 
               <div className="flex-grow">
                 <div>
-                  <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {track.name || "Unknown Track"}
-                  </p>
+                  {selectedTrackIndex === index ? (
+                    <ScrollingText
+                      text={track.name || "Unknown Track"}
+                      className="text-[32px] font-[580] text-white tracking-tight"
+                      maxWidth="280px"
+                      pauseDuration={1000}
+                      pixelsPerSecond={40}
+                    />
+                  ) : (
+                    <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                      {track.name || "Unknown Track"}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap">
                   {track.artists &&
