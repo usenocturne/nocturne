@@ -229,7 +229,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
             <div className="flex items-center mb-4">
               <button
                 onClick={navigateBack}
-                className="mr-4"
+                className="bg-transparent border-none mr-4"
                 disabled={isAnimating}
               >
                 <ChevronLeftIcon className="w-8 h-8 text-white" />
@@ -273,7 +273,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
             <div className="flex items-center mb-4">
               <button
                 onClick={navigateBack}
-                className="mr-4"
+                className="bg-transparent border-none mr-4"
                 disabled={isAnimating}
               >
                 <ChevronLeftIcon className="w-8 h-8 text-white" />
