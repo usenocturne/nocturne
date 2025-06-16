@@ -564,7 +564,7 @@ const ContentView = ({
 
   const getImageStyle = () => {
     return contentType === "artist"
-      ? "aspect-square rounded-full drop-shadow-xl object-cover"
+      ? "aspect-square rounded-full drop-shadow-xl object-cover w-[280px] h-[280px]"
       : "aspect-square rounded-[12px] drop-shadow-xl";
   };
 
