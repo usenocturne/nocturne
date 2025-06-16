@@ -110,6 +110,11 @@ section {
   --wave-offset: -1.5s;
 }
 
+.wave0 {
+  --wavefreq: calc(100ms * var(--m));
+  animation-delay: var(--wave-offset);
+}
+
 .wave1 {
   --wavefreq: calc(200ms * var(--m));
   animation-delay: calc(var(--wave-offset) - 0.2s);
