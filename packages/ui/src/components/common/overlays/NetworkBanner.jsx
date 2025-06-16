@@ -36,15 +36,15 @@ const NetworkBanner = ({ visible, onClose }) => {
       }`}
     >
       <div className="max-w-screen-xl mx-auto px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-grow">
-          <WifiOffIcon className="w-6 h-6 text-white" />
+        <div className="flex items-center flex-grow">
+          <WifiOffIcon className="w-6 h-6 text-white mr-3" />
           <p className="text-white text-[20px] font-[560] tracking-tight">
             Network connection lost. Ensure mobile hotspot is enabled.
           </p>
         </div>
         <button
           onClick={handleClose}
-          className="text-white/70 hover:text-white transition-colors ml-4"
+          className="bg-transparent border-none text-white/70 hover:text-white transition-colors ml-4"
         >
           <XIcon className="w-6 h-6" />
         </button>
