@@ -541,16 +541,20 @@ const ContentView = ({
     return content.images[1]?.url || content.images[0].url;
   };
 
+  const formatNumber = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
   const getSubtitle = () => {
     switch (contentType) {
       case "album":
         return content.artists?.map((artist) => artist.name).join(", ");
       case "artist":
-        return `${content.followers?.total?.toLocaleString() || 0} Followers`;
+        return `${formatNumber(content.followers?.total || 0)} Followers`;
       case "playlist":
-        return `${content.tracks?.total || 0} Songs`;
+        return `${formatNumber(content.tracks?.total || 0)} Songs`;
       case "liked-songs":
-        return `${content.tracks?.total || 0} Songs`;
+        return `${formatNumber(content.tracks?.total || 0)} Songs`;
       case "mix":
         return `${content.tracks?.length || 0} Tracks`;
       default:

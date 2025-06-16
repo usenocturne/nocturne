@@ -339,7 +339,7 @@ export default function Home({
                   Now Playing
                 </>
               ) : (
-                `${likedSongs.tracks.total.toLocaleString()} Songs`
+                `${likedSongs.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} Songs`
               )}
             </h4>
           </div>
@@ -405,7 +405,7 @@ export default function Home({
                         Now Playing
                       </>
                     ) : (
-                      `${playlist.tracks?.total?.toLocaleString() || 0} Songs`
+                      `${(playlist.tracks?.total || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} Songs`
                     )}
                   </h4>
                 </div>
@@ -428,7 +428,8 @@ export default function Home({
         ? `${Math.floor(millions)}M`
         : `${millions.toFixed(1)}M`;
     }
-    return count.toLocaleString();
+    // Manual comma formatting for better browser compatibility
+    return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
   const renderArtistsSection = () => {
