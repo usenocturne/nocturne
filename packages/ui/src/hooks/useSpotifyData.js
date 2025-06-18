@@ -251,7 +251,21 @@ export function useSpotifyData(activeSection) {
     try {
       setIsLoading((prev) => ({ ...prev, radioMixes: true }));
 
-      let userTimezone = getCachedTimezone() || 'America/New_York';
+      let userTimezone = 'America/New_York';
+      
+      const maxWaitTime = 5000;
+      const checkInterval = 100;
+      let waitTime = 0;
+      
+      while (waitTime < maxWaitTime) {
+        const cachedTz = getCachedTimezone();
+        if (cachedTz) {
+          userTimezone = cachedTz;
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+        waitTime += checkInterval;
+      }
 
       const [
         topTracksMediumTerm,
