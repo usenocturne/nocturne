@@ -3,6 +3,8 @@
 exec 2>&1
 sv check superbird_init > /dev/null || exit 1
 
+sleep 1
+
 # Setup GPIO
 GPIOX_17=493
 if [ ! -f /sys/class/gpio/gpio493/direction ]; then
