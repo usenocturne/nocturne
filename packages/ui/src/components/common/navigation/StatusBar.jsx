@@ -31,7 +31,9 @@ export default function StatusBar() {
       try {
         await waitForNetwork();
         const response = await networkAwareRequest(
-          () => fetch("https://api.usenocturne.com/v1/timezone")
+          () => fetch("http://localhost:5000/device/date/settimezone", {
+            method: "POST"
+          })
         );
         
         if (!response.ok) {
@@ -40,7 +42,7 @@ export default function StatusBar() {
         }
 
         const data = await response.json();
-        if (data.timezone) {
+        if (data.status === "success" && data.timezone) {
           cachedTimezone = data.timezone;
           setTimezone(data.timezone);
           console.log("Timezone set to:", data.timezone);
@@ -72,7 +74,32 @@ export default function StatusBar() {
   };
 
   useEffect(() => {
-    const updateTime = () => {
+    const updateTime = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/device/date");
+        if (response.ok) {
+          const data = await response.json();
+          const timeString = data.time;
+          const [hours24, minutes] = timeString.split(':');
+
+          let displayHours;
+          if (settings.use24HourTime) {
+            displayHours = hours24;
+            setIsFourDigits(true);
+          } else {
+            const hour24 = parseInt(hours24);
+            displayHours = (hour24 % 12 || 12).toString();
+            setIsFourDigits(parseInt(displayHours) >= 10);
+          }
+
+          setCurrentTime(`${displayHours}:${minutes}`);
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching time from server:", error);
+      }
+
+
       const now = new Date();
 
       if (timezone && typeof Intl !== 'undefined') {
@@ -112,7 +139,7 @@ export default function StatusBar() {
     };
 
     updateTime();
-    const interval = setInterval(updateTime, 1000);
+    const interval = setInterval(updateTime, 15000);
 
     const handleTimeFormatChange = () => {
       updateTime();
