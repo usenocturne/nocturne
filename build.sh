@@ -6,8 +6,9 @@ set -e
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 : "${NOCTURNE_IMAGE_VERSION:="v3.0.0-beta3"}"
 
-: "${NOCTURNE_UI_TAG:="chrome-69"}"
+: "${NOCTURNE_UI_TAG:="main"}"
 : "${NOCTURNED_TAG:="v1.0.6"}"
+: "${WINGMAN_TAG:="v1.0.1"}"
 
 : "${VOID_BUILD:="20250202"}"
 : "${STATIC_WEB_SERVER_VERSION:="v2.37.0"}"
