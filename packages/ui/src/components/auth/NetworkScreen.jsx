@@ -225,7 +225,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
             transition: `transform ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
           }}
         >
-          <div className="p-12 h-full overflow-y-auto">
+          <div className="p-12 h-full overflow-y-auto scrollbar-hide">
             <div className="flex items-center mb-4">
               <button
                 onClick={navigateBack}
@@ -269,7 +269,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
             transition: `transform ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
           }}
         >
-          <div className="p-12 h-full overflow-y-auto">
+          <div className="p-12 h-full overflow-y-auto scrollbar-hide">
             <div className="flex items-center mb-4">
               <button
                 onClick={navigateBack}
