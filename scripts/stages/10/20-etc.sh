@@ -4,6 +4,8 @@ rm -f "$ROOTFS_PATH"/etc/motd "$ROOTFS_PATH"/etc/fstab
 cp "$RES_PATH"/config/motd "$ROOTFS_PATH"/etc/motd
 cp "$RES_PATH"/config/fstab "$ROOTFS_PATH"/etc/fstab
 
+ln -sf /var/local/etc/localtime "$ROOTFS_PATH"/etc/localtime
+
 echo "$DEFAULT_HOSTNAME" > "$ROOTFS_PATH"/etc/hostname
 
 root_pw=$(mkpasswd -m sha-512 -s "$DEFAULT_ROOT_PASSWORD")
