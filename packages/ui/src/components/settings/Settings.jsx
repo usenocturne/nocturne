@@ -50,6 +50,13 @@ const settingsStructure = {
         storageKey: "use24HourTime",
         defaultValue: false,
       },
+      {
+        id: "factory-reset",
+        title: "Factory Reset",
+        type: "action",
+        description: "Erase all stored settings and paired Bluetooth devices. This cannot be undone.",
+        action: "factoryReset",
+      },
     ],
   },
   update: {
@@ -143,7 +150,7 @@ const settingsStructure = {
         id: "sign-out",
         title: "Sign Out",
         type: "action",
-        description: "Sign out out of Nocturne and reset all settings.",
+        description: "Sign out of your Spotify account.",
         action: "signOut",
       },
     ],
@@ -520,19 +527,6 @@ const settingsStructure = {
   },
 };
 
-const clearSettings = () => {
-  for (const categoryKey in settingsStructure) {
-    const category = settingsStructure[categoryKey];
-    if (category.items) {
-      for (const item of category.items) {
-        if (item.storageKey) {
-          localStorage.removeItem(item.storageKey);
-        }
-      }
-    }
-  }
-};
-
 export default function Settings({
   accessToken,
   onOpenDonationModal,
@@ -597,13 +591,20 @@ export default function Settings({
     updateSetting(key, !settings[key]);
   };
 
+  const handleFactoryReset = async () => {
+    try {
+      fetch("http://localhost:5000/device/factoryreset", { method: "POST" })
+    } catch (error) {
+      console.error("Error during factory reset:", error);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       localStorage.removeItem("spotifyAccessToken");
       localStorage.removeItem("spotifyRefreshToken");
       localStorage.removeItem("spotifyTokenExpiry");
       localStorage.removeItem("spotifyAuthType");
-      clearSettings();
       window.location.reload();
     } catch (error) {
       console.error("Error during sign out:", error);
@@ -614,6 +615,9 @@ export default function Settings({
 
   const handleAction = (action) => {
     switch (action) {
+      case "factoryReset":
+        handleFactoryReset();
+        break;
       case "signOut":
         handleSignOut();
         break;
