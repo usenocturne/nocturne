@@ -1,6 +1,6 @@
 #!/bin/sh
 
-xbps-install -r "$ROOTFS_PATH" -y NetworkManager dhclient dnsmasq
+xbps-install -r "$ROOTFS_PATH" -y NetworkManager dhclient dnsmasq ifupdown
 
 cp -a "$SCRIPTS_PATH"/services/usb-gadget "$ROOTFS_PATH"/etc/sv/
 
