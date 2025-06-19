@@ -4,6 +4,14 @@ xbps-install -r "$ROOTFS_PATH" -y NetworkManager dhclient dnsmasq ifupdown
 
 cp -a "$SCRIPTS_PATH"/services/usb-gadget "$ROOTFS_PATH"/etc/sv/
 
+cat > "$ROOTFS_PATH"/etc/network/interfaces << EOF
+auto lo
+iface lo inet loopback
+
+auto bnep0
+iface bnep0 inet dhcp
+EOF
+
 cat > "$ROOTFS_PATH"/etc/NetworkManager/NetworkManager.conf << EOF
 [main]
 dhcp=dhclient
