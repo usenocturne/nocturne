@@ -50,8 +50,13 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
         if (!updateJsonAsset) continue;
 
         try {
-          const updateJsonResponse = await fetch(updateJsonAsset.browser_download_url, { redirect: 'follow', mode: 'no-cors' });
+          const updateJsonResponse = await fetch('http://localhost:5000/fetchjson', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: updateJsonAsset.browser_download_url })
+          });
           console.log(updateJsonResponse);
+          continue;
           if (!updateJsonResponse.ok) continue;
 
           const updateJson = await updateJsonResponse.json();

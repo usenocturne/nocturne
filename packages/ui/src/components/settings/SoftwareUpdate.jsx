@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { SettingsUpdateIcon, CheckCircleIcon } from "../common/icons";
+import { SettingsUpdateIcon, CheckCircleIcon, RefreshIcon } from "../common/icons";
 import { useConnector } from "../../contexts/ConnectorContext";
 import { useSystemUpdate } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
@@ -127,10 +127,10 @@ const SoftwareUpdate = ({
           {!isChecking && !hasUpdate && (
             <button
               onClick={checkForUpdates}
-              className="text-white/60 hover:text-white/80 text-[20px] font-[560] transition-colors"
+              className="text-white/60 hover:text-white/80 text-[20px] font-[560] transition-colors flex items-center"
               style={{ background: 'none' }}
             >
-              Check
+              <RefreshIcon className="w-7 h-7 mr-2" />
             </button>
           )}
         </div>
@@ -140,13 +140,13 @@ const SoftwareUpdate = ({
         <div className="space-y-4">
           <div className="p-4 bg-white/10 rounded-xl border border-white/10">
             <div className="text-[28px] font-[580] text-white tracking-tight mb-4">
-              New Version: {isMultiStepUpdate ? `${latestVersion} (Step ${currentStep} of ${totalUpdates})` : latestVersion}
+              New Version: {isMultiStepUpdate ? `${latestVersion} (Update ${currentStep} of ${totalUpdates})` : latestVersion}
             </div>
 
             {isMultiStepUpdate && (
               <div className="mb-4 px-4 py-3 bg-blue-600/20 border border-blue-400/30 rounded-lg">
                 <div className="text-[20px] font-[580] text-blue-300">
-                  Multi-step Update Required
+                  Multiple Updates Required
                 </div>
                 <div className="text-[18px] text-blue-200/80">
                   Your system needs {totalUpdates} sequential updates to reach version {finalVersion}.
@@ -166,7 +166,7 @@ const SoftwareUpdate = ({
                   No Compatible Update Path
                 </div>
                 <div className="text-[18px] text-amber-300/80">
-                  There's no direct update path from your current version. Please contact support.
+                  There's no direct update path from your current version. Please manually update to the latest version using a computer.
                 </div>
               </div>
             )}
@@ -201,7 +201,7 @@ const SoftwareUpdate = ({
               disabled={!canUpdate}
             >
               <span className="text-[28px] font-[580] tracking-tight">
-                {isMultiStepUpdate ? `Download and Install (Step ${currentStep} of ${totalUpdates})` : "Download and Install"}
+                {isMultiStepUpdate ? `Download and Install (Update ${currentStep} of ${totalUpdates})` : "Download and Install"}
               </span>
             </button>
           )}
@@ -222,7 +222,7 @@ const SoftwareUpdate = ({
       <div className="p-4 bg-white/10 rounded-xl border border-white/10">
         <div className="text-[28px] font-[580] text-white tracking-tight mb-2">
           {isError ? "Download Failed" : isMultiStepUpdate
-            ? `Downloading Update (Step ${currentStep} of ${totalSteps})`
+            ? `Downloading Update (Update ${currentStep} of ${totalSteps})`
             : "Downloading Update"
           }
         </div>
