@@ -27,20 +27,42 @@ const SoftwareUpdate = ({
     updateChain
   } = useUpdateCheck(nocturneCurrentVersion);
 
-  const [releaseNotes, setReleaseNotes] = useState([]);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
-  useEffect(() => {
-    if (updateInfo?.releaseNotes) {
-      const notes = updateInfo.releaseNotes
-        .split('\n')
-        .filter(line => line.trim().startsWith('*') || line.trim().startsWith('-'))
-        .map(line => line.trim().substring(1).trim())
-        .filter(line => line.length > 0)
-        .slice(0, 5);
+  const formatBytes = (bytes, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
 
-      setReleaseNotes(notes.length > 0 ? notes : ['New version available']);
-    }
-  }, [updateInfo]);
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
+  const formatDescription = (text) => {
+    if (!text) return null;
+    
+    return text.split('\n').map((line, index) => {
+      const trimmedLine = line.trim();
+      
+      if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
+        return (
+          <div key={index} className="flex items-start">
+            <span className="mr-2 mt-1">•</span>
+            <span>{trimmedLine.substring(2)}</span>
+          </div>
+        );
+      }
+      
+      if (trimmedLine === '') {
+        return <div key={index} className="h-2" />;
+      }
+      
+      return <div key={index}>{trimmedLine}</div>;
+    });
+  };
 
   const handleUpdateChainAdvance = useCallback(() => {
     if (!isUpdating && !isError && updateStatus.stage === 'complete' && updateInfo?.nextInChain) {
@@ -92,55 +114,55 @@ const SoftwareUpdate = ({
     noCompatiblePath
   }) => (
     <div className="space-y-4">
-      <div className="p-4 bg-white/10 rounded-xl border border-white/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <img
-              src={imagePath}
-              alt={`${name} ${currentVersion}`}
-              className="w-16 h-16 rounded-xl object-cover"
-            />
-            <div className="ml-4">
-              <div className="text-[28px] font-[580] text-white tracking-tight">
-                {name} {currentVersion}
-              </div>
-              <div className="flex items-center text-[24px] font-[560] tracking-tight">
-                {isChecking ? (
-                  <div className="flex items-center text-white/80">
-                    Checking for updates...
-                  </div>
-                ) : hasUpdate ? (
-                  <div className="flex items-center text-white/80">
-                    <SettingsUpdateIcon className="w-5 h-5 mr-2" />
-                    Update Available
-                  </div>
-                ) : (
-                  <div className="flex items-center text-white/80">
-                    <CheckCircleIcon className="w-5 h-5 mr-2" />
-                    Up to Date
-                  </div>
-                )}
-              </div>
+      {isChecking ? (
+        <div className="flex items-center justify-center mt-[120px]">
+          <RefreshIcon className="w-6 h-6 text-white/80 mr-3 animate-spin" />
+          <div className="text-[28px] font-[580] text-white tracking-tight">
+            Checking for updates...
+          </div>
+        </div>
+      ) : !hasUpdate ? (
+        <div className="flex flex-col items-center justify-center text-center mt-12">
+          <div className="space-y-2 flex flex-col items-center">
+            <div className="flex justify-center">
+              <CheckCircleIcon className="w-16 h-16 text-green-400" />
+            </div>
+            <div className="text-[28px] font-[580] text-white tracking-tight">
+              {name} is up to date
+            </div>
+            <div className="text-[24px] font-[560] text-white/80 tracking-tight">
+              Version {currentVersion}
             </div>
           </div>
-
-          {!isChecking && !hasUpdate && (
-            <button
-              onClick={checkForUpdates}
-              className="text-white/60 hover:text-white/80 text-[20px] font-[560] transition-colors flex items-center"
-              style={{ background: 'none' }}
-            >
-              <RefreshIcon className="w-7 h-7 mr-2" />
-            </button>
-          )}
+          <button
+            onClick={checkForUpdates}
+            className="mt-8 bg-white/10 hover:bg-white/20 focus:outline-none transition-colors duration-200 rounded-xl px-6 py-3 flex items-center justify-center"
+          >
+            <RefreshIcon className="w-7 h-7 mr-2" />
+            <span className="text-[28px] font-[560] text-white tracking-tight">
+              Refresh
+            </span>
+          </button>
         </div>
-      </div>
+      ): (<div></div>)}
 
       {hasUpdate && (
         <div className="space-y-4">
           <div className="p-4 bg-white/10 rounded-xl border border-white/10">
-            <div className="text-[28px] font-[580] text-white tracking-tight mb-4">
-              New Version: {isMultiStepUpdate ? `${latestVersion} (Update ${currentStep} of ${totalUpdates})` : latestVersion}
+            <div className="flex items-center mb-4">
+              <img
+                src={imagePath}
+                alt={`${name} ${latestVersion}`}
+                className="w-16 h-16 rounded-xl object-cover"
+              />
+              <div className="ml-4">
+                <div className="text-[28px] font-[580] text-white tracking-tight">
+                  {name} {latestVersion}
+                </div>
+                <div className="text-[20px] font-[560] text-white/80 tracking-tight">
+                  {formatBytes(updateInfo?.releaseSize || 0)} - {updateInfo?.releaseDate.split('T')[0]}
+                </div>
+              </div>
             </div>
 
             {isMultiStepUpdate && (
@@ -149,15 +171,24 @@ const SoftwareUpdate = ({
                   Multiple Updates Required
                 </div>
                 <div className="text-[18px] text-blue-200/80">
-                  Your system needs {totalUpdates} sequential updates to reach version {finalVersion}.
+                  Your system needs {totalUpdates} updates to reach version {finalVersion}.
                 </div>
               </div>
             )}
 
-            <div className="space-y-2 text-[24px] font-[560] text-white/80 tracking-tight">
-              {releaseNotes.map((note, index) => (
-                <div key={index}>• {note}</div>
-              ))}
+            <div className="space-y-3 text-[24px] font-[560] text-white/80 tracking-tight">
+              <div className="space-y-2">
+                {formatDescription(showFullDescription ? updateInfo?.fullDescription : updateInfo?.shortDescription)}
+              </div>
+              {updateInfo?.fullDescription && updateInfo?.fullDescription !== updateInfo?.shortDescription && (
+                <button
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="text-blue-400 hover:text-blue-300 transition-colors text-[20px] font-[560]"
+                  style={{ background: 'none' }}
+                >
+                  {showFullDescription ? 'Show less' : 'Read more'}
+                </button>
+              )}
             </div>
 
             {noCompatiblePath && (
@@ -201,7 +232,7 @@ const SoftwareUpdate = ({
               disabled={!canUpdate}
             >
               <span className="text-[28px] font-[580] tracking-tight">
-                {isMultiStepUpdate ? `Download and Install (Update ${currentStep} of ${totalUpdates})` : "Download and Install"}
+                Download and Install
               </span>
             </button>
           )}
@@ -268,7 +299,6 @@ const SoftwareUpdate = ({
         isDownloading={isDownloading}
         canUpdate={canUpdate}
         isChecking={isChecking}
-        releaseNotes={releaseNotes}
         isMultiStepUpdate={isMultiStepUpdate}
         totalUpdates={totalUpdates}
         currentStep={1}

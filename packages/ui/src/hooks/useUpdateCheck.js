@@ -1,16 +1,39 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+// import axios from 'axios';
 
 const compareVersions = (v1, v2) => {
-  const v1Parts = v1.split('.').map(Number);
-  const v2Parts = v2.split('.').map(Number);
+  const parseVersion = (version) => {
+    const match = version.match(/^(\d+\.\d+\.\d+)(?:-(.+))?$/);
+    if (!match) {
+      return { base: version, preRelease: null };
+    }
+    return {
+      base: match[1],
+      preRelease: match[2] || null
+    };
+  };
 
-  for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-    const v1Part = v1Parts[i] || 0;
-    const v2Part = v2Parts[i] || 0;
+  const v1Parsed = parseVersion(v1);
+  const v2Parsed = parseVersion(v2);
+
+  const v1BaseParts = v1Parsed.base.split('.').map(Number);
+  const v2BaseParts = v2Parsed.base.split('.').map(Number);
+
+  for (let i = 0; i < Math.max(v1BaseParts.length, v2BaseParts.length); i++) {
+    const v1Part = v1BaseParts[i] || 0;
+    const v2Part = v2BaseParts[i] || 0;
 
     if (v1Part > v2Part) return 1;
     if (v1Part < v2Part) return -1;
   }
+
+  if (!v1Parsed.preRelease && !v2Parsed.preRelease) return 0;
+  
+  if (!v1Parsed.preRelease && v2Parsed.preRelease) return 1;
+  if (v1Parsed.preRelease && !v2Parsed.preRelease) return -1;
+
+  if (v1Parsed.preRelease > v2Parsed.preRelease) return 1;
+  if (v1Parsed.preRelease < v2Parsed.preRelease) return -1;
 
   return 0;
 };
@@ -55,8 +78,8 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: updateJsonAsset.browser_download_url })
           });
+          //const updateJsonResponse = await axios.get(`https://cors-anywhere.herokuapp.com/${updateJsonAsset.browser_download_url}`, {headers: {'Content-Type': 'application/json'}});
           console.log(updateJsonResponse);
-          continue;
           if (!updateJsonResponse.ok) continue;
 
           const updateJson = await updateJsonResponse.json();
@@ -67,6 +90,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
             tag: release.tag_name,
             releaseNotes: release.body,
             releaseDate: release.published_at,
+            releaseSize: release.assets.find(a => a.name === updateJson.files.full).size,
             assetUrls: {}
           };
 
