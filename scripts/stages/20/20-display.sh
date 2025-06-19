@@ -10,7 +10,8 @@ mkdir -p "$ROOTFS_PATH"/etc/weston
 rm -f "$ROOTFS_PATH"/etc/weston/weston.ini
 cp "$RES_PATH"/config/weston.ini "$RES_PATH"/config/background.png "$ROOTFS_PATH"/etc/weston/
 
-echo "/lib/modules/4.9.113/hardware/aml-4.9/arm/gpu/mali.ko" > "$ROOTFS_PATH"/etc/modules-load.d/mali.conf
+# i don't feel like figuring out this issue right now
+# echo "/lib/modules/4.9.113/hardware/aml-4.9/arm/gpu/mali.ko" > "$ROOTFS_PATH"/etc/modules-load.d/mali.conf
 
 cp -a "$SCRIPTS_PATH"/services/weston "$ROOTFS_PATH"/etc/sv/
 cp -a "$SCRIPTS_PATH"/services/chromium "$ROOTFS_PATH"/etc/sv/

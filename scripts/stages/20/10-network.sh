@@ -1,6 +1,6 @@
 #!/bin/sh
 
-xbps-install -r "$ROOTFS_PATH" -y NetworkManager dhclient
+xbps-install -r "$ROOTFS_PATH" -y NetworkManager dhclient dnsmasq
 
 cp -a "$SCRIPTS_PATH"/services/usb-gadget "$ROOTFS_PATH"/etc/sv/
 
@@ -27,4 +27,12 @@ chmod 600 "$ROOTFS_PATH"/etc/NetworkManager/system-connections/usb0.nmconnection
 
 echo "ENV{DEVTYPE}==\"gadget\", ENV{NM_UNMANAGED}=\"0\"" > "$ROOTFS_PATH"/usr/lib/udev/rules.d/98-network.rules
 
-DEFAULT_SERVICES="${DEFAULT_SERVICES} usb-gadget NetworkManager"
+cat > "$ROOTFS_PATH"/etc/dnsmasq.conf << EOF
+interface=usb0
+dhcp-range=172.16.42.2,172.16.42.254,255.255.255.0,1h
+dhcp-host=a0:b1:c2:d3:e4:01,172.16.42.1
+bind-interfaces
+leasefile-ro
+EOF
+
+DEFAULT_SERVICES="${DEFAULT_SERVICES} usb-gadget NetworkManager dnsmasq"

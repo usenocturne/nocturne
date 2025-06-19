@@ -4,6 +4,8 @@ exec 2>&1
 sv check dbus > /dev/null || exit 1
 sv check seatd > /dev/null || exit 1
 
+modprobe /lib/modules/4.9.113/hardware/aml-4.9/arm/gpu/mali.ko
+
 [ -d /run/wayland ] || mkdir -p /run/wayland
 chmod 0700 /run/wayland
 
