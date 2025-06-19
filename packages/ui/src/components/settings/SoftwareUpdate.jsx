@@ -114,37 +114,40 @@ const SoftwareUpdate = ({
     noCompatiblePath
   }) => (
     <div className="space-y-4">
-      {isChecking ? (
-        <div className="flex items-center justify-center mt-[120px]">
-          <RefreshIcon className="w-6 h-6 text-white/80 mr-3 animate-spin" />
-          <div className="text-[28px] font-[580] text-white tracking-tight">
-            Checking for updates...
-          </div>
-        </div>
-      ) : !hasUpdate ? (
-        <div className="flex flex-col items-center justify-center text-center mt-12">
-          <div className="space-y-2 flex flex-col items-center">
-            <div className="flex justify-center">
-              <CheckCircleIcon className="w-16 h-16 text-green-400" />
-            </div>
-            <div className="text-[28px] font-[580] text-white tracking-tight">
-              {name} is up to date
-            </div>
-            <div className="text-[24px] font-[560] text-white/80 tracking-tight">
-              Version {currentVersion}
+      {(isChecking || !hasUpdate) && (
+        <div className="space-y-4">
+          <div className="p-1.5 bg-white/10 rounded-xl border border-white/10">
+            <div className="flex flex-col items-center justify-center text-center py-8">
+              <div className="space-y-2 flex flex-col items-center">
+                <div className="flex justify-center">
+                  <CheckCircleIcon className="w-16 h-16 text-green-400" />
+                </div>
+                <div className="text-[28px] font-[580] text-white tracking-tight">
+                  {name} is up to date
+                </div>
+                <div className="text-[24px] font-[560] text-white/80 tracking-tight">
+                  Version {currentVersion}
+                </div>
+              </div>
             </div>
           </div>
+          
           <button
-            onClick={checkForUpdates}
-            className="mt-8 bg-white/10 hover:bg-white/20 focus:outline-none transition-colors duration-200 rounded-xl px-6 py-3 flex items-center justify-center"
+            onClick={isChecking ? undefined : checkForUpdates}
+            disabled={isChecking}
+            className={`w-full p-4 rounded-xl border focus:outline-none transition-colors duration-200 flex items-center justify-center ${
+              isChecking
+                ? "bg-white/5 border-white/5 text-white/40 cursor-not-allowed"
+                : "bg-white/10 hover:bg-white/20 border-white/10 text-white"
+            }`}
           >
-            <RefreshIcon className="w-7 h-7 mr-2" />
-            <span className="text-[28px] font-[560] text-white tracking-tight">
-              Refresh
+            <RefreshIcon className={`w-7 h-7 mr-2 ${isChecking ? "animate-spin" : ""}`} />
+            <span className="text-[28px] font-[580] text-white tracking-tight">
+              {isChecking ? "Checking for updates..." : "Check for Updates"}
             </span>
           </button>
         </div>
-      ): (<div></div>)}
+      )}
 
       {hasUpdate && (
         <div className="space-y-4">
@@ -160,7 +163,7 @@ const SoftwareUpdate = ({
                   {name} {latestVersion}
                 </div>
                 <div className="text-[20px] font-[560] text-white/80 tracking-tight">
-                  {formatBytes(updateInfo?.releaseSize || 0)} - {updateInfo?.releaseDate.split('T')[0]}
+                  {formatBytes(updateInfo?.releaseSize || 0)} • {updateInfo?.releaseDate.split('T')[0]}
                 </div>
               </div>
             </div>
