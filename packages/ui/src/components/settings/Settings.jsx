@@ -750,7 +750,7 @@ export default function Settings({
           <div key={item.id} className="mb-8">
             <button
               onClick={() => handleAction(item.action)}
-              className="bg-white/10 hover:bg-white/20 w-80 transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
+              className="bg-white/10 hover:bg-white/20 w-80 transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10 focus:outline-none"
             >
               <span className="text-[32px] font-[580] text-white tracking-tight">
                 {item.title}
@@ -864,7 +864,7 @@ export default function Settings({
                         navigateTo(key);
                       }
                     }}
-                    className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
+                    className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 focus:outline-none"
                     disabled={isAnimating}
                   >
                     <div className="flex items-center">
@@ -894,7 +894,7 @@ export default function Settings({
               <div className="flex items-center mb-4">
                 <button
                   onClick={navigateBack}
-                  className="mr-4"
+                  className="mr-4 focus:outline-none"
                   style={{ background: 'none' }}
                   disabled={isAnimating}
                 >
@@ -912,7 +912,7 @@ export default function Settings({
                       <button
                         key={subItem.id}
                         onClick={() => navigateTo(activeParent, subItem)}
-                        className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
+                        className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 focus:outline-none"
                         disabled={isAnimating}
                       >
                         <div className="flex items-center">
@@ -947,7 +947,7 @@ export default function Settings({
               <div className="flex items-center mb-4">
                 <button
                   onClick={navigateBack}
-                  className="mr-4"
+                  className="mr-4 focus:outline-none"
                   style={{ background: 'none'}}
                   disabled={isAnimating}
                 >
