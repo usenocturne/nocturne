@@ -151,7 +151,7 @@ const WiFiNetworks = () => {
                     )}
                     <button
                       onClick={(e) => handleForgetNetwork(network.networkId, e)}
-                      className="text-white/60 hover:text-white text-[24px] transition-colors px-2 hover:bg-white/10 rounded"
+                      className="text-white/60 hover:text-white text-[24px] transition-colors px-2 hover:bg-white/10 rounded focus:outline-none"
                       disabled={isForgetting}
                     >
                       Forget
@@ -186,7 +186,7 @@ const WiFiNetworks = () => {
           </h3>
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 focus:outline-none"
             disabled={isScanning}
             aria-label="Refresh networks"
           >
@@ -235,7 +235,7 @@ const WiFiNetworks = () => {
         </p>
         <button
           onClick={() => setShowConnectorModal(true)}
-          className="bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 px-6 py-3"
+          className="bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 px-6 py-3 focus:outline-none"
         >
           <span className="text-[28px] font-[560] text-white tracking-tight">
             Learn More
@@ -271,7 +271,7 @@ const WiFiNetworks = () => {
         <p className="text-white/60 text-[28px] mb-6">No networks found</p>
         <button
           onClick={() => scanNetworks(true)}
-          className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white flex items-center gap-2"
+          className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white flex items-center gap-2 focus:outline-none"
           disabled={isScanning}
         >
           <RefreshIcon
@@ -290,7 +290,7 @@ const WiFiNetworks = () => {
           <p className="text-white/80 text-[20px]">{error}</p>
           <button
             onClick={() => scanNetworks(false)}
-            className="text-white/60 hover:text-white text-[18px] mt-2 underline transition-colors"
+            className="text-white/60 hover:text-white text-[18px] mt-2 underline transition-colors focus:outline-none"
           >
             Retry
           </button>

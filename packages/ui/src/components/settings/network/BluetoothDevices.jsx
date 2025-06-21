@@ -206,14 +206,14 @@ const BluetoothDevices = () => {
                     setShowForgetDialog(false);
                     setSelectedDevice(null);
                   }}
-                  className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm sm:col-start-1 border-r border-slate-100/25"
+                  className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm sm:col-start-1 border-r border-slate-100/25 bg-transparent hover:bg-white/5 focus:outline-none"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleForget}
-                  className="mt-3 inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] shadow-sm sm:col-start-2 sm:mt-0"
+                  className="mt-3 inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] shadow-sm sm:col-start-2 sm:mt-0 bg-transparent hover:bg-white/5 focus:outline-none"
                 >
                   Forget
                 </button>
