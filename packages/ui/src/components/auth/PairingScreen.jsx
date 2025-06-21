@@ -26,7 +26,7 @@ const PairingScreen = ({ onAccept, onReject, pin, isConnecting }) => {
             <p className="text-[28px] text-white tracking-tight">
               Confirm that this pin matches the one on your phone.
             </p>
-            <div className="mt-4 flex gap-4 justify-center">
+            <div className="mt-4 flex space-x-4 justify-center">
               <button
                 onClick={onReject}
                 disabled={isConnecting}
