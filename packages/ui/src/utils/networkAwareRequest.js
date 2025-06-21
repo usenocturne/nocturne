@@ -79,12 +79,67 @@ export function waitForNetwork(checkIntervalMs = 1000) {
   });
 }
 
-export async function networkAwareRequest(requestFn, retryCount = 0) {
+export function waitForStableNetwork(stabilityDelayMs = 10000) {
+  return new Promise((resolve) => {
+    let stabilityTimeout = null;
+    let isWaitingForOnline = false;
+
+    const cleanup = () => {
+      if (stabilityTimeout) {
+        clearTimeout(stabilityTimeout);
+        stabilityTimeout = null;
+      }
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('browserOnlyModeOnline', handleOnline);
+    };
+
+    const handleOnline = () => {
+      isWaitingForOnline = false;
+      
+      if (stabilityTimeout) {
+        clearTimeout(stabilityTimeout);
+      }
+      
+      stabilityTimeout = setTimeout(() => {
+        cleanup();
+        resolve();
+      }, stabilityDelayMs);
+    };
+
+    const handleOffline = () => {
+      isWaitingForOnline = true;
+      
+      if (stabilityTimeout) {
+        clearTimeout(stabilityTimeout);
+        stabilityTimeout = null;
+      }
+    };
+
+    if (navigator.onLine && !isWaitingForOnline) {
+      stabilityTimeout = setTimeout(() => {
+        cleanup();
+        resolve();
+      }, stabilityDelayMs);
+    } else {
+      isWaitingForOnline = true;
+    }
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('browserOnlyModeOnline', handleOnline);
+  });
+}
+
+export async function networkAwareRequest(requestFn, retryCount = 0, options = {}) {
+  const { requireNetwork = false } = options;
+  
   try {
     const requestInfo = await requestFn();
     const isAuthRequest = requestInfo?.url?.includes('accounts.spotify.com');
+    const isLocal = isLocalRequest(requestInfo?.url);
     
-    if (!navigator.onLine && !isAuthRequest) {
+    if (!navigator.onLine && !isAuthRequest && (!isLocal || requireNetwork)) {
       throw new Error('No network connection');
     }
 
@@ -97,7 +152,7 @@ export async function networkAwareRequest(requestFn, retryCount = 0) {
 
     if (retryCount < MAX_RETRIES) {
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return networkAwareRequest(requestFn, retryCount + 1);
+      return networkAwareRequest(requestFn, retryCount + 1, options);
     }
 
     throw error;

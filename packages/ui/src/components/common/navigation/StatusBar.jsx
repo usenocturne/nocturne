@@ -4,7 +4,7 @@ import { useSettings } from "../../../contexts/SettingsContext";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
 import { useBluetooth } from "../../../hooks/useNocturned";
 import { useConnector } from "../../../contexts/ConnectorContext";
-import { networkAwareRequest, waitForNetwork } from '../../../utils/networkAwareRequest';
+import { networkAwareRequest, waitForStableNetwork } from '../../../utils/networkAwareRequest';
 
 let cachedTimezone = null;
 
@@ -29,11 +29,13 @@ export default function StatusBar() {
       }
 
       try {
-        await waitForNetwork();
+        await waitForStableNetwork();
         const response = await networkAwareRequest(
           () => fetch("http://localhost:5000/device/date/settimezone", {
             method: "POST"
-          })
+          }),
+          0,
+          { requireNetwork: true }
         );
         
         if (!response.ok) {
