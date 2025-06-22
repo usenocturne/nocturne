@@ -612,7 +612,7 @@ const ContentView = ({
           return (
             <div
               key={`${track.id || 'track'}-${index}`}
-              className={`flex items-start mb-4 transition-transform duration-200 ease-out ${selectedTrackIndex === index ? "scale-105" : ""
+              className={`flex items-start mb-5 transition-transform duration-200 ease-out ${selectedTrackIndex === index ? "scale-105" : ""
                 }`}
               onClick={() => (track.uri ? handleTrackPlay(track, index) : null)}
               style={{ transition: "transform 0.2s ease-out" }}
@@ -636,14 +636,15 @@ const ContentView = ({
               <div className="flex-grow" style={{ marginTop: '-6px' }}>
                 <div>
                   {selectedTrackIndex === index ? (
-                    <ScrollingText
-                      text={track.name || "Unknown Track"}
-                      className="text-white tracking-tight"
-                      style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px' }}
-                      maxWidth="280px"
-                      pauseDuration={1000}
-                      pixelsPerSecond={40}
-                    />
+                    <div style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px' }}>
+                      <ScrollingText
+                        text={track.name || "Unknown Track"}
+                        className="text-white tracking-tight"
+                        maxWidth="280px"
+                        pauseDuration={1000}
+                        pixelsPerSecond={40}
+                      />
+                    </div>
                   ) : (
                     <p className="text-white truncate tracking-tight" style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px' }}>
                       {track.name || "Unknown Track"}
