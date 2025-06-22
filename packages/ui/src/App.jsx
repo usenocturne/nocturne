@@ -426,7 +426,9 @@ function App() {
   }, [isAuthenticated, setActiveSection]);
 
   useEffect(() => {
-    if (activeSection === "recents" && recentAlbums.length > 0) {
+    if (showTutorial) {
+      updateGradientColors(null, "auth");
+    } else if (activeSection === "recents" && recentAlbums.length > 0) {
       const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url;
       if (firstAlbumImage) {
         updateGradientColors(firstAlbumImage, "recents");
@@ -455,6 +457,7 @@ function App() {
     userPlaylists,
     topArtists,
     currentlyPlayingAlbum,
+    showTutorial,
   ]);
 
   useEffect(() => {
