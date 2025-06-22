@@ -492,23 +492,23 @@ const ContentView = ({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
-        <div className="md:w-1/3 sticky top-10">
-          <div className="min-w-[280px] mr-10">
-            <div className="aspect-square rounded-[12px] drop-shadow-xl bg-white/10 animate-pulse w-[280px] h-[280px]" />
-            <div className="mt-4 h-10 bg-white/10 animate-pulse w-[250px] rounded" />
-            <div className="mt-3 h-8 bg-white/10 animate-pulse w-[200px] rounded" />
+      <div className="flex flex-col md:flex-row pt-10 px-12 fadeIn-animation">
+        <div className="md:w-1/3 sticky top-10 mb-8 md:mb-0 md:mr-8">
+          <div className="mr-10" style={{ minWidth: '280px' }}>
+            <div className="aspect-square bg-white/10 animate-pulse rounded-xl drop-shadow-xl" style={{ width: '280px', height: '280px', borderRadius: '12px' }} />
+            <div className="mt-4 h-10 bg-white/10 animate-pulse rounded" style={{ width: '250px' }} />
+            <div className="mt-3 h-8 bg-white/10 animate-pulse rounded" style={{ width: '200px' }} />
           </div>
         </div>
-        <div className="md:w-2/3 pl-20 h-[calc(100vh-5rem)]">
+        <div className="md:w-2/3 md:pl-20" style={{ height: 'calc(100vh - 5rem)' }}>
           {Array(5)
             .fill()
             .map((_, i) => (
-              <div key={i} className="flex gap-12 items-start mb-4">
-                <div className="w-6 h-8 bg-white/10 animate-pulse rounded" />
+              <div key={i} className="flex items-start mb-4">
+                <div className="w-6 h-8 bg-white/10 animate-pulse rounded mr-12" />
                 <div className="flex-grow">
-                  <div className="h-8 bg-white/10 animate-pulse w-[250px] rounded mb-2" />
-                  <div className="h-6 bg-white/10 animate-pulse w-[200px] rounded" />
+                  <div className="h-8 bg-white/10 animate-pulse rounded mb-2" style={{ width: '250px' }} />
+                  <div className="h-6 bg-white/10 animate-pulse rounded" style={{ width: '200px' }} />
                 </div>
               </div>
             ))}
@@ -519,12 +519,12 @@ const ContentView = ({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[480px] text-white/70">
+      <div className="flex flex-col items-center justify-center text-white/70" style={{ height: '480px' }}>
         <CarThingIcon className="h-16 w-auto mb-2" />
-        <h3 className="text-[36px] font-[560] text-white truncate tracking-tight">
+        <h3 className="text-white truncate tracking-tight" style={{ fontSize: '36px', fontWeight: '560' }}>
           Error Loading Content
         </h3>
-        <p className="text-[24px] font-[560] text-white/60 truncate tracking-tight">
+        <p className="text-white/60 truncate tracking-tight" style={{ fontSize: '24px', fontWeight: '560' }}>
           {error}
         </p>
       </div>
@@ -581,9 +581,9 @@ const ContentView = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 pt-10 px-12 fadeIn-animation">
-      <div className="md:w-1/3 sticky top-10">
-        <div className="min-w-[280px] mr-10 relative">
+    <div className="flex flex-col md:flex-row pt-10 px-12 fadeIn-animation">
+      <div className="md:w-1/3 sticky top-10 mb-8 md:mb-0 md:mr-8">
+        <div className="mr-10 relative" style={{ minWidth: '280px' }}>
           <img
             src={getImageUrl()}
             alt={`${content.name} Cover`}
@@ -592,17 +592,18 @@ const ContentView = ({
             className={getImageStyle()}
           />
           {getMappingStatusText()}
-          <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+          <h4 className="mt-2 text-white truncate tracking-tight" style={{ fontSize: '36px', fontWeight: '580', maxWidth: '280px' }}>
             {content.name}
           </h4>
-          <h4 className="text-[28px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+          <h4 className="text-white/60 truncate tracking-tight" style={{ fontSize: '28px', fontWeight: '560', maxWidth: '280px' }}>
             {getSubtitle()}
           </h4>
         </div>
       </div>
 
       <div
-        className="md:w-2/3 pl-20 h-[calc(100vh-5rem)] overflow-y-auto scroll-container scroll-smooth pb-12"
+        className="md:w-2/3 md:pl-20 overflow-y-auto scroll-container scroll-smooth pb-12"
+        style={{ height: 'calc(100vh - 5rem)', paddingTop: '6px' }}
         ref={tracksContainerRef}
       >
         {tracks.map((track, index) => {
@@ -617,7 +618,7 @@ const ContentView = ({
               style={{ transition: "transform 0.2s ease-out" }}
               data-track-index={index}
             >
-              <div className="text-[32px] font-[580] text-center text-white/60 min-w-[3rem] mr-6 mt-3 flex justify-center">
+              <div className="text-3xl font-semibold text-center text-white/60 mr-6 mt-3 flex justify-center" style={{ minWidth: '3rem', fontSize: '32px', fontWeight: '580' }}>
                 {track.uri && track.uri === currentlyPlayingTrackUri ? (
                   <div className="w-5">
                     <section>
@@ -632,18 +633,19 @@ const ContentView = ({
                 )}
               </div>
 
-              <div className="flex-grow">
+              <div className="flex-grow" style={{ marginTop: '-6px' }}>
                 <div>
                   {selectedTrackIndex === index ? (
                     <ScrollingText
                       text={track.name || "Unknown Track"}
-                      className="text-[32px] font-[580] text-white tracking-tight"
+                      className="text-white tracking-tight"
+                      style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px' }}
                       maxWidth="280px"
                       pauseDuration={1000}
                       pixelsPerSecond={40}
                     />
                   ) : (
-                    <p className="text-[32px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                    <p className="text-white truncate tracking-tight" style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px' }}>
                       {track.name || "Unknown Track"}
                     </p>
                   )}
@@ -653,14 +655,16 @@ const ContentView = ({
                     track.artists.map((artist, artistIndex) => (
                       <p
                         key={artist?.id || `artist-${artistIndex}`}
-                        className={`text-[28px] font-[560] text-white/60 truncate tracking-tight ${artistIndex < track.artists.length - 1
-                            ? 'mr-2 after:content-[","]'
+                        className={`text-white/60 truncate tracking-tight ${artistIndex < track.artists.length - 1
+                            ? 'mr-2'
                             : ""
                           }`}
+                        style={{ fontSize: '28px', fontWeight: '560' }}
                       >
                         {artist?.name === null && artist?.type
                           ? artist.type
                           : artist?.name || "Unknown Artist"}
+                        {artistIndex < track.artists.length - 1 && ","}
                       </p>
                     ))}
                 </div>
@@ -671,9 +675,9 @@ const ContentView = ({
 
         {isLoadingMore && contentType === "playlist" && (
           <div className="flex justify-center items-center py-8">
-            <div className="flex gap-4 items-center">
-              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              <p className="text-[24px] font-[560] text-white/60">Loading more tracks...</p>
+            <div className="flex items-center">
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mr-4"></div>
+              <p className="text-white/60" style={{ fontSize: '24px', fontWeight: '560' }}>Loading more tracks...</p>
             </div>
           </div>
         )}
