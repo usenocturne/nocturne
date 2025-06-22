@@ -14,6 +14,10 @@ let pendingFetch = null;
 let keepAliveInterval = null;
 let isInitialized = false;
 let currentAccessToken = null;
+let podcastPollingInterval = null;
+let isPodcastPlaying = false;
+let lastPodcastFetch = 0;
+let podcastFetchDebounceTimeout = null;
 
 export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   const [currentPlayback, setCurrentPlayback] = useState(null);
@@ -21,6 +25,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   const [albumChangeEvent, setAlbumChangeEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [initialFetchInProgress, setInitialFetchInProgress] = useState(false);
 
   const webSocketRef = useRef(null);
   const connectionIdRef = useRef(null);
@@ -30,22 +35,108 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   const reconnectTimeoutRef = useRef(null);
   const maxRetryAttempts = 5;
   const accessTokenRef = useRef(accessToken);
+  const currentPlaybackRef = useRef(null);
 
   useEffect(() => {
     accessTokenRef.current = accessToken;
   }, [accessToken]);
 
+  const stopPodcastPolling = useCallback(() => {
+    if (podcastPollingInterval) {
+      clearInterval(podcastPollingInterval);
+      podcastPollingInterval = null;
+    }
+    if (podcastFetchDebounceTimeout) {
+      clearTimeout(podcastFetchDebounceTimeout);
+      podcastFetchDebounceTimeout = null;
+    }
+    isPodcastPlaying = false;
+    lastPodcastFetch = 0;
+  }, []);
+
   const processPlaybackState = useCallback((data) => {
     if (!data) return;
 
-    setCurrentPlayback({
-      ...data,
-      device: {
-        ...data.device,
-        volume_percent: data.device?.volume_percent,
-      },
-      shuffle_state: data.shuffle_state,
-      repeat_state: data.repeat_state,
+    const isEpisode = data.currently_playing_type === "episode" || (data?.item && data.item.type === "episode");
+    const hasIncompleteEpisodeData = data.currently_playing_type === "episode" && !data.item;
+    
+    if (isEpisode && !isPodcastPlaying) {
+      isPodcastPlaying = true;
+      setTimeout(() => {
+        if (podcastPollingInterval || !isPodcastPlaying) return;
+        
+        podcastPollingInterval = setInterval(async () => {
+          if (isPodcastPlaying && accessTokenRef.current && navigator.onLine) {
+            try {
+              const now = Date.now();
+              if (now - lastPodcastFetch < 25000) return;
+              
+              lastPodcastFetch = now;
+              await waitForNetwork();
+              const response = await networkAwareRequest(() => 
+                fetch("https://api.spotify.com/v1/me/player?additional_types=track,episode", {
+                  headers: {
+                    Authorization: `Bearer ${accessTokenRef.current}`,
+                  },
+                })
+              );
+
+              if (response.ok) {
+                const polledData = await response.json();
+                if (polledData && Object.keys(polledData).length > 0) {
+                  const wasPolling = isPodcastPlaying;
+                  isPodcastPlaying = false;
+                  processPlaybackState(polledData);
+                  isPodcastPlaying = wasPolling;
+                }
+              }
+            } catch (err) {
+              console.error("Error polling podcast data:", err);
+            }
+          }
+        }, 30000);
+      }, 2000);
+    } else if (!isEpisode && isPodcastPlaying) {
+      setTimeout(() => {
+        if (!isEpisode) {
+          stopPodcastPolling();
+        }
+      }, 1000);
+    }
+
+    if (hasIncompleteEpisodeData && currentPlaybackRef.current?.item?.type === "episode") {
+      setCurrentPlayback(prevPlayback => {
+        const updatedPlayback = {
+          ...prevPlayback,
+          device: {
+            ...prevPlayback?.device,
+            ...data.device,
+            volume_percent: data.device?.volume_percent,
+          },
+          shuffle_state: data.shuffle_state,
+          repeat_state: data.repeat_state,
+          is_playing: data.is_playing,
+          progress_ms: data.progress_ms,
+          timestamp: data.timestamp
+        };
+        currentPlaybackRef.current = updatedPlayback;
+        return updatedPlayback;
+      });
+      return;
+    }
+
+    setCurrentPlayback(prevPlayback => {
+      const newPlayback = {
+        ...data,
+        device: {
+          ...data.device,
+          volume_percent: data.device?.volume_percent,
+        },
+        shuffle_state: data.shuffle_state,
+        repeat_state: data.repeat_state,
+      };
+      currentPlaybackRef.current = newPlayback;
+      return newPlayback;
     });
 
     if (data?.item && data.item.type === "track") {
@@ -72,26 +163,40 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     } else if (data?.item && data.item.type === "episode") {
       const currentShow = data.item.show;
       setCurrentlyPlayingAlbum(currentShow);
+      
+      if (currentShow?.id && data.item.id) {
+        localStorage.setItem(`lastPlayedEpisode_${currentShow.id}`, data.item.id);
+      }
     }
 
     initialStateLoadedRef.current = true;
-  }, []);
+  }, [stopPodcastPolling]);
 
-  const resetPlaybackState = useCallback(() => {
-    setCurrentPlayback(null);
-    setCurrentlyPlayingAlbum(null);
+  const resetPlaybackState = useCallback((force = false) => {
+    stopPodcastPolling();
+    if (force || !initialFetchInProgress) {
+      setCurrentPlayback(null);
+      setCurrentlyPlayingAlbum(null);
+    }
     initialStateLoadedRef.current = true;
-  }, []);
+  }, [stopPodcastPolling, initialFetchInProgress]);
 
   const fetchCurrentPlayback = useCallback(async (forceRefresh = false) => {
     if (!accessTokenRef.current || !navigator.onLine) {
-      setCurrentPlayback(null);
+      if (!initialStateLoadedRef.current) {
+        setCurrentPlayback(null);
+      }
       return;
     }
 
     const now = Date.now();
     if (!forceRefresh && (now - lastFetchTimestamp < 1000 || pendingFetch)) {
       return;
+    }
+
+    const isInitialFetch = !initialStateLoadedRef.current;
+    if (isInitialFetch) {
+      setInitialFetchInProgress(true);
     }
 
     try {
@@ -101,7 +206,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
       setIsLoading(true);
 
       const response = await networkAwareRequest(() => 
-        fetch("https://api.spotify.com/v1/me/player?type=episode,track", {
+        fetch("https://api.spotify.com/v1/me/player?additional_types=track,episode", {
           headers: {
             Authorization: `Bearer ${accessTokenRef.current}`,
           },
@@ -134,8 +239,11 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     } finally {
       pendingFetch = false;
       setIsLoading(false);
+      setInitialFetchInProgress(false);
     }
-  }, [accessToken, processPlaybackState, resetPlaybackState]);
+  }, [processPlaybackState, resetPlaybackState]);
+
+
 
   const cleanupWebSocket = useCallback(() => {
     connectionCount = Math.max(0, connectionCount - 1);
@@ -149,6 +257,17 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+
+      if (podcastPollingInterval) {
+        clearInterval(podcastPollingInterval);
+        podcastPollingInterval = null;
+      }
+      if (podcastFetchDebounceTimeout) {
+        clearTimeout(podcastFetchDebounceTimeout);
+        podcastFetchDebounceTimeout = null;
+      }
+      isPodcastPlaying = false;
+      lastPodcastFetch = 0;
 
       isAttemptingReconnect = false;
       isConnecting = false;
@@ -296,9 +415,19 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
               if (payload.events) {
                 for (const eventData of payload.events) {
                   if (eventData.type === "PLAYER_STATE_CHANGED" && eventData.event?.state) {
+                    const state = eventData.event.state;
+                    
+                    if (state.currently_playing_type === "episode" && !state.item) {
+                      const now = Date.now();
+                      if (now - lastPodcastFetch > 1000) {
+                        lastPodcastFetch = now;
+                        fetchCurrentPlayback(true);
+                      }
+                    }
+                    
                     eventSubscribers.forEach((subscriber) => {
                       if (subscriber.onPlaybackState) {
-                        subscriber.onPlaybackState(eventData.event.state);
+                        subscriber.onPlaybackState(state);
                       }
                     });
                   }

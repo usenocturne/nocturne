@@ -4,6 +4,7 @@ import {
   LibraryIcon,
   ArtistsIcon,
   RadioIcon,
+  PodcastIcon,
   SettingsIcon,
 } from "../../common/icons";
 import StatusBar from "./StatusBar";
@@ -53,6 +54,7 @@ export default function Sidebar({ activeSection, setActiveSection }) {
       <SidebarItem section="library" icon={LibraryIcon} label="Library" />
       <SidebarItem section="artists" icon={ArtistsIcon} label="Artists" />
       <SidebarItem section="radio" icon={RadioIcon} label="Radio" />
+      <SidebarItem section="podcasts" icon={PodcastIcon} label="Podcasts" />
       <SidebarItem section="settings" icon={SettingsIcon} label="Settings" />
     </div>
   );

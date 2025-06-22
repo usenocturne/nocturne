@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSpotifyPlayerState } from './useSpotifyPlayerState';
 
 const sharedState = {
   refreshTimeoutId: null,
   lastRefreshTime: 0
 };
 
-export const usePlaybackProgress = (accessToken) => {
-  const { currentPlayback, refreshPlaybackState } = useSpotifyPlayerState(accessToken);
+export const usePlaybackProgress = (currentPlayback, refreshPlaybackState, accessToken) => {
   const [progressMs, setProgressMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -81,17 +79,11 @@ export const usePlaybackProgress = (accessToken) => {
 
     if (!isPlaying || duration <= 0) return;
 
-    const FRAME_SKIP = 2;
-
     const animate = () => {
-      frameSkipCounterRef.current = (frameSkipCounterRef.current + 1) % FRAME_SKIP;
-      
-      if (frameSkipCounterRef.current === 0) {
-        const now = Date.now();
-        const elapsed = now - lastUpdateTimeRef.current;
-        const estimated = Math.min(serverProgressRef.current + elapsed, duration);
-        setProgressMs(estimated);
-      }
+      const now = Date.now();
+      const elapsed = now - lastUpdateTimeRef.current;
+      const estimated = Math.min(serverProgressRef.current + elapsed, duration);
+      setProgressMs(estimated);
 
       animationFrameRef.current = requestAnimationFrame(animate);
     };

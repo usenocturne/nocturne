@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
 import { CarThingIcon } from "../common/icons";
-import { useSpotifyPlayerState } from "../../hooks/useSpotifyPlayerState";
 import { useButtonMapping } from "../../hooks/useButtonMapping";
 import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 import ScrollingText from "../common/ScrollingText";
@@ -14,10 +13,12 @@ const ContentView = ({
   contentType = "album",
   onClose,
   currentlyPlayingTrackUri,
+  currentPlayback,
   radioMixes = [],
   updateGradientColors,
   setIgnoreNextRelease,
   onNavigateToNowPlaying,
+  refreshPlaybackState,
 }) => {
   const [content, setContent] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -31,7 +32,6 @@ const ContentView = ({
   const [loadedPages, setLoadedPages] = useState(0);
   const tracksContainerRef = useRef(null);
   const navigate = useNavigate();
-  const { currentPlayback } = useSpotifyPlayerState(accessToken);
 
   const {
     playTrack,
@@ -66,7 +66,7 @@ const ContentView = ({
   };
 
   const loadMoreTracks = useCallback(async () => {
-    if (!nextUrl || isLoadingMore || contentType !== "playlist") return;
+    if (!nextUrl || isLoadingMore || (contentType !== "playlist" && contentType !== "show")) return;
 
     try {
       setIsLoadingMore(true);
@@ -81,7 +81,9 @@ const ContentView = ({
       }
 
       const data = await response.json();
-      const newTracks = data.items.map(item => item.track);
+      const newTracks = contentType === "playlist" 
+        ? data.items.map(item => item.track)
+        : data.items;
       
       setTracks(prevTracks => [...prevTracks, ...newTracks]);
       setNextUrl(data.next);
@@ -96,7 +98,7 @@ const ContentView = ({
 
   useEffect(() => {
     const container = tracksContainerRef.current;
-    if (!container || contentType !== "playlist" || tracksPerPage === 0) return;
+    if (!container || (contentType !== "playlist" && contentType !== "show") || tracksPerPage === 0) return;
 
     const handleScroll = () => {
       const trackElements = container.querySelectorAll('[data-track-index]');
@@ -371,6 +373,47 @@ const ContentView = ({
             break;
           }
 
+          case "show": {
+            const [showResponse, episodesResponse] = await Promise.all([
+              fetch(`https://api.spotify.com/v1/shows/${contentId}`, {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              }),
+              fetch(`https://api.spotify.com/v1/shows/${contentId}/episodes?limit=50`, {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              }),
+            ]);
+
+            if (!showResponse.ok || !episodesResponse.ok) {
+              throw new Error(
+                `Failed to fetch show data: ${
+                  !showResponse.ok ? showResponse.status : episodesResponse.status
+                }`
+              );
+            }
+
+            contentData = await showResponse.json();
+            const episodesData = await episodesResponse.json();
+
+            if (
+              contentData?.images &&
+              contentData.images.length > 0 &&
+              updateGradientColors
+            ) {
+              updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+            }
+
+            tracksData = episodesData.items;
+            setNextUrl(episodesData.next);
+            setHasMoreTracks(!!episodesData.next);
+            setTracksPerPage(tracksData.length);
+            setLoadedPages(1);
+            break;
+          }
+
           default:
             throw new Error(`Unsupported content type: ${contentType}`);
         }
@@ -418,6 +461,8 @@ const ContentView = ({
       uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
       const startIndex = index || 0;
       uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+    } else if (contentType === "show") {
+      contextUri = `spotify:show:${contentId}`;
     } else if (contentType === "mix") {
       const currentMix = radioMixes.find((m) => m.id === contentId);
       if (currentMix && currentMix.type === "spotify-radio") {
@@ -442,6 +487,12 @@ const ContentView = ({
     );
 
     if (success) {
+      if (refreshPlaybackState) {
+        setTimeout(() => {
+          refreshPlaybackState(true);
+        }, 1000);
+      }
+      
       if (wasShuffleEnabled) {
         setTimeout(async () => {
           await toggleShuffle(true);
@@ -558,6 +609,8 @@ const ContentView = ({
         return `${formatNumber(content.tracks?.total || 0)} Songs`;
       case "mix":
         return `${content.tracks?.length || 0} Tracks`;
+      case "show":
+        return content.publisher;
       default:
         return "";
     }
@@ -652,7 +705,16 @@ const ContentView = ({
                   )}
                 </div>
                 <div className="flex flex-wrap">
-                  {track.artists &&
+                  {contentType === "show" ? (
+                    <p className="text-white/60 truncate tracking-tight" style={{ fontSize: '28px', fontWeight: '560' }}>
+                      {track.release_date ? new Date(track.release_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      }) : "No release date available"}
+                    </p>
+                  ) : (
+                    track.artists &&
                     track.artists.map((artist, artistIndex) => (
                       <p
                         key={artist?.id || `artist-${artistIndex}`}
@@ -667,18 +729,21 @@ const ContentView = ({
                           : artist?.name || "Unknown Artist"}
                         {artistIndex < track.artists.length - 1 && ","}
                       </p>
-                    ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
 
-        {isLoadingMore && contentType === "playlist" && (
+        {isLoadingMore && (contentType === "playlist" || contentType === "show") && (
           <div className="flex justify-center items-center py-8">
             <div className="flex items-center">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mr-4"></div>
-              <p className="text-white/60" style={{ fontSize: '24px', fontWeight: '560' }}>Loading more tracks...</p>
+              <p className="text-white/60" style={{ fontSize: '24px', fontWeight: '560' }}>
+                Loading more {contentType === "show" ? "episodes" : "tracks"}...
+              </p>
             </div>
           </div>
         )}

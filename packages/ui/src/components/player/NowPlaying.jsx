@@ -24,7 +24,11 @@ import {
   ShuffleIcon,
   RepeatIcon,
   RepeatOneIcon,
+  SkipForwardIcon,
+  SkipBackwardIcon,
+  SpeedIcon,
 } from "../common/icons";
+
 
 export default function NowPlaying({
   accessToken,
@@ -45,6 +49,7 @@ export default function NowPlaying({
   });
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   
   const volumeTimerRef = useRef(null);
   const volumeLastAdjustedRef = useRef(0);
@@ -76,6 +81,8 @@ export default function NowPlaying({
     updateVolumeFromDevice,
     toggleShuffle,
     setRepeatMode: setRepeatModeApi,
+    setPlaybackSpeed: setPlaybackSpeedApi,
+    getCurrentDeviceOptions,
   } = useSpotifyPlayerControls(accessToken);
 
   const {
@@ -182,7 +189,6 @@ export default function NowPlaying({
     } else if (currentPlayback?.item) {
       await playTrack();
     }
-    triggerRefresh();
   };
 
   const trackInfo = useMemo(() => {
@@ -246,10 +252,9 @@ export default function NowPlaying({
       if (newVolume !== volume) {
         manualVolumeChangeRef.current = true;
         setVolume(newVolume);
-        triggerRefresh();
       }
     }
-  }, [isProgressScrubbing, volume, setVolume, triggerRefresh]);
+  }, [isProgressScrubbing, volume, setVolume]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -346,21 +351,30 @@ export default function NowPlaying({
   }, [trackId, currentPlayback?.item?.type, isCheckingLike, checkIsTrackLiked]);
 
   const handleSkipNext = useCallback(async () => {
-    await skipToNext();
-    triggerRefresh();
-  }, [skipToNext, triggerRefresh]);
+    if (currentPlayback?.item?.type === "episode") {
+      const newPosition = Math.min(progressMs + 15000, duration);
+      await seekToPosition(newPosition);
+      updateProgress(newPosition);
+    } else {
+      await skipToNext();
+    }
+  }, [currentPlayback?.item?.type, progressMs, duration, seekToPosition, updateProgress, skipToNext]);
 
   const handleSkipPrevious = useCallback(async () => {
-    const RESTART_THRESHOLD_MS = 3000;
-
-    if (progressMs > RESTART_THRESHOLD_MS) {
-      await seekToPosition(0);
-      updateProgress(0);
+    if (currentPlayback?.item?.type === "episode") {
+      const newPosition = Math.max(progressMs - 15000, 0);
+      await seekToPosition(newPosition);
+      updateProgress(newPosition);
     } else {
-      await skipToPrevious();
+      const RESTART_THRESHOLD_MS = 3000;
+      if (progressMs > RESTART_THRESHOLD_MS) {
+        await seekToPosition(0);
+        updateProgress(0);
+      } else {
+        await skipToPrevious();
+      }
     }
-    triggerRefresh();
-  }, [progressMs, seekToPosition, updateProgress, skipToPrevious, triggerRefresh]);
+  }, [currentPlayback?.item?.type, progressMs, seekToPosition, updateProgress, skipToPrevious]);
 
   const handleToggleLike = useCallback(async () => {
     if (!trackId || currentPlayback?.item?.type !== "track" || isCheckingLike)
@@ -374,12 +388,11 @@ export default function NowPlaying({
         setIsLiked(true);
         await likeTrack(trackId);
       }
-      triggerRefresh();
     } catch (error) {
       setIsLiked(!isLiked);
       console.error("Error toggling track like:", error);
     }
-  }, [trackId, currentPlayback?.item?.type, isCheckingLike, isLiked, unlikeTrack, likeTrack, triggerRefresh]);
+  }, [trackId, currentPlayback?.item?.type, isCheckingLike, isLiked, unlikeTrack, likeTrack]);
 
   const handleScrubbingChange = (scrubbing) => {
     setIsProgressScrubbing(scrubbing);
@@ -390,24 +403,22 @@ export default function NowPlaying({
       if (currentPlayback?.item) {
         await seekToPosition(position);
         updateProgress(position);
-        triggerRefresh();
       }
     } catch (error) {
       console.error("Error seeking:", error);
     }
-  }, [currentPlayback?.item, seekToPosition, updateProgress, triggerRefresh]);
+  }, [currentPlayback?.item, seekToPosition, updateProgress]);
 
   const handleToggleShuffle = useCallback(async () => {
     try {
       const newShuffleState = !shuffleEnabled;
       setShuffleEnabled(newShuffleState);
       await toggleShuffle(newShuffleState);
-      triggerRefresh();
     } catch (error) {
       console.error("Error toggling shuffle:", error);
       setShuffleEnabled(!shuffleEnabled);
     }
-  }, [shuffleEnabled, toggleShuffle, triggerRefresh]);
+  }, [shuffleEnabled, toggleShuffle]);
 
   const handleToggleRepeat = useCallback(async () => {
     try {
@@ -416,11 +427,29 @@ export default function NowPlaying({
 
       setRepeatMode(newRepeatMode);
       await setRepeatModeApi(newRepeatMode);
-      triggerRefresh();
     } catch (error) {
       console.error("Error toggling repeat mode:", error);
     }
-  }, [repeatMode, setRepeatModeApi, triggerRefresh]);
+  }, [repeatMode, setRepeatModeApi]);
+
+  const fetchCurrentPlaybackSpeed = useCallback(async () => {
+    try {
+      const options = await getCurrentDeviceOptions();
+      if (options && options.playback_speed !== undefined) {
+        setPlaybackSpeed(options.playback_speed);
+      }
+    } catch (error) {
+      console.error("Error fetching current playback speed:", error);
+    }
+  }, [getCurrentDeviceOptions]);
+
+  const handleSpeedChange = async (speed) => {
+    setPlaybackSpeed(speed);
+    const success = await setPlaybackSpeedApi(speed);
+    if (!success) {
+      console.error(`Failed to set playback speed to ${speed}x`);
+    }
+  };
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) {
@@ -590,17 +619,67 @@ export default function NowPlaying({
             : "translate-y-0 opacity-100"
         }`}
       >
-        <div className="flex-shrink-0 focus:outline-none outline-none border-none bg-transparent appearance-none" onClick={handleToggleLike} style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
-          {isLiked ? (
-            <HeartIconFilled className="w-14 h-14" />
-          ) : (
-            <HeartIcon className="w-14 h-14" />
-          )}
-        </div>
+        {currentPlayback?.item?.type === "episode" ? (
+          <Menu as="div" className="relative inline-block text-left">
+            {({ open }) => (
+              <>
+                <MenuButton 
+                  className="focus:outline-none outline-none border-none bg-transparent appearance-none"
+                  onClick={() => {
+                    if (!open) {
+                      fetchCurrentPlaybackSpeed();
+                    }
+                  }}
+                  style={{
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    boxShadow: 'none',
+                    WebkitTapHighlightColor: 'transparent'
+                  }}
+                >
+                  <SpeedIcon className="w-14 h-14" />
+                </MenuButton>
+
+                <MenuItems
+              transition
+              className="absolute left-0 bottom-full z-10 mb-2 w-[16rem] origin-bottom-left divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+            >
+              <div className="py-1">
+                <div className="px-4 py-[12px] text-sm text-white/60 font-[560] tracking-tight border-b border-slate-100/25">
+                  <span className="text-[24px]">Playback Speed</span>
+                </div>
+                {[0.5, 0.8, 1, 1.2, 1.5, 2].map((speed) => (
+                  <MenuItem key={speed} onClick={() => handleSpeedChange(speed)}>
+                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
+                      <span className="text-[28px]">{speed}x</span>
+                      {playbackSpeed === speed && (
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      )}
+                    </div>
+                  </MenuItem>
+                ))}
+              </div>
+                </MenuItems>
+              </>
+            )}
+          </Menu>
+        ) : (
+          <div className="flex-shrink-0 focus:outline-none outline-none border-none bg-transparent appearance-none" onClick={handleToggleLike} style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
+            {isLiked ? (
+              <HeartIconFilled className="w-14 h-14" />
+            ) : (
+              <HeartIcon className="w-14 h-14" />
+            )}
+          </div>
+        )}
 
         <div className="flex justify-center items-center flex-1">
           <div onClick={handleSkipPrevious} className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none" style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
-            <BackIcon className="w-14 h-14" />
+            {currentPlayback?.item?.type === "episode" ? (
+              <SkipBackwardIcon className="w-14 h-14" />
+            ) : (
+              <BackIcon className="w-14 h-14" />
+            )}
           </div>
           <div
             onClick={handlePlayPause}
@@ -610,7 +689,11 @@ export default function NowPlaying({
             {PlayPauseIcon}
           </div>
           <div onClick={handleSkipNext} className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none" style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
-            <ForwardIcon className="w-14 h-14" />
+            {currentPlayback?.item?.type === "episode" ? (
+              <SkipForwardIcon className="w-14 h-14" />
+            ) : (
+              <ForwardIcon className="w-14 h-14" />
+            )}
           </div>
         </div>
 
@@ -736,6 +819,7 @@ export default function NowPlaying({
           </div>
         </div>
       </div>
+
     </div>
   );
 };
