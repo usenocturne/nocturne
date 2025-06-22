@@ -533,22 +533,29 @@ export default function NowPlaying({
           ) : (
             <div className="flex-1 flex flex-col h-[280px]">
               <div
-                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px]"
+                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px] transform-gpu will-change-scroll"
                 ref={lyricsContainerRef}
+                style={{ 
+                  scrollBehavior: 'smooth',
+                  transform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  perspective: '1000px'
+                }}
               >
                 {lyricsLoading ? (
-                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
                     Loading lyrics...
                   </p>
                 ) : lyricsError ? (
-                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
                     Lyrics not available
                   </p>
                 ) : lyrics.length > 0 ? (
                   lyrics.map((lyric, index) => (
                     <p
                       key={index}
-                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 ${
+                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto ${
                         index === currentLyricIndex
                           ? "text-white current-lyric-animation"
                           : index === currentLyricIndex - 1 ||
@@ -556,12 +563,17 @@ export default function NowPlaying({
                           ? "text-white/40"
                           : "text-white/20"
                       }`}
+                      style={{
+                        transform: 'translateZ(0)',
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden'
+                      }}
                     >
                       {lyric.text}
                     </p>
                   ))
                 ) : (
-                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300">
+                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
                     Lyrics not available
                   </p>
                 )}
