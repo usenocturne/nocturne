@@ -83,8 +83,8 @@ const WiFiNetworks = () => {
                 <p className="text-white/60 text-[20px]">Connecting...</p>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-green-500 flex items-center gap-1">
+            <div className="flex items-center space-x-3">
+              <div className="text-green-500 flex items-center space-x-1">
                 <CheckIcon className="w-[20px] h-[20px]" />
                 <span className="text-[18px]">Connected</span>
               </div>
@@ -140,18 +140,20 @@ const WiFiNetworks = () => {
                       <p className="text-white/60 text-[20px]">Out of Range</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center">
                     {hasPasswordSecurity(network.flags) && (
                       <LockIcon className="text-white" size={24} />
                     )}
-                    {inRange ? (
-                      getSignalIcon(scanNetwork.signal)
-                    ) : (
-                      <WifiOffIcon className="w-[24px] h-[24px] text-white/60" />
-                    )}
+                    <div className={hasPasswordSecurity(network.flags) ? "ml-3 mr-3" : "mr-3"}>
+                      {inRange ? (
+                        getSignalIcon(scanNetwork.signal)
+                      ) : (
+                        <WifiOffIcon className="w-[24px] h-[24px] text-white/60" />
+                      )}
+                    </div>
                     <button
                       onClick={(e) => handleForgetNetwork(network.networkId, e)}
-                      className="text-white/60 hover:text-white text-[24px] transition-colors px-2 hover:bg-white/10 rounded focus:outline-none"
+                      className="bg-transparent border-none text-white/60 hover:text-white text-[24px] transition-colors px-2 hover:bg-white/10 rounded focus:outline-none"
                       disabled={isForgetting}
                     >
                       Forget
@@ -186,7 +188,7 @@ const WiFiNetworks = () => {
           </h3>
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 focus:outline-none"
+            className="bg-transparent border-none flex items-center space-x-2 text-white/60 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 focus:outline-none"
             disabled={isScanning}
             aria-label="Refresh networks"
           >
@@ -209,7 +211,7 @@ const WiFiNetworks = () => {
                     {network.ssid}
                   </h4>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center space-x-3">
                   {hasPasswordSecurity(network.flags) && (
                     <LockIcon className="text-white" size={24} />
                   )}
@@ -271,7 +273,7 @@ const WiFiNetworks = () => {
         <p className="text-white/60 text-[28px] mb-6">No networks found</p>
         <button
           onClick={() => scanNetworks(true)}
-          className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white flex items-center gap-2 focus:outline-none"
+          className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white flex items-center space-x-2 focus:outline-none"
           disabled={isScanning}
         >
           <RefreshIcon
@@ -290,7 +292,7 @@ const WiFiNetworks = () => {
           <p className="text-white/80 text-[20px]">{error}</p>
           <button
             onClick={() => scanNetworks(false)}
-            className="text-white/60 hover:text-white text-[18px] mt-2 underline transition-colors focus:outline-none"
+            className="bg-transparent border-none text-white/60 hover:text-white text-[18px] mt-2 underline transition-colors focus:outline-none"
           >
             Retry
           </button>
