@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import Keyboard from "react-simple-keyboard";
 import "react-simple-keyboard/build/css/index.css";
+import { renderToStaticMarkup } from "react-dom/server";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
+import { BackspaceIcon, ShiftIcon, CapsLockIcon, KeyboardHideIcon } from "../icons";
 
 export default function NetworkPasswordModal({
   network,
@@ -122,15 +124,15 @@ export default function NetworkPasswordModal({
   };
 
   const display = {
-    "{bksp}": "⌫",
+    "{bksp}": renderToStaticMarkup(<BackspaceIcon size={20} />),
     "{enter}": "return",
-    "{shift}": "⇧",
-    "{lock}": '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19h6"/><path d="M9 15v-3H5l7-7 7 7h-4v3H9z"/></svg>',
+    "{shift}": renderToStaticMarkup(<ShiftIcon size={20} />),
+    "{lock}": renderToStaticMarkup(<CapsLockIcon size={20} />),
     "{space}": "space",
     "{numbers}": "?123",
     "{symbols}": "#+= ",
     "{default}": "ABC",
-    "{hide}": '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>'
+    "{hide}": renderToStaticMarkup(<KeyboardHideIcon size={20} />)
   };
 
   const buttonTheme = [

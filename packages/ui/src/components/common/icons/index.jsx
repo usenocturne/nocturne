@@ -66,3 +66,7 @@ export { default as RefreshIcon } from "./RefreshIcon";
 export { default as SkipForwardIcon } from "./SkipForwardIcon";
 export { default as SkipBackwardIcon } from "./SkipBackwardIcon";
 export { default as SpeedIcon } from "./SpeedIcon";
+export { default as BackspaceIcon } from "./BackspaceIcon";
+export { default as ShiftIcon } from "./ShiftIcon";
+export { default as CapsLockIcon } from "./CapsLockIcon";
+export { default as KeyboardHideIcon } from "./KeyboardHideIcon";
