@@ -64,12 +64,6 @@ const Tutorial = ({ onComplete }) => {
     {
       header: "Controls",
       subtext:
-        "Press the rightmost button to adjust brightness with the dial. Try it now.",
-      continueType: "brightnessPress",
-    },
-    {
-      header: "Controls",
-      subtext:
         "Turn the dial in the Now Playing tab to adjust volume. Scroll right to continue.",
       continueType: "scroll",
     },
@@ -155,14 +149,6 @@ const Tutorial = ({ onComplete }) => {
         lastPressedKey.current !== e.key
       ) {
         lastPressedKey.current = e.key;
-        handleScreenTransition(currentScreen + 1);
-        return;
-      }
-
-      if (
-        screens[currentScreen].continueType === "brightnessPress" &&
-        e.key.toLowerCase() === "m"
-      ) {
         handleScreenTransition(currentScreen + 1);
         return;
       }

@@ -1,6 +1,3 @@
-export { default as BrightnessLowIcon } from "./BrightnessLowIcon";
-export { default as BrightnessMidIcon } from "./BrightnessMidIcon";
-export { default as BrightnessHighIcon } from "./BrightnessHighIcon";
 export { default as NocturneIcon } from "./NocturneIcon";
 export { default as NowPlayingIcon } from "./NowPlayingIcon";
 export { default as RecentsIcon } from "./RecentsIcon";

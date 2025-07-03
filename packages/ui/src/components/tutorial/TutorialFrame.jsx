@@ -157,12 +157,6 @@ const TutorialFrame = ({ currentScreen }) => {
             transform-origin: bottom;
           }
           
-          .animate-brightness-button {
-            animation: quickPress 2s ease-in-out infinite;
-            transform-box: fill-box;
-            transform-origin: bottom;
-          }
-          
           .animate-swipe-indicator {
             animation: swipeGestures 4s ease-in-out infinite;
             transform-box: fill-box;
@@ -276,18 +270,6 @@ const TutorialFrame = ({ currentScreen }) => {
             />
           </g>
         ))}
-
-        <g style={{ transform: `translate(1531.38px, 10.0273px)` }}>
-          <rect
-            width="134.829"
-            height="8.2"
-            rx="4.1"
-            fill="white"
-            stroke="white"
-            strokeWidth="8"
-            className={currentScreen === 5 ? "animate-brightness-button" : ""}
-          />
-        </g>
 
         <g
           className={
