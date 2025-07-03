@@ -25,7 +25,7 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
 import PairingScreen from "./components/auth/PairingScreen";
-import LockView from "./components/lock/LockView";
+import LockView from "./components/common/LockView";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
