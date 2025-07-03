@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "../contexts/SettingsContext";
-import { networkAwareRequest, waitForNetwork } from '../utils/networkAwareRequest';
+import { networkAwareRequest, waitForStableNetwork } from '../utils/networkAwareRequest';
 
 let cachedTimezone = null;
 export const getCachedTimezone = () => cachedTimezone;
@@ -19,9 +19,13 @@ export function useCurrentTime() {
       }
 
       try {
-        await waitForNetwork();
+        await waitForStableNetwork();
         const response = await networkAwareRequest(
-          () => fetch("https://api.usenocturne.com/v1/timezone")
+          () => fetch("http://localhost:5000/device/date/settimezone", {
+            method: "POST"
+          }),
+          0,
+          { requireNetwork: true }
         );
         
         if (!response.ok) {
@@ -30,7 +34,7 @@ export function useCurrentTime() {
         }
 
         const data = await response.json();
-        if (data.timezone) {
+        if (data.status === "success" && data.timezone) {
           cachedTimezone = data.timezone;
           setTimezone(data.timezone);
           console.log("Timezone set to:", data.timezone);
@@ -46,10 +50,35 @@ export function useCurrentTime() {
 
   
   useEffect(() => {
-    const updateTime = () => {
+    const updateTime = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/device/date");
+        if (response.ok) {
+          const data = await response.json();
+          const timeString = data.time;
+          const [hours24, minutes] = timeString.split(':');
+
+          let displayHours;
+          if (settings.use24HourTime) {
+            displayHours = hours24;
+            setIsFourDigits(true);
+          } else {
+            const hour24 = parseInt(hours24);
+            displayHours = (hour24 % 12 || 12).toString();
+            setIsFourDigits(parseInt(displayHours) >= 10);
+          }
+
+          setCurrentTime(`${displayHours}:${minutes}`);
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching time from server:", error);
+      }
+
+
       const now = new Date();
 
-      if (timezone) {
+      if (timezone && typeof Intl !== 'undefined') {
         try {
           const options = { timeZone: timezone, hour: 'numeric', minute: 'numeric', hour12: !settings.use24HourTime };
           const formatter = new Intl.DateTimeFormat('en-US', options);
@@ -86,7 +115,7 @@ export function useCurrentTime() {
     };
 
     updateTime();
-    const interval = setInterval(updateTime, 1000);
+    const interval = setInterval(updateTime, 15000);
 
     const handleTimeFormatChange = () => {
       updateTime();
@@ -100,5 +129,8 @@ export function useCurrentTime() {
     };
   }, [settings.use24HourTime, timezone]);
 
-  return { currentTime, isFourDigits };
+  return {
+    currentTime,
+    isFourDigits
+  };
 }
