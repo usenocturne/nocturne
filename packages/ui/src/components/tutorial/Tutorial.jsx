@@ -64,6 +64,12 @@ const Tutorial = ({ onComplete }) => {
     {
       header: "Controls",
       subtext:
+        "Press the rightmost button to lock the screen. Try it now.",
+      continueType: "lockPress",
+    },
+    {
+      header: "Controls",
+      subtext:
         "Turn the dial in the Now Playing tab to adjust volume. Scroll right to continue.",
       continueType: "scroll",
     },
@@ -149,6 +155,14 @@ const Tutorial = ({ onComplete }) => {
         lastPressedKey.current !== e.key
       ) {
         lastPressedKey.current = e.key;
+        handleScreenTransition(currentScreen + 1);
+        return;
+      }
+
+      if (
+        screens[currentScreen].continueType === "lockPress" &&
+        e.key.toLowerCase() === "m"
+      ) {
         handleScreenTransition(currentScreen + 1);
         return;
       }
