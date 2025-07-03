@@ -24,6 +24,7 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
 import PairingScreen from "./components/auth/PairingScreen";
+import LockView from "./components/common/LockView";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
@@ -454,6 +455,11 @@ function App() {
       if (albumImage) {
         updateGradientColors(albumImage, "nowPlaying");
       }
+    } else if (activeSection === "lock") {
+      const albumImage = currentlyPlayingAlbum?.images?.[1]?.url;
+      if (albumImage) {
+        updateGradientColors(albumImage, "lock");
+      }
     }
   }, [
     activeSection,
@@ -492,6 +498,20 @@ function App() {
       }
     }
   }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        setActiveSection("lock");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const handleAuthSuccess = () => {
     const storedAccessToken = localStorage.getItem("spotifyAccessToken");
@@ -611,6 +631,8 @@ function App() {
         onNavigateToAlbum={handleNavigateToAlbumFromNowPlaying}
       />
     );
+  } else if (activeSection === "lock") {
+    content = (<LockView onClose={() => setActiveSection("recents")}/>)
   } else if (viewingContent) {
     content = (
       <ContentView
