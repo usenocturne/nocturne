@@ -6,7 +6,7 @@ export default function LockView({ onClose }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" || e.key === "m") {
         onClose();
       }
     };

@@ -47,8 +47,6 @@ export function useCurrentTime() {
     fetchTimezone();
   }, []);
 
-
-  
   useEffect(() => {
     const updateTime = async () => {
       try {

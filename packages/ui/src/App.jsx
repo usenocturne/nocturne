@@ -499,6 +499,20 @@ function App() {
     }
   }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        setActiveSection("lock");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   const handleAuthSuccess = () => {
     const storedAccessToken = localStorage.getItem("spotifyAccessToken");
     const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
