@@ -16,6 +16,7 @@ export default function Home({
   likedSongs,
   topArtists,
   radioMixes,
+  userShows,
   currentPlayback,
   currentlyPlayingAlbum,
   isLoading,
@@ -59,6 +60,9 @@ export default function Home({
     } else if (activeSection === "artists" && topArtists.length > 0) {
       const firstArtistImage = topArtists[0]?.images?.[1]?.url || topArtists[0]?.images?.[0]?.url;
       updateGradientColors(firstArtistImage || null, "artists");
+    } else if (activeSection === "podcasts" && userShows.length > 0) {
+      const firstShowImage = userShows[0]?.show?.images?.[1]?.url || userShows[0]?.show?.images?.[0]?.url;
+      updateGradientColors(firstShowImage || null, "podcasts");
     } else if (activeSection === "settings") {
       updateGradientColors(null, "settings");
     }
@@ -69,6 +73,7 @@ export default function Home({
     userPlaylists,
     topArtists,
     radioMixes,
+    userShows,
     currentlyPlayingAlbum,
   ]);
 
@@ -201,6 +206,13 @@ export default function Home({
     }
   };
 
+  const handlePodcastsItemSelect = (index, item) => {
+    if (index !== -1 && userShows[index]) {
+      const show = userShows[index].show;
+      onOpenContent(show.id, "show");
+    }
+  };
+
   const renderRecentsSection = () => {
     return (
       <HorizontalScroll
@@ -244,7 +256,7 @@ export default function Home({
                 <div
                   className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                   style={{ width: 280, height: 280 }}
-                  onClick={() => album.type !== 'local-track' && onOpenContent(album.id, "album")}
+                  onClick={() => album.type !== 'local-track' && onOpenContent(album.id, album.type === 'show' ? "show" : "album")}
                 >
                   {album.images?.[1]?.url && album.type !== 'local-track' ? (
                     <img
@@ -265,19 +277,27 @@ export default function Home({
 
                 <h4
                   className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-                  onClick={() => album.type !== 'local-track' && onOpenContent(album.id, "album")}
+                  onClick={() => album.type !== 'local-track' && onOpenContent(album.id, album.type === 'show' ? "show" : "album")}
                 >
                   {album.name}
                 </h4>
 
-                {album.artists?.[0] && (
-                  <h4
-                    className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
-                    onClick={() => onOpenContent(album.artists[0].id, "artist")}
-                  >
-                    {album.artists.map((artist) => artist.name).join(", ")}
-                  </h4>
-                )}
+                                 {album.type === 'show' ? (
+                   album.publisher && (
+                     <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                       {album.publisher}
+                     </h4>
+                   )
+                 ) : (
+                   album.artists?.[0] && (
+                     <h4
+                       className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
+                       onClick={() => onOpenContent(album.artists[0].id, "artist")}
+                     >
+                       {album.artists.map((artist) => artist.name).join(", ")}
+                     </h4>
+                   )
+                 )}
               </div>
             ))
           ) : (
@@ -652,6 +672,82 @@ export default function Home({
     );
   };
 
+  const renderPodcastsSection = () => {
+    return (
+      <HorizontalScroll
+        containerRef={scrollContainerRef}
+        accessToken={accessToken}
+        activeSection={activeSection}
+        onItemSelect={handlePodcastsItemSelect}
+      >
+        <div
+          ref={scrollContainerRef}
+          className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
+          style={{ willChange: "transform" }}
+        >
+          {isLoading.userShows ? (
+            Array(5)
+              .fill()
+              .map((_, index) => (
+                <div
+                  key={`loading-${index}`}
+                  className="min-w-[280px] pl-2 mr-10 snap-start"
+                >
+                  <div
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
+                    style={{ width: 280, height: 280 }}
+                  ></div>
+                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
+                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
+                </div>
+              ))
+          ) : userShows.length > 0 ? (
+            userShows.map((item, i) => {
+              const show = item.show;
+              return (
+                <div
+                  key={`${show.id}-${i}`}
+                  className="min-w-[280px] pl-2 mr-10 snap-start"
+                  data-id={show.id}
+                >
+                  <div
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                    style={{ width: 280, height: 280 }}
+                    onClick={() => onOpenContent(show.id, "show")}
+                  >
+                    {show.images?.[1]?.url || show.images?.[0]?.url ? (
+                      <img
+                        src={show.images[1]?.url || show.images[0]?.url}
+                        alt={`${show.name} Cover`}
+                        className="w-full h-full rounded-[12px] aspect-square"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+                    )}
+                  </div>
+                  <h4
+                    className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                    onClick={() => onOpenContent(show.id, "show")}
+                  >
+                    {show.name}
+                  </h4>
+                  <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                    {show.publisher}
+                  </h4>
+                </div>
+              );
+            })
+          ) : (
+            <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+              No podcasts found
+            </div>
+          )}
+          <div className="min-w-4 flex-shrink-0"></div>
+        </div>
+      </HorizontalScroll>
+    );
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case "recents":
@@ -662,6 +758,8 @@ export default function Home({
         return renderArtistsSection();
       case "radio":
         return renderRadioSection();
+      case "podcasts":
+        return renderPodcastsSection();
       case "settings":
         return (
           <Settings

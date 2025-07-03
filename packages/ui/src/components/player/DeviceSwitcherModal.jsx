@@ -15,7 +15,6 @@ import {
   CarIcon
 } from "../common/icons";
 import { generateRandomString } from "../../utils/helpers";
-import RefreshIcon from "../common/icons/RefreshIcon";
 
 const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
   const [devices, setDevices] = useState([]);
@@ -135,8 +134,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
           >
             <div>
               <div className="text-center">
-                <div className="flex items-center justify-between px-6">
-                  <div className="w-8"></div>
+                <div className="px-6">
                   <DialogTitle
                     as="h3"
                     className="text-4xl font-medium text-white"
@@ -144,14 +142,6 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
                   >
                     Switch Device
                   </DialogTitle>
-                  <button
-                    onClick={handleRefresh}
-                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:bg-opacity-10 transition-colors"
-                    disabled={isLoading}
-                    style={{ backgroundColor: 'transparent' }}
-                  >
-                    <RefreshIcon className={`w-6 h-6 text-white opacity-60 ${isLoading ? 'animate-spin' : ''}`} />
-                  </button>
                 </div>
                 {isLoading ? (
                   <div className="mt-2">
@@ -194,15 +184,30 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
                 )}
               </div>
             </div>
-            <div className="mt-5 border-t border-slate-100 border-opacity-25">
+            <div className="mt-5 border-t border-slate-100 border-opacity-25 flex">
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="flex-1 flex justify-center items-center px-3 py-3 hover:bg-white hover:bg-opacity-5 transition-colors disabled:opacity-50 border-r border-slate-100 border-opacity-25"
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 560,
+                  letterSpacing: '-0.025em',
+                  color: '#6c8bd5',
+                  backgroundColor: 'transparent'
+                }}
+              >
+                Refresh
+              </button>
               <button
                 type="button"
                 onClick={() => onClose(null)}
-                className="flex w-full justify-center items-center px-3 py-3 hover:bg-white hover:bg-opacity-5 transition-colors"
-                style={{ 
-                  fontSize: '28px', 
-                  fontWeight: 560, 
-                  letterSpacing: '-0.025em', 
+                className="flex-1 flex justify-center items-center px-3 py-3 hover:bg-white hover:bg-opacity-5 transition-colors"
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 560,
+                  letterSpacing: '-0.025em',
                   color: '#6c8bd5',
                   backgroundColor: 'transparent'
                 }}

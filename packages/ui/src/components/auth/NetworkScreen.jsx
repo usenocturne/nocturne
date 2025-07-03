@@ -206,7 +206,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
 
                   <button
                     onClick={openNetworkSettings}
-                    className="mt-4 bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3 border border-white/10"
+                    className="mt-4 bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3 border border-white/10 focus:outline-none"
                   >
                     <span className="text-[28px] font-[560] text-white tracking-tight">
                       Network Settings
@@ -229,7 +229,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
             <div className="flex items-center mb-4">
               <button
                 onClick={navigateBack}
-                className="bg-transparent border-none mr-4"
+                className="bg-transparent border-none mr-4 focus:outline-none"
                 disabled={isAnimating}
               >
                 <ChevronLeftIcon className="w-8 h-8 text-white" />
@@ -244,7 +244,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
                 <button
                   key={option.id}
                   onClick={() => navigateToSubpage(option)}
-                  className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
+                  className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 focus:outline-none"
                   disabled={isAnimating}
                 >
                   <div className="flex items-center">
@@ -273,7 +273,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
             <div className="flex items-center mb-4">
               <button
                 onClick={navigateBack}
-                className="bg-transparent border-none mr-4"
+                className="bg-transparent border-none mr-4 focus:outline-none"
                 disabled={isAnimating}
               >
                 <ChevronLeftIcon className="w-8 h-8 text-white" />

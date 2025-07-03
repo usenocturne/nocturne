@@ -41,7 +41,6 @@
 - Hold one of the top hardware preset buttons while on a playlist page to map it to the button
 - Press the mapped buttons to quickly play playlists
 - Hold the right-most top hardware button to access settings
-- Triple-press the right-most top hardware button to access brightness control
 - Press the hardware button underneath of the knob to go back in the application
 
 ## Local Development Setup
