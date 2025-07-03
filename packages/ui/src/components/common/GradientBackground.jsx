@@ -70,7 +70,7 @@ const GradientBackground = ({
       );
       setActiveLayerId(newActiveLayerId);
     }
-  }, [gradientHexColors, generateMeshGradient, activeLayerId, gradientLayers, initialMeshGradient]);
+  }, [gradientHexColors, generateMeshGradient, activeLayerId, initialMeshGradient]);
 
   return (
     <div className={classNames("absolute", "inset-0", "overflow-hidden", className)}>

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import TutorialFrame from "./TutorialFrame";
 import NocturneIcon from "../common/icons/NocturneIcon";
-import GradientBackground from "../common/GradientBackground";
-import { useGradientState } from "../../hooks/useGradientState";
 import { useNavigation } from "../../hooks/useNavigation";
 
 const Tutorial = ({ onComplete }) => {
@@ -16,11 +14,7 @@ const Tutorial = ({ onComplete }) => {
   const buttonLockRef = useRef(false);
   const lastPressedKey = useRef(null);
 
-  const [gradientState, updateGradientColors] = useGradientState();
 
-  useEffect(() => {
-    updateGradientColors(null, "auth");
-  }, [updateGradientColors]);
 
   useEffect(() => {
     if (currentScreen === 1) {
@@ -66,12 +60,6 @@ const Tutorial = ({ onComplete }) => {
       subtext:
         "Press a mapped button anytime to instantly start playback. Try it now.",
       continueType: "topButtonPress",
-    },
-    {
-      header: "Controls",
-      subtext:
-        "Press the rightmost button to adjust brightness with the dial. Try it now.",
-      continueType: "brightnessPress",
     },
     {
       header: "Controls",
@@ -166,14 +154,6 @@ const Tutorial = ({ onComplete }) => {
       }
 
       if (
-        screens[currentScreen].continueType === "brightnessPress" &&
-        e.key.toLowerCase() === "m"
-      ) {
-        handleScreenTransition(currentScreen + 1);
-        return;
-      }
-
-      if (
         screens[currentScreen].continueType === "hold1" &&
         validPresetButtons.includes(e.key)
       ) {
@@ -262,8 +242,6 @@ const Tutorial = ({ onComplete }) => {
 
   return (
     <div className="fixed inset-0 w-full h-full" ref={tutorialContainerRef}>
-      <GradientBackground gradientState={gradientState} className="rounded-2xl" />
-
       <div className="relative h-full z-10 flex justify-between px-6">
         <div className="flex flex-col items-start w-1/2 -mr-6 ml-12 flex-1 justify-center">
           <NocturneIcon className="h-12 w-auto mb-8" />

@@ -2,6 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { Switch } from "@headlessui/react";
 import { useNavigate } from "react-router-dom";
 import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  DialogBackdrop,
+} from "@headlessui/react";
+import {
   ChevronLeftIcon,
   ChevronRightIcon,
   SettingsAccountIcon,
@@ -542,6 +548,7 @@ export default function Settings({
   const isProcessingEscape = useRef(false);
   const scrollContainerRef = useRef(null);
   const { settings, updateSetting } = useSettings();
+  const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false);
 
   const [showMain, setShowMain] = useState(true);
   const [showParent, setShowParent] = useState(false);
@@ -594,8 +601,10 @@ export default function Settings({
   const handleFactoryReset = async () => {
     try {
       fetch("http://localhost:5000/device/factoryreset", { method: "POST" })
+      setShowFactoryResetDialog(false);
     } catch (error) {
       console.error("Error during factory reset:", error);
+      setShowFactoryResetDialog(false);
     }
   };
 
@@ -616,7 +625,7 @@ export default function Settings({
   const handleAction = (action) => {
     switch (action) {
       case "factoryReset":
-        handleFactoryReset();
+        setShowFactoryResetDialog(true);
         break;
       case "signOut":
         handleSignOut();
@@ -750,7 +759,7 @@ export default function Settings({
           <div key={item.id} className="mb-8">
             <button
               onClick={() => handleAction(item.action)}
-              className="bg-white/10 hover:bg-white/20 w-80 transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10"
+              className="bg-white/10 hover:bg-white/20 w-80 transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10 focus:outline-none"
             >
               <span className="text-[32px] font-[580] text-white tracking-tight">
                 {item.title}
@@ -864,7 +873,7 @@ export default function Settings({
                         navigateTo(key);
                       }
                     }}
-                    className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
+                    className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 focus:outline-none"
                     disabled={isAnimating}
                   >
                     <div className="flex items-center">
@@ -894,7 +903,7 @@ export default function Settings({
               <div className="flex items-center mb-4">
                 <button
                   onClick={navigateBack}
-                  className="mr-4"
+                  className="mr-4 focus:outline-none"
                   style={{ background: 'none' }}
                   disabled={isAnimating}
                 >
@@ -912,7 +921,7 @@ export default function Settings({
                       <button
                         key={subItem.id}
                         onClick={() => navigateTo(activeParent, subItem)}
-                        className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10"
+                        className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 focus:outline-none"
                         disabled={isAnimating}
                       >
                         <div className="flex items-center">
@@ -947,7 +956,7 @@ export default function Settings({
               <div className="flex items-center mb-4">
                 <button
                   onClick={navigateBack}
-                  className="mr-4"
+                  className="mr-4 focus:outline-none"
                   style={{ background: 'none'}}
                   disabled={isAnimating}
                 >
@@ -964,6 +973,61 @@ export default function Settings({
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={showFactoryResetDialog}
+        onClose={() => setShowFactoryResetDialog(false)}
+        className="relative z-50"
+      >
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-black/60 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+        />
+
+        <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+          <div
+            className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0"
+            style={{ fontFamily: "var(--font-inter)" }}
+          >
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-[17px] bg-[#161616] px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[36rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+            >
+              <div>
+                <div className="text-center">
+                  <DialogTitle
+                    as="h3"
+                    className="text-[36px] font-[560] tracking-tight text-white"
+                  >
+                    Factory Reset?
+                  </DialogTitle>
+                  <div className="mt-2">
+                    <p className="text-[28px] font-[560] tracking-tight text-white/60">
+                      This will erase all stored settings and paired Bluetooth devices. This cannot be undone.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-0 border-t border-slate-100/25">
+                <button
+                  type="button"
+                  onClick={() => setShowFactoryResetDialog(false)}
+                  className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm sm:col-start-1 border-r border-slate-100/25 bg-transparent hover:bg-white/5 focus:outline-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFactoryReset}
+                  className="mt-3 inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] shadow-sm sm:col-start-2 sm:mt-0 bg-transparent hover:bg-white/5 focus:outline-none"
+                >
+                  Reset
+                </button>
+              </div>
+            </DialogPanel>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

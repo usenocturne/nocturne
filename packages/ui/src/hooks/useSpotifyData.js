@@ -28,6 +28,7 @@ export function useSpotifyData(activeSection) {
     type: "liked-songs",
   });
   const [radioMixes, setRadioMixes] = useState([]);
+  const [userShows, setUserShows] = useState([]);
   const [retryCount, setRetryCount] = useState(0);
 
   const [isLoading, setIsLoading] = useState({
@@ -35,7 +36,8 @@ export function useSpotifyData(activeSection) {
     userPlaylists: true,
     topArtists: true,
     likedSongs: true,
-    radioMixes: true
+    radioMixes: true,
+    userShows: true
   });
 
   const [errors, setErrors] = useState({
@@ -44,6 +46,7 @@ export function useSpotifyData(activeSection) {
     topArtists: null,
     likedSongs: null,
     radioMixes: null,
+    userShows: null,
   });
 
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
@@ -103,7 +106,7 @@ export function useSpotifyData(activeSection) {
       setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
 
       const response = await networkAwareRequest(
-        () => fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", {
+        () => fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50&additional_types=track,episode", {
           headers: {
             Authorization: `Bearer ${effectiveToken}`,
           },
@@ -124,13 +127,12 @@ export function useSpotifyData(activeSection) {
       }
 
       data.items.forEach((item) => {
-        if (
-          item.track &&
-          item.track.album &&
-          !albumIds.has(item.track.album.id)
-        ) {
+        if (item.track && item.track.type === "track" && item.track.album && !albumIds.has(item.track.album.id)) {
           albumIds.add(item.track.album.id);
           uniqueAlbums.push(item.track.album);
+        } else if (item.track && item.track.type === "episode" && item.track.show && !albumIds.has(item.track.show.id)) {
+          albumIds.add(item.track.show.id);
+          uniqueAlbums.push(item.track.show);
         }
       });
 
@@ -242,6 +244,37 @@ export function useSpotifyData(activeSection) {
       setIsLoading((prev) => ({ ...prev, likedSongs: false }));
     }
   }, [effectiveToken, likedSongs]);
+
+  const fetchUserShows = useCallback(async () => {
+    if (!effectiveToken) return;
+
+    try {
+      setIsLoading((prev) => ({ ...prev, userShows: true }));
+
+      const response = await networkAwareRequest(
+        () => fetch("https://api.spotify.com/v1/me/shows?limit=50", {
+          headers: {
+            Authorization: `Bearer ${effectiveToken}`,
+          },
+        })
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setUserShows(data.items || []);
+      setErrors((prev) => ({ ...prev, userShows: null }));
+      return data.items || [];
+    } catch (err) {
+      console.error("Error fetching user shows:", err);
+      setErrors((prev) => ({ ...prev, userShows: err.message }));
+      throw err;
+    } finally {
+      setIsLoading((prev) => ({ ...prev, userShows: false }));
+    }
+  }, [effectiveToken]);
 
   const fetchRadioMixes = useCallback(async () => {
     if (!effectiveToken) return;
@@ -587,7 +620,8 @@ export function useSpotifyData(activeSection) {
       userPlaylists: true,
       topArtists: true,
       likedSongs: true,
-      radioMixes: true
+      radioMixes: true,
+      userShows: true
     });
     
     try {
@@ -600,7 +634,8 @@ export function useSpotifyData(activeSection) {
         fetchUserPlaylists(),
         fetchTopArtists(),
         fetchLikedSongs(),
-        fetchRadioMixes()
+        fetchRadioMixes(),
+        fetchUserShows()
       ]);
 
       const failedRequests = results.filter(result => result.status === 'rejected');
@@ -646,7 +681,8 @@ export function useSpotifyData(activeSection) {
     fetchUserPlaylists,
     fetchTopArtists,
     fetchLikedSongs,
-    fetchRadioMixes
+    fetchRadioMixes,
+    fetchUserShows
   ]);
 
   useEffect(() => {
@@ -685,7 +721,8 @@ export function useSpotifyData(activeSection) {
       userPlaylists: true,
       topArtists: true,
       likedSongs: true,
-      radioMixes: true
+      radioMixes: true,
+      userShows: true
     }));
 
     try {
@@ -693,12 +730,13 @@ export function useSpotifyData(activeSection) {
       await fetchTopArtists();
       await fetchLikedSongs();
       await fetchRadioMixes();
+      await fetchUserShows();
     } catch (error) {
       console.error("Error refreshing data:", error);
     } finally {
       dataFetchingInProgressRef.current = false;
     }
-  }, [accessToken, waitForValidToken, fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchRadioMixes, initialDataLoaded]);
+  }, [accessToken, waitForValidToken, fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchRadioMixes, fetchUserShows, initialDataLoaded]);
 
   const isLoadingData = Object.values(isLoading).some(Boolean);
   const isLoadingAll = authIsLoading || isInitializing || isLoadingData || playerIsLoading;
@@ -719,6 +757,7 @@ export function useSpotifyData(activeSection) {
     topArtists,
     likedSongs,
     radioMixes,
+    userShows,
     initialDataLoaded,
     isLoading: {
       data: isLoadingData,
@@ -729,7 +768,8 @@ export function useSpotifyData(activeSection) {
       userPlaylists: isLoading.userPlaylists,
       topArtists: isLoading.topArtists,
       likedSongs: isLoading.likedSongs,
-      radioMixes: isLoading.radioMixes
+      radioMixes: isLoading.radioMixes,
+      userShows: isLoading.userShows
     },
     errors,
     refreshData,
@@ -738,5 +778,6 @@ export function useSpotifyData(activeSection) {
     refreshTopArtists: fetchTopArtists,
     refreshLikedSongs: fetchLikedSongs,
     refreshRadioMixes: fetchRadioMixes,
+    refreshUserShows: fetchUserShows,
   };
 }

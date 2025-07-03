@@ -13,6 +13,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
   const [hasQrCode, setHasQrCode] = useState(false);
   const authAttemptedRef = useRef(false);
   const authTimerRef = useRef(null);
+  const previousNetworkStateRef = useRef(null);
 
   const { authData, isLoading, initAuth, pollAuthStatus, isAuthenticated } =
     useAuth();
@@ -90,6 +91,16 @@ const AuthScreen = ({ onAuthSuccess }) => {
       onAuthSuccess();
     }
   }, [isAuthenticated, onAuthSuccess]);
+
+  useEffect(() => {
+    if (previousNetworkStateRef.current === false && isNetworkConnected === true) {
+      authAttemptedRef.current = false;
+      setAuthInitialized(false);
+      setHasQrCode(false);
+      setError(null);
+    }
+    previousNetworkStateRef.current = isNetworkConnected;
+  }, [isNetworkConnected]);
 
   if (!initialCheckDone) {
     return (

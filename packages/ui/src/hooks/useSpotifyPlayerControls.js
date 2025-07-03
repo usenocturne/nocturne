@@ -1,5 +1,6 @@
 import { useCallback, useState, useContext, useRef, useEffect } from "react";
 import React from "react";
+import { generateRandomString } from "../utils/helpers";
 
 export const DeviceSwitcherContext = React.createContext({
   openDeviceSwitcher: (playbackIntent = null) => { },
@@ -646,6 +647,108 @@ export function useSpotifyPlayerControls(accessToken) {
     }
   }, [accessToken]);
 
+  const getCurrentDeviceOptions = useCallback(async () => {
+    if (!accessToken) return null;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch(
+        `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`, {
+        method: 'PUT',
+        headers: {
+          'accept': 'application/json',
+          'accept-language': 'en-US,en;q=0.9',
+          'authorization': `Bearer ${accessToken}`,
+          'content-type': 'application/json',
+          'x-spotify-connection-id': generateRandomString(148)
+        },
+        body: JSON.stringify({
+          'member_type': 'CONNECT_STATE'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.player_state && data.player_state.options) {
+        return data.player_state.options;
+      }
+
+    } catch (err) {
+      console.error("Error getting device options:", err);
+      setError(err.message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accessToken]);
+
+  const setPlaybackSpeed = useCallback(async (speed) => {
+    if (!accessToken) return false;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const deviceResponse = await fetch(
+        "https://api.spotify.com/v1/me/player",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      let deviceId = null;
+      if (deviceResponse.status !== 204) {
+        const deviceData = await deviceResponse.json();
+        deviceId = deviceData.device?.id;
+      }
+
+      if (!deviceId) {
+        throw new Error("No active device found");
+      }
+
+      const response = await fetch(
+        `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
+        {
+          method: "POST",
+          headers: {
+            "accept": "*/*",
+            "accept-language": "en-US,en;q=0.9",
+            "authorization": `Bearer ${accessToken}`,
+            "content-type": "application/json",
+            "origin": "https://open.spotify.com",
+            "referer": "https://open.spotify.com/",
+          },
+          body: JSON.stringify({
+            command: {
+              playback_speed: speed,
+              endpoint: "set_options"
+            }
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Error setting playback speed:", err);
+      setError(err.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accessToken]);
+
   return {
     playTrack,
     pausePlayback,
@@ -663,6 +766,8 @@ export function useSpotifyPlayerControls(accessToken) {
     unlikeTrack,
     playDJMix,
     sendDJSignal,
+    setPlaybackSpeed,
+    getCurrentDeviceOptions,
     isLoading,
     error,
   };

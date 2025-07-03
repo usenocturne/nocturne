@@ -212,11 +212,21 @@ export function useLyrics(accessToken, currentPlayback) {
 
   useEffect(() => {
     if (currentLyricIndex >= 0 && lyricsContainerRef.current) {
-      const lyricElements = lyricsContainerRef.current.children;
+      const container = lyricsContainerRef.current;
+      const lyricElements = container.children;
       if (lyricElements.length > currentLyricIndex) {
         const lyricElement = lyricElements[currentLyricIndex];
         if (lyricElement) {
-          lyricElement.scrollIntoView({ behavior: "smooth", block: "center" });
+          requestAnimationFrame(() => {
+            const containerRect = container.getBoundingClientRect();
+            const elementRect = lyricElement.getBoundingClientRect();
+            const offset = elementRect.top - containerRect.top - containerRect.height / 2 + elementRect.height / 2;
+            
+            container.scrollTo({
+              top: container.scrollTop + offset,
+              behavior: 'smooth'
+            });
+          });
         }
       }
     }

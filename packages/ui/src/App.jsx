@@ -13,7 +13,6 @@ import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
 import SystemUpdateModal from "./components/common/modals/SystemUpdateModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
-import BrightnessOverlay from "./components/common/overlays/BrightnessOverlay";
 import GradientBackground from "./components/common/GradientBackground";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
@@ -94,6 +93,35 @@ function useGlobalButtonMapping({
             }
           } else {
             contextUri = `spotify:artist:${mappedId}`;
+          }
+        } else if (mappedType === "show") {
+          const response = await fetch(
+            `https://api.spotify.com/v1/shows/${mappedId}/episodes?limit=50`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.items && data.items.length > 0) {
+              const lastPlayedEpisodeId = localStorage.getItem(`lastPlayedEpisode_${mappedId}`);
+              let targetEpisodeIndex = 0;
+              
+              if (lastPlayedEpisodeId) {
+                const foundIndex = data.items.findIndex(ep => ep.id === lastPlayedEpisodeId);
+                if (foundIndex !== -1) {
+                  targetEpisodeIndex = foundIndex;
+                }
+              }
+              
+              contextUri = `spotify:show:${mappedId}`;
+              uris = [`spotify:episode:${data.items[targetEpisodeIndex].id}`];
+            }
+          } else {
+            contextUri = `spotify:show:${mappedId}`;
           }
         } else if (mappedType === "mix") {
           const mixTracksJson = localStorage.getItem(
@@ -248,8 +276,6 @@ function App() {
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState(null);
   const [showConnectorModal, setShowConnectorModal] = useState(false);
-  const [brightness, setBrightness] = useState(160);
-  const [showBrightnessOverlay, setShowBrightnessOverlay] = useState(false);
   const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] = useState(null);
 
   useEffect(() => {
@@ -260,29 +286,7 @@ function App() {
     });
   }, []);
 
-  useEffect(() => {
-    const handleBrightnessKeyDown = (e) => {
-      if (showTutorial || (e.key.toLowerCase() === 'm' && !showBrightnessOverlay)) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.key.toLowerCase() === 'm' && !showBrightnessOverlay && !showTutorial) {
-          setShowBrightnessOverlay(true);
-        }
-      }
-    };
 
-    const handleOverlayDismiss = () => {
-      setShowBrightnessOverlay(false);
-    };
-
-    document.addEventListener('keydown', handleBrightnessKeyDown, { capture: true });
-    window.addEventListener('brightness-overlay-dismiss', handleOverlayDismiss);
-
-    return () => {
-      document.removeEventListener('keydown', handleBrightnessKeyDown, { capture: true });
-      window.removeEventListener('brightness-overlay-dismiss', handleOverlayDismiss);
-    };
-  }, [showBrightnessOverlay, showTutorial]);
 
   const {
     isAuthenticated,
@@ -300,6 +304,7 @@ function App() {
     topArtists,
     likedSongs,
     radioMixes,
+    userShows,
     initialDataLoaded,
     isLoading,
     errors: dataErrors,
@@ -332,7 +337,7 @@ function App() {
 
   const [gradientState, updateGradientColors] = useGradientState(activeSection);
 
-  const playbackProgress = usePlaybackProgress(accessToken);
+  const playbackProgress = usePlaybackProgress(currentPlayback, refreshPlaybackState, accessToken);
 
   const {
     showMappingOverlay: showGlobalMappingOverlay,
@@ -427,7 +432,9 @@ function App() {
   }, [isAuthenticated, setActiveSection]);
 
   useEffect(() => {
-    if (activeSection === "recents" && recentAlbums.length > 0) {
+    if (showTutorial) {
+      updateGradientColors(null, "auth");
+    } else if (activeSection === "recents" && recentAlbums.length > 0) {
       const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url;
       if (firstAlbumImage) {
         updateGradientColors(firstAlbumImage, "recents");
@@ -461,6 +468,7 @@ function App() {
     userPlaylists,
     topArtists,
     currentlyPlayingAlbum,
+    showTutorial,
   ]);
 
   useEffect(() => {
@@ -620,10 +628,12 @@ function App() {
         onClose={handleCloseContent}
         onNavigateToNowPlaying={handleNavigateToNowPlaying}
         currentlyPlayingTrackUri={currentPlayback?.item?.uri}
+        currentPlayback={currentPlayback}
         radioMixes={radioMixes}
         updateGradientColors={updateGradientColors}
         setIgnoreNextRelease={setIgnoreNextRelease}
         playbackProgress={playbackProgress}
+        refreshPlaybackState={refreshPlaybackState}
       />
     );
   } else {
@@ -637,6 +647,7 @@ function App() {
         topArtists={topArtists}
         likedSongs={likedSongs}
         radioMixes={radioMixes}
+        userShows={userShows}
         currentPlayback={currentPlayback}
         currentlyPlayingAlbum={currentlyPlayingAlbum}
         playbackProgress={playbackProgress}
@@ -712,12 +723,6 @@ function App() {
                         activeButton={globalActiveButton}
                       />
                     )}
-                    <BrightnessOverlay
-                      isVisible={showBrightnessOverlay}
-                      brightness={brightness}
-                      onBrightnessChange={setBrightness}
-                      onDismiss={() => setShowBrightnessOverlay(false)}
-                    />
                   </div>
                 </main>
               </Router>
