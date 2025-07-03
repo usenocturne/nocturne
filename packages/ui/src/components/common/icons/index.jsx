@@ -63,8 +63,6 @@ export { default as LockIcon } from "./LockIcon";
 export { default as DJIcon } from "./DJIcon";
 export { default as CarThingIcon } from "./CarThingIcon";
 export { default as RefreshIcon } from "./RefreshIcon";
-export { default as SkipForwardIcon } from "./SkipForwardIcon";
-export { default as SkipBackwardIcon } from "./SkipBackwardIcon";
 export { default as SpeedIcon } from "./SpeedIcon";
 export { default as BackspaceIcon } from "./BackspaceIcon";
 export { default as ShiftIcon } from "./ShiftIcon";
