@@ -26,6 +26,7 @@ const FontLoader = () => {
           document.fonts.load("400 16px 'Noto Sans HE'"),
           document.fonts.load("400 16px 'Noto Sans TA'"),
           document.fonts.load("400 16px 'Noto Sans TH'"),
+          document.fonts.load("400 16px 'Noto Color Emoji'"),
         ];
 
         await Promise.all(fontLoadPromises);

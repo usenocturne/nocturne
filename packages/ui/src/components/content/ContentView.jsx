@@ -696,10 +696,11 @@ const ContentView = ({
                         maxWidth="280px"
                         pauseDuration={1000}
                         pixelsPerSecond={40}
+                        style={{ fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}
                       />
                     </div>
                   ) : (
-                    <p className="text-white truncate tracking-tight" style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px' }}>
+                    <p className="text-white truncate tracking-tight" style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px', fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}>
                       {track.name || "Unknown Track"}
                     </p>
                   )}
@@ -722,7 +723,7 @@ const ContentView = ({
                             ? 'mr-2'
                             : ""
                           }`}
-                        style={{ fontSize: '28px', fontWeight: '560' }}
+                        style={{ fontSize: '28px', fontWeight: '560', fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}
                       >
                         {artist?.name === null && artist?.type
                           ? artist.type

@@ -173,6 +173,18 @@ export const notoSansTHConfig = {
   ],
 };
 
+export const notoColorEmojiConfig = {
+  name: "Noto Color Emoji",
+  variable: "--font-noto-color-emoji",
+  files: [
+    {
+      path: "/fonts/NotoColorEmoji-Regular.woff2",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+};
+
 export function detectTextScript(text) {
   if (!text) return "latin";
 
@@ -222,18 +234,18 @@ export function getTextDirection(text) {
 }
 
 export const fontFamilyForScript = {
-  latin: `var(--font-inter)`,
-  chinese: `var(--font-noto-sans-sc), var(--font-inter)`,
-  traditionalChinese: `var(--font-noto-sans-tc), var(--font-inter)`,
-  japanese: `var(--font-noto-serif-jp), var(--font-inter)`,
-  korean: `var(--font-noto-sans-kr), var(--font-inter)`,
-  arabic: `var(--font-noto-naskh-ar), var(--font-inter)`,
-  devanagari: `var(--font-noto-sans-dv), var(--font-inter)`,
-  hebrew: `var(--font-noto-sans-he), var(--font-inter)`,
-  bengali: `var(--font-noto-sans-bn), var(--font-inter)`,
-  tamil: `var(--font-noto-sans-ta), var(--font-inter)`,
-  thai: `var(--font-noto-sans-th), var(--font-inter)`,
-  gurmukhi: `var(--font-noto-sans-gk), var(--font-inter)`,
+  latin: `var(--font-inter), var(--font-noto-color-emoji)`,
+  chinese: `var(--font-noto-sans-sc), var(--font-inter), var(--font-noto-color-emoji)`,
+  traditionalChinese: `var(--font-noto-sans-tc), var(--font-inter), var(--font-noto-color-emoji)`,
+  japanese: `var(--font-noto-serif-jp), var(--font-inter), var(--font-noto-color-emoji)`,
+  korean: `var(--font-noto-sans-kr), var(--font-inter), var(--font-noto-color-emoji)`,
+  arabic: `var(--font-noto-naskh-ar), var(--font-inter), var(--font-noto-color-emoji)`,
+  devanagari: `var(--font-noto-sans-dv), var(--font-inter), var(--font-noto-color-emoji)`,
+  hebrew: `var(--font-noto-sans-he), var(--font-inter), var(--font-noto-color-emoji)`,
+  bengali: `var(--font-noto-sans-bn), var(--font-inter), var(--font-noto-color-emoji)`,
+  tamil: `var(--font-noto-sans-ta), var(--font-inter), var(--font-noto-color-emoji)`,
+  thai: `var(--font-noto-sans-th), var(--font-inter), var(--font-noto-color-emoji)`,
+  gurmukhi: `var(--font-noto-sans-gk), var(--font-inter), var(--font-noto-color-emoji)`,
 };
 
 export function generateAllFontFaces() {
@@ -250,6 +262,7 @@ export function generateAllFontFaces() {
       ${createFontFace(notoSansHEConfig.name, notoSansHEConfig.files)}
       ${createFontFace(notoSansTAConfig.name, notoSansTAConfig.files)}
       ${createFontFace(notoSansTHConfig.name, notoSansTHConfig.files)}
+      ${createFontFace(notoColorEmojiConfig.name, notoColorEmojiConfig.files)}
       
       :root {
         ${interFontConfig.variable}: ${interFontConfig.name}, sans-serif;
@@ -264,6 +277,7 @@ export function generateAllFontFaces() {
         ${notoSansHEConfig.variable}: ${notoSansHEConfig.name}, sans-serif;
         ${notoSansTAConfig.variable}: ${notoSansTAConfig.name}, sans-serif;
         ${notoSansTHConfig.variable}: ${notoSansTHConfig.name}, sans-serif;
+        ${notoColorEmojiConfig.variable}: ${notoColorEmojiConfig.name}, sans-serif;
       }
     `;
 }

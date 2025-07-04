@@ -278,6 +278,7 @@ export default function Home({
                 <h4
                   className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
                   onClick={() => album.type !== 'local-track' && onOpenContent(album.id, album.type === 'show' ? "show" : "album")}
+                  style={{ fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}
                 >
                   {album.name}
                 </h4>
@@ -293,6 +294,7 @@ export default function Home({
                      <h4
                        className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
                        onClick={() => onOpenContent(album.artists[0].id, "artist")}
+                       style={{ fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}
                      >
                        {album.artists.map((artist) => artist.name).join(", ")}
                      </h4>
@@ -342,6 +344,7 @@ export default function Home({
             <h4
               className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
               onClick={() => onOpenContent("liked", "liked-songs")}
+              style={{ fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}
             >
               {likedSongs.name}
             </h4>
@@ -408,7 +411,7 @@ export default function Home({
                       <div className="w-full h-full rounded-[12px] bg-white/10"></div>
                     )}
                   </div>
-                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]" style={{ fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}>
                     {playlist.name}
                   </h4>
                   <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
@@ -504,11 +507,12 @@ export default function Home({
                   )}
                 </div>
                 <h4
-                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-                  onClick={() => onOpenContent(artist.id, "artist")}
-                >
-                  {artist.name}
-                </h4>
+                                   className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                 onClick={() => onOpenContent(artist.id, "artist")}
+                 style={{ fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}
+               >
+                 {artist.name}
+               </h4>
                 <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
                   {isFromCurrentlyPlayingArtist(artist.id) ? (
                     <>

@@ -506,11 +506,13 @@ export default function NowPlaying({
                   maxWidth="400px"
                   pauseDuration={1000}
                   pixelsPerSecond={40}
+                  style={{ fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}
                 />
               </div>
               <h4
                 className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId ? 'cursor-pointer' : ''}`}
                 onClick={() => firstArtistId && onNavigateToArtist && onNavigateToArtist(firstArtistId, "artist")}
+                style={{ fontFamily: "var(--font-inter), var(--font-noto-color-emoji)" }}
               >
                 {artistName}
               </h4>
