@@ -486,6 +486,8 @@ function App() {
   }, [showTetheringScreen, enableNetworking]);
 
   useEffect(() => {
+    if (showTutorial) return;
+    
     if (currentlyPlayingAlbum?.images?.[1]?.url) {
       if (activeSection === "nowPlaying") {
         updateGradientColors(currentlyPlayingAlbum.images[1].url, "nowPlaying");
@@ -497,7 +499,7 @@ function App() {
         updateGradientColors("/images/not-playing.webp", activeSection);
       }
     }
-  }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
+  }, [currentlyPlayingAlbum, activeSection, updateGradientColors, showTutorial]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
