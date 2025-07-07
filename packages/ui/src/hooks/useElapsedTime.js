@@ -1,19 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export function useElapsedTime() {
-  const [elapsedTimeEnabled, setElapsedTimeEnabled] = useState(true);
+  const [elapsedTimeEnabled] = useState(() => {
+    const stored = localStorage.getItem("elapsedTimeEnabled");
 
-  useEffect(() => {
-    const elapsedTimeEnabled = localStorage.getItem("elapsedTimeEnabled");
-    if (elapsedTimeEnabled === null) {
+    if (stored === null) {
       localStorage.setItem("elapsedTimeEnabled", "true");
-      setElapsedTimeEnabled(true);
-    } else {
-      setElapsedTimeEnabled(elapsedTimeEnabled === "true");
+      return true;
     }
-  }, []);
+
+    return stored === "true";
+  });
 
   return {
-    elapsedTimeEnabled
+    elapsedTimeEnabled,
   };
 }

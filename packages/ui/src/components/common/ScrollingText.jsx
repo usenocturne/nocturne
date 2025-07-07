@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 
 const ScrollingText = ({
@@ -25,7 +25,7 @@ const ScrollingText = ({
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const updateScrolling = () => {
       if (!textRef.current || !containerRef.current) return;
 
