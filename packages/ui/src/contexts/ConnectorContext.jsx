@@ -14,12 +14,35 @@ export function ConnectorProvider({ children }) {
   const [connectorInfo, setConnectorInfo] = useState({});
 
   useEffect(() => {
+    let intervalId;
+    const POLL_INTERVAL = 15000;
+    const POLL_DURATION = 180000;
+    const startTime = Date.now();
+
+    let connectorFound = false;
+
     const checkConnectorAvailability = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       try {
-        const response = await fetch(`${API_BASE}/info`);
-        setConnectorInfo(response.json());
-        setIsConnectorAvailable(response.ok);
+        const response = await fetch(`${API_BASE}/info`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json().catch(() => ({}));
+        if (response.ok) {
+          setConnectorInfo(data);
+          setIsConnectorAvailable(true);
+          connectorFound = true;
+          clearInterval(intervalId);
+        } else {
+          setIsConnectorAvailable(false);
+        }
       } catch (error) {
+        clearTimeout(timeoutId);
         setIsConnectorAvailable(false);
       } finally {
         setIsLoading(false);
@@ -27,6 +50,17 @@ export function ConnectorProvider({ children }) {
     };
 
     checkConnectorAvailability();
+
+    intervalId = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= POLL_DURATION || connectorFound) {
+        clearInterval(intervalId);
+        return;
+      }
+      checkConnectorAvailability();
+    }, POLL_INTERVAL);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
