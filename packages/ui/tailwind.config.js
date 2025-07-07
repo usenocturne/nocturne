@@ -17,7 +17,6 @@ export default {
           "var(--font-noto-sans-ta)",
           "var(--font-noto-sans-th)",
           "var(--font-noto-sans-gk)",
-          "var(--font-noto-color-emoji)",
           "system-ui",
           "-apple-system",
           "BlinkMacSystemFont",

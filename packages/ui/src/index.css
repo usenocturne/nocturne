@@ -315,7 +315,7 @@ section {
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: white !important;
   border-radius: 6px !important;
-  font-family: var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), var(--font-noto-color-emoji), system-ui, sans-serif !important;
+  font-family: var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif !important;
   font-optical-sizing: auto !important;
   font-size: 18px !important;
   font-weight: 500 !important;

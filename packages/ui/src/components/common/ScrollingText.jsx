@@ -7,7 +7,6 @@ const ScrollingText = ({
   maxWidth = "100%",
   pauseDuration = 1000,
   pixelsPerSecond = 50,
-  style: externalStyle = {},
 }) => {
   const { settings } = useSettings();
   const [shouldScroll, setShouldScroll] = useState(false);
@@ -101,7 +100,7 @@ const ScrollingText = ({
       <div
         ref={textRef}
         className={`inline-block whitespace-nowrap ${className}`}
-        style={shouldScroll ? { ...externalStyle, ...style } : externalStyle}
+        style={shouldScroll ? style : {}}
       >
         {text}
       </div>
