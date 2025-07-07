@@ -837,7 +837,7 @@ export default function Settings({
   }, [isAnimating, showSubpage, showParent, setActiveSection]);
 
   return (
-    <div className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container" style={{ touchAction: "pan-y", overflowX: "hidden" }}>
+    <div className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container scroll-smooth" style={{ touchAction: "pan-y", overflowX: "hidden", WebkitOverflowScrolling: "touch", willChange: "transform" }}>
       <style>{`
         .screen-transition {
           transition: transform ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1),
