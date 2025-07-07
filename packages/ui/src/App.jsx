@@ -432,6 +432,7 @@ function App() {
   }, [isAuthenticated, setActiveSection]);
 
   useEffect(() => {
+    if (viewingContent) return;
     if (showTutorial) {
       updateGradientColors(null, "auth");
     } else if (activeSection === "recents" && recentAlbums.length > 0) {
@@ -463,6 +464,7 @@ function App() {
     }
   }, [
     activeSection,
+    viewingContent,
     updateGradientColors,
     recentAlbums,
     userPlaylists,
@@ -487,6 +489,8 @@ function App() {
 
   useEffect(() => {
     if (showTutorial) return;
+
+    if (viewingContent) return;
     
     if (currentlyPlayingAlbum?.images?.[1]?.url) {
       if (activeSection === "nowPlaying") {
@@ -499,7 +503,7 @@ function App() {
         updateGradientColors("/images/not-playing.webp", activeSection);
       }
     }
-  }, [currentlyPlayingAlbum, activeSection, updateGradientColors, showTutorial]);
+  }, [currentlyPlayingAlbum, activeSection, updateGradientColors, showTutorial, viewingContent]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
