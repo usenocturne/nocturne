@@ -235,6 +235,25 @@ export function useWiFiNetworks() {
         if (!connectResponse.ok) {
           throw new Error(`Failed to connect to network: ${connectResponse.status}`);
         }
+
+        try {
+          if (typeof localStorage !== "undefined") {
+            const storageKey = "savedWifiNetworks";
+            const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+
+            const filtered = existing.filter((item) => item && item.ssid !== network.ssid);
+
+            const entry = {
+              ssid: network.ssid,
+              psk: hasPasswordSecurity(network.flags) ? password || undefined : undefined,
+            };
+
+            filtered.push(entry);
+            localStorage.setItem(storageKey, JSON.stringify(filtered));
+          }
+        } catch (storageErr) {
+          console.error("Failed to persist Wi-Fi credentials in localStorage", storageErr);
+        }
       }
 
       setTimeout(() => {
@@ -249,7 +268,7 @@ export function useWiFiNetworks() {
     } finally {
       setLoadingState(prev => ({ ...prev, connecting: false }));
     }
-  }, [scanNetworks, fetchNetworkStatus, handleFetchError]);
+  }, [scanNetworks, fetchNetworkStatus, handleFetchError, hasPasswordSecurity]);
 
   const connectToSavedNetwork = useCallback(async (networkId) => {
     setLoadingState(prev => ({ ...prev, connecting: true }));
