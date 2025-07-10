@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { networkAwareRequest, waitForNetwork } from '../utils/networkAwareRequest';
+import { useNetwork } from "./useNetwork";
 
 let globalWebSocket = null;
 let globalConnectionId = null;
@@ -20,6 +21,7 @@ let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 
 export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
+  const { isConnected: isNetworkConnected } = useNetwork();
   const [currentPlayback, setCurrentPlayback] = useState(null);
   const [currentlyPlayingAlbum, setCurrentlyPlayingAlbum] = useState(null);
   const [albumChangeEvent, setAlbumChangeEvent] = useState(null);
@@ -66,7 +68,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
         if (podcastPollingInterval || !isPodcastPlaying) return;
         
         podcastPollingInterval = setInterval(async () => {
-          if (isPodcastPlaying && accessTokenRef.current && navigator.onLine) {
+          if (isPodcastPlaying && accessTokenRef.current && isNetworkConnected) {
             try {
               const now = Date.now();
               if (now - lastPodcastFetch < 25000) return;
@@ -182,7 +184,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   }, [stopPodcastPolling, initialFetchInProgress]);
 
   const fetchCurrentPlayback = useCallback(async (forceRefresh = false) => {
-    if (!accessTokenRef.current || !navigator.onLine) {
+    if (!accessTokenRef.current || !isNetworkConnected) {
       if (!initialStateLoadedRef.current) {
         setCurrentPlayback(null);
       }
@@ -232,7 +234,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
       console.error("Error fetching current playback:", err);
       setError(err.message);
       
-      if (err.name === 'NetworkError' || !navigator.onLine) {
+      if (err.name === 'NetworkError' || !isNetworkConnected) {
         resetPlaybackState();
         cleanupWebSocket();
       }
@@ -296,7 +298,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   }, [reconnectTimeoutRef]);
 
   const connectWebSocket = useCallback(async () => {
-    if (!accessTokenRef.current || (isConnecting && globalWebSocket && globalWebSocket.readyState === WebSocket.CONNECTING) || isAttemptingReconnect || !navigator.onLine) {
+    if (!accessTokenRef.current || (isConnecting && globalWebSocket && globalWebSocket.readyState === WebSocket.CONNECTING) || isAttemptingReconnect || !isNetworkConnected) {
       return;
     }
 
@@ -406,7 +408,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
               }
             } catch (error) {
               console.error("Error setting up notifications:", error);
-              if (error.name === 'NetworkError' || !navigator.onLine) {
+              if (error.name === 'NetworkError' || !isNetworkConnected) {
                 cleanupWebSocket();
               }
             }
@@ -460,7 +462,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
             keepAliveInterval = null;
           }
 
-          if (connectionCount > 0 && navigator.onLine) {
+          if (connectionCount > 0 && isNetworkConnected) {
             const backoffTime = Math.min(1000 * Math.pow(1.5, Math.min(connectionErrors, wasGloballyConnecting ? connectionErrors +1 : connectionErrors)), 15000);
             connectionErrors++;
 
@@ -469,10 +471,10 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
             }
 
             reconnectTimeoutRef.current = setTimeout(async () => {
-              if (connectionCount > 0 && navigator.onLine) {
+              if (connectionCount > 0 && isNetworkConnected) {
                 try {
                   await waitForNetwork();
-                  if (navigator.onLine) {
+                  if (isNetworkConnected) {
                     await fetchCurrentPlayback();
                     connectWebSocket();
                   } else {
@@ -481,7 +483,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
                 } catch (error) {
                   console.error("Failed during pre-reconnect sequence:", error);
                   isAttemptingReconnect = false;
-                  if (connectionCount > 0 && navigator.onLine) {
+                  if (connectionCount > 0 && isNetworkConnected) {
                       const nextRetryTime = Math.min(backoffTime * 2, 30000);
                       reconnectTimeoutRef.current = setTimeout(() => {
                           connectWebSocket();

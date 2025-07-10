@@ -49,10 +49,10 @@ export function useAuth() {
       }
 
       if (authInitializationState.refreshing) return false;
-      
-      await waitForNetwork();
-      
+
       authInitializationState.refreshing = true;
+
+      await waitForNetwork();
 
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);

@@ -7,14 +7,23 @@ export class NetworkError extends Error {
 
 const STATUS_ENDPOINT = "http://localhost:5000/network/status";
 let hasDaemonFailed = false;
+const NETWORK_CHECK_BYPASS_KEY = "networkCheckBypass";
+
+function isBypassed() {
+  try {
+    return typeof localStorage !== "undefined" && localStorage.getItem(NETWORK_CHECK_BYPASS_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 
 export async function checkNetworkConnectivity() {
-  if (hasDaemonFailed) {
-    return { isConnected: navigator.onLine, source: "browser" };
+  if (isBypassed()) {
+    return { isConnected: true, source: "bypass" };
   }
 
-  if (!navigator.onLine) {
-    return { isConnected: false, source: "browser" };
+  if (hasDaemonFailed) {
+    return { isConnected: false, source: "daemon" };
   }
 
   try {
@@ -31,7 +40,7 @@ export async function checkNetworkConnectivity() {
 
     if (!response.ok) {
       hasDaemonFailed = true;
-      return { isConnected: navigator.onLine, source: "browser" };
+      return { isConnected: false, source: "browser" };
     }
 
     const data = await response.json();
@@ -42,15 +51,19 @@ export async function checkNetworkConnectivity() {
   } catch (error) {
     hasDaemonFailed = true;
     return {
-      isConnected: navigator.onLine,
+      isConnected: false,
       source: "browser",
     };
   }
 }
 
 export async function checkNetworkConnectivitySync() {
+  if (isBypassed()) {
+    return { isConnected: true, source: "bypass" };
+  }
+
   if (hasDaemonFailed) {
-    return { isConnected: navigator.onLine, source: "browser" };
+    return { isConnected: false, source: "daemon" };
   }
 
   try {
@@ -67,7 +80,7 @@ export async function checkNetworkConnectivitySync() {
 
     if (!response.ok) {
       hasDaemonFailed = true;
-      return { isConnected: navigator.onLine, source: "browser" };
+      return { isConnected: false, source: "browser" };
     }
 
     const data = await response.json();
@@ -78,7 +91,7 @@ export async function checkNetworkConnectivitySync() {
   } catch (error) {
     hasDaemonFailed = true;
     return {
-      isConnected: navigator.onLine,
+      isConnected: false,
       source: "browser",
     };
   }
