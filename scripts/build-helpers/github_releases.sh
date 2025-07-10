@@ -36,6 +36,7 @@ if [ -z "$VER" ]; then
   if [ -z "$NOSUM" ]; then
     curl -LO "https://github.com/$REPO/releases/latest/download/$ASSET.sha256"
     sha256sum -c "$ASSET.sha256"
+    rm "$ASSET.sha256"
   fi
 else
   curl -LO "https://github.com/$REPO/releases/download/$VER/$ASSET"
@@ -43,10 +44,11 @@ else
   if [ -z "$NOSUM" ]; then
     curl -LO "https://github.com/$REPO/releases/download/$VER/$ASSET.sha256"
     sha256sum -c "$ASSET.sha256"
+    rm "$ASSET.sha256"
   fi
 fi
 
 if [ -z "$nocopy" ]; then
   mkdir -p "$DEST"
-  cp "$ASSET" "$DEST"
+  mv "$ASSET" "$DEST"
 fi

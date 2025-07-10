@@ -8,6 +8,7 @@ set -e
 
 : "${NOCTURNE_UI_TAG:="main"}"
 : "${NOCTURNED_TAG:="v1.0.9"}"
+: "${NOCTURNE_CONNECTOR_TAG:="v3.0.0-beta3"}"
 : "${WINGMAN_TAG:="v1.0.1"}"
 
 : "${VOID_BUILD:="20250202"}"
@@ -45,8 +46,8 @@ export CACHE_PATH="${SAVED_PWD}/cache"
 
 export SCRIPTS_PATH="${SAVED_PWD}/scripts"
 export HELPERS_PATH="${SAVED_PWD}/scripts/build-helpers"
-export M4_PATH="${SAVED_PWD}/m4"
 export RES_PATH="${SAVED_PWD}/resources"
+export M4_PATH="${RES_PATH}/m4"
 DEF_STAGE_PATH="${SAVED_PWD}/scripts/stages"
 
 mkdir -p "$IMAGE_PATH" "$ROOTFS_PATH" "$OUTPUT_PATH" "$CACHE_PATH"

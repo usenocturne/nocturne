@@ -20,4 +20,6 @@ cp "$RES_PATH"/config/sshd_config "$ROOTFS_PATH"/etc/sshd_config
 rm -rf "$ROOTFS_PATH"/etc/ssh
 ln -sf /var/local/etc/ssh "$ROOTFS_PATH"/etc/ssh
 
+cp "$RES_PATH"/connector.img "$ROOTFS_PATH"/connector.img
+
 DEFAULT_SERVICES="${DEFAULT_SERVICES} sshd"

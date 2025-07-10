@@ -15,4 +15,5 @@ cd "$IMAGE_PATH"/ || exit 1
 zip -r9 "$OUTPUT_PATH"/nocturne_image.zip .
 
 cd "$OUTPUT_PATH"/ || exit 1
+sha256sum nocturne_image.zip > nocturne_image.zip.sha256
 sha256sum nocturne_update.img.gz > nocturne_update.img.gz.sha256
