@@ -154,6 +154,15 @@ export function useWiFiNetworks() {
 
       const status = await response.json();
       setNetworkStatus(status);
+
+      try {
+        if (typeof localStorage !== "undefined" && status?.networkId) {
+          localStorage.setItem("lastConnectedWifiNetworkId", String(status.networkId));
+        }
+      } catch (storageErr) {
+        console.error("Failed to store last connected Wi-Fi network", storageErr);
+      }
+
       return status;
     } catch (error) {
       handleFetchError(error, 'Network status fetch');
