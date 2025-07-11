@@ -243,9 +243,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
       setIsLoading(false);
       setInitialFetchInProgress(false);
     }
-  }, [processPlaybackState, resetPlaybackState]);
-
-
+  }, [processPlaybackState, resetPlaybackState, isNetworkConnected]);
 
   const cleanupWebSocket = useCallback(() => {
     connectionCount = Math.max(0, connectionCount - 1);
@@ -508,7 +506,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
           globalWebSocket = null;
       }
     }
-  }, [accessTokenRef, fetchCurrentPlayback, cleanupWebSocket, initialStateLoadedRef, networkAwareRequest, processPlaybackState]);
+  }, [accessTokenRef, fetchCurrentPlayback, cleanupWebSocket, initialStateLoadedRef, networkAwareRequest, processPlaybackState, isNetworkConnected]);
 
   useEffect(() => {
     const subscriberId = subscriberIdRef.current;

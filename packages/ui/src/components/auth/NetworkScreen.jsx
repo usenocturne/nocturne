@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useGradientState } from "../../hooks/useGradientState";
+import { useNetwork } from "../../hooks/useNetwork";
 import { useBluetooth } from "../../hooks/useNocturned";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import {
@@ -12,7 +13,7 @@ import WiFiNetworks from "../settings/network/WiFiNetworks";
 import BluetoothDevices from "../settings/network/BluetoothDevices";
 import GradientBackground from "../common/GradientBackground";
 
-const NetworkScreen = ({ isConnectionLost = true }) => {
+const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
   const [showMain, setShowMain] = React.useState(true);
   const [showParent, setShowParent] = React.useState(false);
   const [showSubpage, setShowSubpage] = React.useState(false);
@@ -20,6 +21,7 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
   const [activeSubItem, setActiveSubItem] = React.useState(null);
   const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
   const { reconnectAttempt: bluetoothReconnectAttempt } = useBluetooth();
+  const { isConnected: isInternetConnected, hasEverConnectedThisSession } = useNetwork();
 
   useEffect(() => {
     const handleReconnectAttempt = (event) => {
@@ -31,6 +33,12 @@ const NetworkScreen = ({ isConnectionLost = true }) => {
       window.removeEventListener('bluetoothReconnectAttempt', handleReconnectAttempt);
     };
   }, []);
+
+  useEffect(() => {
+    if (isInternetConnected && hasEverConnectedThisSession && onConnectionRestored) {
+      onConnectionRestored();
+    }
+  }, [isInternetConnected, hasEverConnectedThisSession, onConnectionRestored]);
 
   useEffect(() => {
     const cleanup = () => {

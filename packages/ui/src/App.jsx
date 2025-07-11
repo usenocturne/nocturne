@@ -596,6 +596,10 @@ function App() {
     }
   };
 
+  const handleConnectionRestored = () => {
+    refreshPlaybackState(true);
+  };
+
   const isFlashing = isUpdating && updateStatus.stage === "flash";
 
   const showConnectionLostScreen = initialCheckDone &&
@@ -617,9 +621,9 @@ function App() {
   if (authIsLoading && !initialCheckDone) {
     content = null;
   } else if (!isInternetConnected && !hasEverConnectedThisSession && initialCheckDone) {
-    content = <NetworkScreen isConnectionLost={true} />;
+    content = <NetworkScreen isConnectionLost={true} onConnectionRestored={handleConnectionRestored} />;
   } else if (showConnectionLostScreen) {
-    content = <NetworkScreen isConnectionLost={true} deviceName={lastConnectedDevice?.name} />;
+    content = <NetworkScreen isConnectionLost={true} deviceName={lastConnectedDevice?.name} onConnectionRestored={handleConnectionRestored} />;
   } else if (!isAuthenticated && initialCheckDone) {
     content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showTutorial) {

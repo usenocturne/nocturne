@@ -98,6 +98,11 @@ export function useWiFiNetworks() {
     }, []);
   }, []);
 
+  const hasPasswordSecurity = useCallback((flags) => {
+    const flagStr = flags.toString();
+    return flagStr.includes("WPA") || flagStr.includes("WEP");
+  }, []);
+
   const scanNetworks = useCallback(async (isInitial = false) => {
     if (scanningRef.current) return;
     scanningRef.current = true;
@@ -229,6 +234,14 @@ export function useWiFiNetworks() {
         if (!selectResponse.ok) {
           throw new Error(`Failed to select network: ${selectResponse.status}`);
         }
+
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('lastConnectedWifiNetworkId', String(existingSavedNetwork.networkId));
+          }
+        } catch (storageErr) {
+          console.error('Failed to store last connected Wi-Fi network ID', storageErr);
+        }
       } else {
         const connectResponse = await fetch(`${API_BASE}/network/connect`, {
           method: 'POST',
@@ -246,7 +259,7 @@ export function useWiFiNetworks() {
         }
 
         try {
-          if (typeof localStorage !== "undefined") {
+          if (typeof localStorage !== "undefined" && typeof localStorage !== "undefined") {
             const storageKey = "savedWifiNetworks";
             const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
 
@@ -292,6 +305,14 @@ export function useWiFiNetworks() {
         throw new Error(`Failed to select network: ${response.status}`);
       }
 
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('lastConnectedWifiNetworkId', String(networkId));
+        }
+      } catch (storageErr) {
+        console.error('Failed to store last connected Wi-Fi network ID', storageErr);
+      }
+
       setTimeout(() => {
         scanNetworks();
         fetchNetworkStatus();
@@ -329,11 +350,6 @@ export function useWiFiNetworks() {
       setLoadingState(prev => ({ ...prev, forgetting: false }));
     }
   }, [scanNetworks, handleFetchError]);
-
-  const hasPasswordSecurity = useCallback((flags) => {
-    const flagStr = flags.toString();
-    return flagStr.includes("WPA") || flagStr.includes("WEP");
-  }, []);
 
   const handleWsMessage = useCallback((data) => {
     if (data.type === 'network') {
