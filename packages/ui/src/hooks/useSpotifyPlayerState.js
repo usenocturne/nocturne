@@ -23,6 +23,7 @@ let isPodcastPlaying = false;
 let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
+let hasInvalidToken = false;
 
 export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   const { isConnected: isNetworkConnected } = useNetwork();
@@ -45,6 +46,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
 
   useEffect(() => {
     accessTokenRef.current = accessToken;
+    hasInvalidToken = false;
   }, [accessToken]);
 
   const stopPodcastPolling = useCallback(() => {
@@ -214,6 +216,8 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
 
   const fetchCurrentPlayback = useCallback(
     async (forceRefresh = false) => {
+      if (hasInvalidToken) return;
+
       if (!accessTokenRef.current || !isNetworkConnected) {
         if (!initialStateLoadedRef.current) {
           setCurrentPlayback(null);
@@ -247,6 +251,13 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
             },
           ),
         );
+
+        if (response.status === 401 || response.status === 403) {
+          hasInvalidToken = true;
+          resetPlaybackState(true);
+          cleanupWebSocket();
+          return;
+        }
 
         if (response.status === 204) {
           resetPlaybackState();
@@ -339,6 +350,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
 
   const connectWebSocket = useCallback(async () => {
     if (
+      hasInvalidToken ||
       !accessTokenRef.current ||
       (isConnecting &&
         globalWebSocket &&
@@ -685,7 +697,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
       const newAccessToken = event.detail.accessToken;
       if (newAccessToken && newAccessToken !== accessTokenRef.current) {
         accessTokenRef.current = newAccessToken;
-
+        hasInvalidToken = false;
         initialPlaybackFetchDone = false;
 
         if (
