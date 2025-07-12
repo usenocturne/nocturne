@@ -84,22 +84,22 @@ After setting up your local server, you may follow these steps to see your chang
    ```
    mount -o remount,rw /
    ```
-4. Edit `/etc/init.d/weston`.
+4. Edit `/etc/sv/chromium/run`.
    ```
-   vi /etc/init.d/weston
+   vi /etc/sv/chromium/run
    ```
-5. Jump to the end of the `command_args` line by using arrow keys to go over it, and type `$`.
+5. Jump to the end of the `exec` line by using arrow keys to go over it, and type `$`.
 6. Enter insert mode with `i` and replace the URL to point to your local server's IP address.
    ```bash
-   --app=http://localhost:3000
+   --app=http://localhost:80
    # turns into
    --app=http://your.local.ip.address:port
    ```
-7. Remount the rootfs as read-only, sync changes, and restart Weston.
+7. Remount the rootfs as read-only, sync changes, and restart Chromium.
    ```
    mount -o remount,ro /
    sync
-   rc-service weston restart
+   sv restart chromium
    ```
 
 ## Contributing
@@ -137,7 +137,7 @@ This software was made possible only through the following individuals and open 
 
 ## Related
 
-- [nocturne-image](https://github.com/usenocturne/nocturne-image) - The Alpine image that runs this web application
+- [nocturne-image](https://github.com/usenocturne/nocturne-image) - The Void Linux image that runs this web application
 - [nocturned](https://github.com/usenocturne/nocturned) - Local API for the Car Thing to handle bluetooth + others
 
 ## License
