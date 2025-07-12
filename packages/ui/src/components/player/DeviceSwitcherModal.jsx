@@ -12,7 +12,7 @@ import {
   SmartphoneIcon,
   TvIcon,
   GamepadIcon,
-  CarIcon
+  CarIcon,
 } from "../common/icons";
 import { generateRandomString } from "../../utils/helpers";
 
@@ -31,28 +31,30 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
     try {
       setIsLoading(true);
       const response = await fetch(
-        `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`, {
-        method: 'PUT',
-        headers: {
-          'accept': 'application/json',
-          'accept-language': 'en-US,en;q=0.9',
-          'authorization': `Bearer ${accessToken}`,
-          'content-type': 'application/json',
-          'x-spotify-connection-id': generateRandomString(148)
+        `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`,
+        {
+          method: "PUT",
+          headers: {
+            accept: "application/json",
+            "accept-language": "en-US,en;q=0.9",
+            authorization: `Bearer ${accessToken}`,
+            "content-type": "application/json",
+            "x-spotify-connection-id": generateRandomString(148),
+          },
+          body: JSON.stringify({
+            member_type: "CONNECT_STATE",
+            device: {
+              device_info: {
+                capabilities: {
+                  can_be_player: false,
+                  hidden: true,
+                  needs_full_player_state: true,
+                },
+              },
+            },
+          }),
         },
-        body: JSON.stringify({
-          'member_type': 'CONNECT_STATE',
-          'device': {
-            'device_info': {
-              'capabilities': {
-                'can_be_player': false,
-                'hidden': true,
-                'needs_full_player_state': true
-              }
-            }
-          }
-        })
-      });
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch devices");
@@ -70,21 +72,28 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
   const handleDeviceSelect = async (deviceId) => {
     try {
       setIsTransferring(true);
-      const transferResponse = await fetch("https://api.spotify.com/v1/me/player", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
+      const transferResponse = await fetch(
+        "https://api.spotify.com/v1/me/player",
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            device_ids: [deviceId],
+            play: false,
+          }),
         },
-        body: JSON.stringify({
-          device_ids: [deviceId],
-          play: false,
-        }),
-      });
+      );
 
       if (!transferResponse.ok) {
         const errorData = await transferResponse.json().catch(() => ({}));
-        console.error("Failed to transfer playback to device:", deviceId, errorData);
+        console.error(
+          "Failed to transfer playback to device:",
+          deviceId,
+          errorData,
+        );
         throw new Error("Failed to transfer playback");
       }
 
@@ -119,11 +128,15 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
   };
 
   return (
-    <Dialog open={isOpen} onClose={() => onClose(false)} className="relative z-40">
+    <Dialog
+      open={isOpen}
+      onClose={() => onClose(false)}
+      className="relative z-40"
+    >
       <DialogBackdrop
         transition
         className="fixed inset-0 bg-black transition-opacity data-[closed]:opacity-0 data-[enter]:opacity-100 data-[enter]:duration-300 data-[leave]:duration-300 data-[enter]:ease-out data-[leave]:ease-in"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
+        style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
       />
 
       <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
@@ -138,39 +151,67 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
                   <DialogTitle
                     as="h3"
                     className="text-4xl font-medium text-white"
-                    style={{ fontSize: '36px', fontWeight: 560, letterSpacing: '-0.025em' }}
+                    style={{
+                      fontSize: "36px",
+                      fontWeight: 560,
+                      letterSpacing: "-0.025em",
+                    }}
                   >
                     Switch Device
                   </DialogTitle>
                 </div>
                 {isLoading ? (
                   <div className="mt-2">
-                    <p className="text-white opacity-60" style={{ fontSize: '28px', fontWeight: 560, letterSpacing: '-0.025em' }}>
+                    <p
+                      className="text-white opacity-60"
+                      style={{
+                        fontSize: "28px",
+                        fontWeight: 560,
+                        letterSpacing: "-0.025em",
+                      }}
+                    >
                       Loading available devices...
                     </p>
                   </div>
                 ) : devices.length === 0 ? (
                   <div className="mt-2">
-                    <p className="text-white opacity-60" style={{ fontSize: '28px', fontWeight: 560, letterSpacing: '-0.025em' }}>
+                    <p
+                      className="text-white opacity-60"
+                      style={{
+                        fontSize: "28px",
+                        fontWeight: 560,
+                        letterSpacing: "-0.025em",
+                      }}
+                    >
                       No devices found
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-2 px-6" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                  <div
+                    className="mt-2 px-6"
+                    style={{ maxHeight: "60vh", overflowY: "auto" }}
+                  >
                     {devices.map((device) => (
                       <button
                         key={device.id}
                         onClick={() => handleDeviceSelect(device.device_id)}
                         disabled={isTransferring}
                         className="w-full flex items-center justify-between p-4 mb-2 rounded-xl hover:bg-white hover:bg-opacity-5 transition-colors disabled:opacity-50"
-                        style={{ backgroundColor: 'transparent' }}
+                        style={{ backgroundColor: "transparent" }}
                       >
                         <div className="flex items-center">
-                          <div style={{ marginRight: '12px' }}>
+                          <div style={{ marginRight: "12px" }}>
                             {getDeviceIcon(device.device_type)}
                           </div>
                           <div className="text-left">
-                            <p className="text-white" style={{ fontSize: '28px', fontWeight: 560, letterSpacing: '-0.025em' }}>
+                            <p
+                              className="text-white"
+                              style={{
+                                fontSize: "28px",
+                                fontWeight: 560,
+                                letterSpacing: "-0.025em",
+                              }}
+                            >
                               {device.name}
                             </p>
                           </div>
@@ -191,11 +232,11 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
                 disabled={isLoading}
                 className="flex-1 flex justify-center items-center px-3 py-3 hover:bg-white hover:bg-opacity-5 transition-colors disabled:opacity-50 border-r border-slate-100 border-opacity-25"
                 style={{
-                  fontSize: '28px',
+                  fontSize: "28px",
                   fontWeight: 560,
-                  letterSpacing: '-0.025em',
-                  color: '#6c8bd5',
-                  backgroundColor: 'transparent'
+                  letterSpacing: "-0.025em",
+                  color: "#6c8bd5",
+                  backgroundColor: "transparent",
                 }}
               >
                 Refresh
@@ -205,11 +246,11 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
                 onClick={() => onClose(null)}
                 className="flex-1 flex justify-center items-center px-3 py-3 hover:bg-white hover:bg-opacity-5 transition-colors"
                 style={{
-                  fontSize: '28px',
+                  fontSize: "28px",
                   fontWeight: 560,
-                  letterSpacing: '-0.025em',
-                  color: '#6c8bd5',
-                  backgroundColor: 'transparent'
+                  letterSpacing: "-0.025em",
+                  color: "#6c8bd5",
+                  backgroundColor: "transparent",
                 }}
               >
                 Cancel

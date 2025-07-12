@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { networkAwareRequest, waitForNetwork } from '../utils/networkAwareRequest';
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  networkAwareRequest,
+  waitForNetwork,
+} from "../utils/networkAwareRequest";
 
-const API_BASE = 'http://localhost:5000';
+const API_BASE = "http://localhost:5000";
 
 let globalWsRef = null;
 let globalWsListeners = [];
@@ -16,14 +19,16 @@ let connectRequestQueue = [];
 const clearConnectQueue = () => {
   while (connectRequestQueue.length > 0) {
     const pendingRequest = connectRequestQueue.shift();
-    pendingRequest.reject(new Error('Connection already established to another device'));
+    pendingRequest.reject(
+      new Error("Connection already established to another device"),
+    );
   }
 };
 
 export const addGlobalWsListener = (id, handlers) => {
   const listener = {
     id,
-    ...handlers
+    ...handlers,
   };
   globalWsListeners.push(listener);
 
@@ -31,9 +36,9 @@ export const addGlobalWsListener = (id, handlers) => {
     setupGlobalWebSocket();
     wsInitialized = true;
   }
-  
+
   return () => {
-    globalWsListeners = globalWsListeners.filter(l => l.id !== id);
+    globalWsListeners = globalWsListeners.filter((l) => l.id !== id);
   };
 };
 
@@ -46,9 +51,9 @@ const queueConnectRequest = async (deviceAddress, options = {}) => {
       deviceAddress,
       options,
       resolve,
-      reject
+      reject,
     };
-    
+
     connectRequestQueue.push(request);
     processConnectQueue();
   });
@@ -58,44 +63,49 @@ const processConnectQueue = async () => {
   if (isConnectRequestInProgress || connectRequestQueue.length === 0) {
     return;
   }
-  
+
   isConnectRequestInProgress = true;
   const request = connectRequestQueue.shift();
-  
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
-    
-    const response = await fetch(`${API_BASE}/bluetooth/connect/${request.deviceAddress}`, {
-      method: 'POST',
-      signal: controller.signal,
-      ...request.options
-    });
-    
+
+    const response = await fetch(
+      `${API_BASE}/bluetooth/connect/${request.deviceAddress}`,
+      {
+        method: "POST",
+        signal: controller.signal,
+        ...request.options,
+      },
+    );
+
     clearTimeout(timeoutId);
-    
+
     let connectionSuccessful = false;
-    
+
     if (response.ok) {
       const data = await response.json().catch(() => ({}));
       connectionSuccessful = data.connected !== false;
-      
+
       if (connectionSuccessful) {
         while (connectRequestQueue.length > 0) {
           const pendingRequest = connectRequestQueue.shift();
-          pendingRequest.reject(new Error('Connection already established to another device'));
+          pendingRequest.reject(
+            new Error("Connection already established to another device"),
+          );
         }
       }
     }
-    
+
     request.resolve(response);
-    
+
     if (!connectionSuccessful && connectRequestQueue.length > 0) {
       setTimeout(processConnectQueue, 100);
     }
   } catch (error) {
     request.reject(error);
-    
+
     if (connectRequestQueue.length > 0) {
       setTimeout(processConnectQueue, 100);
     }
@@ -108,37 +118,45 @@ const setupGlobalWebSocket = async () => {
   if (globalWsRef) return;
 
   try {
-    console.log('Connecting to WebSocket...');
-    const socket = new WebSocket(`ws://${API_BASE.replace('http://', '')}/ws`);
+    console.log("Connecting to WebSocket...");
+    const socket = new WebSocket(`ws://${API_BASE.replace("http://", "")}/ws`);
     globalWsRef = socket;
 
     socket.onopen = () => {
-      console.log('Connected to WebSocket');
-      globalWsListeners.forEach(listener => listener.onOpen && listener.onOpen(socket));
+      console.log("Connected to WebSocket");
+      globalWsListeners.forEach(
+        (listener) => listener.onOpen && listener.onOpen(socket),
+      );
     };
 
     socket.onclose = () => {
-      console.log('Disconnected from WebSocket');
-      globalWsListeners.forEach(listener => listener.onClose && listener.onClose());
+      console.log("Disconnected from WebSocket");
+      globalWsListeners.forEach(
+        (listener) => listener.onClose && listener.onClose(),
+      );
       globalWsRef = null;
     };
 
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        globalWsListeners.forEach(listener => listener.onMessage && listener.onMessage(data));
+        globalWsListeners.forEach(
+          (listener) => listener.onMessage && listener.onMessage(data),
+        );
       } catch (err) {
-        console.error('WebSocket message error:', err);
+        console.error("WebSocket message error:", err);
       }
     };
 
     socket.onerror = (err) => {
-      console.error('WebSocket error:', err);
-      globalWsListeners.forEach(listener => listener.onError && listener.onError(err));
+      console.error("WebSocket error:", err);
+      globalWsListeners.forEach(
+        (listener) => listener.onError && listener.onError(err),
+      );
       socket.close();
     };
   } catch (error) {
-    console.error('Error setting up WebSocket:', error);
+    console.error("Error setting up WebSocket:", error);
   }
 };
 
@@ -165,7 +183,7 @@ export const useNocturned = () => {
       },
       onError: () => {
         setWsConnected(false);
-      }
+      },
     });
 
     if (globalWsRef && globalWsRef.readyState === WebSocket.OPEN) {
@@ -174,48 +192,52 @@ export const useNocturned = () => {
 
     return () => {
       globalWsListeners = globalWsListeners.filter(
-        listener => listener.id !== listenerId
+        (listener) => listener.id !== listenerId,
       );
     };
   }, []);
 
-  const apiRequest = useCallback(async (endpoint, method = 'GET', body = null) => {
-    const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  const apiRequest = useCallback(
+    async (endpoint, method = "GET", body = null) => {
+      const url = `${API_BASE}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`;
 
-    try {
-      const options = {
-        method,
-        headers: {},
-      };
+      try {
+        const options = {
+          method,
+          headers: {},
+        };
 
-      if (body) {
-        options.headers['Content-Type'] = 'application/json';
-        options.body = JSON.stringify(body);
+        if (body) {
+          options.headers["Content-Type"] = "application/json";
+          options.body = JSON.stringify(body);
+        }
+
+        const response = await networkAwareRequest(() => fetch(url, options), {
+          skipNetworkCheck: true,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.error || `Request failed: ${response.status}`,
+          );
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error(`API request failed: ${url}`, error);
+        throw error;
       }
-
-      const response = await networkAwareRequest(
-        () => fetch(url, options),
-        { skipNetworkCheck: true }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Request failed: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`API request failed: ${url}`, error);
-      throw error;
-    }
-  }, []);
+    },
+    [],
+  );
 
   const addMessageListener = useCallback((id, messageHandler) => {
     const listenerId = `${id}-${Date.now()}`;
 
     globalWsListeners.push({
       id: listenerId,
-      onMessage: messageHandler
+      onMessage: messageHandler,
     });
 
     return listenerId;
@@ -223,7 +245,7 @@ export const useNocturned = () => {
 
   const removeMessageListener = useCallback((listenerId) => {
     globalWsListeners = globalWsListeners.filter(
-      listener => listener.id !== listenerId
+      (listener) => listener.id !== listenerId,
     );
   }, []);
 
@@ -231,33 +253,34 @@ export const useNocturned = () => {
     wsConnected,
     apiRequest,
     addMessageListener,
-    removeMessageListener
+    removeMessageListener,
   };
 };
 
 export const useSystemUpdate = () => {
-  const { wsConnected, apiRequest, addMessageListener, removeMessageListener } = useNocturned();
+  const { wsConnected, apiRequest, addMessageListener, removeMessageListener } =
+    useNocturned();
 
   const [updateStatus, setUpdateStatus] = useState({
     inProgress: false,
-    stage: '',
-    error: ''
+    stage: "",
+    error: "",
   });
   const [progress, setProgress] = useState({
     bytesComplete: 0,
     bytesTotal: 0,
     speed: 0,
-    percent: 0
+    percent: 0,
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [isError, setIsError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const listenerIdRef = useRef(null);
   const lastSuccessfulStageRef = useRef(null);
 
   const checkUpdateStatus = useCallback(async () => {
     try {
-      const status = await apiRequest('/update/status');
+      const status = await apiRequest("/update/status");
       setUpdateStatus(status);
       setIsUpdating(status.inProgress);
 
@@ -270,83 +293,89 @@ export const useSystemUpdate = () => {
         setErrorMessage(status.error);
       } else {
         setIsError(false);
-        setErrorMessage('');
+        setErrorMessage("");
       }
 
       return status;
     } catch (error) {
-      console.error('Error checking update status:', error);
+      console.error("Error checking update status:", error);
       return null;
     }
   }, [apiRequest]);
 
-  const startUpdate = useCallback(async (imageURL, sumURL) => {
-    try {
-      setIsUpdating(true);
-      setIsError(false);
-      setErrorMessage('');
+  const startUpdate = useCallback(
+    async (imageURL, sumURL) => {
+      try {
+        setIsUpdating(true);
+        setIsError(false);
+        setErrorMessage("");
 
-      setProgress({
-        bytesComplete: 0,
-        bytesTotal: 0,
-        speed: 0,
-        percent: 0
-      });
+        setProgress({
+          bytesComplete: 0,
+          bytesTotal: 0,
+          speed: 0,
+          percent: 0,
+        });
 
-      const data = await apiRequest('/update', 'POST', {
-        image_url: imageURL,
-        sum_url: sumURL
-      });
+        const data = await apiRequest("/update", "POST", {
+          image_url: imageURL,
+          sum_url: sumURL,
+        });
 
-      return data;
-    } catch (error) {
-      console.error('Error starting update:', error);
-      setIsUpdating(false);
-      setIsError(true);
-      setErrorMessage(`Failed to start update: ${error.message}`);
-      return null;
-    }
-  }, [apiRequest]);
-
-  const handleWsMessage = useCallback((data) => {
-    if (data.type === 'progress') {
-      setProgress({
-        bytesComplete: data.bytes_complete,
-        bytesTotal: data.bytes_total,
-        speed: data.speed,
-        percent: data.percent
-      });
-
-      if (data.stage) {
-        lastSuccessfulStageRef.current = data.stage;
-        setUpdateStatus(prev => ({
-          ...prev,
-          stage: data.stage,
-          inProgress: true
-        }));
-      }
-    } else if (data.type === 'completion') {
-      if (data.success) {
-        setUpdateStatus(prev => ({
-          ...prev,
-          inProgress: false,
-          stage: 'complete'
-        }));
+        return data;
+      } catch (error) {
+        console.error("Error starting update:", error);
         setIsUpdating(false);
-      } else {
         setIsError(true);
-        setErrorMessage(data.error || 'Update failed');
-        setIsUpdating(false);
-        setUpdateStatus(prev => ({
-          ...prev,
-          inProgress: false,
-          error: data.error || 'Update failed'
-        }));
+        setErrorMessage(`Failed to start update: ${error.message}`);
+        return null;
       }
+    },
+    [apiRequest],
+  );
 
-      checkUpdateStatus();
-    }
-  }, [checkUpdateStatus]);
+  const handleWsMessage = useCallback(
+    (data) => {
+      if (data.type === "progress") {
+        setProgress({
+          bytesComplete: data.bytes_complete,
+          bytesTotal: data.bytes_total,
+          speed: data.speed,
+          percent: data.percent,
+        });
+
+        if (data.stage) {
+          lastSuccessfulStageRef.current = data.stage;
+          setUpdateStatus((prev) => ({
+            ...prev,
+            stage: data.stage,
+            inProgress: true,
+          }));
+        }
+      } else if (data.type === "completion") {
+        if (data.success) {
+          setUpdateStatus((prev) => ({
+            ...prev,
+            inProgress: false,
+            stage: "complete",
+          }));
+          setIsUpdating(false);
+        } else {
+          setIsError(true);
+          setErrorMessage(data.error || "Update failed");
+          setIsUpdating(false);
+          setUpdateStatus((prev) => ({
+            ...prev,
+            inProgress: false,
+            error: data.error || "Update failed",
+          }));
+        }
+
+        checkUpdateStatus();
+      }
+    },
+    [checkUpdateStatus],
+  );
 
   useEffect(() => {
     let statusIntervalId = null;
@@ -365,7 +394,7 @@ export const useSystemUpdate = () => {
   }, [isUpdating, checkUpdateStatus]);
 
   useEffect(() => {
-    const listenerId = addMessageListener('system-update', handleWsMessage);
+    const listenerId = addMessageListener("system-update", handleWsMessage);
     listenerIdRef.current = listenerId;
 
     checkUpdateStatus();
@@ -375,7 +404,12 @@ export const useSystemUpdate = () => {
         removeMessageListener(listenerIdRef.current);
       }
     };
-  }, [addMessageListener, removeMessageListener, handleWsMessage, checkUpdateStatus]);
+  }, [
+    addMessageListener,
+    removeMessageListener,
+    handleWsMessage,
+    checkUpdateStatus,
+  ]);
 
   return {
     updateStatus,
@@ -385,12 +419,13 @@ export const useSystemUpdate = () => {
     errorMessage,
     wsConnected,
     startUpdate,
-    checkUpdateStatus
+    checkUpdateStatus,
   };
 };
 
 export const useBluetooth = () => {
-  const { wsConnected, apiRequest, addMessageListener, removeMessageListener } = useNocturned();
+  const { wsConnected, apiRequest, addMessageListener, removeMessageListener } =
+    useNocturned();
 
   const [pairingRequest, setPairingRequest] = useState(null);
   const [connectedDevices, setConnectedDevices] = useState([]);
@@ -400,7 +435,7 @@ export const useBluetooth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
-  
+
   const networkStartRef = useRef(null);
   const networkPollRef = useRef(null);
   const retryTimeoutRef = useRef(null);
@@ -423,126 +458,147 @@ export const useBluetooth = () => {
     }
   }, []);
 
-  const attemptReconnect = useCallback(async (continuous = false) => {
-    if (isReconnecting.current) {
-      return;
-    }
+  const attemptReconnect = useCallback(
+    async (continuous = false) => {
+      if (isReconnecting.current) {
+        return;
+      }
 
-    const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
-    if (!lastDeviceAddress) {
-      cleanupReconnectTimer();
-      reconnectAttemptsRef.current = 0;
-      setReconnectAttempt(0);
-      isReconnecting.current = false;
-      window.dispatchEvent(new Event('networkBannerHide'));
-      return;
-    }
+      const lastDeviceAddress = localStorage.getItem(
+        "lastConnectedBluetoothDevice",
+      );
+      if (!lastDeviceAddress) {
+        cleanupReconnectTimer();
+        reconnectAttemptsRef.current = 0;
+        setReconnectAttempt(0);
+        isReconnecting.current = false;
+        window.dispatchEvent(new Event("networkBannerHide"));
+        return;
+      }
 
-    await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    if (!continuous && reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
-      cleanupReconnectTimer();
-      reconnectAttemptsRef.current = 0;
-      setReconnectAttempt(0);
-      isReconnecting.current = false;
-      window.dispatchEvent(new Event('networkBannerHide'));
-      return;
-    }
+      if (
+        !continuous &&
+        reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS
+      ) {
+        cleanupReconnectTimer();
+        reconnectAttemptsRef.current = 0;
+        setReconnectAttempt(0);
+        isReconnecting.current = false;
+        window.dispatchEvent(new Event("networkBannerHide"));
+        return;
+      }
 
-    try {
-      isReconnecting.current = true;
-      window.dispatchEvent(new Event('networkBannerShow'));
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        isReconnecting.current = true;
+        window.dispatchEvent(new Event("networkBannerShow"));
 
-      const devicesResponse = await fetch(`${API_BASE}/bluetooth/devices`, { 
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (devicesResponse.ok) {
-        const devices = await devicesResponse.json();
-        
-        const isAlreadyConnected = devices.some(device => 
-          device.address === lastDeviceAddress && device.connected
-        );
-        
-        if (isAlreadyConnected) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const devicesResponse = await fetch(`${API_BASE}/bluetooth/devices`, {
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (devicesResponse.ok) {
+          const devices = await devicesResponse.json();
+
+          const isAlreadyConnected = devices.some(
+            (device) =>
+              device.address === lastDeviceAddress && device.connected,
+          );
+
+          if (isAlreadyConnected) {
+            cleanupReconnectTimer();
+            reconnectAttemptsRef.current = 0;
+            setReconnectAttempt(0);
+            isReconnecting.current = false;
+            window.dispatchEvent(new Event("networkBannerHide"));
+            retryIsCancelled = true;
+            return;
+          }
+        }
+
+        reconnectAttemptsRef.current++;
+        setReconnectAttempt(reconnectAttemptsRef.current);
+
+        const response = await queueConnectRequest(lastDeviceAddress);
+
+        if (response.ok) {
+          const data = await response.json().catch(() => ({}));
+          if (data.connected) {
+            cleanupReconnectTimer();
+            reconnectAttemptsRef.current = 0;
+            setReconnectAttempt(0);
+            isReconnecting.current = false;
+            retryIsCancelled = true;
+            window.dispatchEvent(new Event("networkBannerHide"));
+            return;
+          }
+        }
+
+        if (
+          continuous ||
+          reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS
+        ) {
+          const delayTime = continuous
+            ? Math.max(RECONNECT_INTERVAL, 5000)
+            : RECONNECT_INTERVAL;
+          reconnectTimeoutRef.current = setTimeout(() => {
+            isReconnecting.current = false;
+            if (continuous) {
+              attemptReconnect(true);
+            } else {
+              attemptReconnect();
+            }
+          }, delayTime);
+        } else {
           cleanupReconnectTimer();
-          reconnectAttemptsRef.current = 0;
-          setReconnectAttempt(0);
           isReconnecting.current = false;
-          window.dispatchEvent(new Event('networkBannerHide'));
-          retryIsCancelled = true;
-          return;
+          window.dispatchEvent(new Event("networkBannerHide"));
+        }
+      } catch (error) {
+        console.error("Reconnect attempt failed:", error);
+        reconnectAttemptsRef.current++;
+        setReconnectAttempt(reconnectAttemptsRef.current);
+
+        if (
+          continuous ||
+          reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS
+        ) {
+          const delayTime = continuous
+            ? Math.max(RECONNECT_INTERVAL, 5000)
+            : RECONNECT_INTERVAL;
+          reconnectTimeoutRef.current = setTimeout(() => {
+            isReconnecting.current = false;
+            if (continuous) {
+              attemptReconnect(true);
+            } else {
+              attemptReconnect();
+            }
+          }, delayTime);
+        } else {
+          cleanupReconnectTimer();
+          isReconnecting.current = false;
+          window.dispatchEvent(new Event("networkBannerHide"));
         }
       }
-
-      reconnectAttemptsRef.current++;
-      setReconnectAttempt(reconnectAttemptsRef.current);
-      
-      const response = await queueConnectRequest(lastDeviceAddress);
-
-      if (response.ok) {
-        const data = await response.json().catch(() => ({}));
-        if (data.connected) {
-          cleanupReconnectTimer();
-          reconnectAttemptsRef.current = 0;
-          setReconnectAttempt(0);
-          isReconnecting.current = false;
-          retryIsCancelled = true;
-          window.dispatchEvent(new Event('networkBannerHide'));
-          return;
-        }
-      }
-
-      if (continuous || reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-        const delayTime = continuous ? Math.max(RECONNECT_INTERVAL, 5000) : RECONNECT_INTERVAL;
-        reconnectTimeoutRef.current = setTimeout(() => {
-          isReconnecting.current = false;
-          if (continuous) {
-            attemptReconnect(true);
-          } else {
-            attemptReconnect();
-          }
-        }, delayTime);
-      } else {
-        cleanupReconnectTimer();
-        isReconnecting.current = false;
-        window.dispatchEvent(new Event('networkBannerHide'));
-      }
-    } catch (error) {
-      console.error('Reconnect attempt failed:', error);
-      reconnectAttemptsRef.current++;
-      setReconnectAttempt(reconnectAttemptsRef.current);
-
-      if (continuous || reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-        const delayTime = continuous ? Math.max(RECONNECT_INTERVAL, 5000) : RECONNECT_INTERVAL;
-        reconnectTimeoutRef.current = setTimeout(() => {
-          isReconnecting.current = false;
-          if (continuous) {
-            attemptReconnect(true);
-          } else {
-            attemptReconnect();
-          }
-        }, delayTime);
-      } else {
-        cleanupReconnectTimer();
-        isReconnecting.current = false;
-        window.dispatchEvent(new Event('networkBannerHide'));
-      }
-    }
-  }, [cleanupReconnectTimer]);
+    },
+    [cleanupReconnectTimer],
+  );
 
   useEffect(() => {
-    const lastDeviceAddress = localStorage.getItem('lastConnectedBluetoothDevice');
+    const lastDeviceAddress = localStorage.getItem(
+      "lastConnectedBluetoothDevice",
+    );
     if (lastDeviceAddress) {
       reconnectAttemptsRef.current = 0;
       setReconnectAttempt(0);
       isReconnecting.current = false;
-      
+
       setTimeout(() => {
         attemptReconnect();
       }, INITIAL_RECONNECT_DELAY);
@@ -558,7 +614,7 @@ export const useBluetooth = () => {
 
   const stopNetworkPolling = useCallback(() => {
     isNetworkPollingActive = false;
-    
+
     if (networkPollRef.current) {
       clearInterval(networkPollRef.current);
       networkPollRef.current = null;
@@ -571,12 +627,12 @@ export const useBluetooth = () => {
 
   const stopRetrying = useCallback(() => {
     retryIsCancelled = true;
-    
+
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
-    
+
     retryDeviceAddressRef.current = null;
   }, []);
 
@@ -597,13 +653,13 @@ export const useBluetooth = () => {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(`${API_BASE}/bluetooth/devices`, {
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error('Failed to fetch devices');
+        throw new Error("Failed to fetch devices");
       }
 
       const data = await response.json();
@@ -620,17 +676,17 @@ export const useBluetooth = () => {
 
   const startNetworkPolling = useCallback(async (deviceAddress) => {
     if (!deviceAddress) return;
-    
+
     let isPolling = true;
-    
+
     const attemptNetworkConnection = async () => {
       if (!isPolling) return false;
-      
+
       try {
         const response = await queueConnectRequest(deviceAddress);
-        
+
         if (response.ok) {
-          console.log('Network connection established successfully');
+          console.log("Network connection established successfully");
 
           isPolling = false;
           clearInterval(networkPollRef.current);
@@ -640,7 +696,7 @@ export const useBluetooth = () => {
         }
       } catch (error) {
         if (isPolling) {
-          console.log('Network connection attempt failed, retrying...');
+          console.log("Network connection attempt failed, retrying...");
         }
       }
       return false;
@@ -657,233 +713,267 @@ export const useBluetooth = () => {
         isPolling = false;
       }
     }, 5000);
-    
+
     const success = await attemptNetworkConnection();
     if (success) {
       isPolling = false;
       clearInterval(networkPollRef.current);
       networkPollRef.current = null;
     }
-    
+
     networkStartRef.current = Date.now();
   }, []);
 
-  const connectDevice = useCallback(async (deviceAddress) => {
-    try {
-      setLoading(true);
-      stopRetrying();
-      retryIsCancelled = false;
-      retryDeviceAddressRef.current = deviceAddress;
+  const connectDevice = useCallback(
+    async (deviceAddress) => {
+      try {
+        setLoading(true);
+        stopRetrying();
+        retryIsCancelled = false;
+        retryDeviceAddressRef.current = deviceAddress;
 
-      const response = await queueConnectRequest(deviceAddress);
+        const response = await queueConnectRequest(deviceAddress);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        if (errorData.error === "Failed to connect to device: exit status 4") {
-          const retryConnection = () => {
-            if (retryIsCancelled) return;
-            
-            queueConnectRequest(deviceAddress)
-            .then(retryResponse => {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+
+          if (
+            errorData.error === "Failed to connect to device: exit status 4"
+          ) {
+            const retryConnection = () => {
               if (retryIsCancelled) return;
-              
-              if (retryResponse.ok) {
-                localStorage.setItem('lastConnectedBluetoothDevice', deviceAddress);
-                fetchDevices(true);
-                startNetworkPolling(deviceAddress);
-                retryIsCancelled = true;
-                window.dispatchEvent(new Event('networkBannerHide'));
-              } else {
-                if (!retryIsCancelled) {
-                  window.dispatchEvent(new Event('networkBannerShow'));
-                  const newTimeout = setTimeout(retryConnection, 5000);
-                  retryTimeoutRef.current = newTimeout;
-                }
-              }
-            })
-            .catch(error => {
-              if (!retryIsCancelled) {
-                window.dispatchEvent(new Event('networkBannerShow'));
-                const newTimeout = setTimeout(retryConnection, 5000);
-                retryTimeoutRef.current = newTimeout;
-              }
-            });
-          };
 
-          window.dispatchEvent(new Event('networkBannerShow'));
-          const timeout = setTimeout(retryConnection, 5000);
-          retryTimeoutRef.current = timeout;
-          
-          return false;
+              queueConnectRequest(deviceAddress)
+                .then((retryResponse) => {
+                  if (retryIsCancelled) return;
+
+                  if (retryResponse.ok) {
+                    localStorage.setItem(
+                      "lastConnectedBluetoothDevice",
+                      deviceAddress,
+                    );
+                    fetchDevices(true);
+                    startNetworkPolling(deviceAddress);
+                    retryIsCancelled = true;
+                    window.dispatchEvent(new Event("networkBannerHide"));
+                  } else {
+                    if (!retryIsCancelled) {
+                      window.dispatchEvent(new Event("networkBannerShow"));
+                      const newTimeout = setTimeout(retryConnection, 5000);
+                      retryTimeoutRef.current = newTimeout;
+                    }
+                  }
+                })
+                .catch((error) => {
+                  if (!retryIsCancelled) {
+                    window.dispatchEvent(new Event("networkBannerShow"));
+                    const newTimeout = setTimeout(retryConnection, 5000);
+                    retryTimeoutRef.current = newTimeout;
+                  }
+                });
+            };
+
+            window.dispatchEvent(new Event("networkBannerShow"));
+            const timeout = setTimeout(retryConnection, 5000);
+            retryTimeoutRef.current = timeout;
+
+            return false;
+          }
+          window.dispatchEvent(new Event("networkBannerShow"));
+          throw new Error(errorData.error || "Failed to connect device");
         }
-        window.dispatchEvent(new Event('networkBannerShow'));
-        throw new Error(errorData.error || 'Failed to connect device');
+
+        localStorage.setItem("lastConnectedBluetoothDevice", deviceAddress);
+        await fetchDevices(true);
+        startNetworkPolling(deviceAddress);
+        window.dispatchEvent(new Event("networkBannerHide"));
+        return true;
+      } catch (err) {
+        window.dispatchEvent(new Event("networkBannerShow"));
+        setError(err.message);
+        return false;
+      } finally {
+        setLoading(false);
       }
+    },
+    [fetchDevices, stopRetrying, startNetworkPolling],
+  );
 
-      localStorage.setItem('lastConnectedBluetoothDevice', deviceAddress);
-      await fetchDevices(true);
-      startNetworkPolling(deviceAddress);
-      window.dispatchEvent(new Event('networkBannerHide'));
-      return true;
-
-    } catch (err) {
-      window.dispatchEvent(new Event('networkBannerShow'));
-      setError(err.message);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchDevices, stopRetrying, startNetworkPolling]);
-
-  const disconnectDevice = useCallback(async (address) => {
-    try {
-      stopNetworkPolling();
-      stopRetrying();
-      retryIsCancelled = true;
-      isNetworkPollingActive = false;
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-      const response = await fetch(`${API_BASE}/bluetooth/disconnect/${address}`, {
-        method: 'POST',
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) throw new Error('Failed to disconnect device');
-
-      localStorage.removeItem('lastConnectedBluetoothDevice');
-      
-      setTimeout(() => {
+  const disconnectDevice = useCallback(
+    async (address) => {
+      try {
         stopNetworkPolling();
         stopRetrying();
-      }, 100);
-      
-      await fetchDevices(true);
-      return true;
-    } catch (error) {
-      console.error('Error disconnecting:', error);
-      return false;
-    }
-  }, [fetchDevices, stopNetworkPolling, stopRetrying]);
+        retryIsCancelled = true;
+        isNetworkPollingActive = false;
 
-  const forgetDevice = useCallback(async (deviceAddress) => {
-    try {
-      setLoading(true);
-      stopNetworkPolling();
-      stopRetrying();
-      retryDeviceAddressRef.current = null;
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch(`${API_BASE}/bluetooth/remove/${deviceAddress}`, {
-        method: 'POST',
-        signal: controller.signal
-      });
+        const response = await fetch(
+          `${API_BASE}/bluetooth/disconnect/${address}`,
+          {
+            method: "POST",
+            signal: controller.signal,
+          },
+        );
 
-      clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to remove device');
-      }
+        if (!response.ok) throw new Error("Failed to disconnect device");
 
-      if (localStorage.getItem('lastConnectedBluetoothDevice') === deviceAddress) {
-        localStorage.removeItem('lastConnectedBluetoothDevice');
-      }
-      
-      await fetchDevices(true);
-      return true;
-    } catch (err) {
-      setError(err.message);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchDevices, stopNetworkPolling, stopRetrying]);
+        localStorage.removeItem("lastConnectedBluetoothDevice");
 
-  const handleWsMessage = useCallback((data) => {
-    switch (data.type) {
-      case 'bluetooth/pairing':
-        setPairingRequest(data.payload);
-        break;
-
-      case 'bluetooth/paired':
-        setPairingRequest(null);
-        setConnectedDevices(prev => [...prev, data.payload.device]);
-        setLastConnectedDevice(data.payload.device);
-        localStorage.setItem('lastConnectedBluetoothDevice', data.payload.device.address);
         setTimeout(() => {
-          startNetworkPolling(data.payload.device.address);
-        }, 5000);
-        window.dispatchEvent(new Event('networkBannerHide'));
-        clearConnectQueue();
-        break;
+          stopNetworkPolling();
+          stopRetrying();
+        }, 100);
 
-      case 'bluetooth/connect':
-        startNetworkPolling(data.payload.address);
-        window.dispatchEvent(new Event('networkBannerHide'));
-        cleanupReconnectTimer();
-        reconnectAttemptsRef.current = 0;
-        setReconnectAttempt(0);
-        isReconnecting.current = false;
-        clearConnectQueue();
-        break;
+        await fetchDevices(true);
+        return true;
+      } catch (error) {
+        console.error("Error disconnecting:", error);
+        return false;
+      }
+    },
+    [fetchDevices, stopNetworkPolling, stopRetrying],
+  );
 
-      case 'network_status':
-        if (data.payload.status === 'online') {
+  const forgetDevice = useCallback(
+    async (deviceAddress) => {
+      try {
+        setLoading(true);
+        stopNetworkPolling();
+        stopRetrying();
+        retryDeviceAddressRef.current = null;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const response = await fetch(
+          `${API_BASE}/bluetooth/remove/${deviceAddress}`,
+          {
+            method: "POST",
+            signal: controller.signal,
+          },
+        );
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to remove device");
+        }
+
+        if (
+          localStorage.getItem("lastConnectedBluetoothDevice") === deviceAddress
+        ) {
+          localStorage.removeItem("lastConnectedBluetoothDevice");
+        }
+
+        await fetchDevices(true);
+        return true;
+      } catch (err) {
+        setError(err.message);
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchDevices, stopNetworkPolling, stopRetrying],
+  );
+
+  const handleWsMessage = useCallback(
+    (data) => {
+      switch (data.type) {
+        case "bluetooth/pairing":
+          setPairingRequest(data.payload);
+          break;
+
+        case "bluetooth/paired":
+          setPairingRequest(null);
+          setConnectedDevices((prev) => [...prev, data.payload.device]);
+          setLastConnectedDevice(data.payload.device);
+          localStorage.setItem(
+            "lastConnectedBluetoothDevice",
+            data.payload.device.address,
+          );
+          setTimeout(() => {
+            startNetworkPolling(data.payload.device.address);
+          }, 5000);
+          window.dispatchEvent(new Event("networkBannerHide"));
+          clearConnectQueue();
+          break;
+
+        case "bluetooth/connect":
+          startNetworkPolling(data.payload.address);
+          window.dispatchEvent(new Event("networkBannerHide"));
           cleanupReconnectTimer();
           reconnectAttemptsRef.current = 0;
           setReconnectAttempt(0);
           isReconnecting.current = false;
-          retryIsCancelled = true;
-          window.dispatchEvent(new Event('networkBannerHide'));
-        }
-        break;
+          clearConnectQueue();
+          break;
 
-      case 'bluetooth/disconnect':
-        setConnectedDevices(prev =>
-          prev.filter(device => device.address !== data.payload.address)
-        );
-        if (lastConnectedDevice?.address === data.payload.address) {
-          setLastConnectedDevice(null);
-          stopNetworkPolling();
-          stopRetrying();
-          window.dispatchEvent(new Event('offline'));
+        case "network_status":
+          if (data.payload.status === "online") {
+            cleanupReconnectTimer();
+            reconnectAttemptsRef.current = 0;
+            setReconnectAttempt(0);
+            isReconnecting.current = false;
+            retryIsCancelled = true;
+            window.dispatchEvent(new Event("networkBannerHide"));
+          }
+          break;
+
+        case "bluetooth/disconnect":
+          setConnectedDevices((prev) =>
+            prev.filter((device) => device.address !== data.payload.address),
+          );
+          if (lastConnectedDevice?.address === data.payload.address) {
+            setLastConnectedDevice(null);
+            stopNetworkPolling();
+            stopRetrying();
+            window.dispatchEvent(new Event("offline"));
+
+            reconnectAttemptsRef.current = 0;
+            setReconnectAttempt(0);
+            isReconnecting.current = false;
+            setTimeout(() => {
+              attemptReconnect();
+            }, INITIAL_RECONNECT_DELAY);
+          }
+          break;
+
+        case "bluetooth/network/disconnect":
+          window.dispatchEvent(new Event("offline"));
+
+          if (isReconnecting.current) {
+            cleanupReconnectTimer();
+            isReconnecting.current = false;
+          }
 
           reconnectAttemptsRef.current = 0;
           setReconnectAttempt(0);
-          isReconnecting.current = false;
+
           setTimeout(() => {
             attemptReconnect();
           }, INITIAL_RECONNECT_DELAY);
-        }
-        break;
+          break;
 
-      case 'bluetooth/network/disconnect':
-        window.dispatchEvent(new Event('offline'));
-
-        if (isReconnecting.current) {
-          cleanupReconnectTimer();
-          isReconnecting.current = false;
-        }
-
-        reconnectAttemptsRef.current = 0;
-        setReconnectAttempt(0);
-
-        setTimeout(() => {
-          attemptReconnect();
-        }, INITIAL_RECONNECT_DELAY);
-        break;
-
-      default:
-        break;
-    }
-  }, [lastConnectedDevice, stopNetworkPolling, startNetworkPolling, stopRetrying, attemptReconnect, cleanupReconnectTimer]);
+        default:
+          break;
+      }
+    },
+    [
+      lastConnectedDevice,
+      stopNetworkPolling,
+      startNetworkPolling,
+      stopRetrying,
+      attemptReconnect,
+      cleanupReconnectTimer,
+    ],
+  );
 
   const startDiscovery = useCallback(async () => {
     if (discoveryActive.current || isInitializingDiscovery) {
@@ -896,19 +986,19 @@ export const useBluetooth = () => {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(`${API_BASE}/bluetooth/discover/on`, {
-        method: 'POST',
-        signal: controller.signal
+        method: "POST",
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error('Failed to start discovery');
+        throw new Error("Failed to start discovery");
       }
       discoveryActive.current = true;
       return true;
     } catch (err) {
-      console.error('Error starting discovery:', err);
+      console.error("Error starting discovery:", err);
       return false;
     } finally {
       isInitializingDiscovery = false;
@@ -926,23 +1016,26 @@ export const useBluetooth = () => {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       await fetch(`${API_BASE}/bluetooth/discover/off`, {
-        method: 'POST',
-        signal: controller.signal
+        method: "POST",
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
       discoveryActive.current = false;
     } catch (err) {
-      console.error('Failed to stop discovery:', err);
+      console.error("Failed to stop discovery:", err);
     } finally {
       isStoppingDiscovery = false;
     }
   }, []);
 
-  const setDiscoverable = useCallback(async (enabled) => {
-    return enabled ? startDiscovery() : stopDiscovery();
-  }, [startDiscovery, stopDiscovery]);
+  const setDiscoverable = useCallback(
+    async (enabled) => {
+      return enabled ? startDiscovery() : stopDiscovery();
+    },
+    [startDiscovery, stopDiscovery],
+  );
 
   const acceptPairing = useCallback(async () => {
     if (!pairingRequest) return;
@@ -953,16 +1046,16 @@ export const useBluetooth = () => {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(`${API_BASE}/bluetooth/pairing/accept`, {
-        method: 'POST',
-        signal: controller.signal
+        method: "POST",
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) throw new Error('Failed to accept pairing');
+      if (!response.ok) throw new Error("Failed to accept pairing");
       setPairingRequest(null);
     } catch (error) {
-      console.error('Error accepting pair:', error);
+      console.error("Error accepting pair:", error);
       setPairingRequest(null);
     } finally {
       setIsConnecting(false);
@@ -977,16 +1070,16 @@ export const useBluetooth = () => {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(`${API_BASE}/bluetooth/pairing/deny`, {
-        method: 'POST',
-        signal: controller.signal
+        method: "POST",
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) throw new Error('Failed to deny pairing');
+      if (!response.ok) throw new Error("Failed to deny pairing");
       setPairingRequest(null);
     } catch (error) {
-      console.error('Error denying pair:', error);
+      console.error("Error denying pair:", error);
       setPairingRequest(null);
     }
   }, [pairingRequest]);
@@ -997,7 +1090,7 @@ export const useBluetooth = () => {
   }, [lastConnectedDevice, startNetworkPolling]);
 
   useEffect(() => {
-    const listenerId = addMessageListener('bluetooth', handleWsMessage);
+    const listenerId = addMessageListener("bluetooth", handleWsMessage);
     listenerIdRef.current = listenerId;
 
     return () => {
@@ -1029,6 +1122,6 @@ export const useBluetooth = () => {
     wsConnected,
     stopRetrying,
     reconnectAttempt,
-    attemptReconnect
+    attemptReconnect,
   };
 };

@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import { useCallback } from 'react';
-import { useState } from 'react';
+import { useMemo } from "react";
+import { useCallback } from "react";
+import { useState } from "react";
 
 export function useGradientState(activeSection = null) {
   const [imageURL, setImageURL] = useState(null);

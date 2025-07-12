@@ -35,7 +35,7 @@ const BatteryIcon = ({ percentage = 100, className }) => {
           <rect width="22" height="13" fill="black" />
           {percentage > 0 && (
             <text
-              x="11" 
+              x="11"
               y="6.5"
               textAnchor="middle"
               alignmentBaseline="central"

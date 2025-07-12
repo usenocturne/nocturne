@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useNavigation } from "../../hooks/useNavigation";
@@ -27,7 +33,6 @@ import {
   SpeedIcon,
 } from "../common/icons";
 
-
 export default function NowPlaying({
   accessToken,
   currentPlayback,
@@ -43,7 +48,7 @@ export default function NowPlaying({
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
   const [volumeOverlayState, setVolumeOverlayState] = useState({
     visible: false,
-    animation: "hidden"
+    animation: "hidden",
   });
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
@@ -89,7 +94,7 @@ export default function NowPlaying({
     duration,
     progressPercentage,
     updateProgress,
-    triggerRefresh
+    triggerRefresh,
   } = playbackProgress;
 
   const convertTimeToLength = (ms, elapsed) => {
@@ -103,8 +108,9 @@ export default function NowPlaying({
     const formattedSeconds = seconds.toString().padStart(2, "0");
 
     if (hours > 0) {
-      return `${!elapsed ? "-" : ""
-        }${hours}:${formattedMinutes}:${formattedSeconds}`;
+      return `${
+        !elapsed ? "-" : ""
+      }${hours}:${formattedMinutes}:${formattedSeconds}`;
     }
 
     return `${!elapsed ? "-" : ""}${formattedMinutes}:${formattedSeconds}`;
@@ -130,19 +136,19 @@ export default function NowPlaying({
 
     setVolumeOverlayState({
       visible: true,
-      animation: "showing"
+      animation: "showing",
     });
 
     volumeTimerRef.current = setTimeout(() => {
-      setVolumeOverlayState(prev => ({
+      setVolumeOverlayState((prev) => ({
         ...prev,
-        animation: "hiding"
+        animation: "hiding",
       }));
 
       setTimeout(() => {
         setVolumeOverlayState({
           visible: false,
-          animation: "hidden"
+          animation: "hidden",
         });
 
         manualVolumeChangeRef.current = false;
@@ -211,8 +217,8 @@ export default function NowPlaying({
       ? currentPlayback.item.type === "episode"
         ? currentPlayback.item.show.images[1]?.url || "/images/not-playing.webp"
         : currentPlayback.item.type === "local" ||
-          !currentPlayback.item?.album?.images?.[1]?.url ||
-          !currentPlayback.item?.album?.images?.[1]
+            !currentPlayback.item?.album?.images?.[1]?.url ||
+            !currentPlayback.item?.album?.images?.[1]
           ? "/images/not-playing.webp"
           : currentPlayback.item.album.images[1].url
       : "/images/not-playing.webp";
@@ -222,36 +228,41 @@ export default function NowPlaying({
     return { trackName, artistName, albumArt, trackId, firstArtistId, albumId };
   }, [currentPlayback]);
 
-  const { trackName, artistName, albumArt, trackId, firstArtistId, albumId } = trackInfo;
+  const { trackName, artistName, albumArt, trackId, firstArtistId, albumId } =
+    trackInfo;
 
-  const handleWheel = useCallback((e) => {
-    if (isProgressScrubbing) return;
+  const handleWheel = useCallback(
+    (e) => {
+      if (isProgressScrubbing) return;
 
-    const now = Date.now();
-    if (now - lastWheelEventRef.current < 50) {
-      e.preventDefault();
-      return;
-    }
-    lastWheelEventRef.current = now;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    wheelDeltaAccumulatorRef.current += delta;
-
-    if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
-      const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
-      const newVolume = Math.max(0, Math.min(100, volume + direction * 5));
-
-      wheelDeltaAccumulatorRef.current = 0;
-
-      if (newVolume !== volume) {
-        manualVolumeChangeRef.current = true;
-        setVolume(newVolume);
+      const now = Date.now();
+      if (now - lastWheelEventRef.current < 50) {
+        e.preventDefault();
+        return;
       }
-    }
-  }, [isProgressScrubbing, volume, setVolume]);
+      lastWheelEventRef.current = now;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const delta =
+        Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      wheelDeltaAccumulatorRef.current += delta;
+
+      if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
+        const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
+        const newVolume = Math.max(0, Math.min(100, volume + direction * 5));
+
+        wheelDeltaAccumulatorRef.current = 0;
+
+        if (newVolume !== volume) {
+          manualVolumeChangeRef.current = true;
+          setVolume(newVolume);
+        }
+      }
+    },
+    [isProgressScrubbing, volume, setVolume],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -349,7 +360,14 @@ export default function NowPlaying({
 
   const handleSkipNext = useCallback(async () => {
     await skipToNext();
-  }, [currentPlayback?.item?.type, progressMs, duration, seekToPosition, updateProgress, skipToNext]);
+  }, [
+    currentPlayback?.item?.type,
+    progressMs,
+    duration,
+    seekToPosition,
+    updateProgress,
+    skipToNext,
+  ]);
 
   const handleSkipPrevious = useCallback(async () => {
     const RESTART_THRESHOLD_MS = 3000;
@@ -359,7 +377,13 @@ export default function NowPlaying({
     } else {
       await skipToPrevious();
     }
-  }, [currentPlayback?.item?.type, progressMs, seekToPosition, updateProgress, skipToPrevious]);
+  }, [
+    currentPlayback?.item?.type,
+    progressMs,
+    seekToPosition,
+    updateProgress,
+    skipToPrevious,
+  ]);
 
   const handleToggleLike = useCallback(async () => {
     if (!trackId || currentPlayback?.item?.type !== "track" || isCheckingLike)
@@ -377,22 +401,32 @@ export default function NowPlaying({
       setIsLiked(!isLiked);
       console.error("Error toggling track like:", error);
     }
-  }, [trackId, currentPlayback?.item?.type, isCheckingLike, isLiked, unlikeTrack, likeTrack]);
+  }, [
+    trackId,
+    currentPlayback?.item?.type,
+    isCheckingLike,
+    isLiked,
+    unlikeTrack,
+    likeTrack,
+  ]);
 
   const handleScrubbingChange = (scrubbing) => {
     setIsProgressScrubbing(scrubbing);
   };
 
-  const handleSeek = useCallback(async (position) => {
-    try {
-      if (currentPlayback?.item) {
-        await seekToPosition(position);
-        updateProgress(position);
+  const handleSeek = useCallback(
+    async (position) => {
+      try {
+        if (currentPlayback?.item) {
+          await seekToPosition(position);
+          updateProgress(position);
+        }
+      } catch (error) {
+        console.error("Error seeking:", error);
       }
-    } catch (error) {
-      console.error("Error seeking:", error);
-    }
-  }, [currentPlayback?.item, seekToPosition, updateProgress]);
+    },
+    [currentPlayback?.item, seekToPosition, updateProgress],
+  );
 
   const handleToggleShuffle = useCallback(async () => {
     try {
@@ -465,7 +499,10 @@ export default function NowPlaying({
       document.addEventListener("visibilitychange", handleVisibilityChange);
 
       return () => {
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange,
+        );
       };
     }
   }, [currentPlayback?.is_playing]);
@@ -483,7 +520,14 @@ export default function NowPlaying({
     >
       <div ref={contentContainerRef}>
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
-          <div className={`min-w-[280px] mr-8 ${albumId ? 'cursor-pointer' : ''}`} onClick={() => albumId && onNavigateToAlbum && onNavigateToAlbum(albumId, "album")}>
+          <div
+            className={`min-w-[280px] mr-8 ${albumId ? "cursor-pointer" : ""}`}
+            onClick={() =>
+              albumId &&
+              onNavigateToAlbum &&
+              onNavigateToAlbum(albumId, "album")
+            }
+          >
             <img
               src={albumArt}
               alt={
@@ -509,8 +553,12 @@ export default function NowPlaying({
                 />
               </div>
               <h4
-                className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId ? 'cursor-pointer' : ''}`}
-                onClick={() => firstArtistId && onNavigateToArtist && onNavigateToArtist(firstArtistId, "artist")}
+                className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId ? "cursor-pointer" : ""}`}
+                onClick={() =>
+                  firstArtistId &&
+                  onNavigateToArtist &&
+                  onNavigateToArtist(firstArtistId, "artist")
+                }
               >
                 {artistName}
               </h4>
@@ -521,11 +569,11 @@ export default function NowPlaying({
                 className="flex-1 text-left overflow-y-auto h-[280px] w-[380px] transform-gpu will-change-scroll"
                 ref={lyricsContainerRef}
                 style={{
-                  scrollBehavior: 'smooth',
-                  transform: 'translateZ(0)',
-                  backfaceVisibility: 'hidden',
-                  WebkitBackfaceVisibility: 'hidden',
-                  perspective: '1000px'
+                  scrollBehavior: "smooth",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
+                  perspective: "1000px",
                 }}
               >
                 {lyricsLoading ? (
@@ -540,17 +588,18 @@ export default function NowPlaying({
                   lyrics.map((lyric, index) => (
                     <p
                       key={index}
-                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto ${index === currentLyricIndex
-                        ? "text-white current-lyric-animation"
-                        : index === currentLyricIndex - 1 ||
-                          index === currentLyricIndex + 1
-                          ? "text-white/40"
-                          : "text-white/20"
-                        }`}
+                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto ${
+                        index === currentLyricIndex
+                          ? "text-white current-lyric-animation"
+                          : index === currentLyricIndex - 1 ||
+                              index === currentLyricIndex + 1
+                            ? "text-white/40"
+                            : "text-white/20"
+                      }`}
                       style={{
-                        transform: 'translateZ(0)',
-                        backfaceVisibility: 'hidden',
-                        WebkitBackfaceVisibility: 'hidden'
+                        transform: "translateZ(0)",
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
                       }}
                     >
                       {lyric.text}
@@ -567,7 +616,9 @@ export default function NowPlaying({
         </div>
       </div>
 
-      <div className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}>
+      <div
+        className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}
+      >
         <ProgressBar
           progress={progressPercentage}
           isPlaying={isPlaying}
@@ -580,10 +631,13 @@ export default function NowPlaying({
       </div>
 
       {elapsedTimeEnabled && (
-        <div className={`w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden transition-all duration-200 ease-in-out ${isProgressScrubbing
-          ? "translate-y-24 opacity-0"
-          : "translate-y-0 opacity-100"
-          }`}>
+        <div
+          className={`w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden transition-all duration-200 ease-in-out ${
+            isProgressScrubbing
+              ? "translate-y-24 opacity-0"
+              : "translate-y-0 opacity-100"
+          }`}
+        >
           <div className="flex justify-between">
             {currentPlayback && currentPlayback.item ? (
               <>
@@ -591,10 +645,7 @@ export default function NowPlaying({
                   {convertTimeToLength(progressMs, true)}
                 </span>
                 <span className="text-white/60 text-[20px]">
-                  {convertTimeToLength(
-                    currentPlayback.item.duration_ms,
-                    true
-                  )}
+                  {convertTimeToLength(currentPlayback.item.duration_ms, true)}
                 </span>
               </>
             ) : (
@@ -608,10 +659,11 @@ export default function NowPlaying({
       )}
 
       <div
-        className={`flex justify-between items-center w-full px-12 mt-1 transition-all duration-200 ease-in-out ${isProgressScrubbing
-          ? "translate-y-24 opacity-0"
-          : "translate-y-0 opacity-100"
-          }`}
+        className={`flex justify-between items-center w-full px-12 mt-1 transition-all duration-200 ease-in-out ${
+          isProgressScrubbing
+            ? "translate-y-24 opacity-0"
+            : "translate-y-0 opacity-100"
+        }`}
       >
         {currentPlayback?.item?.type === "episode" ? (
           <Menu as="div" className="relative inline-block text-left">
@@ -625,10 +677,10 @@ export default function NowPlaying({
                     }
                   }}
                   style={{
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    boxShadow: 'none',
-                    WebkitTapHighlightColor: 'transparent'
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                    boxShadow: "none",
+                    WebkitTapHighlightColor: "transparent",
                   }}
                 >
                   <SpeedIcon className="w-14 h-14 fill-white/60" />
@@ -640,7 +692,10 @@ export default function NowPlaying({
                 >
                   <div className="py-1">
                     {[0.5, 0.8, 1, 1.2, 1.5, 2].map((speed) => (
-                      <MenuItem key={speed} onClick={() => handleSpeedChange(speed)}>
+                      <MenuItem
+                        key={speed}
+                        onClick={() => handleSpeedChange(speed)}
+                      >
                         <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
                           <span className="text-[24px]">{speed}x</span>
                           {playbackSpeed === speed && (
@@ -655,7 +710,15 @@ export default function NowPlaying({
             )}
           </Menu>
         ) : (
-          <div className="flex-shrink-0 focus:outline-none outline-none border-none bg-transparent appearance-none" onClick={handleToggleLike} style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
+          <div
+            className="flex-shrink-0 focus:outline-none outline-none border-none bg-transparent appearance-none"
+            onClick={handleToggleLike}
+            style={{
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
             {isLiked ? (
               <HeartIconFilled className="w-14 h-14" />
             ) : (
@@ -665,24 +728,52 @@ export default function NowPlaying({
         )}
 
         <div className="flex justify-center items-center flex-1">
-          <div onClick={handleSkipPrevious} className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none" style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
+          <div
+            onClick={handleSkipPrevious}
+            className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
+            style={{
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
             <BackIcon className="w-14 h-14" />
           </div>
           <div
             onClick={handlePlayPause}
             className="transition-opacity duration-100 mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
-            style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}
+            style={{
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              WebkitTapHighlightColor: "transparent",
+            }}
           >
             {PlayPauseIcon}
           </div>
-          <div onClick={handleSkipNext} className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none" style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
+          <div
+            onClick={handleSkipNext}
+            className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
+            style={{
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
             <ForwardIcon className="w-14 h-14" />
           </div>
         </div>
 
         <div className="flex items-center">
           {isDJPlaylist && (
-            <div onClick={sendDJSignal} className="focus:outline-none outline-none border-none bg-transparent appearance-none" style={{ WebkitAppearance: 'none', MozAppearance: 'none', WebkitTapHighlightColor: 'transparent' }}>
+            <div
+              onClick={sendDJSignal}
+              className="focus:outline-none outline-none border-none bg-transparent appearance-none"
+              style={{
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
               <DJIcon className="w-14 h-14 fill-white/60 mr-4 mb-1" />
             </div>
           )}
@@ -690,10 +781,10 @@ export default function NowPlaying({
             <MenuButton
               className="focus:outline-none outline-none border-none bg-transparent appearance-none"
               style={{
-                WebkitAppearance: 'none',
-                MozAppearance: 'none',
-                boxShadow: 'none',
-                WebkitTapHighlightColor: 'transparent'
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                boxShadow: "none",
+                WebkitTapHighlightColor: "transparent",
               }}
             >
               <MenuIcon className="w-14 h-14 fill-white/60" />
@@ -711,8 +802,9 @@ export default function NowPlaying({
                     </span>
                     <LyricsIcon
                       aria-hidden="true"
-                      className={`h-8 w-8 ${showLyrics ? "text-white" : "text-white/60"
-                        }`}
+                      className={`h-8 w-8 ${
+                        showLyrics ? "text-white" : "text-white/60"
+                      }`}
                     />
                   </div>
                 </MenuItem>
@@ -727,8 +819,9 @@ export default function NowPlaying({
                         </span>
                         <ShuffleIcon
                           aria-hidden="true"
-                          className={`h-8 w-8 ${shuffleEnabled ? "text-white" : "text-white/60"
-                            }`}
+                          className={`h-8 w-8 ${
+                            shuffleEnabled ? "text-white" : "text-white/60"
+                          }`}
                         />
                       </div>
                     </MenuItem>
@@ -749,10 +842,11 @@ export default function NowPlaying({
                         ) : (
                           <RepeatIcon
                             aria-hidden="true"
-                            className={`h-8 w-8 ${repeatMode === "context"
-                              ? "text-white"
-                              : "text-white/60"
-                              }`}
+                            className={`h-8 w-8 ${
+                              repeatMode === "context"
+                                ? "text-white"
+                                : "text-white/60"
+                            }`}
                           />
                         )}
                       </div>
@@ -774,17 +868,18 @@ export default function NowPlaying({
         </div>
       </div>
       <div
-        className={`fixed top-[4.5rem] transform transition-opacity duration-300 ${!volumeOverlayState.visible
-          ? "hidden"
-          : volumeOverlayState.animation === "showing"
-            ? "opacity-100 volumeInScale"
-            : volumeOverlayState.animation === "hiding"
-              ? "opacity-0 volumeOutScale"
-              : "hidden"
-          }`}
+        className={`fixed top-[4.5rem] transform transition-opacity duration-300 ${
+          !volumeOverlayState.visible
+            ? "hidden"
+            : volumeOverlayState.animation === "showing"
+              ? "opacity-100 volumeInScale"
+              : volumeOverlayState.animation === "hiding"
+                ? "opacity-0 volumeOutScale"
+                : "hidden"
+        }`}
         style={{
-          right: '-6px',
-          zIndex: 50
+          right: "-6px",
+          zIndex: 50,
         }}
       >
         <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
@@ -798,7 +893,6 @@ export default function NowPlaying({
           </div>
         </div>
       </div>
-
     </div>
   );
-};
+}

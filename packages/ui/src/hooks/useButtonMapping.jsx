@@ -42,13 +42,13 @@ export function useButtonMapping({
       ) {
         localStorage.setItem(
           `button${buttonNumber}Tracks`,
-          JSON.stringify(trackUrisRef.current)
+          JSON.stringify(trackUrisRef.current),
         );
       }
 
       setMappingInProgress(false);
     },
-    [contentId, contentType, contentImage, contentName]
+    [contentId, contentType, contentImage, contentName],
   );
 
   const setTrackUris = useCallback((uris) => {
@@ -94,7 +94,7 @@ export function useButtonMapping({
 
       e.preventDefault();
     },
-    [isActive, saveButtonMapping, setIgnoreNextRelease]
+    [isActive, saveButtonMapping, setIgnoreNextRelease],
   );
 
   const handleKeyUp = useCallback(
@@ -113,7 +113,7 @@ export function useButtonMapping({
 
       e.preventDefault();
     },
-    [isActive]
+    [isActive],
   );
 
   useEffect(() => {

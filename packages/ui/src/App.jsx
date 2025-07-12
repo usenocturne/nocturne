@@ -28,12 +28,12 @@ import LockView from "./components/common/LockView";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
-  setSelectedNetwork: () => { },
+  setSelectedNetwork: () => {},
 });
 
 export const ConnectorContext = React.createContext({
   showConnectorModal: false,
-  setShowConnectorModal: () => { },
+  setShowConnectorModal: () => {},
 });
 
 function useGlobalButtonMapping({
@@ -83,7 +83,7 @@ function useGlobalButtonMapping({
               headers: {
                 Authorization: `Bearer ${accessToken}`,
               },
-            }
+            },
           );
 
           if (response.ok) {
@@ -101,22 +101,26 @@ function useGlobalButtonMapping({
               headers: {
                 Authorization: `Bearer ${accessToken}`,
               },
-            }
+            },
           );
 
           if (response.ok) {
             const data = await response.json();
             if (data.items && data.items.length > 0) {
-              const lastPlayedEpisodeId = localStorage.getItem(`lastPlayedEpisode_${mappedId}`);
+              const lastPlayedEpisodeId = localStorage.getItem(
+                `lastPlayedEpisode_${mappedId}`,
+              );
               let targetEpisodeIndex = 0;
-              
+
               if (lastPlayedEpisodeId) {
-                const foundIndex = data.items.findIndex(ep => ep.id === lastPlayedEpisodeId);
+                const foundIndex = data.items.findIndex(
+                  (ep) => ep.id === lastPlayedEpisodeId,
+                );
                 if (foundIndex !== -1) {
                   targetEpisodeIndex = foundIndex;
                 }
               }
-              
+
               contextUri = `spotify:show:${mappedId}`;
               uris = [`spotify:episode:${data.items[targetEpisodeIndex].id}`];
             }
@@ -125,7 +129,7 @@ function useGlobalButtonMapping({
           }
         } else if (mappedType === "mix") {
           const mixTracksJson = localStorage.getItem(
-            `button${buttonNumber}Tracks`
+            `button${buttonNumber}Tracks`,
           );
           if (mixTracksJson) {
             try {
@@ -138,7 +142,7 @@ function useGlobalButtonMapping({
           }
         } else if (mappedType === "liked-songs") {
           const likedTracksJson = localStorage.getItem(
-            `button${buttonNumber}Tracks`
+            `button${buttonNumber}Tracks`,
           );
           if (likedTracksJson) {
             try {
@@ -154,7 +158,7 @@ function useGlobalButtonMapping({
                   headers: {
                     Authorization: `Bearer ${accessToken}`,
                   },
-                }
+                },
               );
 
               if (response.ok) {
@@ -172,7 +176,7 @@ function useGlobalButtonMapping({
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
                 },
-              }
+              },
             );
 
             if (response.ok) {
@@ -219,7 +223,7 @@ function useGlobalButtonMapping({
       setActiveSection,
       isProcessingButtonPress,
       isTutorialActive,
-    ]
+    ],
   );
 
   useEffect(() => {
@@ -276,17 +280,16 @@ function App() {
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState(null);
   const [showConnectorModal, setShowConnectorModal] = useState(false);
-  const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] = useState(null);
+  const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] =
+    useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:5000/device/resetcounter', {
-      method: 'POST',
-    }).catch(error => {
-      console.error('Error resetting boot counter:', error);
+    fetch("http://localhost:5000/device/resetcounter", {
+      method: "POST",
+    }).catch((error) => {
+      console.error("Error resetting boot counter:", error);
     });
   }, []);
-
-
 
   const {
     isAuthenticated,
@@ -337,7 +340,11 @@ function App() {
 
   const [gradientState, updateGradientColors] = useGradientState(activeSection);
 
-  const playbackProgress = usePlaybackProgress(currentPlayback, refreshPlaybackState, accessToken);
+  const playbackProgress = usePlaybackProgress(
+    currentPlayback,
+    refreshPlaybackState,
+    accessToken,
+  );
 
   const {
     showMappingOverlay: showGlobalMappingOverlay,
@@ -362,15 +369,31 @@ function App() {
   const handleCloseDeviceSwitcher = (selectedDeviceId = null) => {
     setIsDeviceSwitcherOpen(false);
     if (selectedDeviceId && playbackIntentOnDeviceSwitch) {
-      const { trackUriToPlay, contextUriToPlay, urisToPlay } = playbackIntentOnDeviceSwitch;
+      const { trackUriToPlay, contextUriToPlay, urisToPlay } =
+        playbackIntentOnDeviceSwitch;
       (async () => {
         let success = false;
         if (contextUriToPlay) {
-          success = await playerControls.playTrack(trackUriToPlay, contextUriToPlay, null, selectedDeviceId);
+          success = await playerControls.playTrack(
+            trackUriToPlay,
+            contextUriToPlay,
+            null,
+            selectedDeviceId,
+          );
         } else if (urisToPlay && urisToPlay.length > 0) {
-          success = await playerControls.playTrack(null, null, urisToPlay, selectedDeviceId);
+          success = await playerControls.playTrack(
+            null,
+            null,
+            urisToPlay,
+            selectedDeviceId,
+          );
         } else if (trackUriToPlay) {
-          success = await playerControls.playTrack(trackUriToPlay, null, null, selectedDeviceId);
+          success = await playerControls.playTrack(
+            trackUriToPlay,
+            null,
+            null,
+            selectedDeviceId,
+          );
         }
 
         if (success) {
@@ -418,12 +441,14 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const hasSeenTutorial = localStorage.getItem("hasSeenTutorial") === 'true';
+      const hasSeenTutorial =
+        localStorage.getItem("hasSeenTutorial") === "true";
       if (hasSeenTutorial) {
         setShowTutorial(false);
-        const shouldStartWithNowPlaying = localStorage.getItem('startWithNowPlaying') === 'true';
+        const shouldStartWithNowPlaying =
+          localStorage.getItem("startWithNowPlaying") === "true";
         if (shouldStartWithNowPlaying) {
-          setActiveSection('nowPlaying');
+          setActiveSection("nowPlaying");
         }
       } else {
         setShowTutorial(true);
@@ -491,7 +516,7 @@ function App() {
     if (showTutorial) return;
 
     if (viewingContent) return;
-    
+
     if (currentlyPlayingAlbum?.images?.[1]?.url) {
       if (activeSection === "nowPlaying") {
         updateGradientColors(currentlyPlayingAlbum.images[1].url, "nowPlaying");
@@ -503,7 +528,13 @@ function App() {
         updateGradientColors("/images/not-playing.webp", activeSection);
       }
     }
-  }, [currentlyPlayingAlbum, activeSection, updateGradientColors, showTutorial, viewingContent]);
+  }, [
+    currentlyPlayingAlbum,
+    activeSection,
+    updateGradientColors,
+    showTutorial,
+    viewingContent,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -530,7 +561,9 @@ function App() {
         console.log("Refreshing data after auth success");
         refreshData();
       } else {
-        console.log("Skipping refresh - letting initial data load handle the fetch");
+        console.log(
+          "Skipping refresh - letting initial data load handle the fetch",
+        );
       }
     } else {
       console.warn("No valid tokens found after auth success");
@@ -540,11 +573,12 @@ function App() {
   const handleTutorialComplete = () => {
     setShowTutorial(false);
     localStorage.setItem("hasSeenTutorial", "true");
-    const shouldStartWithNowPlaying = localStorage.getItem('startWithNowPlaying') === 'true';
+    const shouldStartWithNowPlaying =
+      localStorage.getItem("startWithNowPlaying") === "true";
     if (shouldStartWithNowPlaying) {
-      setActiveSection('nowPlaying');
+      setActiveSection("nowPlaying");
     } else {
-      setActiveSection('recents');
+      setActiveSection("recents");
     }
   };
 
@@ -602,16 +636,18 @@ function App() {
 
   const isFlashing = isUpdating && updateStatus.stage === "flash";
 
-  const showConnectionLostScreen = initialCheckDone &&
+  const showConnectionLostScreen =
+    initialCheckDone &&
     !isFlashing &&
     !pairingRequest &&
     !showTetheringScreen &&
-    (
-      (initialConnectionFailed && !isInternetConnected && !hasEverConnectedThisSession) ||
-      (!hasEverConnectedThisSession && !isInternetConnected)
-    );
+    ((initialConnectionFailed &&
+      !isInternetConnected &&
+      !hasEverConnectedThisSession) ||
+      (!hasEverConnectedThisSession && !isInternetConnected));
 
-  const displayNetworkBanner = initialCheckDone &&
+  const displayNetworkBanner =
+    initialCheckDone &&
     !showConnectionLostScreen &&
     !pairingRequest &&
     showNetworkBanner &&
@@ -620,10 +656,25 @@ function App() {
   let content;
   if (authIsLoading && !initialCheckDone) {
     content = null;
-  } else if (!isInternetConnected && !hasEverConnectedThisSession && initialCheckDone) {
-    content = <NetworkScreen isConnectionLost={true} onConnectionRestored={handleConnectionRestored} />;
+  } else if (
+    !isInternetConnected &&
+    !hasEverConnectedThisSession &&
+    initialCheckDone
+  ) {
+    content = (
+      <NetworkScreen
+        isConnectionLost={true}
+        onConnectionRestored={handleConnectionRestored}
+      />
+    );
   } else if (showConnectionLostScreen) {
-    content = <NetworkScreen isConnectionLost={true} deviceName={lastConnectedDevice?.name} onConnectionRestored={handleConnectionRestored} />;
+    content = (
+      <NetworkScreen
+        isConnectionLost={true}
+        deviceName={lastConnectedDevice?.name}
+        onConnectionRestored={handleConnectionRestored}
+      />
+    );
   } else if (!isAuthenticated && initialCheckDone) {
     content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showTutorial) {
@@ -642,7 +693,7 @@ function App() {
       />
     );
   } else if (activeSection === "lock") {
-    content = (<LockView onClose={() => setActiveSection("recents")}/>)
+    content = <LockView onClose={() => setActiveSection("recents")} />;
   } else if (viewingContent) {
     content = (
       <ContentView
@@ -700,25 +751,28 @@ function App() {
                     fontOpticalSizing: "auto",
                   }}
                 >
-                  <GradientBackground gradientState={gradientState} className="bg-black" />
+                  <GradientBackground
+                    gradientState={gradientState}
+                    className="bg-black"
+                  />
 
                   <div className="relative z-10">
                     {content}
-                    {!isFlashing && !showTetheringScreen && !showConnectionLostScreen && (
-                      <>
-                        {pairingRequest ? (
-                          <PairingScreen
-                            pin={pairingRequest.pairingKey}
-                            isConnecting={isConnecting}
-                            onAccept={acceptPairing}
-                            onReject={denyPairing}
-                          />
-                        ) : null}
-                      </>
-                    )}
-                    <NetworkBanner
-                      visible={displayNetworkBanner}
-                    />
+                    {!isFlashing &&
+                      !showTetheringScreen &&
+                      !showConnectionLostScreen && (
+                        <>
+                          {pairingRequest ? (
+                            <PairingScreen
+                              pin={pairingRequest.pairingKey}
+                              isConnecting={isConnecting}
+                              onAccept={acceptPairing}
+                              onReject={denyPairing}
+                            />
+                          ) : null}
+                        </>
+                      )}
+                    <NetworkBanner visible={displayNetworkBanner} />
                     <SystemUpdateModal
                       show={isFlashing}
                       status={updateStatus}

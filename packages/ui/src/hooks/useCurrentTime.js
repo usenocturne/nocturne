@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "../contexts/SettingsContext";
-import { networkAwareRequest, waitForStableNetwork } from '../utils/networkAwareRequest';
+import {
+  networkAwareRequest,
+  waitForStableNetwork,
+} from "../utils/networkAwareRequest";
 
 let cachedTimezone = null;
 export const getCachedTimezone = () => cachedTimezone;
@@ -21,15 +24,19 @@ export function useCurrentTime() {
       try {
         await waitForStableNetwork();
         const response = await networkAwareRequest(
-          () => fetch("http://localhost:5000/device/date/settimezone", {
-            method: "POST"
-          }),
+          () =>
+            fetch("http://localhost:5000/device/date/settimezone", {
+              method: "POST",
+            }),
           0,
-          { requireNetwork: true }
+          { requireNetwork: true },
         );
-        
+
         if (!response.ok) {
-          console.error("Failed to fetch timezone from API, status:", response.status);
+          console.error(
+            "Failed to fetch timezone from API, status:",
+            response.status,
+          );
           return;
         }
 
@@ -54,7 +61,7 @@ export function useCurrentTime() {
         if (response.ok) {
           const data = await response.json();
           const timeString = data.time;
-          const [hours24, minutes] = timeString.split(':');
+          const [hours24, minutes] = timeString.split(":");
 
           let displayHours;
           if (settings.use24HourTime) {
@@ -73,21 +80,25 @@ export function useCurrentTime() {
         console.error("Error fetching time from server:", error);
       }
 
-
       const now = new Date();
 
-      if (timezone && typeof Intl !== 'undefined') {
+      if (timezone && typeof Intl !== "undefined") {
         try {
-          const options = { timeZone: timezone, hour: 'numeric', minute: 'numeric', hour12: !settings.use24HourTime };
-          const formatter = new Intl.DateTimeFormat('en-US', options);
+          const options = {
+            timeZone: timezone,
+            hour: "numeric",
+            minute: "numeric",
+            hour12: !settings.use24HourTime,
+          };
+          const formatter = new Intl.DateTimeFormat("en-US", options);
           const timeString = formatter.format(now);
 
-          let parts = timeString.split(':');
+          let parts = timeString.split(":");
           let hours = parts[0];
           let minutes = parts[1];
 
           if (!settings.use24HourTime) {
-            minutes = minutes.split(' ')[0];
+            minutes = minutes.split(" ")[0];
           }
 
           setCurrentTime(`${hours}:${minutes}`);
@@ -129,6 +140,6 @@ export function useCurrentTime() {
 
   return {
     currentTime,
-    isFourDigits
+    isFourDigits,
   };
 }

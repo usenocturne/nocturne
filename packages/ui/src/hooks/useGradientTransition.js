@@ -4,7 +4,8 @@ import { extractColorsFromImage } from "../utils/colorExtractor";
 const DEFAULT_HEX_COLORS = ["#191414", "#191414", "#191414", "#191414"];
 
 export function useGradientTransition(activeSection) {
-  const [currentGradientHexColors, setCurrentGradientHexColors] = useState(DEFAULT_HEX_COLORS);
+  const [currentGradientHexColors, setCurrentGradientHexColors] =
+    useState(DEFAULT_HEX_COLORS);
   const [sectionGradients, setSectionGradients] = useState({
     recents: null,
     library: null,
@@ -27,16 +28,13 @@ export function useGradientTransition(activeSection) {
     return { r, g, b };
   }, []);
 
-  const rgbToHex = useCallback(
-    ({ r, g, b }) => {
-      const toHex = (n) =>
-        Math.max(0, Math.min(255, Math.round(n)))
-          .toString(16)
-          .padStart(2, "0");
-      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-    },
-    []
-  );
+  const rgbToHex = useCallback(({ r, g, b }) => {
+    const toHex = (n) =>
+      Math.max(0, Math.min(255, Math.round(n)))
+        .toString(16)
+        .padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }, []);
 
   const calculateBrightness = useCallback((hex) => {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -62,7 +60,7 @@ export function useGradientTransition(activeSection) {
         b: Math.round(rgb.b / reduction),
       });
     },
-    [MAX_BRIGHTNESS_THRESHOLD, hexToRgb, rgbToHex]
+    [MAX_BRIGHTNESS_THRESHOLD, hexToRgb, rgbToHex],
   );
 
   const calculateHue = useCallback((hex) => {
@@ -108,7 +106,10 @@ export function useGradientTransition(activeSection) {
     return radialGradients.join(", ");
   }, []);
 
-  const initialMeshGradient = useMemo(() => generateMeshGradient(DEFAULT_HEX_COLORS), [generateMeshGradient]);
+  const initialMeshGradient = useMemo(
+    () => generateMeshGradient(DEFAULT_HEX_COLORS),
+    [generateMeshGradient],
+  );
 
   const needsDarkGradientEnhancement = useCallback(
     (colors) => {
@@ -132,7 +133,7 @@ export function useGradientTransition(activeSection) {
         darkColorCount >= Math.ceil(colors.length * 0.75) || avgBrightness < 25
       );
     },
-    [calculateBrightness]
+    [calculateBrightness],
   );
 
   const createEnhancedDarkGradient = useCallback(
@@ -185,7 +186,7 @@ export function useGradientTransition(activeSection) {
         }),
       ];
     },
-    [hexToRgb, rgbToHex]
+    [hexToRgb, rgbToHex],
   );
 
   const filterColors = useCallback(
@@ -193,7 +194,7 @@ export function useGradientTransition(activeSection) {
       if (!colors || colors.length === 0) return colors;
 
       const brightnessLimitedColors = colors.map((color) =>
-        limitColorBrightness(color)
+        limitColorBrightness(color),
       );
 
       if (needsDarkGradientEnhancement(brightnessLimitedColors)) {
@@ -220,7 +221,7 @@ export function useGradientTransition(activeSection) {
       const brightColors = withBrightness.filter((c) => c.brightness > 120);
       const darkColors = withBrightness.filter((c) => c.brightness < 60);
       const midColors = withBrightness.filter(
-        (c) => c.brightness >= 60 && c.brightness <= 120
+        (c) => c.brightness >= 60 && c.brightness <= 120,
       );
 
       const result = [];
@@ -288,7 +289,7 @@ export function useGradientTransition(activeSection) {
       limitColorBrightness,
       needsDarkGradientEnhancement,
       createEnhancedDarkGradient,
-    ]
+    ],
   );
 
   const updateGradientColors = useCallback(
@@ -329,7 +330,12 @@ export function useGradientTransition(activeSection) {
             "#151231",
           ];
         else if (imageSection === "library")
-          newColorsForImageSection = ["#7662e9", "#a9c1de", "#8f90e3", "#5b30ef"];
+          newColorsForImageSection = [
+            "#7662e9",
+            "#a9c1de",
+            "#8f90e3",
+            "#5b30ef",
+          ];
         else if (imageSection === "auth")
           newColorsForImageSection = [
             "#3B518B",
@@ -337,58 +343,90 @@ export function useGradientTransition(activeSection) {
             "#142045",
             "#151231",
           ];
-        else newColorsForImageSection = ["#191414", "#191414", "#191414", "#191414"];
+        else
+          newColorsForImageSection = [
+            "#191414",
+            "#191414",
+            "#191414",
+            "#191414",
+          ];
       } else {
         try {
           let extracted = await extractColorsFromImage(imageUrl);
           newColorsForImageSection = filterColors(extracted);
         } catch (error) {
           console.error("Error updating gradient colors:", error);
-          newColorsForImageSection = ["#191414", "#191414", "#191414", "#191414"];
+          newColorsForImageSection = [
+            "#191414",
+            "#191414",
+            "#191414",
+            "#191414",
+          ];
           isError = true;
         }
       }
 
       if (imageSection) {
-        setSectionGradients((prev) => ({ ...prev, [imageSection]: newColorsForImageSection }));
+        setSectionGradients((prev) => ({
+          ...prev,
+          [imageSection]: newColorsForImageSection,
+        }));
       }
 
       let shouldUpdateGlobalGradient = false;
       if (isError) {
         if (activeSection && sectionGradients[activeSection]) {
-            setCurrentGradientHexColors(sectionGradients[activeSection]);
+          setCurrentGradientHexColors(sectionGradients[activeSection]);
         } else {
-            setCurrentGradientHexColors(["#191414", "#191414", "#191414", "#191414"]);
+          setCurrentGradientHexColors([
+            "#191414",
+            "#191414",
+            "#191414",
+            "#191414",
+          ]);
         }
         return;
       }
 
       if (!imageUrl) {
         if (imageSection === "auth") shouldUpdateGlobalGradient = true;
-        else if (imageSection === "settings" && activeSection === "settings") shouldUpdateGlobalGradient = true;
-        else if (imageSection === "radio" && (activeSection === "radio" || activeSection === "nowPlaying")) shouldUpdateGlobalGradient = true;
-        else if (imageSection === "library" && activeSection === "library") shouldUpdateGlobalGradient = true;
+        else if (imageSection === "settings" && activeSection === "settings")
+          shouldUpdateGlobalGradient = true;
+        else if (
+          imageSection === "radio" &&
+          (activeSection === "radio" || activeSection === "nowPlaying")
+        )
+          shouldUpdateGlobalGradient = true;
+        else if (imageSection === "library" && activeSection === "library")
+          shouldUpdateGlobalGradient = true;
         else if (!imageSection) shouldUpdateGlobalGradient = true;
       } else {
-        shouldUpdateGlobalGradient = (
+        shouldUpdateGlobalGradient =
           !imageSection ||
           imageSection === activeSection ||
           imageSection === "nowPlaying" ||
           (activeSection === "nowPlaying" && imageSection) ||
-          ["album", "playlist", "artist", "mix", "liked-songs"].includes(imageSection)
-        );
+          ["album", "playlist", "artist", "mix", "liked-songs"].includes(
+            imageSection,
+          );
       }
 
       if (shouldUpdateGlobalGradient) {
         setCurrentGradientHexColors(newColorsForImageSection);
       } else if (activeSection && sectionGradients[activeSection]) {
-        if (JSON.stringify(currentGradientHexColors) !== JSON.stringify(sectionGradients[activeSection])) {
+        if (
+          JSON.stringify(currentGradientHexColors) !==
+          JSON.stringify(sectionGradients[activeSection])
+        ) {
           setCurrentGradientHexColors(sectionGradients[activeSection]);
         }
-      } else if (JSON.stringify(currentGradientHexColors) !== JSON.stringify(["#191414", "#191414", "#191414", "#191414"])) {
+      } else if (
+        JSON.stringify(currentGradientHexColors) !==
+        JSON.stringify(["#191414", "#191414", "#191414", "#191414"])
+      ) {
       }
     },
-    [activeSection, filterColors, hexToRgb, rgbToHex]
+    [activeSection, filterColors, hexToRgb, rgbToHex],
   );
 
   return {

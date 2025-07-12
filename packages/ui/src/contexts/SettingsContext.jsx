@@ -12,15 +12,15 @@ export function SettingsProvider({ children }) {
     use24HourTime: getDefaultSettingValue("use24HourTime", false),
     trackNameScrollingEnabled: getDefaultSettingValue(
       "trackNameScrollingEnabled",
-      true
+      true,
     ),
     showLyricsGestureEnabled: getDefaultSettingValue(
       "showLyricsGestureEnabled",
-      false
+      false,
     ),
     songChangeGestureEnabled: getDefaultSettingValue(
       "songChangeGestureEnabled",
-      true
+      true,
     ),
     lyricsMenuEnabled: getDefaultSettingValue("lyricsMenuEnabled", true),
     elapsedTimeEnabled: getDefaultSettingValue("elapsedTimeEnabled", false),

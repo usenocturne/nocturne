@@ -61,20 +61,24 @@ export default function HorizontalScroll({
   });
 
   useEffect(() => {
-    if (currentlyPlayingId && containerRef.current && items.length > 0 && 
-        !hasScrolledToPlayingRef.current && scrollItemIntoView) {
-      
+    if (
+      currentlyPlayingId &&
+      containerRef.current &&
+      items.length > 0 &&
+      !hasScrolledToPlayingRef.current &&
+      scrollItemIntoView
+    ) {
       const playingItemIndex = items.findIndex(
-        item => item.getAttribute("data-id") === currentlyPlayingId
+        (item) => item.getAttribute("data-id") === currentlyPlayingId,
       );
-      
+
       if (playingItemIndex === 0) {
         containerRef.current.scrollTo({
           left: 0,
-          behavior: "smooth"
+          behavior: "smooth",
         });
       }
-      
+
       hasScrolledToPlayingRef.current = true;
     }
   }, [currentlyPlayingId, items, containerRef, scrollItemIntoView]);

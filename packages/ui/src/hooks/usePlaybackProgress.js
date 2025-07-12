@@ -1,11 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const sharedState = {
   refreshTimeoutId: null,
-  lastRefreshTime: 0
+  lastRefreshTime: 0,
 };
 
-export const usePlaybackProgress = (currentPlayback, refreshPlaybackState, accessToken) => {
+export const usePlaybackProgress = (
+  currentPlayback,
+  refreshPlaybackState,
+  accessToken,
+) => {
   const [progressMs, setProgressMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -18,11 +22,11 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState, acces
 
   const scheduleNextRefresh = useCallback(() => {
     const REFRESH_INTERVAL = 15000;
-    
+
     if (sharedState.refreshTimeoutId) {
       clearTimeout(sharedState.refreshTimeoutId);
     }
-    
+
     sharedState.refreshTimeoutId = setTimeout(() => {
       refreshPlaybackState();
       sharedState.lastRefreshTime = Date.now();
@@ -34,7 +38,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState, acces
     if (sharedState.refreshTimeoutId) {
       clearTimeout(sharedState.refreshTimeoutId);
     }
-    
+
     refreshPlaybackState();
     sharedState.lastRefreshTime = Date.now();
     scheduleNextRefresh();
@@ -43,11 +47,14 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState, acces
   useEffect(() => {
     if (accessToken) {
       const now = Date.now();
-      if (!sharedState.refreshTimeoutId || (now - sharedState.lastRefreshTime > 10000)) {
+      if (
+        !sharedState.refreshTimeoutId ||
+        now - sharedState.lastRefreshTime > 10000
+      ) {
         triggerRefresh();
       }
     }
-    
+
     return () => {};
   }, [accessToken, triggerRefresh]);
 
@@ -59,8 +66,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState, acces
         serverProgressRef.current = currentPlayback.progress_ms || 0;
         setProgressMs(currentPlayback.progress_ms || 0);
         lastUpdateTimeRef.current = Date.now();
-      }
-      else if (currentPlayback?.progress_ms !== undefined) {
+      } else if (currentPlayback?.progress_ms !== undefined) {
         serverProgressRef.current = currentPlayback.progress_ms;
         setProgressMs(currentPlayback.progress_ms);
         lastUpdateTimeRef.current = Date.now();
@@ -111,6 +117,6 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState, acces
     trackId,
     progressPercentage: duration > 0 ? (progressMs / duration) * 100 : 0,
     updateProgress,
-    triggerRefresh
+    triggerRefresh,
   };
-}; 
+};

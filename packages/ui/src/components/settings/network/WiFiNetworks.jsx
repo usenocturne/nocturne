@@ -67,7 +67,7 @@ const WiFiNetworks = () => {
     if (!currentNetwork) return null;
 
     const scanNetwork = availableNetworks.find(
-      (n) => n.ssid === currentNetwork.ssid
+      (n) => n.ssid === currentNetwork.ssid,
     );
     const inRange = !!scanNetwork;
 
@@ -115,7 +115,7 @@ const WiFiNetworks = () => {
         <div className="space-y-4">
           {savedNetworks.map((network) => {
             const scanNetwork = availableNetworks.find(
-              (n) => n.ssid === network.ssid
+              (n) => n.ssid === network.ssid,
             );
             const inRange = !!scanNetwork;
 
@@ -126,9 +126,10 @@ const WiFiNetworks = () => {
                   inRange && handleConnectToSavedNetwork(network.networkId)
                 }
                 className={`bg-white/10 rounded-xl p-6 select-none border border-white/10 
-                  ${inRange
-                    ? "hover:bg-white/20 transition-colors"
-                    : "opacity-70"
+                  ${
+                    inRange
+                      ? "hover:bg-white/20 transition-colors"
+                      : "opacity-70"
                   }`}
               >
                 <div className="flex justify-between items-center">
@@ -144,7 +145,13 @@ const WiFiNetworks = () => {
                     {hasPasswordSecurity(network.flags) && (
                       <LockIcon className="text-white" size={24} />
                     )}
-                    <div className={hasPasswordSecurity(network.flags) ? "ml-3 mr-3" : "mr-3"}>
+                    <div
+                      className={
+                        hasPasswordSecurity(network.flags)
+                          ? "ml-3 mr-3"
+                          : "mr-3"
+                      }
+                    >
                       {inRange ? (
                         getSignalIcon(scanNetwork.signal)
                       ) : (

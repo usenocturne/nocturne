@@ -11,9 +11,9 @@ const CapsLockIcon = ({ size = 20, className = "" }) => (
     strokeLinejoin="round"
     className={className}
   >
-    <path d="M9 19h6"/>
-    <path d="M9 15v-3H5l7-7 7 7h-4v3H9z"/>
+    <path d="M9 19h6" />
+    <path d="M9 15v-3H5l7-7 7 7h-4v3H9z" />
   </svg>
 );
 
-export default CapsLockIcon; 
+export default CapsLockIcon;

@@ -1,13 +1,13 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from "react";
 
-const API_BASE = 'http://172.16.42.1:20574';
+const API_BASE = "http://172.16.42.1:20574";
 
 let restoreSent = false;
 
 const ConnectorContext = createContext({
   isConnectorAvailable: false,
   isLoading: true,
-  connectorInfo: {}
+  connectorInfo: {},
 });
 
 export function ConnectorProvider({ children }) {
@@ -29,7 +29,7 @@ export function ConnectorProvider({ children }) {
 
       try {
         const response = await fetch(`${API_BASE}/info`, {
-          cache: 'no-store',
+          cache: "no-store",
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
@@ -41,7 +41,7 @@ export function ConnectorProvider({ children }) {
           connectorFound = true;
           clearInterval(intervalId);
 
-          if (!restoreSent && typeof localStorage !== 'undefined') {
+          if (!restoreSent && typeof localStorage !== "undefined") {
             restoreSent = true;
             try {
               const networkStatusResponse = await fetch(`${API_BASE}/network`);
@@ -49,29 +49,38 @@ export function ConnectorProvider({ children }) {
 
               if (networkStatusResponse.ok) {
                 const networkStatus = await networkStatusResponse.json();
-                isAlreadyConnected = networkStatus && Object.keys(networkStatus).length > 0;
+                isAlreadyConnected =
+                  networkStatus && Object.keys(networkStatus).length > 0;
               }
 
               if (!isAlreadyConnected) {
-                const networksJson = localStorage.getItem('savedWifiNetworks');
+                const networksJson = localStorage.getItem("savedWifiNetworks");
                 if (networksJson) {
                   const networks = JSON.parse(networksJson);
                   if (Array.isArray(networks) && networks.length > 0) {
-                    const restoreResponse = await fetch(`${API_BASE}/network/restore`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
+                    const restoreResponse = await fetch(
+                      `${API_BASE}/network/restore`,
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(networks),
                       },
-                      body: JSON.stringify(networks),
-                    });
+                    );
 
                     if (restoreResponse.ok) {
-                      const lastId = localStorage.getItem('lastConnectedWifiNetworkId');
+                      const lastId = localStorage.getItem(
+                        "lastConnectedWifiNetworkId",
+                      );
                       if (lastId) {
                         fetch(`${API_BASE}/network/select/${lastId}`, {
-                          method: 'POST',
+                          method: "POST",
                         }).catch((err) => {
-                          console.error('Failed to select last connected Wi-Fi network', err);
+                          console.error(
+                            "Failed to select last connected Wi-Fi network",
+                            err,
+                          );
                         });
                       }
                     }
@@ -79,7 +88,10 @@ export function ConnectorProvider({ children }) {
                 }
               }
             } catch (err) {
-              console.error('Error processing saved Wi-Fi networks from localStorage', err);
+              console.error(
+                "Error processing saved Wi-Fi networks from localStorage",
+                err,
+              );
             }
           }
         } else {
@@ -108,7 +120,9 @@ export function ConnectorProvider({ children }) {
   }, []);
 
   return (
-    <ConnectorContext.Provider value={{ isConnectorAvailable, isLoading, connectorInfo }}>
+    <ConnectorContext.Provider
+      value={{ isConnectorAvailable, isLoading, connectorInfo }}
+    >
       {children}
     </ConnectorContext.Provider>
   );
@@ -116,4 +130,4 @@ export function ConnectorProvider({ children }) {
 
 export function useConnector() {
   return useContext(ConnectorContext);
-} 
+}

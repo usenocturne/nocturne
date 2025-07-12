@@ -20,7 +20,7 @@ export function extractColorsFromImage(imageUrl) {
               Math.floor((x * size) / 5),
               Math.floor((y * size) / 5),
               1,
-              1
+              1,
             ).data;
             colorSamples.push({
               r: pixelData[0],
@@ -39,7 +39,7 @@ export function extractColorsFromImage(imageUrl) {
         const brightColors = colorSamples.slice(0, 5);
         const midColors = colorSamples.slice(
           Math.floor(colorSamples.length / 2) - 2,
-          Math.floor(colorSamples.length / 2) + 3
+          Math.floor(colorSamples.length / 2) + 3,
         );
         const darkColors = colorSamples.slice(-5);
 
@@ -52,7 +52,7 @@ export function extractColorsFromImage(imageUrl) {
           (color) =>
             `#${color.r.toString(16).padStart(2, "0")}${color.g
               .toString(16)
-              .padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`
+              .padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`,
         );
 
         resolve(selectedColors);

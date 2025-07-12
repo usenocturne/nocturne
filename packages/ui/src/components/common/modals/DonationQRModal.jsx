@@ -29,15 +29,15 @@ const DonationQRModal = ({ onClose }) => {
           isVisible && !isExiting
             ? "-translate-y-1/2 opacity-100"
             : isExiting
-            ? "translate-y-[10%] opacity-0"
-            : "translate-y-[10%] opacity-0"
+              ? "translate-y-[10%] opacity-0"
+              : "translate-y-[10%] opacity-0"
         }`}
       >
         <div className="relative bg-black/90 p-8 rounded-3xl shadow-2xl min-w-[400px] border border-white/10">
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors focus:outline-none"
-            style={{ background: 'none' }}
+            style={{ background: "none" }}
           >
             <XIcon size={24} />
           </button>

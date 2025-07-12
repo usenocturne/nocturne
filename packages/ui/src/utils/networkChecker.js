@@ -11,7 +11,10 @@ const NETWORK_CHECK_BYPASS_KEY = "networkCheckBypass";
 
 function isBypassed() {
   try {
-    return typeof localStorage !== "undefined" && localStorage.getItem(NETWORK_CHECK_BYPASS_KEY) === "true";
+    return (
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem(NETWORK_CHECK_BYPASS_KEY) === "true"
+    );
   } catch {
     return false;
   }

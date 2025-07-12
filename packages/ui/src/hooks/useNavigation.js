@@ -55,7 +55,7 @@ export function useNavigation({
             "scale-105",
             "transition-transform",
             "duration-200",
-            "ease-out"
+            "ease-out",
           );
         }
       });
@@ -64,7 +64,10 @@ export function useNavigation({
 
   const previousPlayingIdRef = useRef(null);
   useEffect(() => {
-    if (currentlyPlayingId && currentlyPlayingId !== previousPlayingIdRef.current) {
+    if (
+      currentlyPlayingId &&
+      currentlyPlayingId !== previousPlayingIdRef.current
+    ) {
       previousPlayingIdRef.current = currentlyPlayingId;
       hasScrolledToPlayingRef.current = false;
     }
@@ -90,7 +93,7 @@ export function useNavigation({
         });
       }
     },
-    [containerRef, vertical]
+    [containerRef, vertical],
   );
 
   useEffect(() => {
@@ -102,12 +105,15 @@ export function useNavigation({
       enableScrollTracking
     ) {
       const firstItem = itemsRef.current[0];
-      
-      if (firstItem && firstItem.getAttribute("data-id") === currentlyPlayingId) {
+
+      if (
+        firstItem &&
+        firstItem.getAttribute("data-id") === currentlyPlayingId
+      ) {
         containerRef.current.scrollTo({
           left: 0,
           top: 0,
-          behavior: "smooth"
+          behavior: "smooth",
         });
         hasScrolledToPlayingRef.current = true;
       }
@@ -118,7 +124,7 @@ export function useNavigation({
     if (!containerRef.current) return [];
 
     return Array.from(
-      containerRef.current.querySelectorAll("[data-track-index]")
+      containerRef.current.querySelectorAll("[data-track-index]"),
     ).sort((a, b) => {
       const indexA = parseInt(a.getAttribute("data-track-index"), 10);
       const indexB = parseInt(b.getAttribute("data-track-index"), 10);
@@ -142,7 +148,7 @@ export function useNavigation({
           "scale-105",
           "transition-transform",
           "duration-200",
-          "ease-out"
+          "ease-out",
         );
       }
     }
@@ -181,29 +187,32 @@ export function useNavigation({
       e.stopPropagation();
 
       const now = Date.now();
-      
+
       if (wheelThrottleRef.current && now - wheelThrottleRef.current < 60) {
         isRapidScrollingRef.current = true;
-        
+
         if (now - wheelThrottleRef.current < 15) {
           return;
         }
-      } else if (wheelThrottleRef.current && now - wheelThrottleRef.current > 100) {
+      } else if (
+        wheelThrottleRef.current &&
+        now - wheelThrottleRef.current > 100
+      ) {
         isRapidScrollingRef.current = false;
       }
-      
+
       if (wheelDebounceRef.current) {
         clearTimeout(wheelDebounceRef.current);
       }
-      
+
       wheelDebounceRef.current = setTimeout(() => {
         isRapidScrollingRef.current = false;
       }, 100);
-      
+
       wheelThrottleRef.current = now;
 
       lastActivityRef.current = now;
-      
+
       if (inactivityTimeoutRef.current) {
         clearTimeout(inactivityTimeoutRef.current);
       }
@@ -231,7 +240,7 @@ export function useNavigation({
         const scaledItem = items.findIndex(
           (item) =>
             item.classList.contains("scale-105") ||
-            item.classList.contains("transition-transform")
+            item.classList.contains("transition-transform"),
         );
 
         const delta = e.deltaX;
@@ -247,7 +256,7 @@ export function useNavigation({
               "scale-105",
               "transition-transform",
               "duration-200",
-              "ease-out"
+              "ease-out",
             );
           });
 
@@ -255,7 +264,7 @@ export function useNavigation({
             "scale-105",
             "transition-transform",
             "duration-200",
-            "ease-out"
+            "ease-out",
           );
 
           onItemFocus(startIndex, targetItem);
@@ -291,7 +300,7 @@ export function useNavigation({
                 "scale-105",
                 "transition-transform",
                 "duration-200",
-                "ease-out"
+                "ease-out",
               );
             });
 
@@ -299,7 +308,7 @@ export function useNavigation({
               "scale-105",
               "transition-transform",
               "duration-200",
-              "ease-out"
+              "ease-out",
             );
           });
 
@@ -315,7 +324,7 @@ export function useNavigation({
               "scale-105",
               "transition-transform",
               "duration-200",
-              "ease-out"
+              "ease-out",
             );
           });
         }
@@ -324,7 +333,7 @@ export function useNavigation({
       if (enableItemSelection) {
         inactivityTimeoutRef.current = setTimeout(() => {
           const scaledItemIndex = items.findIndex((item) =>
-            item.classList?.contains("scale-105")
+            item.classList?.contains("scale-105"),
           );
 
           if (scaledItemIndex !== -1) {
@@ -332,7 +341,7 @@ export function useNavigation({
             scaledItem.classList.add(
               "transition-transform",
               "duration-200",
-              "ease-out"
+              "ease-out",
             );
             scaledItem.classList.remove("scale-105");
           }
@@ -352,7 +361,7 @@ export function useNavigation({
       onItemFocus,
       vertical,
       getTrackItems,
-    ]
+    ],
   );
 
   const handleKeyDown = useCallback(
@@ -372,12 +381,18 @@ export function useNavigation({
       if (enableKeyboardNavigation && e.key === "Enter") {
         const items = vertical ? getTrackItems() : itemsRef.current;
 
-        if (selectedIndexRef.current !== -1 && items[selectedIndexRef.current]) {
+        if (
+          selectedIndexRef.current !== -1 &&
+          items[selectedIndexRef.current]
+        ) {
           if (inactivityTimeoutRef.current) {
             clearTimeout(inactivityTimeoutRef.current);
           }
 
-          onItemSelect(selectedIndexRef.current, items[selectedIndexRef.current]);
+          onItemSelect(
+            selectedIndexRef.current,
+            items[selectedIndexRef.current],
+          );
           return;
         } else if (
           items.length > 0 &&
@@ -431,7 +446,7 @@ export function useNavigation({
                   "scale-105",
                   "transition-transform",
                   "duration-200",
-                  "ease-out"
+                  "ease-out",
                 );
               });
 
@@ -439,7 +454,7 @@ export function useNavigation({
                 "scale-105",
                 "transition-transform",
                 "duration-200",
-                "ease-out"
+                "ease-out",
               );
 
               onItemSelect(visibleItemIndex, targetItem);
@@ -489,7 +504,7 @@ export function useNavigation({
                 "scale-105",
                 "transition-transform",
                 "duration-200",
-                "ease-out"
+                "ease-out",
               );
             });
 
@@ -497,7 +512,7 @@ export function useNavigation({
               "scale-105",
               "transition-transform",
               "duration-200",
-              "ease-out"
+              "ease-out",
             );
 
             onItemFocus(newIndex, targetItem);
@@ -532,7 +547,7 @@ export function useNavigation({
       scrollItemIntoView,
       inactivityTimeout,
       getTrackItems,
-    ]
+    ],
   );
 
   useEffect(() => {
@@ -582,7 +597,7 @@ export function useNavigation({
             "scale-105",
             "transition-transform",
             "duration-200",
-            "ease-out"
+            "ease-out",
           );
         });
 
@@ -591,13 +606,13 @@ export function useNavigation({
           "scale-105",
           "transition-transform",
           "duration-200",
-          "ease-out"
+          "ease-out",
         );
 
         scrollItemIntoView(targetItem);
       }
     },
-    [enableItemSelection, scrollItemIntoView, vertical, getTrackItems]
+    [enableItemSelection, scrollItemIntoView, vertical, getTrackItems],
   );
 
   const scrollToPosition = useCallback(
@@ -616,7 +631,7 @@ export function useNavigation({
         });
       }
     },
-    [containerRef, vertical]
+    [containerRef, vertical],
   );
 
   const scrollByAmount = useCallback(
@@ -635,7 +650,7 @@ export function useNavigation({
         });
       }
     },
-    [containerRef, vertical]
+    [containerRef, vertical],
   );
 
   const cleanup = useCallback(() => {
@@ -665,7 +680,7 @@ export function useNavigation({
           "transition-transform",
           "duration-200",
           "duration-150",
-          "ease-out"
+          "ease-out",
         );
       }
     });

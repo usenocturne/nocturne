@@ -270,8 +270,8 @@ const TutorialFrame = ({ currentScreen }) => {
                 currentScreen === 3
                   ? `animate-preset-button-${index + 1}`
                   : currentScreen === 4
-                  ? `animate-quick-press-${index + 1}`
-                  : ""
+                    ? `animate-quick-press-${index + 1}`
+                    : ""
               }
             />
           </g>
@@ -294,8 +294,8 @@ const TutorialFrame = ({ currentScreen }) => {
             currentScreen === 1 || currentScreen === 6
               ? "animate-dial"
               : currentScreen === 7
-              ? "animate-scrub-dial"
-              : ""
+                ? "animate-scrub-dial"
+                : ""
           }
         >
           <circle

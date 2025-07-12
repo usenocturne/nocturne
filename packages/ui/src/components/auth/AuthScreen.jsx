@@ -39,7 +39,9 @@ const AuthScreen = ({ onAuthSuccess }) => {
         authAttemptedRef.current = true;
         try {
           const storedAccessToken = localStorage.getItem("spotifyAccessToken");
-          const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+          const storedRefreshToken = localStorage.getItem(
+            "spotifyRefreshToken",
+          );
 
           if (!storedAccessToken || !storedRefreshToken) {
             const authResponse = await initAuth();
@@ -93,7 +95,10 @@ const AuthScreen = ({ onAuthSuccess }) => {
   }, [isAuthenticated, onAuthSuccess]);
 
   useEffect(() => {
-    if (previousNetworkStateRef.current === false && isNetworkConnected === true) {
+    if (
+      previousNetworkStateRef.current === false &&
+      isNetworkConnected === true
+    ) {
       authAttemptedRef.current = false;
       setAuthInitialized(false);
       setHasQrCode(false);
@@ -124,8 +129,8 @@ const AuthScreen = ({ onAuthSuccess }) => {
     error && !error.includes("authorization_pending")
       ? error
       : !isNetworkConnected
-      ? "Network connection required"
-      : null;
+        ? "Network connection required"
+        : null;
 
   return (
     <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">

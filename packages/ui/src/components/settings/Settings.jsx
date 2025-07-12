@@ -60,7 +60,8 @@ const settingsStructure = {
         id: "factory-reset",
         title: "Factory Reset",
         type: "action",
-        description: "Erase all stored settings and paired Bluetooth devices. This cannot be undone.",
+        description:
+          "Erase all stored settings and paired Bluetooth devices. This cannot be undone.",
         action: "factoryReset",
       },
     ],
@@ -136,8 +137,7 @@ const settingsStructure = {
         id: "elapsed-time",
         title: "Show Time Elapsed",
         type: "toggle",
-        description:
-          "Display the elapsed track time below the progress bar.",
+        description: "Display the elapsed track time below the progress bar.",
         storageKey: "elapsedTimeEnabled",
         defaultValue: false,
       },
@@ -180,7 +180,14 @@ const settingsStructure = {
         id: "contributors",
         title: "Contributors",
         type: "sponsors",
-        names: ["angelolz", "EllEation", "Jenner Gray", "vakst", "álvaro s", "Justin Reynard"],
+        names: [
+          "angelolz",
+          "EllEation",
+          "Jenner Gray",
+          "vakst",
+          "álvaro s",
+          "Justin Reynard",
+        ],
       },
       {
         id: "sponsors",
@@ -556,17 +563,17 @@ export default function Settings({
 
   const [mainClasses, setMainClasses] = useState("translate-x-0 opacity-100");
   const [parentClasses, setParentClasses] = useState(
-    "translate-x-full opacity-0"
+    "translate-x-full opacity-0",
   );
   const [subpageClasses, setSubpageClasses] = useState(
-    "translate-x-full opacity-0"
+    "translate-x-full opacity-0",
   );
 
   const ANIMATION_DURATION = 300;
 
   useEffect(() => {
     scrollContainerRef.current = document.querySelector(
-      ".settings-scroll-container"
+      ".settings-scroll-container",
     );
   }, []);
 
@@ -600,7 +607,7 @@ export default function Settings({
 
   const handleFactoryReset = async () => {
     try {
-      fetch("http://localhost:5000/device/factoryreset", { method: "POST" })
+      fetch("http://localhost:5000/device/factoryreset", { method: "POST" });
       setShowFactoryResetDialog(false);
     } catch (error) {
       console.error("Error during factory reset:", error);
@@ -735,14 +742,16 @@ export default function Settings({
               <Switch
                 checked={settings[item.storageKey]}
                 onChange={() => handleToggle(item.storageKey)}
-                className={`relative inline-flex h-11 w-20 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
-                  }`}
+                className={`relative inline-flex h-11 w-20 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
+                }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings[item.storageKey]
+                  className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    settings[item.storageKey]
                       ? "translate-x-9"
                       : "translate-x-0"
-                    }`}
+                  }`}
                 />
               </Switch>
               <span className="ml-3 text-[32px] font-[580] text-white tracking-tight">
@@ -812,7 +821,7 @@ export default function Settings({
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (isAnimating) return;
-      
+
       if (e.key === "Escape") {
         if (showSubpage) {
           navigateBack();
@@ -837,7 +846,15 @@ export default function Settings({
   }, [isAnimating, showSubpage, showParent, setActiveSection]);
 
   return (
-    <div className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container scroll-smooth" style={{ touchAction: "pan-y", overflowX: "hidden", WebkitOverflowScrolling: "touch", willChange: "transform" }}>
+    <div
+      className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container scroll-smooth"
+      style={{
+        touchAction: "pan-y",
+        overflowX: "hidden",
+        WebkitOverflowScrolling: "touch",
+        willChange: "transform",
+      }}
+    >
       <style>{`
         .screen-transition {
           transition: transform ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1),
@@ -904,7 +921,7 @@ export default function Settings({
                 <button
                   onClick={navigateBack}
                   className="mr-4 focus:outline-none"
-                  style={{ background: 'none' }}
+                  style={{ background: "none" }}
                   disabled={isAnimating}
                 >
                   <ChevronLeftIcon className="w-8 h-8 text-white" />
@@ -915,7 +932,7 @@ export default function Settings({
               </div>
               <div className="space-y-6 mb-12">
                 {activeParent &&
-                  settingsStructure[activeParent].type === "parent" ? (
+                settingsStructure[activeParent].type === "parent" ? (
                   <div className="space-y-4">
                     {settingsStructure[activeParent].items?.map((subItem) => (
                       <button
@@ -939,7 +956,7 @@ export default function Settings({
                 ) : (
                   activeParent &&
                   settingsStructure[activeParent].items?.map((item) =>
-                    renderSettingItem(item)
+                    renderSettingItem(item),
                   )
                 )}
               </div>
@@ -957,7 +974,7 @@ export default function Settings({
                 <button
                   onClick={navigateBack}
                   className="mr-4 focus:outline-none"
-                  style={{ background: 'none'}}
+                  style={{ background: "none" }}
                   disabled={isAnimating}
                 >
                   <ChevronLeftIcon className="w-8 h-8 text-white" />
@@ -1003,7 +1020,8 @@ export default function Settings({
                   </DialogTitle>
                   <div className="mt-2">
                     <p className="text-[28px] font-[560] tracking-tight text-white/60">
-                      This will erase all stored settings and paired Bluetooth devices. This cannot be undone.
+                      This will erase all stored settings and paired Bluetooth
+                      devices. This cannot be undone.
                     </p>
                   </div>
                 </div>

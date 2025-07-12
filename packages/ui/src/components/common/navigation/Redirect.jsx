@@ -10,7 +10,7 @@ const Redirect = ({ href, children, accessToken }) => {
   const handleClick = (e) => {
     e.preventDefault();
     navigate(
-      `${href}${href.includes("?") ? "&" : "?"}accessToken=${accessToken}`
+      `${href}${href.includes("?") ? "&" : "?"}accessToken=${accessToken}`,
     );
   };
 

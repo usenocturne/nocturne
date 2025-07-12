@@ -42,7 +42,11 @@ const ContentView = ({
 
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
 
-  const fetchPlaylistTracks = async (playlistId, initialTracks, initialNext) => {
+  const fetchPlaylistTracks = async (
+    playlistId,
+    initialTracks,
+    initialNext,
+  ) => {
     let allTracks = [...initialTracks];
     let nextUrl = initialNext;
 
@@ -54,11 +58,13 @@ const ContentView = ({
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch additional tracks: ${response.status}`);
+        throw new Error(
+          `Failed to fetch additional tracks: ${response.status}`,
+        );
       }
 
       const data = await response.json();
-      allTracks = [...allTracks, ...data.items.map(item => item.track)];
+      allTracks = [...allTracks, ...data.items.map((item) => item.track)];
       nextUrl = data.next;
     }
 
@@ -66,7 +72,12 @@ const ContentView = ({
   };
 
   const loadMoreTracks = useCallback(async () => {
-    if (!nextUrl || isLoadingMore || (contentType !== "playlist" && contentType !== "show")) return;
+    if (
+      !nextUrl ||
+      isLoadingMore ||
+      (contentType !== "playlist" && contentType !== "show")
+    )
+      return;
 
     try {
       setIsLoadingMore(true);
@@ -81,14 +92,15 @@ const ContentView = ({
       }
 
       const data = await response.json();
-      const newTracks = contentType === "playlist" 
-        ? data.items.map(item => item.track)
-        : data.items;
-      
-      setTracks(prevTracks => [...prevTracks, ...newTracks]);
+      const newTracks =
+        contentType === "playlist"
+          ? data.items.map((item) => item.track)
+          : data.items;
+
+      setTracks((prevTracks) => [...prevTracks, ...newTracks]);
       setNextUrl(data.next);
       setHasMoreTracks(!!data.next);
-      setLoadedPages(prev => prev + 1);
+      setLoadedPages((prev) => prev + 1);
     } catch (err) {
       console.error("Error loading more tracks:", err);
     } finally {
@@ -98,10 +110,15 @@ const ContentView = ({
 
   useEffect(() => {
     const container = tracksContainerRef.current;
-    if (!container || (contentType !== "playlist" && contentType !== "show") || tracksPerPage === 0) return;
+    if (
+      !container ||
+      (contentType !== "playlist" && contentType !== "show") ||
+      tracksPerPage === 0
+    )
+      return;
 
     const handleScroll = () => {
-      const trackElements = container.querySelectorAll('[data-track-index]');
+      const trackElements = container.querySelectorAll("[data-track-index]");
       if (trackElements.length === 0) return;
 
       const containerRect = container.getBoundingClientRect();
@@ -111,7 +128,7 @@ const ContentView = ({
         const trackRect = trackElements[i].getBoundingClientRect();
         const trackCenter = trackRect.top + trackRect.height / 2;
         const containerCenter = containerRect.top + containerRect.height / 2;
-        
+
         if (trackCenter <= containerCenter) {
           currentVisibleTrackIndex = i;
         } else {
@@ -120,29 +137,42 @@ const ContentView = ({
       }
 
       if (currentVisibleTrackIndex >= 0) {
-        const currentPage = Math.floor(currentVisibleTrackIndex / tracksPerPage);
+        const currentPage = Math.floor(
+          currentVisibleTrackIndex / tracksPerPage,
+        );
         const currentPageStart = currentPage * tracksPerPage;
-        const currentPageMidpoint = currentPageStart + Math.floor(tracksPerPage / 2);
-        
-        if (currentVisibleTrackIndex >= currentPageMidpoint && 
-            currentPage >= loadedPages - 1 && 
-            hasMoreTracks && 
-            !isLoadingMore) {
+        const currentPageMidpoint =
+          currentPageStart + Math.floor(tracksPerPage / 2);
+
+        if (
+          currentVisibleTrackIndex >= currentPageMidpoint &&
+          currentPage >= loadedPages - 1 &&
+          hasMoreTracks &&
+          !isLoadingMore
+        ) {
           loadMoreTracks();
         }
       }
     };
 
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [hasMoreTracks, isLoadingMore, loadMoreTracks, contentType, tracksPerPage, loadedPages]);
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [
+    hasMoreTracks,
+    isLoadingMore,
+    loadMoreTracks,
+    contentType,
+    tracksPerPage,
+    loadedPages,
+  ]);
 
   const { showMappingOverlay, activeButton, mappingInProgress, setTrackUris } =
     useButtonMapping({
       accessToken,
       contentId,
       contentType,
-      contentImage: content?.images?.[1]?.url || content?.images?.[0]?.url || "",
+      contentImage:
+        content?.images?.[1]?.url || content?.images?.[0]?.url || "",
       contentName: content?.name || "",
       playTrack,
       isActive: !!content,
@@ -200,7 +230,7 @@ const ContentView = ({
         setIsLoadingMore(false);
         setTracksPerPage(0);
         setLoadedPages(0);
-        
+
         let contentData;
         let tracksData = [];
 
@@ -212,23 +242,26 @@ const ContentView = ({
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
                 },
-              }
+              },
             );
 
             if (!albumResponse.ok) {
               throw new Error(
-                `Failed to fetch album data: ${albumResponse.status}`
+                `Failed to fetch album data: ${albumResponse.status}`,
               );
             }
 
             contentData = await albumResponse.json();
-            
+
             if (
               contentData?.images &&
               contentData.images.length > 0 &&
               updateGradientColors
             ) {
-              updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+              updateGradientColors(
+                contentData.images[1]?.url || contentData.images[0].url,
+                contentType,
+              );
             }
 
             tracksData = contentData.tracks.items;
@@ -242,12 +275,12 @@ const ContentView = ({
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
                 },
-              }
+              },
             );
 
             if (!playlistResponse.ok) {
               throw new Error(
-                `Failed to fetch playlist data: ${playlistResponse.status}`
+                `Failed to fetch playlist data: ${playlistResponse.status}`,
               );
             }
 
@@ -258,7 +291,10 @@ const ContentView = ({
               contentData.images.length > 0 &&
               updateGradientColors
             ) {
-              updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+              updateGradientColors(
+                contentData.images[1]?.url || contentData.images[0].url,
+                contentType,
+              );
             }
 
             tracksData = contentData.tracks.items.map((item) => item.track);
@@ -282,15 +318,17 @@ const ContentView = ({
                   headers: {
                     Authorization: `Bearer ${accessToken}`,
                   },
-                }
+                },
               ),
             ]);
 
             if (!artistResponse.ok || !topTracksResponse.ok) {
               throw new Error(
                 `Failed to fetch artist data: ${
-                  !artistResponse.ok ? artistResponse.status : topTracksResponse.status
-                }`
+                  !artistResponse.ok
+                    ? artistResponse.status
+                    : topTracksResponse.status
+                }`,
               );
             }
 
@@ -302,7 +340,10 @@ const ContentView = ({
               contentData.images.length > 0 &&
               updateGradientColors
             ) {
-              updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+              updateGradientColors(
+                contentData.images[1]?.url || contentData.images[0].url,
+                contentType,
+              );
             }
 
             tracksData = topTracksData.tracks;
@@ -316,19 +357,19 @@ const ContentView = ({
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
                 },
-              }
+              },
             );
 
             if (!likedSongsResponse.ok) {
               throw new Error(
-                `Failed to fetch liked songs: ${likedSongsResponse.status}`
+                `Failed to fetch liked songs: ${likedSongsResponse.status}`,
               );
             }
 
             const likedSongsData = await likedSongsResponse.json();
 
             contentData = {
-              id: "liked-songs", 
+              id: "liked-songs",
               name: "Liked Songs",
               type: "liked-songs",
               images: [
@@ -353,9 +394,9 @@ const ContentView = ({
               contentData = {
                 ...foundMix,
                 type: "mix",
-                images: foundMix.images?.[1] 
-                  ? foundMix.images 
-                  : [foundMix.images?.[0], foundMix.images?.[0]]
+                images: foundMix.images?.[1]
+                  ? foundMix.images
+                  : [foundMix.images?.[0], foundMix.images?.[0]],
               };
 
               if (
@@ -363,12 +404,15 @@ const ContentView = ({
                 contentData.images.length > 0 &&
                 updateGradientColors
               ) {
-                updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+                updateGradientColors(
+                  contentData.images[1]?.url || contentData.images[0].url,
+                  contentType,
+                );
               }
 
               tracksData = foundMix.tracks || [];
             } else {
-              throw new Error(`Mix not found: ${contentId}`); 
+              throw new Error(`Mix not found: ${contentId}`);
             }
             break;
           }
@@ -380,18 +424,23 @@ const ContentView = ({
                   Authorization: `Bearer ${accessToken}`,
                 },
               }),
-              fetch(`https://api.spotify.com/v1/shows/${contentId}/episodes?limit=50`, {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
+              fetch(
+                `https://api.spotify.com/v1/shows/${contentId}/episodes?limit=50`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
                 },
-              }),
+              ),
             ]);
 
             if (!showResponse.ok || !episodesResponse.ok) {
               throw new Error(
                 `Failed to fetch show data: ${
-                  !showResponse.ok ? showResponse.status : episodesResponse.status
-                }`
+                  !showResponse.ok
+                    ? showResponse.status
+                    : episodesResponse.status
+                }`,
               );
             }
 
@@ -403,7 +452,10 @@ const ContentView = ({
               contentData.images.length > 0 &&
               updateGradientColors
             ) {
-              updateGradientColors(contentData.images[1]?.url || contentData.images[0].url, contentType);
+              updateGradientColors(
+                contentData.images[1]?.url || contentData.images[0].url,
+                contentType,
+              );
             }
 
             tracksData = episodesData.items;
@@ -480,11 +532,7 @@ const ContentView = ({
       localStorage.setItem("playingLikedSongs", "true");
     }
 
-    const success = await playTrack(
-      track.uri,
-      contextUri,
-      uris
-    );
+    const success = await playTrack(track.uri, contextUri, uris);
 
     if (success) {
       if (refreshPlaybackState) {
@@ -492,7 +540,7 @@ const ContentView = ({
           refreshPlaybackState(true);
         }, 1000);
       }
-      
+
       if (wasShuffleEnabled) {
         setTimeout(async () => {
           await toggleShuffle(true);
@@ -545,21 +593,39 @@ const ContentView = ({
     return (
       <div className="flex flex-col md:flex-row pt-10 px-12 fadeIn-animation">
         <div className="md:w-1/3 sticky top-10 mb-8 md:mb-0 md:mr-8">
-          <div className="mr-10" style={{ minWidth: '280px' }}>
-            <div className="aspect-square bg-white/10 animate-pulse rounded-xl drop-shadow-xl" style={{ width: '280px', height: '280px', borderRadius: '12px' }} />
-            <div className="mt-4 h-10 bg-white/10 animate-pulse rounded" style={{ width: '250px' }} />
-            <div className="mt-3 h-8 bg-white/10 animate-pulse rounded" style={{ width: '200px' }} />
+          <div className="mr-10" style={{ minWidth: "280px" }}>
+            <div
+              className="aspect-square bg-white/10 animate-pulse rounded-xl drop-shadow-xl"
+              style={{ width: "280px", height: "280px", borderRadius: "12px" }}
+            />
+            <div
+              className="mt-4 h-10 bg-white/10 animate-pulse rounded"
+              style={{ width: "250px" }}
+            />
+            <div
+              className="mt-3 h-8 bg-white/10 animate-pulse rounded"
+              style={{ width: "200px" }}
+            />
           </div>
         </div>
-        <div className="md:w-2/3 md:pl-20" style={{ height: 'calc(100vh - 5rem)' }}>
+        <div
+          className="md:w-2/3 md:pl-20"
+          style={{ height: "calc(100vh - 5rem)" }}
+        >
           {Array(5)
             .fill()
             .map((_, i) => (
               <div key={i} className="flex items-start mb-4">
                 <div className="w-6 h-8 bg-white/10 animate-pulse rounded mr-12" />
                 <div className="flex-grow">
-                  <div className="h-8 bg-white/10 animate-pulse rounded mb-2" style={{ width: '250px' }} />
-                  <div className="h-6 bg-white/10 animate-pulse rounded" style={{ width: '200px' }} />
+                  <div
+                    className="h-8 bg-white/10 animate-pulse rounded mb-2"
+                    style={{ width: "250px" }}
+                  />
+                  <div
+                    className="h-6 bg-white/10 animate-pulse rounded"
+                    style={{ width: "200px" }}
+                  />
                 </div>
               </div>
             ))}
@@ -570,12 +636,21 @@ const ContentView = ({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center text-white/70" style={{ height: '480px' }}>
+      <div
+        className="flex flex-col items-center justify-center text-white/70"
+        style={{ height: "480px" }}
+      >
         <CarThingIcon className="h-16 w-auto mb-2" />
-        <h3 className="text-white truncate tracking-tight" style={{ fontSize: '36px', fontWeight: '560' }}>
+        <h3
+          className="text-white truncate tracking-tight"
+          style={{ fontSize: "36px", fontWeight: "560" }}
+        >
           Error Loading Content
         </h3>
-        <p className="text-white/60 truncate tracking-tight" style={{ fontSize: '24px', fontWeight: '560' }}>
+        <p
+          className="text-white/60 truncate tracking-tight"
+          style={{ fontSize: "24px", fontWeight: "560" }}
+        >
           {error}
         </p>
       </div>
@@ -594,7 +669,7 @@ const ContentView = ({
   };
 
   const formatNumber = (num) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   const getSubtitle = () => {
@@ -636,7 +711,7 @@ const ContentView = ({
   return (
     <div className="flex flex-col md:flex-row pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10 mb-8 md:mb-0 md:mr-8">
-        <div className="mr-10 relative" style={{ minWidth: '280px' }}>
+        <div className="mr-10 relative" style={{ minWidth: "280px" }}>
           <img
             src={getImageUrl()}
             alt={`${content.name} Cover`}
@@ -645,10 +720,16 @@ const ContentView = ({
             className={getImageStyle()}
           />
           {getMappingStatusText()}
-          <h4 className="mt-2 text-white truncate tracking-tight" style={{ fontSize: '36px', fontWeight: '580', maxWidth: '280px' }}>
+          <h4
+            className="mt-2 text-white truncate tracking-tight"
+            style={{ fontSize: "36px", fontWeight: "580", maxWidth: "280px" }}
+          >
             {content.name}
           </h4>
-          <h4 className="text-white/60 truncate tracking-tight" style={{ fontSize: '28px', fontWeight: '560', maxWidth: '280px' }}>
+          <h4
+            className="text-white/60 truncate tracking-tight"
+            style={{ fontSize: "28px", fontWeight: "560", maxWidth: "280px" }}
+          >
             {getSubtitle()}
           </h4>
         </div>
@@ -656,7 +737,7 @@ const ContentView = ({
 
       <div
         className="md:w-2/3 md:pl-20 overflow-y-auto scroll-container scroll-smooth pb-12"
-        style={{ height: 'calc(100vh - 5rem)', paddingTop: '6px' }}
+        style={{ height: "calc(100vh - 5rem)", paddingTop: "6px" }}
         ref={tracksContainerRef}
       >
         {tracks.map((track, index) => {
@@ -664,14 +745,22 @@ const ContentView = ({
 
           return (
             <div
-              key={`${track.id || 'track'}-${index}`}
-              className={`flex items-start mb-5 transition-transform duration-200 ease-out ${selectedTrackIndex === index ? "scale-105" : ""
-                }`}
+              key={`${track.id || "track"}-${index}`}
+              className={`flex items-start mb-5 transition-transform duration-200 ease-out ${
+                selectedTrackIndex === index ? "scale-105" : ""
+              }`}
               onClick={() => (track.uri ? handleTrackPlay(track, index) : null)}
               style={{ transition: "transform 0.2s ease-out" }}
               data-track-index={index}
             >
-              <div className="text-3xl font-semibold text-center text-white/60 mr-6 mt-3 flex justify-center" style={{ minWidth: '3rem', fontSize: '32px', fontWeight: '580' }}>
+              <div
+                className="text-3xl font-semibold text-center text-white/60 mr-6 mt-3 flex justify-center"
+                style={{
+                  minWidth: "3rem",
+                  fontSize: "32px",
+                  fontWeight: "580",
+                }}
+              >
                 {track.uri && track.uri === currentlyPlayingTrackUri ? (
                   <div className="w-5">
                     <section>
@@ -686,10 +775,16 @@ const ContentView = ({
                 )}
               </div>
 
-              <div className="flex-grow" style={{ marginTop: '-6px' }}>
+              <div className="flex-grow" style={{ marginTop: "-6px" }}>
                 <div>
                   {selectedTrackIndex === index ? (
-                    <div style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px' }}>
+                    <div
+                      style={{
+                        fontSize: "32px",
+                        fontWeight: "580",
+                        maxWidth: "280px",
+                      }}
+                    >
                       <ScrollingText
                         text={track.name || "Unknown Track"}
                         className="text-white tracking-tight"
@@ -699,30 +794,44 @@ const ContentView = ({
                       />
                     </div>
                   ) : (
-                    <p className="text-white truncate tracking-tight" style={{ fontSize: '32px', fontWeight: '580', maxWidth: '280px' }}>
+                    <p
+                      className="text-white truncate tracking-tight"
+                      style={{
+                        fontSize: "32px",
+                        fontWeight: "580",
+                        maxWidth: "280px",
+                      }}
+                    >
                       {track.name || "Unknown Track"}
                     </p>
                   )}
                 </div>
                 <div className="flex flex-wrap">
                   {contentType === "show" ? (
-                    <p className="text-white/60 truncate tracking-tight" style={{ fontSize: '28px', fontWeight: '560' }}>
-                      {track.release_date ? new Date(track.release_date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      }) : "No release date available"}
+                    <p
+                      className="text-white/60 truncate tracking-tight"
+                      style={{ fontSize: "28px", fontWeight: "560" }}
+                    >
+                      {track.release_date
+                        ? new Date(track.release_date).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            },
+                          )
+                        : "No release date available"}
                     </p>
                   ) : (
                     track.artists &&
                     track.artists.map((artist, artistIndex) => (
                       <p
                         key={artist?.id || `artist-${artistIndex}`}
-                        className={`text-white/60 truncate tracking-tight ${artistIndex < track.artists.length - 1
-                            ? 'mr-2'
-                            : ""
-                          }`}
-                        style={{ fontSize: '28px', fontWeight: '560' }}
+                        className={`text-white/60 truncate tracking-tight ${
+                          artistIndex < track.artists.length - 1 ? "mr-2" : ""
+                        }`}
+                        style={{ fontSize: "28px", fontWeight: "560" }}
                       >
                         {artist?.name === null && artist?.type
                           ? artist.type
@@ -737,16 +846,21 @@ const ContentView = ({
           );
         })}
 
-        {isLoadingMore && (contentType === "playlist" || contentType === "show") && (
-          <div className="flex justify-center items-center py-8">
-            <div className="flex items-center">
-              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mr-4"></div>
-              <p className="text-white/60" style={{ fontSize: '24px', fontWeight: '560' }}>
-                Loading more {contentType === "show" ? "episodes" : "tracks"}...
-              </p>
+        {isLoadingMore &&
+          (contentType === "playlist" || contentType === "show") && (
+            <div className="flex justify-center items-center py-8">
+              <div className="flex items-center">
+                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mr-4"></div>
+                <p
+                  className="text-white/60"
+                  style={{ fontSize: "24px", fontWeight: "560" }}
+                >
+                  Loading more {contentType === "show" ? "episodes" : "tracks"}
+                  ...
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {playbackError && (
           <div className="mt-4 p-4 bg-red-500/20 rounded-lg">

@@ -21,21 +21,32 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
   const [activeSubItem, setActiveSubItem] = React.useState(null);
   const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
   const { reconnectAttempt: bluetoothReconnectAttempt } = useBluetooth();
-  const { isConnected: isInternetConnected, hasEverConnectedThisSession } = useNetwork();
+  const { isConnected: isInternetConnected, hasEverConnectedThisSession } =
+    useNetwork();
 
   useEffect(() => {
     const handleReconnectAttempt = (event) => {
       setReconnectAttempt(event.detail.attempt);
     };
 
-    window.addEventListener('bluetoothReconnectAttempt', handleReconnectAttempt);
+    window.addEventListener(
+      "bluetoothReconnectAttempt",
+      handleReconnectAttempt,
+    );
     return () => {
-      window.removeEventListener('bluetoothReconnectAttempt', handleReconnectAttempt);
+      window.removeEventListener(
+        "bluetoothReconnectAttempt",
+        handleReconnectAttempt,
+      );
     };
   }, []);
 
   useEffect(() => {
-    if (isInternetConnected && hasEverConnectedThisSession && onConnectionRestored) {
+    if (
+      isInternetConnected &&
+      hasEverConnectedThisSession &&
+      onConnectionRestored
+    ) {
       onConnectionRestored();
     }
   }, [isInternetConnected, hasEverConnectedThisSession, onConnectionRestored]);
@@ -44,24 +55,27 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
     const cleanup = () => {
       setReconnectAttempt(0);
     };
-    window.addEventListener('online', cleanup);
+    window.addEventListener("online", cleanup);
 
     return () => {
-      window.removeEventListener('online', cleanup);
+      window.removeEventListener("online", cleanup);
     };
   }, []);
 
   const MAX_RECONNECT_ATTEMPTS = 5;
-  const showReconnectMessage = isConnectionLost && bluetoothReconnectAttempt > 0 && bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
+  const showReconnectMessage =
+    isConnectionLost &&
+    bluetoothReconnectAttempt > 0 &&
+    bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
 
   const [mainClasses, setMainClasses] = React.useState(
-    "translate-x-0 opacity-100"
+    "translate-x-0 opacity-100",
   );
   const [parentClasses, setParentClasses] = React.useState(
-    "translate-x-full opacity-0"
+    "translate-x-full opacity-0",
   );
   const [subpageClasses, setSubpageClasses] = React.useState(
-    "translate-x-full opacity-0"
+    "translate-x-full opacity-0",
   );
 
   const ANIMATION_DURATION = 300;
@@ -208,7 +222,8 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
                     </div>
                   ) : (
                     <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                      Enable Bluetooth Tethering and connect to "Nocturne" in your phone's settings.
+                      Enable Bluetooth Tethering and connect to "Nocturne" in
+                      your phone's settings.
                     </p>
                   )}
 

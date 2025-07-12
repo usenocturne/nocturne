@@ -4,46 +4,56 @@ import { checkNetworkConnectivitySync } from "../utils/networkChecker";
 
 const NETWORK_CHECK_BYPASS_KEY = "networkCheckBypass";
 
-const isBypassed = typeof localStorage !== 'undefined' && localStorage.getItem(NETWORK_CHECK_BYPASS_KEY) === 'true';
+const isBypassed =
+  typeof localStorage !== "undefined" &&
+  localStorage.getItem(NETWORK_CHECK_BYPASS_KEY) === "true";
 
 const ALLOWED_AUTH_ENDPOINTS = [
-  'accounts.spotify.com/oauth2/device/authorize',
-  'accounts.spotify.com/api/token'
+  "accounts.spotify.com/oauth2/device/authorize",
+  "accounts.spotify.com/api/token",
 ];
 
-const isAuthEndpoint = (url) => ALLOWED_AUTH_ENDPOINTS.some(endpoint => url.includes(endpoint));
+const isAuthEndpoint = (url) =>
+  ALLOWED_AUTH_ENDPOINTS.some((endpoint) => url.includes(endpoint));
 
 export function useNetwork() {
   const [isConnected, setIsConnected] = useState(isBypassed ? true : null);
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
-  const [initialCheckDone, setInitialCheckDone] = useState(isBypassed ? true : false);
+  const [initialCheckDone, setInitialCheckDone] = useState(
+    isBypassed ? true : false,
+  );
   const [initialConnectionFailed, setInitialConnectionFailed] = useState(false);
-  const [hasEverConnectedThisSession, setHasEverConnectedThisSession] = useState(isBypassed ? true : false);
-  const { wsConnected, addMessageListener, removeMessageListener } = useNocturned();
+  const [hasEverConnectedThisSession, setHasEverConnectedThisSession] =
+    useState(isBypassed ? true : false);
+  const { wsConnected, addMessageListener, removeMessageListener } =
+    useNocturned();
   const listenerIdRef = useRef(null);
   const globalListenerCleanupRef = useRef(null);
   const checkInProgressRef = useRef(false);
 
   const isInTutorial = !localStorage.getItem("hasSeenTutorial");
 
-  const updateConnectionStatus = useCallback((newIsConnected) => {
-    setIsConnected(prev => {
-      if (prev === newIsConnected) return prev;
-      
-      if (newIsConnected) {
-        if (!hasEverConnectedThisSession) {
-          setHasEverConnectedThisSession(true);
+  const updateConnectionStatus = useCallback(
+    (newIsConnected) => {
+      setIsConnected((prev) => {
+        if (prev === newIsConnected) return prev;
+
+        if (newIsConnected) {
+          if (!hasEverConnectedThisSession) {
+            setHasEverConnectedThisSession(true);
+          }
+          setShowNetworkBanner(false);
+          window.dispatchEvent(new Event("networkBannerHide"));
+          window.dispatchEvent(new Event("networkRestored"));
+        } else if (!isInTutorial) {
+          setShowNetworkBanner(true);
+          window.dispatchEvent(new Event("networkBannerShow"));
         }
-        setShowNetworkBanner(false);
-        window.dispatchEvent(new Event('networkBannerHide'));
-        window.dispatchEvent(new Event('networkRestored'));
-      } else if (!isInTutorial) {
-        setShowNetworkBanner(true);
-        window.dispatchEvent(new Event('networkBannerShow'));
-      }
-      return newIsConnected;
-    });
-  }, [isInTutorial, hasEverConnectedThisSession]);
+        return newIsConnected;
+      });
+    },
+    [isInTutorial, hasEverConnectedThisSession],
+  );
 
   const performNetworkCheck = useCallback(async () => {
     if (checkInProgressRef.current) return;
@@ -59,8 +69,8 @@ export function useNetwork() {
       const status = await checkNetworkConnectivitySync();
       updateConnectionStatus(status.isConnected);
 
-      if (status.source === 'browser' && status.isConnected) {
-        window.dispatchEvent(new CustomEvent('browserOnlyModeOnline'));
+      if (status.source === "browser" && status.isConnected) {
+        window.dispatchEvent(new CustomEvent("browserOnlyModeOnline"));
       }
     } catch (error) {
       console.error("Network check failed:", error);
@@ -78,9 +88,12 @@ export function useNetwork() {
       }
     };
 
-    globalListenerCleanupRef.current = addGlobalWsListener("network-global-listener", {
-      onMessage: handleGlobalNetworkStatus,
-    });
+    globalListenerCleanupRef.current = addGlobalWsListener(
+      "network-global-listener",
+      {
+        onMessage: handleGlobalNetworkStatus,
+      },
+    );
 
     return () => {
       if (globalListenerCleanupRef.current) {
@@ -91,8 +104,7 @@ export function useNetwork() {
 
   useEffect(() => {
     let mounted = true;
-    
-    
+
     if (isBypassed) {
       updateConnectionStatus(true);
       setInitialCheckDone(true);
@@ -102,9 +114,9 @@ export function useNetwork() {
     const initialCheck = async () => {
       const status = await checkNetworkConnectivitySync();
       if (!mounted) return;
-      
+
       updateConnectionStatus(status.isConnected);
-      
+
       if (!status.isConnected) {
         setInitialConnectionFailed(true);
       } else {
@@ -112,13 +124,15 @@ export function useNetwork() {
       }
       setInitialCheckDone(true);
 
-      if (status.source === 'browser' && status.isConnected) {
-        window.dispatchEvent(new CustomEvent('browserOnlyModeOnline'));
+      if (status.source === "browser" && status.isConnected) {
+        window.dispatchEvent(new CustomEvent("browserOnlyModeOnline"));
       }
     };
 
     initialCheck();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [updateConnectionStatus]);
 
   useEffect(() => {
@@ -139,18 +153,21 @@ export function useNetwork() {
         performNetworkCheck();
       };
 
-      const listenerId = addMessageListener("network-status-listener", handleNetworkStatusMessage);
+      const listenerId = addMessageListener(
+        "network-status-listener",
+        handleNetworkStatusMessage,
+      );
       listenerIdRef.current = listenerId;
 
-      window.addEventListener('offline', handleOfflineEvent);
-      window.addEventListener('online', handleOnlineEvent);
+      window.addEventListener("offline", handleOfflineEvent);
+      window.addEventListener("online", handleOnlineEvent);
 
       return () => {
         if (listenerIdRef.current) {
           removeMessageListener(listenerIdRef.current);
         }
-        window.removeEventListener('offline', handleOfflineEvent);
-        window.removeEventListener('online', handleOnlineEvent);
+        window.removeEventListener("offline", handleOfflineEvent);
+        window.removeEventListener("online", handleOnlineEvent);
       };
     } else if (initialCheckDone) {
       performNetworkCheck();
@@ -161,7 +178,14 @@ export function useNetwork() {
         removeMessageListener(listenerIdRef.current);
       }
     };
-  }, [wsConnected, addMessageListener, removeMessageListener, initialCheckDone, performNetworkCheck, updateConnectionStatus]);
+  }, [
+    wsConnected,
+    addMessageListener,
+    removeMessageListener,
+    initialCheckDone,
+    performNetworkCheck,
+    updateConnectionStatus,
+  ]);
 
   return {
     isConnected,

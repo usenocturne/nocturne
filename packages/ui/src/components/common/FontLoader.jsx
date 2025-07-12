@@ -13,7 +13,7 @@ const FontLoader = () => {
         const fontLoadPromises = [
           document.fonts.load("400 16px Inter"),
           document.fonts.load("500 16px Inter"),
-          document.fonts.load("600 16px Inter"), 
+          document.fonts.load("600 16px Inter"),
           document.fonts.load("700 16px Inter"),
           document.fonts.load("400 16px 'Noto Sans SC'"),
           document.fonts.load("400 16px 'Noto Sans TC'"),

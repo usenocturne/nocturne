@@ -3,7 +3,7 @@ import React from "react";
 import { generateRandomString } from "../utils/helpers";
 
 export const DeviceSwitcherContext = React.createContext({
-  openDeviceSwitcher: (playbackIntent = null) => { },
+  openDeviceSwitcher: (playbackIntent = null) => {},
 });
 
 export function useSpotifyPlayerControls(accessToken) {
@@ -25,11 +25,14 @@ export function useSpotifyPlayerControls(accessToken) {
     };
   }, []);
 
-  const updateVolumeFromDevice = useCallback((deviceVolume) => {
-    if (!isAdjustingVolume && deviceVolume !== undefined) {
-      setVolumeState(deviceVolume);
-    }
-  }, [isAdjustingVolume]);
+  const updateVolumeFromDevice = useCallback(
+    (deviceVolume) => {
+      if (!isAdjustingVolume && deviceVolume !== undefined) {
+        setVolumeState(deviceVolume);
+      }
+    },
+    [isAdjustingVolume],
+  );
 
   const playTrack = useCallback(
     async (trackUri, contextUri = null, uris = null, deviceId = null) => {
@@ -57,28 +60,29 @@ export function useSpotifyPlayerControls(accessToken) {
           playUrl += `?device_id=${deviceId}`;
         }
 
-        const response = await fetch(
-          playUrl,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          }
-        );
+        const response = await fetch(playUrl, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
 
         if (!response.ok && response.status !== 204) {
           const errorData = await response.json().catch(() => ({
             error: { message: `HTTP error! status: ${response.status}` },
           }));
 
-          const errorMessage = errorData.error?.message || `HTTP error! status: ${response.status}`;
+          const errorMessage =
+            errorData.error?.message ||
+            `HTTP error! status: ${response.status}`;
 
           if (errorData.error?.reason === "NO_ACTIVE_DEVICE" && !deviceId) {
             if (openDeviceSwitcher) {
-              console.log("No active device, opening device switcher with playback intent.");
+              console.log(
+                "No active device, opening device switcher with playback intent.",
+              );
               openDeviceSwitcher({
                 trackUriToPlay: trackUri,
                 contextUriToPlay: contextUri,
@@ -98,17 +102,20 @@ export function useSpotifyPlayerControls(accessToken) {
         return true;
       } catch (err) {
         if (!error && err && err.message) {
-            setError(err.message);
+          setError(err.message);
         } else if (!error) {
-            setError("An unknown error occurred while trying to play.");
+          setError("An unknown error occurred while trying to play.");
         }
-        console.error("Error playing track (caught):", err && err.message ? err.message : err);
+        console.error(
+          "Error playing track (caught):",
+          err && err.message ? err.message : err,
+        );
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    [accessToken, openDeviceSwitcher, error]
+    [accessToken, openDeviceSwitcher, error],
   );
 
   const pausePlayback = useCallback(async () => {
@@ -125,7 +132,7 @@ export function useSpotifyPlayerControls(accessToken) {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
+        },
       );
 
       if (!response.ok && response.status !== 204) {
@@ -133,7 +140,7 @@ export function useSpotifyPlayerControls(accessToken) {
           error: { message: `HTTP error! status: ${response.status}` },
         }));
         throw new Error(
-          errorData.error?.message || `HTTP error! status: ${response.status}`
+          errorData.error?.message || `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -161,7 +168,7 @@ export function useSpotifyPlayerControls(accessToken) {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
+        },
       );
 
       if (!response.ok && response.status !== 204) {
@@ -169,7 +176,7 @@ export function useSpotifyPlayerControls(accessToken) {
           error: { message: `HTTP error! status: ${response.status}` },
         }));
         throw new Error(
-          errorData.error?.message || `HTTP error! status: ${response.status}`
+          errorData.error?.message || `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -197,7 +204,7 @@ export function useSpotifyPlayerControls(accessToken) {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
+        },
       );
 
       if (!response.ok && response.status !== 204) {
@@ -205,7 +212,7 @@ export function useSpotifyPlayerControls(accessToken) {
           error: { message: `HTTP error! status: ${response.status}` },
         }));
         throw new Error(
-          errorData.error?.message || `HTTP error! status: ${response.status}`
+          errorData.error?.message || `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -234,7 +241,7 @@ export function useSpotifyPlayerControls(accessToken) {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
-          }
+          },
         );
 
         if (!response.ok && response.status !== 204) {
@@ -242,7 +249,8 @@ export function useSpotifyPlayerControls(accessToken) {
             error: { message: `HTTP error! status: ${response.status}` },
           }));
           throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
+            errorData.error?.message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
 
@@ -255,23 +263,27 @@ export function useSpotifyPlayerControls(accessToken) {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   const processVolumeQueue = useCallback(async () => {
-    if (isVolumeProcessingRef.current || volumeQueueRef.current.length === 0 || !accessToken) {
+    if (
+      isVolumeProcessingRef.current ||
+      volumeQueueRef.current.length === 0 ||
+      !accessToken
+    ) {
       return;
     }
 
     isVolumeProcessingRef.current = true;
-    
+
     const latestVolume = volumeQueueRef.current.pop();
     volumeQueueRef.current = [];
-    
+
     const now = Date.now();
     const timeSinceLastUpdate = now - lastVolumeUpdateTimeRef.current;
     const minInterval = 100;
-    
+
     const processRequest = async () => {
       try {
         const response = await fetch(
@@ -281,24 +293,25 @@ export function useSpotifyPlayerControls(accessToken) {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
-          }
+          },
         );
-        
+
         lastVolumeUpdateTimeRef.current = Date.now();
-        
+
         if (!response.ok && response.status !== 204) {
           const errorData = await response.json().catch(() => ({
             error: { message: `HTTP error! status: ${response.status}` },
           }));
-          
+
           if (errorData.error?.reason === "NO_ACTIVE_DEVICE") {
             if (openDeviceSwitcher) {
               openDeviceSwitcher();
             }
           }
-          
+
           throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
+            errorData.error?.message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
       } catch (err) {
@@ -306,7 +319,7 @@ export function useSpotifyPlayerControls(accessToken) {
         setError(err.message);
       } finally {
         const processingDelay = Math.max(0, minInterval - (Date.now() - now));
-        
+
         volumeTimeoutRef.current = setTimeout(() => {
           isVolumeProcessingRef.current = false;
           if (volumeQueueRef.current.length > 0) {
@@ -317,7 +330,7 @@ export function useSpotifyPlayerControls(accessToken) {
         }, processingDelay);
       }
     };
-    
+
     if (timeSinceLastUpdate < minInterval) {
       const delay = minInterval - timeSinceLastUpdate;
       setTimeout(processRequest, delay);
@@ -326,24 +339,30 @@ export function useSpotifyPlayerControls(accessToken) {
     }
   }, [accessToken, openDeviceSwitcher]);
 
-  const setVolume = useCallback(async (volumePercent) => {
-    if (!accessToken) return false;
+  const setVolume = useCallback(
+    async (volumePercent) => {
+      if (!accessToken) return false;
 
-    const boundedVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
-    
-    if (boundedVolume !== volume) {
-      setVolumeState(boundedVolume);
-      setIsAdjustingVolume(true);
-      
-      volumeQueueRef.current.push(boundedVolume);
-      
-      if (!isVolumeProcessingRef.current) {
-        processVolumeQueue();
+      const boundedVolume = Math.max(
+        0,
+        Math.min(100, Math.round(volumePercent)),
+      );
+
+      if (boundedVolume !== volume) {
+        setVolumeState(boundedVolume);
+        setIsAdjustingVolume(true);
+
+        volumeQueueRef.current.push(boundedVolume);
+
+        if (!isVolumeProcessingRef.current) {
+          processVolumeQueue();
+        }
       }
-    }
 
-    return true;
-  }, [accessToken, processVolumeQueue, volume]);
+      return true;
+    },
+    [accessToken, processVolumeQueue, volume],
+  );
 
   const checkIsTrackLiked = useCallback(
     async (trackId) => {
@@ -360,7 +379,7 @@ export function useSpotifyPlayerControls(accessToken) {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
-          }
+          },
         );
 
         if (!response.ok) {
@@ -368,7 +387,8 @@ export function useSpotifyPlayerControls(accessToken) {
             error: { message: `HTTP error! status: ${response.status}` },
           }));
           throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
+            errorData.error?.message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
 
@@ -382,7 +402,7 @@ export function useSpotifyPlayerControls(accessToken) {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   const likeTrack = useCallback(
@@ -402,7 +422,7 @@ export function useSpotifyPlayerControls(accessToken) {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ ids: [trackId] }),
-          }
+          },
         );
 
         if (!response.ok && response.status !== 204) {
@@ -410,7 +430,8 @@ export function useSpotifyPlayerControls(accessToken) {
             error: { message: `HTTP error! status: ${response.status}` },
           }));
           throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
+            errorData.error?.message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
 
@@ -423,7 +444,7 @@ export function useSpotifyPlayerControls(accessToken) {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   const unlikeTrack = useCallback(
@@ -443,7 +464,7 @@ export function useSpotifyPlayerControls(accessToken) {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ ids: [trackId] }),
-          }
+          },
         );
 
         if (!response.ok && response.status !== 204) {
@@ -451,7 +472,8 @@ export function useSpotifyPlayerControls(accessToken) {
             error: { message: `HTTP error! status: ${response.status}` },
           }));
           throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
+            errorData.error?.message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
 
@@ -464,7 +486,7 @@ export function useSpotifyPlayerControls(accessToken) {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   const toggleShuffle = useCallback(
@@ -482,7 +504,7 @@ export function useSpotifyPlayerControls(accessToken) {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
-          }
+          },
         );
 
         if (!response.ok && response.status !== 204) {
@@ -490,7 +512,8 @@ export function useSpotifyPlayerControls(accessToken) {
             error: { message: `HTTP error! status: ${response.status}` },
           }));
           throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
+            errorData.error?.message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
 
@@ -503,7 +526,7 @@ export function useSpotifyPlayerControls(accessToken) {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   const setRepeatMode = useCallback(
@@ -521,7 +544,7 @@ export function useSpotifyPlayerControls(accessToken) {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
-          }
+          },
         );
 
         if (!response.ok && response.status !== 204) {
@@ -529,7 +552,8 @@ export function useSpotifyPlayerControls(accessToken) {
             error: { message: `HTTP error! status: ${response.status}` },
           }));
           throw new Error(
-            errorData.error?.message || `HTTP error! status: ${response.status}`
+            errorData.error?.message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
 
@@ -542,7 +566,7 @@ export function useSpotifyPlayerControls(accessToken) {
         setIsLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   const playDJMix = useCallback(async () => {
@@ -558,7 +582,7 @@ export function useSpotifyPlayerControls(accessToken) {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
+        },
       );
 
       let deviceId = null;
@@ -577,7 +601,7 @@ export function useSpotifyPlayerControls(accessToken) {
             "content-type": "application/x-www-form-urlencoded",
           },
           body: '{"command": {"endpoint": "play", "context": {"entity_uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "url": "hm:\\/\\/lexicon-session-provider\\/context-resolve\\/v2\\/session?contextUri=spotify:playlist:37i9dQZF1EYkqdzj48dyYq"}}}',
-        }
+        },
       );
 
       if (!response.ok) {
@@ -607,7 +631,7 @@ export function useSpotifyPlayerControls(accessToken) {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
+        },
       );
 
       let deviceId = null;
@@ -630,7 +654,7 @@ export function useSpotifyPlayerControls(accessToken) {
             "content-type": "application/x-www-form-urlencoded",
           },
           body: '{"command": {"endpoint": "signal", "signal_id": "jump"}}',
-        }
+        },
       );
 
       if (!response.ok) {
@@ -655,30 +679,31 @@ export function useSpotifyPlayerControls(accessToken) {
       setError(null);
 
       const response = await fetch(
-        `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`, {
-        method: 'PUT',
-        headers: {
-          'accept': 'application/json',
-          'accept-language': 'en-US,en;q=0.9',
-          'authorization': `Bearer ${accessToken}`,
-          'content-type': 'application/json',
-          'x-spotify-connection-id': generateRandomString(148)
+        `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`,
+        {
+          method: "PUT",
+          headers: {
+            accept: "application/json",
+            "accept-language": "en-US,en;q=0.9",
+            authorization: `Bearer ${accessToken}`,
+            "content-type": "application/json",
+            "x-spotify-connection-id": generateRandomString(148),
+          },
+          body: JSON.stringify({
+            member_type: "CONNECT_STATE",
+          }),
         },
-        body: JSON.stringify({
-          'member_type': 'CONNECT_STATE'
-        })
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (data.player_state && data.player_state.options) {
         return data.player_state.options;
       }
-
     } catch (err) {
       console.error("Error getting device options:", err);
       setError(err.message);
@@ -688,66 +713,69 @@ export function useSpotifyPlayerControls(accessToken) {
     }
   }, [accessToken]);
 
-  const setPlaybackSpeed = useCallback(async (speed) => {
-    if (!accessToken) return false;
+  const setPlaybackSpeed = useCallback(
+    async (speed) => {
+      if (!accessToken) return false;
 
-    try {
-      setIsLoading(true);
-      setError(null);
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      const deviceResponse = await fetch(
-        "https://api.spotify.com/v1/me/player",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
+        const deviceResponse = await fetch(
+          "https://api.spotify.com/v1/me/player",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
           },
+        );
+
+        let deviceId = null;
+        if (deviceResponse.status !== 204) {
+          const deviceData = await deviceResponse.json();
+          deviceId = deviceData.device?.id;
         }
-      );
 
-      let deviceId = null;
-      if (deviceResponse.status !== 204) {
-        const deviceData = await deviceResponse.json();
-        deviceId = deviceData.device?.id;
-      }
+        if (!deviceId) {
+          throw new Error("No active device found");
+        }
 
-      if (!deviceId) {
-        throw new Error("No active device found");
-      }
-
-      const response = await fetch(
-        `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
-        {
-          method: "POST",
-          headers: {
-            "accept": "*/*",
-            "accept-language": "en-US,en;q=0.9",
-            "authorization": `Bearer ${accessToken}`,
-            "content-type": "application/json",
-            "origin": "https://open.spotify.com",
-            "referer": "https://open.spotify.com/",
+        const response = await fetch(
+          `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
+          {
+            method: "POST",
+            headers: {
+              accept: "*/*",
+              "accept-language": "en-US,en;q=0.9",
+              authorization: `Bearer ${accessToken}`,
+              "content-type": "application/json",
+              origin: "https://open.spotify.com",
+              referer: "https://open.spotify.com/",
+            },
+            body: JSON.stringify({
+              command: {
+                playback_speed: speed,
+                endpoint: "set_options",
+              },
+            }),
           },
-          body: JSON.stringify({
-            command: {
-              playback_speed: speed,
-              endpoint: "set_options"
-            }
-          }),
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return true;
+      } catch (err) {
+        console.error("Error setting playback speed:", err);
+        setError(err.message);
+        return false;
+      } finally {
+        setIsLoading(false);
       }
-
-      return true;
-    } catch (err) {
-      console.error("Error setting playback speed:", err);
-      setError(err.message);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [accessToken]);
+    },
+    [accessToken],
+  );
 
   return {
     playTrack,

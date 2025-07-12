@@ -3,22 +3,24 @@ import Keyboard from "react-simple-keyboard";
 import "react-simple-keyboard/build/css/index.css";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
-import { BackspaceIcon, ShiftIcon, CapsLockIcon, KeyboardHideIcon } from "../icons";
+import {
+  BackspaceIcon,
+  ShiftIcon,
+  CapsLockIcon,
+  KeyboardHideIcon,
+} from "../icons";
 
-export default function NetworkPasswordModal({
-  network,
-  onClose,
-  onConnect
-}) {
+export default function NetworkPasswordModal({ network, onClose, onConnect }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [layoutName, setLayoutName] = useState("default");
   const [capsLock, setCapsLock] = useState(false);
   const keyboard = useRef();
-  const { connectToNetwork, hasPasswordSecurity, isConnecting } = useWiFiNetworks();
+  const { connectToNetwork, hasPasswordSecurity, isConnecting } =
+    useWiFiNetworks();
 
-  const handleConnect = async function(e) {
+  const handleConnect = async function (e) {
     e.preventDefault();
     setError("");
 
@@ -35,12 +37,12 @@ export default function NetworkPasswordModal({
     }
   };
 
-  const handleCancel = function() {
+  const handleCancel = function () {
     setPassword("");
     onClose();
   };
 
-  const onChangeInput = function(event) {
+  const onChangeInput = function (event) {
     const inputValue = event.target.value;
     setPassword(inputValue);
     if (keyboard.current) {
@@ -48,13 +50,13 @@ export default function NetworkPasswordModal({
     }
   };
 
-  const onKeyPress = function(button) {
+  const onKeyPress = function (button) {
     console.log("Button pressed", button);
 
     if (button === "{bksp}") {
       setPassword(password.slice(0, -1));
     } else if (button === "{enter}") {
-      handleConnect({ preventDefault: function() {} });
+      handleConnect({ preventDefault: function () {} });
     } else if (button === "{space}") {
       setPassword(password + " ");
     } else if (button === "{shift}") {
@@ -80,47 +82,53 @@ export default function NetworkPasswordModal({
     }
   };
 
-
-
-  const onInputFocus = function() {
+  const onInputFocus = function () {
     setShowKeyboard(true);
   };
 
-  useEffect(function() {
-    if (network && hasPasswordSecurity && hasPasswordSecurity(network.flags)) {
-      setShowKeyboard(true);
-    }
-  }, [network, hasPasswordSecurity]);
+  useEffect(
+    function () {
+      if (
+        network &&
+        hasPasswordSecurity &&
+        hasPasswordSecurity(network.flags)
+      ) {
+        setShowKeyboard(true);
+      }
+    },
+    [network, hasPasswordSecurity],
+  );
 
   if (!network) return null;
 
-  const needsPassword = hasPasswordSecurity && hasPasswordSecurity(network.flags);
+  const needsPassword =
+    hasPasswordSecurity && hasPasswordSecurity(network.flags);
 
   const layout = {
     default: [
       "q w e r t y u i o p {bksp}",
       "a s d f g h j k l ; {enter}",
       "{shift} z x c v b n m , . {lock}",
-      "{numbers} {space} {numbers} {hide}"
+      "{numbers} {space} {numbers} {hide}",
     ],
     shift: [
       "Q W E R T Y U I O P {bksp}",
       "A S D F G H J K L : {enter}",
       "{shift} Z X C V B N M < > {lock}",
-      "{numbers} {space} {numbers} {hide}"
+      "{numbers} {space} {numbers} {hide}",
     ],
     numbers: [
       "1 2 3 4 5 6 7 8 9 0 {bksp}",
-      "- / : ; ( ) $ & @ \" {enter}",
+      '- / : ; ( ) $ & @ " {enter}',
       "{symbols} . , ? ! ' + - = ' {lock}",
-      "{default} {space} {default} {hide}"
+      "{default} {space} {default} {hide}",
     ],
     symbols: [
       "[ ] { } # % ^ * + = {bksp}",
       "_ \\ | ~ < > € £ ¥ • {enter}",
       "{numbers} ` ¿ ¡ § ° † ‡ … ≠ {lock}",
-      "{default} {space} {default} {hide}"
-    ]
+      "{default} {space} {default} {hide}",
+    ],
   };
 
   const display = {
@@ -132,45 +140,45 @@ export default function NetworkPasswordModal({
     "{numbers}": "?123",
     "{symbols}": "#+= ",
     "{default}": "ABC",
-    "{hide}": renderToStaticMarkup(<KeyboardHideIcon size={20} />)
+    "{hide}": renderToStaticMarkup(<KeyboardHideIcon size={20} />),
   };
 
   const buttonTheme = [
     {
       class: "hg-red",
-      buttons: "{bksp}"
+      buttons: "{bksp}",
     },
     {
-      class: "hg-green", 
-      buttons: "{enter}"
-    }
+      class: "hg-green",
+      buttons: "{enter}",
+    },
   ];
 
   if (layoutName === "shift" && !capsLock) {
     buttonTheme.push({
       class: "hg-highlight",
-      buttons: "{shift}"
+      buttons: "{shift}",
     });
   }
 
   if (capsLock) {
     buttonTheme.push({
       class: "hg-highlight",
-      buttons: "{lock}"
+      buttons: "{lock}",
     });
   }
 
   if (layoutName === "numbers") {
     buttonTheme.push({
       class: "hg-highlight",
-      buttons: "{numbers}"
+      buttons: "{numbers}",
     });
   }
 
   if (layoutName === "symbols") {
     buttonTheme.push({
       class: "hg-highlight",
-      buttons: "{symbols}"
+      buttons: "{symbols}",
     });
   }
 
@@ -197,9 +205,7 @@ export default function NetworkPasswordModal({
               )}
 
               {error && (
-                <div className="text-red-500 text-[20px] mb-6">
-                  {error}
-                </div>
+                <div className="text-red-500 text-[20px] mb-6">{error}</div>
               )}
 
               <div className="flex justify-end gap-4">
@@ -207,7 +213,7 @@ export default function NetworkPasswordModal({
                   type="button"
                   onClick={handleCancel}
                   className="px-6 py-3 text-[24px] font-[560] text-white/60 hover:text-white transition-colors"
-                  style={{ background: 'none' }}
+                  style={{ background: "none" }}
                 >
                   Cancel
                 </button>
@@ -228,7 +234,9 @@ export default function NetworkPasswordModal({
         <div className="fixed bottom-0 left-0 right-0 z-[110] p-4">
           <div className="max-w-[800px] mx-auto">
             <Keyboard
-              keyboardRef={function(r) { keyboard.current = r; }}
+              keyboardRef={function (r) {
+                keyboard.current = r;
+              }}
               layoutName={layoutName}
               layout={layout}
               display={display}
@@ -242,4 +250,4 @@ export default function NetworkPasswordModal({
       )}
     </>
   );
-} 
+}

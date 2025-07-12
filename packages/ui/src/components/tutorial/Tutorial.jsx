@@ -14,8 +14,6 @@ const Tutorial = ({ onComplete }) => {
   const buttonLockRef = useRef(false);
   const lastPressedKey = useRef(null);
 
-
-
   useEffect(() => {
     if (currentScreen === 1) {
       setTimeout(() => setIsFrameVisible(true), 50);
@@ -63,8 +61,7 @@ const Tutorial = ({ onComplete }) => {
     },
     {
       header: "Controls",
-      subtext:
-        "Press the rightmost button to lock the screen. Try it now.",
+      subtext: "Press the rightmost button to lock the screen. Try it now.",
       continueType: "lockPress",
     },
     {

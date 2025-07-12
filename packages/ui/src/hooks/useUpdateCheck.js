@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 // import axios from 'axios';
 
 const compareVersions = (v1, v2) => {
@@ -9,15 +9,15 @@ const compareVersions = (v1, v2) => {
     }
     return {
       base: match[1],
-      preRelease: match[2] || null
+      preRelease: match[2] || null,
     };
   };
 
   const v1Parsed = parseVersion(v1);
   const v2Parsed = parseVersion(v2);
 
-  const v1BaseParts = v1Parsed.base.split('.').map(Number);
-  const v2BaseParts = v2Parsed.base.split('.').map(Number);
+  const v1BaseParts = v1Parsed.base.split(".").map(Number);
+  const v2BaseParts = v2Parsed.base.split(".").map(Number);
 
   for (let i = 0; i < Math.max(v1BaseParts.length, v2BaseParts.length); i++) {
     const v1Part = v1BaseParts[i] || 0;
@@ -28,7 +28,7 @@ const compareVersions = (v1, v2) => {
   }
 
   if (!v1Parsed.preRelease && !v2Parsed.preRelease) return 0;
-  
+
   if (!v1Parsed.preRelease && v2Parsed.preRelease) return 1;
   if (v1Parsed.preRelease && !v2Parsed.preRelease) return -1;
 
@@ -59,7 +59,9 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     setError(null);
 
     try {
-      const releasesResponse = await fetch(`https://api.github.com/repos/usenocturne/updater-test/releases`);
+      const releasesResponse = await fetch(
+        `https://api.github.com/repos/usenocturne/updater-test/releases`,
+      );
 
       if (!releasesResponse.ok) {
         throw new Error(`Failed to fetch releases: ${releasesResponse.status}`);
@@ -69,15 +71,22 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
       const validReleases = [];
 
       for (const release of releases) {
-        const updateJsonAsset = release.assets.find(asset => asset.name === 'update.json');
+        const updateJsonAsset = release.assets.find(
+          (asset) => asset.name === "update.json",
+        );
         if (!updateJsonAsset) continue;
 
         try {
-          const updateJsonResponse = await fetch('http://localhost:5000/fetchjson', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: updateJsonAsset.browser_download_url })
-          });
+          const updateJsonResponse = await fetch(
+            "http://localhost:5000/fetchjson",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                url: updateJsonAsset.browser_download_url,
+              }),
+            },
+          );
           //const updateJsonResponse = await axios.get(`https://cors-anywhere.herokuapp.com/${updateJsonAsset.browser_download_url}`, {headers: {'Content-Type': 'application/json'}});
           console.log(updateJsonResponse);
           if (!updateJsonResponse.ok) continue;
@@ -90,12 +99,14 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
             tag: release.tag_name,
             releaseNotes: release.body,
             releaseDate: release.published_at,
-            releaseSize: release.assets.find(a => a.name === updateJson.files.full).size,
-            assetUrls: {}
+            releaseSize: release.assets.find(
+              (a) => a.name === updateJson.files.full,
+            ).size,
+            assetUrls: {},
           };
 
           for (const [key, fileName] of Object.entries(updateJson.files)) {
-            const asset = release.assets.find(a => a.name === fileName);
+            const asset = release.assets.find((a) => a.name === fileName);
             if (asset) {
               releaseData.assetUrls[key] = asset.browser_download_url;
             }
@@ -119,11 +130,12 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
           hasUpdate: true,
           canUpdate: true,
           nextInChain: chain.length > 1,
-          totalUpdates: chain.length
+          totalUpdates: chain.length,
         });
       } else if (validReleases.length > 0) {
         const latestRelease = validReleases[0];
-        const isNewer = compareVersions(latestRelease.version, currentVersionRef.current) > 0;
+        const isNewer =
+          compareVersions(latestRelease.version, currentVersionRef.current) > 0;
 
         if (isNewer) {
           setUpdateInfo({
@@ -132,7 +144,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
             canUpdate: false,
             nextInChain: false,
             totalUpdates: 1,
-            noCompatiblePath: true
+            noCompatiblePath: true,
           });
         } else {
           setUpdateInfo({
@@ -140,7 +152,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
             hasUpdate: false,
             canUpdate: false,
             nextInChain: false,
-            totalUpdates: 0
+            totalUpdates: 0,
           });
         }
       } else {
@@ -149,7 +161,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
 
       setLastChecked(new Date());
     } catch (err) {
-      console.error('Error checking for updates:', err);
+      console.error("Error checking for updates:", err);
       setError(err.message);
     } finally {
       setIsChecking(false);
@@ -165,11 +177,14 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
       releaseMap.set(release.version, release);
     }
 
-    const sortedReleases = [...releases].sort((a, b) => compareVersions(a.version, b.version));
+    const sortedReleases = [...releases].sort((a, b) =>
+      compareVersions(a.version, b.version),
+    );
 
-    const possibleNextUpdates = sortedReleases.filter(release =>
-      compareVersions(release.version, currentVersion) > 0 &&
-      compareVersions(currentVersion, release.minimumVersion) >= 0
+    const possibleNextUpdates = sortedReleases.filter(
+      (release) =>
+        compareVersions(release.version, currentVersion) > 0 &&
+        compareVersions(currentVersion, release.minimumVersion) >= 0,
     );
 
     if (possibleNextUpdates.length === 0) {
@@ -183,9 +198,10 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
       let currentStep = nextUpdate;
 
       while (true) {
-        const possibleNextSteps = sortedReleases.filter(release =>
-          compareVersions(release.version, currentStep.version) > 0 &&
-          compareVersions(currentStep.version, release.minimumVersion) >= 0
+        const possibleNextSteps = sortedReleases.filter(
+          (release) =>
+            compareVersions(release.version, currentStep.version) > 0 &&
+            compareVersions(currentStep.version, release.minimumVersion) >= 0,
         );
 
         if (possibleNextSteps.length === 0) {
@@ -211,8 +227,10 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
 
       if (compareVersions(currentPathLastVersion, bestPathLastVersion) > 0) {
         bestPath = path;
-      } else if (compareVersions(currentPathLastVersion, bestPathLastVersion) === 0 &&
-        path.length < bestPath.length) {
+      } else if (
+        compareVersions(currentPathLastVersion, bestPathLastVersion) === 0 &&
+        path.length < bestPath.length
+      ) {
         bestPath = path;
       }
     }
@@ -229,12 +247,12 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   const advanceUpdateChain = useCallback(() => {
     if (updateChain.length <= 1) {
       setUpdateChain([]);
-      setUpdateInfo(prev => ({
+      setUpdateInfo((prev) => ({
         ...prev,
         hasUpdate: false,
         canUpdate: false,
         nextInChain: false,
-        totalUpdates: 0
+        totalUpdates: 0,
       }));
       return;
     }
@@ -248,7 +266,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
       hasUpdate: true,
       canUpdate: true,
       nextInChain: newChain.length > 1,
-      totalUpdates: newChain.length
+      totalUpdates: newChain.length,
     });
   }, [updateChain]);
 
@@ -259,6 +277,6 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     lastChecked,
     checkForUpdates,
     advanceUpdateChain,
-    updateChain
+    updateChain,
   };
-}; 
+};

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
 
 export default function LockView({ onClose }) {
-  const { currentTime } = useCurrentTime();  
+  const { currentTime } = useCurrentTime();
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -21,5 +21,5 @@ export default function LockView({ onClose }) {
         {currentTime}
       </div>
     </div>
-  )
+  );
 }

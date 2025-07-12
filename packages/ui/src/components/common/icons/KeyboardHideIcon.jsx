@@ -11,8 +11,8 @@ const KeyboardHideIcon = ({ size = 20, className = "" }) => (
     strokeLinejoin="round"
     className={className}
   >
-    <path d="m6 9 6 6 6-6"/>
+    <path d="m6 9 6 6 6-6" />
   </svg>
 );
 
-export default KeyboardHideIcon; 
+export default KeyboardHideIcon;

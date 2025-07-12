@@ -44,31 +44,37 @@ export default function Home({
     enableItemSelection: false,
     itemWidth: itemWidth,
     itemGap: 40,
-    currentlyPlayingId: currentlyPlayingAlbum?.id
+    currentlyPlayingId: currentlyPlayingAlbum?.id,
   });
 
   useEffect(() => {
     if (activeSection === "recents" && recentAlbums.length > 0) {
-      const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url || recentAlbums[0]?.images?.[0]?.url;
+      const firstAlbumImage =
+        recentAlbums[0]?.images?.[1]?.url || recentAlbums[0]?.images?.[0]?.url;
       updateGradientColors(firstAlbumImage || null, "recents");
     } else if (activeSection === "library" && userPlaylists.length > 0) {
-      const firstPlaylistImage = userPlaylists[0]?.images?.[1]?.url || userPlaylists[0]?.images?.[0]?.url;
+      const firstPlaylistImage =
+        userPlaylists[0]?.images?.[1]?.url ||
+        userPlaylists[0]?.images?.[0]?.url;
       updateGradientColors(firstPlaylistImage || null, "library");
     } else if (activeSection === "radio" && radioMixes.length > 0) {
       const firstMixImage = radioMixes[0]?.images?.[0]?.url;
       updateGradientColors(firstMixImage || null, "radio");
     } else if (activeSection === "artists" && topArtists.length > 0) {
-      const firstArtistImage = topArtists[0]?.images?.[1]?.url || topArtists[0]?.images?.[0]?.url;
+      const firstArtistImage =
+        topArtists[0]?.images?.[1]?.url || topArtists[0]?.images?.[0]?.url;
       updateGradientColors(firstArtistImage || null, "artists");
     } else if (activeSection === "podcasts" && userShows.length > 0) {
-      const firstShowImage = userShows[0]?.show?.images?.[1]?.url || userShows[0]?.show?.images?.[0]?.url;
+      const firstShowImage =
+        userShows[0]?.show?.images?.[1]?.url ||
+        userShows[0]?.show?.images?.[0]?.url;
       updateGradientColors(firstShowImage || null, "podcasts");
     } else if (activeSection === "settings") {
       updateGradientColors(null, "settings");
     }
   }, [
     activeSection,
-    updateGradientColors,  
+    updateGradientColors,
     recentAlbums,
     userPlaylists,
     topArtists,
@@ -82,7 +88,10 @@ export default function Home({
       if (e.key === "Escape") {
         if (activeSection === "recents") {
           setActiveSection("nowPlaying");
-        } else if (activeSection !== "nowPlaying" && activeSection !== "settings") {
+        } else if (
+          activeSection !== "nowPlaying" &&
+          activeSection !== "settings"
+        ) {
           setActiveSection("recents");
         }
       }
@@ -144,13 +153,15 @@ export default function Home({
   };
 
   const isPlayingFromMix = (mixId) => {
-    if (mixId.startsWith('spotify-')) {
-      const spotifyMix = radioMixes.find(mix => mix.id === mixId && mix.type === "spotify-radio");
+    if (mixId.startsWith("spotify-")) {
+      const spotifyMix = radioMixes.find(
+        (mix) => mix.id === mixId && mix.type === "spotify-radio",
+      );
       if (spotifyMix) {
         return currentPlayback?.context?.uri === spotifyMix.uri;
       }
     }
-    
+
     const playingMixId = localStorage.getItem(`playingMix-${mixId}`);
     return currentPlayback?.context?.uri === playingMixId;
   };
@@ -178,7 +189,7 @@ export default function Home({
     const adjustedIndex = index - 1;
     const playlists = userPlaylists.filter(
       (item) =>
-        item?.type === "playlist" && item.id !== "37i9dQZF1EYkqdzj48dyYq"
+        item?.type === "playlist" && item.id !== "37i9dQZF1EYkqdzj48dyYq",
     );
 
     if (adjustedIndex >= 0 && adjustedIndex < playlists.length) {
@@ -228,43 +239,50 @@ export default function Home({
           className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
           style={{ willChange: "transform" }}
         >
-          {isLoading.recentAlbums 
-            ? (Array(5)
-                .fill()
-                .map((_, index) => (
+          {isLoading.recentAlbums ? (
+            Array(5)
+              .fill()
+              .map((_, index) => (
+                <div
+                  key={`loading-${index}`}
+                  className="min-w-[280px] pl-2 mr-10 snap-start"
+                >
                   <div
-                    key={`loading-${index}`}
-                    className="min-w-[280px] pl-2 mr-10 snap-start"
-                  >
-                    <div
-                      className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
-                      style={{ width: 280, height: 280 }}
-                    ></div>
-                    <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
-                    <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
-                  </div>
-                ))
-              ) 
-            : recentAlbums.length > 0 
-            ? (recentAlbums.map((album) => (
+                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
+                    style={{ width: 280, height: 280 }}
+                  ></div>
+                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
+                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
+                </div>
+              ))
+          ) : recentAlbums.length > 0 ? (
+            recentAlbums.map((album) => (
               <div
                 key={album.id}
                 className="min-w-[280px] pl-2 mr-10 snap-start"
                 data-id={album.id}
-                data-playing={album.id === currentlyPlayingAlbum?.id ? "true" : "false"}
+                data-playing={
+                  album.id === currentlyPlayingAlbum?.id ? "true" : "false"
+                }
               >
                 <div
                   className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                   style={{ width: 280, height: 280 }}
-                  onClick={() => album.type !== 'local-track' && onOpenContent(album.id, album.type === 'show' ? "show" : "album")}
+                  onClick={() =>
+                    album.type !== "local-track" &&
+                    onOpenContent(
+                      album.id,
+                      album.type === "show" ? "show" : "album",
+                    )
+                  }
                 >
-                  {album.images?.[1]?.url && album.type !== 'local-track' ? (
+                  {album.images?.[1]?.url && album.type !== "local-track" ? (
                     <img
                       src={album.images[1].url}
                       alt="Album Cover"
                       className="w-full h-full rounded-[12px] aspect-square"
                     />
-                  ) : album.type === 'local-track' ? (
+                  ) : album.type === "local-track" ? (
                     <img
                       src="/images/not-playing.webp"
                       alt="Local File"
@@ -277,27 +295,33 @@ export default function Home({
 
                 <h4
                   className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-                  onClick={() => album.type !== 'local-track' && onOpenContent(album.id, album.type === 'show' ? "show" : "album")}
+                  onClick={() =>
+                    album.type !== "local-track" &&
+                    onOpenContent(
+                      album.id,
+                      album.type === "show" ? "show" : "album",
+                    )
+                  }
                 >
                   {album.name}
                 </h4>
 
-                                 {album.type === 'show' ? (
-                   album.publisher && (
-                     <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                       {album.publisher}
-                     </h4>
-                   )
-                 ) : (
-                   album.artists?.[0] && (
-                     <h4
-                       className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
-                       onClick={() => onOpenContent(album.artists[0].id, "artist")}
-                     >
-                       {album.artists.map((artist) => artist.name).join(", ")}
-                     </h4>
-                   )
-                 )}
+                {album.type === "show"
+                  ? album.publisher && (
+                      <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                        {album.publisher}
+                      </h4>
+                    )
+                  : album.artists?.[0] && (
+                      <h4
+                        className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
+                        onClick={() =>
+                          onOpenContent(album.artists[0].id, "artist")
+                        }
+                      >
+                        {album.artists.map((artist) => artist.name).join(", ")}
+                      </h4>
+                    )}
               </div>
             ))
           ) : (
@@ -359,7 +383,7 @@ export default function Home({
                   Now Playing
                 </>
               ) : (
-                `${likedSongs.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} Songs`
+                `${likedSongs.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
               )}
             </h4>
           </div>
@@ -386,7 +410,7 @@ export default function Home({
                 (item) =>
                   item?.type === "playlist" &&
                   item.id !== "37i9dQZF1EYkqdzj48dyYq" &&
-                  (item.tracks?.total > 0)
+                  item.tracks?.total > 0,
               )
               .map((playlist) => (
                 <div
@@ -425,7 +449,7 @@ export default function Home({
                         Now Playing
                       </>
                     ) : (
-                      `${(playlist.tracks?.total || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} Songs`
+                      `${(playlist.tracks?.total || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
                     )}
                   </h4>
                 </div>
@@ -449,7 +473,7 @@ export default function Home({
         : `${millions.toFixed(1)}M`;
     }
     // Manual comma formatting for better browser compatibility
-    return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   const renderArtistsSection = () => {

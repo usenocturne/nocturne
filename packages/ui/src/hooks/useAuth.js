@@ -4,14 +4,17 @@ import {
   checkAuthStatus,
   refreshAccessToken,
 } from "../services/authService";
-import { networkAwareRequest, waitForNetwork } from '../utils/networkAwareRequest';
+import {
+  networkAwareRequest,
+  waitForNetwork,
+} from "../utils/networkAwareRequest";
 
 const authInitializationState = {
   initializing: false,
   refreshing: false,
   lastRefreshTime: 0,
   lastRefreshAttemptFailed: false,
-  networkRestoreTimeout: null
+  networkRestoreTimeout: null,
 };
 
 const DNS_READY_DELAY = 5000;
@@ -35,7 +38,9 @@ export function useAuth() {
 
     const expiryTime = new Date(tokenExpiry);
     const now = new Date();
-    return expiryTime <= now || authInitializationState.lastRefreshAttemptFailed;
+    return (
+      expiryTime <= now || authInitializationState.lastRefreshAttemptFailed
+    );
   }, []);
 
   const refreshTokens = useCallback(async () => {
@@ -73,14 +78,18 @@ export function useAuth() {
 
         const expiryDate = new Date();
         expiryDate.setSeconds(
-          expiryDate.getSeconds() + (data.expires_in || 3600) - 600
+          expiryDate.getSeconds() + (data.expires_in || 3600) - 600,
         );
         localStorage.setItem("spotifyTokenExpiry", expiryDate.toISOString());
 
         setIsAuthenticated(true);
         scheduleTokenRefresh(expiryDate);
 
-        window.dispatchEvent(new CustomEvent('accessTokenUpdated', { detail: { accessToken: data.access_token } }));
+        window.dispatchEvent(
+          new CustomEvent("accessTokenUpdated", {
+            detail: { accessToken: data.access_token },
+          }),
+        );
 
         authInitializationState.refreshing = false;
         authInitializationState.lastRefreshTime = now;
@@ -112,7 +121,7 @@ export function useAuth() {
       const expiryTime = new Date(expiryDate);
       const timeUntilRefresh = Math.max(
         0,
-        expiryTime.getTime() - now.getTime()
+        expiryTime.getTime() - now.getTime(),
       );
 
       if (timeUntilRefresh < 60000) {
@@ -124,7 +133,7 @@ export function useAuth() {
         refreshTokens();
       }, timeUntilRefresh);
     },
-    [refreshTokens]
+    [refreshTokens],
   );
 
   const logout = useCallback(() => {
@@ -166,7 +175,10 @@ export function useAuth() {
         try {
           await refreshTokens();
         } catch (error) {
-          console.error("Initial token refresh attempt failed during initAuthState:", error);
+          console.error(
+            "Initial token refresh attempt failed during initAuthState:",
+            error,
+          );
         }
       }
 
@@ -217,7 +229,7 @@ export function useAuth() {
 
   const pollAuthStatus = useCallback(
     (deviceCode) => {
-      if (isAuthenticated) return () => { };
+      if (isAuthenticated) return () => {};
 
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
@@ -249,11 +261,11 @@ export function useAuth() {
 
             const expiryDate = new Date();
             expiryDate.setSeconds(
-              expiryDate.getSeconds() + (data.expires_in || 3600) - 600
+              expiryDate.getSeconds() + (data.expires_in || 3600) - 600,
             );
             localStorage.setItem(
               "spotifyTokenExpiry",
-              expiryDate.toISOString()
+              expiryDate.toISOString(),
             );
 
             setAccessToken(data.access_token);
@@ -281,7 +293,7 @@ export function useAuth() {
         }
       };
     },
-    [authData, scheduleTokenRefresh, isAuthenticated]
+    [authData, scheduleTokenRefresh, isAuthenticated],
   );
 
   useEffect(() => {
@@ -340,7 +352,10 @@ export function useAuth() {
             await waitForNetwork();
             await refreshTokens();
           } catch (error) {
-            console.error("Error refreshing token after network restored:", error);
+            console.error(
+              "Error refreshing token after network restored:",
+              error,
+            );
           }
         }
       }, DNS_READY_DELAY);

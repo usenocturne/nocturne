@@ -14,7 +14,7 @@ const ScrollingText = ({
   const textRef = useRef(null);
   const containerRef = useRef(null);
   const animationIdRef = useRef(
-    `scroll-${Math.random().toString(36).substr(2, 9)}`
+    `scroll-${Math.random().toString(36).substr(2, 9)}`,
   );
   const styleElRef = useRef(null);
 

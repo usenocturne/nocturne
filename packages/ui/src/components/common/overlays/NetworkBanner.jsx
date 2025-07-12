@@ -17,7 +17,7 @@ const NetworkBanner = ({ visible, onClose }) => {
     if (visible) {
       setIsExiting(false);
     }
-    
+
     return () => {
       if (!visible) {
         stopRetrying();
