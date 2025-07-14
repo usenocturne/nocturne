@@ -4,11 +4,11 @@ set -e
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Image build config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-: "${NOCTURNE_IMAGE_VERSION:="v3.0.0-beta3"}"
+: "${NOCTURNE_IMAGE_VERSION:="v3.0.0-beta4"}"
 
 : "${NOCTURNE_UI_TAG:="main"}"
-: "${NOCTURNED_TAG:="v1.0.9"}"
-: "${NOCTURNE_CONNECTOR_TAG:="v3.0.0-beta3"}"
+: "${NOCTURNED_TAG:="v1.0.10"}"
+: "${NOCTURNE_CONNECTOR_TAG:="v1.0.0"}"
 : "${WINGMAN_TAG:="v1.0.1"}"
 
 : "${VOID_BUILD:="20250202"}"
