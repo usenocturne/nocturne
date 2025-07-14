@@ -352,7 +352,7 @@ const WiFiNetworks = () => {
               </DialogTitle>
               <div className="mt-2">
                 <p className="text-[28px] font-[560] tracking-tight text-white/60">
-                  Re-enter the password to connect again.
+                  You will need to re-enter the password to connect again.
                 </p>
               </div>
             </div>

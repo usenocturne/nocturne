@@ -3,12 +3,19 @@ import {
   networkAwareRequest,
   waitForNetwork,
 } from "../utils/networkAwareRequest";
+import { checkNetworkConnectivity } from "../utils/networkChecker";
 
 const API_BASE = "http://localhost:5000";
 
 let globalWsRef = null;
 let globalWsListeners = [];
 let wsInitialized = false;
+
+let wsReconnectAttempts = 0;
+let wsReconnectTimer = null;
+let wsReconnectInProgress = false;
+const WS_MAX_RECONNECT_ATTEMPTS = 30;
+const WS_RECONNECT_INTERVAL = 2000; // 2 seconds
 
 let isInitializingDiscovery = false;
 let isStoppingDiscovery = false;
@@ -23,6 +30,24 @@ const clearConnectQueue = () => {
       new Error("Connection already established to another device"),
     );
   }
+};
+
+const cleanupWsReconnection = () => {
+  if (wsReconnectTimer) {
+    clearTimeout(wsReconnectTimer);
+    wsReconnectTimer = null;
+  }
+  wsReconnectAttempts = 0;
+  wsReconnectInProgress = false;
+};
+
+export const cleanupGlobalWebSocket = () => {
+  cleanupWsReconnection();
+  if (globalWsRef) {
+    globalWsRef.close(1000);
+    globalWsRef = null;
+  }
+  wsInitialized = false;
 };
 
 export const addGlobalWsListener = (id, handlers) => {
@@ -114,27 +139,64 @@ const processConnectQueue = async () => {
   }
 };
 
+const attemptWsReconnection = () => {
+  if (wsReconnectInProgress || wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
+    return;
+  }
+
+  wsReconnectInProgress = true;
+  wsReconnectAttempts++;
+  
+  console.log(`WebSocket reconnection attempt ${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS}`);
+
+  wsReconnectTimer = setTimeout(() => {
+    wsReconnectInProgress = false;
+    setupGlobalWebSocket();
+  }, WS_RECONNECT_INTERVAL);
+};
+
 const setupGlobalWebSocket = async () => {
-  if (globalWsRef) return;
+  if (globalWsRef && globalWsRef.readyState === WebSocket.CONNECTING) return;
 
   try {
     console.log("Connecting to WebSocket...");
     const socket = new WebSocket(`ws://${API_BASE.replace("http://", "")}/ws`);
     globalWsRef = socket;
 
-    socket.onopen = () => {
+    socket.onopen = async () => {
       console.log("Connected to WebSocket");
+      cleanupWsReconnection();
+
+      try {
+        const networkStatus = await checkNetworkConnectivity();
+        console.log("Network status after WebSocket reconnection:", networkStatus);
+        
+        if (networkStatus.isConnected) {
+          window.dispatchEvent(new Event("online"));
+          window.dispatchEvent(new CustomEvent("networkRestored"));
+        } else {
+          window.dispatchEvent(new Event("offline"));
+        }
+      } catch (error) {
+        console.error("Failed to check network status after WebSocket reconnection:", error);
+      }
+      
       globalWsListeners.forEach(
         (listener) => listener.onOpen && listener.onOpen(socket),
       );
     };
 
-    socket.onclose = () => {
+    socket.onclose = (event) => {
       console.log("Disconnected from WebSocket");
       globalWsListeners.forEach(
         (listener) => listener.onClose && listener.onClose(),
       );
       globalWsRef = null;
+
+      if (event.code !== 1000 && event.code !== 1001) {
+        console.log("WebSocket closed unexpectedly, attempting reconnection...");
+        attemptWsReconnection();
+      }
     };
 
     socket.onmessage = (event) => {
@@ -153,10 +215,10 @@ const setupGlobalWebSocket = async () => {
       globalWsListeners.forEach(
         (listener) => listener.onError && listener.onError(err),
       );
-      socket.close();
     };
   } catch (error) {
     console.error("Error setting up WebSocket:", error);
+    attemptWsReconnection();
   }
 };
 
@@ -194,6 +256,10 @@ export const useNocturned = () => {
       globalWsListeners = globalWsListeners.filter(
         (listener) => listener.id !== listenerId,
       );
+
+      if (globalWsListeners.length === 0) {
+        cleanupGlobalWebSocket();
+      }
     };
   }, []);
 

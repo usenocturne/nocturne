@@ -52,8 +52,6 @@ export default function NetworkPasswordModal({ network, onClose, onConnect }) {
   };
 
   const onKeyPress = function (button) {
-    console.log("Button pressed", button);
-
     if (button === "{bksp}") {
       setPassword(password.slice(0, -1));
     } else if (button === "{enter}") {
