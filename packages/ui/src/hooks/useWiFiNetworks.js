@@ -353,6 +353,7 @@ export function useWiFiNetworks() {
         if (!connected) {
           await scanNetworks(false);
           await fetchNetworkStatus();
+          throw new Error("Failed to establish connection to network");
         }
 
         return true;
@@ -396,6 +397,7 @@ export function useWiFiNetworks() {
         if (!connected) {
           await scanNetworks(false);
           await fetchNetworkStatus();
+          throw new Error("Failed to establish connection to network");
         }
 
         return true;

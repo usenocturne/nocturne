@@ -323,6 +323,46 @@ export const useNocturned = () => {
   };
 };
 
+export const useNocturneVersion = () => {
+  const [version, setVersion] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { apiRequest } = useNocturned();
+
+  const fetchVersion = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const data = await apiRequest("/info");
+      
+      if (data && data.version) {
+        const cleanVersion = data.version.replace(/^v/, '');
+        setVersion(cleanVersion);
+      } else {
+        setVersion(null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch version from nocturned:", err);
+      setError(err.message);
+      setVersion(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiRequest]);
+
+  useEffect(() => {
+    fetchVersion();
+  }, [fetchVersion]);
+
+  return {
+    version,
+    isLoading,
+    error,
+    refetch: fetchVersion,
+  };
+};
+
 export const useSystemUpdate = () => {
   const { wsConnected, apiRequest, addMessageListener, removeMessageListener } =
     useNocturned();

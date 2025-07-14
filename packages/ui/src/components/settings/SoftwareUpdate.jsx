@@ -4,12 +4,10 @@ import {
   CheckCircleIcon,
   RefreshIcon,
 } from "../common/icons";
-import { useConnector } from "../../contexts/ConnectorContext";
-import { useSystemUpdate } from "../../hooks/useNocturned";
+import { useSystemUpdate, useNocturneVersion } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
 
-const SoftwareUpdate = ({ nocturneCurrentVersion = "3.0.0" }) => {
-  const { isConnectorAvailable } = useConnector();
+const SoftwareUpdate = () => {
   const {
     updateStatus,
     progress,
@@ -18,6 +16,12 @@ const SoftwareUpdate = ({ nocturneCurrentVersion = "3.0.0" }) => {
     errorMessage,
     startUpdate,
   } = useSystemUpdate();
+
+  const {
+    version: nocturneCurrentVersion,
+    isLoading: isVersionLoading,
+    error: versionError,
+  } = useNocturneVersion();
 
   const {
     updateInfo,
@@ -315,35 +319,41 @@ const SoftwareUpdate = ({ nocturneCurrentVersion = "3.0.0" }) => {
     return updateChain[updateChain.length - 1].version;
   };
 
+  const effectiveHasUpdate = nocturneCurrentVersion && !isVersionLoading && !versionError && hasNocturneUpdate;
+  const effectiveIsChecking = isChecking || isVersionLoading;
+
+  if (!nocturneCurrentVersion && !isVersionLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="p-4 bg-white/10 rounded-xl border border-white/10">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-[24px] font-[560] text-white/80 tracking-tight">
+              No update information available
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <UpdateSection
         name="Nocturne"
-        currentVersion={nocturneCurrentVersion}
+        currentVersion={nocturneCurrentVersion || "Unknown"}
         latestVersion={nocturneLatestVersion}
         finalVersion={getFinalVersion()}
-        hasUpdate={hasNocturneUpdate}
+        hasUpdate={effectiveHasUpdate}
         imagePath="/images/os/nocturne/3.0.0.webp"
         onUpdate={handleNocturneUpdate}
         isDownloading={isDownloading}
         canUpdate={canUpdate}
-        isChecking={isChecking}
+        isChecking={effectiveIsChecking}
         isMultiStepUpdate={isMultiStepUpdate}
         totalUpdates={totalUpdates}
         currentStep={1}
         noCompatiblePath={noCompatiblePath}
       />
-
-      {isConnectorAvailable && (
-        <div className="p-4 bg-white/10 rounded-xl border border-white/10">
-          <div className="text-[28px] font-[580] text-white tracking-tight mb-2">
-            Connector Updates
-          </div>
-          <div className="text-[24px] font-[560] text-white/80 tracking-tight">
-            Connector updates are managed separately.
-          </div>
-        </div>
-      )}
     </div>
   );
 };

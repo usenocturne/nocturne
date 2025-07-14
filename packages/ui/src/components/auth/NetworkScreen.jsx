@@ -3,6 +3,7 @@ import { useGradientState } from "../../hooks/useGradientState";
 import { useNetwork } from "../../hooks/useNetwork";
 import { useBluetooth } from "../../hooks/useNocturned";
 import NocturneIcon from "../common/icons/NocturneIcon";
+import { useConnector } from "../../contexts/ConnectorContext";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -23,6 +24,8 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
   const { reconnectAttempt: bluetoothReconnectAttempt } = useBluetooth();
   const { isConnected: isInternetConnected, hasEverConnectedThisSession } =
     useNetwork();
+  const { isRestoringWifiNetworks, isConnectorAvailable } = useConnector();
+  const showWifiConnectMessage = isConnectorAvailable && isRestoringWifiNetworks;
 
   useEffect(() => {
     const handleReconnectAttempt = (event) => {
@@ -64,6 +67,7 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
 
   const MAX_RECONNECT_ATTEMPTS = 5;
   const showReconnectMessage =
+    !showWifiConnectMessage &&
     isConnectionLost &&
     bluetoothReconnectAttempt > 0 &&
     bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
@@ -212,9 +216,13 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
 
                 <div className="space-y-4">
                   <h2 className="text-5xl text-white tracking-tight font-semibold w-[24rem]">
-                    Connection Lost
+                    {showWifiConnectMessage ? "Connecting to Wi-Fi" : "Connection Lost"}
                   </h2>
-                  {showReconnectMessage ? (
+                  {showWifiConnectMessage ? (
+                    <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
+                      Connecting to Wi-Fi...
+                    </p>
+                  ) : showReconnectMessage ? (
                     <div className="space-y-2">
                       <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
                         Attempting to reconnect...

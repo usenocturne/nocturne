@@ -6,12 +6,14 @@ const ConnectorContext = createContext({
   isConnectorAvailable: false,
   isLoading: true,
   connectorInfo: {},
+  isRestoringWifiNetworks: false,
 });
 
 export function ConnectorProvider({ children }) {
   const [isConnectorAvailable, setIsConnectorAvailable] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [connectorInfo, setConnectorInfo] = useState({});
+  const [isRestoringWifiNetworks, setIsRestoringWifiNetworks] = useState(false);
 
   const restoreOnceRef = useRef(false);
 
@@ -29,6 +31,7 @@ export function ConnectorProvider({ children }) {
       }
 
       restoreOnceRef.current = true;
+      setIsRestoringWifiNetworks(true);
 
       try {
         const listResponse = await fetch(`${API_BASE}/network/list`);
@@ -78,6 +81,8 @@ export function ConnectorProvider({ children }) {
           "Error processing saved Wi-Fi networks from localStorage",
           err,
         );
+      } finally {
+        setIsRestoringWifiNetworks(false);
       }
     };
 
@@ -127,7 +132,7 @@ export function ConnectorProvider({ children }) {
 
   return (
     <ConnectorContext.Provider
-      value={{ isConnectorAvailable, isLoading, connectorInfo }}
+      value={{ isConnectorAvailable, isLoading, connectorInfo, isRestoringWifiNetworks }}
     >
       {children}
     </ConnectorContext.Provider>
