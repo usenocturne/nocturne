@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useState, useRef } from "react";
 import {
   WifiMaxIcon,
   WifiHighIcon,
@@ -8,6 +8,7 @@ import {
   CheckIcon,
   RefreshIcon,
 } from "../../common/icons";
+import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
 import { NetworkContext, ConnectorContext } from "../../../App";
 
@@ -29,6 +30,23 @@ const WiFiNetworks = () => {
     forgetNetwork,
     hasPasswordSecurity,
   } = useWiFiNetworks();
+
+    const longPressTimer = useRef(null);
+  const [showForgetDialog, setShowForgetDialog] = useState(false);
+  const [selectedNetworkId, setSelectedNetworkId] = useState(null);
+
+  const handleCardPress = (networkId) => {
+    longPressTimer.current = setTimeout(() => {
+      setSelectedNetworkId(networkId);
+      setShowForgetDialog(true);
+    }, 800);
+  };
+
+  const handleCardRelease = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
 
   const getSignalIcon = (signal) => {
     if (!signal)
@@ -73,7 +91,7 @@ const WiFiNetworks = () => {
 
     return (
       <div className="mb-8">
-        <div className="bg-white/10 rounded-xl p-6 select-none border border-white/10">
+        <div onTouchStart={() => handleCardPress(currentNetwork.networkId)} onMouseDown={() => handleCardPress(currentNetwork.networkId)} onTouchEnd={handleCardRelease} onMouseUp={handleCardRelease} onMouseLeave={handleCardRelease} className="bg-white/10 rounded-xl p-6 select-none border border-white/10">
           <div className="flex justify-between items-center">
             <div className="min-w-0 flex-1">
               <h4 className="text-[28px] font-[580] text-white tracking-tight truncate pr-4">
@@ -122,9 +140,12 @@ const WiFiNetworks = () => {
             return (
               <div
                 key={network.networkId}
-                onClick={() =>
-                  inRange && handleConnectToSavedNetwork(network.networkId)
-                }
+                onClick={() => inRange && handleConnectToSavedNetwork(network.networkId)}
+                onTouchStart={() => handleCardPress(network.networkId)}
+                onMouseDown={() => handleCardPress(network.networkId)}
+                onTouchEnd={handleCardRelease}
+                onMouseUp={handleCardRelease}
+                onMouseLeave={handleCardRelease}
                 className={`bg-white/10 rounded-xl p-6 select-none border border-white/10 
                   ${
                     inRange
@@ -160,7 +181,7 @@ const WiFiNetworks = () => {
                     </div>
                     <button
                       onClick={(e) => handleForgetNetwork(network.networkId, e)}
-                      className="bg-transparent border-none text-white/60 hover:text-white text-[24px] transition-colors px-2 hover:bg-white/10 rounded focus:outline-none"
+                      className="hidden"
                       disabled={isForgetting}
                     >
                       Forget
@@ -292,8 +313,66 @@ const WiFiNetworks = () => {
     );
   }
 
+  const confirmForgetDialog = (
+    <Dialog
+      open={showForgetDialog}
+      onClose={() => {
+        setShowForgetDialog(false);
+        setSelectedNetworkId(null);
+      }}
+      className="relative z-50"
+    >
+      <DialogBackdrop className="fixed inset-0 bg-black/60" />
+      <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+        <div
+          className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0"
+          style={{ fontFamily: "var(--font-inter)" }}
+        >
+          <DialogPanel className="relative transform overflow-hidden rounded-[17px] bg-[#161616] px-0 pb-0 pt-5 text-left shadow-xl sm:my-8 sm:w-full sm:max-w-[36rem]">
+            <div className="text-center">
+              <DialogTitle as="h3" className="text-[36px] font-[560] tracking-tight text-white">
+                Forget Network?
+              </DialogTitle>
+              <div className="mt-2">
+                <p className="text-[28px] font-[560] tracking-tight text-white/60">
+                  Re-enter the password to connect again.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 border-t border-slate-100/25">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgetDialog(false);
+                  setSelectedNetworkId(null);
+                }}
+                className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] border-r border-slate-100/25 bg-transparent hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (selectedNetworkId) {
+                    await forgetNetwork(selectedNetworkId);
+                  }
+                  setShowForgetDialog(false);
+                  setSelectedNetworkId(null);
+                }}
+                className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] bg-transparent hover:bg-white/5"
+              >
+                Forget
+              </button>
+            </div>
+          </DialogPanel>
+        </div>
+      </div>
+    </Dialog>
+  );
+
   return (
     <div className="space-y-6">
+      {confirmForgetDialog}
       {error && (
         <div className="bg-red-900/40 border border-red-700/60 rounded-xl p-4 mb-4">
           <p className="text-white/80 text-[20px]">{error}</p>

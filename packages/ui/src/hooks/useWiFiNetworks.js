@@ -244,6 +244,18 @@ export function useWiFiNetworks() {
     }
   }, [availableNetworks, handleFetchError]);
 
+  const pollConnectionStatus = async (maxAttempts = 10, interval = 2000) => {
+    for (let i = 0; i < maxAttempts; i++) {
+      const status = await fetchNetworkStatus();
+      if (status && status.networkId) {
+        await scanNetworks(false);
+        return true;
+      }
+      await new Promise((r) => setTimeout(r, interval));
+    }
+    return false;
+  };
+
   const connectToNetwork = useCallback(
     async (network, password = null) => {
       setLoadingState((prev) => ({ ...prev, connecting: true }));
@@ -337,10 +349,11 @@ export function useWiFiNetworks() {
           }
         }
 
-        setTimeout(() => {
-          scanNetworks();
-          fetchNetworkStatus();
-        }, 1000);
+        const connected = await pollConnectionStatus();
+        if (!connected) {
+          await scanNetworks(false);
+          await fetchNetworkStatus();
+        }
 
         return true;
       } catch (error) {
@@ -371,12 +384,10 @@ export function useWiFiNetworks() {
         }
 
         try {
-          if (typeof localStorage !== "undefined") {
-            localStorage.setItem(
-              "lastConnectedWifiNetworkId",
-              String(networkId),
-            );
-          }
+          localStorage.setItem(
+            "lastConnectedWifiNetworkId",
+            String(networkId),
+          );
         } catch (storageErr) {
           console.error(
             "Failed to store last connected Wi-Fi network ID",
@@ -384,10 +395,11 @@ export function useWiFiNetworks() {
           );
         }
 
-        setTimeout(() => {
-          scanNetworks();
-          fetchNetworkStatus();
-        }, 1000);
+        const connected = await pollConnectionStatus();
+        if (!connected) {
+          await scanNetworks(false);
+          await fetchNetworkStatus();
+        }
 
         return true;
       } catch (error) {
@@ -418,6 +430,17 @@ export function useWiFiNetworks() {
         }
 
         await scanNetworks();
+
+        try {
+          const storageKey = "savedWifiNetworks";
+          const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+          const filtered = existing.filter(
+            (item) => item && item.networkId !== networkId && item.ssid !== (currentNetwork && currentNetwork.ssid),
+          );
+          localStorage.setItem(storageKey, JSON.stringify(filtered));
+        } catch (storageErr) {
+          console.error("Failed to remove Wi-Fi credentials from localStorage", storageErr);
+        }
 
         return true;
       } catch (error) {
@@ -476,7 +499,7 @@ export function useWiFiNetworks() {
 
       pollingIntervalRef.current = setInterval(() => {
         scanNetworks(false);
-      }, 60000);
+      }, 15000);
     }
 
     return () => {

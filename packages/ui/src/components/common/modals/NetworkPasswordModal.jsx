@@ -25,6 +25,7 @@ export default function NetworkPasswordModal({ network, onClose, onConnect }) {
     setError("");
 
     try {
+      setShowKeyboard(false);
       const success = await connectToNetwork(network, password);
       if (success) {
         setPassword("");
@@ -89,6 +90,10 @@ export default function NetworkPasswordModal({ network, onClose, onConnect }) {
   useEffect(
     function () {
       if (
+        isConnecting
+      ) {
+        setShowKeyboard(false);
+      } else if (
         network &&
         hasPasswordSecurity &&
         hasPasswordSecurity(network.flags)
@@ -96,7 +101,7 @@ export default function NetworkPasswordModal({ network, onClose, onConnect }) {
         setShowKeyboard(true);
       }
     },
-    [network, hasPasswordSecurity],
+    [network, hasPasswordSecurity, isConnecting],
   );
 
   if (!network) return null;
