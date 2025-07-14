@@ -3,5 +3,6 @@
 exec 2>&1
 sv check dbus > /dev/null || exit 1
 sv check bluetoothd > /dev/null || exit 1
+sv check bluetooth_adapter > /dev/null || exit 1
 
 exec /usr/sbin/nocturned > /dev/null 2>&1

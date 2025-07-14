@@ -3,6 +3,8 @@
 exec 2>&1
 sv check weston > /dev/null || exit 1
 sv check nocturne-ui > /dev/null || exit 1
+sv check nocturned > /dev/null || exit 1
+curl -fs http://localhost:5000/info > /dev/null 2>&1 || exit 1
 
 export XDG_RUNTIME_DIR="/run/wayland/"
 export XDG_CACHE_HOME="/var/cache"
