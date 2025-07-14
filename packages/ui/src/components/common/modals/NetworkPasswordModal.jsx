@@ -89,9 +89,7 @@ export default function NetworkPasswordModal({ network, onClose, onConnect }) {
 
   useEffect(
     function () {
-      if (
-        isConnecting
-      ) {
+      if (isConnecting) {
         setShowKeyboard(false);
       } else if (
         network &&

@@ -8,7 +8,12 @@ import {
   CheckIcon,
   RefreshIcon,
 } from "../../common/icons";
-import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  DialogBackdrop,
+} from "@headlessui/react";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
 import { NetworkContext, ConnectorContext } from "../../../App";
 
@@ -31,7 +36,7 @@ const WiFiNetworks = () => {
     hasPasswordSecurity,
   } = useWiFiNetworks();
 
-    const longPressTimer = useRef(null);
+  const longPressTimer = useRef(null);
   const [showForgetDialog, setShowForgetDialog] = useState(false);
   const [selectedNetworkId, setSelectedNetworkId] = useState(null);
 
@@ -91,7 +96,14 @@ const WiFiNetworks = () => {
 
     return (
       <div className="mb-8">
-        <div onTouchStart={() => handleCardPress(currentNetwork.networkId)} onMouseDown={() => handleCardPress(currentNetwork.networkId)} onTouchEnd={handleCardRelease} onMouseUp={handleCardRelease} onMouseLeave={handleCardRelease} className="bg-white/10 rounded-xl p-6 select-none border border-white/10">
+        <div
+          onTouchStart={() => handleCardPress(currentNetwork.networkId)}
+          onMouseDown={() => handleCardPress(currentNetwork.networkId)}
+          onTouchEnd={handleCardRelease}
+          onMouseUp={handleCardRelease}
+          onMouseLeave={handleCardRelease}
+          className="bg-white/10 rounded-xl p-6 select-none border border-white/10"
+        >
           <div className="flex justify-between items-center">
             <div className="min-w-0 flex-1">
               <h4 className="text-[28px] font-[580] text-white tracking-tight truncate pr-4">
@@ -140,7 +152,9 @@ const WiFiNetworks = () => {
             return (
               <div
                 key={network.networkId}
-                onClick={() => inRange && handleConnectToSavedNetwork(network.networkId)}
+                onClick={() =>
+                  inRange && handleConnectToSavedNetwork(network.networkId)
+                }
                 onTouchStart={() => handleCardPress(network.networkId)}
                 onMouseDown={() => handleCardPress(network.networkId)}
                 onTouchEnd={handleCardRelease}
@@ -330,7 +344,10 @@ const WiFiNetworks = () => {
         >
           <DialogPanel className="relative transform overflow-hidden rounded-[17px] bg-[#161616] px-0 pb-0 pt-5 text-left shadow-xl sm:my-8 sm:w-full sm:max-w-[36rem]">
             <div className="text-center">
-              <DialogTitle as="h3" className="text-[36px] font-[560] tracking-tight text-white">
+              <DialogTitle
+                as="h3"
+                className="text-[36px] font-[560] tracking-tight text-white"
+              >
                 Forget Network?
               </DialogTitle>
               <div className="mt-2">

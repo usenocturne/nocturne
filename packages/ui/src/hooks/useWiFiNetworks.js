@@ -384,10 +384,7 @@ export function useWiFiNetworks() {
         }
 
         try {
-          localStorage.setItem(
-            "lastConnectedWifiNetworkId",
-            String(networkId),
-          );
+          localStorage.setItem("lastConnectedWifiNetworkId", String(networkId));
         } catch (storageErr) {
           console.error(
             "Failed to store last connected Wi-Fi network ID",
@@ -435,11 +432,17 @@ export function useWiFiNetworks() {
           const storageKey = "savedWifiNetworks";
           const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
           const filtered = existing.filter(
-            (item) => item && item.networkId !== networkId && item.ssid !== (currentNetwork && currentNetwork.ssid),
+            (item) =>
+              item &&
+              item.networkId !== networkId &&
+              item.ssid !== (currentNetwork && currentNetwork.ssid),
           );
           localStorage.setItem(storageKey, JSON.stringify(filtered));
         } catch (storageErr) {
-          console.error("Failed to remove Wi-Fi credentials from localStorage", storageErr);
+          console.error(
+            "Failed to remove Wi-Fi credentials from localStorage",
+            storageErr,
+          );
         }
 
         return true;

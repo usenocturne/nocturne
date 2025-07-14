@@ -44,13 +44,16 @@ export function ConnectorProvider({ children }) {
           if (networksJson) {
             const networks = JSON.parse(networksJson);
             if (Array.isArray(networks) && networks.length > 0) {
-              const restoreResponse = await fetch(`${API_BASE}/network/restore`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
+              const restoreResponse = await fetch(
+                `${API_BASE}/network/restore`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify(networks),
                 },
-                body: JSON.stringify(networks),
-              });
+              );
 
               if (restoreResponse.ok) {
                 const lastId = localStorage.getItem(
