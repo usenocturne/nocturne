@@ -17,7 +17,7 @@ export default function LockView({ onClose }) {
 
   return (
     <div className="flex items-center justify-center h-screen w-full z-10 fadeIn-animation text-white">
-      <div className="text-[20vw] leading-none font-semibold">
+      <div className="text-[20vw] leading-none font-semibold tracking-tight">
         {currentTime}
       </div>
     </div>
