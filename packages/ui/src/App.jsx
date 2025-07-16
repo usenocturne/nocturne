@@ -282,6 +282,7 @@ function App() {
   const [showConnectorModal, setShowConnectorModal] = useState(false);
   const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] =
     useState(null);
+  const [prefetchedDevices, setPrefetchedDevices] = useState(null);
 
   useEffect(() => {
     fetch("http://localhost:5000/device/resetcounter", {
@@ -359,15 +360,34 @@ function App() {
     isTutorialActive: showTutorial,
   });
 
-  const handleOpenDeviceSwitcher = (playbackIntent = null) => {
+  const handleOpenDeviceSwitcher = (
+    playbackIntentOrDevices = null,
+    devicesArg = null,
+  ) => {
+    let playbackIntent = null;
+    let devicesList = null;
+
+    if (Array.isArray(playbackIntentOrDevices)) {
+      devicesList = playbackIntentOrDevices;
+    } else {
+      playbackIntent = playbackIntentOrDevices;
+      devicesList = devicesArg;
+    }
+
     if (playbackIntent) {
       setPlaybackIntentOnDeviceSwitch(playbackIntent);
     }
+
+    if (devicesList && devicesList.length > 0) {
+      setPrefetchedDevices(devicesList);
+    }
+
     setIsDeviceSwitcherOpen(true);
   };
 
   const handleCloseDeviceSwitcher = (selectedDeviceId = null) => {
     setIsDeviceSwitcherOpen(false);
+    setPrefetchedDevices(null);
     if (selectedDeviceId && playbackIntentOnDeviceSwitch) {
       const { trackUriToPlay, contextUriToPlay, urisToPlay } =
         playbackIntentOnDeviceSwitch;
@@ -784,6 +804,7 @@ function App() {
                       isOpen={isDeviceSwitcherOpen}
                       onClose={handleCloseDeviceSwitcher}
                       accessToken={accessToken}
+                      initialDevices={prefetchedDevices}
                     />
                     {showConnectorModal && (
                       <ConnectorQRModal

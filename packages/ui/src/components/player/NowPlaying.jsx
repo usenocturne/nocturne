@@ -32,6 +32,7 @@ import {
   RepeatOneIcon,
   SpeedIcon,
 } from "../common/icons";
+import { generateRandomString } from "../../utils/helpers";
 
 export default function NowPlaying({
   accessToken,
@@ -189,8 +190,88 @@ export default function NowPlaying({
   const handlePlayPause = async () => {
     if (currentPlayback?.is_playing) {
       await pausePlayback();
-    } else if (currentPlayback?.item) {
+      return;
+    }
+
+    if (currentPlayback?.item) {
       await playTrack();
+      return;
+    }
+
+    try {
+      if (!accessToken) return;
+
+      const connectEndpoint = `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`;
+
+      const devicesRes = await fetch(connectEndpoint, {
+        method: "PUT",
+        headers: {
+          accept: "application/json",
+          "accept-language": "en-US,en;q=0.9",
+          authorization: `Bearer ${accessToken}`,
+          "content-type": "application/json",
+          "x-spotify-connection-id": generateRandomString(148),
+        },
+        body: JSON.stringify({
+          member_type: "CONNECT_STATE",
+          device: {
+            device_info: {
+              capabilities: {
+                can_be_player: false,
+                hidden: true,
+                needs_full_player_state: true,
+              },
+            },
+          },
+        }),
+      });
+
+      if (!devicesRes.ok) {
+        console.error("Failed to retrieve devices", devicesRes.status);
+        return;
+      }
+
+      const data = await devicesRes.json();
+      const devicesArray = Object.values(data.devices || {});
+
+      if (devicesArray.length === 0) return;
+
+      const activeDevice = devicesArray.find((d) => d.is_active);
+
+      if (!activeDevice && devicesArray.length > 1) {
+        if (typeof onOpenDeviceSwitcher === "function") {
+          onOpenDeviceSwitcher(devicesArray);
+        }
+        return;
+      }
+
+      const target = activeDevice || devicesArray[0];
+      const targetDeviceId = target.device_id || target.id;
+
+      const transferRes = await fetch("https://api.spotify.com/v1/me/player", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          device_ids: [targetDeviceId],
+          play: true,
+        }),
+      });
+
+      if (!transferRes.ok && transferRes.status !== 204) {
+        console.error("Failed to transfer playback", await transferRes.text());
+        return;
+      }
+
+      setTimeout(() => {
+        if (typeof triggerRefresh === "function") {
+          triggerRefresh();
+        }
+      }, 1000);
+    } catch (err) {
+      console.error("Error attempting to resume playback:", err);
     }
   };
 

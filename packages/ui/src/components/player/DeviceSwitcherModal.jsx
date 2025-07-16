@@ -16,16 +16,30 @@ import {
 } from "../common/icons";
 import { generateRandomString } from "../../utils/helpers";
 
-const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
-  const [devices, setDevices] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+const DeviceSwitcherModal = ({
+  isOpen,
+  onClose,
+  accessToken,
+  initialDevices,
+}) => {
+  const safeInitialDevices = Array.isArray(initialDevices)
+    ? initialDevices
+    : [];
+
+  const [devices, setDevices] = useState(safeInitialDevices);
+  const [isLoading, setIsLoading] = useState(safeInitialDevices.length === 0);
   const [isTransferring, setIsTransferring] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    if (Array.isArray(initialDevices) && initialDevices.length > 0) {
+      setDevices(initialDevices);
+      setIsLoading(false);
+    } else {
       fetchDevices();
     }
-  }, [isOpen, accessToken]);
+  }, [isOpen, accessToken, initialDevices]);
 
   const fetchDevices = async () => {
     try {
@@ -82,7 +96,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, accessToken }) => {
           },
           body: JSON.stringify({
             device_ids: [deviceId],
-            play: false,
+            play: true,
           }),
         },
       );
