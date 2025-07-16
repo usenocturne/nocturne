@@ -140,14 +140,19 @@ const processConnectQueue = async () => {
 };
 
 const attemptWsReconnection = () => {
-  if (wsReconnectInProgress || wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
+  if (
+    wsReconnectInProgress ||
+    wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS
+  ) {
     return;
   }
 
   wsReconnectInProgress = true;
   wsReconnectAttempts++;
-  
-  console.log(`WebSocket reconnection attempt ${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS}`);
+
+  console.log(
+    `WebSocket reconnection attempt ${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS}`,
+  );
 
   wsReconnectTimer = setTimeout(() => {
     wsReconnectInProgress = false;
@@ -169,8 +174,11 @@ const setupGlobalWebSocket = async () => {
 
       try {
         const networkStatus = await checkNetworkConnectivity();
-        console.log("Network status after WebSocket reconnection:", networkStatus);
-        
+        console.log(
+          "Network status after WebSocket reconnection:",
+          networkStatus,
+        );
+
         if (networkStatus.isConnected) {
           window.dispatchEvent(new Event("online"));
           window.dispatchEvent(new CustomEvent("networkRestored"));
@@ -178,9 +186,12 @@ const setupGlobalWebSocket = async () => {
           window.dispatchEvent(new Event("offline"));
         }
       } catch (error) {
-        console.error("Failed to check network status after WebSocket reconnection:", error);
+        console.error(
+          "Failed to check network status after WebSocket reconnection:",
+          error,
+        );
       }
-      
+
       globalWsListeners.forEach(
         (listener) => listener.onOpen && listener.onOpen(socket),
       );
@@ -194,7 +205,9 @@ const setupGlobalWebSocket = async () => {
       globalWsRef = null;
 
       if (event.code !== 1000 && event.code !== 1001) {
-        console.log("WebSocket closed unexpectedly, attempting reconnection...");
+        console.log(
+          "WebSocket closed unexpectedly, attempting reconnection...",
+        );
         attemptWsReconnection();
       }
     };
@@ -333,11 +346,11 @@ export const useNocturneVersion = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const data = await apiRequest("/info");
-      
+
       if (data && data.version) {
-        const cleanVersion = data.version.replace(/^v/, '');
+        const cleanVersion = data.version.replace(/^v/, "");
         setVersion(cleanVersion);
       } else {
         setVersion(null);

@@ -319,7 +319,11 @@ const SoftwareUpdate = () => {
     return updateChain[updateChain.length - 1].version;
   };
 
-  const effectiveHasUpdate = nocturneCurrentVersion && !isVersionLoading && !versionError && hasNocturneUpdate;
+  const effectiveHasUpdate =
+    nocturneCurrentVersion &&
+    !isVersionLoading &&
+    !versionError &&
+    hasNocturneUpdate;
   const effectiveIsChecking = isChecking || isVersionLoading;
 
   if (!nocturneCurrentVersion && !isVersionLoading) {

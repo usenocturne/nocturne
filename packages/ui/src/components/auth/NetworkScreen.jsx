@@ -25,7 +25,8 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
   const { isConnected: isInternetConnected, hasEverConnectedThisSession } =
     useNetwork();
   const { isRestoringWifiNetworks, isConnectorAvailable } = useConnector();
-  const showWifiConnectMessage = isConnectorAvailable && isRestoringWifiNetworks;
+  const showWifiConnectMessage =
+    isConnectorAvailable && isRestoringWifiNetworks;
 
   useEffect(() => {
     const handleReconnectAttempt = (event) => {
@@ -216,7 +217,9 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
 
                 <div className="space-y-4">
                   <h2 className="text-5xl text-white tracking-tight font-semibold w-[24rem]">
-                    {showWifiConnectMessage ? "Connecting to Wi-Fi" : "Connection Lost"}
+                    {showWifiConnectMessage
+                      ? "Connecting to Wi-Fi"
+                      : "Connection Lost"}
                   </h2>
                   {showWifiConnectMessage ? (
                     <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">

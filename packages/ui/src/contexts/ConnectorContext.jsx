@@ -132,7 +132,12 @@ export function ConnectorProvider({ children }) {
 
   return (
     <ConnectorContext.Provider
-      value={{ isConnectorAvailable, isLoading, connectorInfo, isRestoringWifiNetworks }}
+      value={{
+        isConnectorAvailable,
+        isLoading,
+        connectorInfo,
+        isRestoringWifiNetworks,
+      }}
     >
       {children}
     </ConnectorContext.Provider>
