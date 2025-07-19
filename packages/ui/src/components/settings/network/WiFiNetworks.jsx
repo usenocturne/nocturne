@@ -28,9 +28,11 @@ const WiFiNetworks = () => {
     error,
     isInitialLoading,
     isScanning,
+    isConnecting,
     isForgetting,
     isConnectorAvailable,
     scanNetworks,
+    connectToNetwork,
     connectToSavedNetwork,
     forgetNetwork,
     hasPasswordSecurity,
@@ -69,8 +71,18 @@ const WiFiNetworks = () => {
     }
   };
 
-  const handleNetworkClick = (network) => {
+  const handleNetworkClick = async (network) => {
     setSelectedNetwork(network);
+
+    if (hasPasswordSecurity(network.flags)) {
+      return;
+    }
+
+    try {
+      await connectToNetwork(network);
+    } catch (error) {
+      console.error("Failed to auto-connect to open network:", error);
+    }
   };
 
   const handleConnectToSavedNetwork = async (networkId) => {
@@ -83,7 +95,9 @@ const WiFiNetworks = () => {
   };
 
   const handleRefresh = () => {
-    scanNetworks(false);
+    if (!isConnecting) {
+      scanNetworks(false);
+    }
   };
 
   const renderCurrentNetwork = () => {
@@ -231,11 +245,11 @@ const WiFiNetworks = () => {
           <button
             onClick={handleRefresh}
             className="bg-transparent border-none flex items-center space-x-2 text-white/60 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 focus:outline-none"
-            disabled={isScanning}
+            disabled={isScanning || isConnecting}
             aria-label="Refresh networks"
           >
             <RefreshIcon
-              className={`w-6 h-6 ${isScanning ? "animate-spin" : ""}`}
+              className={`w-6 h-6 ${isScanning || isConnecting ? "animate-spin" : ""}`}
             />
           </button>
         </div>
@@ -316,10 +330,10 @@ const WiFiNetworks = () => {
         <button
           onClick={() => scanNetworks(true)}
           className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl px-6 py-3 text-[28px] font-[560] text-white flex items-center space-x-2 focus:outline-none"
-          disabled={isScanning}
+          disabled={isScanning || isConnecting}
         >
           <RefreshIcon
-            className={`w-6 h-6 ${isScanning ? "animate-spin" : ""}`}
+            className={`w-6 h-6 ${isScanning || isConnecting ? "animate-spin" : ""}`}
           />
           Scan for networks
         </button>

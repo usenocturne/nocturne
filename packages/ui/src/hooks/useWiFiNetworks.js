@@ -503,7 +503,9 @@ export function useWiFiNetworks() {
       init();
 
       pollingIntervalRef.current = setInterval(() => {
-        scanNetworks(false);
+        if (!loadingState.connecting) {
+          scanNetworks(false);
+        }
       }, 15000);
     }
 
