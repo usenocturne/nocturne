@@ -11,8 +11,6 @@ fi
 
 echo "Setting up USB gadget"
 
-modprobe /lib/modules/4.9.113/kernel/drivers/usb/gadget/function/usb_f_mass_storage.ko
-
 mount -t configfs none /sys/kernel/config/ 2> /dev/null || true
 
 # Create USB gadget
@@ -43,16 +41,9 @@ echo "a0:b1:c2:d3:e4:00" > "${usbGadgetDir}"/functions/rndis.usb0/dev_addr
 echo "a0:b1:c2:d3:e4:01" > "${usbGadgetDir}"/functions/rndis.usb0/host_addr
 echo RNDIS > "${usbGadgetDir}"/functions/rndis.usb0/os_desc/interface.rndis/compatible_id
 echo 5162001 > "${usbGadgetDir}"/functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id
-
-# Mass Storage
-mkdir -p "${usbGadgetDir}"/functions/mass_storage.0
-echo 1 > "${usbGadgetDir}"/functions/mass_storage.0/ro
-echo 0 > "${usbGadgetDir}"/functions/mass_storage.0/stall
-echo "/connector.img" > "${usbGadgetDir}"/functions/mass_storage.0/lun.0/file
-
 sleep 1
+
 ln -s "${usbGadgetDir}"/functions/rndis.usb0 "${usbGadgetDir}"/configs/c.1
-ln -s "${usbGadgetDir}"/functions/mass_storage.0 "${usbGadgetDir}"/configs/c.1
 ln -s "${usbGadgetDir}"/configs/c.1 "${usbGadgetDir}"/os_desc
 # Bind gadget to the USB device
 printToKmsg "Binding gadget to USB device"

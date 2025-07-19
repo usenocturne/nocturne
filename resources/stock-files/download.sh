@@ -21,8 +21,7 @@ trap cleanup EXIT
 
 ########################
 
-#FIRMWARE_URL="https://thingify.tools/files/blob/${FIRMWARE_ID}/${VERSION_ID}/${FILE_ID}?name=8.9.2-thinglabs.zip"
-FIRMWARE_URL="https://f.itsnebula.net/nocturne/8.9.2-thinglabs.zip"
+FIRMWARE_URL="https://thingify.tools/files/blob/${FIRMWARE_ID}/${VERSION_ID}/${FILE_ID}?name=8.9.2-thinglabs.zip"
 FIRMWARE_BASENAME="8.9.2-thinglabs.zip"
 FIRMWARE_FILE="${WORK_PATH}/${FIRMWARE_BASENAME}"
 
@@ -50,8 +49,6 @@ rm "$OUTPUT_PATH"/* 2> /dev/null || true
 )
 
 cp -a "$MNT_PATH"/lib/modules "$OUTPUT_PATH"/usr/lib/
-mkdir -p "$OUTPUT_PATH"/usr/lib/modules/4.9.113/kernel/drivers/usb/gadget/function/
-cp ../modules/usb_f_mass_storage.ko "$OUTPUT_PATH"/usr/lib/modules/4.9.113/kernel/drivers/usb/gadget/function/
 
 cp "$MNT_PATH"/usr/bin/{phb,uenv,sp-als-backlight} "$OUTPUT_PATH"/usr/bin/
 cp -a "$MNT_PATH"/usr/bin/chromium-browser "$OUTPUT_PATH"/usr/bin/
