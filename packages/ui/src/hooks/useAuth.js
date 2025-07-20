@@ -171,15 +171,6 @@ export function useAuth() {
         setAccessToken(storedAccessToken);
         setRefreshToken(storedRefreshToken);
         setIsAuthenticated(true);
-
-        try {
-          await refreshTokens();
-        } catch (error) {
-          console.error(
-            "Initial token refresh attempt failed during initAuthState:",
-            error,
-          );
-        }
       }
 
       setIsLoading(false);

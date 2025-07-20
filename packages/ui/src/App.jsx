@@ -25,6 +25,7 @@ import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
 import PairingScreen from "./components/auth/PairingScreen";
 import LockView from "./components/common/LockView";
+import LoadingScreen from "./components/common/LoadingScreen";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
@@ -283,14 +284,7 @@ function App() {
   const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] =
     useState(null);
   const [prefetchedDevices, setPrefetchedDevices] = useState(null);
-
-  useEffect(() => {
-    fetch("http://localhost:5000/device/resetcounter", {
-      method: "POST",
-    }).catch((error) => {
-      console.error("Error resetting boot counter:", error);
-    });
-  }, []);
+  const [showLoader, setShowLoader] = useState(true);
 
   const {
     isAuthenticated,
@@ -313,7 +307,7 @@ function App() {
     isLoading,
     errors: dataErrors,
     refreshData,
-  } = useSpotifyData(activeSection);
+  } = useSpotifyData(activeSection, showLoader, !showLoader);
 
   const {
     isConnected: isInternetConnected,
@@ -764,6 +758,12 @@ function App() {
             <ConnectorContext.Provider value={connectorContextValue}>
               <Router>
                 <FontLoader />
+                {showLoader && (
+                  <LoadingScreen
+                    show={showLoader}
+                    onComplete={() => setShowLoader(false)}
+                  />
+                )}
                 <main
                   className="overflow-hidden relative min-h-screen rounded-2xl"
                   style={{

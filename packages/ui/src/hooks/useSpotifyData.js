@@ -11,7 +11,11 @@ import { getCachedTimezone } from "../components/common/navigation/StatusBar";
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
 
-export function useSpotifyData(activeSection) {
+export function useSpotifyData(
+  activeSection,
+  skipInitialFetch = false,
+  tokenReady = true,
+) {
   const {
     isAuthenticated,
     accessToken,
@@ -54,13 +58,14 @@ export function useSpotifyData(activeSection) {
 
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const dataLoadingAttemptedRef = useRef(false);
+  const initialLoadTriggeredRef = useRef(false);
   const dataFetchingInProgressRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
   const effectiveToken = useMemo(() => {
-    return isAuthenticated && !isInitializing && accessToken
+    return tokenReady && isAuthenticated && !isInitializing && accessToken
       ? accessToken
       : null;
-  }, [isAuthenticated, isInitializing, accessToken]);
+  }, [tokenReady, isAuthenticated, isInitializing, accessToken]);
   const retryTimeoutRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -76,10 +81,11 @@ export function useSpotifyData(activeSection) {
   const playerControls = useSpotifyPlayerControls(effectiveToken);
 
   useEffect(() => {
+    if (skipInitialFetch) return;
     if (isAuthenticated && !authIsLoading && !initialDataLoaded) {
       loadInitialData();
     }
-  }, [isAuthenticated, authIsLoading]);
+  }, [isAuthenticated, authIsLoading, skipInitialFetch]);
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.id) {
@@ -642,7 +648,9 @@ export function useSpotifyData(activeSection) {
   }, [isAuthenticated, accessToken, refreshTokens, isTokenValid]);
 
   const loadInitialData = useCallback(async () => {
+    if (skipInitialFetch) return;
     if (
+      initialLoadTriggeredRef.current ||
       !accessToken ||
       isInitializing ||
       initialDataLoaded ||
@@ -651,6 +659,8 @@ export function useSpotifyData(activeSection) {
     ) {
       return;
     }
+
+    initialLoadTriggeredRef.current = true;
 
     const hasValidToken = await waitForValidToken();
     if (!hasValidToken) {
@@ -748,9 +758,11 @@ export function useSpotifyData(activeSection) {
     fetchLikedSongs,
     fetchRadioMixes,
     fetchUserShows,
+    skipInitialFetch,
   ]);
 
   useEffect(() => {
+    if (skipInitialFetch) return;
     if (accessToken && !initialDataLoaded && !isInitializing) {
       loadInitialData();
     }
@@ -763,7 +775,13 @@ export function useSpotifyData(activeSection) {
         abortControllerRef.current.abort();
       }
     };
-  }, [accessToken, initialDataLoaded, isInitializing, loadInitialData]);
+  }, [
+    accessToken,
+    initialDataLoaded,
+    isInitializing,
+    loadInitialData,
+    skipInitialFetch,
+  ]);
 
   const refreshData = useCallback(async () => {
     if (!accessToken) return;

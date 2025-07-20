@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useNetwork } from "../../hooks/useNetwork";
-import { useBluetooth } from "../../hooks/useNocturned";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import { useConnector } from "../../contexts/ConnectorContext";
 import {
@@ -20,30 +19,11 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
   const [showSubpage, setShowSubpage] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [activeSubItem, setActiveSubItem] = React.useState(null);
-  const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
-  const { reconnectAttempt: bluetoothReconnectAttempt } = useBluetooth();
   const { isConnected: isInternetConnected, hasEverConnectedThisSession } =
     useNetwork();
   const { isRestoringWifiNetworks, isConnectorAvailable } = useConnector();
   const showWifiConnectMessage =
     isConnectorAvailable && isRestoringWifiNetworks;
-
-  useEffect(() => {
-    const handleReconnectAttempt = (event) => {
-      setReconnectAttempt(event.detail.attempt);
-    };
-
-    window.addEventListener(
-      "bluetoothReconnectAttempt",
-      handleReconnectAttempt,
-    );
-    return () => {
-      window.removeEventListener(
-        "bluetoothReconnectAttempt",
-        handleReconnectAttempt,
-      );
-    };
-  }, []);
 
   useEffect(() => {
     if (
@@ -54,24 +34,6 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
       onConnectionRestored();
     }
   }, [isInternetConnected, hasEverConnectedThisSession, onConnectionRestored]);
-
-  useEffect(() => {
-    const cleanup = () => {
-      setReconnectAttempt(0);
-    };
-    window.addEventListener("online", cleanup);
-
-    return () => {
-      window.removeEventListener("online", cleanup);
-    };
-  }, []);
-
-  const MAX_RECONNECT_ATTEMPTS = 5;
-  const showReconnectMessage =
-    !showWifiConnectMessage &&
-    isConnectionLost &&
-    bluetoothReconnectAttempt > 0 &&
-    bluetoothReconnectAttempt < MAX_RECONNECT_ATTEMPTS;
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100",
@@ -225,12 +187,6 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
                     <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
                       Connecting to Wi-Fi...
                     </p>
-                  ) : showReconnectMessage ? (
-                    <div className="space-y-2">
-                      <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                        Attempting to reconnect...
-                      </p>
-                    </div>
                   ) : (
                     <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
                       Enable Bluetooth Tethering and connect to "Nocturne" in
