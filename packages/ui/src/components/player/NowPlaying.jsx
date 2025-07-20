@@ -66,6 +66,7 @@ export default function NowPlaying({
 
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
+  const isPodcast = currentPlayback?.item?.type === "episode";
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
@@ -383,12 +384,12 @@ export default function NowPlaying({
       handleSkipPrevious();
     },
     onSwipeUp: () => {
-      if (!showLyrics) {
+      if (!isPodcast && !showLyrics) {
         toggleLyrics();
       }
     },
     onSwipeDown: () => {
-      if (showLyrics) {
+      if (!isPodcast && showLyrics) {
         toggleLyrics();
       }
     },
@@ -876,19 +877,21 @@ export default function NowPlaying({
               className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
             >
               <div className="py-1">
-                <MenuItem onClick={toggleLyrics}>
-                  <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
-                    <span className="text-[28px]">
-                      {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
-                    </span>
-                    <LyricsIcon
-                      aria-hidden="true"
-                      className={`h-8 w-8 ${
-                        showLyrics ? "text-white" : "text-white/60"
-                      }`}
-                    />
-                  </div>
-                </MenuItem>
+                {!isPodcast && (
+                  <MenuItem onClick={toggleLyrics}>
+                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
+                      <span className="text-[28px]">
+                        {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
+                      </span>
+                      <LyricsIcon
+                        aria-hidden="true"
+                        className={`h-8 w-8 ${
+                          showLyrics ? "text-white" : "text-white/60"
+                        }`}
+                      />
+                    </div>
+                  </MenuItem>
+                )}
                 {!isDJPlaylist && (
                   <>
                     <MenuItem onClick={handleToggleShuffle}>
