@@ -322,6 +322,38 @@ export function useAuth() {
   }, [scheduleTokenRefresh]);
 
   useEffect(() => {
+    const handleAccessTokenUpdated = (e) => {
+      const newAccessToken = e.detail?.accessToken;
+      if (newAccessToken) {
+        setAccessToken(newAccessToken);
+
+        const storedExpiry = localStorage.getItem("spotifyTokenExpiry");
+        if (storedExpiry) {
+          scheduleTokenRefresh(new Date(storedExpiry));
+        }
+
+        if (!isAuthenticated) {
+          const storedRefreshToken = localStorage.getItem(
+            "spotifyRefreshToken",
+          );
+          if (storedRefreshToken) {
+            setRefreshToken(storedRefreshToken);
+            setIsAuthenticated(true);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("accessTokenUpdated", handleAccessTokenUpdated);
+    return () => {
+      window.removeEventListener(
+        "accessTokenUpdated",
+        handleAccessTokenUpdated,
+      );
+    };
+  }, [isAuthenticated, scheduleTokenRefresh]);
+
+  useEffect(() => {
     if (accessToken && refreshToken) {
       setIsAuthenticated(true);
     } else {

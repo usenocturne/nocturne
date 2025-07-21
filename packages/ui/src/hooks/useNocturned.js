@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNetwork } from "./useNetwork";
 import {
   networkAwareRequest,
   waitForNetwork,
@@ -570,6 +571,13 @@ export const useBluetooth = () => {
   const RECONNECT_INTERVAL = 3000;
   const INITIAL_RECONNECT_DELAY = 1000;
 
+  const { isConnected: isInternetConnected } = useNetwork();
+  const networkCheckBypass =
+    typeof localStorage !== "undefined" &&
+    localStorage.getItem("networkCheckBypass") === "true";
+
+  const skipBluetoothStep = isInternetConnected || networkCheckBypass;
+
   const cleanupReconnectTimer = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
@@ -710,6 +718,10 @@ export const useBluetooth = () => {
   );
 
   useEffect(() => {
+    if (skipBluetoothStep) {
+      return;
+    }
+
     const lastDeviceAddress = localStorage.getItem(
       "lastConnectedBluetoothDevice",
     );
@@ -729,7 +741,7 @@ export const useBluetooth = () => {
       setReconnectAttempt(0);
       isReconnecting.current = false;
     };
-  }, [attemptReconnect, cleanupReconnectTimer]);
+  }, [attemptReconnect, cleanupReconnectTimer, skipBluetoothStep]);
 
   const stopNetworkPolling = useCallback(() => {
     isNetworkPollingActive = false;

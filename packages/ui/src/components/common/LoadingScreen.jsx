@@ -19,7 +19,13 @@ const LoadingScreen = ({ show = true, onComplete }) => {
   const { loading: connectorLoading, reconnectAttempt } = useBluetooth();
   const { isConnectorAvailable } = useConnector();
   const { isConnected: isInternetConnected } = useNetwork();
-  const skipBluetoothStep = isConnectorAvailable || isInternetConnected;
+
+  const networkCheckBypass =
+    typeof localStorage !== "undefined" &&
+    localStorage.getItem("networkCheckBypass") === "true";
+
+  const skipBluetoothStep =
+    isConnectorAvailable || isInternetConnected || networkCheckBypass;
   const MAX_RECONNECT_ATTEMPTS = 3;
   const showReconnectMessage =
     !skipBluetoothStep &&
@@ -35,15 +41,11 @@ const LoadingScreen = ({ show = true, onComplete }) => {
 
     let cancelled = false;
 
-    const bypass =
-      typeof localStorage !== "undefined" &&
-      localStorage.getItem("networkCheckBypass") === "true";
-
     const markStable = () => {
       if (!cancelled) setNetworkStable(true);
     };
 
-    if (bypass) {
+    if (networkCheckBypass) {
       markStable();
       return () => {
         cancelled = true;
@@ -75,7 +77,7 @@ const LoadingScreen = ({ show = true, onComplete }) => {
     return () => {
       cancelled = true;
     };
-  }, [show, networkStable]);
+  }, [show, networkStable, networkCheckBypass]);
 
   useEffect(() => {
     if (!show || tokenRefreshed) return;
@@ -108,6 +110,32 @@ const LoadingScreen = ({ show = true, onComplete }) => {
     skipBluetoothStep,
     refreshTokens,
   ]);
+
+  useEffect(() => {
+    if (!networkTimedOut) return;
+
+    let didAttempt = false;
+
+    const tryRefresh = async () => {
+      if (didAttempt) return;
+      didAttempt = true;
+
+      try {
+        await waitForStableNetwork(5000);
+        await refreshTokens();
+      } catch (err) {
+        console.error("Deferred token refresh failed", err);
+      }
+    };
+
+    window.addEventListener("networkRestored", tryRefresh);
+    window.addEventListener("online", tryRefresh);
+
+    return () => {
+      window.removeEventListener("networkRestored", tryRefresh);
+      window.removeEventListener("online", tryRefresh);
+    };
+  }, [networkTimedOut, refreshTokens]);
 
   useEffect(() => {
     if (show) {
