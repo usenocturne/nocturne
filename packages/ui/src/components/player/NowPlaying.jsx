@@ -11,6 +11,8 @@ import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
 import { useGestureControls } from "../../hooks/useGestureControls";
 import { useElapsedTime } from "../../hooks/useElapsedTime";
+import { useButtonMapping } from "../../hooks/useButtonMapping";
+import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
 import {
@@ -43,6 +45,7 @@ export default function NowPlaying({
   onOpenDeviceSwitcher,
   onNavigateToArtist,
   onNavigateToAlbum,
+  setIgnoreNextRelease,
 }) {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
@@ -312,6 +315,54 @@ export default function NowPlaying({
 
   const { trackName, artistName, albumArt, trackId, firstArtistId, albumId } =
     trackInfo;
+
+  const contextUri = currentPlayback?.context?.uri;
+  const playlistId = useMemo(() => {
+    if (contextUri && contextUri.startsWith("spotify:playlist:")) {
+      const parts = contextUri.split(":");
+      return parts[2] || null;
+    }
+    return null;
+  }, [contextUri]);
+
+  const [playlistDetails, setPlaylistDetails] = useState({ name: "", image: "" });
+
+  useEffect(() => {
+    const fetchPlaylistDetails = async () => {
+      if (!playlistId || !accessToken) return;
+      try {
+        const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setPlaylistDetails({
+          name: data.name || "",
+          image: data.images?.[1]?.url || data.images?.[0]?.url || "",
+        });
+      } catch (err) {
+        console.error("Failed to fetch playlist details", err);
+      }
+    };
+
+    fetchPlaylistDetails();
+  }, [playlistId, accessToken]);
+
+  const {
+    showMappingOverlay,
+    activeButton,
+  } = useButtonMapping({
+    accessToken,
+    contentId: playlistId,
+    contentType: playlistId ? "playlist" : null,
+    contentImage: playlistDetails.image || albumArt,
+    contentName: playlistDetails.name || trackName,
+    playTrack,
+    isActive: !!playlistId,
+    setIgnoreNextRelease,
+  });
 
   const handleWheel = useCallback(
     (e) => {
@@ -977,6 +1028,11 @@ export default function NowPlaying({
           </div>
         </div>
       </div>
+
+      <ButtonMappingOverlay
+        show={showMappingOverlay}
+        activeButton={activeButton}
+      />
     </div>
   );
 }

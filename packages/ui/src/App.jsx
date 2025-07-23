@@ -41,6 +41,7 @@ function useGlobalButtonMapping({
   accessToken,
   isAuthenticated,
   playTrack,
+  playDJMix,
   refreshPlaybackState,
   setActiveSection,
   isTutorialActive,
@@ -191,7 +192,14 @@ function useGlobalButtonMapping({
         }
 
         let success = false;
-        if (contextUri) {
+        const DJ_PLAYLIST_ID = "37i9dQZF1EYkqdzj48dyYq";
+
+        if (
+          mappedType === "playlist" &&
+          mappedId === DJ_PLAYLIST_ID
+        ) {
+          success = await (playDJMix ? playDJMix() : playTrack(null, contextUri));
+        } else if (contextUri) {
           success = await playTrack(null, contextUri);
         } else if (uris && uris.length > 0) {
           success = await playTrack(null, null, uris);
@@ -220,6 +228,7 @@ function useGlobalButtonMapping({
       accessToken,
       isAuthenticated,
       playTrack,
+      playDJMix,
       refreshPlaybackState,
       setActiveSection,
       isProcessingButtonPress,
@@ -349,6 +358,7 @@ function App() {
     accessToken,
     isAuthenticated,
     playTrack: playerControls.playTrack,
+    playDJMix: playerControls.playDJMix,
     refreshPlaybackState,
     setActiveSection,
     isTutorialActive: showTutorial,
@@ -704,6 +714,7 @@ function App() {
         onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
         onNavigateToArtist={handleNavigateToArtistFromNowPlaying}
         onNavigateToAlbum={handleNavigateToAlbumFromNowPlaying}
+        setIgnoreNextRelease={setIgnoreNextRelease}
       />
     );
   } else if (activeSection === "lock") {
