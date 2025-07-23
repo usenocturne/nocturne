@@ -244,6 +244,7 @@ export default function NetworkPasswordModal({ network, onClose, onConnect }) {
               onKeyPress={onKeyPress}
               physicalKeyboardHighlight={false}
               theme="hg-theme-default hg-layout-default"
+              debug={false}
               buttonTheme={buttonTheme}
             />
           </div>
