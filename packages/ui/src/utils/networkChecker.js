@@ -6,6 +6,53 @@ export class NetworkError extends Error {
 }
 
 const STATUS_ENDPOINT = "http://localhost:5000/network/status";
+
+const CACHE_WINDOW_MS = 3000;
+let lastCheckTimestamp = 0;
+let lastCheckResult = null;
+let inFlightPromise = null;
+
+async function fetchNetworkStatus() {
+  await new Promise((r) => setTimeout(r, 5000));
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300);
+
+    const response = await fetch(STATUS_ENDPOINT, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error("Non-200 status");
+    }
+
+    const data = await response.json();
+    return {
+      isConnected: data.status === "online",
+      source: "daemon",
+    };
+  } catch {
+    return { isConnected: false, source: "browser" };
+  }
+}
+
+function maybeUseCache() {
+  if (Date.now() - lastCheckTimestamp < CACHE_WINDOW_MS && lastCheckResult) {
+    return lastCheckResult;
+  }
+  return null;
+}
+
+function updateCache(result) {
+  lastCheckTimestamp = Date.now();
+  lastCheckResult = result;
+  return result;
+}
+
 let hasDaemonFailed = false;
 const NETWORK_CHECK_BYPASS_KEY = "networkCheckBypass";
 
@@ -21,83 +68,33 @@ function isBypassed() {
 }
 
 export async function checkNetworkConnectivity() {
-  if (isBypassed()) {
-    return { isConnected: true, source: "bypass" };
-  }
+  const bypassResult = isBypassed();
+  if (bypassResult) return { isConnected: true, source: "bypass" };
 
-  if (hasDaemonFailed) {
-    return { isConnected: false, source: "daemon" };
-  }
+  const cached = maybeUseCache();
+  if (cached) return cached;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300);
+  if (inFlightPromise) return inFlightPromise;
 
-    const response = await fetch(STATUS_ENDPOINT, {
-      method: "GET",
-      cache: "no-store",
-      signal: controller.signal,
-    });
+  inFlightPromise = fetchNetworkStatus().then((res) => {
+    inFlightPromise = null;
+    return updateCache(res);
+  });
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      hasDaemonFailed = true;
-      return { isConnected: false, source: "browser" };
-    }
-
-    const data = await response.json();
-    return {
-      isConnected: data.status === "online",
-      source: "daemon",
-    };
-  } catch (error) {
-    hasDaemonFailed = true;
-    return {
-      isConnected: false,
-      source: "browser",
-    };
-  }
+  return inFlightPromise;
 }
 
 export async function checkNetworkConnectivitySync() {
-  if (isBypassed()) {
-    return { isConnected: true, source: "bypass" };
-  }
+  const bypassResult = isBypassed();
+  if (bypassResult) return { isConnected: true, source: "bypass" };
 
-  if (hasDaemonFailed) {
-    return { isConnected: false, source: "daemon" };
-  }
+  const cached = maybeUseCache();
+  if (cached) return cached;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300);
+  if (inFlightPromise) return inFlightPromise;
 
-    const response = await fetch(STATUS_ENDPOINT, {
-      method: "GET",
-      cache: "no-store",
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      hasDaemonFailed = true;
-      return { isConnected: false, source: "browser" };
-    }
-
-    const data = await response.json();
-    return {
-      isConnected: data.status === "online",
-      source: "daemon",
-    };
-  } catch (error) {
-    hasDaemonFailed = true;
-    return {
-      isConnected: false,
-      source: "browser",
-    };
-  }
+  const result = await fetchNetworkStatus();
+  return updateCache(result);
 }
 
 let networkWebSocket = null;

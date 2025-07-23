@@ -568,7 +568,7 @@ export const useBluetooth = () => {
   const retryDeviceAddressRef = useRef(null);
 
   const MAX_RECONNECT_ATTEMPTS = 5;
-  const RECONNECT_INTERVAL = 3000;
+  const RECONNECT_INTERVAL = 5000;
   const INITIAL_RECONNECT_DELAY = 1000;
 
   const { isConnected: isInternetConnected } = useNetwork();
@@ -587,7 +587,7 @@ export const useBluetooth = () => {
 
   const attemptReconnect = useCallback(
     async (continuous = false) => {
-      if (isReconnecting.current) {
+      if (isReconnecting.current || reconnectTimeoutRef.current) {
         return;
       }
 
@@ -602,8 +602,6 @@ export const useBluetooth = () => {
         window.dispatchEvent(new Event("networkBannerHide"));
         return;
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       if (
         !continuous &&
@@ -652,6 +650,8 @@ export const useBluetooth = () => {
         reconnectAttemptsRef.current++;
         setReconnectAttempt(reconnectAttemptsRef.current);
 
+        await new Promise((r) => setTimeout(r, 5000));
+
         const response = await queueConnectRequest(lastDeviceAddress);
 
         if (response.ok) {
@@ -675,6 +675,7 @@ export const useBluetooth = () => {
             ? Math.max(RECONNECT_INTERVAL, 5000)
             : RECONNECT_INTERVAL;
           reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectTimeoutRef.current = null;
             isReconnecting.current = false;
             if (continuous) {
               attemptReconnect(true);
@@ -700,6 +701,7 @@ export const useBluetooth = () => {
             ? Math.max(RECONNECT_INTERVAL, 5000)
             : RECONNECT_INTERVAL;
           reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectTimeoutRef.current = null;
             isReconnecting.current = false;
             if (continuous) {
               attemptReconnect(true);
@@ -1053,6 +1055,7 @@ export const useBluetooth = () => {
             setReconnectAttempt(0);
             isReconnecting.current = false;
             retryIsCancelled = true;
+            clearConnectQueue();
             window.dispatchEvent(new Event("networkBannerHide"));
           }
           break;

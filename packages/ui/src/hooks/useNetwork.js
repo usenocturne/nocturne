@@ -148,9 +148,17 @@ export function useNetwork() {
         updateConnectionStatus(false);
       };
 
+      const onlineCheckTimerRef = { current: null };
+
       const handleOnlineEvent = () => {
         updateConnectionStatus(true);
-        performNetworkCheck();
+
+        if (onlineCheckTimerRef.current) return;
+
+        onlineCheckTimerRef.current = setTimeout(() => {
+          performNetworkCheck();
+          onlineCheckTimerRef.current = null;
+        }, 500);
       };
 
       const listenerId = addMessageListener(
