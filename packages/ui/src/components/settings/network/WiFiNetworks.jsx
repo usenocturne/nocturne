@@ -335,7 +335,7 @@ const WiFiNetworks = () => {
           <RefreshIcon
             className={`w-6 h-6 ${isScanning || isConnecting ? "animate-spin" : ""}`}
           />
-          Scan for networks
+          <span>Scan for networks</span>
         </button>
       </div>
     );
