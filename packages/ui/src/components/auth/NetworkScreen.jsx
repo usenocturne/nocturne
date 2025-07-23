@@ -153,6 +153,22 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isAnimating) return;
+      if (e.key === "Escape") {
+        if (showSubpage || showParent) {
+          navigateBack();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isAnimating, showSubpage, showParent, navigateBack]);
+
   const renderSubpage = () => {
     if (!activeSubItem) return null;
     const SubpageComponent = activeSubItem.subpage.component;
