@@ -402,7 +402,7 @@ const WiFiNetworks = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 transform-gpu will-change-transform">
       {confirmForgetDialog}
       {error && (
         <div className="bg-red-900/40 border border-red-700/60 rounded-xl p-4 mb-4">

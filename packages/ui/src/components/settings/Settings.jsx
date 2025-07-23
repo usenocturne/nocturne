@@ -847,7 +847,7 @@ export default function Settings({
 
   return (
     <div
-      className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container scroll-smooth"
+      className="h-full overflow-y-auto overflow-x-hidden settings-scroll-container scroll-smooth transform-gpu will-change-transform"
       style={{
         touchAction: "pan-y",
         overflowX: "hidden",
