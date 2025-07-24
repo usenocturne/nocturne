@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { useConnector } from "../contexts/ConnectorContext";
+import { NetworkContext } from "../App";
 
 let globalWsRef = null;
 let globalWsListeners = [];
 let wsInitialized = false;
 let reconnectTimeoutRef = null;
 const API_BASE = "http://172.16.42.1:20574";
+let globalScanInProgress = false;
 
 const setupGlobalWebSocket = (isConnectorAvailable) => {
   if (globalWsRef || !isConnectorAvailable) return;
@@ -58,6 +60,7 @@ const setupGlobalWebSocket = (isConnectorAvailable) => {
 };
 
 export function useWiFiNetworks() {
+  const { selectedNetwork } = useContext(NetworkContext);
   const { isConnectorAvailable, isLoading: isConnectorLoading } =
     useConnector();
   const [currentNetwork, setCurrentNetwork] = useState(null);
@@ -116,8 +119,18 @@ export function useWiFiNetworks() {
 
   const scanNetworks = useCallback(
     async (isInitial = false) => {
+      if (selectedNetwork) {
+        return [];
+      }
+      while (globalScanInProgress) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        if (selectedNetwork) return [];
+      }
+
       if (scanningRef.current) return;
+
       scanningRef.current = true;
+      globalScanInProgress = true;
 
       try {
         setLoadingState((prev) => ({
@@ -154,6 +167,7 @@ export function useWiFiNetworks() {
         return [];
       } finally {
         scanningRef.current = false;
+        globalScanInProgress = false;
         setLoadingState((prev) => ({
           ...prev,
           initial: false,
@@ -161,7 +175,7 @@ export function useWiFiNetworks() {
         }));
       }
     },
-    [processNetworks, combineNetworks, handleFetchError],
+    [processNetworks, combineNetworks, handleFetchError, selectedNetwork],
   );
 
   const fetchNetworkStatus = useCallback(async () => {
@@ -506,7 +520,7 @@ export function useWiFiNetworks() {
         if (!loadingState.connecting) {
           scanNetworks(false);
         }
-      }, 15000);
+      }, 20000);
     }
 
     return () => {
