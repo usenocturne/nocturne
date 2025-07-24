@@ -678,6 +678,14 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
 
   useEffect(() => {
     const handleNetworkRestored = async () => {
+      if (
+        globalWebSocket &&
+        (globalWebSocket.readyState === WebSocket.OPEN ||
+          globalWebSocket.readyState === WebSocket.CONNECTING)
+      ) {
+        return;
+      }
+
       cleanupWebSocket();
       connectionErrors = 0;
       isAttemptingReconnect = false;
