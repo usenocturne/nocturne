@@ -515,23 +515,14 @@ export function useWiFiNetworks() {
       };
 
       init();
-
-      pollingIntervalRef.current = setInterval(() => {
-        if (!loadingState.connecting) {
-          scanNetworks(false);
-        }
-      }, 20000);
     }
 
     return () => {
       globalWsListeners = globalWsListeners.filter(
         (listener) => listener.id !== listenerId,
       );
-
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
     };
+    
   }, [
     scanNetworks,
     fetchNetworkStatus,

@@ -194,11 +194,10 @@ function useGlobalButtonMapping({
         let success = false;
         const DJ_PLAYLIST_ID = "37i9dQZF1EYkqdzj48dyYq";
 
-        if (
-          mappedType === "playlist" &&
-          mappedId === DJ_PLAYLIST_ID
-        ) {
-          success = await (playDJMix ? playDJMix() : playTrack(null, contextUri));
+        if (mappedType === "playlist" && mappedId === DJ_PLAYLIST_ID) {
+          success = await (playDJMix
+            ? playDJMix()
+            : playTrack(null, contextUri));
         } else if (contextUri) {
           success = await playTrack(null, contextUri);
         } else if (uris && uris.length > 0) {

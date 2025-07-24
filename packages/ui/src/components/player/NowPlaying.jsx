@@ -325,17 +325,23 @@ export default function NowPlaying({
     return null;
   }, [contextUri]);
 
-  const [playlistDetails, setPlaylistDetails] = useState({ name: "", image: "" });
+  const [playlistDetails, setPlaylistDetails] = useState({
+    name: "",
+    image: "",
+  });
 
   useEffect(() => {
     const fetchPlaylistDetails = async () => {
       if (!playlistId || !accessToken) return;
       try {
-        const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
+        const res = await fetch(
+          `https://api.spotify.com/v1/playlists/${playlistId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
           },
-        });
+        );
         if (!res.ok) return;
         const data = await res.json();
         setPlaylistDetails({
@@ -350,10 +356,7 @@ export default function NowPlaying({
     fetchPlaylistDetails();
   }, [playlistId, accessToken]);
 
-  const {
-    showMappingOverlay,
-    activeButton,
-  } = useButtonMapping({
+  const { showMappingOverlay, activeButton } = useButtonMapping({
     accessToken,
     contentId: playlistId,
     contentType: playlistId ? "playlist" : null,
