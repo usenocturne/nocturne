@@ -107,6 +107,20 @@ const AuthScreen = ({ onAuthSuccess }) => {
     previousNetworkStateRef.current = isNetworkConnected;
   }, [isNetworkConnected]);
 
+  useEffect(() => {
+    if (authInitialized && !hasQrCode && isNetworkConnected) {
+      const retryTimer = setTimeout(() => {
+        if (!hasQrCode && isNetworkConnected) {
+          authAttemptedRef.current = false;
+          setAuthInitialized(false);
+          setError(null);
+        }
+      }, 5000);
+
+      return () => clearTimeout(retryTimer);
+    }
+  }, [authInitialized, hasQrCode, isNetworkConnected]);
+
   if (!initialCheckDone) {
     return (
       <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
