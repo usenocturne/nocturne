@@ -71,17 +71,21 @@ Available recipes:
   shell
 ```
 
-## Enabling USB Tethering for use on Windows
+## Setting up a host device
 
-The Car Thing running Nocturne can present itself as a virtual network adapter. With some configuration, you can share your internet connection to the Car Thing.
+<details>
+  <summary>Windows</summary>
+  
+  The Car Thing running Nocturne can present itself as a virtual network adapter. With some configuration, you can share your internet connection to the Car Thing via USB tethering.
 
-1. Connect the CarThing to your PC.
-2. Run the following commands in an elevated PowerShell terminal:
-    * `$ctNic = (Get-NetAdapter -InterfaceDescription "*NDIS*")`
-    * `$ctNic | Set-NetIPAddress -IPAddress 172.16.42.1 -PrefixLength 24`
-    * `New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 172.16.42.0/24`
+  1. Connect the CarThing to your PC.
+  2. Run the following commands in an elevated PowerShell terminal:
+* `$ctNic = (Get-NetAdapter -InterfaceDescription "*NDIS*")`
+* `$ctNic | Set-NetIPAddress -IPAddress 172.16.42.1 -PrefixLength 24`
+* `New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 172.16.42.0/24`
 
 **Tip:** If you get an error akin to a duplicate name being in use, you may need to identify conflicts on your system with `Get-VMSwitch`. If you do not have that command installed, you will need to get the Hyper-V optional Windows feature installed, following a reboot, with: `Get-WindowsOptionalFeature -Online | Where-Object FeatureName -like '*Hyper-V*'`.
+</details>
 
 ## Credits
 
