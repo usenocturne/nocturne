@@ -191,20 +191,6 @@ export function useWiFiNetworks() {
       const status = await response.json();
       setNetworkStatus(status);
 
-      try {
-        if (typeof localStorage !== "undefined" && status?.networkId) {
-          localStorage.setItem(
-            "lastConnectedWifiNetworkId",
-            String(status.networkId),
-          );
-        }
-      } catch (storageErr) {
-        console.error(
-          "Failed to store last connected Wi-Fi network",
-          storageErr,
-        );
-      }
-
       return status;
     } catch (error) {
       handleFetchError(error, "Network status fetch");
@@ -299,20 +285,6 @@ export function useWiFiNetworks() {
               `Failed to select network: ${selectResponse.status}`,
             );
           }
-
-          try {
-            if (typeof localStorage !== "undefined") {
-              localStorage.setItem(
-                "lastConnectedWifiNetworkId",
-                String(existingSavedNetwork.networkId),
-              );
-            }
-          } catch (storageErr) {
-            console.error(
-              "Failed to store last connected Wi-Fi network ID",
-              storageErr,
-            );
-          }
         } else {
           const connectResponse = await fetch(`${API_BASE}/network/connect`, {
             method: "POST",
@@ -328,37 +300,6 @@ export function useWiFiNetworks() {
           if (!connectResponse.ok) {
             throw new Error(
               `Failed to connect to network: ${connectResponse.status}`,
-            );
-          }
-
-          try {
-            if (
-              typeof localStorage !== "undefined" &&
-              typeof localStorage !== "undefined"
-            ) {
-              const storageKey = "savedWifiNetworks";
-              const existing = JSON.parse(
-                localStorage.getItem(storageKey) || "[]",
-              );
-
-              const filtered = existing.filter(
-                (item) => item && item.ssid !== network.ssid,
-              );
-
-              const entry = {
-                ssid: network.ssid,
-                psk: hasPasswordSecurity(network.flags)
-                  ? password || undefined
-                  : undefined,
-              };
-
-              filtered.push(entry);
-              localStorage.setItem(storageKey, JSON.stringify(filtered));
-            }
-          } catch (storageErr) {
-            console.error(
-              "Failed to persist Wi-Fi credentials in localStorage",
-              storageErr,
             );
           }
         }
@@ -398,15 +339,6 @@ export function useWiFiNetworks() {
           throw new Error(`Failed to select network: ${response.status}`);
         }
 
-        try {
-          localStorage.setItem("lastConnectedWifiNetworkId", String(networkId));
-        } catch (storageErr) {
-          console.error(
-            "Failed to store last connected Wi-Fi network ID",
-            storageErr,
-          );
-        }
-
         const connected = await pollConnectionStatus();
         if (!connected) {
           await scanNetworks(false);
@@ -443,23 +375,6 @@ export function useWiFiNetworks() {
         }
 
         await scanNetworks();
-
-        try {
-          const storageKey = "savedWifiNetworks";
-          const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
-          const filtered = existing.filter(
-            (item) =>
-              item &&
-              item.networkId !== networkId &&
-              item.ssid !== (currentNetwork && currentNetwork.ssid),
-          );
-          localStorage.setItem(storageKey, JSON.stringify(filtered));
-        } catch (storageErr) {
-          console.error(
-            "Failed to remove Wi-Fi credentials from localStorage",
-            storageErr,
-          );
-        }
 
         return true;
       } catch (error) {
@@ -522,7 +437,6 @@ export function useWiFiNetworks() {
         (listener) => listener.id !== listenerId,
       );
     };
-    
   }, [
     scanNetworks,
     fetchNetworkStatus,
