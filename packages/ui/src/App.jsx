@@ -26,6 +26,7 @@ import React from "react";
 import PairingScreen from "./components/auth/PairingScreen";
 import LockView from "./components/common/LockView";
 import LoadingScreen from "./components/common/LoadingScreen";
+import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
@@ -45,11 +46,13 @@ function useGlobalButtonMapping({
   refreshPlaybackState,
   setActiveSection,
   isTutorialActive,
+  isDisabled = false,
 }) {
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [activeButton, setActiveButton] = useState(null);
   const [isProcessingButtonPress, setIsProcessingButtonPress] = useState(false);
   const ignoreNextReleaseRef = useRef(false);
+  const shouldRenderRef = useRef(true);
 
   const handleButtonPress = useCallback(
     async (buttonNumber) => {
@@ -57,7 +60,8 @@ function useGlobalButtonMapping({
         !accessToken ||
         !isAuthenticated ||
         isProcessingButtonPress ||
-        isTutorialActive
+        isTutorialActive ||
+        isDisabled
       )
         return;
 
@@ -232,11 +236,14 @@ function useGlobalButtonMapping({
       setActiveSection,
       isProcessingButtonPress,
       isTutorialActive,
+      isDisabled,
     ],
   );
 
   useEffect(() => {
     if (!isAuthenticated || isTutorialActive) return;
+
+    if (isDisabled) return;
 
     const handleKeyDown = (e) => {
       const validButtons = ["1", "2", "3", "4"];
@@ -268,14 +275,14 @@ function useGlobalButtonMapping({
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
       window.removeEventListener("keyup", handleKeyUp, { capture: true });
     };
-  }, [isAuthenticated, handleButtonPress, isTutorialActive]);
+  }, [isAuthenticated, handleButtonPress, isTutorialActive, isDisabled]);
 
   const setIgnoreNextRelease = useCallback(() => {
     ignoreNextReleaseRef.current = true;
   }, []);
 
   return {
-    showMappingOverlay,
+    showMappingOverlay: isDisabled ? false : showMappingOverlay,
     activeButton,
     setIgnoreNextRelease,
   };
@@ -284,6 +291,15 @@ function useGlobalButtonMapping({
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [activeSection, setActiveSection] = useState("recents");
+  const previousSectionRef = useRef("recents");
+  const activeSectionRef = useRef(activeSection);
+
+  useEffect(() => {
+    activeSectionRef.current = activeSection;
+    if (activeSection !== "lock") {
+      previousSectionRef.current = activeSection;
+    }
+  }, [activeSection]);
   const [viewingContent, setViewingContent] = useState(null);
   const [contentSourceSection, setContentSourceSection] = useState(null);
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
@@ -293,6 +309,12 @@ function App() {
     useState(null);
   const [prefetchedDevices, setPrefetchedDevices] = useState(null);
   const [showLoader, setShowLoader] = useState(true);
+  const [powerMenuVisible, setPowerMenuVisible] = useState(false);
+  const powerMenuVisibleRef = useRef(false);
+
+  useEffect(() => {
+    powerMenuVisibleRef.current = powerMenuVisible;
+  }, [powerMenuVisible]);
 
   const {
     isAuthenticated,
@@ -361,6 +383,7 @@ function App() {
     refreshPlaybackState,
     setActiveSection,
     isTutorialActive: showTutorial,
+    isDisabled: powerMenuVisible,
   });
 
   const handleOpenDeviceSwitcher = (
@@ -560,18 +583,77 @@ function App() {
   ]);
 
   useEffect(() => {
+    const holdTimerRef = { current: null };
+    const longPressTriggeredRef = { current: false };
+
     const handleKeyDown = (e) => {
-      if (e.key === "m" || e.key === "M") {
-        e.preventDefault();
-        setActiveSection("lock");
+      if (!e.key || e.key.toLowerCase() !== "m") return;
+
+      if (powerMenuVisibleRef.current) return;
+
+      if (longPressTriggeredRef.current) return;
+
+      if (!holdTimerRef.current) {
+        holdTimerRef.current = setTimeout(() => {
+          longPressTriggeredRef.current = true;
+          setPowerMenuVisible(true);
+          holdTimerRef.current = null;
+        }, 600);
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    const handleKeyUp = (e) => {
+      if (!e.key || e.key.toLowerCase() !== "m") return;
+
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+        holdTimerRef.current = null;
+      }
+
+      if (longPressTriggeredRef.current) {
+        longPressTriggeredRef.current = false;
+        return;
+      }
+
+      if (powerMenuVisibleRef.current) {
+        setPowerMenuVisible(false);
+        return;
+      }
+
+      if (activeSectionRef.current === "lock") {
+        const target = previousSectionRef.current || "recents";
+        setActiveSection(target);
+        activeSectionRef.current = target;
+      } else {
+        previousSectionRef.current = activeSectionRef.current;
+        setActiveSection("lock");
+        activeSectionRef.current = "lock";
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    window.addEventListener("keyup", handleKeyUp, { capture: true });
+
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+      window.removeEventListener("keyup", handleKeyUp, { capture: true });
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
     };
   }, []);
+
+  const handleShutdown = () => {
+    fetch("http://localhost:5000/device/power/shutdown", {
+      method: "POST",
+    }).catch((err) => console.error("Shutdown request failed", err));
+    setPowerMenuVisible(false);
+  };
+
+  const handleRestart = () => {
+    fetch("http://localhost:5000/device/power/restart", {
+      method: "POST",
+    }).catch((err) => console.error("Restart request failed", err));
+    setPowerMenuVisible(false);
+  };
 
   const handleAuthSuccess = () => {
     const storedAccessToken = localStorage.getItem("spotifyAccessToken");
@@ -721,7 +803,8 @@ function App() {
       <LockView
         currentPlayback={currentPlayback}
         refreshPlaybackState={refreshPlaybackState}
-        onClose={() => setActiveSection("recents")} />
+        onClose={() => setActiveSection("recents")}
+      />
     );
   } else if (viewingContent) {
     content = (
@@ -837,6 +920,12 @@ function App() {
                         activeButton={globalActiveButton}
                       />
                     )}
+                    <PowerMenuOverlay
+                      show={powerMenuVisible}
+                      onShutdown={handleShutdown}
+                      onRestart={handleRestart}
+                      onClose={() => setPowerMenuVisible(false)}
+                    />
                   </div>
                 </main>
               </Router>

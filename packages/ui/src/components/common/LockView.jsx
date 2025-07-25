@@ -4,16 +4,16 @@ import { useAuth } from "../../hooks/useAuth";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGestureControls } from "../../hooks/useGestureControls";
 
-export default function LockView({ onClose, currentPlayback, refreshPlaybackState }) {
+export default function LockView({
+  onClose,
+  currentPlayback,
+  refreshPlaybackState,
+}) {
   const { currentTime } = useCurrentTime();
   const containerRef = useRef(null);
   const { accessToken } = useAuth();
-  const {
-    playTrack,
-    pausePlayback,
-    skipToNext,
-    skipToPrevious,
-  } = useSpotifyPlayerControls(accessToken);
+  const { playTrack, pausePlayback, skipToNext, skipToPrevious } =
+    useSpotifyPlayerControls(accessToken);
 
   const handlePlayPause = useCallback(async () => {
     if (!accessToken) return;
@@ -33,7 +33,13 @@ export default function LockView({ onClose, currentPlayback, refreshPlaybackStat
       }
       return;
     }
-  }, [accessToken, currentPlayback, playTrack, pausePlayback, refreshPlaybackState]);
+  }, [
+    accessToken,
+    currentPlayback,
+    playTrack,
+    pausePlayback,
+    refreshPlaybackState,
+  ]);
 
   useGestureControls({
     contentRef: containerRef,
@@ -54,7 +60,7 @@ export default function LockView({ onClose, currentPlayback, refreshPlaybackStat
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape" || e.key === "m") {
+      if (e.key === "Escape") {
         onClose();
       } else if (e.key === "Enter") {
         handlePlayPause();
