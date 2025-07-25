@@ -76,8 +76,7 @@ Available recipes:
 The Car Thing running Nocturne can present itself as a virtual network adapter. With some configuration, you can share your internet connection to the Car Thing.
 
 1. Connect the CarThing to your PC.
-2. Open "Network Connections". Open the properties for the device that is labeled "Remote NDIS Compatible Device". (This is your Car Thing.)
-3. Run the following commands in an elevated PowerShell terminal:
+2. Run the following commands in an elevated PowerShell terminal:
     * `$ctNic = (Get-NetAdapter -InterfaceDescription "*NDIS*")`
     * `$ctNic | Set-NetIPAddress -IPAddress 172.16.42.1 -PrefixLength 24`
     * `New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 172.16.42.0/24`
