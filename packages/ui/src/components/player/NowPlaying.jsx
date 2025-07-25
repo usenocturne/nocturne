@@ -453,6 +453,7 @@ export default function NowPlaying({
   const {
     showLyrics,
     lyrics,
+    hasLyrics,
     currentLyricIndex,
     isLoading: lyricsLoading,
     error: lyricsError,
@@ -677,7 +678,7 @@ export default function NowPlaying({
             />
           </div>
 
-          {!showLyrics ? (
+          {!showLyrics || !hasLyrics ? (
             <div className="flex-1 text-center md:text-left">
               <div className="max-w-[400px]">
                 <ScrollingText

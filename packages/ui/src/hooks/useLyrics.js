@@ -258,9 +258,12 @@ export function useLyrics(accessToken, currentPlayback) {
     }
   }, [currentPlayback?.item?.id, showLyrics]);
 
+  const hasLyrics = lyrics.length > 0 && !error;
+
   return {
     showLyrics,
     lyrics,
+    hasLyrics,
     currentLyricIndex,
     isLoading,
     error,
