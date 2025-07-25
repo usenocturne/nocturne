@@ -717,7 +717,12 @@ function App() {
       />
     );
   } else if (activeSection === "lock") {
-    content = <LockView onClose={() => setActiveSection("recents")} />;
+    content = (
+      <LockView
+        currentPlayback={currentPlayback}
+        refreshPlaybackState={refreshPlaybackState}
+        onClose={() => setActiveSection("recents")} />
+    );
   } else if (viewingContent) {
     content = (
       <ContentView
