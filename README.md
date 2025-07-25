@@ -77,19 +77,12 @@ The Car Thing running Nocturne can present itself as a virtual network adapter. 
 
 1. Connect the CarThing to your PC.
 2. Open "Network Connections". Open the properties for the device that is labeled "Remote NDIS Compatible Device". (This is your Car Thing.)
-3. Assign the following settings:
-    * Sharing properties:
-        * ✅ "Allow other network users to connect through this computer's Internet connection..."; select your primary uplink network adapter
-        * ✅ "Allow other network users to control or disable the shared Internet connection..."
-    * Internet Protocol Version 4 (TCP/IPv4) properties:
-        * IP Address: 172.16.42.1
-        * Subnet Mask: 255.255.255.0
-4. Run the following commands in an elevated PowerShell terminal:
+3. Run the following commands in an elevated PowerShell terminal:
     * `$ctNic = (Get-NetAdapter -InterfaceDescription "*NDIS*")`
     * `$ctNic | Set-NetIPAddress -IPAddress 172.16.42.1 -PrefixLength 24`
     * `New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 172.16.42.0/24`
 
-**Tip:** If you get an error akin to a duplicate name being in use, you may need to identify conflicts on your system with `Get-VMSwitch`. If you do not have that command installed, you will need to get the Hyper-V optional Windows feature installed, following a reboot, with: `Get-WindowsOptionalFeature -Online | Where-Object FeatureName -like '*Hyper-V*'.
+**Tip:** If you get an error akin to a duplicate name being in use, you may need to identify conflicts on your system with `Get-VMSwitch`. If you do not have that command installed, you will need to get the Hyper-V optional Windows feature installed, following a reboot, with: `Get-WindowsOptionalFeature -Online | Where-Object FeatureName -like '*Hyper-V*'`.
 
 ## Credits
 
