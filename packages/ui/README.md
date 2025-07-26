@@ -19,17 +19,17 @@
 </p>
 
 <br>
-<img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-1.png" alt="screenshot">
-<br>
-<img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-2.png" alt="screenshot">
-<br>
-<img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-3.png" alt="screenshot">
+<img src="https://usenocturne.com/images/nocturne-2.png" alt="Nocturne screenshot">
 
 ## How To Use
 
+### Flashing
+
+The guide to flash Nocturne to your Car Thing is on the [main Nocturne GitHub page](https://github.com/usenocturne/nocturne#flashing).
+
 ### Login
 
-1. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne-image?tab=readme-ov-file#how-to-use">the image's repo</a>.
+1. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne#setting-up-network">the image's repo</a>.
 2. Once running on your Car Thing, scan the QR Code using your phone's camera.
 3. Authorize with Spotify and start using Nocturne!
 
@@ -40,8 +40,8 @@
 
 - Hold one of the top hardware preset buttons while on a playlist page to map it to the button
 - Press the mapped buttons to quickly play playlists
-- Hold the right-most top hardware button to access settings
-- Press the hardware button underneath of the knob to go back in the application
+- Press the right-most top hardware button to go to the lock screen
+- Press the hardware button underneath the knob to go back in the application
 
 ## Local Development Setup
 
@@ -50,11 +50,7 @@ First, set up the configuration:
 1. Clone the repository:
 
 ```bash
-# for upstream
 git clone https://github.com/usenocturne/nocturne-ui.git
-# for forks
-git clone https://github.com/yourusername/nocturne-ui.git
-
 cd nocturne-ui
 ```
 
@@ -114,7 +110,7 @@ After setting up your local server, you may follow these steps to see your chang
 
 ## Donate
 
-Nocturne is a massive endeavor, and the team have spent everyday over the last few months making it a reality out of our passion for creating something that people like you love to use.
+Nocturne is a massive endeavor, and the team has spent every day over the last year making it a reality out of our passion for creating something that people like you love to use.
 
 All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
 
@@ -129,7 +125,7 @@ This software was made possible only through the following individuals and open 
 - [Dominic Frye](https://github.com/itsnebulalol)
 - [bbaovanc](https://github.com/bbaovanc)
 
-<br>
+<hr>
 
 - [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for giving Brandon a Car Thing to develop with
 - [bishopdynamics](https://github.com/bishopdynamics), for creating the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), and [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk)
@@ -137,7 +133,7 @@ This software was made possible only through the following individuals and open 
 
 ## Related
 
-- [nocturne-image](https://github.com/usenocturne/nocturne-image) - The Void Linux image that runs this web application
+- [nocturne](https://github.com/usenocturne/nocturne) - The Void Linux image that runs this web application
 - [nocturned](https://github.com/usenocturne/nocturned) - Local API for the Car Thing to handle bluetooth + others
 
 ## License
