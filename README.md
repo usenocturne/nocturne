@@ -6,22 +6,22 @@
   <br>
 </h1>
 
-<h4 align="center">The most advanced custom firmware for the <a href="https://carthing.spotify.com" target="_blank">Spotify Car Thing</a>.</h4>
+<p align="center">The most advanced custom firmware for the <a href="https://carthing.spotify.com" target="_blank">Spotify Car Thing</a>.</p>
 
 <p align="center">
   <a href="#flashing">Flashing</a> •
-  <a href="#setting-up-network">Setting up Network</a> •
   <a href="#donate">Donate</a> •
   <a href="#building">Building</a> •
+  <a href="#subprojects">Subprojects</a> •
   <a href="#credits">Credits</a> •
   <a href="#license">License</a>
 </p>
 
-<br>
+<be>
 
-<img src="https://usenocturne.com/images/nocturne.png" alt="Nocturne screenshot">
+<p align="center"><img width=600 src="https://usenocturne.com/images/nocturne.png" alt="Nocturne screenshot"></p>
 
-## Flashing
+## Setup
 
 > [!WARNING]
 > Bricking the Car Thing is nearly impossible, but the risk is always there when flashing custom firmware.
@@ -30,7 +30,7 @@
 
 - Terbium driver is required on Windows: `irm https://driver.terbium.app/get | iex` (Powershell)
 
-### Steps
+### Flashing
 
 1. Download an installer zip file from [Releases](https://github.com/usenocturne/nocturne/releases)
 2. Plug in your Car Thing's USB while holding 1+4 (buttons at the top)
@@ -38,16 +38,12 @@
 
 Flashing will likely take about 10 minutes, depending on your USB ports and some other factors. Please try multiple ports if one isn’t working (Rear IO USB 3/2, BIOS flash port if on AMD, etc).
 
-### Uninstall
-
-Use a tool of your choice (likely Terbium) to flash stock or a different firmware.
-
-## Setting up Network
+### Setting up Network
 
 <details>
 <summary><img src="https://github.com/user-attachments/assets/ae4fcc48-5f86-4ea6-90b2-29bf938a2de0" height="14" style="vertical-align: middle;"> Bluetooth (recommended)</summary>
 
-Since Nocturne 3.0.0, Bluetooth via tethering is supported.
+Since Nocturne 3.0.0, Bluetooth via tethering is supported. Your phone plan must support hotspot. 
 
 1. While on the Connection Lost screen, connect to `Nocturne (XXXX)` from your phone (XXXX being the last 4 characters of your Car Thing's serial number).
 2. Enable Bluetooth tethering on your phone:
@@ -86,11 +82,15 @@ New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 172.16.42.0/24
 **Tip:** If you get an error akin to a duplicate name being in use, you may need to identify conflicts on your system with `Get-VMSwitch`. If you do not have that command installed, you will need to install the Hyper-V optional Windows feature, following a reboot, with: `Get-WindowsOptionalFeature -Online | Where-Object FeatureName -like '*Hyper-V*'`.
 </details>
 
+### Uninstall
+
+Use a tool of your choice (likely Terbium) to flash stock or a different firmware.
+
 ## Donate
 
-Nocturne is a massive endeavor, and the team have spent everyday over the last year making it a reality out of our passion for creating something that people like you love to use.
+Nocturne is a massive endeavor, and the team has spent every day over the last year making it a reality out of our passion for creating something that people like you love to use.
 
-All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
+All donations are split between the three members of the Nocturne team and go towards the development of future features. We are so grateful for your support!
 
 [Donation Page](https://usenocturne.com/donate)
 
@@ -116,6 +116,18 @@ Available recipes:
   run
   shell
 ```
+
+## Subprojects
+
+Nocturne consists of several Git repos, all of which are public and open-source.
+
+- [nocturne-ui](https://github.com/usenocturne/nocturne-ui) - Nocturne's standalone web application written with Vite + React
+- [nocturned](https://github.com/usenocturne/nocturned) - Local daemon for real-time web/host communication
+- [wingman](https://github.com/usenocturne/wingman) - Open source management tool for the Spotify Car Thing
+
+### Related
+
+- [nocturne-connector](https://github.com/usenocturne/nocturne-connector) - Raspberry Pi OS for Wi-Fi connectivity on the Spotify Car Thing
 
 ## Credits
 
