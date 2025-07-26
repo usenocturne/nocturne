@@ -70,6 +70,8 @@ See more on the [Nocturne Connector GitHub](https://github.com/usenocturne/noctu
 
 The Car Thing running Nocturne presents itself as a virtual network adapter. With some configuration, you can share your internet connection to the Car Thing via USB tethering.
 
+**Windows 10/11 Pro or Enterprise is required**. If you are on Home, you may configure the adapter manually via the Network and Sharing Center GUI.
+
 1. Connect the Car Thing to your PC.
 2. Run the following commands in an elevated PowerShell terminal:
 
