@@ -653,6 +653,28 @@ export function useNavigation({
     [containerRef, vertical],
   );
 
+  const scrollLeft = useCallback(() => {
+    const items = vertical ? getTrackItems() : itemsRef.current;
+    if (items.length === 0) return;
+
+    const currentIndex =
+      selectedIndexRef.current === -1 ? 0 : selectedIndexRef.current;
+
+    const newIndex = Math.max(currentIndex - 1, 0);
+    selectItem(newIndex);
+  }, [selectItem, vertical, getTrackItems]);
+
+  const scrollRight = useCallback(() => {
+    const items = vertical ? getTrackItems() : itemsRef.current;
+    if (items.length === 0) return;
+
+    const currentIndex =
+      selectedIndexRef.current === -1 ? 0 : selectedIndexRef.current;
+
+    const newIndex = Math.min(currentIndex + 1, items.length - 1);
+    selectItem(newIndex);
+  }, [selectItem, vertical, getTrackItems]);
+
   const cleanup = useCallback(() => {
     if (inactivityTimeoutRef.current) {
       clearTimeout(inactivityTimeoutRef.current);
@@ -701,6 +723,8 @@ export function useNavigation({
     scrollItemIntoView,
     scrollToPosition,
     scrollByAmount,
+    scrollLeft,
+    scrollRight,
     cleanup,
     hasScrolledToCurrentItem: hasScrolledToPlayingRef.current,
   };
