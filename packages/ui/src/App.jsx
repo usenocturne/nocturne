@@ -347,6 +347,21 @@ function App() {
     hasEverConnectedThisSession,
   } = useNetwork();
 
+  useEffect(() => {
+    if (showLoader) return;
+    if (!isInternetConnected) return;
+
+    const existing = document.getElementById("analytics");
+    if (existing) return;
+
+    const script = document.createElement("script");
+    script.defer = true;
+    script.src = "https://p.itsnebula.net/script.js";
+    script.setAttribute("data-website-id", "3465cd10-6beb-4dd9-969c-f7f44704fd18");
+    script.id = "analytics";
+    document.body.appendChild(script);
+  }, [showLoader, isInternetConnected]);
+
   const {
     pairingRequest,
     isConnecting,
