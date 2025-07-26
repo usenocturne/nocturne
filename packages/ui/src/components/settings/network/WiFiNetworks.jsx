@@ -79,7 +79,10 @@ const WiFiNetworks = () => {
     }
 
     try {
-      await connectToNetwork(network);
+      const success = await connectToNetwork(network);
+      if (success) {
+        setSelectedNetwork(null);
+      }
     } catch (error) {
       console.error("Failed to auto-connect to open network:", error);
     }

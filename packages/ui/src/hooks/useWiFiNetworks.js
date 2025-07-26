@@ -8,6 +8,7 @@ let wsInitialized = false;
 let reconnectTimeoutRef = null;
 const API_BASE = "http://172.16.42.1:20574";
 let globalScanInProgress = false;
+let globalRescanAfterConnect = false;
 
 const setupGlobalWebSocket = (isConnectorAvailable) => {
   if (globalWsRef || !isConnectorAvailable) return;
@@ -119,7 +120,7 @@ export function useWiFiNetworks() {
 
   const scanNetworks = useCallback(
     async (isInitial = false) => {
-      if (selectedNetwork) {
+      if (selectedNetwork || globalRescanAfterConnect) {
         return [];
       }
       while (globalScanInProgress) {
@@ -247,8 +248,7 @@ export function useWiFiNetworks() {
   const pollConnectionStatus = async (maxAttempts = 10, interval = 2000) => {
     for (let i = 0; i < maxAttempts; i++) {
       const status = await fetchNetworkStatus();
-      if (status && status.networkId) {
-        await scanNetworks(false);
+      if (status && (status.wpaState === "COMPLETED" || status.networkId)) {
         return true;
       }
       await new Promise((r) => setTimeout(r, interval));
@@ -258,6 +258,7 @@ export function useWiFiNetworks() {
 
   const connectToNetwork = useCallback(
     async (network, password = null) => {
+      globalRescanAfterConnect = true;
       setLoadingState((prev) => ({ ...prev, connecting: true }));
       setError(null);
 
@@ -302,6 +303,22 @@ export function useWiFiNetworks() {
               `Failed to connect to network: ${connectResponse.status}`,
             );
           }
+
+          try {
+            const listResp = await fetch(`${API_BASE}/network/list`);
+            if (listResp.ok) {
+              const listData = await listResp.json();
+              const newlySaved = listData.find((n) => n.ssid === network.ssid);
+              if (newlySaved && newlySaved.networkId) {
+                await fetch(
+                  `${API_BASE}/network/select/${newlySaved.networkId}`,
+                  { method: "POST" },
+                );
+              }
+            }
+          } catch (err) {
+            console.error("Failed to select newly added network:", err);
+          }
         }
 
         const connected = await pollConnectionStatus();
@@ -324,6 +341,7 @@ export function useWiFiNetworks() {
 
   const connectToSavedNetwork = useCallback(
     async (networkId) => {
+      globalRescanAfterConnect = true;
       setLoadingState((prev) => ({ ...prev, connecting: true }));
       setError(null);
 
@@ -391,7 +409,9 @@ export function useWiFiNetworks() {
     (data) => {
       if (data.type === "network") {
         fetchNetworkStatus();
-        scanNetworks(false);
+        if (!globalRescanAfterConnect) {
+          scanNetworks(false);
+        }
       }
     },
     [fetchNetworkStatus, scanNetworks],
@@ -444,6 +464,21 @@ export function useWiFiNetworks() {
     isConnectorAvailable,
     isConnectorLoading,
   ]);
+
+  useEffect(() => {
+    if (
+      !loadingState.connecting &&
+      !selectedNetwork &&
+      globalRescanAfterConnect
+    ) {
+      const timeoutId = setTimeout(() => {
+        globalRescanAfterConnect = false;
+        scanNetworks(false);
+      }, 5000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loadingState.connecting, selectedNetwork, scanNetworks]);
 
   return {
     currentNetwork,
