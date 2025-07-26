@@ -2,7 +2,7 @@
   <br>
   <img src="https://usenocturne.com/images/logo.png" alt="Nocturne" width="200">
   <br>
-  nocturne-image
+  Nocturne Image
   <br>
 </h1>
 
@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="#flashing">Flashing</a> •
+  <a href="#setting-up-network">Setting up Network</a> •
   <a href="#donate">Donate</a> •
   <a href="#building">Building</a> •
   <a href="#credits">Credits</a> •
@@ -35,11 +36,53 @@
 2. Plug in your Car Thing's USB while holding 1+4 (buttons at the top)
 3. Follow the instructions on [Terbium](https://terbium.app) to flash your Car Thing using the downloaded zip file
 
-Flashing will likely take about 10 minutes depending on your USB ports and some other factors. Please try multiple ports if one isn’t working (Rear IO USB 3/2, BIOS flash port if on AMD, etc).
+Flashing will likely take about 10 minutes, depending on your USB ports and some other factors. Please try multiple ports if one isn’t working (Rear IO USB 3/2, BIOS flash port if on AMD, etc).
 
 ### Uninstall
 
 Use a tool of your choice (likely Terbium) to flash stock or a different firmware.
+
+## Setting up Network
+
+<details>
+<summary><img src="https://github.com/user-attachments/assets/ae4fcc48-5f86-4ea6-90b2-29bf938a2de0" height="14" style="vertical-align: middle;"> Bluetooth (recommended)</summary>
+
+Since Nocturne 3.0.0, Bluetooth via tethering is supported.
+
+1. While on the Connection Lost screen, connect to `Nocturne (XXXX)` from your phone (XXXX being the last 4 characters of your Car Thing's serial number).
+2. Enable Bluetooth tethering on your phone:
+   * iOS: Turn on Personal Hotspot
+   * Android: Turn on hotspot and/or Bluetooth tethering
+
+**Tip:** Make sure your Car Thing is not connected to a computer, as this conflicts with Bluetooth.
+</details>
+
+<details>
+<summary><img src="https://usenocturne.com/favicon.ico" height="14" style="vertical-align: middle;"> Nocturne Connector (recommended)</summary>
+
+Nocturne Connector requires a Raspberry Pi, but adds Wi-Fi support to your Car Thing while it's connected to the Pi.
+
+See more on the [Nocturne Connector GitHub](https://github.com/usenocturne/nocturne-connector).
+</details>
+
+<details>
+<summary><img src="https://upload.wikimedia.org/wikipedia/commons/8/87/Windows_logo_-_2021.svg" height="14" style="vertical-align: middle;"> Windows</summary>
+
+The Car Thing running Nocturne presents itself as a virtual network adapter. With some configuration, you can share your internet connection to the Car Thing via USB tethering.
+
+1. Connect the Car Thing to your PC.
+2. Run the following commands in an elevated PowerShell terminal:
+
+```powershell
+$ctNic = (Get-NetAdapter -InterfaceDescription "*NDIS*")
+
+$ctNic | Set-NetIPAddress -IPAddress 172.16.42.1 -PrefixLength 24
+
+New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 172.16.42.0/24
+```
+
+**Tip:** If you get an error akin to a duplicate name being in use, you may need to identify conflicts on your system with `Get-VMSwitch`. If you do not have that command installed, you will need to install the Hyper-V optional Windows feature, following a reboot, with: `Get-WindowsOptionalFeature -Online | Where-Object FeatureName -like '*Hyper-V*'`.
+</details>
 
 ## Donate
 
@@ -55,6 +98,7 @@ All donations are split between the four members of the Nocturne team, and go to
 
 > [!CAUTION]
 > Do not extract the xbps-static tar to your rootfs without being careful or else you may end up with a broken system. The following command has worked for me, but you have been warned.
+>
 > `sudo tar --no-overwrite-dir --no-same-owner --no-same-permissions -xvf xbps-static-latest.x86_64-musl.tar.xz -C /` 
 
 If you are on an architecture other than arm64, qemu-user-static (+ binfmt, or use `docker run --rm --privileged multiarch/qemu-user-static --reset -p yes`) is required.
@@ -70,22 +114,6 @@ Available recipes:
   run
   shell
 ```
-
-## Setting up a host device
-
-<details>
-  <summary>Windows</summary>
-  
-  The Car Thing running Nocturne can present itself as a virtual network adapter. With some configuration, you can share your internet connection to the Car Thing via USB tethering.
-
-  1. Connect the CarThing to your PC.
-  2. Run the following commands in an elevated PowerShell terminal:
-* `$ctNic = (Get-NetAdapter -InterfaceDescription "*NDIS*")`
-* `$ctNic | Set-NetIPAddress -IPAddress 172.16.42.1 -PrefixLength 24`
-* `New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 172.16.42.0/24`
-
-**Tip:** If you get an error akin to a duplicate name being in use, you may need to identify conflicts on your system with `Get-VMSwitch`. If you do not have that command installed, you will need to get the Hyper-V optional Windows feature installed, following a reboot, with: `Get-WindowsOptionalFeature -Online | Where-Object FeatureName -like '*Hyper-V*'`.
-</details>
 
 ## Credits
 
