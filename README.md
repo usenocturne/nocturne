@@ -2,7 +2,7 @@
   <br>
   <img src="https://usenocturne.com/images/logo.png" alt="Nocturne" width="200">
   <br>
-  Nocturne Image
+  Nocturne
   <br>
 </h1>
 
