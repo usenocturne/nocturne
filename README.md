@@ -138,7 +138,7 @@ This software was made possible only through the following individuals and open 
 - [Dominic Frye](https://github.com/itsnebulalol)
 - [bbaovanc](https://github.com/bbaovanc)
 
-<br />
+<hr>
 
 - [raspi-alpine/builder](https://gitlab.com/raspi-alpine/builder) (by [Benjamin Böhmke](https://gitlab.com/bboehmke) and [Duncan Bellamy](https://gitlab.com/a16bitsysop)) which is what this builder is based on
 - [JoeyEamigh/nixos-superbird](https://github.com/JoeyEamigh/nixos-superbird)
