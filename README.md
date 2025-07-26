@@ -6,7 +6,7 @@
   <br>
 </h1>
 
-<h4 align="center">A pre-built Void Linux image for the <a href="https://carthing.spotify.com/" target="_blank">Spotify Car Thing</a>.</h4>
+<h4 align="center">The most advanced custom firmware for the <a href="https://carthing.spotify.com" target="_blank">Spotify Car Thing</a>.</h4>
 
 <p align="center">
   <a href="#flashing">Flashing</a> •
@@ -19,7 +19,7 @@
 
 <br>
 
-<img src="https://raw.githubusercontent.com/brandonsaldan/nocturne-image/refs/heads/main/pictures/nocturne-1.png" alt="screenshot">
+<img src="https://usenocturne.com/images/nocturne.png" alt="Nocturne screenshot">
 
 ## Flashing
 
@@ -32,7 +32,7 @@
 
 ### Steps
 
-1. Download an installer zip file from [Releases](https://github.com/usenocturne/nocturne-image/releases)
+1. Download an installer zip file from [Releases](https://github.com/usenocturne/nocturne/releases)
 2. Plug in your Car Thing's USB while holding 1+4 (buttons at the top)
 3. Follow the instructions on [Terbium](https://terbium.app) to flash your Car Thing using the downloaded zip file
 
@@ -88,7 +88,7 @@ New-NetNat -Name "CarThing" -InternalIPInterfaceAddressPrefix 172.16.42.0/24
 
 ## Donate
 
-Nocturne is a massive endeavor, and the team have spent everyday over the last few months making it a reality out of our passion for creating something that people like you love to use.
+Nocturne is a massive endeavor, and the team have spent everyday over the last year making it a reality out of our passion for creating something that people like you love to use.
 
 All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
 
@@ -140,7 +140,7 @@ This project is licensed under the **Apache** license.
 
 ---
 
-> © 2025 Nocturne.
+> © 2025 Vanta Labs.
 
 > "Spotify" and "Car Thing" are trademarks of Spotify AB. This software is not affiliated with or endorsed by Spotify AB.
 
