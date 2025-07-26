@@ -6,11 +6,11 @@
   <br>
 </h1>
 
-<h4 align="center">A web application for <a href="https://github.com/usenocturne/nocturne-image" target="_blank">nocturne-image</a> and the <a href="https://carthing.spotify.com/" target="_blank">Spotify Car Thing</a>.</h4>
+<p align="center">Nocturne's standalone web application written with Vite + React</p>
 
 <p align="center">
   <a href="#how-to-use">How To Use</a> •
-  <a href="#local-development-setup">Local Development Setup</a> •
+  <a href="#development">Development</a> •
   <a href="#contributing">Contributing</a> •
   <a href="#donate">Donate</a> •
   <a href="#credits">Credits</a> •
@@ -19,6 +19,7 @@
 </p>
 
 <br>
+
 <img src="https://usenocturne.com/images/nocturne-2.png" alt="Nocturne screenshot">
 
 ## How To Use
@@ -43,9 +44,7 @@ The guide to flash Nocturne to your Car Thing is on the [main Nocturne GitHub pa
 - Press the right-most top hardware button to go to the lock screen
 - Press the hardware button underneath the knob to go back in the application
 
-## Local Development Setup
-
-First, set up the configuration:
+## Development
 
 1. Clone the repository:
 
@@ -112,7 +111,7 @@ After setting up your local server, you may follow these steps to see your chang
 
 Nocturne is a massive endeavor, and the team has spent every day over the last year making it a reality out of our passion for creating something that people like you love to use.
 
-All donations are split between the four members of the Nocturne team, and go towards the development of future features. We are so grateful for your support!
+All donations are split between the three members of the Nocturne team and go towards the development of future features. We are so grateful for your support!
 
 [Donation Page](https://usenocturne.com/donate)
 
@@ -133,8 +132,8 @@ This software was made possible only through the following individuals and open 
 
 ## Related
 
-- [nocturne](https://github.com/usenocturne/nocturne) - The Void Linux image that runs this web application
-- [nocturned](https://github.com/usenocturne/nocturned) - Local API for the Car Thing to handle bluetooth + others
+- [nocturne](https://github.com/usenocturne/nocturne)
+- [nocturned](https://github.com/usenocturne/nocturned) - Local daemon for real-time web/host communication
 
 ## License
 
@@ -144,7 +143,7 @@ We kindly ask that any modifications or distributions made outside of direct for
 
 ---
 
-> © 2025 Nocturne.
+> © 2025 Vanta Labs.
 
 > "Spotify" and "Car Thing" are trademarks of Spotify AB. This software is not affiliated with or endorsed by Spotify AB.
 
