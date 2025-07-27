@@ -71,6 +71,14 @@ const AuthScreen = ({ onAuthSuccess }) => {
   ]);
 
   useEffect(() => {
+    if (isAuthenticated && authInitialized) {
+      setAuthInitialized(false);
+      setHasQrCode(false);
+      authAttemptedRef.current = false;
+    }
+  }, [isAuthenticated, authInitialized]);
+
+  useEffect(() => {
     if (authData?.verification_uri_complete) {
       setHasQrCode(true);
     }
@@ -112,6 +120,10 @@ const AuthScreen = ({ onAuthSuccess }) => {
   const handleQRCodeRefresh = async () => {
     if (!isNetworkConnected || isAuthenticated) return;
 
+    const storedAccessToken = localStorage.getItem("spotifyAccessToken");
+    const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+    if (storedAccessToken && storedRefreshToken) return;
+
     try {
       setError(null);
       authAttemptedRef.current = false;
@@ -121,7 +133,6 @@ const AuthScreen = ({ onAuthSuccess }) => {
       const authResponse = await initAuth();
       if (authResponse?.device_code) {
         setAuthInitialized(true);
-
         pollAuthStatus(authResponse.device_code);
       }
     } catch (err) {
