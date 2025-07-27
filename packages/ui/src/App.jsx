@@ -663,8 +663,8 @@ function App() {
     setPowerMenuVisible(false);
   };
 
-  const handleRestart = () => {
-    fetch("http://localhost:5000/device/power/restart", {
+  const handleReboot = () => {
+    fetch("http://localhost:5000/device/power/reboot", {
       method: "POST",
     }).catch((err) => console.error("Restart request failed", err));
     setPowerMenuVisible(false);
@@ -938,7 +938,7 @@ function App() {
                     <PowerMenuOverlay
                       show={powerMenuVisible}
                       onShutdown={handleShutdown}
-                      onRestart={handleRestart}
+                      onReboot={handleReboot}
                       onClose={() => setPowerMenuVisible(false)}
                     />
                   </div>

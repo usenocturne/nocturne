@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import PowerIcon from "../icons/PowerIcon";
 import RefreshIcon from "../icons/RefreshIcon";
 
-function PowerMenuOverlay({ show, onShutdown, onRestart, onClose }) {
+function PowerMenuOverlay({ show, onShutdown, onReboot, onClose }) {
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -65,7 +65,7 @@ function PowerMenuOverlay({ show, onShutdown, onRestart, onClose }) {
           <PowerIcon className="w-10 h-10 text-white" />
         </button>
         <button
-          onClick={onRestart}
+          onClick={onReboot}
           className="w-24 h-24 rounded-full bg-neutral-700 flex items-center justify-center hover:bg-neutral-600 transition-colors"
         >
           <RefreshIcon className="w-10 h-10 text-white" />
