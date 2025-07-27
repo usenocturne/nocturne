@@ -1,7 +1,12 @@
 import React, { useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
-const QRCodeDisplay = ({ verificationUri, isLoading, error, onRefreshNeeded }) => {
+const QRCodeDisplay = ({
+  verificationUri,
+  isLoading,
+  error,
+  onRefreshNeeded,
+}) => {
   const refreshIntervalRef = useRef(null);
   const lastVerificationUriRef = useRef(verificationUri);
 

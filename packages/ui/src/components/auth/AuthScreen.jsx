@@ -47,8 +47,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
             const authResponse = await initAuth();
             if (authResponse?.device_code) {
               setAuthInitialized(true);
-
-                      pollAuthStatus(authResponse.device_code);
+              pollAuthStatus(authResponse.device_code);
             }
           }
         } catch (err) {
@@ -112,17 +111,17 @@ const AuthScreen = ({ onAuthSuccess }) => {
 
   const handleQRCodeRefresh = async () => {
     if (!isNetworkConnected || isAuthenticated) return;
-    
+
     try {
       setError(null);
       authAttemptedRef.current = false;
       setAuthInitialized(false);
       setHasQrCode(false);
-      
+
       const authResponse = await initAuth();
       if (authResponse?.device_code) {
         setAuthInitialized(true);
-        
+
         pollAuthStatus(authResponse.device_code);
       }
     } catch (err) {

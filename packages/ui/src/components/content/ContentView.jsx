@@ -779,7 +779,8 @@ const ContentView = ({
 
               <div className="flex-grow" style={{ marginTop: "-6px" }}>
                 <div>
-                  {selectedTrackIndex === index && settings.trackNameScrollingEnabled ? (
+                  {selectedTrackIndex === index &&
+                  settings.trackNameScrollingEnabled ? (
                     <div
                       style={{
                         fontSize: "32px",

@@ -41,37 +41,37 @@ export default function Home({
   });
 
   const handleRecentsSelectedIndexChange = useCallback((index) => {
-    setSelectedIndices(prev => ({
+    setSelectedIndices((prev) => ({
       ...prev,
-      recents: index
+      recents: index,
     }));
   }, []);
 
   const handleLibrarySelectedIndexChange = useCallback((index) => {
-    setSelectedIndices(prev => ({
+    setSelectedIndices((prev) => ({
       ...prev,
-      library: index
+      library: index,
     }));
   }, []);
 
   const handleArtistsSelectedIndexChange = useCallback((index) => {
-    setSelectedIndices(prev => ({
+    setSelectedIndices((prev) => ({
       ...prev,
-      artists: index
+      artists: index,
     }));
   }, []);
 
   const handleRadioSelectedIndexChange = useCallback((index) => {
-    setSelectedIndices(prev => ({
+    setSelectedIndices((prev) => ({
       ...prev,
-      radio: index
+      radio: index,
     }));
   }, []);
 
   const handlePodcastsSelectedIndexChange = useCallback((index) => {
-    setSelectedIndices(prev => ({
+    setSelectedIndices((prev) => ({
       ...prev,
-      podcasts: index
+      podcasts: index,
     }));
   }, []);
 
@@ -79,7 +79,7 @@ export default function Home({
 
   const renderTitle = (title, section, index, maxWidth = "280px") => {
     const isSelected = selectedIndices[section] === index;
-    
+
     if (isSelected && settings.trackNameScrollingEnabled) {
       return (
         <div style={{ maxWidth }}>
@@ -93,7 +93,7 @@ export default function Home({
         </div>
       );
     }
-    
+
     return (
       <h4
         className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight"
@@ -669,9 +669,7 @@ export default function Home({
                 className="w-full h-full rounded-[12px]"
               />
             </div>
-            <div>
-              {renderTitle("DJ", "radio", 0)}
-            </div>
+            <div>{renderTitle("DJ", "radio", 0)}</div>
             <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
               {isPlayingDJ() ? (
                 <>
@@ -709,11 +707,11 @@ export default function Home({
               ))
           ) : radioMixes.length > 0 ? (
             radioMixes.map((mix, index) => (
-                              <div
-                  key={`${mix.id}-${index}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                  data-id={mix.id}
-                >
+              <div
+                key={`${mix.id}-${index}`}
+                className="min-w-[280px] pl-2 mr-10 snap-start"
+                data-id={mix.id}
+              >
                 <div
                   className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                   style={{ width: 280, height: 280 }}
