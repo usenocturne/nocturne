@@ -797,7 +797,7 @@ export default function Home({
               const show = item.show;
               return (
                 <div
-                  key={`${show.id}-${i}`}
+                  key={`${show.id}-${index}`}
                   className="min-w-[280px] pl-2 mr-10 snap-start"
                   data-id={show.id}
                 >
