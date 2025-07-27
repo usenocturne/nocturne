@@ -60,13 +60,13 @@ function PowerMenuOverlay({ show, onShutdown, onReboot, onClose }) {
       >
         <button
           onClick={onShutdown}
-          className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center hover:bg-red-700 transition-colors"
+          className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center hover:bg-red-700 transition-colors focus:outline-none"
         >
           <PowerIcon className="w-10 h-10 text-white" />
         </button>
         <button
           onClick={onReboot}
-          className="w-24 h-24 rounded-full bg-neutral-700 flex items-center justify-center hover:bg-neutral-600 transition-colors"
+          className="w-24 h-24 rounded-full bg-neutral-700 flex items-center justify-center hover:bg-neutral-600 transition-colors focus:outline-none"
         >
           <RefreshIcon className="w-10 h-10 text-white" />
         </button>

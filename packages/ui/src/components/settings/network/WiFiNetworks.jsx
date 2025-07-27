@@ -380,7 +380,7 @@ const WiFiNetworks = () => {
                   setShowForgetDialog(false);
                   setSelectedNetworkId(null);
                 }}
-                className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] border-r border-slate-100/25 bg-transparent hover:bg-white/5"
+                className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] border-r border-slate-100/25 bg-transparent hover:bg-white/5 focus:outline-none"
               >
                 Cancel
               </button>
@@ -393,7 +393,7 @@ const WiFiNetworks = () => {
                   setShowForgetDialog(false);
                   setSelectedNetworkId(null);
                 }}
-                className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] bg-transparent hover:bg-white/5"
+                className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] bg-transparent hover:bg-white/5 focus:outline-none"
               >
                 Forget
               </button>
