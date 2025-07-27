@@ -48,18 +48,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
             if (authResponse?.device_code) {
               setAuthInitialized(true);
 
-              const originalPollAuthStatus = pollAuthStatus;
-              const safePollStatus = async (deviceCode) => {
-                try {
-                  await originalPollAuthStatus(deviceCode);
-                } catch (err) {
-                  if (!err.message?.includes("authorization_pending")) {
-                    setError(err.message);
-                  }
-                }
-              };
-
-              safePollStatus(authResponse.device_code);
+                      pollAuthStatus(authResponse.device_code);
             }
           }
         } catch (err) {
@@ -121,6 +110,27 @@ const AuthScreen = ({ onAuthSuccess }) => {
     }
   }, [authInitialized, hasQrCode, isNetworkConnected]);
 
+  const handleQRCodeRefresh = async () => {
+    if (!isNetworkConnected || isAuthenticated) return;
+    
+    try {
+      setError(null);
+      authAttemptedRef.current = false;
+      setAuthInitialized(false);
+      setHasQrCode(false);
+      
+      const authResponse = await initAuth();
+      if (authResponse?.device_code) {
+        setAuthInitialized(true);
+        
+        pollAuthStatus(authResponse.device_code);
+      }
+    } catch (err) {
+      setError("Failed to refresh QR code");
+      console.error("QR code refresh error:", err);
+    }
+  };
+
   if (!initialCheckDone) {
     return (
       <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
@@ -173,6 +183,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
             }
             isLoading={isContentLoading || !isNetworkConnected}
             error={displayError}
+            onRefreshNeeded={handleQRCodeRefresh}
           />
         </div>
       </div>
