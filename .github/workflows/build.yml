@@ -18,7 +18,7 @@ jobs:
 
       - name: Clone and build nocturne-connector and nocturne image
         run: |
-          docker run --platofmr=linux/arm64 --rm \
+          docker run --platform=linux/arm64 --rm \
             --user 0:0 \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
