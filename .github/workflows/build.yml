@@ -19,15 +19,17 @@ jobs:
       - name: Clone and build nocturne-connector inside container
         run: |
           docker run --rm --privileged \
+            --user 0:0 \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ghcr.io/nguyenkvvn/nocturne-builder:latest \
             /bin/bash -c "\
+              cd /tmp && \
               git clone https://github.com/usenocturne/nocturne-connector.git && \
               cd nocturne-connector && \
               just run && \
-              cp *.img /workspace/resources/ &&
-              cd .. && \
+              cp *.img /workspace/resources/ && \
+              cd /workspace && \
               just run"
 
       - name: Upload build artifacts
