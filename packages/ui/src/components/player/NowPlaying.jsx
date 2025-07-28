@@ -674,7 +674,7 @@ export default function NowPlaying({
               }
               width={280}
               height={280}
-              className="aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+              className="aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] max-w-[280px] max-h-[280px]"
             />
           </div>
 

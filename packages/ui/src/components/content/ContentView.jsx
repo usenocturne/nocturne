@@ -719,7 +719,7 @@ const ContentView = ({
             alt={`${content.name} Cover`}
             width={280}
             height={280}
-            className={getImageStyle()}
+            className={`${getImageStyle()} max-w-[280px] max-h-[280px]`}
           />
           {getMappingStatusText()}
           <h4

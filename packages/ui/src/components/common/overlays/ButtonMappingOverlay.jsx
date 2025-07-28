@@ -128,7 +128,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
                       <img
                         src={image}
                         alt={`Button ${buttonNum} mapping`}
-                        className={`w-full h-full object-cover shadow-lg ${
+                        className={`w-full h-full object-cover shadow-lg max-w-[152px] max-h-[152px] ${
                           isArtist ? "rounded-full" : "rounded-lg"
                         }`}
                       />
