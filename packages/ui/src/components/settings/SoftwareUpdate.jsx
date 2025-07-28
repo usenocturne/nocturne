@@ -96,16 +96,16 @@ const SoftwareUpdate = () => {
   const handleNocturneUpdate = async () => {
     if (!updateInfo || !updateInfo.assetUrls) return;
 
-    const imageURL = updateInfo.assetUrls.update || updateInfo.assetUrls.full;
-    const sumURL =
-      updateInfo.assetUrls.updateSum || updateInfo.assetUrls.fullSum;
+    const imageURL = updateInfo.assetUrls.update;
+    const sum =
+      updateInfo.assetSums && updateInfo.assetSums.update;
 
-    if (!imageURL || !sumURL) {
+    if (!imageURL) {
       console.error("Missing update files");
       return;
     }
 
-    await startUpdate(imageURL, sumURL);
+    await startUpdate(imageURL, sum);
   };
 
   const UpdateSection = ({
@@ -348,7 +348,7 @@ const SoftwareUpdate = () => {
         latestVersion={nocturneLatestVersion}
         finalVersion={getFinalVersion()}
         hasUpdate={effectiveHasUpdate}
-        imagePath="/images/os/nocturne/3.0.0.webp"
+        imagePath={updateInfo?.imageUrl || "/images/os/nocturne/3.0.0.webp"}
         onUpdate={handleNocturneUpdate}
         isDownloading={isDownloading}
         canUpdate={canUpdate}

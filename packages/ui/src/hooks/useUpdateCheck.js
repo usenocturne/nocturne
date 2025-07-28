@@ -135,15 +135,22 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
             releaseNotes: release.body,
             releaseDate: release.published_at,
             releaseSize: release.assets.find(
-              (a) => a.name === updateJson.files.full,
+              (a) => a.name === updateJson.files.update,
             ).size,
             assetUrls: {},
+            assetSums: {},
           };
 
           for (const [key, fileName] of Object.entries(updateJson.files)) {
             const asset = release.assets.find((a) => a.name === fileName);
             if (asset) {
               releaseData.assetUrls[key] = asset.browser_download_url;
+              if (asset.digest) {
+                releaseData.assetSums[key] = asset.digest.replace(
+                  /^sha256:/,
+                  "",
+                );
+              }
             }
           }
 

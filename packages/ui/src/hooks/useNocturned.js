@@ -424,7 +424,7 @@ export const useSystemUpdate = () => {
   }, [apiRequest]);
 
   const startUpdate = useCallback(
-    async (imageURL, sumURL) => {
+    async (imageURL, sum) => {
       try {
         setIsUpdating(true);
         setIsError(false);
@@ -439,7 +439,7 @@ export const useSystemUpdate = () => {
 
         const data = await apiRequest("/update", "POST", {
           image_url: imageURL,
-          sum_url: sumURL,
+          sum,
         });
 
         return data;
