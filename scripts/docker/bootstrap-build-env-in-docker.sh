@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cd ~/void-packages
 
 # Create libconfuse template
