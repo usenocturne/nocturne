@@ -34,6 +34,7 @@ jobs:
               cd nocturne-connector && \
               just run && \
               cp output/*.img.gz /workspace/resources/ && \
+              cd /workspace/resources/stock-files && ./download.sh && \
               cd /workspace && \
               just run"
 
