@@ -39,12 +39,6 @@ EOF
 echo "XBPS_ALLOW_CHROOT_BREAKOUT=yes" >> etc/conf
 echo "BUILD_CHROOT=false" >> etc/conf
 
-RUN xbps-install -Sy glibc-locales && \
-    localedef -i en_US -f UTF-8 en_US.UTF-8
-
-ENV LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8
-
 # Build packages
 ./xbps-src binary-bootstrap
 ./xbps-src pkg libconfuse

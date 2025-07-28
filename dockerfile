@@ -48,6 +48,13 @@ WORKDIR /home/builder
 
 RUN git clone --depth=1 https://github.com/void-linux/void-packages.git
 
+# Force locale
+RUN xbps-install -Sy glibc-locales && \
+    localedef -i en_US -f UTF-8 en_US.UTF-8
+
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
+
 COPY scripts/docker/bootstrap-build-env-in-docker.sh /home/builder/finish-init.sh
 RUN sudo chmod +x /home/builder/finish-init.sh
 
