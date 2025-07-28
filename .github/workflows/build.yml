@@ -16,7 +16,7 @@ jobs:
       - name: Pull prebuilt image
         run: docker pull ghcr.io/nguyenkvvn/nocturne-builder:latest
 
-      - name: Clone and build nocturne-connector inside container
+      - name: Clone and build nocturne-connector and nocturne image
         run: |
           docker run --rm --privileged \
             --user 0:0 \
