@@ -1,0 +1,47 @@
+name: Docker Build Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build custom Docker image
+        run: |
+          docker build -t nocturne-builder .
+
+      - name: Install remaining dependencies inside container
+        run: |
+          docker run --name build-container -v ${{ github.workspace }}:/workspace -w /workspace nocturne-builder \
+            /home/builder/finish-init.sh
+
+      - name: Commit container state to new image
+        run: |
+          docker commit build-container nocturne-builder-final
+
+      - name: Clone and build nocturne-connector inside container
+        run: |
+          docker run --rm --privileged \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            nocturne-builder-final \
+            /bin/bash -c "\
+              git clone https://github.com/usenocturne/nocturne-connector.git && \
+              cd nocturne-connector && \
+              just run && \
+              cp *.img /workspace/resources/ &&
+              cd .. && \
+              just run"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: output/
