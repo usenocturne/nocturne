@@ -13,25 +13,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build custom Docker image
-        run: |
-          docker build -t nocturne-builder .
-
-      - name: Install remaining dependencies inside container
-        run: |
-          docker run --name build-container -v ${{ github.workspace }}:/workspace -w /workspace nocturne-builder \
-            /home/builder/finish-init.sh
-
-      - name: Commit container state to new image
-        run: |
-          docker commit build-container nocturne-builder-final
+      - name: Pull prebuilt image
+        run: docker pull ghcr.io/nguyenkvvn/nocturne-builder:latest
 
       - name: Clone and build nocturne-connector inside container
         run: |
           docker run --rm --privileged \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            nocturne-builder-final \
+            ghcr.io/nguyenkvvn/nocturne-builder:latest \
             /bin/bash -c "\
               git clone https://github.com/usenocturne/nocturne-connector.git && \
               cd nocturne-connector && \
