@@ -33,7 +33,7 @@ jobs:
               git clone https://github.com/usenocturne/nocturne-connector.git && \
               cd nocturne-connector && \
               just run && \
-              cp *.img /workspace/resources/ && \
+              cp output/*.img.gz /workspace/resources/ && \
               cd /workspace && \
               just run"
 
