@@ -1,41 +1,79 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-// import axios from 'axios';
 
 const compareVersions = (v1, v2) => {
   const parseVersion = (version) => {
-    const match = version.match(/^(\d+\.\d+\.\d+)(?:-(.+))?$/);
+    const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(\d*))?$/);
     if (!match) {
-      return { base: version, preRelease: null };
+      return {
+        major: 0,
+        minor: 0,
+        patch: 0,
+        preRelease: null,
+        preReleaseNum: null,
+      };
     }
     return {
-      base: match[1],
-      preRelease: match[2] || null,
+      major: parseInt(match[1], 10),
+      minor: parseInt(match[2], 10),
+      patch: parseInt(match[3], 10),
+      preRelease: match[4] || null,
+      preReleaseNum: match[5] ? parseInt(match[5], 10) : null,
     };
   };
 
-  const v1Parsed = parseVersion(v1);
-  const v2Parsed = parseVersion(v2);
+  const a = parseVersion(v1);
+  const b = parseVersion(v2);
 
-  const v1BaseParts = v1Parsed.base.split(".").map(Number);
-  const v2BaseParts = v2Parsed.base.split(".").map(Number);
+  if (a.major !== b.major) return a.major > b.major ? 1 : -1;
+  if (a.minor !== b.minor) return a.minor > b.minor ? 1 : -1;
+  if (a.patch !== b.patch) return a.patch > b.patch ? 1 : -1;
 
-  for (let i = 0; i < Math.max(v1BaseParts.length, v2BaseParts.length); i++) {
-    const v1Part = v1BaseParts[i] || 0;
-    const v2Part = v2BaseParts[i] || 0;
+  if (!a.preRelease && !b.preRelease) return 0;
+  if (!a.preRelease && b.preRelease) return 1;
+  if (a.preRelease && !b.preRelease) return -1;
 
-    if (v1Part > v2Part) return 1;
-    if (v1Part < v2Part) return -1;
+  if (a.preRelease !== b.preRelease) {
+    return a.preRelease > b.preRelease ? 1 : -1;
   }
 
-  if (!v1Parsed.preRelease && !v2Parsed.preRelease) return 0;
-
-  if (!v1Parsed.preRelease && v2Parsed.preRelease) return 1;
-  if (v1Parsed.preRelease && !v2Parsed.preRelease) return -1;
-
-  if (v1Parsed.preRelease > v2Parsed.preRelease) return 1;
-  if (v1Parsed.preRelease < v2Parsed.preRelease) return -1;
+  if (a.preReleaseNum === null && b.preReleaseNum === null) return 0;
+  if (a.preReleaseNum === null) return -1;
+  if (b.preReleaseNum === null) return 1;
+  if (a.preReleaseNum !== b.preReleaseNum)
+    return a.preReleaseNum > b.preReleaseNum ? 1 : -1;
 
   return 0;
+};
+
+const isCompatible = (currentVersion, minimumVersion) => {
+  const parseVersion = (version) => {
+    const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(\d*))?$/);
+    if (!match) {
+      return {
+        major: 0,
+        minor: 0,
+        patch: 0,
+        preRelease: null,
+        preReleaseNum: null,
+      };
+    }
+    return {
+      major: parseInt(match[1], 10),
+      minor: parseInt(match[2], 10),
+      patch: parseInt(match[3], 10),
+      preRelease: match[4] || null,
+      preReleaseNum: match[5] ? parseInt(match[5], 10) : null,
+    };
+  };
+
+  const current = parseVersion(currentVersion);
+  const minimum = parseVersion(minimumVersion);
+
+  if (current.major !== minimum.major) return current.major > minimum.major;
+  if (current.minor !== minimum.minor) return current.minor > minimum.minor;
+  if (current.patch !== minimum.patch) return current.patch > minimum.patch;
+
+  return true;
 };
 
 export const useUpdateCheck = (currentVersion, autoCheck = true) => {
@@ -87,12 +125,9 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
               }),
             },
           );
-          //const updateJsonResponse = await axios.get(`https://cors-anywhere.herokuapp.com/${updateJsonAsset.browser_download_url}`, {headers: {'Content-Type': 'application/json'}});
-          console.log(updateJsonResponse);
           if (!updateJsonResponse.ok) continue;
 
           const updateJson = await updateJsonResponse.json();
-          console.log(updateJson);
 
           const releaseData = {
             ...updateJson,
@@ -184,7 +219,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     const possibleNextUpdates = sortedReleases.filter(
       (release) =>
         compareVersions(release.version, currentVersion) > 0 &&
-        compareVersions(currentVersion, release.minimumVersion) >= 0,
+        isCompatible(currentVersion, release.minimumVersion),
     );
 
     if (possibleNextUpdates.length === 0) {
@@ -201,7 +236,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
         const possibleNextSteps = sortedReleases.filter(
           (release) =>
             compareVersions(release.version, currentStep.version) > 0 &&
-            compareVersions(currentStep.version, release.minimumVersion) >= 0,
+            isCompatible(currentStep.version, release.minimumVersion),
         );
 
         if (possibleNextSteps.length === 0) {
