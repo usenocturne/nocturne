@@ -918,10 +918,12 @@ function App() {
         activeSection={activeSection}
         handleReboot={handleReboot}
       />
-      <UpdateCheckNotification
-        showLoader={showLoader}
-        setActiveSection={setActiveSection}
-      />
+      {isAuthenticated && !showConnectionLostScreen && (
+        <UpdateCheckNotification
+          showLoader={showLoader}
+          setActiveSection={setActiveSection}
+        />
+      )}
       <ConnectorProvider>
         <SettingsProvider>
           <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
