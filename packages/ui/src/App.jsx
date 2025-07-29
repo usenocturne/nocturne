@@ -10,7 +10,6 @@ import NowPlaying from "./components/player/NowPlaying";
 import DeviceSwitcherModal from "./components/player/DeviceSwitcherModal";
 import NetworkPasswordModal from "./components/common/modals/NetworkPasswordModal";
 import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
-import SystemUpdateModal from "./components/common/modals/SystemUpdateModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import GradientBackground from "./components/common/GradientBackground";
@@ -23,10 +22,14 @@ import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
+import { NotificationProvider, useNotifications } from "./contexts/NotificationContext";
+import NotificationsContainer from "./components/common/notifications/NotificationsContainer";
 import PairingScreen from "./components/auth/PairingScreen";
 import LockView from "./components/common/LockView";
 import LoadingScreen from "./components/common/LoadingScreen";
 import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
+import { CheckIcon } from "./components/common/icons";
+import { SettingsUpdateIcon } from "./components/common/icons";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
@@ -288,6 +291,25 @@ function useGlobalButtonMapping({
   };
 }
 
+function NotificationEffects({ isUpdating, updateStatus, activeSection, handleReboot }) {
+  const { addNotification } = useNotifications();
+  const notificationShownRef = useRef(false);
+
+  useEffect(() => {
+    if (!isUpdating && updateStatus.stage === "complete" && activeSection !== "settings" && !notificationShownRef.current) {
+      notificationShownRef.current = true;
+      addNotification({
+        icon: SettingsUpdateIcon,
+        title: "Update installed",
+        description: "Nocturne was updated successfully. Restart to apply.",
+        action: { label: "Restart", onPress: handleReboot },
+      });
+    }
+  }, [isUpdating, updateStatus.stage, activeSection, addNotification, handleReboot]);
+
+  return null;
+}
+
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [activeSection, setActiveSection] = useState("recents");
@@ -401,7 +423,7 @@ function App() {
     refreshPlaybackState,
     setActiveSection,
     isTutorialActive: showTutorial,
-    isDisabled: powerMenuVisible,
+    isDisabled: powerMenuVisible || isUpdating,
   });
 
   const handleOpenDeviceSwitcher = (
@@ -757,11 +779,11 @@ function App() {
     refreshPlaybackState(true);
   };
 
-  const isFlashing = isUpdating && updateStatus.stage === "flash";
+  const isUpdateInProgress = isUpdating;
 
   const showConnectionLostScreen =
     initialCheckDone &&
-    !isFlashing &&
+    !isUpdateInProgress &&
     !pairingRequest &&
     !showTetheringScreen &&
     ((initialConnectionFailed &&
@@ -867,91 +889,93 @@ function App() {
   }
 
   return (
-    <ConnectorProvider>
-      <SettingsProvider>
-        <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
-          <NetworkContext.Provider value={networkContextValue}>
-            <ConnectorContext.Provider value={connectorContextValue}>
-              <Router>
-                <FontLoader />
-                {showLoader && (
-                  <LoadingScreen
-                    show={showLoader}
-                    onComplete={() => setShowLoader(false)}
-                  />
-                )}
-                <main
-                  className="overflow-hidden relative min-h-screen rounded-2xl"
-                  style={{
-                    fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
-                    fontOpticalSizing: "auto",
-                  }}
-                >
-                  <GradientBackground
-                    gradientState={gradientState}
-                    className="bg-black"
-                  />
+    <NotificationProvider>
+      <NotificationEffects 
+        isUpdating={isUpdating}
+        updateStatus={updateStatus}
+        activeSection={activeSection}
+        handleReboot={handleReboot}
+      />
+      <ConnectorProvider>
+        <SettingsProvider>
+          <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
+            <NetworkContext.Provider value={networkContextValue}>
+              <ConnectorContext.Provider value={connectorContextValue}>
+                <Router>
+                  <FontLoader />
+                  {showLoader && (
+                    <LoadingScreen
+                      show={showLoader}
+                      onComplete={() => setShowLoader(false)}
+                    />
+                  )}
+                  <main
+                    className="overflow-hidden relative min-h-screen rounded-2xl"
+                    style={{
+                      fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
+                      fontOpticalSizing: "auto",
+                    }}
+                  >
+                    <GradientBackground
+                      gradientState={gradientState}
+                      className="bg-black"
+                    />
 
-                  <div className="relative z-10">
-                    {content}
-                    {!isFlashing &&
-                      !showTetheringScreen &&
-                      !showConnectionLostScreen && (
-                        <>
-                          {pairingRequest ? (
-                            <PairingScreen
-                              pin={pairingRequest.pairingKey}
-                              isConnecting={isConnecting}
-                              onAccept={acceptPairing}
-                              onReject={denyPairing}
-                            />
-                          ) : null}
-                        </>
+                    <div className="relative z-10">
+                      {content}
+                      {!isUpdateInProgress &&
+                        !showTetheringScreen &&
+                        !showConnectionLostScreen && (
+                          <>
+                            {pairingRequest ? (
+                              <PairingScreen
+                                pin={pairingRequest.pairingKey}
+                                isConnecting={isConnecting}
+                                onAccept={acceptPairing}
+                                onReject={denyPairing}
+                              />
+                            ) : null}
+                          </>
+                        )}
+                      <NetworkBanner visible={displayNetworkBanner} />
+                      <DeviceSwitcherModal
+                        isOpen={isDeviceSwitcherOpen}
+                        onClose={handleCloseDeviceSwitcher}
+                        accessToken={accessToken}
+                        initialDevices={prefetchedDevices}
+                      />
+                      {showConnectorModal && (
+                        <ConnectorQRModal
+                          onClose={() => setShowConnectorModal(false)}
+                        />
                       )}
-                    <NetworkBanner visible={displayNetworkBanner} />
-                    <SystemUpdateModal
-                      show={isFlashing}
-                      status={updateStatus}
-                      progress={progress}
-                      isError={isError}
-                      errorMessage={errorMessage}
-                    />
-                    <DeviceSwitcherModal
-                      isOpen={isDeviceSwitcherOpen}
-                      onClose={handleCloseDeviceSwitcher}
-                      accessToken={accessToken}
-                      initialDevices={prefetchedDevices}
-                    />
-                    {showConnectorModal && (
-                      <ConnectorQRModal
-                        onClose={() => setShowConnectorModal(false)}
+                      <NetworkPasswordModal
+                        network={selectedNetwork}
+                        onClose={handleNetworkClose}
+                        onConnect={handleNetworkClose}
                       />
-                    )}
-                    <NetworkPasswordModal
-                      network={selectedNetwork}
-                      onClose={handleNetworkClose}
-                      onConnect={handleNetworkClose}
-                    />
-                    {!showTutorial && showGlobalMappingOverlay && (
-                      <ButtonMappingOverlay
-                        show={showGlobalMappingOverlay}
-                        activeButton={globalActiveButton}
+                      {!showTutorial && showGlobalMappingOverlay && (
+                        <ButtonMappingOverlay
+                          show={showGlobalMappingOverlay}
+                          activeButton={globalActiveButton}
+                        />
+                      )}
+                      <PowerMenuOverlay
+                        show={powerMenuVisible}
+                        onShutdown={handleShutdown}
+                        onReboot={handleReboot}
+                        onClose={() => setPowerMenuVisible(false)}
                       />
-                    )}
-                    <PowerMenuOverlay
-                      show={powerMenuVisible}
-                      onShutdown={handleShutdown}
-                      onReboot={handleReboot}
-                      onClose={() => setPowerMenuVisible(false)}
-                    />
-                  </div>
-                </main>
-              </Router>
-            </ConnectorContext.Provider>
-          </NetworkContext.Provider>
-        </DeviceSwitcherContext.Provider>
-      </SettingsProvider>
-    </ConnectorProvider>
+                    </div>
+                  </main>
+                  <NotificationsContainer />
+                </Router>
+              </ConnectorContext.Provider>
+            </NetworkContext.Provider>
+          </DeviceSwitcherContext.Provider>
+        </SettingsProvider>
+      </ConnectorProvider>
+    </NotificationProvider>
   );
 }
 

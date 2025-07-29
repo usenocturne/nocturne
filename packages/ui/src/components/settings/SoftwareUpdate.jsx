@@ -7,6 +7,8 @@ import {
 import { useSystemUpdate, useNocturneVersion } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
 
+let updateCompletedInSession = false;
+
 const SoftwareUpdate = () => {
   const {
     updateStatus,
@@ -34,6 +36,21 @@ const SoftwareUpdate = () => {
   } = useUpdateCheck(nocturneCurrentVersion);
 
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [sessionCompleted, setSessionCompleted] = useState(updateCompletedInSession);
+
+  const hasNocturneUpdate = updateInfo?.hasUpdate || false;
+  const nocturneLatestVersion = updateInfo?.version || nocturneCurrentVersion;
+  const isDownloadStage = updateStatus.stage === "download";
+  const isFlashStage = updateStatus.stage === "flash";
+  const isDownloading = isUpdating && (isDownloadStage || isFlashStage);
+  const isCompleted = updateStatus.stage === "complete" && !isUpdating && !isError;
+
+  useEffect(() => {
+    if (isCompleted) {
+      updateCompletedInSession = true;
+      setSessionCompleted(true);
+    }
+  }, [isCompleted]);
 
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return "0 Bytes";
@@ -85,9 +102,6 @@ const SoftwareUpdate = () => {
     handleUpdateChainAdvance();
   }, [handleUpdateChainAdvance]);
 
-  const hasNocturneUpdate = updateInfo?.hasUpdate || false;
-  const nocturneLatestVersion = updateInfo?.version || nocturneCurrentVersion;
-  const isDownloading = isUpdating && updateStatus.stage === "download";
   const canUpdate = updateInfo?.canUpdate !== false;
   const isMultiStepUpdate = updateInfo?.nextInChain === true;
   const totalUpdates = updateInfo?.totalUpdates || 0;
@@ -108,6 +122,12 @@ const SoftwareUpdate = () => {
     await startUpdate(imageURL, sum);
   };
 
+  const handleReboot = useCallback(() => {
+    fetch("http://localhost:5000/device/power/reboot", { method: "POST" }).catch(
+      (err) => console.error("Restart request failed", err),
+    );
+  }, []);
+
   const UpdateSection = ({
     name,
     currentVersion,
@@ -124,9 +144,13 @@ const SoftwareUpdate = () => {
     totalUpdates,
     currentStep,
     noCompatiblePath,
+    isCompleted,
+    onReboot,
+    stage,
+    checkForUpdates,
   }) => (
     <div className="space-y-4">
-      {(isChecking || !hasUpdate) && (
+      {(isChecking || !hasUpdate || sessionCompleted) && (
         <div className="space-y-4">
           <div className="p-1.5 bg-white/10 rounded-xl border border-white/10">
             <div className="flex flex-col items-center justify-center text-center py-8">
@@ -135,35 +159,46 @@ const SoftwareUpdate = () => {
                   <CheckCircleIcon className="w-16 h-16 text-green-400" />
                 </div>
                 <div className="text-[28px] font-[580] text-white tracking-tight">
-                  {name} is up to date
+                  {sessionCompleted ? "Update Complete" : `${name} is up to date`}
                 </div>
                 <div className="text-[24px] font-[560] text-white/80 tracking-tight">
-                  Version {currentVersion}
+                  {sessionCompleted ? "Reboot to apply changes" : `Version ${currentVersion}`}
                 </div>
               </div>
             </div>
           </div>
 
-          <button
-            onClick={isChecking ? undefined : checkForUpdates}
-            disabled={isChecking}
-            className={`w-full p-4 rounded-xl border focus:outline-none transition-colors duration-200 flex items-center justify-center ${
-              isChecking
-                ? "bg-white/5 border-white/5 text-white/40 cursor-not-allowed"
-                : "bg-white/10 hover:bg-white/20 border-white/10 text-white"
-            }`}
-          >
-            <RefreshIcon
-              className={`w-7 h-7 mr-2 ${isChecking ? "animate-spin" : ""}`}
-            />
-            <span className="text-[28px] font-[580] text-white tracking-tight">
-              {isChecking ? "Checking for updates..." : "Check for Updates"}
-            </span>
-          </button>
+          {sessionCompleted ? (
+            <button
+              onClick={onReboot}
+              className="w-full p-4 rounded-xl border bg-white/10 hover:bg-white/20 border-white/10 text-white"
+            >
+              <span className="text-[28px] font-[580] text-white tracking-tight">
+                Reboot Now
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={isChecking ? undefined : checkForUpdates}
+              disabled={isChecking}
+              className={`w-full p-4 rounded-xl border focus:outline-none transition-colors duration-200 flex items-center justify-center ${
+                isChecking
+                  ? "bg-white/5 border-white/5 text-white/40 cursor-not-allowed"
+                  : "bg-white/10 hover:bg-white/20 border-white/10 text-white"
+              }`}
+            >
+              <RefreshIcon
+                className={`w-7 h-7 mr-2 ${isChecking ? "animate-spin" : ""}`}
+              />
+              <span className="text-[28px] font-[580] text-white tracking-tight">
+                {isChecking ? "Checking for updates..." : "Check for Updates"}
+              </span>
+            </button>
+          )}
         </div>
       )}
 
-      {hasUpdate && (
+      {hasUpdate && !sessionCompleted && (
         <div className="space-y-4">
           <div className="p-4 bg-white/10 rounded-xl border border-white/10">
             <div className="flex items-center mb-4">
@@ -241,7 +276,7 @@ const SoftwareUpdate = () => {
             )}
           </div>
 
-          {isDownloading ? (
+          {(isDownloading || isFlashStage) ? (
             <DownloadProgressPanel
               progress={progress}
               isError={isError}
@@ -249,6 +284,7 @@ const SoftwareUpdate = () => {
               isMultiStepUpdate={isMultiStepUpdate}
               currentStep={currentStep}
               totalSteps={totalUpdates}
+              stage={stage}
             />
           ) : (
             <button
@@ -277,15 +313,16 @@ const SoftwareUpdate = () => {
     isMultiStepUpdate,
     currentStep,
     totalSteps,
+    stage,
   }) => {
     return (
       <div className="p-4 bg-white/10 rounded-xl border border-white/10">
         <div className="text-[28px] font-[580] text-white tracking-tight mb-2">
           {isError
-            ? "Download Failed"
+            ? (stage === "flash" ? "Installation Failed" : "Download Failed")
             : isMultiStepUpdate
-              ? `Downloading Update (Update ${currentStep} of ${totalSteps})`
-              : "Downloading Update"}
+              ? `${stage === "flash" ? "Installing" : "Downloading"} Update (${currentStep} of ${totalSteps})`
+              : `${stage === "flash" ? "Installing" : "Downloading"} Update`}
         </div>
 
         {isError ? (
@@ -294,14 +331,14 @@ const SoftwareUpdate = () => {
           </div>
         ) : (
           <>
-            <div className="w-full bg-white/10 rounded-full h-3 mb-2">
+            <div className="w-full bg-white/10 rounded-full h-3 mb-2 overflow-hidden">
               <div
                 className="bg-white h-3 rounded-full transition-all"
-                style={{ width: `${progress.percent}%` }}
+                style={{ width: `${Math.min(progress.percent, 100)}%` }}
               ></div>
             </div>
             <div className="flex justify-between text-[18px] font-[560] text-white/80 tracking-tight">
-              <span>{progress.percent}%</span>
+              <span>{Math.min(progress.percent, 100)}%</span>
               <span>
                 {Math.round(progress.bytesComplete / 1024 / 1024)} MB /{" "}
                 {Math.round(progress.bytesTotal / 1024 / 1024)} MB
@@ -357,6 +394,10 @@ const SoftwareUpdate = () => {
         totalUpdates={totalUpdates}
         currentStep={1}
         noCompatiblePath={noCompatiblePath}
+        isCompleted={isCompleted}
+        onReboot={handleReboot}
+        stage={updateStatus.stage}
+        checkForUpdates={checkForUpdates}
       />
     </div>
   );

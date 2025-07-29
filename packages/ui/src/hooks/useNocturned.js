@@ -456,42 +456,49 @@ export const useSystemUpdate = () => {
 
   const handleWsMessage = useCallback(
     (data) => {
-      if (data.type === "progress") {
-        setProgress({
-          bytesComplete: data.bytes_complete,
-          bytesTotal: data.bytes_total,
-          speed: data.speed,
-          percent: data.percent,
-        });
+      if (data.type === "update_progress" && data.payload) {
+        const payload = data.payload;
+        
+        if (payload.type === "progress") {
+          setIsUpdating(true);
+          setProgress({
+            bytesComplete: payload.bytes_complete,
+            bytesTotal: payload.bytes_total,
+            speed: payload.speed,
+            percent: payload.percent,
+          });
 
-        if (data.stage) {
-          lastSuccessfulStageRef.current = data.stage;
-          setUpdateStatus((prev) => ({
-            ...prev,
-            stage: data.stage,
-            inProgress: true,
-          }));
+          if (payload.stage) {
+            lastSuccessfulStageRef.current = payload.stage;
+            setUpdateStatus((prev) => ({
+              ...prev,
+              stage: payload.stage,
+              inProgress: true,
+            }));
+          }
         }
-      } else if (data.type === "completion") {
-        if (data.success) {
-          setUpdateStatus((prev) => ({
-            ...prev,
-            inProgress: false,
-            stage: "complete",
-          }));
-          setIsUpdating(false);
-        } else {
-          setIsError(true);
-          setErrorMessage(data.error || "Update failed");
-          setIsUpdating(false);
-          setUpdateStatus((prev) => ({
-            ...prev,
-            inProgress: false,
-            error: data.error || "Update failed",
-          }));
+      } else if (data.type === "update_completion" && data.payload) {
+        const payload = data.payload;
+        
+        if (payload.type === "completion") {
+          if (payload.success) {
+            setUpdateStatus((prev) => ({
+              ...prev,
+              inProgress: false,
+              stage: "complete",
+            }));
+            setIsUpdating(false);
+          } else {
+            setIsError(true);
+            setErrorMessage(payload.error || "Update failed");
+            setIsUpdating(false);
+            setUpdateStatus((prev) => ({
+              ...prev,
+              inProgress: false,
+              error: payload.error || "Update failed",
+            }));
+          }
         }
-
-        checkUpdateStatus();
       }
     },
     [checkUpdateStatus],
