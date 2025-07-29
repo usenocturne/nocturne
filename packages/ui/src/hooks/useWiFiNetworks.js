@@ -10,6 +10,14 @@ const API_BASE = "http://172.16.42.1:20574";
 let globalScanInProgress = false;
 let globalRescanAfterConnect = false;
 
+const globalNetworkCache = {
+  currentNetwork: null,
+  savedNetworks: [],
+  availableNetworks: [],
+  networkStatus: null,
+  initialDataFetched: false,
+};
+
 const setupGlobalWebSocket = (isConnectorAvailable) => {
   if (globalWsRef || !isConnectorAvailable) return;
 
@@ -64,10 +72,10 @@ export function useWiFiNetworks() {
   const { selectedNetwork } = useContext(NetworkContext);
   const { isConnectorAvailable, isLoading: isConnectorLoading } =
     useConnector();
-  const [currentNetwork, setCurrentNetwork] = useState(null);
-  const [savedNetworks, setSavedNetworks] = useState([]);
-  const [availableNetworks, setAvailableNetworks] = useState([]);
-  const [networkStatus, setNetworkStatus] = useState(null);
+  const [currentNetwork, setCurrentNetwork] = useState(globalNetworkCache.currentNetwork);
+  const [savedNetworks, setSavedNetworks] = useState(globalNetworkCache.savedNetworks);
+  const [availableNetworks, setAvailableNetworks] = useState(globalNetworkCache.availableNetworks);
+  const [networkStatus, setNetworkStatus] = useState(globalNetworkCache.networkStatus);
   const [loadingState, setLoadingState] = useState({
     initial: true,
     scanning: false,
@@ -152,6 +160,8 @@ export function useWiFiNetworks() {
 
         setAvailableNetworks(combinedNetworks);
 
+        globalNetworkCache.availableNetworks = combinedNetworks;
+
         await fetchSavedNetworks();
 
         return combinedNetworks;
@@ -174,6 +184,7 @@ export function useWiFiNetworks() {
           initial: false,
           scanning: false,
         }));
+        globalNetworkCache.initialDataFetched = true;
       }
     },
     [processNetworks, combineNetworks, handleFetchError, selectedNetwork],
@@ -183,27 +194,35 @@ export function useWiFiNetworks() {
     if (statusFetchingRef.current) return null;
     statusFetchingRef.current = true;
 
+    let statusData = null;
+
     try {
       const response = await fetch(`${API_BASE}/network`);
       if (!response.ok) {
         throw new Error(`Status fetch failed with status: ${response.status}`);
       }
 
-      const status = await response.json();
-      setNetworkStatus(status);
+      statusData = await response.json();
+      setNetworkStatus(statusData);
 
-      return status;
+      return statusData;
     } catch (error) {
       handleFetchError(error, "Network status fetch");
       return null;
     } finally {
       statusFetchingRef.current = false;
+      if (statusData) {
+        globalNetworkCache.networkStatus = statusData;
+      }
     }
   }, [handleFetchError]);
 
   const fetchSavedNetworks = useCallback(async () => {
     if (savedFetchingRef.current) return;
     savedFetchingRef.current = true;
+
+    let currentNetworkData = null;
+    let savedNetworksData = [];
 
     try {
       const response = await fetch(`${API_BASE}/network/list`);
@@ -226,6 +245,7 @@ export function useWiFiNetworks() {
         if (availableNetwork) {
           current.signal = availableNetwork.signal;
         }
+        currentNetworkData = current;
         setCurrentNetwork(current);
       } else {
         setCurrentNetwork(null);
@@ -234,6 +254,7 @@ export function useWiFiNetworks() {
       const saved = networks.filter(
         (network) => !network.flags.includes("[CURRENT]"),
       );
+      savedNetworksData = saved;
       setSavedNetworks(saved);
 
       return networks;
@@ -242,6 +263,8 @@ export function useWiFiNetworks() {
       return [];
     } finally {
       savedFetchingRef.current = false;
+      globalNetworkCache.currentNetwork = currentNetworkData;
+      globalNetworkCache.savedNetworks = savedNetworksData;
     }
   }, [availableNetworks, handleFetchError]);
 
@@ -432,6 +455,7 @@ export function useWiFiNetworks() {
     listenerIdRef.current = listenerId;
 
     if (isConnectorAvailable) {
+      const isFirstListener = globalWsListeners.length === 0;
       globalWsListeners.push({
         id: listenerId,
         onOpen: () => setWsConnected(true),
@@ -449,7 +473,25 @@ export function useWiFiNetworks() {
         await fetchNetworkStatus();
       };
 
-      init();
+      if (isFirstListener) {
+        init();
+      } else if (globalNetworkCache.initialDataFetched) {
+        setAvailableNetworks(globalNetworkCache.availableNetworks);
+        setSavedNetworks(globalNetworkCache.savedNetworks);
+        setCurrentNetwork(globalNetworkCache.currentNetwork);
+        setNetworkStatus(globalNetworkCache.networkStatus);
+      } else {
+        const pollCache = async () => {
+          while (!globalNetworkCache.initialDataFetched) {
+            await new Promise((r) => setTimeout(r, 50));
+          }
+          setAvailableNetworks(globalNetworkCache.availableNetworks);
+          setSavedNetworks(globalNetworkCache.savedNetworks);
+          setCurrentNetwork(globalNetworkCache.currentNetwork);
+          setNetworkStatus(globalNetworkCache.networkStatus);
+        };
+        pollCache();
+      }
     }
 
     return () => {
@@ -479,6 +521,22 @@ export function useWiFiNetworks() {
       return () => clearTimeout(timeoutId);
     }
   }, [loadingState.connecting, selectedNetwork, scanNetworks]);
+
+  useEffect(() => {
+    globalNetworkCache.currentNetwork = currentNetwork;
+  }, [currentNetwork]);
+
+  useEffect(() => {
+    globalNetworkCache.availableNetworks = availableNetworks;
+  }, [availableNetworks]);
+
+  useEffect(() => {
+    globalNetworkCache.savedNetworks = savedNetworks;
+  }, [savedNetworks]);
+
+  useEffect(() => {
+    globalNetworkCache.networkStatus = networkStatus;
+  }, [networkStatus]);
 
   return {
     currentNetwork,
