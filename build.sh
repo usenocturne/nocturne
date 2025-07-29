@@ -7,7 +7,7 @@ set -e
 : "${NOCTURNE_IMAGE_VERSION:="v3.0.0-beta5"}"
 
 : "${NOCTURNE_UI_TAG:="main"}"
-: "${NOCTURNED_TAG:="v1.0.12"}"
+: "${NOCTURNED_TAG:="v1.0.13"}"
 : "${WINGMAN_TAG:="v1.0.1"}"
 
 : "${VOID_BUILD:="20250202"}"
