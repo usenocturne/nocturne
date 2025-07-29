@@ -58,7 +58,7 @@ const LoadingScreen = ({ show = true, onComplete }) => {
           setTimeout(() => resolve("timeout"), 30000),
         );
 
-        const stablePromise = waitForStableNetwork(5000).then(() => "stable");
+        const stablePromise = waitForStableNetwork(10000).then(() => "stable");
 
         const result = await Promise.race([stablePromise, timeoutPromise]);
 
@@ -121,7 +121,7 @@ const LoadingScreen = ({ show = true, onComplete }) => {
       didAttempt = true;
 
       try {
-        await waitForStableNetwork(5000);
+        await waitForStableNetwork(10000);
         await refreshTokens();
       } catch (err) {
         console.error("Deferred token refresh failed", err);
