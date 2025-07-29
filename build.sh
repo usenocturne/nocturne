@@ -39,6 +39,7 @@ SAVED_PWD="$(pwd)"
 
 WORK_PATH=$(mktemp -d)
 export ROOTFS_PATH="${WORK_PATH}/rootfs"
+export UPDATE_PATH="${WORK_PATH}/update"
 IMAGE_PATH="${WORK_PATH}/img"
 export OUTPUT_PATH="${SAVED_PWD}/output"
 export CACHE_PATH="${SAVED_PWD}/cache"
@@ -49,7 +50,7 @@ export M4_PATH="${SAVED_PWD}/m4"
 export RES_PATH="${SAVED_PWD}/resources"
 DEF_STAGE_PATH="${SAVED_PWD}/scripts/stages"
 
-mkdir -p "$IMAGE_PATH" "$ROOTFS_PATH" "$OUTPUT_PATH" "$CACHE_PATH"
+mkdir -p "$IMAGE_PATH" "$ROOTFS_PATH" "$OUTPUT_PATH" "$CACHE_PATH" "$UPDATE_PATH"
 
 export XBPS_ARCH="armv7l"
 
