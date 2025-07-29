@@ -36,14 +36,17 @@ const SoftwareUpdate = () => {
   } = useUpdateCheck(nocturneCurrentVersion);
 
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [sessionCompleted, setSessionCompleted] = useState(updateCompletedInSession);
+  const [sessionCompleted, setSessionCompleted] = useState(
+    updateCompletedInSession,
+  );
 
   const hasNocturneUpdate = updateInfo?.hasUpdate || false;
   const nocturneLatestVersion = updateInfo?.version || nocturneCurrentVersion;
   const isDownloadStage = updateStatus.stage === "download";
   const isFlashStage = updateStatus.stage === "flash";
   const isDownloading = isUpdating && (isDownloadStage || isFlashStage);
-  const isCompleted = updateStatus.stage === "complete" && !isUpdating && !isError;
+  const isCompleted =
+    updateStatus.stage === "complete" && !isUpdating && !isError;
 
   useEffect(() => {
     if (isCompleted) {
@@ -111,8 +114,7 @@ const SoftwareUpdate = () => {
     if (!updateInfo || !updateInfo.assetUrls) return;
 
     const imageURL = updateInfo.assetUrls.update;
-    const sum =
-      updateInfo.assetSums && updateInfo.assetSums.update;
+    const sum = updateInfo.assetSums && updateInfo.assetSums.update;
 
     if (!imageURL) {
       console.error("Missing update files");
@@ -123,9 +125,9 @@ const SoftwareUpdate = () => {
   };
 
   const handleReboot = useCallback(() => {
-    fetch("http://localhost:5000/device/power/reboot", { method: "POST" }).catch(
-      (err) => console.error("Restart request failed", err),
-    );
+    fetch("http://localhost:5000/device/power/reboot", {
+      method: "POST",
+    }).catch((err) => console.error("Restart request failed", err));
   }, []);
 
   const UpdateSection = ({
@@ -159,10 +161,14 @@ const SoftwareUpdate = () => {
                   <CheckCircleIcon className="w-16 h-16 text-green-400" />
                 </div>
                 <div className="text-[28px] font-[580] text-white tracking-tight">
-                  {sessionCompleted ? "Update Complete" : `${name} is up to date`}
+                  {sessionCompleted
+                    ? "Update Complete"
+                    : `${name} is up to date`}
                 </div>
                 <div className="text-[24px] font-[560] text-white/80 tracking-tight">
-                  {sessionCompleted ? "Reboot to apply changes" : `Version ${currentVersion}`}
+                  {sessionCompleted
+                    ? "Reboot to apply changes"
+                    : `Version ${currentVersion}`}
                 </div>
               </div>
             </div>
@@ -276,7 +282,7 @@ const SoftwareUpdate = () => {
             )}
           </div>
 
-          {(isDownloading || isFlashStage) ? (
+          {isDownloading || isFlashStage ? (
             <DownloadProgressPanel
               progress={progress}
               isError={isError}
@@ -319,7 +325,9 @@ const SoftwareUpdate = () => {
       <div className="p-4 bg-white/10 rounded-xl border border-white/10">
         <div className="text-[28px] font-[580] text-white tracking-tight mb-2">
           {isError
-            ? (stage === "flash" ? "Installation Failed" : "Download Failed")
+            ? stage === "flash"
+              ? "Installation Failed"
+              : "Download Failed"
             : isMultiStepUpdate
               ? `${stage === "flash" ? "Installing" : "Downloading"} Update (${currentStep} of ${totalSteps})`
               : `${stage === "flash" ? "Installing" : "Downloading"} Update`}

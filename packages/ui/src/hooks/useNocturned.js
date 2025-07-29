@@ -458,7 +458,7 @@ export const useSystemUpdate = () => {
     (data) => {
       if (data.type === "update_progress" && data.payload) {
         const payload = data.payload;
-        
+
         if (payload.type === "progress") {
           setIsUpdating(true);
           setProgress({
@@ -479,7 +479,7 @@ export const useSystemUpdate = () => {
         }
       } else if (data.type === "update_completion" && data.payload) {
         const payload = data.payload;
-        
+
         if (payload.type === "completion") {
           if (payload.success) {
             setUpdateStatus((prev) => ({

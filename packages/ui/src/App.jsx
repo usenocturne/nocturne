@@ -22,7 +22,10 @@ import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
-import { NotificationProvider, useNotifications } from "./contexts/NotificationContext";
+import {
+  NotificationProvider,
+  useNotifications,
+} from "./contexts/NotificationContext";
 import NotificationsContainer from "./components/common/notifications/NotificationsContainer";
 import PairingScreen from "./components/auth/PairingScreen";
 import LockView from "./components/common/LockView";
@@ -30,6 +33,7 @@ import LoadingScreen from "./components/common/LoadingScreen";
 import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
 import { CheckIcon } from "./components/common/icons";
 import { SettingsUpdateIcon } from "./components/common/icons";
+import UpdateCheckNotification from "./components/common/notifications/UpdateCheckNotification";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
@@ -291,12 +295,22 @@ function useGlobalButtonMapping({
   };
 }
 
-function NotificationEffects({ isUpdating, updateStatus, activeSection, handleReboot }) {
+function NotificationEffects({
+  isUpdating,
+  updateStatus,
+  activeSection,
+  handleReboot,
+}) {
   const { addNotification } = useNotifications();
   const notificationShownRef = useRef(false);
 
   useEffect(() => {
-    if (!isUpdating && updateStatus.stage === "complete" && activeSection !== "settings" && !notificationShownRef.current) {
+    if (
+      !isUpdating &&
+      updateStatus.stage === "complete" &&
+      activeSection !== "settings" &&
+      !notificationShownRef.current
+    ) {
       notificationShownRef.current = true;
       addNotification({
         icon: SettingsUpdateIcon,
@@ -305,7 +319,13 @@ function NotificationEffects({ isUpdating, updateStatus, activeSection, handleRe
         action: { label: "Restart", onPress: handleReboot },
       });
     }
-  }, [isUpdating, updateStatus.stage, activeSection, addNotification, handleReboot]);
+  }, [
+    isUpdating,
+    updateStatus.stage,
+    activeSection,
+    addNotification,
+    handleReboot,
+  ]);
 
   return null;
 }
@@ -890,11 +910,15 @@ function App() {
 
   return (
     <NotificationProvider>
-      <NotificationEffects 
+      <NotificationEffects
         isUpdating={isUpdating}
         updateStatus={updateStatus}
         activeSection={activeSection}
         handleReboot={handleReboot}
+      />
+      <UpdateCheckNotification
+        showLoader={showLoader}
+        setActiveSection={setActiveSection}
       />
       <ConnectorProvider>
         <SettingsProvider>
