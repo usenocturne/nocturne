@@ -819,7 +819,9 @@ function App() {
     hasEverConnectedThisSession;
 
   let content;
-  if (authIsLoading && !initialCheckDone) {
+  if (showLoader) {
+    content = null;
+  } else if (authIsLoading && !initialCheckDone) {
     content = null;
   } else if (
     !isInternetConnected &&

@@ -11,12 +11,6 @@ const QRCodeDisplay = ({
   const lastVerificationUriRef = useRef(verificationUri);
 
   useEffect(() => {
-    if (!verificationUri || verificationUri.trim() === "") {
-      if (onRefreshNeeded) {
-        onRefreshNeeded();
-      }
-    }
-
     refreshIntervalRef.current = setInterval(() => {
       if (!verificationUri || verificationUri.trim() === "") {
         if (onRefreshNeeded) {
