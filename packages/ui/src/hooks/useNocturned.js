@@ -397,6 +397,7 @@ export const useSystemUpdate = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const listenerIdRef = useRef(null);
   const lastSuccessfulStageRef = useRef(null);
+  const postCommandsRef = useRef([]);
 
   const checkUpdateStatus = useCallback(async () => {
     try {
@@ -423,9 +424,27 @@ export const useSystemUpdate = () => {
     }
   }, [apiRequest]);
 
-  const startUpdate = useCallback(
-    async (imageURL, sum) => {
+  const execCommands = useCallback(
+    async (commands) => {
+      if (!commands || commands.length === 0) return;
       try {
+        await apiRequest("/device/exec", "POST", { commands });
+      } catch (err) {
+        console.error("Command execution failed:", err);
+      }
+    },
+    [apiRequest],
+  );
+
+  const startUpdate = useCallback(
+    async (imageURL, sum, commands = {}) => {
+      try {
+        const pre = commands.pre || [];
+        const post = commands.post || [];
+        if (pre.length) {
+          await execCommands(pre);
+        }
+
         setIsUpdating(true);
         setIsError(false);
         setErrorMessage("");
@@ -442,6 +461,8 @@ export const useSystemUpdate = () => {
           sum,
         });
 
+        postCommandsRef.current = post;
+
         return data;
       } catch (error) {
         console.error("Error starting update:", error);
@@ -451,7 +472,7 @@ export const useSystemUpdate = () => {
         return null;
       }
     },
-    [apiRequest],
+    [apiRequest, execCommands],
   );
 
   const handleWsMessage = useCallback(
@@ -488,6 +509,10 @@ export const useSystemUpdate = () => {
               stage: "complete",
             }));
             setIsUpdating(false);
+            if (postCommandsRef.current && postCommandsRef.current.length) {
+              execCommands(postCommandsRef.current);
+              postCommandsRef.current = [];
+            }
           } else {
             setIsError(true);
             setErrorMessage(payload.error || "Update failed");
@@ -501,7 +526,7 @@ export const useSystemUpdate = () => {
         }
       }
     },
-    [checkUpdateStatus],
+    [checkUpdateStatus, execCommands],
   );
 
   useEffect(() => {

@@ -121,7 +121,7 @@ const SoftwareUpdate = () => {
       return;
     }
 
-    await startUpdate(imageURL, sum);
+    await startUpdate(imageURL, sum, updateInfo?.commands || {});
   };
 
   const handleReboot = useCallback(() => {
