@@ -66,7 +66,7 @@ export const usePlaybackProgress = (
         serverProgressRef.current = currentPlayback.progress_ms || 0;
         setProgressMs(currentPlayback.progress_ms || 0);
         lastUpdateTimeRef.current = Date.now();
-      } else if (currentPlayback?.progress_ms !== undefined) {
+      } else if (typeof currentPlayback?.progress_ms === "number") {
         serverProgressRef.current = currentPlayback.progress_ms;
         setProgressMs(currentPlayback.progress_ms);
         lastUpdateTimeRef.current = Date.now();
