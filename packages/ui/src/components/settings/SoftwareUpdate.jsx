@@ -257,7 +257,9 @@ const SoftwareUpdate = () => {
                   updateInfo?.fullDescription !==
                     updateInfo?.shortDescription && (
                     <button
-                      onClick={() => setShowFullDescription(!showFullDescription)}
+                      onClick={() =>
+                        setShowFullDescription(!showFullDescription)
+                      }
                       className="text-blue-400 hover:text-blue-300 transition-colors text-[20px] font-[560]"
                       style={{ background: "none" }}
                     >
@@ -273,7 +275,8 @@ const SoftwareUpdate = () => {
                   </div>
                   <div className="text-[18px] text-amber-300/80">
                     There's no direct update path from your current version.
-                    Please manually update to the latest version using a computer.
+                    Please manually update to the latest version using a
+                    computer.
                   </div>
                 </div>
               )}
@@ -284,8 +287,8 @@ const SoftwareUpdate = () => {
                     Your current version is too old for this update.
                   </div>
                   <div className="text-[18px] text-amber-300/80">
-                    Please update to at least version {updateInfo?.minimumVersion}{" "}
-                    first.
+                    Please update to at least version{" "}
+                    {updateInfo?.minimumVersion} first.
                   </div>
                 </div>
               )}

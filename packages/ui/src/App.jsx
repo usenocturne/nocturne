@@ -800,7 +800,8 @@ function App() {
     refreshPlaybackState(true);
   };
 
-  const isUpdateScreenVisible = isUpdating || (updateStatus.stage && updateStatus.stage !== "");
+  const isUpdateScreenVisible =
+    isUpdating || (updateStatus.stage && updateStatus.stage !== "");
 
   const showConnectionLostScreen =
     initialCheckDone &&

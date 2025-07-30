@@ -72,10 +72,18 @@ export function useWiFiNetworks() {
   const { selectedNetwork } = useContext(NetworkContext);
   const { isConnectorAvailable, isLoading: isConnectorLoading } =
     useConnector();
-  const [currentNetwork, setCurrentNetwork] = useState(globalNetworkCache.currentNetwork);
-  const [savedNetworks, setSavedNetworks] = useState(globalNetworkCache.savedNetworks);
-  const [availableNetworks, setAvailableNetworks] = useState(globalNetworkCache.availableNetworks);
-  const [networkStatus, setNetworkStatus] = useState(globalNetworkCache.networkStatus);
+  const [currentNetwork, setCurrentNetwork] = useState(
+    globalNetworkCache.currentNetwork,
+  );
+  const [savedNetworks, setSavedNetworks] = useState(
+    globalNetworkCache.savedNetworks,
+  );
+  const [availableNetworks, setAvailableNetworks] = useState(
+    globalNetworkCache.availableNetworks,
+  );
+  const [networkStatus, setNetworkStatus] = useState(
+    globalNetworkCache.networkStatus,
+  );
   const [loadingState, setLoadingState] = useState({
     initial: true,
     scanning: false,

@@ -30,9 +30,9 @@ const UpdateScreen = () => {
     if (countdown === null) return;
 
     if (countdown === 0) {
-      fetch("http://localhost:5000/device/power/reboot", { method: "POST" }).catch(
-        (err) => console.error("Reboot request failed", err),
-      );
+      fetch("http://localhost:5000/device/power/reboot", {
+        method: "POST",
+      }).catch((err) => console.error("Reboot request failed", err));
       return;
     }
 
@@ -61,9 +61,8 @@ const UpdateScreen = () => {
   }
 
   const percent = Math.min(updateProgress.percent || 0, 100);
-  const displayPercent = stage === "complete" && countdown !== null
-    ? countdown * 10
-    : percent;
+  const displayPercent =
+    stage === "complete" && countdown !== null ? countdown * 10 : percent;
   const bytesCompleteMB = updateProgress.bytesComplete
     ? Math.round(updateProgress.bytesComplete / 1024 / 1024)
     : 0;
@@ -98,7 +97,10 @@ const UpdateScreen = () => {
           <div className="relative w-full h-2 bg-white/20 rounded-full overflow-hidden">
             <div
               className="absolute left-0 top-0 h-full bg-white rounded-full"
-              style={{ width: `${displayPercent}%`, transition: "width 0.3s ease" }}
+              style={{
+                width: `${displayPercent}%`,
+                transition: "width 0.3s ease",
+              }}
             />
           </div>
           <div className="relative mt-2 text-white/60 text-[20px] tracking-tight w-full">
@@ -120,4 +122,4 @@ const UpdateScreen = () => {
   );
 };
 
-export default UpdateScreen; 
+export default UpdateScreen;
