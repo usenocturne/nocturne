@@ -945,7 +945,7 @@ function App() {
         handleReboot={handleReboot}
         isAuthenticated={isAuthenticated}
       />
-      {isAuthenticated && !showConnectionLostScreen && (
+      {isAuthenticated && !showConnectionLostScreen && !showTutorial && (
         <UpdateCheckNotification
           showLoader={showLoader}
           setActiveSection={setActiveSection}
