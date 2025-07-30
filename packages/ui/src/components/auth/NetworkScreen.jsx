@@ -1,4 +1,6 @@
 import React, { useEffect } from "react";
+import { waitForStableNetwork } from "../../utils/networkAwareRequest";
+import { useAuth } from "../../hooks/useAuth";
 import { useGradientState } from "../../hooks/useGradientState";
 import { useNetwork } from "../../hooks/useNetwork";
 import NocturneIcon from "../common/icons/NocturneIcon";
@@ -14,6 +16,7 @@ import BluetoothDevices from "../settings/network/BluetoothDevices";
 import GradientBackground from "../common/GradientBackground";
 
 const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
+  const { refreshTokens } = useAuth();
   const [showMain, setShowMain] = React.useState(true);
   const [showParent, setShowParent] = React.useState(false);
   const [showSubpage, setShowSubpage] = React.useState(false);
@@ -26,14 +29,50 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
     isConnectorAvailable && isRestoringWifiNetworks;
 
   useEffect(() => {
-    if (
-      isInternetConnected &&
-      hasEverConnectedThisSession &&
-      onConnectionRestored
-    ) {
-      onConnectionRestored();
-    }
-  }, [isInternetConnected, hasEverConnectedThisSession, onConnectionRestored]);
+    let cancelled = false;
+
+    const handleNetworkRestored = async () => {
+      if (
+        isInternetConnected &&
+        hasEverConnectedThisSession
+      ) {
+        try {
+          await waitForStableNetwork();
+          let refreshSuccess = false;
+
+          try {
+            refreshSuccess = await refreshTokens();
+          } catch (tokenErr) {
+            console.error("Token refresh attempt failed:", tokenErr);
+          }
+
+          if (!refreshSuccess) {
+            for (let i = 0; i < 2 && !refreshSuccess; i++) {
+              await new Promise((res) => setTimeout(res, 3000));
+              try {
+                refreshSuccess = await refreshTokens();
+              } catch (retryErr) {
+                console.error(`Retry ${i + 1} token refresh failed:`, retryErr);
+              }
+            }
+          }
+
+        } catch (err) {
+          console.error("Error while waiting for stable network or refreshing token:", err);
+        } finally {
+          if (!cancelled && onConnectionRestored) {
+            onConnectionRestored();
+          }
+        }
+      }
+    };
+
+    handleNetworkRestored();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInternetConnected, hasEverConnectedThisSession, refreshTokens, onConnectionRestored]);
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100",
