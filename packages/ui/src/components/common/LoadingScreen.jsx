@@ -177,7 +177,7 @@ const LoadingScreen = ({ show = true, onComplete }) => {
     if (completed === tasksTotal && onComplete) {
       const timer = setTimeout(() => {
         onComplete();
-      }, 300);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [
