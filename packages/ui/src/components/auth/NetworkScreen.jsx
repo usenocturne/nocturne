@@ -32,10 +32,7 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
     let cancelled = false;
 
     const handleNetworkRestored = async () => {
-      if (
-        isInternetConnected &&
-        hasEverConnectedThisSession
-      ) {
+      if (isInternetConnected && hasEverConnectedThisSession) {
         try {
           await waitForStableNetwork();
           let refreshSuccess = false;
@@ -56,9 +53,11 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
               }
             }
           }
-
         } catch (err) {
-          console.error("Error while waiting for stable network or refreshing token:", err);
+          console.error(
+            "Error while waiting for stable network or refreshing token:",
+            err,
+          );
         } finally {
           if (!cancelled && onConnectionRestored) {
             onConnectionRestored();
@@ -72,7 +71,12 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
     return () => {
       cancelled = true;
     };
-  }, [isInternetConnected, hasEverConnectedThisSession, refreshTokens, onConnectionRestored]);
+  }, [
+    isInternetConnected,
+    hasEverConnectedThisSession,
+    refreshTokens,
+    onConnectionRestored,
+  ]);
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100",

@@ -10,8 +10,8 @@ import NocturneIcon from "./icons/NocturneIcon";
 
 const LoadingScreen = ({ show = true, onComplete }) => {
   const [gradientState, updateGradientColors] = useGradientState();
-  const [progress, setProgress] = useState(0)
-  const [bootCounterDone, setBootCounterDone] = useState(false)
+  const [progress, setProgress] = useState(0);
+  const [bootCounterDone, setBootCounterDone] = useState(false);
   const [tokenRefreshed, setTokenRefreshed] = useState(false);
   const onCompleteCalledRef = useRef(false);
   const { loading: connectorLoading, reconnectAttempt } = useBluetooth();
@@ -172,7 +172,11 @@ const LoadingScreen = ({ show = true, onComplete }) => {
     const pct = Math.floor((completed / tasksTotal) * 100);
     setProgress(pct);
 
-    if (completed === tasksTotal && onComplete && !onCompleteCalledRef.current) {
+    if (
+      completed === tasksTotal &&
+      onComplete &&
+      !onCompleteCalledRef.current
+    ) {
       onCompleteCalledRef.current = true;
       setTimeout(() => {
         onComplete();

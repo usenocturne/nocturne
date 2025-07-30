@@ -15,40 +15,40 @@ export function useCurrentTime() {
   const { settings } = useSettings();
 
   const fetchTimezone = async () => {
-      if (cachedTimezone) {
-        setTimezone(cachedTimezone);
+    if (cachedTimezone) {
+      setTimezone(cachedTimezone);
+      return;
+    }
+
+    try {
+      await waitForStableNetwork();
+      const response = await networkAwareRequest(
+        () =>
+          fetch("http://localhost:5000/device/date/settimezone", {
+            method: "POST",
+          }),
+        0,
+        { requireNetwork: true },
+      );
+
+      if (!response.ok) {
+        console.error(
+          "Failed to fetch timezone from API, status:",
+          response.status,
+        );
         return;
       }
 
-      try {
-        await waitForStableNetwork();
-        const response = await networkAwareRequest(
-          () =>
-            fetch("http://localhost:5000/device/date/settimezone", {
-              method: "POST",
-            }),
-          0,
-          { requireNetwork: true },
-        );
-
-        if (!response.ok) {
-          console.error(
-            "Failed to fetch timezone from API, status:",
-            response.status,
-          );
-          return;
-        }
-
-        const data = await response.json();
-        if (data.status === "success" && data.timezone) {
-          cachedTimezone = data.timezone;
-          setTimezone(data.timezone);
-          console.log("Timezone set to:", data.timezone);
-        }
-      } catch (error) {
-        console.error("Error fetching timezone:", error);
+      const data = await response.json();
+      if (data.status === "success" && data.timezone) {
+        cachedTimezone = data.timezone;
+        setTimezone(data.timezone);
+        console.log("Timezone set to:", data.timezone);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching timezone:", error);
+    }
+  };
 
   useEffect(() => {
     fetchTimezone();
