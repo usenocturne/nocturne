@@ -153,6 +153,9 @@ export function useAuth() {
     localStorage.removeItem("spotifyTokenExpiry");
     localStorage.removeItem("spotifyAuthType");
 
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("userLoggedOut"));
+
     setAccessToken(null);
     setRefreshToken(null);
     setIsAuthenticated(false);

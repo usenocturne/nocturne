@@ -301,8 +301,9 @@ function NotificationEffects({
   updateStatus,
   activeSection,
   handleReboot,
+  isAuthenticated,
 }) {
-  const { addNotification } = useNotifications();
+  const { addNotification, removeNotification } = useNotifications();
   const notificationShownRef = useRef(false);
 
   useEffect(() => {
@@ -327,6 +328,27 @@ function NotificationEffects({
     addNotification,
     handleReboot,
   ]);
+
+  const logoutNotificationIdRef = useRef(null);
+
+  useEffect(() => {
+    const handler = () => {
+      const id = addNotification({
+        title: "Signed out",
+        description: "Your session expired. Please sign in again.",
+      });
+      logoutNotificationIdRef.current = id;
+    };
+    window.addEventListener("userLoggedOut", handler);
+    return () => window.removeEventListener("userLoggedOut", handler);
+  }, [addNotification]);
+
+  useEffect(() => {
+    if (isAuthenticated && logoutNotificationIdRef.current) {
+      removeNotification(logoutNotificationIdRef.current);
+      logoutNotificationIdRef.current = null;
+    }
+  }, [isAuthenticated, removeNotification]);
 
   return null;
 }
@@ -921,6 +943,7 @@ function App() {
         updateStatus={updateStatus}
         activeSection={activeSection}
         handleReboot={handleReboot}
+        isAuthenticated={isAuthenticated}
       />
       {isAuthenticated && !showConnectionLostScreen && (
         <UpdateCheckNotification

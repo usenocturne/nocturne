@@ -89,6 +89,18 @@ export async function refreshAccessToken(refreshToken) {
       }),
     );
 
+    if (response.status === 400) {
+      try {
+        const errorData = await response.json();
+        if (errorData?.error === "invalid_grant") {
+          throw new Error("invalid_grant");
+        }
+        throw new Error(errorData?.error_description || "Token refresh failed");
+      } catch {
+        throw new Error("invalid_grant");
+      }
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
