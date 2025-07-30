@@ -57,6 +57,7 @@ export default function NowPlaying({
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isAlbumArtLoaded, setIsAlbumArtLoaded] = useState(false);
 
   const volumeTimerRef = useRef(null);
   const volumeLastAdjustedRef = useRef(0);
@@ -315,6 +316,10 @@ export default function NowPlaying({
 
   const { trackName, artistName, albumArt, trackId, firstArtistId, albumId } =
     trackInfo;
+
+  useEffect(() => {
+    setIsAlbumArtLoaded(false);
+  }, [albumArt]);
 
   const contextUri = currentPlayback?.context?.uri;
   const playlistId = useMemo(() => {
@@ -658,13 +663,16 @@ export default function NowPlaying({
       <div ref={contentContainerRef}>
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div
-            className={`min-w-[280px] mr-8 ${albumId ? "cursor-pointer" : ""}`}
+            className={`relative min-w-[280px] mr-8 ${albumId ? "cursor-pointer" : ""}`}
             onClick={() =>
               albumId &&
               onNavigateToAlbum &&
               onNavigateToAlbum(albumId, "album")
             }
           >
+            {!isAlbumArtLoaded && (
+              <div className="w-[280px] h-[280px] bg-transparent rounded-[12px]" />
+            )}
             <img
               src={albumArt}
               alt={
@@ -674,7 +682,8 @@ export default function NowPlaying({
               }
               width={280}
               height={280}
-              className="aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] max-w-[280px] max-h-[280px]"
+              onLoad={() => setIsAlbumArtLoaded(true)}
+              className={`aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] max-w-[280px] max-h-[280px] ${isAlbumArtLoaded ? "" : "hidden"}`}
             />
           </div>
 
