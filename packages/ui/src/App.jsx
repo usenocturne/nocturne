@@ -34,6 +34,7 @@ import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
 import { CheckIcon } from "./components/common/icons";
 import { SettingsUpdateIcon } from "./components/common/icons";
 import UpdateCheckNotification from "./components/common/notifications/UpdateCheckNotification";
+import UpdateScreen from "./components/common/updatescreen";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
@@ -799,11 +800,11 @@ function App() {
     refreshPlaybackState(true);
   };
 
-  const isUpdateInProgress = isUpdating;
+  const isUpdateScreenVisible = isUpdating || (updateStatus.stage && updateStatus.stage !== "");
 
   const showConnectionLostScreen =
     initialCheckDone &&
-    !isUpdateInProgress &&
+    !isUpdateScreenVisible &&
     !pairingRequest &&
     !showTetheringScreen &&
     ((initialConnectionFailed &&
@@ -823,6 +824,8 @@ function App() {
     content = null;
   } else if (authIsLoading && !initialCheckDone) {
     content = null;
+  } else if (isUpdateScreenVisible) {
+    content = <UpdateScreen />;
   } else if (
     !isInternetConnected &&
     !hasEverConnectedThisSession &&
@@ -951,7 +954,7 @@ function App() {
 
                     <div className="relative z-10">
                       {content}
-                      {!isUpdateInProgress &&
+                      {!isUpdateScreenVisible &&
                         !showTetheringScreen &&
                         !showConnectionLostScreen && (
                           <>

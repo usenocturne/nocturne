@@ -6,6 +6,7 @@ import {
 } from "../common/icons";
 import { useSystemUpdate, useNocturneVersion } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
+import UpdateScreen from "../common/updatescreen";
 
 let updateCompletedInSession = false;
 
@@ -150,210 +151,164 @@ const SoftwareUpdate = () => {
     onReboot,
     stage,
     checkForUpdates,
-  }) => (
-    <div className="space-y-4">
-      {(isChecking || !hasUpdate || sessionCompleted) && (
-        <div className="space-y-4">
-          <div className="p-1.5 bg-white/10 rounded-xl border border-white/10">
-            <div className="flex flex-col items-center justify-center text-center py-8">
-              <div className="space-y-2 flex flex-col items-center">
-                <div className="flex justify-center">
-                  <CheckCircleIcon className="w-16 h-16 text-green-400" />
-                </div>
-                <div className="text-[28px] font-[580] text-white tracking-tight">
-                  {sessionCompleted
-                    ? "Update Complete"
-                    : `${name} is up to date`}
-                </div>
-                <div className="text-[24px] font-[560] text-white/80 tracking-tight">
-                  {sessionCompleted
-                    ? "Reboot to apply changes"
-                    : `Version ${currentVersion}`}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {sessionCompleted ? (
-            <button
-              onClick={onReboot}
-              className="w-full p-4 rounded-xl border bg-white/10 hover:bg-white/20 border-white/10 text-white"
-            >
-              <span className="text-[28px] font-[580] text-white tracking-tight">
-                Reboot Now
-              </span>
-            </button>
-          ) : (
-            <button
-              onClick={isChecking ? undefined : checkForUpdates}
-              disabled={isChecking}
-              className={`w-full p-4 rounded-xl border focus:outline-none transition-colors duration-200 flex items-center justify-center ${
-                isChecking
-                  ? "bg-white/5 border-white/5 text-white/40 cursor-not-allowed"
-                  : "bg-white/10 hover:bg-white/20 border-white/10 text-white"
-              }`}
-            >
-              <RefreshIcon
-                className={`w-7 h-7 mr-2 ${isChecking ? "animate-spin" : ""}`}
-              />
-              <span className="text-[28px] font-[580] text-white tracking-tight">
-                {isChecking ? "Checking for updates..." : "Check for Updates"}
-              </span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {hasUpdate && !sessionCompleted && (
-        <div className="space-y-4">
-          <div className="p-4 bg-white/10 rounded-xl border border-white/10">
-            <div className="flex items-center mb-4">
-              <img
-                src={imagePath}
-                alt={`${name} ${latestVersion}`}
-                className="w-16 h-16 rounded-xl object-cover"
-              />
-              <div className="ml-4">
-                <div className="text-[28px] font-[580] text-white tracking-tight">
-                  {name} {latestVersion}
-                </div>
-                <div className="text-[20px] font-[560] text-white/80 tracking-tight">
-                  {formatBytes(updateInfo?.releaseSize || 0)} •{" "}
-                  {updateInfo?.releaseDate.split("T")[0]}
-                </div>
-              </div>
-            </div>
-
-            {isMultiStepUpdate && (
-              <div className="mb-4 px-4 py-3 bg-blue-600/20 border border-blue-400/30 rounded-lg">
-                <div className="text-[20px] font-[580] text-blue-300">
-                  Multiple Updates Required
-                </div>
-                <div className="text-[18px] text-blue-200/80">
-                  Your system needs {totalUpdates} updates to reach version{" "}
-                  {finalVersion}.
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3 text-[24px] font-[560] text-white/80 tracking-tight">
-              <div className="space-y-2">
-                {formatDescription(
-                  showFullDescription
-                    ? updateInfo?.fullDescription
-                    : updateInfo?.shortDescription,
-                )}
-              </div>
-              {updateInfo?.fullDescription &&
-                updateInfo?.fullDescription !==
-                  updateInfo?.shortDescription && (
-                  <button
-                    onClick={() => setShowFullDescription(!showFullDescription)}
-                    className="text-blue-400 hover:text-blue-300 transition-colors text-[20px] font-[560]"
-                    style={{ background: "none" }}
-                  >
-                    {showFullDescription ? "Show less" : "Read more"}
-                  </button>
-                )}
-            </div>
-
-            {noCompatiblePath && (
-              <div className="mt-4 p-3 bg-amber-600/20 border border-amber-400/30 rounded-lg">
-                <div className="text-[20px] font-[580] text-amber-400">
-                  No Compatible Update Path
-                </div>
-                <div className="text-[18px] text-amber-300/80">
-                  There's no direct update path from your current version.
-                  Please manually update to the latest version using a computer.
-                </div>
-              </div>
-            )}
-
-            {!canUpdate && !noCompatiblePath && (
-              <div className="mt-4 p-3 bg-amber-600/20 border border-amber-400/30 rounded-lg">
-                <div className="text-[20px] font-[580] text-amber-400">
-                  Your current version is too old for this update.
-                </div>
-                <div className="text-[18px] text-amber-300/80">
-                  Please update to at least version {updateInfo?.minimumVersion}{" "}
-                  first.
-                </div>
-              </div>
-            )}
-          </div>
-
-          {isDownloading || isFlashStage ? (
-            <DownloadProgressPanel
-              progress={progress}
-              isError={isError}
-              errorMessage={errorMessage}
-              isMultiStepUpdate={isMultiStepUpdate}
-              currentStep={currentStep}
-              totalSteps={totalUpdates}
-              stage={stage}
-            />
-          ) : (
-            <button
-              className={`w-full p-4 rounded-xl border ${
-                canUpdate
-                  ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
-                  : "bg-white/5 border-white/5 text-white/40"
-              }`}
-              onClick={canUpdate ? onUpdate : undefined}
-              disabled={!canUpdate}
-            >
-              <span className="text-[28px] font-[580] tracking-tight">
-                Download and Install
-              </span>
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  const DownloadProgressPanel = ({
-    progress,
-    isError,
-    errorMessage,
-    isMultiStepUpdate,
-    currentStep,
-    totalSteps,
-    stage,
   }) => {
-    return (
-      <div className="p-4 bg-white/10 rounded-xl border border-white/10">
-        <div className="text-[28px] font-[580] text-white tracking-tight mb-2">
-          {isError
-            ? stage === "flash"
-              ? "Installation Failed"
-              : "Download Failed"
-            : isMultiStepUpdate
-              ? `${stage === "flash" ? "Installing" : "Downloading"} Update (${currentStep} of ${totalSteps})`
-              : `${stage === "flash" ? "Installing" : "Downloading"} Update`}
-        </div>
+    const [iconError, setIconError] = useState(false);
 
-        {isError ? (
-          <div className="text-[24px] font-[560] text-red-400 tracking-tight mb-2">
-            {errorMessage || "An unknown error occurred"}
+    return (
+      <div className="space-y-4">
+        {(isChecking || !hasUpdate || sessionCompleted) && (
+          <div className="space-y-4">
+            <div className="p-1.5 bg-white/10 rounded-xl border border-white/10">
+              <div className="flex flex-col items-center justify-center text-center py-8">
+                <div className="space-y-2 flex flex-col items-center">
+                  <div className="flex justify-center">
+                    <CheckCircleIcon className="w-16 h-16 text-green-400" />
+                  </div>
+                  <div className="text-[28px] font-[580] text-white tracking-tight">
+                    {sessionCompleted
+                      ? "Update Complete"
+                      : `${name} is up to date`}
+                  </div>
+                  <div className="text-[24px] font-[560] text-white/80 tracking-tight">
+                    {sessionCompleted
+                      ? "Reboot to apply changes"
+                      : `Version ${currentVersion}`}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {sessionCompleted ? (
+              <button
+                onClick={onReboot}
+                className="w-full p-4 rounded-xl border bg-white/10 hover:bg-white/20 border-white/10 text-white"
+              >
+                <span className="text-[28px] font-[580] text-white tracking-tight">
+                  Reboot Now
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={isChecking ? undefined : checkForUpdates}
+                disabled={isChecking}
+                className={`w-full p-4 rounded-xl border focus:outline-none transition-colors duration-200 flex items-center justify-center ${
+                  isChecking
+                    ? "bg-white/5 border-white/5 text-white/40 cursor-not-allowed"
+                    : "bg-white/10 hover:bg-white/20 border-white/10 text-white"
+                }`}
+              >
+                <RefreshIcon
+                  className={`w-7 h-7 mr-2 ${isChecking ? "animate-spin" : ""}`}
+                />
+                <span className="text-[28px] font-[580] text-white tracking-tight">
+                  {isChecking ? "Checking for updates..." : "Check for Updates"}
+                </span>
+              </button>
+            )}
           </div>
-        ) : (
-          <>
-            <div className="w-full bg-white/10 rounded-full h-3 mb-2 overflow-hidden">
-              <div
-                className="bg-white h-3 rounded-full transition-all"
-                style={{ width: `${Math.min(progress.percent, 100)}%` }}
-              ></div>
+        )}
+
+        {hasUpdate && !sessionCompleted && (
+          <div className="space-y-4">
+            <div className="p-4 bg-white/10 rounded-xl border border-white/10">
+              <div className="flex items-center mb-4">
+                {iconError ? (
+                  <SettingsUpdateIcon className="w-16 h-16 text-white" />
+                ) : (
+                  <img
+                    src={imagePath}
+                    alt={`${name} ${latestVersion}`}
+                    className="w-16 h-16 rounded-xl object-cover"
+                    onError={() => setIconError(true)}
+                  />
+                )}
+                <div className="ml-4">
+                  <div className="text-[28px] font-[580] text-white tracking-tight">
+                    {name} {latestVersion}
+                  </div>
+                  <div className="text-[20px] font-[560] text-white/80 tracking-tight">
+                    {formatBytes(updateInfo?.releaseSize || 0)} •{" "}
+                    {updateInfo?.releaseDate.split("T")[0]}
+                  </div>
+                </div>
+              </div>
+
+              {isMultiStepUpdate && (
+                <div className="mb-4 px-4 py-3 bg-blue-600/20 border border-blue-400/30 rounded-lg">
+                  <div className="text-[20px] font-[580] text-blue-300">
+                    Multiple Updates Required
+                  </div>
+                  <div className="text-[18px] text-blue-200/80">
+                    Your system needs {totalUpdates} updates to reach version{" "}
+                    {finalVersion}.
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3 text-[24px] font-[560] text-white/80 tracking-tight">
+                <div className="space-y-2">
+                  {formatDescription(
+                    showFullDescription
+                      ? updateInfo?.fullDescription
+                      : updateInfo?.shortDescription,
+                  )}
+                </div>
+                {updateInfo?.fullDescription &&
+                  updateInfo?.fullDescription !==
+                    updateInfo?.shortDescription && (
+                    <button
+                      onClick={() => setShowFullDescription(!showFullDescription)}
+                      className="text-blue-400 hover:text-blue-300 transition-colors text-[20px] font-[560]"
+                      style={{ background: "none" }}
+                    >
+                      {showFullDescription ? "Show less" : "Read more"}
+                    </button>
+                  )}
+              </div>
+
+              {noCompatiblePath && (
+                <div className="mt-4 p-3 bg-amber-600/20 border border-amber-400/30 rounded-lg">
+                  <div className="text-[20px] font-[580] text-amber-400">
+                    No Compatible Update Path
+                  </div>
+                  <div className="text-[18px] text-amber-300/80">
+                    There's no direct update path from your current version.
+                    Please manually update to the latest version using a computer.
+                  </div>
+                </div>
+              )}
+
+              {!canUpdate && !noCompatiblePath && (
+                <div className="mt-4 p-3 bg-amber-600/20 border border-amber-400/30 rounded-lg">
+                  <div className="text-[20px] font-[580] text-amber-400">
+                    Your current version is too old for this update.
+                  </div>
+                  <div className="text-[18px] text-amber-300/80">
+                    Please update to at least version {updateInfo?.minimumVersion}{" "}
+                    first.
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex justify-between text-[18px] font-[560] text-white/80 tracking-tight">
-              <span>{Math.min(progress.percent, 100)}%</span>
-              <span>
-                {Math.round(progress.bytesComplete / 1024 / 1024)} MB /{" "}
-                {Math.round(progress.bytesTotal / 1024 / 1024)} MB
-              </span>
-              <span>{progress.speed} MB/s</span>
-            </div>
-          </>
+
+            {isDownloading || isFlashStage ? (
+              <UpdateScreen />
+            ) : (
+              <button
+                className={`w-full p-4 rounded-xl border ${
+                  canUpdate
+                    ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
+                    : "bg-white/5 border-white/5 text-white/40"
+                }`}
+                onClick={canUpdate ? onUpdate : undefined}
+                disabled={!canUpdate}
+              >
+                <span className="text-[28px] font-[580] tracking-tight">
+                  Download and Install
+                </span>
+              </button>
+            )}
+          </div>
         )}
       </div>
     );
