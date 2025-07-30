@@ -1,4 +1,4 @@
-import React, { useContext, useState, useRef } from "react";
+import { useContext, useState, useRef, useEffect } from "react";
 import {
   WifiMaxIcon,
   WifiHighIcon,
@@ -41,6 +41,13 @@ const WiFiNetworks = () => {
   const longPressTimer = useRef(null);
   const [showForgetDialog, setShowForgetDialog] = useState(false);
   const [selectedNetworkId, setSelectedNetworkId] = useState(null);
+
+  useEffect(() => {
+    if (!isScanning && !isConnecting) {
+      scanNetworks(false);
+    }
+  }, []);
+
 
   const handleCardPress = (networkId) => {
     longPressTimer.current = setTimeout(() => {
