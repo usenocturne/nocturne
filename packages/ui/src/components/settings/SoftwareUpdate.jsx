@@ -6,7 +6,7 @@ import {
 } from "../common/icons";
 import { useSystemUpdate, useNocturneVersion } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
-import UpdateScreen from "../common/updatescreen";
+import UpdateScreen from "../common/UpdateScreen";
 
 let updateCompletedInSession = false;
 

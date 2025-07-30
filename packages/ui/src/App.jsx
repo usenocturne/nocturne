@@ -34,7 +34,7 @@ import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
 import { CheckIcon } from "./components/common/icons";
 import { SettingsUpdateIcon } from "./components/common/icons";
 import UpdateCheckNotification from "./components/common/notifications/UpdateCheckNotification";
-import UpdateScreen from "./components/common/updatescreen";
+import UpdateScreen from "./components/common/UpdateScreen";
 
 export const NetworkContext = React.createContext({
   selectedNetwork: null,
