@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useBluetooth } from "../../hooks/useNocturned";
 import { useConnector } from "../../contexts/ConnectorContext";
 import { useNetwork } from "../../hooks/useNetwork";
@@ -10,12 +10,10 @@ import NocturneIcon from "./icons/NocturneIcon";
 
 const LoadingScreen = ({ show = true, onComplete }) => {
   const [gradientState, updateGradientColors] = useGradientState();
-  const [progress, setProgress] = useState(0);
-
-  const [bootCounterDone, setBootCounterDone] = useState(false);
-
+  const [progress, setProgress] = useState(0)
+  const [bootCounterDone, setBootCounterDone] = useState(false)
   const [tokenRefreshed, setTokenRefreshed] = useState(false);
-
+  const onCompleteCalledRef = useRef(false);
   const { loading: connectorLoading, reconnectAttempt } = useBluetooth();
   const { isConnectorAvailable } = useConnector();
   const { isConnected: isInternetConnected } = useNetwork();
@@ -174,11 +172,11 @@ const LoadingScreen = ({ show = true, onComplete }) => {
     const pct = Math.floor((completed / tasksTotal) * 100);
     setProgress(pct);
 
-    if (completed === tasksTotal && onComplete) {
-      const timer = setTimeout(() => {
+    if (completed === tasksTotal && onComplete && !onCompleteCalledRef.current) {
+      onCompleteCalledRef.current = true;
+      setTimeout(() => {
         onComplete();
-      }, 500);
-      return () => clearTimeout(timer);
+      }, 2000);
     }
   }, [
     show,
