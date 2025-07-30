@@ -14,8 +14,7 @@ export function useCurrentTime() {
   const [timezone, setTimezone] = useState(cachedTimezone);
   const { settings } = useSettings();
 
-  useEffect(() => {
-    const fetchTimezone = async () => {
+  const fetchTimezone = async () => {
       if (cachedTimezone) {
         setTimezone(cachedTimezone);
         return;
@@ -51,7 +50,21 @@ export function useCurrentTime() {
       }
     };
 
+  useEffect(() => {
     fetchTimezone();
+  }, []);
+
+  useEffect(() => {
+    const handleNetworkRestored = () => {
+      if (!cachedTimezone) {
+        fetchTimezone();
+      }
+    };
+
+    window.addEventListener("networkRestored", handleNetworkRestored);
+    return () => {
+      window.removeEventListener("networkRestored", handleNetworkRestored);
+    };
   }, []);
 
   useEffect(() => {
