@@ -27,6 +27,7 @@ export function SettingsProvider({ children }) {
     remainingTimeEnabled: getDefaultSettingValue("remainingTimeEnabled", false),
     showStatusBar: getDefaultSettingValue("showStatusBar", true),
     startWithNowPlaying: getDefaultSettingValue("startWithNowPlaying", false),
+    analyticsEnabled: getDefaultSettingValue("analyticsEnabled", true),
   });
 
   useEffect(() => {

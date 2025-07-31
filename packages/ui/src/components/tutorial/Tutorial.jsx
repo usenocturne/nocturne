@@ -87,6 +87,12 @@ const Tutorial = ({ onComplete }) => {
       continueType: "button",
     },
     {
+      header: "Analytics",
+      subtext:
+        "Usage data is collected to help improve Nocturne. You can opt-out in Settings.",
+      continueType: "button",
+    },
+    {
       header: "Good to Go!",
       subtext:
         "You're all set! Press 'Get Started' to begin exploring your music.",

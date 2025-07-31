@@ -57,6 +57,15 @@ const settingsStructure = {
         defaultValue: false,
       },
       {
+        id: "analytics-enabled",
+        title: "Analytics",
+        type: "toggle",
+        description:
+          "Allow Nocturne to collect anonymous usage data to help improve the app.",
+        storageKey: "analyticsEnabled",
+        defaultValue: true,
+      },
+      {
         id: "factory-reset",
         title: "Factory Reset",
         type: "action",

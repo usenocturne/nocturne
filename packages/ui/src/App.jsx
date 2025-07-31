@@ -423,6 +423,22 @@ function App() {
     refetch: refetchInfo,
   } = useNocturneInfo();
 
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(
+    () => localStorage.getItem("analyticsEnabled") !== "false",
+  );
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setAnalyticsEnabled(localStorage.getItem("analyticsEnabled") !== "false");
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
   useEffect(() => {
     if (showLoader) return;
     if (!isInternetConnected) return;
@@ -430,6 +446,14 @@ function App() {
     if (!serial) return;
 
     const existing = document.getElementById("analytics");
+
+    if (!analyticsEnabled) {
+      if (existing) {
+        existing.remove();
+      }
+      return;
+    }
+
     if (existing) return;
 
     const script = document.createElement("script");
@@ -448,7 +472,13 @@ function App() {
     };
 
     document.body.appendChild(script);
-  }, [showLoader, isInternetConnected, isInfoLoading, serial]);
+  }, [
+    showLoader,
+    isInternetConnected,
+    isInfoLoading,
+    serial,
+    analyticsEnabled,
+  ]);
 
   const {
     pairingRequest,

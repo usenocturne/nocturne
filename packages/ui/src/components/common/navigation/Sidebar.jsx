@@ -43,7 +43,7 @@ const SidebarComponent = function Sidebar({ activeSection, setActiveSection }) {
 
   const handleSectionClick = (section) => {
     if (window.umami) {
-      window.umami.track('sidebar_tab_click', { section });
+      window.umami.track("sidebar_tab_click", { section });
     }
     setActiveSection(section);
   };
