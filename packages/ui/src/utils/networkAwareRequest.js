@@ -193,6 +193,16 @@ export async function networkAwareRequest(
     }
 
     const response = await requestInfo;
+
+    if (
+      !response.ok &&
+      retryCount < MAX_RETRIES &&
+      (response.status >= 500 || [429, 408, 0, 304].includes(response.status))
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+      return networkAwareRequest(requestFn, retryCount + 1, options);
+    }
+
     return response;
   } catch (error) {
     if (error.name === "AbortError") {
