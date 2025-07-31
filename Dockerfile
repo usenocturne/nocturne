@@ -17,6 +17,10 @@ RUN curl -L https://github.com/pengutronix/genimage/archive/refs/tags/v18.tar.gz
     && cd / \
     && rm -rf /tmp/genimage-18
 
+COPY resources/ /work/resources/
+COPY scripts/ /work/scripts/
+COPY docker-entrypoint.sh build.sh /work/
+
 WORKDIR /work
 
-CMD ["/bin/bash"]
+CMD ["/bin/bash", "/work/docker-entrypoint.sh"]
