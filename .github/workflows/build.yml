@@ -1,4 +1,4 @@
-name: Docker Build Pipeline
+name: Docker Build
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: Build with Docker
     runs-on: self-hosted
 
     steps:
@@ -18,28 +19,23 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Pull prebuilt image
-        run: docker pull ghcr.io/nguyenkvvn/nocturne-builder:latest
+      - name: Build Docker image
+        run: docker build -t nocturne-builder:latest .
 
-      - name: Clone and build nocturne-connector and nocturne image
+      - name: Build Nocturne
         run: |
-          docker run --privileged --platform=linux/arm64 --rm \
+          docker run --privileged --rm \
             --user 0:0 \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/nguyenkvvn/nocturne-builder:latest \
+            nocturne-builder:latest \
             /bin/bash -c "\
-              cd /tmp && \
-              git clone https://github.com/usenocturne/nocturne-connector.git && \
-              cd nocturne-connector && \
-              just run && \
-              cp output/*.img.gz /workspace/resources/ && \
               cd /workspace/resources/stock-files && ./download.sh && \
               cd /workspace && \
-              just run"
+              ./build.sh"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-output
-          path: output/
+          path: output/**
