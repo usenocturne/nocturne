@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useNotifications } from "../../../contexts/NotificationContext";
-import { useNocturneVersion } from "../../../hooks/useNocturned";
+import { useNocturneInfo } from "../../../hooks/useNocturned";
 import { useUpdateCheck } from "../../../hooks/useUpdateCheck";
 import { waitForStableNetwork } from "../../../utils/networkAwareRequest";
 import { SettingsUpdateIcon } from "../icons";
@@ -12,15 +12,15 @@ function UpdateCheckNotification({ showLoader, setActiveSection }) {
 
   const {
     version: currentVersion,
-    isLoading: isVersionLoading,
-    refetch: refetchVersion,
-  } = useNocturneVersion();
+    isLoading: isInfoLoading,
+    refetch: refetchInfo,
+  } = useNocturneInfo();
 
   const { updateInfo, checkForUpdates } = useUpdateCheck(currentVersion, false);
 
   useEffect(() => {
     if (showLoader) return;
-    if (isVersionLoading) return;
+    if (isInfoLoading) return;
     if (hasCheckedRef.current) return;
     hasCheckedRef.current = true;
 
@@ -29,10 +29,10 @@ function UpdateCheckNotification({ showLoader, setActiveSection }) {
         await waitForStableNetwork(5000);
       } catch {}
       await new Promise((r) => setTimeout(r, 3000));
-      await refetchVersion();
+      await refetchInfo();
       checkForUpdates();
     })();
-  }, [showLoader, isVersionLoading, checkForUpdates, refetchVersion]);
+  }, [showLoader, isInfoLoading, checkForUpdates, refetchInfo]);
 
   useEffect(() => {
     if (!updateInfo?.hasUpdate) return;

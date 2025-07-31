@@ -337,13 +337,14 @@ export const useNocturned = () => {
   };
 };
 
-export const useNocturneVersion = () => {
+export const useNocturneInfo = () => {
   const [version, setVersion] = useState(null);
+  const [serial, setSerial] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { apiRequest } = useNocturned();
 
-  const fetchVersion = useCallback(async () => {
+  const fetchInfo = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -356,24 +357,32 @@ export const useNocturneVersion = () => {
       } else {
         setVersion(null);
       }
+
+      if (data && data.serial) {
+        setSerial(data.serial);
+      } else {
+        setSerial(null);
+      }
     } catch (err) {
-      console.error("Failed to fetch version from nocturned:", err);
+      console.error("Failed to fetch info from nocturned:", err);
       setError(err.message);
       setVersion(null);
+      setSerial(null);
     } finally {
       setIsLoading(false);
     }
   }, [apiRequest]);
 
   useEffect(() => {
-    fetchVersion();
-  }, [fetchVersion]);
+    fetchInfo();
+  }, [fetchInfo]);
 
   return {
     version,
+    serial,
     isLoading,
     error,
-    refetch: fetchVersion,
+    refetch: fetchInfo,
   };
 };
 

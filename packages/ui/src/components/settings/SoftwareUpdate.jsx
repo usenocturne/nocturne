@@ -4,7 +4,7 @@ import {
   CheckCircleIcon,
   RefreshIcon,
 } from "../common/icons";
-import { useSystemUpdate, useNocturneVersion } from "../../hooks/useNocturned";
+import { useSystemUpdate, useNocturneInfo } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
 import UpdateScreen from "../common/UpdateScreen";
 
@@ -22,9 +22,9 @@ const SoftwareUpdate = () => {
 
   const {
     version: nocturneCurrentVersion,
-    isLoading: isVersionLoading,
+    isLoading: isInfoLoading,
     error: versionError,
-  } = useNocturneVersion();
+  } = useNocturneInfo();
 
   const {
     updateInfo,
@@ -324,12 +324,12 @@ const SoftwareUpdate = () => {
 
   const effectiveHasUpdate =
     nocturneCurrentVersion &&
-    !isVersionLoading &&
+    !isInfoLoading &&
     !versionError &&
     hasNocturneUpdate;
-  const effectiveIsChecking = isChecking || isVersionLoading;
+  const effectiveIsChecking = isChecking || isInfoLoading;
 
-  if (!nocturneCurrentVersion && !isVersionLoading) {
+  if (!nocturneCurrentVersion && !isInfoLoading) {
     return (
       <div className="space-y-6">
         <div className="p-4 bg-white/10 rounded-xl border border-white/10">
