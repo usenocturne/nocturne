@@ -98,7 +98,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
 
     try {
       const releasesResponse = await fetch(
-        `https://api.github.com/repos/usenocturne/updater-test/releases`,
+        `https://api.github.com/repos/usenocturne/nocturne/releases`,
       );
 
       if (!releasesResponse.ok) {
