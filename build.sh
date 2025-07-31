@@ -46,7 +46,6 @@ export CACHE_PATH="${SAVED_PWD}/cache"
 
 export SCRIPTS_PATH="${SAVED_PWD}/scripts"
 export HELPERS_PATH="${SAVED_PWD}/scripts/build-helpers"
-export M4_PATH="${SAVED_PWD}/m4"
 export RES_PATH="${SAVED_PWD}/resources"
 DEF_STAGE_PATH="${SAVED_PWD}/scripts/stages"
 

@@ -13,7 +13,7 @@ OUTPUT_PATH="$(pwd)/output"
 
 cleanup() {
   if mountpoint -q "${MNT_PATH}"; then
-    sudo umount "${MNT_PATH}"
+    umount "${MNT_PATH}"
   fi
   rm -rf "${WORK_PATH}"
 }
@@ -35,7 +35,7 @@ unzip -q "${FIRMWARE_FILE}" -d "${EXTRACT_PATH}"
 
 echo "Mounting system"
 mkdir -p "${MNT_PATH}"
-sudo mount -o loop "${EXTRACT_PATH}/system_a.ext2" "${MNT_PATH}"
+mount -o loop "${EXTRACT_PATH}/system_a.ext2" "${MNT_PATH}"
 
 #
 
