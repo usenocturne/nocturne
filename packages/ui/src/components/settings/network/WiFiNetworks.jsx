@@ -48,7 +48,6 @@ const WiFiNetworks = () => {
     }
   }, []);
 
-
   const handleCardPress = (networkId) => {
     longPressTimer.current = setTimeout(() => {
       setSelectedNetworkId(networkId);

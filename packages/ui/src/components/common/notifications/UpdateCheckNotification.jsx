@@ -1,20 +1,19 @@
 import React, { useEffect, useRef } from "react";
 import { useNotifications } from "../../../contexts/NotificationContext";
-import { useNocturneInfo } from "../../../hooks/useNocturned";
 import { useUpdateCheck } from "../../../hooks/useUpdateCheck";
 import { waitForStableNetwork } from "../../../utils/networkAwareRequest";
 import { SettingsUpdateIcon } from "../icons";
 
-function UpdateCheckNotification({ showLoader, setActiveSection }) {
+function UpdateCheckNotification({
+  showLoader,
+  setActiveSection,
+  currentVersion,
+  isInfoLoading,
+  refetchInfo,
+}) {
   const { addNotification } = useNotifications();
   const hasCheckedRef = useRef(false);
   const hasNotifiedRef = useRef(false);
-
-  const {
-    version: currentVersion,
-    isLoading: isInfoLoading,
-    refetch: refetchInfo,
-  } = useNocturneInfo();
 
   const { updateInfo, checkForUpdates } = useUpdateCheck(currentVersion, false);
 

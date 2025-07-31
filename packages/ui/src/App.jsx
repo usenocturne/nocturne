@@ -16,7 +16,11 @@ import GradientBackground from "./components/common/GradientBackground";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
-import { useBluetooth, useSystemUpdate } from "./hooks/useNocturned";
+import {
+  useBluetooth,
+  useSystemUpdate,
+  useNocturneInfo,
+} from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
 import { SettingsProvider } from "./contexts/SettingsContext";
@@ -412,9 +416,18 @@ function App() {
     hasEverConnectedThisSession,
   } = useNetwork();
 
+  const {
+    version: nocturneVersion,
+    serial,
+    isLoading: isInfoLoading,
+    refetch: refetchInfo,
+  } = useNocturneInfo();
+
   useEffect(() => {
     if (showLoader) return;
     if (!isInternetConnected) return;
+    if (isInfoLoading) return;
+    if (!serial) return;
 
     const existing = document.getElementById("analytics");
     if (existing) return;
@@ -427,8 +440,15 @@ function App() {
       "3465cd10-6beb-4dd9-969c-f7f44704fd18",
     );
     script.id = "analytics";
+
+    script.onload = () => {
+      if (window.umami) {
+        window.umami.identify(serial);
+      }
+    };
+
     document.body.appendChild(script);
-  }, [showLoader, isInternetConnected]);
+  }, [showLoader, isInternetConnected, isInfoLoading, serial]);
 
   const {
     pairingRequest,
@@ -949,6 +969,9 @@ function App() {
         <UpdateCheckNotification
           showLoader={showLoader}
           setActiveSection={setActiveSection}
+          currentVersion={nocturneVersion}
+          isInfoLoading={isInfoLoading}
+          refetchInfo={refetchInfo}
         />
       )}
       <ConnectorProvider>
