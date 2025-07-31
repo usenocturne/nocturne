@@ -19,8 +19,10 @@ jobs:
 
       - name: Build Nocturne
         run: |
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes && \
+          mkdir -p ${{ github.workspace }}/output
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker run --rm --privileged -v ${{ github.workspace }}/output:/work/output --user 0:0 nocturne-builder:latest
+          docker run --rm -v ${{ github.workspace }}/output:/output alpine:latest chown -R 1001:1001 /output
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
