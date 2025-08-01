@@ -683,7 +683,7 @@ export default function NowPlaying({
             />
           </div>
 
-          {!showLyrics || !hasLyrics ? (
+          {!showLyrics ? (
             <div className="flex-1 text-center md:text-left">
               <div className="max-w-[400px]">
                 <ScrollingText
