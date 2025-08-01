@@ -6,7 +6,7 @@
   <br>
 </h1>
 
-<p align="center">Nocturne's standalone web application written with Vite + React</p>
+<p align="center">Nocturne's standalone web application built with Vite + React</p>
 
 <p align="center">
   <a href="#how-to-use">How To Use</a> •
@@ -20,7 +20,7 @@
 
 <br>
 
-<img src="https://usenocturne.com/images/nocturne-2.png" alt="Nocturne screenshot">
+<p align="center"><img width=600 src="https://usenocturne.com/images/nocturne-2.png" alt="Nocturne screenshot"></p>
 
 ## How To Use
 
