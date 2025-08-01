@@ -34,8 +34,7 @@ const settingsStructure = {
         id: "start-with-now-playing",
         title: "Start with Now Playing",
         type: "toggle",
-        description:
-          "When enabled, the app will open directly to Now Playing.",
+        description: "When enabled, the app will open directly to Now Playing.",
         storageKey: "startWithNowPlaying",
         defaultValue: false,
       },

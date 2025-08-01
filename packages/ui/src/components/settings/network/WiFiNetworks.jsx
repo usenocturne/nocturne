@@ -136,17 +136,17 @@ const WiFiNetworks = () => {
                 <p className="text-white/60 text-[20px]">Connecting...</p>
               )}
             </div>
-                          <div className="flex items-center space-x-3">
-                <CheckIcon className="w-[24px] h-[24px] text-green-500" />
-                {hasPasswordSecurity(currentNetwork.flags) && (
-                  <LockIcon className="text-white" size={24} />
-                )}
-                {inRange ? (
-                  getSignalIcon(scanNetwork.signal)
-                ) : (
-                  <WifiOffIcon className="w-[24px] h-[24px] text-white/60" />
-                )}
-              </div>
+            <div className="flex items-center space-x-3">
+              <CheckIcon className="w-[24px] h-[24px] text-green-500" />
+              {hasPasswordSecurity(currentNetwork.flags) && (
+                <LockIcon className="text-white" size={24} />
+              )}
+              {inRange ? (
+                getSignalIcon(scanNetwork.signal)
+              ) : (
+                <WifiOffIcon className="w-[24px] h-[24px] text-white/60" />
+              )}
+            </div>
           </div>
         </div>
       </div>
