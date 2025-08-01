@@ -30,7 +30,9 @@ export function useButtonMapping({
       localStorage.setItem(`button${buttonNumber}Id`, contentId);
       localStorage.setItem(`button${buttonNumber}Type`, contentType);
       let imageToSave = contentImage;
-      if (contentType === "liked-songs" && !imageToSave) {
+      if (contentId === "37i9dQZF1EYkqdzj48dyYq") {
+        imageToSave = "/images/radio-cover/dj.webp";
+      } else if (contentType === "liked-songs" && !imageToSave) {
         imageToSave = "https://misc.scdn.co/liked-songs/liked-songs-300.png";
       }
       localStorage.setItem(`button${buttonNumber}Image`, imageToSave || "");
