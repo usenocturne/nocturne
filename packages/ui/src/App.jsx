@@ -1062,7 +1062,7 @@ function App() {
                         onClose={handleNetworkClose}
                         onConnect={handleNetworkClose}
                       />
-                      {!showTutorial && showGlobalMappingOverlay && (
+                      {!showTutorial && (
                         <ButtonMappingOverlay
                           show={showGlobalMappingOverlay}
                           activeButton={globalActiveButton}
