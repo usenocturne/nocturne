@@ -8,7 +8,6 @@ export default function HorizontalScroll({
   currentlyPlayingId,
   activeSection,
   onItemSelect,
-  onSelectedIndexChange,
 }) {
   const [items, setItems] = useState([]);
   const hasScrolledToPlayingRef = useRef(false);
@@ -60,12 +59,6 @@ export default function HorizontalScroll({
     onItemSelect: handleItemSelect,
     inactivityTimeout: 3000,
   });
-
-  useEffect(() => {
-    if (onSelectedIndexChange) {
-      onSelectedIndexChange(selectedIndex);
-    }
-  }, [selectedIndex, onSelectedIndexChange]);
 
   useEffect(() => {
     if (

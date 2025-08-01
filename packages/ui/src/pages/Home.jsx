@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sidebar from "../components/common/navigation/Sidebar";
 import HorizontalScroll from "../components/common/navigation/HorizontalScroll";
 import Settings from "../components/settings/Settings";
-import ScrollingText from "../components/common/ScrollingText";
 import { useGradientState } from "../hooks/useGradientState";
 import { useNavigation } from "../hooks/useNavigation";
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
-import { useSettings } from "../contexts/SettingsContext";
 
 export default function Home({
   accessToken,
@@ -32,77 +30,6 @@ export default function Home({
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
   const { playDJMix } = useSpotifyPlayerControls(accessToken);
   const [showDonationModal, setShowDonationModal] = useState(false);
-  const [selectedIndices, setSelectedIndices] = useState({
-    recents: -1,
-    library: -1,
-    artists: -1,
-    radio: -1,
-    podcasts: -1,
-  });
-
-  const handleRecentsSelectedIndexChange = useCallback((index) => {
-    setSelectedIndices((prev) => ({
-      ...prev,
-      recents: index,
-    }));
-  }, []);
-
-  const handleLibrarySelectedIndexChange = useCallback((index) => {
-    setSelectedIndices((prev) => ({
-      ...prev,
-      library: index,
-    }));
-  }, []);
-
-  const handleArtistsSelectedIndexChange = useCallback((index) => {
-    setSelectedIndices((prev) => ({
-      ...prev,
-      artists: index,
-    }));
-  }, []);
-
-  const handleRadioSelectedIndexChange = useCallback((index) => {
-    setSelectedIndices((prev) => ({
-      ...prev,
-      radio: index,
-    }));
-  }, []);
-
-  const handlePodcastsSelectedIndexChange = useCallback((index) => {
-    setSelectedIndices((prev) => ({
-      ...prev,
-      podcasts: index,
-    }));
-  }, []);
-
-  const { settings } = useSettings();
-
-  const renderTitle = (title, section, index, maxWidth = "280px") => {
-    const isSelected = selectedIndices[section] === index;
-
-    if (isSelected && settings.trackNameScrollingEnabled) {
-      return (
-        <div style={{ maxWidth }}>
-          <ScrollingText
-            text={title}
-            className="text-[36px] font-[580] text-white tracking-tight"
-            maxWidth={maxWidth}
-            pauseDuration={1000}
-            pixelsPerSecond={40}
-          />
-        </div>
-      );
-    }
-
-    return (
-      <h4
-        className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight"
-        style={{ maxWidth }}
-      >
-        {title}
-      </h4>
-    );
-  };
 
   const handleOpenDonationModal = () => {
     setShowDonationModal(true);
@@ -306,7 +233,6 @@ export default function Home({
         accessToken={accessToken}
         activeSection={activeSection}
         onItemSelect={handleRecentsItemSelect}
-        onSelectedIndexChange={handleRecentsSelectedIndexChange}
       >
         <div
           ref={scrollContainerRef}
@@ -330,7 +256,7 @@ export default function Home({
                 </div>
               ))
           ) : recentAlbums.length > 0 ? (
-            recentAlbums.map((album, index) => (
+            recentAlbums.map((album) => (
               <div
                 key={album.id}
                 className="min-w-[280px] pl-2 mr-10 snap-start"
@@ -367,7 +293,8 @@ export default function Home({
                   )}
                 </div>
 
-                <div
+                <h4
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
                   onClick={() =>
                     album.type !== "local-track" &&
                     onOpenContent(
@@ -376,8 +303,8 @@ export default function Home({
                     )
                   }
                 >
-                  {renderTitle(album.name, "recents", index)}
-                </div>
+                  {album.name}
+                </h4>
 
                 {album.type === "show"
                   ? album.publisher && (
@@ -415,7 +342,6 @@ export default function Home({
         accessToken={accessToken}
         activeSection={activeSection}
         onItemSelect={handleLibraryItemSelect}
-        onSelectedIndexChange={handleLibrarySelectedIndexChange}
       >
         <div
           ref={scrollContainerRef}
@@ -437,9 +363,12 @@ export default function Home({
                 className="w-full h-full rounded-[12px] aspect-square max-w-[280px] max-h-[280px]"
               />
             </div>
-            <div onClick={() => onOpenContent("liked", "liked-songs")}>
-              {renderTitle(likedSongs.name, "library", 0)}
-            </div>
+            <h4
+              className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+              onClick={() => onOpenContent("liked", "liked-songs")}
+            >
+              {likedSongs.name}
+            </h4>
             <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
               {isPlayingLikedSongs() ? (
                 <>
@@ -483,7 +412,7 @@ export default function Home({
                   item.id !== "37i9dQZF1EYkqdzj48dyYq" &&
                   item.tracks?.total > 0,
               )
-              .map((playlist, index) => (
+              .map((playlist) => (
                 <div
                   key={`playlist-${playlist.id}`}
                   className="min-w-[280px] pl-2 mr-10 snap-start"
@@ -503,9 +432,9 @@ export default function Home({
                       <div className="w-full h-full rounded-[12px] bg-white/10"></div>
                     )}
                   </div>
-                  <div onClick={() => onOpenContent(playlist.id, "playlist")}>
-                    {renderTitle(playlist.name, "library", index + 1)}
-                  </div>
+                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                    {playlist.name}
+                  </h4>
                   <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
                     {isPlayingFromPlaylist(playlist.id) ? (
                       <>
@@ -543,6 +472,7 @@ export default function Home({
         ? `${Math.floor(millions)}M`
         : `${millions.toFixed(1)}M`;
     }
+    // Manual comma formatting for better browser compatibility
     return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
@@ -553,7 +483,6 @@ export default function Home({
         accessToken={accessToken}
         activeSection={activeSection}
         onItemSelect={handleArtistsItemSelect}
-        onSelectedIndexChange={handleArtistsSelectedIndexChange}
       >
         <div
           ref={scrollContainerRef}
@@ -577,7 +506,7 @@ export default function Home({
                 </div>
               ))
           ) : topArtists.length > 0 ? (
-            topArtists.map((artist, index) => (
+            topArtists.map((artist) => (
               <div
                 key={artist.id}
                 className="min-w-[280px] pl-2 mr-10 snap-start"
@@ -598,9 +527,12 @@ export default function Home({
                     <div className="w-full h-full rounded-full bg-white/10"></div>
                   )}
                 </div>
-                <div onClick={() => onOpenContent(artist.id, "artist")}>
-                  {renderTitle(artist.name, "artists", index)}
-                </div>
+                <h4
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                  onClick={() => onOpenContent(artist.id, "artist")}
+                >
+                  {artist.name}
+                </h4>
                 <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
                   {isFromCurrentlyPlayingArtist(artist.id) ? (
                     <>
@@ -638,7 +570,6 @@ export default function Home({
         accessToken={accessToken}
         activeSection={activeSection}
         onItemSelect={handleRadioItemSelect}
-        onSelectedIndexChange={handleRadioSelectedIndexChange}
       >
         <div
           ref={scrollContainerRef}
@@ -669,7 +600,9 @@ export default function Home({
                 className="w-full h-full rounded-[12px] max-w-[280px] max-h-[280px]"
               />
             </div>
-            <div>{renderTitle("DJ", "radio", 0)}</div>
+            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+              DJ
+            </h4>
             <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
               {isPlayingDJ() ? (
                 <>
@@ -727,9 +660,12 @@ export default function Home({
                     <div className="w-full h-full rounded-[12px] bg-white/10"></div>
                   )}
                 </div>
-                <div onClick={() => onOpenContent(mix.id, "mix")}>
-                  {renderTitle(mix.name, "radio", index + 1)}
-                </div>
+                <h4
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                  onClick={() => onOpenContent(mix.id, "mix")}
+                >
+                  {mix.name}
+                </h4>
                 <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
                   {isPlayingFromMix(mix.id) ? (
                     <>
@@ -767,7 +703,6 @@ export default function Home({
         accessToken={accessToken}
         activeSection={activeSection}
         onItemSelect={handlePodcastsItemSelect}
-        onSelectedIndexChange={handlePodcastsSelectedIndexChange}
       >
         <div
           ref={scrollContainerRef}
@@ -791,11 +726,11 @@ export default function Home({
                 </div>
               ))
           ) : userShows.length > 0 ? (
-            userShows.map((item, index) => {
+            userShows.map((item, i) => {
               const show = item.show;
               return (
                 <div
-                  key={`${show.id}-${index}`}
+                  key={`${show.id}-${i}`}
                   className="min-w-[280px] pl-2 mr-10 snap-start"
                   data-id={show.id}
                 >
@@ -814,9 +749,12 @@ export default function Home({
                       <div className="w-full h-full rounded-[12px] bg-white/10"></div>
                     )}
                   </div>
-                  <div onClick={() => onOpenContent(show.id, "show")}>
-                    {renderTitle(show.name, "podcasts", index)}
-                  </div>
+                  <h4
+                    className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                    onClick={() => onOpenContent(show.id, "show")}
+                  >
+                    {show.name}
+                  </h4>
                   <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
                     {show.publisher}
                   </h4>

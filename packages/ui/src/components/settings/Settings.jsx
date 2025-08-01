@@ -120,7 +120,7 @@ const settingsStructure = {
         title: "Track Name Scrolling",
         type: "toggle",
         description:
-          "Enable or disable the scrolling animation for long names in the UI.",
+          "Enable or disable the scrolling animation for the track name in the player.",
         storageKey: "trackNameScrollingEnabled",
         defaultValue: true,
       },

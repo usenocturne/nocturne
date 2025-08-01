@@ -6,7 +6,6 @@ import { CarThingIcon } from "../common/icons";
 import { useButtonMapping } from "../../hooks/useButtonMapping";
 import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 import ScrollingText from "../common/ScrollingText";
-import { useSettings } from "../../contexts/SettingsContext";
 
 const ContentView = ({
   accessToken,
@@ -42,7 +41,6 @@ const ContentView = ({
   } = useSpotifyPlayerControls(accessToken);
 
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
-  const { settings } = useSettings();
 
   const fetchPlaylistTracks = async (
     playlistId,
@@ -779,8 +777,7 @@ const ContentView = ({
 
               <div className="flex-grow" style={{ marginTop: "-6px" }}>
                 <div>
-                  {selectedTrackIndex === index &&
-                  settings.trackNameScrollingEnabled ? (
+                  {selectedTrackIndex === index ? (
                     <div
                       style={{
                         fontSize: "32px",
