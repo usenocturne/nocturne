@@ -658,7 +658,7 @@ export default function NowPlaying({
       <div ref={contentContainerRef}>
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div
-            className={`min-w-[280px] mr-8 ${albumId ? "cursor-pointer" : ""}`}
+            className={`min-w-[280px] h-[280px] mr-8 ${albumId ? "cursor-pointer" : ""}`}
             onClick={() =>
               albumId &&
               onNavigateToAlbum &&
@@ -674,6 +674,11 @@ export default function NowPlaying({
               }
               width={280}
               height={280}
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "/images/not-playing.webp";
+              }}
               className="aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] max-w-[280px] max-h-[280px]"
             />
           </div>
