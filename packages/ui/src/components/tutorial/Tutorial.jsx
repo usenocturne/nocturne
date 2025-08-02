@@ -61,14 +61,20 @@ const Tutorial = ({ onComplete }) => {
     },
     {
       header: "Controls",
+      subtext:
+        "Turn the dial in the Now Playing tab to adjust volume. Scroll right to continue.",
+      continueType: "scroll",
+    },
+    {
+      header: "Controls",
       subtext: "Press the rightmost button to lock the screen. Try it now.",
       continueType: "lockPress",
     },
     {
       header: "Controls",
       subtext:
-        "Turn the dial in the Now Playing tab to adjust volume. Scroll right to continue.",
-      continueType: "scroll",
+        "Hold the rightmost button to access the power and brightness menu.",
+      continueType: "button",
     },
     {
       header: "Playback",
