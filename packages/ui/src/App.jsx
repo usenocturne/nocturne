@@ -610,13 +610,16 @@ function App() {
     if (isAuthenticated) {
       const handleNetworkRestored = () => {
         refreshPlaybackState(true);
+        if (!initialDataLoaded) {
+          refreshData();
+        }
       };
       window.addEventListener("online", handleNetworkRestored);
       return () => {
         window.removeEventListener("online", handleNetworkRestored);
       };
     }
-  }, [isAuthenticated, refreshPlaybackState]);
+  }, [isAuthenticated, refreshPlaybackState, refreshData, initialDataLoaded]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -870,6 +873,9 @@ function App() {
 
   const handleConnectionRestored = () => {
     refreshPlaybackState(true);
+    if (!initialDataLoaded) {
+      refreshData();
+    }
   };
 
   const isUpdateScreenVisible =
