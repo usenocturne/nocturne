@@ -57,6 +57,7 @@ export default function NowPlaying({
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isStartingPlayback, setIsStartingPlayback] = useState(false);
 
   const volumeTimerRef = useRef(null);
   const volumeLastAdjustedRef = useRef(0);
@@ -191,6 +192,12 @@ export default function NowPlaying({
     }
   }, [currentPlayback?.shuffle_state, currentPlayback?.repeat_state]);
 
+  useEffect(() => {
+    if (isStartingPlayback && currentPlayback?.item && currentPlayback?.is_playing) {
+      setIsStartingPlayback(false);
+    }
+  }, [isStartingPlayback, currentPlayback?.item, currentPlayback?.is_playing]);
+
   const handlePlayPause = async () => {
     if (currentPlayback?.is_playing) {
       await pausePlayback();
@@ -204,6 +211,8 @@ export default function NowPlaying({
 
     try {
       if (!accessToken) return;
+
+      setIsStartingPlayback(true);
 
       const connectEndpoint = `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`;
 
@@ -232,13 +241,17 @@ export default function NowPlaying({
 
       if (!devicesRes.ok) {
         console.error("Failed to retrieve devices", devicesRes.status);
+        setIsStartingPlayback(false);
         return;
       }
 
       const data = await devicesRes.json();
       const devicesArray = Object.values(data.devices || {});
 
-      if (devicesArray.length === 0) return;
+      if (devicesArray.length === 0) {
+        setIsStartingPlayback(false);
+        return;
+      }
 
       const activeDevice = devicesArray.find((d) => d.is_active);
 
@@ -246,6 +259,7 @@ export default function NowPlaying({
         if (typeof onOpenDeviceSwitcher === "function") {
           onOpenDeviceSwitcher(devicesArray);
         }
+        setIsStartingPlayback(false);
         return;
       }
 
@@ -266,6 +280,7 @@ export default function NowPlaying({
 
       if (!transferRes.ok && transferRes.status !== 204) {
         console.error("Failed to transfer playback", await transferRes.text());
+        setIsStartingPlayback(false);
         return;
       }
 
@@ -273,32 +288,37 @@ export default function NowPlaying({
         if (typeof triggerRefresh === "function") {
           triggerRefresh();
         }
-      }, 1000);
+        setIsStartingPlayback(false);
+      }, 2000);
     } catch (err) {
       console.error("Error attempting to resume playback:", err);
+      setIsStartingPlayback(false);
     }
   };
 
   const trackInfo = useMemo(() => {
-    const trackName = currentPlayback?.item
+    const hasCurrentItem = currentPlayback?.item && !isStartingPlayback;
+    
+    const trackName = hasCurrentItem
       ? currentPlayback.item.type === "episode"
         ? currentPlayback.item.name
         : currentPlayback.item.name || "Not Playing"
       : "Not Playing";
 
-    const artistName = currentPlayback?.item
+    const artistName = hasCurrentItem
       ? currentPlayback.item.type === "episode"
         ? currentPlayback.item.show.name
         : currentPlayback.item.artists.map((artist) => artist.name).join(", ")
       : "";
 
     const firstArtistId =
-      currentPlayback?.item?.type === "track" &&
-      currentPlayback?.item?.artists?.[0]?.id;
+      hasCurrentItem && currentPlayback?.item?.type === "track"
+        ? currentPlayback?.item?.artists?.[0]?.id
+        : null;
 
-    const albumId = currentPlayback?.item?.album?.id;
+    const albumId = hasCurrentItem ? currentPlayback?.item?.album?.id : null;
 
-    const albumArt = currentPlayback?.item
+    const albumArt = hasCurrentItem
       ? currentPlayback.item.type === "episode"
         ? currentPlayback.item.show.images[1]?.url || "/images/not-playing.webp"
         : currentPlayback.item.type === "local" ||
@@ -308,10 +328,10 @@ export default function NowPlaying({
           : currentPlayback.item.album.images[1].url
       : "/images/not-playing.webp";
 
-    const trackId = currentPlayback?.item?.id;
+    const trackId = hasCurrentItem ? currentPlayback?.item?.id : null;
 
     return { trackName, artistName, albumArt, trackId, firstArtistId, albumId };
-  }, [currentPlayback]);
+  }, [currentPlayback, isStartingPlayback]);
 
   const { trackName, artistName, albumArt, trackId, firstArtistId, albumId } =
     trackInfo;
@@ -762,8 +782,8 @@ export default function NowPlaying({
         className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}
       >
         <ProgressBar
-          progress={progressPercentage}
-          isPlaying={isPlaying}
+          progress={currentPlayback?.item && !isStartingPlayback ? progressPercentage : 0}
+          isPlaying={isPlaying && !isStartingPlayback}
           durationMs={duration}
           onSeek={handleSeek}
           onPlayPause={handlePlayPause}
