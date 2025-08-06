@@ -430,7 +430,11 @@ function App() {
     isLoading,
     errors: dataErrors,
     refreshData,
-  } = useSpotifyData(activeSection, showLoader || !tokenReady, tokenReady && !showLoader);
+  } = useSpotifyData(
+    activeSection,
+    showLoader || !tokenReady,
+    tokenReady && !showLoader,
+  );
 
   const {
     isConnected: isInternetConnected,

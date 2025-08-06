@@ -27,7 +27,7 @@ export function useAuth() {
 
   const pollingIntervalRef = useRef(null);
 
-    const refreshTimerRef = useRef(null);
+  const refreshTimerRef = useRef(null);
   const currentDeviceCodeRef = useRef(null);
   const initCalledRef = useRef(false);
 
@@ -42,20 +42,27 @@ export function useAuth() {
     );
   }, []);
 
-  const tokenReady = isAuthenticated && !tokenRefreshing && !shouldRefreshToken();
+  const tokenReady =
+    isAuthenticated && !tokenRefreshing && !shouldRefreshToken();
 
   const refreshTokens = useCallback(async () => {
     setTokenRefreshing(true);
     try {
       const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-      if (!storedRefreshToken) { setTokenRefreshing(false); return false; }
+      if (!storedRefreshToken) {
+        setTokenRefreshing(false);
+        return false;
+      }
 
       const now = Date.now();
       if (now - authInitializationState.lastRefreshTime < 15000) {
         return true;
       }
 
-      if (authInitializationState.refreshing) { setTokenRefreshing(false); return false; }
+      if (authInitializationState.refreshing) {
+        setTokenRefreshing(false);
+        return false;
+      }
 
       authInitializationState.refreshing = true;
 
@@ -386,11 +393,11 @@ export function useAuth() {
         if (shouldRefreshToken()) {
           try {
             const bypass =
-        typeof localStorage !== "undefined" &&
-        localStorage.getItem("networkCheckBypass") === "true";
-      if (!bypass) {
-        await waitForStableNetwork(10000);
-      }
+              typeof localStorage !== "undefined" &&
+              localStorage.getItem("networkCheckBypass") === "true";
+            if (!bypass) {
+              await waitForStableNetwork(10000);
+            }
             await refreshTokens();
           } catch (error) {
             console.error(
