@@ -11,6 +11,7 @@ export function useGradientTransition(activeSection) {
     library: null,
     artists: null,
     radio: null,
+    podcasts: null,
     nowPlaying: null,
   });
   const [gradientTransitionDurationMs] = useState(3000);

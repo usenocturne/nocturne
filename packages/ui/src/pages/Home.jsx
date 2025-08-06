@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Sidebar from "../components/common/navigation/Sidebar";
 import HorizontalScroll from "../components/common/navigation/HorizontalScroll";
 import Settings from "../components/settings/Settings";
-import { useGradientState } from "../hooks/useGradientState";
+
 import { useNavigation } from "../hooks/useNavigation";
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
@@ -23,8 +23,9 @@ export default function Home({
   refreshData,
   refreshPlaybackState,
   onOpenContent,
+  updateGradientColors,
 }) {
-  const [gradientState, updateGradientColors] = useGradientState();
+
   const scrollContainerRef = useRef(null);
   const itemWidth = 290;
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
