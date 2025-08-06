@@ -4,10 +4,7 @@ import {
   checkAuthStatus,
   refreshAccessToken,
 } from "../services/authService";
-import {
-  networkAwareRequest,
-  waitForNetwork,
-} from "../utils/networkAwareRequest";
+import { waitForStableNetwork } from "../utils/networkAwareRequest";
 
 const authInitializationState = {
   initializing: false,
@@ -25,10 +22,12 @@ export function useAuth() {
   const [refreshToken, setRefreshToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authData, setAuthData] = useState(null);
+  const [tokenRefreshing, setTokenRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   const pollingIntervalRef = useRef(null);
-  const refreshTimerRef = useRef(null);
+
+    const refreshTimerRef = useRef(null);
   const currentDeviceCodeRef = useRef(null);
   const initCalledRef = useRef(false);
 
@@ -43,21 +42,29 @@ export function useAuth() {
     );
   }, []);
 
+  const tokenReady = isAuthenticated && !tokenRefreshing && !shouldRefreshToken();
+
   const refreshTokens = useCallback(async () => {
+    setTokenRefreshing(true);
     try {
       const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-      if (!storedRefreshToken) return false;
+      if (!storedRefreshToken) { setTokenRefreshing(false); return false; }
 
       const now = Date.now();
-      if (now - authInitializationState.lastRefreshTime < 5000) {
+      if (now - authInitializationState.lastRefreshTime < 15000) {
         return true;
       }
 
-      if (authInitializationState.refreshing) return false;
+      if (authInitializationState.refreshing) { setTokenRefreshing(false); return false; }
 
       authInitializationState.refreshing = true;
 
-      await waitForNetwork();
+      const bypass =
+        typeof localStorage !== "undefined" &&
+        localStorage.getItem("networkCheckBypass") === "true";
+      if (!bypass) {
+        await waitForStableNetwork(10000);
+      }
 
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
@@ -92,11 +99,13 @@ export function useAuth() {
         );
 
         authInitializationState.refreshing = false;
+        setTokenRefreshing(false);
         authInitializationState.lastRefreshTime = now;
         authInitializationState.lastRefreshAttemptFailed = false;
         return true;
       }
       authInitializationState.refreshing = false;
+      setTokenRefreshing(false);
       authInitializationState.lastRefreshAttemptFailed = true;
       return false;
     } catch (err) {
@@ -105,6 +114,7 @@ export function useAuth() {
         logout();
       }
       authInitializationState.refreshing = false;
+      setTokenRefreshing(false);
       authInitializationState.lastRefreshAttemptFailed = true;
       return false;
     }
@@ -375,7 +385,12 @@ export function useAuth() {
       authInitializationState.networkRestoreTimeout = setTimeout(async () => {
         if (shouldRefreshToken()) {
           try {
-            await waitForNetwork();
+            const bypass =
+        typeof localStorage !== "undefined" &&
+        localStorage.getItem("networkCheckBypass") === "true";
+      if (!bypass) {
+        await waitForStableNetwork(10000);
+      }
             await refreshTokens();
           } catch (error) {
             console.error(
@@ -399,6 +414,25 @@ export function useAuth() {
     };
   }, [isAuthenticated, shouldRefreshToken, refreshTokens]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (tokenReady) return;
+    if (tokenRefreshing) return;
+
+    let cancelled = false;
+    const retry = async () => {
+      if (cancelled) return;
+      const success = await refreshTokens();
+      if (!success && !cancelled) {
+        setTimeout(retry, 15000);
+      }
+    };
+    retry();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, tokenReady, tokenRefreshing, refreshTokens]);
+
   return {
     isAuthenticated,
     accessToken,
@@ -410,5 +444,7 @@ export function useAuth() {
     pollAuthStatus,
     refreshTokens,
     logout,
+    tokenReady,
+    tokenRefreshing,
   };
 }

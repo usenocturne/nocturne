@@ -76,7 +76,7 @@ export function useSpotifyData(
     isLoading: playerIsLoading,
     error: playerError,
     refreshPlaybackState,
-  } = useSpotifyPlayerState(effectiveToken, !isInitializing);
+  } = useSpotifyPlayerState(effectiveToken, !!effectiveToken);
 
   const playerControls = useSpotifyPlayerControls(effectiveToken);
 
@@ -836,7 +836,7 @@ export function useSpotifyData(
 
   return {
     isAuthenticated,
-    accessToken,
+    accessToken: tokenReady ? accessToken : null,
     authIsLoading,
     currentPlayback,
     currentlyPlayingAlbum,

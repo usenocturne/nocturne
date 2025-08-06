@@ -13,6 +13,8 @@ import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import GradientBackground from "./components/common/GradientBackground";
+import NocturneIcon from "./components/common/icons/NocturneIcon";
+import { useAuth } from "./hooks/useAuth";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
@@ -357,6 +359,27 @@ function NotificationEffects({
   return null;
 }
 
+function TokenRefreshOverlay({ show }) {
+  const [gradientState, updateGradientColors] = useGradientState();
+  useEffect(() => {
+    if (show) {
+      updateGradientColors(null, "auth");
+    }
+  }, [show, updateGradientColors]);
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-hidden rounded-2xl">
+      <div className="absolute inset-0 bg-black" />
+      <GradientBackground gradientState={gradientState} />
+      <div className="relative z-10 flex flex-col items-center justify-center">
+        <NocturneIcon className="h-12 w-auto animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [activeSection, setActiveSection] = useState("recents");
@@ -379,6 +402,7 @@ function App() {
   const [prefetchedDevices, setPrefetchedDevices] = useState(null);
   const [showLoader, setShowLoader] = useState(true);
   const [powerMenuVisible, setPowerMenuVisible] = useState(false);
+  const { tokenReady } = useAuth();
   const powerMenuVisibleRef = useRef(false);
 
   useEffect(() => {
@@ -406,7 +430,7 @@ function App() {
     isLoading,
     errors: dataErrors,
     refreshData,
-  } = useSpotifyData(activeSection, showLoader, !showLoader);
+  } = useSpotifyData(activeSection, showLoader || !tokenReady, tokenReady && !showLoader);
 
   const {
     isConnected: isInternetConnected,
@@ -1022,6 +1046,9 @@ function App() {
                       show={showLoader}
                       onComplete={() => setShowLoader(false)}
                     />
+                  )}
+                  {!showLoader && isAuthenticated && !tokenReady && (
+                    <TokenRefreshOverlay show={!tokenReady} />
                   )}
                   <main
                     className="overflow-hidden relative min-h-screen rounded-2xl"
