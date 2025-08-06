@@ -472,7 +472,6 @@ export default function Home({
         ? `${Math.floor(millions)}M`
         : `${millions.toFixed(1)}M`;
     }
-    // Manual comma formatting for better browser compatibility
     return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 

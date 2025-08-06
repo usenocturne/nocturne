@@ -401,8 +401,15 @@ function App() {
     useState(null);
   const [prefetchedDevices, setPrefetchedDevices] = useState(null);
   const [showLoader, setShowLoader] = useState(true);
+  const [initialTokenRefreshDone, setInitialTokenRefreshDone] = useState(false);
   const [powerMenuVisible, setPowerMenuVisible] = useState(false);
   const { tokenReady } = useAuth();
+
+  useEffect(() => {
+    if (tokenReady && !initialTokenRefreshDone) {
+      setInitialTokenRefreshDone(true);
+    }
+  }, [tokenReady, initialTokenRefreshDone]);
   const powerMenuVisibleRef = useRef(false);
 
   useEffect(() => {
@@ -1051,7 +1058,7 @@ function App() {
                       onComplete={() => setShowLoader(false)}
                     />
                   )}
-                  {!showLoader && isAuthenticated && !tokenReady && (
+                  {!showLoader && isAuthenticated && !tokenReady && !initialTokenRefreshDone && (
                     <TokenRefreshOverlay show={!tokenReady} />
                   )}
                   <main
