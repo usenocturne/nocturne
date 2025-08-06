@@ -373,7 +373,7 @@ const ContentView = ({
               name: "Liked Songs",
               type: "liked-songs",
               images: [
-                { url: "https://misc.scdn.co/liked-songs/liked-songs-300.png" },
+                { url: "/images/liked-songs.webp" },
               ],
               tracks: { total: likedSongsData.total },
               owner: { display_name: "You" },

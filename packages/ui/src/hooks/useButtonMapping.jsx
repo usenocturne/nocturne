@@ -33,7 +33,7 @@ export function useButtonMapping({
       if (contentId === "37i9dQZF1EYkqdzj48dyYq") {
         imageToSave = "/images/radio-cover/dj.webp";
       } else if (contentType === "liked-songs" && !imageToSave) {
-        imageToSave = "https://misc.scdn.co/liked-songs/liked-songs-300.png";
+        imageToSave = "/images/liked-songs.webp";
       }
       localStorage.setItem(`button${buttonNumber}Image`, imageToSave || "");
       localStorage.setItem(`button${buttonNumber}Name`, contentName || "");

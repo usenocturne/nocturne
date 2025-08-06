@@ -31,7 +31,7 @@ export function useSpotifyData(
   const [likedSongs, setLikedSongs] = useState({
     name: "Liked Songs",
     tracks: { total: 0 },
-    images: [{ url: "https://misc.scdn.co/liked-songs/liked-songs-300.png" }],
+    images: [{ url: "/images/liked-songs.webp" }],
     type: "liked-songs",
   });
   const [radioMixes, setRadioMixes] = useState([]);
