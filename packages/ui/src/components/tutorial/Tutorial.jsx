@@ -3,7 +3,7 @@ import TutorialFrame from "./TutorialFrame";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import { useNavigation } from "../../hooks/useNavigation";
 
-const Tutorial = ({ onComplete }) => {
+const Tutorial = ({ onComplete, onStepChange }) => {
   const [currentScreen, setCurrentScreen] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isContentVisible, setIsContentVisible] = useState(true);
@@ -19,6 +19,10 @@ const Tutorial = ({ onComplete }) => {
       setTimeout(() => setIsFrameVisible(true), 50);
     } else if (currentScreen === screens.length - 1) {
       setIsFrameVisible(false);
+    }
+
+    if (onStepChange) {
+      onStepChange(currentScreen);
     }
 
     buttonLockRef.current = true;
@@ -73,8 +77,8 @@ const Tutorial = ({ onComplete }) => {
     {
       header: "Controls",
       subtext:
-        "Hold the rightmost button to access the power and brightness menu.",
-      continueType: "button",
+        "Hold the rightmost button to access the power and brightness menu. Try it now.",
+      continueType: "holdPower",
     },
     {
       header: "Playback",
@@ -194,6 +198,25 @@ const Tutorial = ({ onComplete }) => {
           holdTimerRef.current = null;
         }, 800);
       }
+
+      if (
+        screens[currentScreen].continueType === "holdPower" &&
+        e.key.toLowerCase() === "m"
+      ) {
+        if (isHoldingButton.current && lastPressedKey.current === "m") return;
+
+        isHoldingButton.current = true;
+        lastPressedKey.current = "m";
+
+        if (holdTimerRef.current) {
+          clearTimeout(holdTimerRef.current);
+        }
+
+        holdTimerRef.current = setTimeout(() => {
+          handleScreenTransition(currentScreen + 1);
+          holdTimerRef.current = null;
+        }, 800);
+      }
     };
 
     const onKeyUp = (e) => {
@@ -202,6 +225,22 @@ const Tutorial = ({ onComplete }) => {
       if (
         validPresetButtons.includes(e.key) &&
         lastPressedKey.current === e.key
+      ) {
+        isHoldingButton.current = false;
+
+        if (holdTimerRef.current) {
+          clearTimeout(holdTimerRef.current);
+          holdTimerRef.current = null;
+        }
+
+        if (!buttonLockRef.current) {
+          lastPressedKey.current = null;
+        }
+      }
+
+      if (
+        e.key.toLowerCase() === "m" &&
+        lastPressedKey.current === "m"
       ) {
         isHoldingButton.current = false;
 

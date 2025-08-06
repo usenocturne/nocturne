@@ -382,6 +382,7 @@ function TokenRefreshOverlay({ show }) {
 
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
+  const [currentTutorialStep, setCurrentTutorialStep] = useState(0);
   const [activeSection, setActiveSection] = useState("recents");
   const previousSectionRef = useRef("recents");
   const activeSectionRef = useRef(activeSection);
@@ -764,6 +765,10 @@ function App() {
 
       if (longPressTriggeredRef.current) return;
 
+      if (showTutorial && currentTutorialStep === 7) {
+        return;
+      }
+
       if (!holdTimerRef.current) {
         holdTimerRef.current = setTimeout(() => {
           longPressTriggeredRef.current = true;
@@ -810,7 +815,7 @@ function App() {
       window.removeEventListener("keyup", handleKeyUp, { capture: true });
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
     };
-  }, []);
+  }, [showTutorial, currentTutorialStep]);
 
   const handleShutdown = () => {
     fetch("http://localhost:5000/device/power/shutdown", {
@@ -848,6 +853,7 @@ function App() {
 
   const handleTutorialComplete = () => {
     setShowTutorial(false);
+    setCurrentTutorialStep(0);
     localStorage.setItem("hasSeenTutorial", "true");
     const shouldStartWithNowPlaying =
       localStorage.getItem("startWithNowPlaying") === "true";
@@ -962,7 +968,12 @@ function App() {
   } else if (!isAuthenticated && initialCheckDone) {
     content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showTutorial) {
-    content = <Tutorial onComplete={handleTutorialComplete} />;
+    content = (
+      <Tutorial 
+        onComplete={handleTutorialComplete}
+        onStepChange={setCurrentTutorialStep}
+      />
+    );
   } else if (activeSection === "nowPlaying") {
     content = (
       <NowPlaying

@@ -158,7 +158,13 @@ const TutorialFrame = ({ currentScreen }) => {
           }
           
           .animate-lock-button {
-            animation: quickPress 2s ease-in-out infinite;
+            animation: quickPress 4s ease-in-out infinite;
+            transform-box: fill-box;
+            transform-origin: bottom;
+          }
+          
+          .animate-power-button {
+            animation: pressButton 2s ease-in-out infinite;
             transform-box: fill-box;
             transform-origin: bottom;
           }
@@ -201,7 +207,7 @@ const TutorialFrame = ({ currentScreen }) => {
           strokeWidth="12"
         />
 
-        {currentScreen === 7 && (
+        {currentScreen === 8 && (
           <foreignObject x="190" y="680" width="1100" height="120">
             <div
               xmlns="http://www.w3.org/1999/xhtml"
@@ -216,7 +222,7 @@ const TutorialFrame = ({ currentScreen }) => {
           </foreignObject>
         )}
 
-        {currentScreen === 9 && (
+        {currentScreen === 10 && (
           <>
             <defs>
               <clipPath id="screenBounds">
@@ -285,15 +291,21 @@ const TutorialFrame = ({ currentScreen }) => {
             fill="white"
             stroke="white"
             strokeWidth="8"
-            className={currentScreen === 5 ? "animate-lock-button" : ""}
+            className={
+              currentScreen === 6
+                ? "animate-lock-button"
+                : currentScreen === 7
+                  ? "animate-power-button"
+                  : ""
+            }
           />
         </g>
 
         <g
           className={
-            currentScreen === 1 || currentScreen === 6
+            currentScreen === 1 || currentScreen === 5
               ? "animate-dial"
-              : currentScreen === 7
+              : currentScreen === 8
                 ? "animate-scrub-dial"
                 : ""
           }
