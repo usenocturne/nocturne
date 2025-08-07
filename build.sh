@@ -4,10 +4,10 @@ set -e
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Image build config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-: "${NOCTURNE_IMAGE_VERSION:="v3.0.0-beta5"}"
+: "${NOCTURNE_IMAGE_VERSION:="v3.0.0-beta6"}"
 
 : "${NOCTURNE_UI_TAG:="main"}"
-: "${NOCTURNED_TAG:="v1.0.13"}"
+: "${NOCTURNED_TAG:="v1.0.15"}"
 : "${WINGMAN_TAG:="v1.0.1"}"
 
 : "${VOID_BUILD:="20250202"}"
