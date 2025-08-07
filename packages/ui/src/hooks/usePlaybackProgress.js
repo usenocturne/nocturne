@@ -3,6 +3,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const sharedState = {
   refreshTimeoutId: null,
   lastRefreshTime: 0,
+  driftHistory: [],
+  maxDriftHistory: 10,
 };
 
 export const usePlaybackProgress = (
@@ -66,10 +68,27 @@ export const usePlaybackProgress = (
         serverProgressRef.current = currentPlayback.progress_ms || 0;
         setProgressMs(currentPlayback.progress_ms || 0);
         lastUpdateTimeRef.current = Date.now();
+        // Clear drift history for new tracks
+        sharedState.driftHistory = [];
       } else if (typeof currentPlayback?.progress_ms === "number") {
+        // Calculate drift if we have a previous estimate
+        const now = Date.now();
+        const elapsed = now - lastUpdateTimeRef.current;
+        const estimatedProgress = serverProgressRef.current + elapsed;
+        const actualProgress = currentPlayback.progress_ms;
+        const drift = estimatedProgress - actualProgress;
+        
+        // Track drift for adaptive correction (only if significant elapsed time)
+        if (elapsed > 1000 && Math.abs(drift) < 10000) { // Ignore huge jumps
+          sharedState.driftHistory.push(drift);
+          if (sharedState.driftHistory.length > sharedState.maxDriftHistory) {
+            sharedState.driftHistory.shift();
+          }
+        }
+        
         serverProgressRef.current = currentPlayback.progress_ms;
         setProgressMs(currentPlayback.progress_ms);
-        lastUpdateTimeRef.current = Date.now();
+        lastUpdateTimeRef.current = now;
       }
 
       setIsPlaying(currentPlayback.is_playing || false);
@@ -88,8 +107,32 @@ export const usePlaybackProgress = (
     const animate = () => {
       const now = Date.now();
       const elapsed = now - lastUpdateTimeRef.current;
-      const estimated = Math.min(serverProgressRef.current + elapsed, duration);
-      setProgressMs(estimated);
+      
+      let driftCorrectionFactor = 0.98;
+      if (sharedState.driftHistory.length >= 3) {
+        const averageDrift = sharedState.driftHistory.reduce((sum, drift) => sum + drift, 0) / sharedState.driftHistory.length;
+        if (averageDrift > 100) {
+          driftCorrectionFactor = 0.96;
+        } else if (averageDrift > 50) {
+          driftCorrectionFactor = 0.97;
+        } else if (averageDrift < -50) {
+          driftCorrectionFactor = 1.01;
+        } else {
+          driftCorrectionFactor = 0.98;
+        }
+      }
+      
+      const correctedElapsed = elapsed * driftCorrectionFactor;
+      const estimated = Math.min(serverProgressRef.current + correctedElapsed, duration);
+      
+      if (estimated > duration * 0.98) {
+        const remaining = duration - serverProgressRef.current;
+        const safeProgression = remaining * 0.1;
+        const safeEstimated = Math.min(serverProgressRef.current + safeProgression, duration);
+        setProgressMs(safeEstimated);
+      } else {
+        setProgressMs(estimated);
+      }
 
       animationFrameRef.current = requestAnimationFrame(animate);
     };
