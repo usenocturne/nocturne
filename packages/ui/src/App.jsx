@@ -438,6 +438,7 @@ function App() {
     isLoading,
     errors: dataErrors,
     refreshData,
+    refreshRecentlyPlayed,
   } = useSpotifyData(
     activeSection,
     showLoader || !tokenReady,
@@ -648,6 +649,7 @@ function App() {
         refreshPlaybackState(true);
         if (!initialDataLoaded) {
           refreshData();
+          refreshRecentlyPlayed();
         }
       };
       window.addEventListener("online", handleNetworkRestored);
@@ -655,7 +657,13 @@ function App() {
         window.removeEventListener("online", handleNetworkRestored);
       };
     }
-  }, [isAuthenticated, refreshPlaybackState, refreshData, initialDataLoaded]);
+  }, [
+    isAuthenticated,
+    refreshPlaybackState,
+    refreshData,
+    refreshRecentlyPlayed,
+    initialDataLoaded,
+  ]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -916,6 +924,7 @@ function App() {
     refreshPlaybackState(true);
     if (!initialDataLoaded) {
       refreshData();
+      refreshRecentlyPlayed();
     }
   };
 
