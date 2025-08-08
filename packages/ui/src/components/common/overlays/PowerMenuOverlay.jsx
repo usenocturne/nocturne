@@ -1,9 +1,130 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import PowerIcon from "../icons/PowerIcon";
 import RefreshIcon from "../icons/RefreshIcon";
 import BrightnessMidIcon from "../icons/BrightnessMidIcon";
 import BrightnessLowIcon from "../icons/BrightnessLowIcon";
 import BrightnessHighIcon from "../icons/BrightnessHighIcon";
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getPositionValue(clientX, trackRect, min, max) {
+  const ratio = clamp((clientX - trackRect.left) / trackRect.width, 0, 1);
+  const rawValue = min + ratio * (max - min);
+  return Math.round(rawValue);
+}
+
+function RangeSlider({
+  min = 0,
+  max = 100,
+  value = 0,
+  disabled = false,
+  onChange,
+  className = "",
+  trackStyle = {},
+  thumbClassName = "",
+}) {
+  const trackRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const percentage = useMemo(() => {
+    if (max === min) return 0;
+    return ((clamp(value, min, max) - min) / (max - min)) * 100;
+  }, [value, min, max]);
+
+  const startDraggingAt = useCallback(
+    (clientX) => {
+      if (disabled) return;
+      const track = trackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const newValue = getPositionValue(clientX, rect, min, max);
+      onChange?.(newValue);
+      setIsDragging(true);
+    },
+    [disabled, min, max, onChange]
+  );
+
+  const handleMouseDown = useCallback(
+    (e) => {
+      e.preventDefault();
+      startDraggingAt(e.clientX);
+    },
+    [startDraggingAt]
+  );
+
+  const handleTouchStart = useCallback(
+    (e) => {
+      if (e.touches && e.touches[0]) {
+        startDraggingAt(e.touches[0].clientX);
+      }
+    },
+    [startDraggingAt]
+  );
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e) => {
+      e.preventDefault();
+      const track = trackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const newValue = getPositionValue(e.clientX, rect, min, max);
+      onChange?.(newValue);
+    };
+
+    const handleTouchMove = (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      const track = trackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const newValue = getPositionValue(e.touches[0].clientX, rect, min, max);
+      onChange?.(newValue);
+    };
+
+    const stopDragging = () => setIsDragging(false);
+
+    document.addEventListener("mousemove", handleMouseMove, { passive: false });
+    document.addEventListener("mouseup", stopDragging);
+    document.addEventListener("touchmove", handleTouchMove, { passive: true });
+    document.addEventListener("touchend", stopDragging);
+    document.addEventListener("touchcancel", stopDragging);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", stopDragging);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", stopDragging);
+      document.removeEventListener("touchcancel", stopDragging);
+    };
+  }, [isDragging, min, max, onChange]);
+
+  return (
+    <div
+      ref={trackRef}
+      className={`relative h-2 rounded-lg bg-neutral-700 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      style={trackStyle}
+      role="slider"
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value}
+      aria-disabled={disabled}
+    >
+      <div
+        className="absolute inset-y-0 left-0 rounded-lg bg-white"
+        style={{ width: `${percentage}%` }}
+      />
+      <div
+        className={`absolute top-1/2 -translate-y-1/2 -ml-2 w-4 h-4 rounded-full bg-white ${disabled ? "pointer-events-none" : ""} ${thumbClassName}`}
+        style={{ left: `calc(${percentage}% + 0px)` }}
+      />
+    </div>
+  );
+}
 
 function PowerMenuOverlay({
   show,
@@ -124,48 +245,21 @@ function PowerMenuOverlay({
         <div className="flex items-center space-x-4 w-full max-w-sm">
           <BrightnessLowIcon className="w-8 h-8 text-white flex-shrink-0" />
           <div className="flex-1 relative">
-            <input
-              type="range"
-              min="1"
-              max="220"
+            <RangeSlider
+              min={1}
+              max={220}
               value={221 - brightnessValue}
               disabled={brightnessToggled}
-              onChange={(e) => {
-                const sliderPos = parseInt(e.target.value);
+              onChange={(sliderPos) => {
                 const newValue = 221 - sliderPos;
                 setBrightnessValue(newValue);
-
                 fetch(`http://localhost:5000/device/brightness/${newValue}`, {
                   method: "POST",
                 }).catch((error) => {
                   console.error("Failed to set brightness:", error);
                 });
               }}
-              className={`w-full h-2 bg-neutral-700 rounded-lg appearance-none slider ${brightnessToggled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
-              style={{
-                background: `linear-gradient(to right, #ffffff 0%, #ffffff ${((220 - brightnessValue) / 219) * 100}%, #404040 ${((220 - brightnessValue) / 219) * 100}%, #404040 100%)`,
-                WebkitAppearance: "none",
-                outline: "none",
-              }}
             />
-            <style jsx>{`
-              input[type="range"]::-webkit-slider-thumb {
-                appearance: none;
-                height: 16px;
-                width: 16px;
-                border-radius: 50%;
-                background: rgba(255, 255, 255);
-                cursor: pointer;
-              }
-
-              input[type="range"]::-moz-range-thumb {
-                height: 16px;
-                width: 16px;
-                border-radius: 50%;
-                background: rgba(255, 255, 255);
-                cursor: pointer;
-              }
-            `}</style>
           </div>
           <BrightnessHighIcon className="w-8 h-8 text-white flex-shrink-0" />
         </div>
