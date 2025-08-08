@@ -258,7 +258,7 @@ const DeviceSwitcherModal = ({
               <button
                 type="button"
                 onClick={() => onClose(null)}
-                className="flex-1 flex justify-center items-center px-3 py-3 hover:bg-white hover:bg-opacity-5 transition-colors"
+                className="flex-1 flex justify-center items-center px-3 py-3 hover:bg-white hover:bg-opacity-5 transition-colors focus:outline-none outline-none focus:ring-0 appearance-none"
                 style={{
                   fontSize: "28px",
                   fontWeight: 560,
