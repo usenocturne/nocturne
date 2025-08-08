@@ -41,6 +41,15 @@ const DeviceSwitcherModal = ({
     }
   }, [isOpen, accessToken, initialDevices]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   const fetchDevices = async () => {
     try {
       setIsLoading(true);
@@ -153,7 +162,7 @@ const DeviceSwitcherModal = ({
         style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
       />
 
-      <div className="fixed inset-0 z-40 w-screen overflow-y-auto">
+      <div className="fixed inset-0 z-40 w-screen overflow-y-hidden">
         <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
           <DialogPanel
             transition
@@ -202,7 +211,7 @@ const DeviceSwitcherModal = ({
                   </div>
                 ) : (
                   <div
-                    className="mt-2 px-6"
+                    className="mt-2 px-6 scrollbar-hide"
                     style={{ maxHeight: "60vh", overflowY: "auto" }}
                   >
                     {devices.map((device) => (
