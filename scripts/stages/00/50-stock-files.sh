@@ -32,4 +32,5 @@ ln -sf libfontconfig.so.1.12.0 "$ROOTFS_PATH"/usr/lib/libfontconfig.so.1
 ln -sf libfreetype.so.6.16.1 "$ROOTFS_PATH"/usr/lib/libfreetype.so.6
 ln -sf libpng16.so.16.36.0 "$ROOTFS_PATH"/usr/lib/libpng16.so.16
 
-execstack -c "$ROOTFS_PATH"/usr/lib/libMali.so
+# Use patchelf to clear executable stack flag (equivalent to execstack -c)
+patchelf --clear-execstack "$ROOTFS_PATH"/usr/lib/libMali.so
