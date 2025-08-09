@@ -12,6 +12,26 @@ export function useGestureControls({
   const { settings } = useSettings();
   const touchStartRef = useRef(null);
   const touchStartXRef = useRef(null);
+  const touchTargetRef = useRef(null);
+
+  const isWithinScrollableContainer = (target) => {
+    let current = target;
+    while (current && current !== contentRef?.current) {
+      const computedStyle = window.getComputedStyle(current);
+      const isScrollable = (
+        computedStyle.overflowY === 'auto' || 
+        computedStyle.overflowY === 'scroll' ||
+        computedStyle.overflow === 'auto' ||
+        computedStyle.overflow === 'scroll'
+      ) && current.scrollHeight > current.clientHeight;
+      
+      if (isScrollable) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return null;
+  };
 
   useEffect(() => {
     const element = contentRef?.current;
@@ -20,6 +40,7 @@ export function useGestureControls({
     const handleTouchStart = (e) => {
       touchStartRef.current = e.touches[0].clientY;
       touchStartXRef.current = e.touches[0].clientX;
+      touchTargetRef.current = e.target;
     };
 
     const handleTouchMove = (e) => {
@@ -31,10 +52,15 @@ export function useGestureControls({
       const deltaY = touchStartRef.current - touchY;
       const deltaX = touchStartXRef.current - touchX;
 
+      const scrollableContainer = touchTargetRef.current 
+        ? isWithinScrollableContainer(touchTargetRef.current) 
+        : null;
+
       if (
         Math.abs(deltaY) > Math.abs(deltaX) &&
         Math.abs(deltaY) > 20 &&
-        settings.showLyricsGestureEnabled
+        settings.showLyricsGestureEnabled &&
+        !scrollableContainer
       ) {
         e.preventDefault();
       }
@@ -60,13 +86,21 @@ export function useGestureControls({
 
       const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
 
+      const scrollableContainer = touchTargetRef.current 
+        ? isWithinScrollableContainer(touchTargetRef.current) 
+        : null;
+
       if (isHorizontalSwipe && settings.songChangeGestureEnabled) {
         if (deltaX > 50 && onSwipeLeft) {
           onSwipeLeft();
         } else if (deltaX < -50 && onSwipeRight) {
           onSwipeRight();
         }
-      } else if (!isHorizontalSwipe && settings.showLyricsGestureEnabled) {
+      } else if (
+        !isHorizontalSwipe && 
+        settings.showLyricsGestureEnabled && 
+        !scrollableContainer
+      ) {
         if (deltaY > 50 && onSwipeUp) {
           onSwipeUp();
         } else if (deltaY < -50 && onSwipeDown) {
@@ -76,6 +110,7 @@ export function useGestureControls({
 
       touchStartRef.current = null;
       touchStartXRef.current = null;
+      touchTargetRef.current = null;
     };
 
     element.addEventListener("touchstart", handleTouchStart, { passive: true });
