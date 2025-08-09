@@ -690,9 +690,9 @@ const ContentView = ({
   };
 
   const getImageStyle = () => {
-    return contentType === "artist"
-      ? "aspect-square rounded-full drop-shadow-xl object-cover w-[280px] h-[280px]"
-      : "aspect-square rounded-[12px] drop-shadow-xl";
+  return contentType === "artist"
+    ? "w-[280px] h-[280px] rounded-full drop-shadow-xl object-cover"
+    : "w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-xl";
   };
 
   const getMappingStatusText = () => {
@@ -715,7 +715,7 @@ const ContentView = ({
             alt={`${content.name} Cover`}
             width={280}
             height={280}
-            className={`${getImageStyle()} max-w-[280px] max-h-[280px]`}
+            className={`${getImageStyle()}`}
           />
           {getMappingStatusText()}
           <h4

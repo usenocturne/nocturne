@@ -280,13 +280,13 @@ export default function Home({
                     <img
                       src={album.images[1].url}
                       alt="Album Cover"
-                      className="w-full h-full rounded-[12px] aspect-square max-w-[280px] max-h-[280px]"
+                      className="w-full h-full object-cover rounded-[12px]"
                     />
                   ) : album.type === "local-track" ? (
                     <img
                       src="/images/not-playing.webp"
                       alt="Local File"
-                      className="w-full h-full rounded-[12px] aspect-square max-w-[280px] max-h-[280px]"
+                      className="w-full h-full object-cover rounded-[12px]"
                     />
                   ) : (
                     <div className="w-full h-full rounded-[12px] bg-white/10"></div>
@@ -360,7 +360,7 @@ export default function Home({
               <img
                 src={likedSongs.images[0].url}
                 alt="Liked Songs"
-                className="w-full h-full rounded-[12px] aspect-square max-w-[280px] max-h-[280px]"
+                className="w-full h-full object-cover rounded-[12px]"
               />
             </div>
             <h4
@@ -426,7 +426,7 @@ export default function Home({
                       <img
                         src={playlist.images[1]?.url || playlist.images[0].url}
                         alt={`${playlist.name} Cover`}
-                        className="w-full h-full rounded-[12px] aspect-square max-w-[280px] max-h-[280px]"
+                        className="w-full h-full object-cover rounded-[12px]"
                       />
                     ) : (
                       <div className="w-full h-full rounded-[12px] bg-white/10"></div>
@@ -520,7 +520,7 @@ export default function Home({
                     <img
                       src={artist.images[1].url}
                       alt={`${artist.name} Profile`}
-                      className="w-full h-full rounded-full aspect-square object-cover max-w-[280px] max-h-[280px]"
+                      className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
                     <div className="w-full h-full rounded-full bg-white/10"></div>
@@ -596,7 +596,7 @@ export default function Home({
               <img
                 src="/images/radio-cover/dj.webp"
                 alt="DJ Playlist"
-                className="w-full h-full rounded-[12px] max-w-[280px] max-h-[280px]"
+                className="w-full h-full object-cover rounded-[12px]"
               />
             </div>
             <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
@@ -653,7 +653,7 @@ export default function Home({
                     <img
                       src={mix.images[0].url}
                       alt={`${mix.name} Cover`}
-                      className="w-full h-full rounded-[12px] aspect-square max-w-[280px] max-h-[280px]"
+                        className="w-full h-full object-cover rounded-[12px]"
                     />
                   ) : (
                     <div className="w-full h-full rounded-[12px] bg-white/10"></div>
@@ -742,7 +742,7 @@ export default function Home({
                       <img
                         src={show.images[1]?.url || show.images[0]?.url}
                         alt={`${show.name} Cover`}
-                        className="w-full h-full rounded-[12px] aspect-square max-w-[280px] max-h-[280px]"
+                        className="w-full h-full object-cover rounded-[12px]"
                       />
                     ) : (
                       <div className="w-full h-full rounded-[12px] bg-white/10"></div>
