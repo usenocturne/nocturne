@@ -1,0 +1,16 @@
+{
+  "version": "3.0.1",
+  "tag": "v3.0.1",
+  "minimumVersion": "3.0.0",
+  "imageUrl": "https://usenocturne.com/images/versions/3.webp",
+  "shortDescription": "This update brings new features and bug fixes. Please set aside about 5-10 minutes for the update to download and install.",
+  "fullDescription": "This update brings new features and bug fixes. Please set aside about 5-10 minutes for the update to download and install.\n\n- feature 1\n- feature 2\n- feature 3",
+  "files": {
+    "full": "nocturne_image_v3.0.1.zip",
+    "update": "nocturne_update_v3.0.1.tar.zst"
+  },
+  "commands": {
+    "pre": [],
+    "post": []
+  }
+}
