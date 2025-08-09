@@ -150,10 +150,12 @@ const DeviceSwitcherModal = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <Dialog
       open={isOpen}
-      onClose={() => onClose(false)}
+      onClose={() => onClose(null)}
       className="relative z-40"
     >
       <DialogBackdrop
