@@ -479,6 +479,8 @@ export default function NowPlaying({
     error: lyricsError,
     lyricsContainerRef,
     toggleLyrics,
+    suspendAutoScroll,
+    resumeAutoScrollOnNextLyric,
   } = useLyrics(accessToken, currentPlayback, contentContainerRef);
 
   useEffect(() => {
@@ -583,6 +585,17 @@ export default function NowPlaying({
       }
     },
     [currentPlayback?.item, seekToPosition, updateProgress],
+  );
+
+  const handleLyricClick = useCallback(
+    (lyricTimeSeconds) => {
+      if (typeof suspendAutoScroll === "function") suspendAutoScroll(5000);
+      if (typeof resumeAutoScrollOnNextLyric === "function")
+        resumeAutoScrollOnNextLyric();
+      const targetMs = Math.max(0, Math.floor(lyricTimeSeconds * 1000));
+      handleSeek(targetMs);
+    },
+    [handleSeek, suspendAutoScroll, resumeAutoScrollOnNextLyric],
   );
 
   const handleToggleShuffle = useCallback(async () => {
@@ -757,11 +770,23 @@ export default function NowPlaying({
                               index === currentLyricIndex + 1
                             ? "text-white/40"
                             : "text-white/20"
-                      }`}
+                      } cursor-pointer select-none`}
                       style={{
                         transform: "translateZ(0)",
                         backfaceVisibility: "hidden",
                         WebkitBackfaceVisibility: "hidden",
+                        WebkitTapHighlightColor: "transparent",
+                        outline: "none",
+                        boxShadow: "none",
+                      }}
+                      onClick={() => handleLyricClick(lyric.time)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleLyricClick(lyric.time);
+                        }
                       }}
                     >
                       {lyric.text}

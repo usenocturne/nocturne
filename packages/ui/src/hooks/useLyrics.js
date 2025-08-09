@@ -7,11 +7,17 @@ export function useLyrics(accessToken, currentPlayback) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [estimatedProgress, setEstimatedProgress] = useState(0);
-
   const lyricsContainerRef = useRef(null);
   const trackIdRef = useRef(null);
   const progressIntervalRef = useRef(null);
   const lastUpdateTimeRef = useRef(0);
+  const isUserScrollingRef = useRef(false);
+  const lastUserInteractionRef = useRef(0);
+  const inactivityTimerRef = useRef(null);
+  const isAutoScrollingRef = useRef(false);
+  const autoScrollEndTimerRef = useRef(null);
+  const resumeOnNextIndexRef = useRef(false);
+  const INACTIVITY_MS = 5000;
 
   const parseLRC = (lrc) => {
     const lines = lrc.split("\n");
@@ -213,10 +219,30 @@ export function useLyrics(accessToken, currentPlayback) {
   useEffect(() => {
     if (currentLyricIndex >= 0 && lyricsContainerRef.current) {
       const container = lyricsContainerRef.current;
+
+      const now = Date.now();
+      const inactiveMs = now - lastUserInteractionRef.current;
+      if (resumeOnNextIndexRef.current) {
+        resumeOnNextIndexRef.current = false;
+        isUserScrollingRef.current = false;
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+          inactivityTimerRef.current = null;
+        }
+      } else if (isUserScrollingRef.current && inactiveMs < INACTIVITY_MS) {
+        return;
+      }
+
       const lyricElements = container.children;
       if (lyricElements.length > currentLyricIndex) {
         const lyricElement = lyricElements[currentLyricIndex];
         if (lyricElement) {
+          isAutoScrollingRef.current = true;
+          if (autoScrollEndTimerRef.current) {
+            clearTimeout(autoScrollEndTimerRef.current);
+            autoScrollEndTimerRef.current = null;
+          }
+
           requestAnimationFrame(() => {
             const containerRect = container.getBoundingClientRect();
             const elementRect = lyricElement.getBoundingClientRect();
@@ -230,11 +256,64 @@ export function useLyrics(accessToken, currentPlayback) {
               top: container.scrollTop + offset,
               behavior: "smooth",
             });
+
+            autoScrollEndTimerRef.current = setTimeout(() => {
+              isAutoScrollingRef.current = false;
+            }, 350);
           });
         }
       }
     }
   }, [currentLyricIndex]);
+
+  useEffect(() => {
+    const el = lyricsContainerRef.current;
+    if (!el) return;
+
+    const markInteraction = () => {
+      if (isAutoScrollingRef.current) return;
+      isUserScrollingRef.current = true;
+      lastUserInteractionRef.current = Date.now();
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      inactivityTimerRef.current = setTimeout(() => {
+        isUserScrollingRef.current = false;
+      }, INACTIVITY_MS);
+    };
+
+    const handleWheel = () => markInteraction();
+    const handleScroll = () => markInteraction();
+    const handleTouchStart = () => markInteraction();
+    const handleTouchMove = () => markInteraction();
+
+    el.addEventListener("wheel", handleWheel, { passive: true });
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchmove", handleTouchMove, { passive: true });
+
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+      el.removeEventListener("scroll", handleScroll);
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [lyricsContainerRef.current]);
+
+  const suspendAutoScroll = (durationMs = INACTIVITY_MS) => {
+    isUserScrollingRef.current = true;
+    lastUserInteractionRef.current = Date.now();
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    inactivityTimerRef.current = setTimeout(() => {
+      isUserScrollingRef.current = false;
+    }, Math.max(0, durationMs));
+  };
+
+  const resumeAutoScrollOnNextLyric = () => {
+    resumeOnNextIndexRef.current = true;
+  };
 
   useEffect(() => {
     if (
@@ -258,6 +337,17 @@ export function useLyrics(accessToken, currentPlayback) {
     }
   }, [currentPlayback?.item?.id, showLyrics]);
 
+  useEffect(() => {
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      if (autoScrollEndTimerRef.current) {
+        clearTimeout(autoScrollEndTimerRef.current);
+      }
+    };
+  }, []);
+
   const hasLyrics = lyrics.length > 0 && !error;
 
   return {
@@ -269,5 +359,7 @@ export function useLyrics(accessToken, currentPlayback) {
     error,
     lyricsContainerRef,
     toggleLyrics,
+    suspendAutoScroll,
+    resumeAutoScrollOnNextLyric,
   };
 }
