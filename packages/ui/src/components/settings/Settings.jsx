@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Switch } from "@headlessui/react";
+import {
+  Switch,
+  Listbox,
+  ListboxButton,
+  ListboxOptions,
+  ListboxOption,
+} from "@headlessui/react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -54,6 +60,15 @@ const settingsStructure = {
           "Display the clock inside of the status bar in 24-hour format instead of 12-hour format.",
         storageKey: "use24HourTime",
         defaultValue: false,
+      },
+      {
+        id: "automatic-timezone",
+        title: "Automatic Timezone",
+        type: "toggle",
+        description:
+          "Automatically set timezone from network. When off, select a timezone manually.",
+        storageKey: "autoTimezoneEnabled",
+        defaultValue: true,
       },
       {
         id: "analytics-enabled",
@@ -563,6 +578,11 @@ export default function Settings({
   const isProcessingEscape = useRef(false);
   const scrollContainerRef = useRef(null);
   const { settings, updateSetting } = useSettings();
+  const [manualTzContinent, setManualTzContinent] = useState("");
+  const [manualTimezone, setManualTimezone] = useState("");
+  const [timezoneOptions, setTimezoneOptions] = useState([]);
+  const [timezoneMap, setTimezoneMap] = useState({});
+  const [continents, setContinents] = useState([]);
   const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false);
 
   const [showMain, setShowMain] = useState(true);
@@ -595,6 +615,24 @@ export default function Settings({
     }
   }, [accessToken]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("http://localhost:5000/device/date");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && typeof data.timezone === "string" && data.timezone.includes("/")) {
+          const parts = data.timezone.split("/");
+          const continent = parts[0] || "";
+          const region = parts[parts.length - 1] || "";
+          setManualTzContinent(continent);
+          setManualTimezone(region);
+        }
+      } catch (_) {
+      }
+    })();
+  }, []);
+
   const fetchSpotifyProfile = async () => {
     try {
       const response = await fetch("https://api.spotify.com/v1/me", {
@@ -611,6 +649,49 @@ export default function Settings({
 
   const handleToggle = (key) => {
     updateSetting(key, !settings[key]);
+  };
+
+  const loadTimezoneOptions = (continent) => {
+    if (!continent) {
+      setTimezoneOptions([]);
+      return;
+    }
+    setTimezoneOptions(timezoneMap[continent] || []);
+  };
+
+  useEffect(() => {
+    loadTimezoneOptions(manualTzContinent);
+  }, [manualTzContinent, timezoneMap]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("http://localhost:5000/device/date/timezones");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && typeof data === "object") {
+          const filtered = Object.fromEntries(
+            Object.entries(data).filter(([k]) => k !== "Etc"),
+          );
+          setTimezoneMap(filtered);
+          setContinents(Object.keys(filtered));
+        }
+      } catch (_) {
+      }
+    })();
+  }, []);
+
+  const applyManualTimezone = async (continent, city) => {
+    const tz = continent && city ? `${continent}/${city}` : "";
+    try {
+      if (tz) {
+        fetch("http://localhost:5000/device/date/settimezone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ timezone: tz }),
+        }).catch(() => {});
+      }
+    } catch (e) {}
   };
 
   const handleFactoryReset = async () => {
@@ -769,6 +850,84 @@ export default function Settings({
             <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
               {item.description}
             </p>
+            {item.storageKey === "autoTimezoneEnabled" && !settings.autoTimezoneEnabled && (
+              <div className="mt-6 space-y-4">
+                <div>
+                  <label className="block text-[24px] font-[560] text-white/80 mb-2">
+                    Continent
+                  </label>
+                  <Listbox
+                    value={manualTzContinent || null}
+                    onChange={(val) => {
+                      const v = val || "";
+                      setManualTzContinent(v);
+                      setManualTimezone("");
+                      applyManualTimezone(v, "");
+                    }}
+                  >
+                    <div className="relative w-96">
+                      <ListboxButton className="w-full bg-white/10 border border-white/10 rounded-[14px] px-5 py-4 text-white text-[24px] text-left hover:bg-white/15 focus:outline-none">
+                        {manualTzContinent || "Select continent"}
+                      </ListboxButton>
+                      <ListboxOptions className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-[14px] bg-[#1c1c1c] border border-white/10 shadow-lg focus:outline-none custom-scrollbar-hide">
+                        {continents.map((c) => (
+                          <ListboxOption
+                            key={c}
+                            value={c}
+                            className="cursor-pointer select-none px-5 py-3 text-[22px] text-white/90 data-[focus]:bg-white/10 data-[focus]:text-white"
+                          >
+                            {c}
+                          </ListboxOption>
+                        ))}
+                      </ListboxOptions>
+                    </div>
+                  </Listbox>
+                </div>
+                <div>
+                  <label className="block text-[24px] font-[560] text-white/80 mb-2">
+                    Timezone
+                  </label>
+                  <Listbox
+                    value={manualTimezone || null}
+                    onChange={(city) => {
+                      const c = city || "";
+                      setManualTimezone(c);
+                      applyManualTimezone(manualTzContinent, c);
+                    }}
+                    disabled={!manualTzContinent}
+                  >
+                    <div className="relative w-96">
+                      <ListboxButton
+                        className={`w-full border rounded-[14px] px-5 py-4 text-[24px] text-left focus:outline-none ${
+                          manualTzContinent
+                            ? "bg-white/10 border-white/10 text-white hover:bg-white/15"
+                            : "bg-white/5 border-white/10 text-white/40 cursor-not-allowed"
+                        }`}
+                      >
+                        {manualTzContinent
+                          ? manualTimezone
+                            ? manualTimezone.replace(/_/g, " ")
+                            : "Select timezone"
+                          : "Select continent first"}
+                      </ListboxButton>
+                      {manualTzContinent && (
+                        <ListboxOptions className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-[14px] bg-[#1c1c1c] border border-white/10 shadow-lg focus:outline-none custom-scrollbar-hide">
+                          {timezoneOptions.map((tz) => (
+                            <ListboxOption
+                              key={tz}
+                              value={tz}
+                              className="cursor-pointer select-none px-5 py-3 text-[22px] text-white/90 data-[focus]:bg-white/10 data-[focus]:text-white"
+                            >
+                              {tz.replace(/_/g, " ")}
+                            </ListboxOption>
+                          ))}
+                        </ListboxOptions>
+                      )}
+                    </div>
+                  </Listbox>
+                </div>
+              </div>
+            )}
           </div>
         );
       case "action":
@@ -872,6 +1031,8 @@ export default function Settings({
         .settings-scroll-container::-webkit-scrollbar {
           display: none;
         }
+        .custom-scrollbar-hide::-webkit-scrollbar { display: none; }
+        .custom-scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
       `}</style>
       <div className="min-h-full flex flex-col px-12 pt-12 -ml-12">
         <div className="flex-1 relative">

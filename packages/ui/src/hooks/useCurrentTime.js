@@ -15,6 +15,11 @@ export function useCurrentTime() {
   const { settings } = useSettings();
 
   const fetchTimezone = async () => {
+    if (!settings.autoTimezoneEnabled) {
+      cachedTimezone = null;
+      setTimezone(null);
+      return;
+    }
     if (cachedTimezone) {
       setTimezone(cachedTimezone);
       return;
@@ -51,12 +56,17 @@ export function useCurrentTime() {
   };
 
   useEffect(() => {
-    fetchTimezone();
-  }, []);
+    if (settings.autoTimezoneEnabled) {
+      fetchTimezone();
+    } else {
+      cachedTimezone = null;
+      setTimezone(null);
+    }
+  }, [settings.autoTimezoneEnabled]);
 
   useEffect(() => {
     const handleNetworkRestored = () => {
-      if (!cachedTimezone) {
+      if (settings.autoTimezoneEnabled && !cachedTimezone) {
         fetchTimezone();
       }
     };
@@ -65,7 +75,7 @@ export function useCurrentTime() {
     return () => {
       window.removeEventListener("networkRestored", handleNetworkRestored);
     };
-  }, []);
+  }, [settings.autoTimezoneEnabled]);
 
   useEffect(() => {
     const updateTime = async () => {
