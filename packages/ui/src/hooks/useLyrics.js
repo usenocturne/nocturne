@@ -306,9 +306,12 @@ export function useLyrics(accessToken, currentPlayback) {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-    inactivityTimerRef.current = setTimeout(() => {
-      isUserScrollingRef.current = false;
-    }, Math.max(0, durationMs));
+    inactivityTimerRef.current = setTimeout(
+      () => {
+        isUserScrollingRef.current = false;
+      },
+      Math.max(0, durationMs),
+    );
   };
 
   const resumeAutoScrollOnNextLyric = () => {

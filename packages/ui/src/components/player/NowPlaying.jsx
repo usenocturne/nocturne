@@ -193,7 +193,11 @@ export default function NowPlaying({
   }, [currentPlayback?.shuffle_state, currentPlayback?.repeat_state]);
 
   useEffect(() => {
-    if (isStartingPlayback && currentPlayback?.item && currentPlayback?.is_playing) {
+    if (
+      isStartingPlayback &&
+      currentPlayback?.item &&
+      currentPlayback?.is_playing
+    ) {
       setIsStartingPlayback(false);
     }
   }, [isStartingPlayback, currentPlayback?.item, currentPlayback?.is_playing]);
@@ -298,7 +302,7 @@ export default function NowPlaying({
 
   const trackInfo = useMemo(() => {
     const hasCurrentItem = currentPlayback?.item && !isStartingPlayback;
-    
+
     const trackName = hasCurrentItem
       ? currentPlayback.item.type === "episode"
         ? currentPlayback.item.name
@@ -807,7 +811,11 @@ export default function NowPlaying({
         className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}
       >
         <ProgressBar
-          progress={currentPlayback?.item && !isStartingPlayback ? progressPercentage : 0}
+          progress={
+            currentPlayback?.item && !isStartingPlayback
+              ? progressPercentage
+              : 0
+          }
           isPlaying={isPlaying && !isStartingPlayback}
           durationMs={duration}
           onSeek={handleSeek}

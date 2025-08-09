@@ -978,7 +978,7 @@ function App() {
     content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showTutorial) {
     content = (
-      <Tutorial 
+      <Tutorial
         onComplete={handleTutorialComplete}
         onStepChange={setCurrentTutorialStep}
       />
@@ -1078,9 +1078,12 @@ function App() {
                       onComplete={() => setShowLoader(false)}
                     />
                   )}
-                  {!showLoader && isAuthenticated && !tokenReady && !initialTokenRefreshDone && (
-                    <TokenRefreshOverlay show={!tokenReady} />
-                  )}
+                  {!showLoader &&
+                    isAuthenticated &&
+                    !tokenReady &&
+                    !initialTokenRefreshDone && (
+                      <TokenRefreshOverlay show={!tokenReady} />
+                    )}
                   <main
                     className="overflow-hidden relative min-h-screen rounded-2xl"
                     style={{

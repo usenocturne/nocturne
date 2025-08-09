@@ -18,13 +18,13 @@ export function useGestureControls({
     let current = target;
     while (current && current !== contentRef?.current) {
       const computedStyle = window.getComputedStyle(current);
-      const isScrollable = (
-        computedStyle.overflowY === 'auto' || 
-        computedStyle.overflowY === 'scroll' ||
-        computedStyle.overflow === 'auto' ||
-        computedStyle.overflow === 'scroll'
-      ) && current.scrollHeight > current.clientHeight;
-      
+      const isScrollable =
+        (computedStyle.overflowY === "auto" ||
+          computedStyle.overflowY === "scroll" ||
+          computedStyle.overflow === "auto" ||
+          computedStyle.overflow === "scroll") &&
+        current.scrollHeight > current.clientHeight;
+
       if (isScrollable) {
         return current;
       }
@@ -52,8 +52,8 @@ export function useGestureControls({
       const deltaY = touchStartRef.current - touchY;
       const deltaX = touchStartXRef.current - touchX;
 
-      const scrollableContainer = touchTargetRef.current 
-        ? isWithinScrollableContainer(touchTargetRef.current) 
+      const scrollableContainer = touchTargetRef.current
+        ? isWithinScrollableContainer(touchTargetRef.current)
         : null;
 
       if (
@@ -86,8 +86,8 @@ export function useGestureControls({
 
       const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
 
-      const scrollableContainer = touchTargetRef.current 
-        ? isWithinScrollableContainer(touchTargetRef.current) 
+      const scrollableContainer = touchTargetRef.current
+        ? isWithinScrollableContainer(touchTargetRef.current)
         : null;
 
       if (isHorizontalSwipe && settings.songChangeGestureEnabled) {
@@ -97,8 +97,8 @@ export function useGestureControls({
           onSwipeRight();
         }
       } else if (
-        !isHorizontalSwipe && 
-        settings.showLyricsGestureEnabled && 
+        !isHorizontalSwipe &&
+        settings.showLyricsGestureEnabled &&
         !scrollableContainer
       ) {
         if (deltaY > 50 && onSwipeUp) {

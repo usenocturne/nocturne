@@ -25,7 +25,6 @@ export default function Home({
   onOpenContent,
   updateGradientColors,
 }) {
-
   const scrollContainerRef = useRef(null);
   const itemWidth = 290;
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);

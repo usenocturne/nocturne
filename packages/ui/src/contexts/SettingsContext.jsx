@@ -5,7 +5,6 @@ const getDefaultSettingValue = (storageKey, defaultValue) => {
   return storedValue !== null ? storedValue === "true" : defaultValue;
 };
 
-
 const SettingsContext = createContext();
 
 export function SettingsProvider({ children }) {

@@ -238,10 +238,7 @@ const Tutorial = ({ onComplete, onStepChange }) => {
         }
       }
 
-      if (
-        e.key.toLowerCase() === "m" &&
-        lastPressedKey.current === "m"
-      ) {
+      if (e.key.toLowerCase() === "m" && lastPressedKey.current === "m") {
         isHoldingButton.current = false;
 
         if (holdTimerRef.current) {

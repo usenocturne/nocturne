@@ -62,10 +62,20 @@ export function useSpotifyData(
   const dataFetchingInProgressRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
   const effectiveToken = useMemo(() => {
-    return tokenReady && isAuthenticated && !isInitializing && !skipInitialFetch && accessToken
+    return tokenReady &&
+      isAuthenticated &&
+      !isInitializing &&
+      !skipInitialFetch &&
+      accessToken
       ? accessToken
       : null;
-  }, [tokenReady, isAuthenticated, isInitializing, skipInitialFetch, accessToken]);
+  }, [
+    tokenReady,
+    isAuthenticated,
+    isInitializing,
+    skipInitialFetch,
+    accessToken,
+  ]);
   const retryTimeoutRef = useRef(null);
   const abortControllerRef = useRef(null);
 

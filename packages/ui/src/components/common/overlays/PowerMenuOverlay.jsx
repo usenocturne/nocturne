@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import PowerIcon from "../icons/PowerIcon";
 import RefreshIcon from "../icons/RefreshIcon";
 import BrightnessMidIcon from "../icons/BrightnessMidIcon";
@@ -43,7 +49,7 @@ function RangeSlider({
       onChange?.(newValue);
       setIsDragging(true);
     },
-    [disabled, min, max, onChange]
+    [disabled, min, max, onChange],
   );
 
   const handleMouseDown = useCallback(
@@ -51,7 +57,7 @@ function RangeSlider({
       e.preventDefault();
       startDraggingAt(e.clientX);
     },
-    [startDraggingAt]
+    [startDraggingAt],
   );
 
   const handleTouchStart = useCallback(
@@ -60,7 +66,7 @@ function RangeSlider({
         startDraggingAt(e.touches[0].clientX);
       }
     },
-    [startDraggingAt]
+    [startDraggingAt],
   );
 
   useEffect(() => {

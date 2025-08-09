@@ -372,9 +372,7 @@ const ContentView = ({
               id: "liked-songs",
               name: "Liked Songs",
               type: "liked-songs",
-              images: [
-                { url: "/images/liked-songs.webp" },
-              ],
+              images: [{ url: "/images/liked-songs.webp" }],
               tracks: { total: likedSongsData.total },
               owner: { display_name: "You" },
             };

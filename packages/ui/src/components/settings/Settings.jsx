@@ -621,15 +621,18 @@ export default function Settings({
         const res = await fetch("http://localhost:5000/device/date");
         if (!res.ok) return;
         const data = await res.json();
-        if (data && typeof data.timezone === "string" && data.timezone.includes("/")) {
+        if (
+          data &&
+          typeof data.timezone === "string" &&
+          data.timezone.includes("/")
+        ) {
           const parts = data.timezone.split("/");
           const continent = parts[0] || "";
           const region = parts[parts.length - 1] || "";
           setManualTzContinent(continent);
           setManualTimezone(region);
         }
-      } catch (_) {
-      }
+      } catch (_) {}
     })();
   }, []);
 
@@ -676,8 +679,7 @@ export default function Settings({
           setTimezoneMap(filtered);
           setContinents(Object.keys(filtered));
         }
-      } catch (_) {
-      }
+      } catch (_) {}
     })();
   }, []);
 
@@ -850,84 +852,85 @@ export default function Settings({
             <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
               {item.description}
             </p>
-            {item.storageKey === "autoTimezoneEnabled" && !settings.autoTimezoneEnabled && (
-              <div className="mt-6 space-y-4">
-                <div>
-                  <label className="block text-[24px] font-[560] text-white/80 mb-2">
-                    Continent
-                  </label>
-                  <Listbox
-                    value={manualTzContinent || null}
-                    onChange={(val) => {
-                      const v = val || "";
-                      setManualTzContinent(v);
-                      setManualTimezone("");
-                      applyManualTimezone(v, "");
-                    }}
-                  >
-                    <div className="relative w-96">
-                      <ListboxButton className="w-full bg-white/10 border border-white/10 rounded-[14px] px-5 py-4 text-white text-[24px] text-left hover:bg-white/15 focus:outline-none">
-                        {manualTzContinent || "Select continent"}
-                      </ListboxButton>
-                      <ListboxOptions className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-[14px] bg-[#1c1c1c] border border-white/10 shadow-lg focus:outline-none custom-scrollbar-hide">
-                        {continents.map((c) => (
-                          <ListboxOption
-                            key={c}
-                            value={c}
-                            className="cursor-pointer select-none px-5 py-3 text-[22px] text-white/90 data-[focus]:bg-white/10 data-[focus]:text-white"
-                          >
-                            {c}
-                          </ListboxOption>
-                        ))}
-                      </ListboxOptions>
-                    </div>
-                  </Listbox>
-                </div>
-                <div>
-                  <label className="block text-[24px] font-[560] text-white/80 mb-2">
-                    Timezone
-                  </label>
-                  <Listbox
-                    value={manualTimezone || null}
-                    onChange={(city) => {
-                      const c = city || "";
-                      setManualTimezone(c);
-                      applyManualTimezone(manualTzContinent, c);
-                    }}
-                    disabled={!manualTzContinent}
-                  >
-                    <div className="relative w-96">
-                      <ListboxButton
-                        className={`w-full border rounded-[14px] px-5 py-4 text-[24px] text-left focus:outline-none ${
-                          manualTzContinent
-                            ? "bg-white/10 border-white/10 text-white hover:bg-white/15"
-                            : "bg-white/5 border-white/10 text-white/40 cursor-not-allowed"
-                        }`}
-                      >
-                        {manualTzContinent
-                          ? manualTimezone
-                            ? manualTimezone.replace(/_/g, " ")
-                            : "Select timezone"
-                          : "Select continent first"}
-                      </ListboxButton>
-                      {manualTzContinent && (
+            {item.storageKey === "autoTimezoneEnabled" &&
+              !settings.autoTimezoneEnabled && (
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <label className="block text-[24px] font-[560] text-white/80 mb-2">
+                      Continent
+                    </label>
+                    <Listbox
+                      value={manualTzContinent || null}
+                      onChange={(val) => {
+                        const v = val || "";
+                        setManualTzContinent(v);
+                        setManualTimezone("");
+                        applyManualTimezone(v, "");
+                      }}
+                    >
+                      <div className="relative w-96">
+                        <ListboxButton className="w-full bg-white/10 border border-white/10 rounded-[14px] px-5 py-4 text-white text-[24px] text-left hover:bg-white/15 focus:outline-none">
+                          {manualTzContinent || "Select continent"}
+                        </ListboxButton>
                         <ListboxOptions className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-[14px] bg-[#1c1c1c] border border-white/10 shadow-lg focus:outline-none custom-scrollbar-hide">
-                          {timezoneOptions.map((tz) => (
+                          {continents.map((c) => (
                             <ListboxOption
-                              key={tz}
-                              value={tz}
+                              key={c}
+                              value={c}
                               className="cursor-pointer select-none px-5 py-3 text-[22px] text-white/90 data-[focus]:bg-white/10 data-[focus]:text-white"
                             >
-                              {tz.replace(/_/g, " ")}
+                              {c}
                             </ListboxOption>
                           ))}
                         </ListboxOptions>
-                      )}
-                    </div>
-                  </Listbox>
+                      </div>
+                    </Listbox>
+                  </div>
+                  <div>
+                    <label className="block text-[24px] font-[560] text-white/80 mb-2">
+                      Timezone
+                    </label>
+                    <Listbox
+                      value={manualTimezone || null}
+                      onChange={(city) => {
+                        const c = city || "";
+                        setManualTimezone(c);
+                        applyManualTimezone(manualTzContinent, c);
+                      }}
+                      disabled={!manualTzContinent}
+                    >
+                      <div className="relative w-96">
+                        <ListboxButton
+                          className={`w-full border rounded-[14px] px-5 py-4 text-[24px] text-left focus:outline-none ${
+                            manualTzContinent
+                              ? "bg-white/10 border-white/10 text-white hover:bg-white/15"
+                              : "bg-white/5 border-white/10 text-white/40 cursor-not-allowed"
+                          }`}
+                        >
+                          {manualTzContinent
+                            ? manualTimezone
+                              ? manualTimezone.replace(/_/g, " ")
+                              : "Select timezone"
+                            : "Select continent first"}
+                        </ListboxButton>
+                        {manualTzContinent && (
+                          <ListboxOptions className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-[14px] bg-[#1c1c1c] border border-white/10 shadow-lg focus:outline-none custom-scrollbar-hide">
+                            {timezoneOptions.map((tz) => (
+                              <ListboxOption
+                                key={tz}
+                                value={tz}
+                                className="cursor-pointer select-none px-5 py-3 text-[22px] text-white/90 data-[focus]:bg-white/10 data-[focus]:text-white"
+                              >
+                                {tz.replace(/_/g, " ")}
+                              </ListboxOption>
+                            ))}
+                          </ListboxOptions>
+                        )}
+                      </div>
+                    </Listbox>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         );
       case "action":
