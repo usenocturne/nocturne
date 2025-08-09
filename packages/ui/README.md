@@ -18,6 +18,11 @@
   <a href="#license">License</a>
 </p>
 
+<div align="center">
+  <a href="https://usenocturne.com"></a><img alt="Website" src="https://img.shields.io/badge/website-gray?style=flat-square&logo=react&logoColor=FFFFFF"></a>
+  <a href="https://discord.gg/mnURjt3M6m"></a><img alt="Discord" src="https://img.shields.io/discord/1304909652387172493?style=flat-square&logo=discord&logoColor=FFFFFF&label=discord"></a>
+</div>
+
 <br>
 
 <p align="center"><img width=600 src="https://usenocturne.com/images/nocturne-2.png" alt="Nocturne screenshot"></p>
@@ -148,4 +153,5 @@ We kindly ask that any modifications or distributions made outside of direct for
 > "Spotify" and "Car Thing" are trademarks of Spotify AB. This software is not affiliated with or endorsed by Spotify AB.
 
 > [usenocturne.com](https://usenocturne.com) &nbsp;&middot;&nbsp;
-> GitHub [@usenocturne](https://github.com/usenocturne)
+> GitHub [@usenocturne](https://github.com/usenocturne) &nbsp;&middot;&nbsp;
+> [Discord](https://discord.gg/mnURjt3M6m)
