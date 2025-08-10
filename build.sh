@@ -4,14 +4,14 @@ set -e
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Image build config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-: "${NOCTURNE_IMAGE_VERSION:="v3.0.0-beta6"}"
+: "${NOCTURNE_IMAGE_VERSION:="v3.0.0"}"
 
 : "${NOCTURNE_UI_TAG:="main"}"
-: "${NOCTURNED_TAG:="v1.0.15"}"
+: "${NOCTURNED_TAG:="v1.0.16"}"
 : "${WINGMAN_TAG:="v1.0.1"}"
 
 : "${VOID_BUILD:="20250202"}"
-: "${STATIC_WEB_SERVER_VERSION:="v2.37.0"}"
+: "${STATIC_WEB_SERVER_VERSION:="v2.38.0"}"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # System config
