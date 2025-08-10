@@ -19,6 +19,12 @@ const UpdateScreen = () => {
 
   const [countdown, setCountdown] = useState(null);
   const countdownRef = useRef(null);
+  const [etaSeconds, setEtaSeconds] = useState(null);
+  const lastBytesRef = useRef(null);
+  const lastTimeRef = useRef(null);
+  const lastPercentRef = useRef(null);
+  const samplesRef = useRef([]);
+  const WINDOW_SECONDS = 10;
 
   useEffect(() => {
     if (stage === "complete" && countdown === null) {
@@ -69,13 +75,84 @@ const UpdateScreen = () => {
   const bytesTotalMB = updateProgress.bytesTotal
     ? Math.round(updateProgress.bytesTotal / 1024 / 1024)
     : 0;
-  const speed = updateProgress.speed ? updateProgress.speed.toFixed(2) : "0";
+  const reportedSpeed =
+    typeof updateProgress.speed === "number" ? updateProgress.speed : 0;
+  const reportedSpeedText =
+    reportedSpeed > 0 ? `${reportedSpeed.toFixed(2)} MB/s` : null;
 
   const isStageComplete = stage === "complete";
 
   useEffect(() => {
     updateGradientColors(null, "auth");
   }, [updateGradientColors]);
+
+  useEffect(() => {
+    if (isStageComplete) {
+      setEtaSeconds(null);
+      lastBytesRef.current = null;
+      lastTimeRef.current = null;
+      lastPercentRef.current = null;
+      samplesRef.current = [];
+      return;
+    }
+
+    const now = Date.now();
+    const bytesComplete = updateProgress.bytesComplete || 0;
+    const bytesTotal = updateProgress.bytesTotal || 0;
+    const remainingBytes = Math.max(bytesTotal - bytesComplete, 0);
+
+    const arr = samplesRef.current;
+    arr.push({ t: now, bytes: bytesComplete });
+    const cutoff = now - WINDOW_SECONDS * 1000;
+    while (arr.length > 1 && arr[0].t < cutoff) arr.shift();
+
+    let speedMBps = 0;
+    if (arr.length >= 2) {
+      const first = arr[0];
+      const last = arr[arr.length - 1];
+      const deltaBytes = Math.max(last.bytes - first.bytes, 0);
+      const deltaSec = Math.max((last.t - first.t) / 1000, 0.001);
+      speedMBps = (deltaBytes / 1024 / 1024) / deltaSec;
+    }
+
+    if (speedMBps <= 0 && reportedSpeed > 0) {
+      speedMBps = reportedSpeed;
+    }
+
+    let eta = null;
+    if (bytesTotal > 0 && speedMBps > 0 && remainingBytes > 0) {
+      const remainingMB = remainingBytes / 1024 / 1024;
+      eta = remainingMB / speedMBps;
+    } else {
+      const prev = lastPercentRef.current;
+      if (prev && prev.time && typeof prev.value === "number") {
+        const deltaSec = (now - prev.time) / 1000;
+        const deltaPercent = percent - prev.value;
+        if (deltaSec > 0 && deltaPercent > 0) {
+          const ratePercentPerSec = deltaPercent / deltaSec;
+          eta = (100 - percent) / ratePercentPerSec;
+        }
+      }
+    }
+
+    const validEta = Number.isFinite(eta) && eta > 0 && eta < 24 * 3600;
+    setEtaSeconds(validEta ? eta : null);
+    lastBytesRef.current = bytesComplete;
+    lastTimeRef.current = now;
+    lastPercentRef.current = { value: percent, time: now };
+  }, [updateProgress, percent, isStageComplete, reportedSpeed]);
+
+  const formatETA = (seconds) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) return null;
+    const s = Math.round(seconds);
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    if (hrs > 0) {
+      return `${hrs}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")} left`;
+    }
+    return `${mins}:${String(secs).padStart(2, "0")} left`;
+  };
 
   return (
     <div className="h-screen flex items-center justify-center overflow-hidden fixed inset-0 rounded-2xl">
@@ -113,7 +190,7 @@ const UpdateScreen = () => {
               </span>
             )}
             {!isStageComplete && (
-              <span className="absolute right-0">{speed} MB/s</span>
+              <span className="absolute right-0">{formatETA(etaSeconds) || reportedSpeedText || "--"}</span>
             )}
           </div>
         </div>
