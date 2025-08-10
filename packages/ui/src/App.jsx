@@ -945,6 +945,9 @@ function App() {
     initialCheckDone &&
     !showConnectionLostScreen &&
     !pairingRequest &&
+    !isUpdating &&
+    updateStatus.stage !== "download" &&
+    updateStatus.stage !== "flash" &&
     showNetworkBanner &&
     hasEverConnectedThisSession;
 
