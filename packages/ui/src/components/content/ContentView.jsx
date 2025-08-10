@@ -690,9 +690,9 @@ const ContentView = ({
   };
 
   const getImageStyle = () => {
-  return contentType === "artist"
-    ? "w-[280px] h-[280px] rounded-full drop-shadow-xl object-cover"
-    : "w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-xl";
+    return contentType === "artist"
+      ? "w-[280px] h-[280px] rounded-full drop-shadow-xl object-cover"
+      : "w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-xl";
   };
 
   const getMappingStatusText = () => {

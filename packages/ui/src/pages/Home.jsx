@@ -653,7 +653,7 @@ export default function Home({
                     <img
                       src={mix.images[0].url}
                       alt={`${mix.name} Cover`}
-                        className="w-full h-full object-cover rounded-[12px]"
+                      className="w-full h-full object-cover rounded-[12px]"
                     />
                   ) : (
                     <div className="w-full h-full rounded-[12px] bg-white/10"></div>

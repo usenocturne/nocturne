@@ -112,7 +112,7 @@ const UpdateScreen = () => {
       const last = arr[arr.length - 1];
       const deltaBytes = Math.max(last.bytes - first.bytes, 0);
       const deltaSec = Math.max((last.t - first.t) / 1000, 0.001);
-      speedMBps = (deltaBytes / 1024 / 1024) / deltaSec;
+      speedMBps = deltaBytes / 1024 / 1024 / deltaSec;
     }
 
     if (speedMBps <= 0 && reportedSpeed > 0) {
@@ -190,7 +190,9 @@ const UpdateScreen = () => {
               </span>
             )}
             {!isStageComplete && (
-              <span className="absolute right-0">{formatETA(etaSeconds) || reportedSpeedText || "--"}</span>
+              <span className="absolute right-0">
+                {formatETA(etaSeconds) || reportedSpeedText || "--"}
+              </span>
             )}
           </div>
         </div>
