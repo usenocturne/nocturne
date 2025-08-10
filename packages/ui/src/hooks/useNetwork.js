@@ -67,7 +67,10 @@ export function useNetwork() {
       }
 
       const status = await checkNetworkConnectivitySync();
-      updateConnectionStatus(status.isConnected);
+      if (status.source === "browser" && status.isConnected === false) {
+      } else {
+        updateConnectionStatus(status.isConnected);
+      }
 
       if (status.source === "browser" && status.isConnected) {
         window.dispatchEvent(new CustomEvent("browserOnlyModeOnline"));

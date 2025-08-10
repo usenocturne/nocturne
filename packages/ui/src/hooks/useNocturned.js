@@ -179,13 +179,6 @@ const setupGlobalWebSocket = async () => {
           "Network status after WebSocket reconnection:",
           networkStatus,
         );
-
-        if (networkStatus.isConnected) {
-          window.dispatchEvent(new Event("online"));
-          window.dispatchEvent(new CustomEvent("networkRestored"));
-        } else {
-          window.dispatchEvent(new Event("offline"));
-        }
       } catch (error) {
         console.error(
           "Failed to check network status after WebSocket reconnection:",
@@ -1109,7 +1102,6 @@ export const useBluetooth = () => {
             setLastConnectedDevice(null);
             stopNetworkPolling();
             stopRetrying();
-            window.dispatchEvent(new Event("offline"));
 
             reconnectAttemptsRef.current = 0;
             setReconnectAttempt(0);
@@ -1121,8 +1113,6 @@ export const useBluetooth = () => {
           break;
 
         case "bluetooth/network/disconnect":
-          window.dispatchEvent(new Event("offline"));
-
           if (isReconnecting.current) {
             cleanupReconnectTimer();
             isReconnecting.current = false;
