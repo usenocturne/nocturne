@@ -6,6 +6,7 @@ import {
   WifiHighIcon,
   WifiLowIcon,
   WifiOffIcon,
+  USBIcon,
 } from "../../common/icons";
 import { useSettings } from "../../../contexts/SettingsContext";
 import { useWiFiNetworks } from "../../../hooks/useWiFiNetworks";
@@ -18,13 +19,17 @@ let cachedTimezone = null;
 export const getCachedTimezone = () => cachedTimezone;
 
 export default function StatusBar() {
-  const [isBluetoothConnected, setIsBluetoothConnected] = useState(true);
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const [rssi, setRssi] = useState(null);
   const { currentNetwork, availableNetworks } = useWiFiNetworks();
   const { lastConnectedDevice, connectedDevices } = useBluetooth();
   const { isConnectorAvailable } = useConnector();
   const { currentTime, isFourDigits } = useCurrentTime();
+
+  const isBluetoothConnected =
+    (Array.isArray(connectedDevices) &&
+      connectedDevices.some((d) => d?.connected)) ||
+    Boolean(lastConnectedDevice);
 
   const getWiFiIcon = () => {
     if (!currentNetwork) return null;
@@ -80,10 +85,6 @@ export default function StatusBar() {
     return () => clearInterval(id);
   }, [isConnectorAvailable, currentNetwork]);
 
-  const shouldRenderStatusBar =
-    isBluetoothConnected || (isConnectorAvailable && currentNetwork);
-  if (!shouldRenderStatusBar) return null;
-
   const showBluetoothInfo =
     isBluetoothConnected && (!isConnectorAvailable || !currentNetwork);
 
@@ -100,19 +101,29 @@ export default function StatusBar() {
         {currentTime}
       </div>
       <div className="flex gap-2.5 h-10" style={{ marginTop: "-10px" }}>
-        {currentNetwork && isConnectorAvailable
-          ? getWiFiIcon()
-          : showBluetoothInfo && (
-              <BluetoothIcon
-                className="w-8 h-10 text-white"
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  display: "block",
-                  transform: "translateY(-10px)",
-                }}
-              />
-            )}
+        {currentNetwork && isConnectorAvailable ? (
+          getWiFiIcon()
+        ) : showBluetoothInfo ? (
+          <BluetoothIcon
+            className="w-8 h-10 text-white"
+            style={{
+              margin: 0,
+              padding: 0,
+              display: "block",
+              transform: "translateY(-10px)",
+            }}
+          />
+        ) : (
+          <USBIcon
+            className="w-8 h-10 text-white"
+            style={{
+              margin: 0,
+              padding: 0,
+              display: "block",
+              transform: "translateY(-10px)",
+            }}
+          />
+        )}
       </div>
     </div>
   );

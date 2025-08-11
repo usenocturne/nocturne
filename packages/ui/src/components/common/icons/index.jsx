@@ -68,3 +68,4 @@ export { default as KeyboardHideIcon } from "./KeyboardHideIcon";
 export { default as BrightnessLowIcon } from "./BrightnessLowIcon";
 export { default as BrightnessMidIcon } from "./BrightnessMidIcon";
 export { default as BrightnessHighIcon } from "./BrightnessHighIcon";
+export { default as USBIcon } from "./USBIcon";
