@@ -22,14 +22,21 @@ export default function StatusBar() {
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const [rssi, setRssi] = useState(null);
   const { currentNetwork, availableNetworks } = useWiFiNetworks();
-  const { lastConnectedDevice, connectedDevices } = useBluetooth();
+  const { lastConnectedDevice, connectedDevices, devices } = useBluetooth();
   const { isConnectorAvailable } = useConnector();
   const { currentTime, isFourDigits } = useCurrentTime();
+
+  const lastDeviceAddressLS =
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("lastConnectedBluetoothDevice")
+      : null;
 
   const isBluetoothConnected =
     (Array.isArray(connectedDevices) &&
       connectedDevices.some((d) => d?.connected)) ||
-    Boolean(lastConnectedDevice);
+    (Array.isArray(devices) && devices.some((d) => d?.connected)) ||
+    Boolean(lastConnectedDevice) ||
+    Boolean(lastDeviceAddressLS);
 
   const getWiFiIcon = () => {
     if (!currentNetwork) return null;
