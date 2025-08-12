@@ -109,25 +109,32 @@ function RangeSlider({
 
   return (
     <div
-      ref={trackRef}
-      className={`relative h-2 rounded-lg bg-neutral-700 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
+      className={`relative ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      style={trackStyle}
       role="slider"
       aria-valuemin={min}
       aria-valuemax={max}
       aria-valuenow={value}
       aria-disabled={disabled}
+      style={{ touchAction: "none" }}
     >
-      <div
-        className="absolute inset-y-0 left-0 rounded-lg bg-white"
-        style={{ width: `${percentage}%` }}
-      />
-      <div
-        className={`absolute top-1/2 -translate-y-1/2 -ml-2 w-4 h-4 rounded-full bg-white ${disabled ? "pointer-events-none" : ""} ${thumbClassName}`}
-        style={{ left: `calc(${percentage}% + 0px)` }}
-      />
+      <div className="py-3 select-none">
+        <div
+          ref={trackRef}
+          className="relative h-2 rounded-lg bg-neutral-700"
+          style={trackStyle}
+        >
+          <div
+            className="absolute inset-y-0 left-0 rounded-lg bg-white"
+            style={{ width: `${percentage}%` }}
+          />
+          <div
+            className={`absolute top-1/2 -translate-y-1/2 -ml-3 w-6 h-6 rounded-full bg-white ${disabled ? "pointer-events-none" : ""} ${thumbClassName}`}
+            style={{ left: `calc(${percentage}% + 0px)` }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -204,7 +211,7 @@ function PowerMenuOverlay({
     >
       <div className="absolute inset-0 bg-black/80" />
       <div
-        className="relative bg-neutral-900/90 rounded-2xl px-8 py-6 flex flex-col items-center space-y-6"
+        className="relative bg-neutral-900/90 rounded-2xl px-8 py-6 flex flex-col items-center space-y-8"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex space-x-8">
