@@ -308,9 +308,12 @@ function NotificationEffects({
   activeSection,
   handleReboot,
   isAuthenticated,
+  isError,
+  errorMessage,
 }) {
   const { addNotification, removeNotification } = useNotifications();
   const notificationShownRef = useRef(false);
+  const lastErrorMessageRef = useRef(null);
 
   useEffect(() => {
     if (
@@ -355,6 +358,21 @@ function NotificationEffects({
       logoutNotificationIdRef.current = null;
     }
   }, [isAuthenticated, removeNotification]);
+
+  useEffect(() => {
+    if (isError && errorMessage) {
+      if (lastErrorMessageRef.current !== errorMessage) {
+        lastErrorMessageRef.current = errorMessage;
+        addNotification({
+          icon: SettingsUpdateIcon,
+          title: "Update failed",
+          description: errorMessage,
+        });
+      }
+    } else if (!isError) {
+      lastErrorMessageRef.current = null;
+    }
+  }, [isError, errorMessage, addNotification]);
 
   return null;
 }
@@ -1058,6 +1076,8 @@ function App() {
         activeSection={activeSection}
         handleReboot={handleReboot}
         isAuthenticated={isAuthenticated}
+          isError={isError}
+          errorMessage={errorMessage}
       />
       {isAuthenticated && !showConnectionLostScreen && !showTutorial && (
         <UpdateCheckNotification
