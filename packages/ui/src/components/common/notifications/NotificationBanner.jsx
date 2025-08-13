@@ -74,12 +74,11 @@ const NotificationBanner = ({ notification, onDismiss }) => {
       </div>
       {action && (
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             if (action.onPress) action.onPress();
             onDismiss();
           }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClickCapture={(e) => e.stopPropagation()}
           className="px-3 py-1 bg-white text-neutral-900 font-medium rounded-md flex-shrink-0 text-[20px] focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
         >
           {action.label}
