@@ -50,13 +50,12 @@ const BluetoothDevices = () => {
     await disconnectDevice(deviceAddress);
   };
 
-  const handleForget = async () => {
+  const handleForget = () => {
     if (selectedDevice) {
-      const success = await forgetDevice(selectedDevice);
-      if (success) {
-        setShowForgetDialog(false);
-        setSelectedDevice(null);
-      }
+      const address = selectedDevice;
+      setShowForgetDialog(false);
+      setSelectedDevice(null);
+      void forgetDevice(address);
     }
   };
 
@@ -162,66 +161,68 @@ const BluetoothDevices = () => {
 
       <div className="space-y-4">{renderContent()}</div>
 
-      <Dialog
-        open={showForgetDialog}
-        onClose={() => {
-          setShowForgetDialog(false);
-          setSelectedDevice(null);
-        }}
-        className="relative z-50"
-      >
-        <DialogBackdrop
-          transition
-          className="fixed inset-0 bg-black/60 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
-        />
+      {showForgetDialog && (
+        <Dialog
+          open={showForgetDialog}
+          onClose={() => {
+            setShowForgetDialog(false);
+            setSelectedDevice(null);
+          }}
+          className="relative z-50"
+        >
+          <DialogBackdrop
+            transition
+            className="fixed inset-0 bg-black/60 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+          />
 
-        <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
-          <div
-            className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0"
-            style={{ fontFamily: "var(--font-inter)" }}
-          >
-            <DialogPanel
-              transition
-              className="relative transform overflow-hidden rounded-[17px] bg-[#161616] px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[36rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+          <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+            <div
+              className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0"
+              style={{ fontFamily: "var(--font-inter)" }}
             >
-              <div>
-                <div className="text-center">
-                  <DialogTitle
-                    as="h3"
-                    className="text-[36px] font-[560] tracking-tight text-white"
-                  >
-                    Forget Device?
-                  </DialogTitle>
-                  <div className="mt-2">
-                    <p className="text-[28px] font-[560] tracking-tight text-white/60">
-                      Pair this device again to use it.
-                    </p>
+              <DialogPanel
+                transition
+                className="relative transform overflow-hidden rounded-[17px] bg-[#161616] px-0 pb-0 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[36rem] data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+              >
+                <div>
+                  <div className="text-center">
+                    <DialogTitle
+                      as="h3"
+                      className="text-[36px] font-[560] tracking-tight text-white"
+                    >
+                      Forget Device?
+                    </DialogTitle>
+                    <div className="mt-2">
+                      <p className="text-[28px] font-[560] tracking-tight text-white/60">
+                        Pair this device again to use it.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-0 border-t border-slate-100/25">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForgetDialog(false);
-                    setSelectedDevice(null);
-                  }}
-                  className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm sm:col-start-1 border-r border-slate-100/25 bg-transparent hover:bg-white/5 focus:outline-none"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleForget}
-                  className="mt-3 inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] shadow-sm sm:col-start-2 sm:mt-0 bg-transparent hover:bg-white/5 focus:outline-none"
-                >
-                  Forget
-                </button>
-              </div>
-            </DialogPanel>
+                <div className="mt-5 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-0 border-t border-slate-100/25">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgetDialog(false);
+                      setSelectedDevice(null);
+                    }}
+                    className="inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#6c8bd5] shadow-sm sm:col-start-1 border-r border-slate-100/25 bg-transparent hover:bg-white/5 focus:outline-none"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleForget}
+                    className="mt-3 inline-flex w-full justify-center px-3 py-3 text-[28px] font-[560] tracking-tight text-[#fe3b30] shadow-sm sm:col-start-2 sm:mt-0 bg-transparent hover:bg-white/5 focus:outline-none"
+                  >
+                    Forget
+                  </button>
+                </div>
+              </DialogPanel>
+            </div>
           </div>
-        </div>
-      </Dialog>
+        </Dialog>
+      )}
     </div>
   );
 };
