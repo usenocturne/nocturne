@@ -511,6 +511,11 @@ function App() {
 
     if (existing) return;
 
+    window.umamiBeforeSend = (type, payload) => {
+      if (!payload) return false;
+      return { ...payload, id: serial };
+    };
+
     const script = document.createElement("script");
     script.defer = true;
     script.src = "https://p.itsnebula.net/script.js";
@@ -518,13 +523,8 @@ function App() {
       "data-website-id",
       "3465cd10-6beb-4dd9-969c-f7f44704fd18",
     );
+    script.setAttribute("data-before-send", "umamiBeforeSend");
     script.id = "analytics";
-
-    script.onload = () => {
-      if (window.umami) {
-        window.umami.identify(serial);
-      }
-    };
 
     document.body.appendChild(script);
   }, [
