@@ -146,6 +146,8 @@ This project is licensed under the **GPL-3.0** license.
 
 We kindly ask that any modifications or distributions made outside of direct forks from this repository include attribution to the original project in the README, as we have worked hard on this. :)
 
+This software contains calls to the Nocturne API. Any use, distribution, or modification of this software constitutes acceptance of the Nocturne API License.
+
 ---
 
 > © 2025 Vanta Labs.
