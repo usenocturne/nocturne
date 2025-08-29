@@ -4,6 +4,8 @@ import {
   waitForNetwork,
 } from "../utils/networkAwareRequest";
 import { useNetwork } from "./useNetwork";
+import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
+import { useNocturned, addGlobalWsListener } from "./useNocturned";
 
 let globalWebSocket = null;
 let globalConnectionId = null;
@@ -17,16 +19,14 @@ let lastFetchTimestamp = 0;
 let pendingFetch = null;
 let keepAliveInterval = null;
 let isInitialized = false;
-let currentAccessToken = null;
 let podcastPollingInterval = null;
 let isPodcastPlaying = false;
 let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
-let hasInvalidToken = false;
-
-export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
+export function useSpotifyPlayerState(immediateLoad = false) {
   const { isConnected: isNetworkConnected } = useNetwork();
+  const { wsConnected, getPlayerState } = useSpotifyWebSocket();
   const [currentPlayback, setCurrentPlayback] = useState(null);
   const [currentlyPlayingAlbum, setCurrentlyPlayingAlbum] = useState(null);
   const [albumChangeEvent, setAlbumChangeEvent] = useState(null);
@@ -41,13 +41,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   const subscriberIdRef = useRef(`subscriber-${Date.now()}-${Math.random()}`);
   const reconnectTimeoutRef = useRef(null);
   const maxRetryAttempts = 5;
-  const accessTokenRef = useRef(accessToken);
   const currentPlaybackRef = useRef(null);
-
-  useEffect(() => {
-    accessTokenRef.current = accessToken;
-    hasInvalidToken = false;
-  }, [accessToken]);
 
   const stopPodcastPolling = useCallback(() => {
     if (podcastPollingInterval) {
@@ -80,7 +74,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
           podcastPollingInterval = setInterval(async () => {
             if (
               isPodcastPlaying &&
-              accessTokenRef.current &&
+              wsConnected &&
               isNetworkConnected
             ) {
               try {
@@ -89,25 +83,13 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
 
                 lastPodcastFetch = now;
                 await waitForNetwork();
-                const response = await networkAwareRequest(() =>
-                  fetch(
-                    "https://api.spotify.com/v1/me/player?additional_types=track,episode",
-                    {
-                      headers: {
-                        Authorization: `Bearer ${accessTokenRef.current}`,
-                      },
-                    },
-                  ),
-                );
-
-                if (response.ok) {
-                  const polledData = await response.json();
-                  if (polledData && Object.keys(polledData).length > 0) {
-                    const wasPolling = isPodcastPlaying;
-                    isPodcastPlaying = false;
-                    processPlaybackState(polledData);
-                    isPodcastPlaying = wasPolling;
-                  }
+                const polledData = await getPlayerState();
+                
+                if (polledData && Object.keys(polledData).length > 0) {
+                  const wasPolling = isPodcastPlaying;
+                  isPodcastPlaying = false;
+                  processPlaybackState(polledData);
+                  isPodcastPlaying = wasPolling;
                 }
               } catch (err) {
                 console.error("Error polling podcast data:", err);
@@ -216,9 +198,8 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
 
   const fetchCurrentPlayback = useCallback(
     async (forceRefresh = false) => {
-      if (hasInvalidToken) return;
 
-      if (!accessTokenRef.current || !isNetworkConnected) {
+      if (!wsConnected || !isNetworkConnected) {
         if (!initialStateLoadedRef.current) {
           setCurrentPlayback(null);
         }
@@ -241,42 +222,27 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
         pendingFetch = true;
         setIsLoading(true);
 
-        const response = await networkAwareRequest(() =>
-          fetch(
-            "https://api.spotify.com/v1/me/player?additional_types=track,episode",
-            {
-              headers: {
-                Authorization: `Bearer ${accessTokenRef.current}`,
-              },
-            },
-          ),
-        );
+        const data = await getPlayerState();
+        
+        if (!data || Object.keys(data).length === 0) {
+          resetPlaybackState();
+        } else {
+          processPlaybackState(data);
+        }
+      } catch (err) {
+        console.error("Error fetching current playback:", err);
+        setError(err.message);
 
-        if (response.status === 401 || response.status === 403) {
-          hasInvalidToken = true;
+        if (err.message.includes("401") || err.message.includes("403")) {
           resetPlaybackState(true);
           cleanupWebSocket();
           return;
         }
 
-        if (response.status === 204) {
+        if (err.message.includes("204") || err.message.includes("No content")) {
           resetPlaybackState();
           return;
         }
-
-        if (response.ok) {
-          const data = await response.json();
-          if (!data || Object.keys(data).length === 0) {
-            resetPlaybackState();
-          } else {
-            processPlaybackState(data);
-          }
-        } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-      } catch (err) {
-        console.error("Error fetching current playback:", err);
-        setError(err.message);
 
         if (err.name === "NetworkError" || !isNetworkConnected) {
           resetPlaybackState();
@@ -288,7 +254,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
         setInitialFetchInProgress(false);
       }
     },
-    [processPlaybackState, resetPlaybackState, isNetworkConnected],
+    [wsConnected, getPlayerState, processPlaybackState, resetPlaybackState, isNetworkConnected],
   );
 
   const cleanupWebSocket = useCallback(() => {
@@ -350,8 +316,6 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
 
   const connectWebSocket = useCallback(async () => {
     if (
-      hasInvalidToken ||
-      !accessTokenRef.current ||
       (isConnecting &&
         globalWebSocket &&
         globalWebSocket.readyState === WebSocket.CONNECTING) ||
@@ -418,18 +382,9 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     }
 
     isConnecting = true;
-    currentAccessToken = accessTokenRef.current;
 
     try {
-      if (!accessTokenRef.current) {
-        isConnecting = false;
-        isAttemptingReconnect = false;
-        connectionCount = Math.max(0, connectionCount - 1);
-        return;
-      }
-      globalWebSocket = new WebSocket(
-        `wss://dealer.spotify.com/?access_token=${currentAccessToken}`,
-      );
+      throw new Error("WebSocket connection should be handled by useSpotifyWebSocket hook");
       webSocketRef.current = globalWebSocket;
 
       globalWebSocket.onopen = () => {
@@ -463,16 +418,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
           connectionIdRef.current = globalConnectionId;
 
           try {
-            const url = `https://api.spotify.com/v1/me/notifications/player?connection_id=${encodeURIComponent(globalConnectionId)}`;
-            await networkAwareRequest(() =>
-              fetch(url, {
-                method: "PUT",
-                headers: {
-                  Authorization: `Bearer ${currentAccessToken}`,
-                  "Content-Type": "application/json",
-                },
-              }),
-            );
+            console.log("WebSocket connection established");
 
             if (!initialStateLoadedRef.current) {
               await networkAwareRequest(() => fetchCurrentPlayback());
@@ -606,11 +552,8 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
       }
     }
   }, [
-    accessTokenRef,
     fetchCurrentPlayback,
     cleanupWebSocket,
-    initialStateLoadedRef,
-    networkAwareRequest,
     processPlaybackState,
     isNetworkConnected,
   ]);
@@ -629,8 +572,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   }, [processPlaybackState]);
 
   useEffect(() => {
-    if (accessToken) {
-      connectWebSocket();
+    if (wsConnected) {
       if (!initialPlaybackFetchDone) {
         initialPlaybackFetchDone = true;
         fetchCurrentPlayback(true);
@@ -659,7 +601,7 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     return () => {
       cleanupWebSocket();
     };
-  }, [accessToken, connectWebSocket, cleanupWebSocket, fetchCurrentPlayback]);
+  }, [wsConnected, connectWebSocket, cleanupWebSocket, fetchCurrentPlayback]);
 
   useEffect(() => {
     if (reconnectTimeoutRef.current) {
@@ -670,11 +612,11 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   }, []);
 
   useEffect(() => {
-    if (accessToken && immediateLoad && !initialPlaybackFetchDone) {
+    if (wsConnected && immediateLoad && !initialPlaybackFetchDone) {
       initialPlaybackFetchDone = true;
       fetchCurrentPlayback(true);
     }
-  }, [accessToken, immediateLoad, fetchCurrentPlayback]);
+  }, [wsConnected, immediateLoad, fetchCurrentPlayback]);
 
   useEffect(() => {
     const handleNetworkRestored = async () => {
@@ -701,53 +643,47 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
   }, [connectWebSocket, fetchCurrentPlayback, cleanupWebSocket]);
 
   useEffect(() => {
-    const handleAccessTokenUpdate = (event) => {
-      const newAccessToken = event.detail.accessToken;
-      if (newAccessToken && newAccessToken !== accessTokenRef.current) {
-        accessTokenRef.current = newAccessToken;
-        hasInvalidToken = false;
-        initialPlaybackFetchDone = false;
+    if (!wsConnected) return;
 
-        if (
-          globalWebSocket &&
-          (globalWebSocket.readyState === WebSocket.OPEN ||
-            globalWebSocket.readyState === WebSocket.CONNECTING)
-        ) {
-          cleanupWebSocket();
-          setTimeout(() => {
-            connectWebSocket();
-            fetchCurrentPlayback(true);
-          }, 100);
-        } else {
-          connectWebSocket();
-          fetchCurrentPlayback(true);
-
-          if (!isConnecting && !isAttemptingReconnect) {
-            if (
-              !globalWebSocket ||
-              globalWebSocket.readyState === WebSocket.CLOSED
-            ) {
-              setTimeout(() => {
-                if (
-                  !globalWebSocket ||
-                  globalWebSocket.readyState !== WebSocket.OPEN
-                ) {
-                  connectWebSocket();
-                }
-                fetchCurrentPlayback(true);
-              }, 100);
-            }
-          }
+    const handlePlayerStateChanged = (data) => {
+      if (data.type === "event" && data.topic === "spotify.player.state_changed") {
+        console.log("Received player state change event:", data);
+        
+        const events = data.data?.events || [];
+        if (events.length > 0 && events[0].event?.state) {
+          const newState = events[0].event.state;
+          console.log("Processing new player state:", newState);
+          processPlaybackState(newState);
         }
       }
     };
 
-    window.addEventListener("accessTokenUpdated", handleAccessTokenUpdate);
+    const cleanup = addGlobalWsListener(`player-state-${Date.now()}`, {
+      onMessage: handlePlayerStateChanged,
+    });
 
-    return () => {
-      window.removeEventListener("accessTokenUpdated", handleAccessTokenUpdate);
-    };
-  }, [connectWebSocket, fetchCurrentPlayback, cleanupWebSocket]);
+    return cleanup;
+  }, [wsConnected, processPlaybackState]);
+
+  const refreshPlaybackState = useCallback(async (forceRefresh = false) => {
+    if (!wsConnected) return;
+    
+    try {
+      console.log("Refreshing playback state via WebSocket...");
+      const data = await getPlayerState();
+      
+      if (!data || Object.keys(data).length === 0) {
+        console.log("No playback data received, resetting state");
+        resetPlaybackState();
+      } else {
+        console.log("Processing new playback data:", data);
+        processPlaybackState(data);
+      }
+    } catch (err) {
+      console.error("Error refreshing playback state:", err);
+      setError(err.message);
+    }
+  }, [wsConnected, getPlayerState, resetPlaybackState, processPlaybackState]);
 
   return {
     currentPlayback,
@@ -755,6 +691,6 @@ export function useSpotifyPlayerState(accessToken, immediateLoad = false) {
     albumChangeEvent,
     isLoading,
     error,
-    refreshPlaybackState: fetchCurrentPlayback,
+    refreshPlaybackState,
   };
 }

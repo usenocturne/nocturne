@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useAuth } from "./useAuth";
 import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
 import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
+import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import {
   networkAwareRequest,
   waitForNetwork,
@@ -14,15 +14,7 @@ const RETRY_DELAY = 2000;
 export function useSpotifyData(
   activeSection,
   skipInitialFetch = false,
-  tokenReady = true,
 ) {
-  const {
-    isAuthenticated,
-    accessToken,
-    isLoading: authIsLoading,
-    refreshTokens,
-    error: authError,
-  } = useAuth();
 
   const [isInitializing, setIsInitializing] = useState(false);
   const [recentAlbums, setRecentAlbums] = useState([]);
@@ -37,6 +29,34 @@ export function useSpotifyData(
   const [radioMixes, setRadioMixes] = useState([]);
   const [userShows, setUserShows] = useState([]);
   const [retryCount, setRetryCount] = useState(0);
+  const [nextRecentTracksAfter, setNextRecentTracksAfter] = useState(null);
+  const [isLazyLoading, setIsLazyLoading] = useState(false);
+  
+  const [nextTokens, setNextTokens] = useState({
+    userPlaylists: null,
+    topArtists: null, 
+    likedSongs: null,
+    userShows: null,
+    recentTracks: null
+  });
+  
+  const [lastOffsets, setLastOffsets] = useState({
+    userPlaylists: 0,
+    topArtists: 0,
+    likedSongs: 0,
+    userShows: 0,
+    recentTracks: 0
+  });
+  
+  const [itemCounts, setItemCounts] = useState({
+    recentAlbums: 0,
+    userPlaylists: 0,
+    topArtists: 0,
+    likedSongs: 0,
+    userShows: 0
+  });
+  
+  const [sectionsAccessed, setSectionsAccessed] = useState(new Set());
 
   const [isLoading, setIsLoading] = useState({
     recentAlbums: true,
@@ -61,23 +81,39 @@ export function useSpotifyData(
   const initialLoadTriggeredRef = useRef(false);
   const dataFetchingInProgressRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
-  const effectiveToken = useMemo(() => {
-    return tokenReady &&
-      isAuthenticated &&
-      !isInitializing &&
-      !skipInitialFetch &&
-      accessToken
-      ? accessToken
-      : null;
-  }, [
-    tokenReady,
-    isAuthenticated,
-    isInitializing,
-    skipInitialFetch,
-    accessToken,
-  ]);
   const retryTimeoutRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const lazyLoadTimeoutRef = useRef(null);
+  
+  const sectionTimeoutRefs = useRef({
+    playlists: null,
+    artists: null,
+    liked: null,
+    shows: null,
+    recents: null
+  });
+  
+  const sectionLoadingRefs = useRef({
+    playlists: false,
+    artists: false,
+    liked: false,
+    shows: false,
+    recents: false
+  });
+  
+  const offsetRefs = useRef({
+    userPlaylists: 0,
+    topArtists: 0,
+    likedSongs: 0,
+    userShows: 0
+  });
+  
+  const currentCountsRef = useRef({
+    userPlaylists: 0,
+    topArtists: 0,
+    likedSongs: 0,
+    userShows: 0
+  });
 
   const {
     currentPlayback,
@@ -86,16 +122,117 @@ export function useSpotifyData(
     isLoading: playerIsLoading,
     error: playerError,
     refreshPlaybackState,
-  } = useSpotifyPlayerState(effectiveToken, !!effectiveToken);
+  } = useSpotifyPlayerState();
 
-  const playerControls = useSpotifyPlayerControls(effectiveToken);
+  const playerControls = useSpotifyPlayerControls();
+  
+  const { 
+    wsConnected, 
+    sendSpotifyCommand,
+    getUserPlaylists, 
+    getUserTopTracks, 
+    getUserTopArtists, 
+    getUserTracks, 
+    getRecentlyPlayed,
+    getNextRecentlyPlayed, 
+    getUserShows 
+  } = useSpotifyWebSocket();
+
+  const scheduleLazyLoad = useCallback(() => {
+    if (!nextRecentTracksAfter || isLazyLoading || activeSection !== 'recents') {
+      return;
+    }
+
+    if (itemCounts.recentAlbums >= 50) {
+      return;
+    }
+    
+    if (sectionLoadingRefs.current.recents) {
+      return;
+    }
+    
+    if (lazyLoadTimeoutRef.current) {
+      return;
+    }
+    
+    if (sectionTimeoutRefs.current.recents) {
+      return;
+    }
+
+    sectionLoadingRefs.current.recents = true;
+    sectionLoadingRefs.current.recents = true;
+    
+    const delay = 3000;
+    lazyLoadTimeoutRef.current = setTimeout(async () => {
+      if (nextRecentTracksAfter && !isLazyLoading && activeSection === 'recents') {
+        try {
+          setIsLazyLoading(true);
+          const data = await getNextRecentlyPlayed(nextRecentTracksAfter);
+          const uniqueAlbums = [];
+          const existingAlbumIds = new Set(recentAlbums.map(album => album.id));
+
+          if (data.nextAfter) {
+            setNextRecentTracksAfter(data.nextAfter);
+          } else {
+            setNextRecentTracksAfter(null);
+          }
+
+          const items = data.items || [];
+          items.forEach((item) => {
+            if (
+              item.track &&
+              item.track.type === "track" &&
+              item.track.album &&
+              !existingAlbumIds.has(item.track.album.id)
+            ) {
+              existingAlbumIds.add(item.track.album.id);
+              uniqueAlbums.push(item.track.album);
+            } else if (
+              item.track &&
+              item.track.type === "episode" &&
+              item.track.show &&
+              !existingAlbumIds.has(item.track.show.id)
+            ) {
+              existingAlbumIds.add(item.track.show.id);
+              uniqueAlbums.push(item.track.show);
+            }
+          });
+
+          setRecentAlbums((prevAlbums) => {
+            const existingIds = new Set(prevAlbums.map(album => album.id));
+            const newUniqueAlbums = uniqueAlbums.filter(album => !existingIds.has(album.id));
+            const newTotal = [...prevAlbums, ...newUniqueAlbums];
+            const limitedAlbums = newTotal.slice(0, 50);
+            setItemCounts(prev => ({ ...prev, recentAlbums: limitedAlbums.length }));
+            
+            if (data.nextAfter && limitedAlbums.length < 50 && activeSection === 'recents') {
+              setTimeout(() => scheduleLazyLoad(), 100);
+            } else {
+                sectionLoadingRefs.current.recents = false;
+            }
+            
+            return limitedAlbums;
+          });
+
+        } catch (err) {
+          console.error("Error in lazy loading recent tracks:", err);
+          sectionLoadingRefs.current.recents = false;
+        } finally {
+          setIsLazyLoading(false);
+        }
+      } else {
+        sectionLoadingRefs.current.recents = false;
+      }
+    }, delay);
+  }, [nextRecentTracksAfter, isLazyLoading, activeSection, getNextRecentlyPlayed, recentAlbums, itemCounts.recentAlbums]);
 
   useEffect(() => {
     if (skipInitialFetch) return;
-    if (isAuthenticated && !authIsLoading && !initialDataLoaded) {
+    if (!initialDataLoaded) {
       loadInitialData();
     }
-  }, [isAuthenticated, authIsLoading, skipInitialFetch]);
+  }, [skipInitialFetch]);
+
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.id) {
@@ -123,37 +260,38 @@ export function useSpotifyData(
     }
   }, [currentlyPlayingAlbum, recentAlbums, activeSection]);
 
-  const fetchRecentlyPlayed = useCallback(async () => {
-    if (!effectiveToken) return;
+  const fetchRecentlyPlayed = useCallback(async (isLoadMore = false) => {
+    if (!wsConnected) return;
 
     try {
-      setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
-
-      const response = await networkAwareRequest(() =>
-        fetch(
-          "https://api.spotify.com/v1/me/player/recently-played?limit=50&additional_types=track,episode",
-          {
-            headers: {
-              Authorization: `Bearer ${effectiveToken}`,
-            },
-          },
-        ),
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
       }
 
-      const data = await response.json();
+      let params = { limit: 5, additional_types: 'track,episode' };
+      if (isLoadMore) {
+        params.offset = lastOffsets.recentTracks + 5;
+      }
+
+      const data = await getRecentlyPlayed(params);
       const uniqueAlbums = [];
       const albumIds = new Set();
+
+      setLastOffsets(prev => ({ ...prev, recentTracks: data.offset || 0 }));
+
+      if (data.nextAfter) {
+        setNextRecentTracksAfter(data.nextAfter);
+      } else if (data.next) {
+        setNextTokens(prev => ({ ...prev, recentTracks: data.next }));
+      }
 
       if (currentlyPlayingAlbum?.id) {
         albumIds.add(currentlyPlayingAlbum.id);
         uniqueAlbums.push(currentlyPlayingAlbum);
       }
 
-      data.items.forEach((item) => {
+      const items = data.items || [];
+      items.forEach((item) => {
         if (
           item.track &&
           item.track.type === "track" &&
@@ -173,8 +311,28 @@ export function useSpotifyData(
         }
       });
 
-      setRecentAlbums(uniqueAlbums);
+      if (isLoadMore) {
+        setRecentAlbums((prev) => {
+          const existingIds = new Set(prev.map(album => album.id));
+          const newUniqueAlbums = uniqueAlbums.filter(album => !existingIds.has(album.id));
+          const newTotal = [...prev, ...newUniqueAlbums];
+          const limitedAlbums = newTotal.slice(0, 50);
+          setItemCounts(prevCounts => ({ ...prevCounts, recentAlbums: limitedAlbums.length }));
+          return limitedAlbums;
+        });
+      } else {
+        setRecentAlbums(uniqueAlbums);
+        setItemCounts(prev => ({ ...prev, recentAlbums: uniqueAlbums.length }));
+      }
+      
       setErrors((prev) => ({ ...prev, recentAlbums: null }));
+      
+      if (data.next && (isLoadMore ? recentAlbums.length + uniqueAlbums.length : uniqueAlbums.length) < 50) {
+        setNextTokens(prev => ({ ...prev, recentTracks: data.next }));
+      } else {
+        setNextTokens(prev => ({ ...prev, recentTracks: null }));
+      }
+      
       return uniqueAlbums;
     } catch (err) {
       console.error("Error fetching recently played:", err);
@@ -183,93 +341,265 @@ export function useSpotifyData(
     } finally {
       setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
     }
-  }, [effectiveToken, currentlyPlayingAlbum]);
+  }, [wsConnected, getRecentlyPlayed, currentlyPlayingAlbum, lastOffsets, recentAlbums.length]);
 
-  const fetchUserPlaylists = useCallback(async () => {
-    if (!effectiveToken) return;
+  const loadMoreRecentTracks = useCallback(async (isLazyLoad = false) => {
+    if (!wsConnected || !nextRecentTracksAfter) return [];
 
     try {
-      setIsLoading((prev) => ({ ...prev, userPlaylists: true }));
-
-      const response = await networkAwareRequest(() =>
-        fetch("https://api.spotify.com/v1/me/playlists?limit=50", {
-          headers: {
-            Authorization: `Bearer ${effectiveToken}`,
-          },
-        }),
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (isLazyLoad) {
+        setIsLazyLoading(true);
+      } else {
+        setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
       }
 
-      const data = await response.json();
-      setUserPlaylists(data.items);
+      const data = await getNextRecentlyPlayed(nextRecentTracksAfter);
+      const uniqueAlbums = [];
+      const existingAlbumIds = new Set(recentAlbums.map(album => album.id));
+
+      if (data.nextAfter) {
+        setNextRecentTracksAfter(data.nextAfter);
+      } else {
+        setNextRecentTracksAfter(null);
+      }
+
+      const items = data.items || [];
+      items.forEach((item) => {
+        if (
+          item.track &&
+          item.track.type === "track" &&
+          item.track.album &&
+          !existingAlbumIds.has(item.track.album.id)
+        ) {
+          existingAlbumIds.add(item.track.album.id);
+          uniqueAlbums.push(item.track.album);
+        } else if (
+          item.track &&
+          item.track.type === "episode" &&
+          item.track.show &&
+          !existingAlbumIds.has(item.track.show.id)
+        ) {
+          existingAlbumIds.add(item.track.show.id);
+          uniqueAlbums.push(item.track.show);
+        }
+      });
+
+      setRecentAlbums((prevAlbums) => {
+        const existingIds = new Set(prevAlbums.map(album => album.id));
+        const newUniqueAlbums = uniqueAlbums.filter(album => !existingIds.has(album.id));
+        const newTotal = [...prevAlbums, ...newUniqueAlbums];
+        const limitedAlbums = newTotal.slice(0, 50);
+        setItemCounts(prev => ({ ...prev, recentAlbums: limitedAlbums.length }));
+        return limitedAlbums;
+      });
+      setErrors((prev) => ({ ...prev, recentAlbums: null }));
+      
+      if (isLazyLoad && nextRecentTracksAfter && itemCounts.recentAlbums < 50 && activeSection === 'recents') {
+        scheduleLazyLoad();
+      }
+      
+      return uniqueAlbums;
+    } catch (err) {
+      console.error("Error loading more recent tracks:", err);
+      setErrors((prev) => ({ ...prev, recentAlbums: err.message }));
+      throw err;
+    } finally {
+      if (isLazyLoad) {
+        setIsLazyLoading(false);
+      } else {
+        setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
+      }
+    }
+  }, [wsConnected, getNextRecentlyPlayed, nextRecentTracksAfter, recentAlbums, activeSection, itemCounts.recentAlbums]);
+
+  const fetchUserPlaylists = useCallback(async (isLoadMore = false) => {
+    if (!wsConnected) return;
+
+    if (isLoadMore && sectionLoadingRefs.current.playlists) {
+      return;
+    }
+
+    try {
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, userPlaylists: true }));
+      } else {
+        sectionLoadingRefs.current.playlists = true;
+      }
+
+      let nextOffset = 0;
+      if (isLoadMore) {
+        nextOffset = lastOffsets.userPlaylists + 5;
+      }
+      
+      
+      const params = { limit: 5, offset: nextOffset };
+
+      const data = await getUserPlaylists(params);
+      const items = data.items || [];
+      
+      setLastOffsets(prev => ({ ...prev, userPlaylists: data.offset || 0 }));
+      
+      if (isLoadMore) {
+        setUserPlaylists((prev) => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newUniqueItems = items.filter(item => !existingIds.has(item.id));
+          const newTotal = [...prev, ...newUniqueItems];
+          const limitedItems = newTotal.slice(0, 50);
+          setItemCounts(prevCounts => ({ ...prevCounts, userPlaylists: limitedItems.length }));
+          return limitedItems;
+        });
+        
+        if (data.next && itemCounts.userPlaylists + items.length < 50) {
+          setNextTokens(prev => ({ ...prev, userPlaylists: data.next }));
+        } else {
+          setNextTokens(prev => ({ ...prev, userPlaylists: null }));
+        }
+      } else {
+        setUserPlaylists(items);
+        setItemCounts(prev => ({ ...prev, userPlaylists: items.length }));
+        
+        if (data.next && items.length < 50) {
+          setNextTokens(prev => ({ ...prev, userPlaylists: data.next }));
+        } else if (items.length === 5 && data.total > 5) {
+          setNextTokens(prev => ({ ...prev, userPlaylists: 'has-more' }));
+        }
+      }
+      
       setErrors((prev) => ({ ...prev, userPlaylists: null }));
-      return data.items;
+      return items;
     } catch (err) {
       console.error("Error fetching user playlists:", err);
       setErrors((prev) => ({ ...prev, userPlaylists: err.message }));
       throw err;
     } finally {
-      setIsLoading((prev) => ({ ...prev, userPlaylists: false }));
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, userPlaylists: false }));
+      } else {
+        sectionLoadingRefs.current.playlists = false;
+      }
     }
-  }, [effectiveToken]);
+  }, [wsConnected, getUserPlaylists, lastOffsets]);
 
-  const fetchTopArtists = useCallback(async () => {
-    if (!effectiveToken) return;
+  const fetchTopArtists = useCallback(async (isLoadMore = false) => {
+    if (!wsConnected) return;
+
+    if (isLoadMore && sectionLoadingRefs.current.artists) {
+      return;
+    }
 
     try {
-      setIsLoading((prev) => ({ ...prev, topArtists: true }));
-
-      const response = await networkAwareRequest(() =>
-        fetch("https://api.spotify.com/v1/me/top/artists?limit=50", {
-          headers: {
-            Authorization: `Bearer ${effectiveToken}`,
-          },
-        }),
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, topArtists: true }));
+      } else {
+        sectionLoadingRefs.current.artists = true;
       }
 
-      const data = await response.json();
-      setTopArtists(data.items);
+      let nextOffset = 0;
+      if (isLoadMore) {
+        nextOffset = offsetRefs.current.topArtists + 5;
+      }
+      
+      
+      const params = { limit: 5, offset: nextOffset };
+
+      const data = await getUserTopArtists(params);
+      const items = data.items || [];
+      
+      offsetRefs.current.topArtists = data.offset || 0;
+      
+      if (isLoadMore) {
+        setTopArtists((prev) => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newUniqueItems = items.filter(item => !existingIds.has(item.id));
+          const newTotal = [...prev, ...newUniqueItems];
+          const limitedItems = newTotal.slice(0, 50);
+          setItemCounts(prevCounts => ({ ...prevCounts, topArtists: limitedItems.length }));
+          return limitedItems;
+        });
+        
+        if (data.next && itemCounts.topArtists + items.length < 50) {
+          setNextTokens(prev => ({ ...prev, topArtists: data.next }));
+        } else {
+          setNextTokens(prev => ({ ...prev, topArtists: null }));
+        }
+      } else {
+        setTopArtists(items);
+        setItemCounts(prev => ({ ...prev, topArtists: items.length }));
+        
+        if (data.next && items.length < 50) {
+          setNextTokens(prev => ({ ...prev, topArtists: data.next }));
+        } else if (items.length === 5 && data.total > 5) {
+          setNextTokens(prev => ({ ...prev, topArtists: 'has-more' }));
+        }
+      }
+      
       setErrors((prev) => ({ ...prev, topArtists: null }));
-      return data.items;
+      return items;
     } catch (err) {
       console.error("Error fetching top artists:", err);
       setErrors((prev) => ({ ...prev, topArtists: err.message }));
       throw err;
     } finally {
-      setIsLoading((prev) => ({ ...prev, topArtists: false }));
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, topArtists: false }));
+      } else {
+        sectionLoadingRefs.current.artists = false;
+      }
     }
-  }, [effectiveToken]);
+  }, [wsConnected, getUserTopArtists]);
 
-  const fetchLikedSongs = useCallback(async () => {
-    if (!effectiveToken) return;
+  const fetchLikedSongs = useCallback(async (isLoadMore = false) => {
+    if (!wsConnected) return;
+
+    if (isLoadMore && sectionLoadingRefs.current.liked) {
+      return;
+    }
 
     try {
-      setIsLoading((prev) => ({ ...prev, likedSongs: true }));
-
-      const response = await networkAwareRequest(() =>
-        fetch("https://api.spotify.com/v1/me/tracks?limit=1", {
-          headers: {
-            Authorization: `Bearer ${effectiveToken}`,
-          },
-        }),
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, likedSongs: true }));
+      } else {
+        sectionLoadingRefs.current.liked = true;
       }
 
-      const data = await response.json();
+      let nextOffset = 0;
+      if (isLoadMore) {
+        nextOffset = lastOffsets.likedSongs + 5;
+      }
+      
+      const params = { limit: 5, offset: nextOffset };
+
+      const data = await getUserTracks(params);
+      
+      setLastOffsets(prev => ({ ...prev, likedSongs: data.offset || 0 }));
       const updatedLikedSongs = {
         ...likedSongs,
-        tracks: { total: data.total },
+        tracks: { 
+          total: data.total || 0,
+          items: isLoadMore ? 
+            (() => {
+              const existingItems = likedSongs.tracks?.items || [];
+              const existingIds = new Set(existingItems.map(item => item.track?.id));
+              const newUniqueItems = (data.items || []).filter(item => !existingIds.has(item.track?.id));
+              return [...existingItems, ...newUniqueItems];
+            })() : 
+            (data.items || [])
+        },
       };
+      
+      if (updatedLikedSongs.tracks.items) {
+        updatedLikedSongs.tracks.items = updatedLikedSongs.tracks.items.slice(0, 50);
+        setItemCounts(prev => ({ ...prev, likedSongs: updatedLikedSongs.tracks.items.length }));
+      }
+      
+      if (data.next && updatedLikedSongs.tracks.items.length < 50) {
+        setNextTokens(prev => ({ ...prev, likedSongs: data.next }));
+      } else if (!isLoadMore && updatedLikedSongs.tracks.items.length === 5 && data.total > 5) {
+        setNextTokens(prev => ({ ...prev, likedSongs: 'has-more' }));
+      } else {
+        setNextTokens(prev => ({ ...prev, likedSongs: null }));
+      }
+      
       setLikedSongs(updatedLikedSongs);
       setErrors((prev) => ({ ...prev, likedSongs: null }));
       return updatedLikedSongs;
@@ -278,390 +608,308 @@ export function useSpotifyData(
       setErrors((prev) => ({ ...prev, likedSongs: err.message }));
       throw err;
     } finally {
-      setIsLoading((prev) => ({ ...prev, likedSongs: false }));
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, likedSongs: false }));
+      } else {
+        sectionLoadingRefs.current.liked = false;
+      }
     }
-  }, [effectiveToken, likedSongs]);
+  }, [wsConnected, getUserTracks, lastOffsets]);
 
-  const fetchUserShows = useCallback(async () => {
-    if (!effectiveToken) return;
+  const fetchUserShows = useCallback(async (isLoadMore = false) => {
+    if (!wsConnected) return;
+
+    if (isLoadMore && sectionLoadingRefs.current.shows) {
+      return;
+    }
 
     try {
-      setIsLoading((prev) => ({ ...prev, userShows: true }));
-
-      const response = await networkAwareRequest(() =>
-        fetch("https://api.spotify.com/v1/me/shows?limit=50", {
-          headers: {
-            Authorization: `Bearer ${effectiveToken}`,
-          },
-        }),
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, userShows: true }));
+      } else {
+        sectionLoadingRefs.current.shows = true;
       }
 
-      const data = await response.json();
-      setUserShows(data.items || []);
+      let nextOffset = 0;
+      if (isLoadMore) {
+        nextOffset = lastOffsets.userShows + 5;
+      }
+      
+      const params = { limit: 5, offset: nextOffset };
+
+      const data = await getUserShows(params);
+      const items = data.items || [];
+      
+      setLastOffsets(prev => ({ ...prev, userShows: data.offset || 0 }));
+      
+      if (isLoadMore) {
+        setUserShows((prev) => {
+          const existingIds = new Set(prev.map(item => item.show?.id || item.id));
+          const newUniqueItems = items.filter(item => !existingIds.has(item.show?.id || item.id));
+          const newTotal = [...prev, ...newUniqueItems];
+          const limitedItems = newTotal.slice(0, 50);
+          setItemCounts(prevCounts => ({ ...prevCounts, userShows: limitedItems.length }));
+          return limitedItems;
+        });
+        
+        if (data.next && itemCounts.userShows + items.length < 50) {
+          setNextTokens(prev => ({ ...prev, userShows: data.next }));
+        } else {
+          setNextTokens(prev => ({ ...prev, userShows: null }));
+        }
+      } else {
+        setUserShows(items);
+        setItemCounts(prev => ({ ...prev, userShows: items.length }));
+        
+        if (data.next && items.length < 50) {
+          setNextTokens(prev => ({ ...prev, userShows: data.next }));
+        } else if (items.length === 5 && data.total > 5) {
+          setNextTokens(prev => ({ ...prev, userShows: 'has-more' }));
+        }
+      }
+      
       setErrors((prev) => ({ ...prev, userShows: null }));
-      return data.items || [];
+      return items;
     } catch (err) {
       console.error("Error fetching user shows:", err);
       setErrors((prev) => ({ ...prev, userShows: err.message }));
       throw err;
     } finally {
-      setIsLoading((prev) => ({ ...prev, userShows: false }));
+      if (!isLoadMore) {
+        setIsLoading((prev) => ({ ...prev, userShows: false }));
+      } else {
+        sectionLoadingRefs.current.shows = false;
+      }
     }
-  }, [effectiveToken]);
+  }, [wsConnected, getUserShows, lastOffsets]);
 
   const fetchRadioMixes = useCallback(async () => {
-    if (!effectiveToken) return;
-
-    let spotifyMixes = [];
+    if (!wsConnected) return [];
 
     try {
       setIsLoading((prev) => ({ ...prev, radioMixes: true }));
-
-      let userTimezone = "America/New_York";
-
-      const maxWaitTime = 5000;
-      const checkInterval = 100;
-      let waitTime = 0;
-
-      while (waitTime < maxWaitTime) {
-        const cachedTz = getCachedTimezone();
-        if (cachedTz) {
-          userTimezone = cachedTz;
-          break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, checkInterval));
-        waitTime += checkInterval;
-      }
-
-      const [
-        topTracksMediumTerm,
-        topTracksLongTerm,
-        recentlyPlayed,
-        topArtists,
-        spotifyRadioMixesResponse,
-      ] = await Promise.all([
-        networkAwareRequest(() =>
-          fetch(
-            "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term",
-            {
-              headers: { Authorization: `Bearer ${effectiveToken}` },
-            },
-          ),
-        ).then((res) => (res.ok ? res.json() : { items: [] })),
-        networkAwareRequest(() =>
-          fetch(
-            "https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=long_term",
-            {
-              headers: { Authorization: `Bearer ${effectiveToken}` },
-            },
-          ),
-        ).then((res) => (res.ok ? res.json() : { items: [] })),
-        networkAwareRequest(() =>
-          fetch(
-            "https://api.spotify.com/v1/me/player/recently-played?limit=50",
-            {
-              headers: { Authorization: `Bearer ${effectiveToken}` },
-            },
-          ),
-        ).then((res) => (res.ok ? res.json() : { items: [] })),
-        networkAwareRequest(() =>
-          fetch("https://api.spotify.com/v1/me/top/artists?limit=10", {
-            headers: { Authorization: `Bearer ${effectiveToken}` },
-          }),
-        ).then((res) => (res.ok ? res.json() : { items: [] })),
-
-        networkAwareRequest(() =>
-          fetch("https://api-partner.spotify.com/pathfinder/v2/query", {
-            method: "POST",
-            headers: {
-              authorization: `Bearer ${effectiveToken}`,
-              "content-type": "application/json;charset=UTF-8",
-            },
-            body: JSON.stringify({
-              variables: {
-                uri: "spotify:section:0JQ5DAUnp4wcj0bCb3wh3S",
-                timeZone: userTimezone,
-                sp_t: "",
-                sectionItemsOffset: 0,
-                sectionItemsLimit: 20,
-              },
-              operationName: "homeSection",
-              extensions: {
-                persistedQuery: {
-                  version: 1,
-                  sha256Hash:
-                    "c11ff5d8f508cb1a3dad3f15ee80611cda7df7e6fb45212e466fb3e84a680bf9",
-                },
-              },
-            }),
-          }),
-        )
-          .then((res) => {
-            if (res.ok) {
-              return res.json();
-            }
-            return { data: { homeSections: { sections: [] } } };
-          })
-          .catch((err) => {
-            console.warn("Failed to fetch Spotify radio mixes:", err);
-            return { data: { homeSections: { sections: [] } } };
-          }),
-      ]);
-
-      const mixes = [];
-
-      if (
-        spotifyRadioMixesResponse?.data?.homeSections?.sections?.[0]
-          ?.sectionItems?.items
-      ) {
-        const spotifyItems =
-          spotifyRadioMixesResponse.data.homeSections.sections[0].sectionItems
-            .items;
-
-        const spotifyMixPromises = spotifyItems.map(async (item, index) => {
-          if (
-            item.content?.__typename === "PlaylistResponseWrapper" &&
-            item.content?.data?.__typename === "Playlist"
-          ) {
-            const playlist = item.content.data;
-
-            if (playlist.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq") {
-              return null;
-            }
-
-            let tracks = [];
-
-            try {
-              const playlistResponse = await networkAwareRequest(() =>
-                fetch("https://api-partner.spotify.com/pathfinder/v2/query", {
-                  method: "POST",
-                  headers: {
-                    authorization: `Bearer ${effectiveToken}`,
-                    "content-type": "application/json;charset=UTF-8",
-                  },
-                  body: JSON.stringify({
-                    variables: {
-                      uri: playlist.uri,
-                      offset: 0,
-                      limit: 25,
-                      enableWatchFeedEntrypoint: true,
-                    },
-                    operationName: "fetchPlaylist",
-                    extensions: {
-                      persistedQuery: {
-                        version: 1,
-                        sha256Hash:
-                          "cd2275433b29f7316176e7b5b5e098ae7744724e1a52d63549c76636b3257749",
-                      },
-                    },
-                  }),
-                }),
-              );
-
-              if (playlistResponse.ok) {
-                const playlistData = await playlistResponse.json();
-
-                if (playlistData?.data?.playlistV2?.content?.items) {
-                  tracks = playlistData.data.playlistV2.content.items
-                    .filter(
-                      (item) =>
-                        item.itemV2?.__typename === "TrackResponseWrapper" &&
-                        item.itemV2?.data,
-                    )
-                    .map((item, trackIndex) => {
-                      const track = item.itemV2.data;
-                      return {
-                        id: track.uri.replace("spotify:track:", ""),
-                        name: track.name,
-                        uri: track.uri,
-                        uniqueId: `${playlist.uri.replace("spotify:playlist:", "spotify-")}-${track.uri.replace("spotify:track:", "")}`,
-                        artists:
-                          track.artists?.items?.map((artist) => ({
-                            id: artist.uri.replace("spotify:artist:", ""),
-                            name: artist.profile?.name || "Unknown Artist",
-                            uri: artist.uri,
-                          })) || [],
-                        album: {
-                          id:
-                            track.albumOfTrack?.uri?.replace(
-                              "spotify:album:",
-                              "",
-                            ) || "",
-                          name: track.albumOfTrack?.name || "Unknown Album",
-                          uri: track.albumOfTrack?.uri || "",
-                        },
-                      };
-                    });
-                }
-              }
-            } catch (error) {
-              console.warn(
-                `Failed to fetch tracks for playlist ${playlist.uri}:`,
-                error,
-              );
-            }
-
-            const spotifyMix = {
-              id: playlist.uri.replace("spotify:playlist:", "spotify-"),
-              name: playlist.name,
-              images: playlist.images?.items?.[0]?.sources
-                ? [{ url: playlist.images.items[0].sources[0].url }]
-                : [{ url: "/images/radio-cover/discoveries.webp" }],
-              tracks: tracks,
-              type: "spotify-radio",
-              uri: playlist.uri,
-              description: playlist.description,
-              format: playlist.format,
-              sortOrder: 100 + index,
-              extractedColors: playlist.images?.items?.[0]?.extractedColors,
-            };
-
-            return spotifyMix;
-          }
-          return null;
-        });
-
-        const resolvedSpotifyMixes = await Promise.all(spotifyMixPromises);
-        spotifyMixes.push(
-          ...resolvedSpotifyMixes.filter((mix) => mix !== null),
-        );
-      }
-
-      const getUniqueTracksById = (tracks) => {
-        const uniqueMap = new Map();
-        tracks.forEach((track) => {
-          if (!uniqueMap.has(track.id)) {
-            uniqueMap.set(track.id, track);
-          }
-        });
-        return Array.from(uniqueMap.values());
-      };
-
-      const addUniqueIds = (tracks, mixId) => {
-        return tracks.map((track) => ({
-          ...track,
-          uniqueId: `${mixId}-${track.id}`,
-        }));
-      };
-
-      if (topTracksMediumTerm.items && topTracksMediumTerm.items.length > 0) {
-        mixes.push({
-          id: "top-mix",
-          name: "Your Top Mix",
-          images: [{ url: "/images/radio-cover/top.webp" }],
-          tracks: addUniqueIds(topTracksMediumTerm.items, "top-mix"),
-          type: "static",
-          sortOrder: 1,
-        });
-      }
-
-      if (topArtists.items && topArtists.items.length > 0) {
-        const artistsToFetch = topArtists.items.slice(0, 5);
-
-        const artistTracksPromises = artistsToFetch.map((artist) =>
-          networkAwareRequest(() =>
-            fetch(
-              `https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=US`,
-              {
-                headers: {
-                  Authorization: `Bearer ${effectiveToken}`,
-                },
-              },
-            ),
-          ).then((res) => (res.ok ? res.json() : { tracks: [] })),
-        );
-
-        const artistTracksResponses = await Promise.all(artistTracksPromises);
-
-        const allArtistTracks = artistTracksResponses.flatMap(
-          (response) => response.tracks || [],
-        );
-
-        const uniqueArtistTracks = getUniqueTracksById(allArtistTracks)
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 50);
-
-        if (uniqueArtistTracks.length > 0) {
-          mixes.push({
+      
+      const result = await sendSpotifyCommand("spotify.radio.mixes");
+      
+      if (result && result.mixes) {
+        setRadioMixes(result.mixes);
+        setErrors((prev) => ({ ...prev, radioMixes: null }));
+        return result.mixes;
+      } else {
+        const fallbackMixes = [
+          {
+            id: "top-mix",
+            name: "Your Top Mix",
+            images: [{ url: "/images/radio-cover/top.webp" }],
+            tracks: [],
+            type: "static",
+            sortOrder: 1,
+          },
+          {
             id: "discoveries-mix",
-            name: "Discoveries",
+            name: "Discoveries", 
             images: [{ url: "/images/radio-cover/discoveries.webp" }],
-            tracks: addUniqueIds(uniqueArtistTracks, "discoveries-mix"),
+            tracks: [],
             type: "static",
             sortOrder: 2,
-          });
-        }
+          },
+        ];
+
+        setRadioMixes(fallbackMixes);
+        setErrors((prev) => ({ ...prev, radioMixes: null }));
+        return fallbackMixes;
       }
-
-      const allMixes = [...mixes, ...spotifyMixes];
-      const sortedMixes = allMixes.sort((a, b) => a.sortOrder - b.sortOrder);
-
-      setRadioMixes(sortedMixes);
-      setErrors((prev) => ({ ...prev, radioMixes: null }));
-      return sortedMixes;
     } catch (err) {
       console.error("Error fetching radio mixes:", err);
       setErrors((prev) => ({ ...prev, radioMixes: err.message }));
-
-      const fallbackMixes = [
-        {
-          id: "top-mix",
-          name: "Your Top Mix",
-          images: [{ url: "/images/radio-cover/top.webp" }],
-          tracks: [],
-          type: "static",
-          sortOrder: 1,
-        },
-        {
-          id: "discoveries-mix",
-          name: "Discoveries",
-          images: [{ url: "/images/radio-cover/discoveries.webp" }],
-          tracks: [],
-          type: "static",
-          sortOrder: 2,
-        },
-        ...spotifyMixes,
-      ];
-
-      setRadioMixes(fallbackMixes);
-      return fallbackMixes;
+      return [];
     } finally {
       setIsLoading((prev) => ({ ...prev, radioMixes: false }));
     }
-  }, [effectiveToken]);
+  }, [wsConnected, sendSpotifyCommand]);
 
-  const isTokenValid = useCallback(() => {
-    const tokenExpiry = localStorage.getItem("spotifyTokenExpiry");
-    if (!tokenExpiry) return false;
+  const loadMoreForSection = useCallback(async (section) => {
+    if (!wsConnected) return;
 
-    const expiryTime = new Date(tokenExpiry);
-    const now = new Date();
-    const tenMinutes = 10 * 60 * 1000;
-    return expiryTime.getTime() - now.getTime() > tenMinutes;
-  }, []);
-
-  const waitForValidToken = useCallback(async () => {
-    if (!isAuthenticated || !accessToken) return false;
-    if (isTokenValid()) return true;
-
-    try {
-      await refreshTokens();
-      return isTokenValid();
-    } catch (error) {
-      console.error("Error refreshing token:", error);
-      return false;
+    if (section === 'recents') {
+      return null;
     }
-  }, [isAuthenticated, accessToken, refreshTokens, isTokenValid]);
+
+    const currentOffset = section === 'playlists' ? lastOffsets.userPlaylists :
+                         section === 'artists' ? offsetRefs.current.topArtists :
+                         section === 'liked' ? lastOffsets.likedSongs :
+                         lastOffsets.userShows;
+    
+    const nextOffset = currentOffset + 5;
+
+    if (nextOffset >= 50) {
+      return null;
+    }
+
+    switch (section) {
+      case 'playlists':
+        if (nextTokens.userPlaylists) {
+          return await fetchUserPlaylists(true);
+        }
+        break;
+      case 'artists':
+        if (nextTokens.topArtists) {
+          return await fetchTopArtists(true);
+        }
+        break;
+      case 'liked':
+        if (nextTokens.likedSongs) {
+          return await fetchLikedSongs(true);
+        }
+        break;
+      case 'shows':
+        if (nextTokens.userShows) {
+          return await fetchUserShows(true);
+        }
+        break;
+      default:
+        break;
+    }
+
+    return null;
+  }, [wsConnected, nextTokens, fetchUserPlaylists, fetchTopArtists, fetchLikedSongs, fetchUserShows, lastOffsets, offsetRefs]);
+
+  const handleSectionAccess = useCallback(async (section) => {
+    Object.keys(sectionTimeoutRefs.current).forEach(key => {
+      if (key !== section && sectionTimeoutRefs.current[key]) {
+        clearTimeout(sectionTimeoutRefs.current[key]);
+        sectionTimeoutRefs.current[key] = null;
+      }
+    });
+    
+    if (section !== 'recents') {
+      if (lazyLoadTimeoutRef.current) {
+        clearTimeout(lazyLoadTimeoutRef.current);
+        lazyLoadTimeoutRef.current = null;
+      }
+      sectionLoadingRefs.current.recents = false;
+    }
+    
+    if (section === 'recents') {
+      if (sectionLoadingRefs.current.recents) {
+        return;
+      }
+      if (lazyLoadTimeoutRef.current) {
+        return;
+      }
+    }
+    
+    const shouldStartLoading = () => {
+      const currentOffset = section === 'playlists' ? lastOffsets.userPlaylists :
+                           section === 'artists' ? offsetRefs.current.topArtists :
+                           section === 'liked' ? lastOffsets.likedSongs :
+                           section === 'recents' ? lastOffsets.recentTracks :
+                           lastOffsets.userShows;
+      
+      const nextOffset = currentOffset + 5;
+      const tokenKey = section === 'playlists' ? 'userPlaylists' : 
+                      section === 'artists' ? 'topArtists' :
+                      section === 'liked' ? 'likedSongs' : 
+                      section === 'recents' ? 'recentTracks' : 'userShows';
+      
+      return nextOffset < 50 && nextTokens[tokenKey];
+    };
+    
+    if (!sectionsAccessed.has(section)) {
+      setSectionsAccessed(prev => new Set([...prev, section]));
+    }
+    
+    if (shouldStartLoading()) {
+      const loadMore = async () => {
+        const sectionMap = {
+          'playlists': 'playlists',
+          'artists': 'artists', 
+          'liked': 'liked',
+          'shows': 'shows',
+          'podcasts': 'shows',
+          'recents': 'recents'
+        };
+        
+        const currentMappedSection = sectionMap[activeSection];
+        if (currentMappedSection !== section) {
+          return;
+        }
+        
+        const result = await loadMoreForSection(section);
+        if (result && result.length > 0) {
+          const currentOffset = section === 'playlists' ? lastOffsets.userPlaylists :
+                               section === 'artists' ? offsetRefs.current.topArtists :
+                               section === 'liked' ? lastOffsets.likedSongs :
+                               section === 'recents' ? lastOffsets.recentTracks :
+                               lastOffsets.userShows;
+          
+          const nextOffset = currentOffset + 5;
+          const tokenKey = section === 'playlists' ? 'userPlaylists' : 
+                          section === 'artists' ? 'topArtists' :
+                          section === 'liked' ? 'likedSongs' : 
+                          section === 'recents' ? 'recentTracks' : 'userShows';
+                          
+          if (nextOffset < 50 && nextTokens[tokenKey]) {
+            sectionTimeoutRefs.current[section] = setTimeout(() => {
+              const stillOnSameSection = sectionMap[activeSection] === section;
+              if (stillOnSameSection) {
+                loadMore();
+              }
+            }, 3000);
+          }
+        }
+      };
+      
+      sectionTimeoutRefs.current[section] = setTimeout(() => loadMore(), 3000);
+    }
+  }, [sectionsAccessed, loadMoreForSection, nextTokens, lastOffsets, offsetRefs, activeSection]);
+
+  useEffect(() => {
+    if (!activeSection || !initialDataLoaded) return;
+
+    if (activeSection === 'recents') {
+      if (nextRecentTracksAfter && itemCounts.recentAlbums < 50) {
+        scheduleLazyLoad();
+      }
+    } else {
+      if (lazyLoadTimeoutRef.current) {
+        clearTimeout(lazyLoadTimeoutRef.current);
+        lazyLoadTimeoutRef.current = null;
+      }
+    }
+
+    const sectionMap = {
+      'playlists': 'playlists',
+      'artists': 'artists', 
+      'liked': 'liked',
+      'shows': 'shows',
+      'podcasts': 'shows'
+    };
+
+    const mappedSection = sectionMap[activeSection];
+    if (mappedSection) {
+      handleSectionAccess(mappedSection);
+    }
+  }, [activeSection, initialDataLoaded, handleSectionAccess, nextRecentTracksAfter, itemCounts.recentAlbums, scheduleLazyLoad]);
+
+  useEffect(() => {
+    if (!initialDataLoaded || activeSection !== 'recents') return;
+    
+    const hasTimestampPagination = nextRecentTracksAfter;
+    
+    if (hasTimestampPagination && itemCounts.recentAlbums < 50 && !lazyLoadTimeoutRef.current) {
+      scheduleLazyLoad();
+    }
+  }, [nextRecentTracksAfter, initialDataLoaded, activeSection, itemCounts.recentAlbums, scheduleLazyLoad]);
 
   const loadInitialData = useCallback(async () => {
     if (skipInitialFetch) return;
+    if (!wsConnected) {
+      console.log("WebSocket not connected, skipping data load");
+      return;
+    }
     if (
       initialLoadTriggeredRef.current ||
-      !accessToken ||
       isInitializing ||
       initialDataLoaded ||
       dataLoadingAttemptedRef.current ||
@@ -672,10 +920,6 @@ export function useSpotifyData(
 
     initialLoadTriggeredRef.current = true;
 
-    const hasValidToken = await waitForValidToken();
-    if (!hasValidToken) {
-      return;
-    }
 
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
@@ -688,7 +932,11 @@ export function useSpotifyData(
 
     dataLoadingAttemptedRef.current = true;
     dataFetchingInProgressRef.current = true;
-    console.log("Starting initial data load...");
+    console.log("Starting initial data load via WebSocket...", {
+      wsConnected,
+      initialDataLoaded,
+      isInitializing
+    });
 
     setIsLoading({
       recentAlbums: true,
@@ -704,23 +952,67 @@ export function useSpotifyData(
 
       abortControllerRef.current = new AbortController();
 
-      const results = await Promise.allSettled([
-        fetchRecentlyPlayed(),
-        fetchUserPlaylists(),
-        fetchTopArtists(),
-        fetchLikedSongs(),
-        fetchRadioMixes(),
-        fetchUserShows(),
-      ]);
+      console.log("Fetching data sequentially...");
+      const failedRequests = [];
+      
+      try {
+        console.log("1/6: Fetching recently played...");
+        await fetchRecentlyPlayed();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (error) {
+        console.error("Failed to fetch recently played:", error);
+        failedRequests.push("fetchRecentlyPlayed");
+      }
 
-      const failedRequests = results.filter(
-        (result) => result.status === "rejected",
-      );
+      try {
+        console.log("2/6: Fetching user playlists...");
+        await fetchUserPlaylists();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (error) {
+        console.error("Failed to fetch user playlists:", error);
+        failedRequests.push("fetchUserPlaylists");
+      }
+
+      try {
+        console.log("3/6: Fetching top artists...");
+        await fetchTopArtists();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (error) {
+        console.error("Failed to fetch top artists:", error);
+        failedRequests.push("fetchTopArtists");
+      }
+
+      try {
+        console.log("4/6: Fetching liked songs...");
+        await fetchLikedSongs();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (error) {
+        console.error("Failed to fetch liked songs:", error);
+        failedRequests.push("fetchLikedSongs");
+      }
+
+      try {
+        console.log("5/6: Fetching radio mixes...");
+        await fetchRadioMixes();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (error) {
+        console.error("Failed to fetch radio mixes:", error);
+        failedRequests.push("fetchRadioMixes");
+      }
+
+      try {
+        console.log("6/6: Fetching user shows...");
+        await fetchUserShows();
+        console.log("Sequential data loading completed!");
+      } catch (error) {
+        console.error("Failed to fetch user shows:", error);
+        failedRequests.push("fetchUserShows");
+      }
 
       if (failedRequests.length > 0) {
         console.error(
           "Some data fetching operations failed:",
-          failedRequests.map((f) => f.reason),
+          failedRequests,
         );
 
         if (retryCount < MAX_RETRIES) {
@@ -758,7 +1050,7 @@ export function useSpotifyData(
       }
     }
   }, [
-    accessToken,
+    wsConnected,
     isInitializing,
     initialDataLoaded,
     retryCount,
@@ -773,7 +1065,7 @@ export function useSpotifyData(
 
   useEffect(() => {
     if (skipInitialFetch) return;
-    if (accessToken && !initialDataLoaded && !isInitializing) {
+    if (wsConnected && !initialDataLoaded && !isInitializing) {
       loadInitialData();
     }
 
@@ -784,9 +1076,18 @@ export function useSpotifyData(
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      if (lazyLoadTimeoutRef.current) {
+        clearTimeout(lazyLoadTimeoutRef.current);
+      }
+      Object.keys(sectionTimeoutRefs.current).forEach(key => {
+        if (sectionTimeoutRefs.current[key]) {
+          clearTimeout(sectionTimeoutRefs.current[key]);
+        }
+        sectionLoadingRefs.current[key] = false;
+      });
     };
   }, [
-    accessToken,
+    wsConnected,
     initialDataLoaded,
     isInitializing,
     loadInitialData,
@@ -794,17 +1095,13 @@ export function useSpotifyData(
   ]);
 
   const refreshData = useCallback(async () => {
-    if (!accessToken) return;
+    if (!wsConnected) return;
 
     if (dataFetchingInProgressRef.current) {
       console.log("Skipping refresh - data fetching already in progress");
       return;
     }
 
-    const hasValidToken = await waitForValidToken();
-    if (!hasValidToken) {
-      return;
-    }
 
     dataFetchingInProgressRef.current = true;
     console.log("Starting data refresh...");
@@ -830,8 +1127,6 @@ export function useSpotifyData(
       dataFetchingInProgressRef.current = false;
     }
   }, [
-    accessToken,
-    waitForValidToken,
     fetchUserPlaylists,
     fetchTopArtists,
     fetchLikedSongs,
@@ -841,13 +1136,9 @@ export function useSpotifyData(
   ]);
 
   const isLoadingData = Object.values(isLoading).some(Boolean);
-  const isLoadingAll =
-    authIsLoading || isInitializing || isLoadingData || playerIsLoading;
+  const isLoadingAll = isInitializing || isLoadingData || playerIsLoading;
 
   return {
-    isAuthenticated,
-    accessToken: tokenReady ? accessToken : null,
-    authIsLoading,
     currentPlayback,
     currentlyPlayingAlbum,
     albumChangeEvent,
@@ -865,7 +1156,6 @@ export function useSpotifyData(
     isLoading: {
       data: isLoadingData,
       player: playerIsLoading,
-      auth: authIsLoading || isInitializing,
       all: isLoadingAll,
       recentAlbums: isLoading.recentAlbums,
       userPlaylists: isLoading.userPlaylists,
@@ -877,6 +1167,18 @@ export function useSpotifyData(
     errors,
     refreshData,
     refreshRecentlyPlayed: fetchRecentlyPlayed,
+    loadMoreRecentTracks,
+    hasMoreRecentTracks: !!nextRecentTracksAfter,
+    isLazyLoading,
+    handleSectionAccess,
+    loadMoreForSection,
+    hasMoreItems: {
+      userPlaylists: !!nextTokens.userPlaylists && itemCounts.userPlaylists < 50,
+      topArtists: !!nextTokens.topArtists && itemCounts.topArtists < 50,
+      likedSongs: !!nextTokens.likedSongs && itemCounts.likedSongs < 50,
+      userShows: !!nextTokens.userShows && itemCounts.userShows < 50
+    },
+    itemCounts,
     refreshUserPlaylists: fetchUserPlaylists,
     refreshTopArtists: fetchTopArtists,
     refreshLikedSongs: fetchLikedSongs,

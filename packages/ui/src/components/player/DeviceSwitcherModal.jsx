@@ -14,14 +14,14 @@ import {
   GamepadIcon,
   CarIcon,
 } from "../common/icons";
-import { generateRandomString } from "../../utils/helpers";
+import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
 
 const DeviceSwitcherModal = ({
   isOpen,
   onClose,
-  accessToken,
   initialDevices,
 }) => {
+  const { wsConnected, getDevices, transferPlayback } = useSpotifyWebSocket();
   const safeInitialDevices = Array.isArray(initialDevices)
     ? initialDevices
     : [];
@@ -31,7 +31,7 @@ const DeviceSwitcherModal = ({
   const [isTransferring, setIsTransferring] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !wsConnected) return;
 
     if (Array.isArray(initialDevices) && initialDevices.length > 0) {
       setDevices(initialDevices);
@@ -39,7 +39,7 @@ const DeviceSwitcherModal = ({
     } else {
       fetchDevices();
     }
-  }, [isOpen, accessToken, initialDevices]);
+  }, [isOpen, wsConnected, initialDevices]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -51,75 +51,26 @@ const DeviceSwitcherModal = ({
   }, [isOpen]);
 
   const fetchDevices = async () => {
+    if (!wsConnected) return;
+    
     try {
       setIsLoading(true);
-      const response = await fetch(
-        `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`,
-        {
-          method: "PUT",
-          headers: {
-            accept: "application/json",
-            "accept-language": "en-US,en;q=0.9",
-            authorization: `Bearer ${accessToken}`,
-            "content-type": "application/json",
-            "x-spotify-connection-id": generateRandomString(148),
-          },
-          body: JSON.stringify({
-            member_type: "CONNECT_STATE",
-            device: {
-              device_info: {
-                capabilities: {
-                  can_be_player: false,
-                  hidden: true,
-                  needs_full_player_state: true,
-                },
-              },
-            },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch devices");
-      }
-
-      const data = await response.json();
-      setDevices(Object.values(data.devices || {}));
+      const data = await getDevices();
+      setDevices(data.devices || []);
     } catch (error) {
       console.error("Error fetching devices:", error);
+      setDevices([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeviceSelect = async (deviceId) => {
+    if (!wsConnected) return;
+    
     try {
       setIsTransferring(true);
-      const transferResponse = await fetch(
-        "https://api.spotify.com/v1/me/player",
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            device_ids: [deviceId],
-            play: true,
-          }),
-        },
-      );
-
-      if (!transferResponse.ok) {
-        const errorData = await transferResponse.json().catch(() => ({}));
-        console.error(
-          "Failed to transfer playback to device:",
-          deviceId,
-          errorData,
-        );
-        throw new Error("Failed to transfer playback");
-      }
-
+      await transferPlayback(deviceId, true);
       onClose(deviceId);
     } catch (error) {
       console.error("Error transferring playback:", error);

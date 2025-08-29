@@ -1,14 +1,13 @@
 import { useCallback, useState, useContext, useRef, useEffect } from "react";
 import React from "react";
 import { generateRandomString } from "../utils/helpers";
+import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 
 export const DeviceSwitcherContext = React.createContext({
   openDeviceSwitcher: (playbackIntent = null) => {},
 });
 
-export function useSpotifyPlayerControls(accessToken) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+export function useSpotifyPlayerControls() {
   const [volume, setVolumeState] = useState(50);
   const [isAdjustingVolume, setIsAdjustingVolume] = useState(false);
   const volumeTimeoutRef = useRef(null);
@@ -16,6 +15,25 @@ export function useSpotifyPlayerControls(accessToken) {
   const isVolumeProcessingRef = useRef(false);
   const lastVolumeUpdateTimeRef = useRef(0);
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
+  const { 
+    wsConnected, 
+    isLoading, 
+    error, 
+    playTrack: playTrackWS,
+    pausePlayback: pausePlaybackWS,
+    skipToNext: skipToNextWS,
+    skipToPrevious: skipToPreviousWS,
+    seekToPosition: seekToPositionWS,
+    setVolume: setVolumeWS,
+    toggleShuffle: toggleShuffleWS,
+    setRepeatMode: setRepeatModeWS,
+    checkIsTrackSaved,
+    saveTrack,
+    removeTrack,
+    transferPlayback,
+    getDevices,
+    getPlayerState
+  } = useSpotifyWebSocket();
 
   useEffect(() => {
     return () => {
@@ -36,241 +54,115 @@ export function useSpotifyPlayerControls(accessToken) {
 
   const playTrack = useCallback(
     async (trackUri, contextUri = null, uris = null, deviceId = null) => {
-      if (!accessToken) return false;
+      if (!wsConnected) return false;
 
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const payload = {};
-
-        if (contextUri) {
-          payload.context_uri = contextUri;
-          if (trackUri) {
-            payload.offset = { uri: trackUri };
+        const result = await playTrackWS(trackUri, contextUri, uris, deviceId);
+        setTimeout(async () => {
+          try {
+            await getPlayerState();
+          } catch (err) {
+            console.error("Error fetching player state after play:", err.message);
           }
-        } else if (uris && uris.length > 0) {
-          payload.uris = uris;
-        } else if (trackUri) {
-          payload.uris = [trackUri];
-        }
-
-        let playUrl = "https://api.spotify.com/v1/me/player/play";
-        if (deviceId) {
-          playUrl += `?device_id=${deviceId}`;
-        }
-
-        const response = await fetch(playUrl, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok && response.status !== 204) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-
-          const errorMessage =
-            errorData.error?.message ||
-            `HTTP error! status: ${response.status}`;
-
-          if (errorData.error?.reason === "NO_ACTIVE_DEVICE" && !deviceId) {
-            if (openDeviceSwitcher) {
-              console.log(
-                "No active device, opening device switcher with playback intent.",
-              );
-              openDeviceSwitcher({
-                trackUriToPlay: trackUri,
-                contextUriToPlay: contextUri,
-                urisToPlay: uris,
-              });
-              return false;
-            } else {
-              setError(errorMessage);
-              throw new Error(errorMessage);
-            }
-          } else {
-            setError(errorMessage);
-            throw new Error(errorMessage);
-          }
-        }
-
+        }, 100);
         return true;
       } catch (err) {
-        if (!error && err && err.message) {
-          setError(err.message);
-        } else if (!error) {
-          setError("An unknown error occurred while trying to play.");
+        if (err.message.includes("NO_ACTIVE_DEVICE") && !deviceId) {
+          if (openDeviceSwitcher) {
+            console.log(
+              "No active device, opening device switcher with playback intent.",
+            );
+            openDeviceSwitcher({
+              trackUriToPlay: trackUri,
+              contextUriToPlay: contextUri,
+              urisToPlay: uris,
+            });
+          }
         }
-        console.error(
-          "Error playing track (caught):",
-          err && err.message ? err.message : err,
-        );
+        console.error("Error playing track:", err.message);
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [accessToken, openDeviceSwitcher, error],
+    [wsConnected, playTrackWS, openDeviceSwitcher, getPlayerState],
   );
 
   const pausePlayback = useCallback(async () => {
-    if (!accessToken) return false;
+    if (!wsConnected) return false;
 
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/player/pause",
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      );
-
-      if (!response.ok && response.status !== 204) {
-        const errorData = await response.json().catch(() => ({
-          error: { message: `HTTP error! status: ${response.status}` },
-        }));
-        throw new Error(
-          errorData.error?.message || `HTTP error! status: ${response.status}`,
-        );
-      }
-
+      await pausePlaybackWS();
+      setTimeout(async () => {
+        try {
+          await getPlayerState();
+        } catch (err) {
+          console.error("Error fetching player state after pause:", err.message);
+        }
+      }, 100);
       return true;
     } catch (err) {
-      console.error("Error pausing playback:", err);
-      setError(err.message);
+      console.error("Error pausing playback:", err.message);
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [wsConnected, pausePlaybackWS, getPlayerState]);
 
   const skipToNext = useCallback(async () => {
-    if (!accessToken) return false;
+    if (!wsConnected) return false;
 
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/player/next",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      );
-
-      if (!response.ok && response.status !== 204) {
-        const errorData = await response.json().catch(() => ({
-          error: { message: `HTTP error! status: ${response.status}` },
-        }));
-        throw new Error(
-          errorData.error?.message || `HTTP error! status: ${response.status}`,
-        );
-      }
-
+      await skipToNextWS();
+      setTimeout(async () => {
+        try {
+          await getPlayerState();
+        } catch (err) {
+          console.error("Error fetching player state after skip next:", err.message);
+        }
+      }, 100);
       return true;
     } catch (err) {
-      console.error("Error skipping to next track:", err);
-      setError(err.message);
+      console.error("Error skipping to next track:", err.message);
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [wsConnected, skipToNextWS, getPlayerState]);
 
   const skipToPrevious = useCallback(async () => {
-    if (!accessToken) return false;
+    if (!wsConnected) return false;
 
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/player/previous",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      );
-
-      if (!response.ok && response.status !== 204) {
-        const errorData = await response.json().catch(() => ({
-          error: { message: `HTTP error! status: ${response.status}` },
-        }));
-        throw new Error(
-          errorData.error?.message || `HTTP error! status: ${response.status}`,
-        );
-      }
-
+      await skipToPreviousWS();
+      setTimeout(async () => {
+        try {
+          await getPlayerState();
+        } catch (err) {
+          console.error("Error fetching player state after skip previous:", err.message);
+        }
+      }, 100);
       return true;
     } catch (err) {
-      console.error("Error skipping to previous track:", err);
-      setError(err.message);
+      console.error("Error skipping to previous track:", err.message);
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [wsConnected, skipToPreviousWS, getPlayerState]);
 
   const seekToPosition = useCallback(
     async (positionMs) => {
-      if (!accessToken) return false;
+      if (!wsConnected) return false;
 
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `https://api.spotify.com/v1/me/player/seek?position_ms=${positionMs}`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-
-        if (!response.ok && response.status !== 204) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-          throw new Error(
-            errorData.error?.message ||
-              `HTTP error! status: ${response.status}`,
-          );
-        }
-
+        await seekToPositionWS(positionMs);
         return true;
       } catch (err) {
-        console.error("Error seeking to position:", err);
-        setError(err.message);
+        console.error("Error seeking to position:", err.message);
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [accessToken],
+    [wsConnected, seekToPositionWS],
   );
 
   const processVolumeQueue = useCallback(async () => {
     if (
       isVolumeProcessingRef.current ||
       volumeQueueRef.current.length === 0 ||
-      !accessToken
+      !wsConnected
     ) {
       return;
     }
@@ -286,37 +178,15 @@ export function useSpotifyPlayerControls(accessToken) {
 
     const processRequest = async () => {
       try {
-        const response = await fetch(
-          `https://api.spotify.com/v1/me/player/volume?volume_percent=${latestVolume}`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-
+        await setVolumeWS(latestVolume);
         lastVolumeUpdateTimeRef.current = Date.now();
-
-        if (!response.ok && response.status !== 204) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-
-          if (errorData.error?.reason === "NO_ACTIVE_DEVICE") {
-            if (openDeviceSwitcher) {
-              openDeviceSwitcher();
-            }
-          }
-
-          throw new Error(
-            errorData.error?.message ||
-              `HTTP error! status: ${response.status}`,
-          );
-        }
       } catch (err) {
-        console.error("Error setting volume:", err);
-        setError(err.message);
+        console.error("Error setting volume:", err.message);
+        if (err.message.includes("NO_ACTIVE_DEVICE")) {
+          if (openDeviceSwitcher) {
+            openDeviceSwitcher();
+          }
+        }
       } finally {
         const processingDelay = Math.max(0, minInterval - (Date.now() - now));
 
@@ -337,11 +207,11 @@ export function useSpotifyPlayerControls(accessToken) {
     } else {
       await processRequest();
     }
-  }, [accessToken, openDeviceSwitcher]);
+  }, [wsConnected, setVolumeWS, openDeviceSwitcher]);
 
   const setVolume = useCallback(
     async (volumePercent) => {
-      if (!accessToken) return false;
+      if (!wsConnected) return false;
 
       const boundedVolume = Math.max(
         0,
@@ -361,420 +231,133 @@ export function useSpotifyPlayerControls(accessToken) {
 
       return true;
     },
-    [accessToken, processVolumeQueue, volume],
+    [wsConnected, processVolumeQueue, volume],
   );
 
   const checkIsTrackLiked = useCallback(
     async (trackId) => {
-      if (!accessToken || !trackId) return false;
+      if (!wsConnected || !trackId) return false;
 
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `https://api.spotify.com/v1/me/tracks/contains?ids=${trackId}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-          throw new Error(
-            errorData.error?.message ||
-              `HTTP error! status: ${response.status}`,
-          );
-        }
-
-        const data = await response.json();
-        return data[0] || false;
+        const result = await checkIsTrackSaved(trackId);
+        return result && result[0] || false;
       } catch (err) {
-        console.error("Error checking if track is liked:", err);
-        setError(err.message);
+        console.error("Error checking if track is liked:", err.message);
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [accessToken],
+    [wsConnected, checkIsTrackSaved],
   );
 
   const likeTrack = useCallback(
     async (trackId) => {
-      if (!accessToken || !trackId) return false;
+      if (!wsConnected || !trackId) return false;
 
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `https://api.spotify.com/v1/me/tracks?ids=${trackId}`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ ids: [trackId] }),
-          },
-        );
-
-        if (!response.ok && response.status !== 204) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-          throw new Error(
-            errorData.error?.message ||
-              `HTTP error! status: ${response.status}`,
-          );
-        }
-
+        await saveTrack(trackId);
         return true;
       } catch (err) {
-        console.error("Error liking track:", err);
-        setError(err.message);
+        console.error("Error liking track:", err.message);
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [accessToken],
+    [wsConnected, saveTrack],
   );
 
   const unlikeTrack = useCallback(
     async (trackId) => {
-      if (!accessToken || !trackId) return false;
+      if (!wsConnected || !trackId) return false;
 
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `https://api.spotify.com/v1/me/tracks?ids=${trackId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ ids: [trackId] }),
-          },
-        );
-
-        if (!response.ok && response.status !== 204) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-          throw new Error(
-            errorData.error?.message ||
-              `HTTP error! status: ${response.status}`,
-          );
-        }
-
+        await removeTrack(trackId);
         return true;
       } catch (err) {
-        console.error("Error unliking track:", err);
-        setError(err.message);
+        console.error("Error unliking track:", err.message);
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [accessToken],
+    [wsConnected, removeTrack],
   );
 
   const toggleShuffle = useCallback(
     async (state) => {
-      if (!accessToken) return false;
+      if (!wsConnected) return false;
 
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `https://api.spotify.com/v1/me/player/shuffle?state=${state}`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-
-        if (!response.ok && response.status !== 204) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-          throw new Error(
-            errorData.error?.message ||
-              `HTTP error! status: ${response.status}`,
-          );
-        }
-
+        await toggleShuffleWS(state);
         return true;
       } catch (err) {
-        console.error("Error toggling shuffle:", err);
-        setError(err.message);
+        console.error("Error toggling shuffle:", err.message);
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [accessToken],
+    [wsConnected, toggleShuffleWS],
   );
 
   const setRepeatMode = useCallback(
     async (state) => {
-      if (!accessToken) return false;
+      if (!wsConnected) return false;
 
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `https://api.spotify.com/v1/me/player/repeat?state=${state}`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-
-        if (!response.ok && response.status !== 204) {
-          const errorData = await response.json().catch(() => ({
-            error: { message: `HTTP error! status: ${response.status}` },
-          }));
-          throw new Error(
-            errorData.error?.message ||
-              `HTTP error! status: ${response.status}`,
-          );
-        }
-
+        await setRepeatModeWS(state);
         return true;
       } catch (err) {
-        console.error("Error setting repeat mode:", err);
-        setError(err.message);
+        console.error("Error setting repeat mode:", err.message);
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [accessToken],
+    [wsConnected, setRepeatModeWS],
   );
 
   const playDJMix = useCallback(async () => {
-    if (!accessToken) return false;
+    if (!wsConnected) return false;
 
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const deviceResponse = await fetch(
-        "https://api.spotify.com/v1/me/player",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      );
-
-      let deviceId = null;
-      if (deviceResponse.status !== 204) {
-        const deviceData = await deviceResponse.json();
-        deviceId = deviceData.device?.id;
-      }
-
-      const response = await fetch(
-        `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
-        {
-          method: "POST",
-          headers: {
-            "accept-language": "en",
-            authorization: `Bearer ${accessToken}`,
-            "content-type": "application/x-www-form-urlencoded",
-          },
-          body: '{"command": {"endpoint": "play", "context": {"entity_uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "uri": "spotify:playlist:37i9dQZF1EYkqdzj48dyYq", "url": "hm:\\/\\/lexicon-session-provider\\/context-resolve\\/v2\\/session?contextUri=spotify:playlist:37i9dQZF1EYkqdzj48dyYq"}}}',
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return true;
+      console.log("DJ mix functionality disabled in WebSocket mode");
+      return false;
     } catch (err) {
       console.error("Error playing DJ mix:", err);
-      setError(err.message);
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [wsConnected]);
 
   const sendDJSignal = useCallback(async () => {
-    if (!accessToken) return false;
+    if (!wsConnected) return false;
 
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const deviceResponse = await fetch(
-        "https://api.spotify.com/v1/me/player",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      );
-
-      let deviceId = null;
-      if (deviceResponse.status !== 204) {
-        const deviceData = await deviceResponse.json();
-        deviceId = deviceData.device?.id;
-      }
-
-      if (!deviceId) {
-        throw new Error("No active device found");
-      }
-
-      const response = await fetch(
-        `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
-        {
-          method: "POST",
-          headers: {
-            "accept-language": "en",
-            authorization: `Bearer ${accessToken}`,
-            "content-type": "application/x-www-form-urlencoded",
-          },
-          body: '{"command": {"endpoint": "signal", "signal_id": "jump"}}',
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return true;
+      console.log("DJ signal functionality disabled in WebSocket mode");
+      return false;
     } catch (err) {
       console.error("Error sending DJ signal:", err);
-      setError(err.message);
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [wsConnected]);
 
   const getCurrentDeviceOptions = useCallback(async () => {
-    if (!accessToken) return null;
+    if (!wsConnected) return null;
 
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch(
-        `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`,
-        {
-          method: "PUT",
-          headers: {
-            accept: "application/json",
-            "accept-language": "en-US,en;q=0.9",
-            authorization: `Bearer ${accessToken}`,
-            "content-type": "application/json",
-            "x-spotify-connection-id": generateRandomString(148),
-          },
-          body: JSON.stringify({
-            member_type: "CONNECT_STATE",
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.player_state && data.player_state.options) {
-        return data.player_state.options;
-      }
+      console.log("Device options functionality disabled in WebSocket mode");
+      return null;
     } catch (err) {
       console.error("Error getting device options:", err);
-      setError(err.message);
       return null;
-    } finally {
-      setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [wsConnected]);
 
   const setPlaybackSpeed = useCallback(
     async (speed) => {
-      if (!accessToken) return false;
+      if (!wsConnected) return false;
 
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const deviceResponse = await fetch(
-          "https://api.spotify.com/v1/me/player",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-
-        let deviceId = null;
-        if (deviceResponse.status !== 204) {
-          const deviceData = await deviceResponse.json();
-          deviceId = deviceData.device?.id;
-        }
-
-        if (!deviceId) {
-          throw new Error("No active device found");
-        }
-
-        const response = await fetch(
-          `https://gue1-spclient.spotify.com/connect-state/v1/player/command/from/${deviceId}/to/${deviceId}`,
-          {
-            method: "POST",
-            headers: {
-              accept: "*/*",
-              "accept-language": "en-US,en;q=0.9",
-              authorization: `Bearer ${accessToken}`,
-              "content-type": "application/json",
-              origin: "https://open.spotify.com",
-              referer: "https://open.spotify.com/",
-            },
-            body: JSON.stringify({
-              command: {
-                playback_speed: speed,
-                endpoint: "set_options",
-              },
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return true;
+        console.log("Playback speed functionality disabled in WebSocket mode");
+        return false;
       } catch (err) {
         console.error("Error setting playback speed:", err);
-        setError(err.message);
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [accessToken],
+    [wsConnected],
   );
 
   return {

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
-import { useAuth } from "../../hooks/useAuth";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGestureControls } from "../../hooks/useGestureControls";
 
@@ -11,12 +10,10 @@ export default function LockView({
 }) {
   const { currentTime } = useCurrentTime();
   const containerRef = useRef(null);
-  const { accessToken } = useAuth();
   const { playTrack, pausePlayback, skipToNext, skipToPrevious } =
-    useSpotifyPlayerControls(accessToken);
+    useSpotifyPlayerControls();
 
   const handlePlayPause = useCallback(async () => {
-    if (!accessToken) return;
 
     if (currentPlayback?.is_playing) {
       const ok = await pausePlayback();
@@ -34,7 +31,6 @@ export default function LockView({
       return;
     }
   }, [
-    accessToken,
     currentPlayback,
     playTrack,
     pausePlayback,

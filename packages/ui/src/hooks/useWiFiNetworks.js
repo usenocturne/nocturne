@@ -21,7 +21,7 @@ const globalNetworkCache = {
 const setupGlobalWebSocket = (isConnectorAvailable) => {
   if (globalWsRef || !isConnectorAvailable) return;
 
-  const ws = new WebSocket(`ws://${API_BASE.replace("http://", "")}/ws`);
+  const ws = new WebSocket(`ws://${API_BASE.replace("http://", "")}`);
   globalWsRef = ws;
 
   ws.onopen = () => {

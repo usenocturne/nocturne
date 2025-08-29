@@ -10,7 +10,6 @@ const sharedState = {
 export const usePlaybackProgress = (
   currentPlayback,
   refreshPlaybackState,
-  accessToken,
 ) => {
   const [progressMs, setProgressMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -47,18 +46,16 @@ export const usePlaybackProgress = (
   }, [refreshPlaybackState, scheduleNextRefresh]);
 
   useEffect(() => {
-    if (accessToken) {
-      const now = Date.now();
-      if (
-        !sharedState.refreshTimeoutId ||
-        now - sharedState.lastRefreshTime > 10000
-      ) {
-        triggerRefresh();
-      }
+    const now = Date.now();
+    if (
+      !sharedState.refreshTimeoutId ||
+      now - sharedState.lastRefreshTime > 10000
+    ) {
+      triggerRefresh();
     }
 
     return () => {};
-  }, [accessToken, triggerRefresh]);
+  }, [triggerRefresh]);
 
   useEffect(() => {
     if (currentPlayback) {

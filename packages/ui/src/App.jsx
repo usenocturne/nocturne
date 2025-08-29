@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import FontLoader from "./components/common/FontLoader";
-import AuthContainer from "./components/auth/AuthContainer";
-import NetworkScreen from "./components/auth/NetworkScreen";
 import Tutorial from "./components/tutorial/Tutorial";
 import Home from "./pages/Home";
 import ContentView from "./components/content/ContentView";
@@ -13,8 +11,6 @@ import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import GradientBackground from "./components/common/GradientBackground";
-import NocturneIcon from "./components/common/icons/NocturneIcon";
-import { useAuth } from "./hooks/useAuth";
 import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
@@ -35,7 +31,6 @@ import {
 import NotificationsContainer from "./components/common/notifications/NotificationsContainer";
 import PairingScreen from "./components/auth/PairingScreen";
 import LockView from "./components/common/LockView";
-import LoadingScreen from "./components/common/LoadingScreen";
 import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
 import { CheckIcon } from "./components/common/icons";
 import { SettingsUpdateIcon } from "./components/common/icons";
@@ -53,8 +48,6 @@ export const ConnectorContext = React.createContext({
 });
 
 function useGlobalButtonMapping({
-  accessToken,
-  isAuthenticated,
   playTrack,
   playDJMix,
   refreshPlaybackState,
@@ -71,8 +64,6 @@ function useGlobalButtonMapping({
   const handleButtonPress = useCallback(
     async (buttonNumber) => {
       if (
-        !accessToken ||
-        !isAuthenticated ||
         isProcessingButtonPress ||
         isTutorialActive ||
         isDisabled
@@ -97,56 +88,9 @@ function useGlobalButtonMapping({
         } else if (mappedType === "playlist") {
           contextUri = `spotify:playlist:${mappedId}`;
         } else if (mappedType === "artist") {
-          const response = await fetch(
-            `https://api.spotify.com/v1/artists/${mappedId}/top-tracks?market=from_token`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            },
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.tracks && data.tracks.length > 0) {
-              uris = data.tracks.map((track) => track.uri);
-            }
-          } else {
-            contextUri = `spotify:artist:${mappedId}`;
-          }
+          contextUri = `spotify:artist:${mappedId}`;
         } else if (mappedType === "show") {
-          const response = await fetch(
-            `https://api.spotify.com/v1/shows/${mappedId}/episodes?limit=50`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            },
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.items && data.items.length > 0) {
-              const lastPlayedEpisodeId = localStorage.getItem(
-                `lastPlayedEpisode_${mappedId}`,
-              );
-              let targetEpisodeIndex = 0;
-
-              if (lastPlayedEpisodeId) {
-                const foundIndex = data.items.findIndex(
-                  (ep) => ep.id === lastPlayedEpisodeId,
-                );
-                if (foundIndex !== -1) {
-                  targetEpisodeIndex = foundIndex;
-                }
-              }
-
-              contextUri = `spotify:show:${mappedId}`;
-              uris = [`spotify:episode:${data.items[targetEpisodeIndex].id}`];
-            }
-          } else {
-            contextUri = `spotify:show:${mappedId}`;
-          }
+          contextUri = `spotify:show:${mappedId}`;
         } else if (mappedType === "mix") {
           const mixTracksJson = localStorage.getItem(
             `button${buttonNumber}Tracks`,
@@ -171,41 +115,9 @@ function useGlobalButtonMapping({
               localStorage.setItem("playingLikedSongs", "true");
             } catch (e) {
               console.error("Error parsing liked tracks:", e);
-
-              const response = await fetch(
-                "https://api.spotify.com/v1/me/tracks?limit=50",
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                },
-              );
-
-              if (response.ok) {
-                const data = await response.json();
-                if (data.items && data.items.length > 0) {
-                  uris = data.items.map((item) => item.track.uri);
-                  localStorage.setItem("playingLikedSongs", "true");
-                }
-              }
             }
           } else {
-            const response = await fetch(
-              "https://api.spotify.com/v1/me/tracks?limit=50",
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              },
-            );
-
-            if (response.ok) {
-              const data = await response.json();
-              if (data.items && data.items.length > 0) {
-                uris = data.items.map((item) => item.track.uri);
-                localStorage.setItem("playingLikedSongs", "true");
-              }
-            }
+            console.log("No cached liked tracks available, WebSocket implementation needed");
           }
         }
 
@@ -242,8 +154,6 @@ function useGlobalButtonMapping({
       }
     },
     [
-      accessToken,
-      isAuthenticated,
       playTrack,
       playDJMix,
       refreshPlaybackState,
@@ -255,7 +165,7 @@ function useGlobalButtonMapping({
   );
 
   useEffect(() => {
-    if (!isAuthenticated || isTutorialActive) return;
+    if (isTutorialActive) return;
 
     if (isDisabled) return;
 
@@ -289,7 +199,7 @@ function useGlobalButtonMapping({
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
       window.removeEventListener("keyup", handleKeyUp, { capture: true });
     };
-  }, [isAuthenticated, handleButtonPress, isTutorialActive, isDisabled]);
+  }, [handleButtonPress, isTutorialActive, isDisabled]);
 
   const setIgnoreNextRelease = useCallback(() => {
     ignoreNextReleaseRef.current = true;
@@ -307,7 +217,6 @@ function NotificationEffects({
   updateStatus,
   activeSection,
   handleReboot,
-  isAuthenticated,
   isError,
   errorMessage,
 }) {
@@ -338,26 +247,6 @@ function NotificationEffects({
     handleReboot,
   ]);
 
-  const logoutNotificationIdRef = useRef(null);
-
-  useEffect(() => {
-    const handler = () => {
-      const id = addNotification({
-        title: "Signed out",
-        description: "Your session expired. Please sign in again.",
-      });
-      logoutNotificationIdRef.current = id;
-    };
-    window.addEventListener("userLoggedOut", handler);
-    return () => window.removeEventListener("userLoggedOut", handler);
-  }, [addNotification]);
-
-  useEffect(() => {
-    if (isAuthenticated && logoutNotificationIdRef.current) {
-      removeNotification(logoutNotificationIdRef.current);
-      logoutNotificationIdRef.current = null;
-    }
-  }, [isAuthenticated, removeNotification]);
 
   useEffect(() => {
     if (isError && errorMessage) {
@@ -377,26 +266,6 @@ function NotificationEffects({
   return null;
 }
 
-function TokenRefreshOverlay({ show }) {
-  const [gradientState, updateGradientColors] = useGradientState();
-  useEffect(() => {
-    if (show) {
-      updateGradientColors(null, "auth");
-    }
-  }, [show, updateGradientColors]);
-
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-hidden rounded-2xl">
-      <div className="absolute inset-0 bg-black" />
-      <GradientBackground gradientState={gradientState} />
-      <div className="relative z-10 flex flex-col items-center justify-center">
-        <NocturneIcon className="h-12 w-auto animate-pulse" />
-      </div>
-    </div>
-  );
-}
 
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
@@ -419,16 +288,7 @@ function App() {
   const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] =
     useState(null);
   const [prefetchedDevices, setPrefetchedDevices] = useState(null);
-  const [showLoader, setShowLoader] = useState(true);
-  const [initialTokenRefreshDone, setInitialTokenRefreshDone] = useState(false);
   const [powerMenuVisible, setPowerMenuVisible] = useState(false);
-  const { tokenReady } = useAuth();
-
-  useEffect(() => {
-    if (tokenReady && !initialTokenRefreshDone) {
-      setInitialTokenRefreshDone(true);
-    }
-  }, [tokenReady, initialTokenRefreshDone]);
   const powerMenuVisibleRef = useRef(false);
 
   useEffect(() => {
@@ -436,9 +296,6 @@ function App() {
   }, [powerMenuVisible]);
 
   const {
-    isAuthenticated,
-    accessToken,
-    authIsLoading,
     currentPlayback,
     currentlyPlayingAlbum,
     albumChangeEvent,
@@ -459,8 +316,8 @@ function App() {
     refreshRecentlyPlayed,
   } = useSpotifyData(
     activeSection,
-    showLoader || !tokenReady,
-    tokenReady && !showLoader,
+    false,
+    true,
   );
 
   const {
@@ -495,7 +352,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (showLoader) return;
     if (!isInternetConnected) return;
     if (isInfoLoading) return;
     if (!serial) return;
@@ -528,7 +384,6 @@ function App() {
 
     document.body.appendChild(script);
   }, [
-    showLoader,
     isInternetConnected,
     isInfoLoading,
     serial,
@@ -556,7 +411,6 @@ function App() {
   const playbackProgress = usePlaybackProgress(
     currentPlayback,
     refreshPlaybackState,
-    accessToken,
   );
 
   const {
@@ -564,8 +418,6 @@ function App() {
     activeButton: globalActiveButton,
     setIgnoreNextRelease,
   } = useGlobalButtonMapping({
-    accessToken,
-    isAuthenticated,
     playTrack: playerControls.playTrack,
     playDJMix: playerControls.playDJMix,
     refreshPlaybackState,
@@ -662,21 +514,18 @@ function App() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const handleNetworkRestored = () => {
-        refreshPlaybackState(true);
-        if (!initialDataLoaded) {
-          refreshData();
-          refreshRecentlyPlayed();
-        }
-      };
-      window.addEventListener("online", handleNetworkRestored);
-      return () => {
-        window.removeEventListener("online", handleNetworkRestored);
-      };
-    }
+    const handleNetworkRestored = () => {
+      refreshPlaybackState(true);
+      if (!initialDataLoaded) {
+        refreshData();
+        refreshRecentlyPlayed();
+      }
+    };
+    window.addEventListener("online", handleNetworkRestored);
+    return () => {
+      window.removeEventListener("online", handleNetworkRestored);
+    };
   }, [
-    isAuthenticated,
     refreshPlaybackState,
     refreshData,
     refreshRecentlyPlayed,
@@ -684,21 +533,18 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const hasSeenTutorial =
-        localStorage.getItem("hasSeenTutorial") === "true";
-      if (hasSeenTutorial) {
-        setShowTutorial(false);
-        const shouldStartWithNowPlaying =
-          localStorage.getItem("startWithNowPlaying") === "true";
-        if (shouldStartWithNowPlaying) {
-          setActiveSection("nowPlaying");
-        }
-      } else {
-        setShowTutorial(true);
+    const hasSeenTutorial = localStorage.getItem("hasSeenTutorial") === "true";
+    if (hasSeenTutorial) {
+      setShowTutorial(false);
+      const shouldStartWithNowPlaying =
+        localStorage.getItem("startWithNowPlaying") === "true";
+      if (shouldStartWithNowPlaying) {
+        setActiveSection("nowPlaying");
       }
+    } else {
+      setShowTutorial(true);
     }
-  }, [isAuthenticated, setActiveSection]);
+  }, [setActiveSection]);
 
   useEffect(() => {
     if (viewingContent) return;
@@ -857,25 +703,6 @@ function App() {
     setPowerMenuVisible(false);
   };
 
-  const handleAuthSuccess = () => {
-    const storedAccessToken = localStorage.getItem("spotifyAccessToken");
-    const storedRefreshToken = localStorage.getItem("spotifyRefreshToken");
-    const storedExpiry = localStorage.getItem("spotifyTokenExpiry");
-    const isTokenValid = storedExpiry && new Date(storedExpiry) > new Date();
-
-    if (storedAccessToken && storedRefreshToken && isTokenValid) {
-      if (initialDataLoaded) {
-        console.log("Refreshing data after auth success");
-        refreshData();
-      } else {
-        console.log(
-          "Skipping refresh - letting initial data load handle the fetch",
-        );
-      }
-    } else {
-      console.warn("No valid tokens found after auth success");
-    }
-  };
 
   const handleTutorialComplete = () => {
     setShowTutorial(false);
@@ -970,23 +797,8 @@ function App() {
     hasEverConnectedThisSession;
 
   let content;
-  if (showLoader) {
-    content = null;
-  } else if (authIsLoading && !initialCheckDone) {
-    content = null;
-  } else if (isUpdateScreenVisible) {
+  if (isUpdateScreenVisible) {
     content = <UpdateScreen />;
-  } else if (
-    !isInternetConnected &&
-    !hasEverConnectedThisSession &&
-    initialCheckDone
-  ) {
-    content = (
-      <NetworkScreen
-        isConnectionLost={true}
-        onConnectionRestored={handleConnectionRestored}
-      />
-    );
   } else if (showConnectionLostScreen) {
     content = (
       <NetworkScreen
@@ -995,8 +807,6 @@ function App() {
         onConnectionRestored={handleConnectionRestored}
       />
     );
-  } else if (!isAuthenticated && initialCheckDone) {
-    content = <AuthContainer onAuthSuccess={handleAuthSuccess} />;
   } else if (showTutorial) {
     content = (
       <Tutorial
@@ -1007,7 +817,6 @@ function App() {
   } else if (activeSection === "nowPlaying") {
     content = (
       <NowPlaying
-        accessToken={accessToken}
         currentPlayback={currentPlayback}
         playbackProgress={playbackProgress}
         onClose={() => setActiveSection("recents")}
@@ -1029,7 +838,6 @@ function App() {
   } else if (viewingContent) {
     content = (
       <ContentView
-        accessToken={accessToken}
         contentId={viewingContent.id}
         contentType={viewingContent.type}
         onClose={handleCloseContent}
@@ -1046,7 +854,6 @@ function App() {
   } else {
     content = (
       <Home
-        accessToken={accessToken}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
         recentAlbums={recentAlbums}
@@ -1075,13 +882,11 @@ function App() {
         updateStatus={updateStatus}
         activeSection={activeSection}
         handleReboot={handleReboot}
-        isAuthenticated={isAuthenticated}
-          isError={isError}
-          errorMessage={errorMessage}
+        isError={isError}
+        errorMessage={errorMessage}
       />
-      {isAuthenticated && !showConnectionLostScreen && !showTutorial && (
+      {!showConnectionLostScreen && !showTutorial && (
         <UpdateCheckNotification
-          showLoader={showLoader}
           setActiveSection={setActiveSection}
           currentVersion={nocturneVersion}
           isInfoLoading={isInfoLoading}
@@ -1095,18 +900,6 @@ function App() {
               <ConnectorContext.Provider value={connectorContextValue}>
                 <Router>
                   <FontLoader />
-                  {showLoader && (
-                    <LoadingScreen
-                      show={showLoader}
-                      onComplete={() => setShowLoader(false)}
-                    />
-                  )}
-                  {!showLoader &&
-                    isAuthenticated &&
-                    !tokenReady &&
-                    !initialTokenRefreshDone && (
-                      <TokenRefreshOverlay show={!tokenReady} />
-                    )}
                   <main
                     className="overflow-hidden relative min-h-screen rounded-2xl"
                     style={{
@@ -1139,7 +932,6 @@ function App() {
                       <DeviceSwitcherModal
                         isOpen={isDeviceSwitcherOpen}
                         onClose={handleCloseDeviceSwitcher}
-                        accessToken={accessToken}
                         initialDevices={prefetchedDevices}
                       />
                       {showConnectorModal && (

@@ -1,4 +1,3 @@
-import { addGlobalWsListener } from "../hooks/useNocturned";
 import { checkNetworkConnectivity } from "./networkChecker";
 
 const LOCAL_URLS = ["172.16.42.1", "localhost"];
@@ -44,50 +43,9 @@ function isLocalRequest(url) {
   return LOCAL_URLS.some((localUrl) => url.includes(localUrl));
 }
 
-function setupNetworkMonitoring() {
-  if (typeof window === "undefined") return () => {};
-
-  let lastStatusUpdate = 0;
-  const MIN_STATUS_UPDATE_INTERVAL = 5000;
-
-  const updateNetworkStatus = (data) => {
-    if (data.type === "network_status") {
-      const now = Date.now();
-      if (now - lastStatusUpdate < MIN_STATUS_UPDATE_INTERVAL) {
-        return;
-      }
-      lastStatusUpdate = now;
-
-      const isOnline = data.payload?.status === "online";
-      const wasOffline = !isConnected;
-      isConnected = isOnline;
-
-      if (isOnline && wasOffline) {
-        lastNetworkRestoredTime = Date.now();
-        window.dispatchEvent(new CustomEvent("networkRestored"));
-      }
-
-      window.dispatchEvent(new Event(isOnline ? "online" : "offline"));
-
-      listeners.forEach((listener) => {
-        if (isOnline) {
-          listener.resolve();
-        }
-      });
-      listeners.clear();
-    }
-  };
-
-  const listenerId = "networkAwareRequest-" + Date.now();
-  return addGlobalWsListener(listenerId, {
-    onMessage: updateNetworkStatus,
-    onClose: () => {
-      isConnected = false;
-    },
-  });
+export function setupNetworkMonitoring() {
+  return () => {};
 }
-
-let cleanupRef = setupNetworkMonitoring();
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
@@ -218,8 +176,3 @@ export async function networkAwareRequest(
   }
 }
 
-window.addEventListener("unload", () => {
-  if (cleanupRef) {
-    cleanupRef();
-  }
-});

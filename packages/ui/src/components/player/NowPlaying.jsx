@@ -7,12 +7,14 @@ import React, {
 } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
+import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
 import { useGestureControls } from "../../hooks/useGestureControls";
 import { useElapsedTime } from "../../hooks/useElapsedTime";
 import { useButtonMapping } from "../../hooks/useButtonMapping";
 import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
+import DeviceSwitcherModal from "./DeviceSwitcherModal";
 import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
 import {
@@ -37,7 +39,6 @@ import {
 import { generateRandomString } from "../../utils/helpers";
 
 export default function NowPlaying({
-  accessToken,
   currentPlayback,
   playbackProgress,
   onClose,
@@ -58,6 +59,7 @@ export default function NowPlaying({
   const [repeatMode, setRepeatMode] = useState("off");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
+  const [showDeviceSwitcher, setShowDeviceSwitcher] = useState(false);
 
   const volumeTimerRef = useRef(null);
   const volumeLastAdjustedRef = useRef(0);
@@ -74,6 +76,8 @@ export default function NowPlaying({
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
+  
+  const { getPlaylist } = useSpotifyWebSocket();
 
   const {
     playTrack,
@@ -92,7 +96,8 @@ export default function NowPlaying({
     setRepeatMode: setRepeatModeApi,
     setPlaybackSpeed: setPlaybackSpeedApi,
     getCurrentDeviceOptions,
-  } = useSpotifyPlayerControls(accessToken);
+    transferPlayback,
+  } = useSpotifyPlayerControls();
 
   const {
     progressMs,
@@ -214,43 +219,13 @@ export default function NowPlaying({
     }
 
     try {
-      if (!accessToken) return;
 
       setIsStartingPlayback(true);
 
       const connectEndpoint = `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`;
 
-      const devicesRes = await fetch(connectEndpoint, {
-        method: "PUT",
-        headers: {
-          accept: "application/json",
-          "accept-language": "en-US,en;q=0.9",
-          authorization: `Bearer ${accessToken}`,
-          "content-type": "application/json",
-          "x-spotify-connection-id": generateRandomString(148),
-        },
-        body: JSON.stringify({
-          member_type: "CONNECT_STATE",
-          device: {
-            device_info: {
-              capabilities: {
-                can_be_player: false,
-                hidden: true,
-                needs_full_player_state: true,
-              },
-            },
-          },
-        }),
-      });
-
-      if (!devicesRes.ok) {
-        console.error("Failed to retrieve devices", devicesRes.status);
-        setIsStartingPlayback(false);
-        return;
-      }
-
-      const data = await devicesRes.json();
-      const devicesArray = Object.values(data.devices || {});
+      const devicesData = await getDevices();
+      const devicesArray = devicesData?.devices || [];
 
       if (devicesArray.length === 0) {
         setIsStartingPlayback(false);
@@ -270,20 +245,10 @@ export default function NowPlaying({
       const target = activeDevice || devicesArray[0];
       const targetDeviceId = target.device_id || target.id;
 
-      const transferRes = await fetch("https://api.spotify.com/v1/me/player", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          device_ids: [targetDeviceId],
-          play: true,
-        }),
-      });
-
-      if (!transferRes.ok && transferRes.status !== 204) {
-        console.error("Failed to transfer playback", await transferRes.text());
+      try {
+        await transferPlayback(targetDeviceId, true);
+      } catch (error) {
+        console.error("Failed to transfer playback", error);
         setIsStartingPlayback(false);
         return;
       }
@@ -356,18 +321,9 @@ export default function NowPlaying({
 
   useEffect(() => {
     const fetchPlaylistDetails = async () => {
-      if (!playlistId || !accessToken) return;
+      if (!playlistId) return;
       try {
-        const res = await fetch(
-          `https://api.spotify.com/v1/playlists/${playlistId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await getPlaylist(playlistId);
         setPlaylistDetails({
           name: data.name || "",
           image: data.images?.[1]?.url || data.images?.[0]?.url || "",
@@ -378,10 +334,9 @@ export default function NowPlaying({
     };
 
     fetchPlaylistDetails();
-  }, [playlistId, accessToken]);
+  }, [playlistId, getPlaylist]);
 
   const { showMappingOverlay, activeButton } = useButtonMapping({
-    accessToken,
     contentId: playlistId,
     contentType: playlistId ? "playlist" : null,
     contentImage: playlistDetails.image || albumArt,
@@ -485,7 +440,7 @@ export default function NowPlaying({
     toggleLyrics,
     suspendAutoScroll,
     resumeAutoScrollOnNextLyric,
-  } = useLyrics(accessToken, currentPlayback, contentContainerRef);
+  } = useLyrics(currentPlayback, contentContainerRef);
 
   useEffect(() => {
     if (albumArt && updateGradientColors) {
@@ -643,6 +598,14 @@ export default function NowPlaying({
       console.error(`Failed to set playback speed to ${speed}x`);
     }
   };
+
+  const handleDeviceSwitcherClose = (selectedDeviceId) => {
+    setShowDeviceSwitcher(false);
+    if (selectedDeviceId) {
+      console.log("Device switched to:", selectedDeviceId);
+    }
+  };
+
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) {
@@ -1050,7 +1013,7 @@ export default function NowPlaying({
                     </MenuItem>
                   </>
                 )}
-                <MenuItem onClick={onOpenDeviceSwitcher}>
+                <MenuItem onClick={() => setShowDeviceSwitcher(true)}>
                   <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
                     <span className="text-[28px]">Switch Device</span>
                     <DeviceSwitcherIcon
@@ -1091,9 +1054,16 @@ export default function NowPlaying({
         </div>
       </div>
 
+
       <ButtonMappingOverlay
         show={showMappingOverlay}
         activeButton={activeButton}
+      />
+
+      <DeviceSwitcherModal
+        isOpen={showDeviceSwitcher}
+        onClose={handleDeviceSwitcherClose}
+        initialDevices={[]}
       />
     </div>
   );

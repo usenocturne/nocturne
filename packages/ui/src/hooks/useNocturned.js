@@ -51,6 +51,8 @@ export const cleanupGlobalWebSocket = () => {
   wsInitialized = false;
 };
 
+export const getGlobalWebSocket = () => globalWsRef;
+
 export const addGlobalWsListener = (id, handlers) => {
   const listener = {
     id,
@@ -166,7 +168,7 @@ const setupGlobalWebSocket = async () => {
 
   try {
     console.log("Connecting to WebSocket...");
-    const socket = new WebSocket(`ws://${API_BASE.replace("http://", "")}/ws`);
+    const socket = new WebSocket(`ws://${API_BASE.replace("http://", "")}`);
     globalWsRef = socket;
 
     socket.onopen = async () => {
