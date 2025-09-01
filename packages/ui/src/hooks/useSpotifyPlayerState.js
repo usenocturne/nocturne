@@ -618,6 +618,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     }
   }, [wsConnected, immediateLoad, fetchCurrentPlayback]);
 
+
   useEffect(() => {
     const handleNetworkRestored = async () => {
       if (

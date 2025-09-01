@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Sidebar from "../components/common/navigation/Sidebar";
 import HorizontalScroll from "../components/common/navigation/HorizontalScroll";
 import Settings from "../components/settings/Settings";
+import SpotifyImage from "../components/common/SpotifyImage";
 
 import { useNavigation } from "../hooks/useNavigation";
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
@@ -256,7 +257,7 @@ export default function Home({
                 </div>
               ))
           ) : recentAlbums.length > 0 ? (
-            recentAlbums.map((album) => (
+            recentAlbums.map((album, index) => (
               <div
                 key={album.id}
                 className="min-w-[280px] pl-2 mr-10 snap-start"
@@ -276,10 +277,12 @@ export default function Home({
                     )
                   }
                 >
-                  {album.images?.[1]?.url && album.type !== "local-track" ? (
-                    <img
-                      src={album.images[1].url}
+                  {album.type !== "local-track" ? (
+                    <SpotifyImage
+                      images={album.images}
+                      preferredSizeIndex={1}
                       alt="Album Cover"
+                      priority={100 - index}
                       className="w-full h-full object-cover rounded-[12px]"
                     />
                   ) : album.type === "local-track" ? (
@@ -412,7 +415,7 @@ export default function Home({
                   item.id !== "37i9dQZF1EYkqdzj48dyYq" &&
                   item.tracks?.total > 0,
               )
-              .map((playlist) => (
+              .map((playlist, index) => (
                 <div
                   key={`playlist-${playlist.id}`}
                   className="min-w-[280px] pl-2 mr-10 snap-start"
@@ -423,9 +426,11 @@ export default function Home({
                     onClick={() => onOpenContent(playlist.id, "playlist")}
                   >
                     {playlist?.images?.length > 0 ? (
-                      <img
-                        src={playlist.images[1]?.url || playlist.images[0].url}
+                      <SpotifyImage
+                        images={playlist.images}
+                        preferredSizeIndex={1}
                         alt={`${playlist.name} Cover`}
+                        priority={50 - index}
                         className="w-full h-full object-cover rounded-[12px]"
                       />
                     ) : (
@@ -505,7 +510,7 @@ export default function Home({
                 </div>
               ))
           ) : topArtists.length > 0 ? (
-            topArtists.map((artist) => (
+            topArtists.map((artist, index) => (
               <div
                 key={artist.id}
                 className="min-w-[280px] pl-2 mr-10 snap-start"
@@ -516,10 +521,12 @@ export default function Home({
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(artist.id, "artist")}
                 >
-                  {artist.images?.[1]?.url ? (
-                    <img
-                      src={artist.images[1].url}
+                  {artist.images?.length > 0 ? (
+                    <SpotifyImage
+                      images={artist.images}
+                      preferredSizeIndex={1}
                       alt={`${artist.name} Profile`}
+                      priority={25 - index}
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (

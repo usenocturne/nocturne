@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
 import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
+import { useImageLoader } from "./useImageLoader";
 import {
   networkAwareRequest,
   waitForNetwork,
@@ -125,6 +126,8 @@ export function useSpotifyData(
   } = useSpotifyPlayerState();
 
   const playerControls = useSpotifyPlayerControls();
+  const { loadImage, getImageSize } = useImageLoader();
+
   
   const { 
     wsConnected, 
@@ -902,6 +905,7 @@ export function useSpotifyData(
     }
   }, [nextRecentTracksAfter, initialDataLoaded, activeSection, itemCounts.recentAlbums, scheduleLazyLoad]);
 
+
   const loadInitialData = useCallback(async () => {
     if (skipInitialFetch) return;
     if (!wsConnected) {
@@ -957,7 +961,8 @@ export function useSpotifyData(
       
       try {
         console.log("1/6: Fetching recently played...");
-        await fetchRecentlyPlayed();
+        const recentAlbumsResult = await fetchRecentlyPlayed();
+        
         await new Promise(resolve => setTimeout(resolve, 200));
       } catch (error) {
         console.error("Failed to fetch recently played:", error);

@@ -17,6 +17,7 @@ import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 import DeviceSwitcherModal from "./DeviceSwitcherModal";
 import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
+import SpotifyImage from "../common/SpotifyImage";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -287,22 +288,21 @@ export default function NowPlaying({
 
     const albumId = hasCurrentItem ? currentPlayback?.item?.album?.id : null;
 
-    const albumArt = hasCurrentItem
+    const albumImages = hasCurrentItem
       ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.show.images[1]?.url || "/images/not-playing.webp"
+        ? currentPlayback.item.show.images
         : currentPlayback.item.type === "local" ||
-            !currentPlayback.item?.album?.images?.[1]?.url ||
-            !currentPlayback.item?.album?.images?.[1]
-          ? "/images/not-playing.webp"
-          : currentPlayback.item.album.images[1].url
-      : "/images/not-playing.webp";
+            !currentPlayback.item?.album?.images
+          ? null
+          : currentPlayback.item.album.images
+      : null;
 
     const trackId = hasCurrentItem ? currentPlayback?.item?.id : null;
 
-    return { trackName, artistName, albumArt, trackId, firstArtistId, albumId };
+    return { trackName, artistName, albumImages, trackId, firstArtistId, albumId };
   }, [currentPlayback, isStartingPlayback]);
 
-  const { trackName, artistName, albumArt, trackId, firstArtistId, albumId } =
+  const { trackName, artistName, albumImages, trackId, firstArtistId, albumId } =
     trackInfo;
 
   const contextUri = currentPlayback?.context?.uri;
@@ -339,7 +339,7 @@ export default function NowPlaying({
   const { showMappingOverlay, activeButton } = useButtonMapping({
     contentId: playlistId,
     contentType: playlistId ? "playlist" : null,
-    contentImage: playlistDetails.image || albumArt,
+    contentImage: playlistDetails.image || (albumImages?.[1]?.url || albumImages?.[0]?.url || "/images/not-playing.webp"),
     contentName: playlistDetails.name || trackName,
     playTrack,
     isActive: !!playlistId,
@@ -442,11 +442,12 @@ export default function NowPlaying({
     resumeAutoScrollOnNextLyric,
   } = useLyrics(currentPlayback, contentContainerRef);
 
-  useEffect(() => {
-    if (albumArt && updateGradientColors) {
-      updateGradientColors(albumArt, "nowPlaying");
+  const handleColorsExtracted = useCallback((colors) => {
+    if (colors && updateGradientColors) {
+
+      updateGradientColors(colors, "nowPlaying");
     }
-  }, [albumArt, updateGradientColors]);
+  }, [updateGradientColors]);
 
   useEffect(() => {
     const checkCurrentTrackLiked = async () => {
@@ -665,8 +666,9 @@ export default function NowPlaying({
               onNavigateToAlbum(albumId, "album")
             }
           >
-            <img
-              src={albumArt}
+            <SpotifyImage
+              images={albumImages}
+              preferredSizeIndex={1}
               alt={
                 currentPlayback?.item?.type === "episode"
                   ? "Podcast Cover"
@@ -674,11 +676,10 @@ export default function NowPlaying({
               }
               width={280}
               height={280}
-              loading="lazy"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = "/images/not-playing.webp";
-              }}
+              priority={10}
+              extractColors={true}
+              onColorsExtracted={handleColorsExtracted}
+              fallbackSrc="/images/not-playing.webp"
               className="w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
             />
           </div>

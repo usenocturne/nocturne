@@ -6,6 +6,7 @@ import { CarThingIcon } from "../common/icons";
 import { useButtonMapping } from "../../hooks/useButtonMapping";
 import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 import ScrollingText from "../common/ScrollingText";
+import SpotifyImage from "../common/SpotifyImage";
 
 const ContentView = ({
   accessToken,
@@ -253,17 +254,6 @@ const ContentView = ({
 
             contentData = await albumResponse.json();
 
-            if (
-              contentData?.images &&
-              contentData.images.length > 0 &&
-              updateGradientColors
-            ) {
-              updateGradientColors(
-                contentData.images[1]?.url || contentData.images[0].url,
-                contentType,
-              );
-            }
-
             tracksData = contentData.tracks.items;
             break;
           }
@@ -285,17 +275,6 @@ const ContentView = ({
             }
 
             contentData = await playlistResponse.json();
-
-            if (
-              contentData?.images &&
-              contentData.images.length > 0 &&
-              updateGradientColors
-            ) {
-              updateGradientColors(
-                contentData.images[1]?.url || contentData.images[0].url,
-                contentType,
-              );
-            }
 
             tracksData = contentData.tracks.items.map((item) => item.track);
             setNextUrl(contentData.tracks.next);
@@ -335,16 +314,6 @@ const ContentView = ({
             contentData = await artistResponse.json();
             const topTracksData = await topTracksResponse.json();
 
-            if (
-              contentData?.images &&
-              contentData.images.length > 0 &&
-              updateGradientColors
-            ) {
-              updateGradientColors(
-                contentData.images[1]?.url || contentData.images[0].url,
-                contentType,
-              );
-            }
 
             tracksData = topTracksData.tracks;
             break;
@@ -376,10 +345,6 @@ const ContentView = ({
               tracks: { total: likedSongsData.total },
               owner: { display_name: "You" },
             };
-
-            if (updateGradientColors) {
-              updateGradientColors(contentData.images[0].url, contentType);
-            }
 
             tracksData = likedSongsData.items.map((item) => item.track);
             break;
@@ -444,18 +409,6 @@ const ContentView = ({
 
             contentData = await showResponse.json();
             const episodesData = await episodesResponse.json();
-
-            if (
-              contentData?.images &&
-              contentData.images.length > 0 &&
-              updateGradientColors
-            ) {
-              updateGradientColors(
-                contentData.images[1]?.url || contentData.images[0].url,
-                contentType,
-              );
-            }
-
             tracksData = episodesData.items;
             setNextUrl(episodesData.next);
             setHasMoreTracks(!!episodesData.next);
@@ -710,11 +663,19 @@ const ContentView = ({
     <div className="flex flex-col md:flex-row pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10 mb-8 md:mb-0 md:mr-8">
         <div className="mr-10 relative" style={{ minWidth: "280px" }}>
-          <img
-            src={getImageUrl()}
+          <SpotifyImage
+            images={content.images}
+            preferredSizeIndex={1}
             alt={`${content.name} Cover`}
             width={280}
             height={280}
+            priority={8}
+            extractColors={true}
+            onColorsExtracted={(colors) => {
+              if (colors && updateGradientColors) {
+                updateGradientColors(colors, contentType);
+              }
+            }}
             className={`${getImageStyle()}`}
           />
           {getMappingStatusText()}

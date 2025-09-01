@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { extractColorsFromImage } from "../utils/colorExtractor";
+import { extractColorsFromImageUrl } from "../utils/colorExtractor";
+import { useImageLoader } from "./useImageLoader";
 
 const DEFAULT_HEX_COLORS = ["#191414", "#191414", "#191414", "#191414"];
 
 export function useGradientTransition(activeSection) {
+  const { loadImage } = useImageLoader();
   const [currentGradientHexColors, setCurrentGradientHexColors] =
     useState(DEFAULT_HEX_COLORS);
   const [sectionGradients, setSectionGradients] = useState({
@@ -294,10 +296,15 @@ export function useGradientTransition(activeSection) {
   );
 
   const updateGradientColors = useCallback(
-    async (imageUrl, imageSection = null) => {
+    async (imageUrlOrColors, imageSection = null) => {
       const skipCacheCheck =
         imageSection === "nowPlaying" || imageSection === "recents";
-      const urlSectionKey = `${imageUrl || "none"}-${imageSection || "none"}`;
+      
+      const isColorArray = Array.isArray(imageUrlOrColors);
+      const cacheKey = isColorArray 
+        ? `colors-${JSON.stringify(imageUrlOrColors)}`
+        : imageUrlOrColors || "none";
+      const urlSectionKey = `${cacheKey}-${imageSection || "none"}`;
 
       if (
         !skipCacheCheck &&
@@ -309,13 +316,13 @@ export function useGradientTransition(activeSection) {
         return;
       }
 
-      lastProcessedUrlRef.current = imageUrl || "none";
+      lastProcessedUrlRef.current = cacheKey;
       lastProcessedSectionRef.current = imageSection || "none";
 
       let newColorsForImageSection;
       let isError = false;
 
-      if (!imageUrl) {
+      if (!imageUrlOrColors) {
         if (imageSection === "radio")
           newColorsForImageSection = [
             "#3B518B",
@@ -351,9 +358,28 @@ export function useGradientTransition(activeSection) {
             "#191414",
             "#191414",
           ];
+      } else if (isColorArray) {
+        try {
+          newColorsForImageSection = filterColors(imageUrlOrColors);
+        } catch (error) {
+          console.error("Error filtering provided colors:", error);
+          newColorsForImageSection = [
+            "#191414",
+            "#191414",
+            "#191414",
+            "#191414",
+          ];
+          isError = true;
+        }
       } else {
         try {
-          let extracted = await extractColorsFromImage(imageUrl);
+          const imageResult = await loadImage(imageUrlOrColors, 1, true);
+          const extracted = imageResult.colors;
+          
+          if (!extracted) {
+            throw new Error("No colors extracted from image");
+          }
+          
           newColorsForImageSection = filterColors(extracted);
         } catch (error) {
           console.error("Error updating gradient colors:", error);
@@ -389,7 +415,7 @@ export function useGradientTransition(activeSection) {
         return;
       }
 
-      if (!imageUrl) {
+      if (!imageUrlOrColors) {
         if (imageSection === "auth") shouldUpdateGlobalGradient = true;
         else if (imageSection === "settings" && activeSection === "settings")
           shouldUpdateGlobalGradient = true;
@@ -427,7 +453,7 @@ export function useGradientTransition(activeSection) {
       ) {
       }
     },
-    [activeSection, filterColors, hexToRgb, rgbToHex],
+    [activeSection, filterColors, loadImage],
   );
 
   return {

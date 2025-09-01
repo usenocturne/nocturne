@@ -69,7 +69,11 @@ export function useSpotifyWebSocket() {
         if (data.error) {
           pendingRequest.reject(new Error(data.error.message || "Spotify command failed"));
         } else {
-          pendingRequest.resolve(data.result);
+          let result = data.result;
+          if (result && typeof result === 'object' && result.result) {
+            result = result.result;
+          }
+          pendingRequest.resolve(result);
         }
       }
     }
@@ -571,6 +575,16 @@ export function useSpotifyWebSocket() {
     }
   }, [sendSpotifyCommand]);
 
+  const fetchImage = useCallback(async (url) => {
+    try {
+      const result = await sendSpotifyCommand("spotify.image.fetch", { url });
+      return result;
+    } catch (err) {
+      console.error("Error fetching image:", err);
+      throw err;
+    }
+  }, [sendSpotifyCommand]);
+
   return {
     wsConnected,
     isLoading,
@@ -607,5 +621,7 @@ export function useSpotifyWebSocket() {
     getShow,
     getShowEpisodes,
     getUserShows,
+    
+    fetchImage,
   };
 }
