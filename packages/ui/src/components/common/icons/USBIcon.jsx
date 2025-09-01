@@ -8,7 +8,7 @@ const USBIcon = ({ className }) => (
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
- >
+  >
     <g transform="rotate(-45 12 12)">
       <circle cx="10" cy="7" r="1" />
       <circle cx="4" cy="20" r="1" />
@@ -22,5 +22,3 @@ const USBIcon = ({ className }) => (
 );
 
 export default USBIcon;
-
-

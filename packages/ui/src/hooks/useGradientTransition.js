@@ -299,9 +299,9 @@ export function useGradientTransition(activeSection) {
     async (imageUrlOrColors, imageSection = null) => {
       const skipCacheCheck =
         imageSection === "nowPlaying" || imageSection === "recents";
-      
+
       const isColorArray = Array.isArray(imageUrlOrColors);
-      const cacheKey = isColorArray 
+      const cacheKey = isColorArray
         ? `colors-${JSON.stringify(imageUrlOrColors)}`
         : imageUrlOrColors || "none";
       const urlSectionKey = `${cacheKey}-${imageSection || "none"}`;
@@ -375,11 +375,11 @@ export function useGradientTransition(activeSection) {
         try {
           const imageResult = await loadImage(imageUrlOrColors, 1, true);
           const extracted = imageResult.colors;
-          
+
           if (!extracted) {
             throw new Error("No colors extracted from image");
           }
-          
+
           newColorsForImageSection = filterColors(extracted);
         } catch (error) {
           console.error("Error updating gradient colors:", error);

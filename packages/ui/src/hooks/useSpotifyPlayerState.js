@@ -72,11 +72,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           if (podcastPollingInterval || !isPodcastPlaying) return;
 
           podcastPollingInterval = setInterval(async () => {
-            if (
-              isPodcastPlaying &&
-              wsConnected &&
-              isNetworkConnected
-            ) {
+            if (isPodcastPlaying && wsConnected && isNetworkConnected) {
               try {
                 const now = Date.now();
                 if (now - lastPodcastFetch < 25000) return;
@@ -84,7 +80,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                 lastPodcastFetch = now;
                 await waitForNetwork();
                 const polledData = await getPlayerState();
-                
+
                 if (polledData && Object.keys(polledData).length > 0) {
                   const wasPolling = isPodcastPlaying;
                   isPodcastPlaying = false;
@@ -198,7 +194,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
   const fetchCurrentPlayback = useCallback(
     async (forceRefresh = false) => {
-
       if (!wsConnected || !isNetworkConnected) {
         if (!initialStateLoadedRef.current) {
           setCurrentPlayback(null);
@@ -223,7 +218,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         setIsLoading(true);
 
         const data = await getPlayerState();
-        
+
         if (!data || Object.keys(data).length === 0) {
           resetPlaybackState();
         } else {
@@ -254,7 +249,13 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         setInitialFetchInProgress(false);
       }
     },
-    [wsConnected, getPlayerState, processPlaybackState, resetPlaybackState, isNetworkConnected],
+    [
+      wsConnected,
+      getPlayerState,
+      processPlaybackState,
+      resetPlaybackState,
+      isNetworkConnected,
+    ],
   );
 
   const cleanupWebSocket = useCallback(() => {
@@ -384,7 +385,9 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     isConnecting = true;
 
     try {
-      throw new Error("WebSocket connection should be handled by useSpotifyWebSocket hook");
+      throw new Error(
+        "WebSocket connection should be handled by useSpotifyWebSocket hook",
+      );
       webSocketRef.current = globalWebSocket;
 
       globalWebSocket.onopen = () => {
@@ -618,7 +621,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     }
   }, [wsConnected, immediateLoad, fetchCurrentPlayback]);
 
-
   useEffect(() => {
     const handleNetworkRestored = async () => {
       if (
@@ -647,9 +649,12 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     if (!wsConnected) return;
 
     const handlePlayerStateChanged = (data) => {
-      if (data.type === "event" && data.topic === "spotify.player.state_changed") {
+      if (
+        data.type === "event" &&
+        data.topic === "spotify.player.state_changed"
+      ) {
         console.log("Received player state change event:", data);
-        
+
         const events = data.data?.events || [];
         if (events.length > 0 && events[0].event?.state) {
           const newState = events[0].event.state;
@@ -666,25 +671,28 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     return cleanup;
   }, [wsConnected, processPlaybackState]);
 
-  const refreshPlaybackState = useCallback(async (forceRefresh = false) => {
-    if (!wsConnected) return;
-    
-    try {
-      console.log("Refreshing playback state via WebSocket...");
-      const data = await getPlayerState();
-      
-      if (!data || Object.keys(data).length === 0) {
-        console.log("No playback data received, resetting state");
-        resetPlaybackState();
-      } else {
-        console.log("Processing new playback data:", data);
-        processPlaybackState(data);
+  const refreshPlaybackState = useCallback(
+    async (forceRefresh = false) => {
+      if (!wsConnected) return;
+
+      try {
+        console.log("Refreshing playback state via WebSocket...");
+        const data = await getPlayerState();
+
+        if (!data || Object.keys(data).length === 0) {
+          console.log("No playback data received, resetting state");
+          resetPlaybackState();
+        } else {
+          console.log("Processing new playback data:", data);
+          processPlaybackState(data);
+        }
+      } catch (err) {
+        console.error("Error refreshing playback state:", err);
+        setError(err.message);
       }
-    } catch (err) {
-      console.error("Error refreshing playback state:", err);
-      setError(err.message);
-    }
-  }, [wsConnected, getPlayerState, resetPlaybackState, processPlaybackState]);
+    },
+    [wsConnected, getPlayerState, resetPlaybackState, processPlaybackState],
+  );
 
   return {
     currentPlayback,

@@ -77,7 +77,7 @@ export default function NowPlaying({
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
-  
+
   const { getPlaylist } = useSpotifyWebSocket();
 
   const {
@@ -220,7 +220,6 @@ export default function NowPlaying({
     }
 
     try {
-
       setIsStartingPlayback(true);
 
       const connectEndpoint = `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`;
@@ -299,11 +298,24 @@ export default function NowPlaying({
 
     const trackId = hasCurrentItem ? currentPlayback?.item?.id : null;
 
-    return { trackName, artistName, albumImages, trackId, firstArtistId, albumId };
+    return {
+      trackName,
+      artistName,
+      albumImages,
+      trackId,
+      firstArtistId,
+      albumId,
+    };
   }, [currentPlayback, isStartingPlayback]);
 
-  const { trackName, artistName, albumImages, trackId, firstArtistId, albumId } =
-    trackInfo;
+  const {
+    trackName,
+    artistName,
+    albumImages,
+    trackId,
+    firstArtistId,
+    albumId,
+  } = trackInfo;
 
   const contextUri = currentPlayback?.context?.uri;
   const playlistId = useMemo(() => {
@@ -339,7 +351,11 @@ export default function NowPlaying({
   const { showMappingOverlay, activeButton } = useButtonMapping({
     contentId: playlistId,
     contentType: playlistId ? "playlist" : null,
-    contentImage: playlistDetails.image || (albumImages?.[1]?.url || albumImages?.[0]?.url || "/images/not-playing.webp"),
+    contentImage:
+      playlistDetails.image ||
+      albumImages?.[1]?.url ||
+      albumImages?.[0]?.url ||
+      "/images/not-playing.webp",
     contentName: playlistDetails.name || trackName,
     playTrack,
     isActive: !!playlistId,
@@ -442,12 +458,14 @@ export default function NowPlaying({
     resumeAutoScrollOnNextLyric,
   } = useLyrics(currentPlayback, contentContainerRef);
 
-  const handleColorsExtracted = useCallback((colors) => {
-    if (colors && updateGradientColors) {
-
-      updateGradientColors(colors, "nowPlaying");
-    }
-  }, [updateGradientColors]);
+  const handleColorsExtracted = useCallback(
+    (colors) => {
+      if (colors && updateGradientColors) {
+        updateGradientColors(colors, "nowPlaying");
+      }
+    },
+    [updateGradientColors],
+  );
 
   useEffect(() => {
     const checkCurrentTrackLiked = async () => {
@@ -606,7 +624,6 @@ export default function NowPlaying({
       console.log("Device switched to:", selectedDeviceId);
     }
   };
-
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) {
@@ -1054,7 +1071,6 @@ export default function NowPlaying({
           </div>
         </div>
       </div>
-
 
       <ButtonMappingOverlay
         show={showMappingOverlay}

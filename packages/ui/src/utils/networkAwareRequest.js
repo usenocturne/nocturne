@@ -175,4 +175,3 @@ export async function networkAwareRequest(
     throw error;
   }
 }
-

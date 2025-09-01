@@ -58,17 +58,21 @@ export function extractColorsFromImageData(imageData) {
         resolve(["#191414", "#1E1B1B", "#222222", "#1A1A1A"]);
       };
 
-      if (typeof imageData === 'string') {
-        if (imageData.startsWith('data:') || imageData.startsWith('blob:') || imageData.startsWith('http')) {
+      if (typeof imageData === "string") {
+        if (
+          imageData.startsWith("data:") ||
+          imageData.startsWith("blob:") ||
+          imageData.startsWith("http")
+        ) {
           img.src = imageData;
         } else {
           img.src = `data:image/jpeg;base64,${imageData}`;
         }
       } else if (imageData instanceof ArrayBuffer) {
-        const blob = new Blob([imageData], { type: 'image/jpeg' });
+        const blob = new Blob([imageData], { type: "image/jpeg" });
         img.src = URL.createObjectURL(blob);
       } else if (imageData instanceof Uint8Array) {
-        const blob = new Blob([imageData], { type: 'image/jpeg' });
+        const blob = new Blob([imageData], { type: "image/jpeg" });
         img.src = URL.createObjectURL(blob);
       } else {
         img.src = String(imageData);
@@ -104,9 +108,7 @@ function extractColorsFromCanvasImage(img) {
         g: pixelData[1],
         b: pixelData[2],
         brightness:
-          0.299 * pixelData[0] +
-          0.587 * pixelData[1] +
-          0.114 * pixelData[2],
+          0.299 * pixelData[0] + 0.587 * pixelData[1] + 0.114 * pixelData[2],
       });
     }
   }

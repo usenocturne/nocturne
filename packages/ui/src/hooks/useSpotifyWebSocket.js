@@ -5,16 +5,16 @@ const extractAfterFromNextUrl = (nextUrl) => {
   if (!nextUrl) return null;
   try {
     const url = new URL(nextUrl);
-    return url.searchParams.get('after');
+    return url.searchParams.get("after");
   } catch (error) {
-    console.error('Error extracting after timestamp from URL:', error);
+    console.error("Error extracting after timestamp from URL:", error);
     return null;
   }
 };
 
-
 export function useSpotifyWebSocket() {
-  const { wsConnected, addMessageListener, removeMessageListener } = useNocturned();
+  const { wsConnected, addMessageListener, removeMessageListener } =
+    useNocturned();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const pendingRequestsRef = useRef(new Map());
@@ -24,8 +24,12 @@ export function useSpotifyWebSocket() {
     (method, params = {}) => {
       return new Promise((resolve, reject) => {
         const globalWs = getGlobalWebSocket();
-        
-        if (!wsConnected || !globalWs || globalWs.readyState !== WebSocket.OPEN) {
+
+        if (
+          !wsConnected ||
+          !globalWs ||
+          globalWs.readyState !== WebSocket.OPEN
+        ) {
           reject(new Error("WebSocket not connected"));
           return;
         }
@@ -62,15 +66,17 @@ export function useSpotifyWebSocket() {
     if (data.type === "response" && data.id) {
       const messageId = data.id;
       const pendingRequest = pendingRequestsRef.current.get(messageId);
-      
+
       if (pendingRequest) {
         pendingRequestsRef.current.delete(messageId);
-        
+
         if (data.error) {
-          pendingRequest.reject(new Error(data.error.message || "Spotify command failed"));
+          pendingRequest.reject(
+            new Error(data.error.message || "Spotify command failed"),
+          );
         } else {
           let result = data.result;
-          if (result && typeof result === 'object' && result.result) {
+          if (result && typeof result === "object" && result.result) {
             result = result.result;
           }
           pendingRequest.resolve(result);
@@ -81,9 +87,12 @@ export function useSpotifyWebSocket() {
 
   useEffect(() => {
     if (!listenerIdRef.current) {
-      listenerIdRef.current = addMessageListener("spotify-ws", handleSpotifyResponse);
+      listenerIdRef.current = addMessageListener(
+        "spotify-ws",
+        handleSpotifyResponse,
+      );
     }
-    
+
     return () => {
       if (listenerIdRef.current) {
         removeMessageListener(listenerIdRef.current);
@@ -290,47 +299,59 @@ export function useSpotifyWebSocket() {
     }
   }, [sendSpotifyCommand]);
 
-  const getUserPlaylists = useCallback(async (params = { limit: 5 }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await sendSpotifyCommand("spotify.me.playlists", params);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sendSpotifyCommand]);
+  const getUserPlaylists = useCallback(
+    async (params = { limit: 5 }) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await sendSpotifyCommand("spotify.me.playlists", params);
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendSpotifyCommand],
+  );
 
-  const getUserTopTracks = useCallback(async (params = { limit: 5, time_range: 'medium_term' }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await sendSpotifyCommand("spotify.me.topTracks", params);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sendSpotifyCommand]);
+  const getUserTopTracks = useCallback(
+    async (params = { limit: 5, time_range: "medium_term" }) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await sendSpotifyCommand("spotify.me.topTracks", params);
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendSpotifyCommand],
+  );
 
-  const getUserTopArtists = useCallback(async (params = { limit: 5 }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await sendSpotifyCommand("spotify.me.topArtists", params);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sendSpotifyCommand]);
+  const getUserTopArtists = useCallback(
+    async (params = { limit: 5 }) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await sendSpotifyCommand(
+          "spotify.me.topArtists",
+          params,
+        );
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendSpotifyCommand],
+  );
 
   const getUserProfile = useCallback(async () => {
     try {
@@ -346,48 +367,60 @@ export function useSpotifyWebSocket() {
     }
   }, [sendSpotifyCommand]);
 
-  const getUserTracks = useCallback(async (params = { limit: 5 }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await sendSpotifyCommand("spotify.me.tracks", params);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sendSpotifyCommand]);
-
-  const getRecentlyPlayed = useCallback(async (params = { limit: 5, additional_types: 'track,episode' }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await sendSpotifyCommand("spotify.me.recentlyPlayed", params);
-      
-      if (result && result.next) {
-        result.nextAfter = extractAfterFromNextUrl(result.next);
+  const getUserTracks = useCallback(
+    async (params = { limit: 5 }) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await sendSpotifyCommand("spotify.me.tracks", params);
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
       }
-      
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sendSpotifyCommand]);
+    },
+    [sendSpotifyCommand],
+  );
 
-  const getNextRecentlyPlayed = useCallback(async (afterTimestamp, additionalParams = {}) => {
-    const params = {
-      limit: 5,
-      additional_types: 'track,episode',
-      after: afterTimestamp,
-      ...additionalParams
-    };
-    return getRecentlyPlayed(params);
-  }, [getRecentlyPlayed]);
+  const getRecentlyPlayed = useCallback(
+    async (params = { limit: 5, additional_types: "track,episode" }) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await sendSpotifyCommand(
+          "spotify.me.recentlyPlayed",
+          params,
+        );
+
+        if (result && result.next) {
+          result.nextAfter = extractAfterFromNextUrl(result.next);
+        }
+
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendSpotifyCommand],
+  );
+
+  const getNextRecentlyPlayed = useCallback(
+    async (afterTimestamp, additionalParams = {}) => {
+      const params = {
+        limit: 5,
+        additional_types: "track,episode",
+        after: afterTimestamp,
+        ...additionalParams,
+      };
+      return getRecentlyPlayed(params);
+    },
+    [getRecentlyPlayed],
+  );
 
   const checkIsTrackSaved = useCallback(
     async (trackId) => {
@@ -548,7 +581,7 @@ export function useSpotifyWebSocket() {
         setError(null);
         const result = await sendSpotifyCommand("spotify.show.episodes", {
           id: showId,
-          ...params
+          ...params,
         });
         return result;
       } catch (err) {
@@ -561,36 +594,42 @@ export function useSpotifyWebSocket() {
     [sendSpotifyCommand],
   );
 
-  const getUserShows = useCallback(async (params = { limit: 5 }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await sendSpotifyCommand("spotify.me.shows", params);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sendSpotifyCommand]);
+  const getUserShows = useCallback(
+    async (params = { limit: 5 }) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await sendSpotifyCommand("spotify.me.shows", params);
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendSpotifyCommand],
+  );
 
-  const fetchImage = useCallback(async (url) => {
-    try {
-      const result = await sendSpotifyCommand("spotify.image.fetch", { url });
-      return result;
-    } catch (err) {
-      console.error("Error fetching image:", err);
-      throw err;
-    }
-  }, [sendSpotifyCommand]);
+  const fetchImage = useCallback(
+    async (url) => {
+      try {
+        const result = await sendSpotifyCommand("spotify.image.fetch", { url });
+        return result;
+      } catch (err) {
+        console.error("Error fetching image:", err);
+        throw err;
+      }
+    },
+    [sendSpotifyCommand],
+  );
 
   return {
     wsConnected,
     isLoading,
     error,
     sendSpotifyCommand,
-    
+
     getPlayerState,
     playTrack,
     pausePlayback,
@@ -601,7 +640,7 @@ export function useSpotifyWebSocket() {
     toggleShuffle,
     setRepeatMode,
     transferPlayback,
-    
+
     getDevices,
     getUserPlaylists,
     getUserTopTracks,
@@ -613,7 +652,7 @@ export function useSpotifyWebSocket() {
     checkIsTrackSaved,
     saveTrack,
     removeTrack,
-    
+
     getArtist,
     getArtistTopTracks,
     getAlbum,
@@ -621,7 +660,7 @@ export function useSpotifyWebSocket() {
     getShow,
     getShowEpisodes,
     getUserShows,
-    
+
     fetchImage,
   };
 }

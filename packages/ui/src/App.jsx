@@ -63,12 +63,7 @@ function useGlobalButtonMapping({
 
   const handleButtonPress = useCallback(
     async (buttonNumber) => {
-      if (
-        isProcessingButtonPress ||
-        isTutorialActive ||
-        isDisabled
-      )
-        return;
+      if (isProcessingButtonPress || isTutorialActive || isDisabled) return;
 
       const mappedId = localStorage.getItem(`button${buttonNumber}Id`);
       const mappedType = localStorage.getItem(`button${buttonNumber}Type`);
@@ -117,7 +112,9 @@ function useGlobalButtonMapping({
               console.error("Error parsing liked tracks:", e);
             }
           } else {
-            console.log("No cached liked tracks available, WebSocket implementation needed");
+            console.log(
+              "No cached liked tracks available, WebSocket implementation needed",
+            );
           }
         }
 
@@ -247,7 +244,6 @@ function NotificationEffects({
     handleReboot,
   ]);
 
-
   useEffect(() => {
     if (isError && errorMessage) {
       if (lastErrorMessageRef.current !== errorMessage) {
@@ -265,7 +261,6 @@ function NotificationEffects({
 
   return null;
 }
-
 
 function App() {
   const [showTutorial, setShowTutorial] = useState(false);
@@ -314,11 +309,7 @@ function App() {
     errors: dataErrors,
     refreshData,
     refreshRecentlyPlayed,
-  } = useSpotifyData(
-    activeSection,
-    false,
-    true,
-  );
+  } = useSpotifyData(activeSection, false, true);
 
   const {
     isConnected: isInternetConnected,
@@ -383,12 +374,7 @@ function App() {
     script.id = "analytics";
 
     document.body.appendChild(script);
-  }, [
-    isInternetConnected,
-    isInfoLoading,
-    serial,
-    analyticsEnabled,
-  ]);
+  }, [isInternetConnected, isInfoLoading, serial, analyticsEnabled]);
 
   const {
     pairingRequest,
@@ -702,7 +688,6 @@ function App() {
     }).catch((err) => console.error("Restart request failed", err));
     setPowerMenuVisible(false);
   };
-
 
   const handleTutorialComplete = () => {
     setShowTutorial(false);

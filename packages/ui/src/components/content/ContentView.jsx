@@ -314,7 +314,6 @@ const ContentView = ({
             contentData = await artistResponse.json();
             const topTracksData = await topTracksResponse.json();
 
-
             tracksData = topTracksData.tracks;
             break;
           }

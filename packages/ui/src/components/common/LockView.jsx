@@ -14,7 +14,6 @@ export default function LockView({
     useSpotifyPlayerControls();
 
   const handlePlayPause = useCallback(async () => {
-
     if (currentPlayback?.is_playing) {
       const ok = await pausePlayback();
       if (ok && refreshPlaybackState) {
@@ -30,12 +29,7 @@ export default function LockView({
       }
       return;
     }
-  }, [
-    currentPlayback,
-    playTrack,
-    pausePlayback,
-    refreshPlaybackState,
-  ]);
+  }, [currentPlayback, playTrack, pausePlayback, refreshPlaybackState]);
 
   useGestureControls({
     contentRef: containerRef,

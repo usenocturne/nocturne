@@ -16,11 +16,7 @@ import {
 } from "../common/icons";
 import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
 
-const DeviceSwitcherModal = ({
-  isOpen,
-  onClose,
-  initialDevices,
-}) => {
+const DeviceSwitcherModal = ({ isOpen, onClose, initialDevices }) => {
   const { wsConnected, getDevices, transferPlayback } = useSpotifyWebSocket();
   const safeInitialDevices = Array.isArray(initialDevices)
     ? initialDevices
@@ -52,7 +48,7 @@ const DeviceSwitcherModal = ({
 
   const fetchDevices = async () => {
     if (!wsConnected) return;
-    
+
     try {
       setIsLoading(true);
       const data = await getDevices();
@@ -67,7 +63,7 @@ const DeviceSwitcherModal = ({
 
   const handleDeviceSelect = async (deviceId) => {
     if (!wsConnected) return;
-    
+
     try {
       setIsTransferring(true);
       await transferPlayback(deviceId, true);

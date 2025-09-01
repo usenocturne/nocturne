@@ -12,29 +12,34 @@ export function useLyrics(currentPlayback) {
 
   const { wsConnected, sendSpotifyCommand } = useSpotifyWebSocket();
 
-  const fetchLyrics = useCallback(async (trackId) => {
-    if (!wsConnected || !trackId) return;
+  const fetchLyrics = useCallback(
+    async (trackId) => {
+      if (!wsConnected || !trackId) return;
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const result = await sendSpotifyCommand("spotify.track.lyrics", { track_id: trackId });
-      
-      if (result && result.lyrics) {
-        setLyrics(result.lyrics);
-      } else {
-        setError("No lyrics available");
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const result = await sendSpotifyCommand("spotify.track.lyrics", {
+          track_id: trackId,
+        });
+
+        if (result && result.lyrics) {
+          setLyrics(result.lyrics);
+        } else {
+          setError("No lyrics available");
+          setLyrics([]);
+        }
+      } catch (err) {
+        console.error("Error fetching lyrics:", err);
+        setError(err.message || "Failed to fetch lyrics");
         setLyrics([]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("Error fetching lyrics:", err);
-      setError(err.message || "Failed to fetch lyrics");
-      setLyrics([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [wsConnected, sendSpotifyCommand]);
+    },
+    [wsConnected, sendSpotifyCommand],
+  );
 
   const toggleLyrics = useCallback(async () => {
     const newShowLyrics = !showLyrics;
@@ -46,8 +51,11 @@ export function useLyrics(currentPlayback) {
   }, [showLyrics, currentPlayback?.item?.id, fetchLyrics]);
 
   useEffect(() => {
-    if (showLyrics && currentPlayback?.item?.id && 
-        currentPlayback.item.id !== trackIdRef.current) {
+    if (
+      showLyrics &&
+      currentPlayback?.item?.id &&
+      currentPlayback.item.id !== trackIdRef.current
+    ) {
       trackIdRef.current = currentPlayback.item.id;
       fetchLyrics(currentPlayback.item.id);
     }

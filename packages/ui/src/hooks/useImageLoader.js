@@ -19,48 +19,68 @@ class ImageLoadQueue {
   }
 
   notifyListeners() {
-    this.listeners.forEach(callback => callback({
-      loadingImages: new Set(this.loadingImages),
-      failedImages: new Set(this.failedImages)
-    }));
+    this.listeners.forEach((callback) =>
+      callback({
+        loadingImages: new Set(this.loadingImages),
+        failedImages: new Set(this.failedImages),
+      }),
+    );
   }
 
-  async loadImage(url, priority = 0, extractColors = false, fetchImageFn, wsConnected) {
+  async loadImage(
+    url,
+    priority = 0,
+    extractColors = false,
+    fetchImageFn,
+    wsConnected,
+  ) {
     return new Promise((resolve, reject) => {
       if (!url) {
-        reject(new Error('No URL provided'));
+        reject(new Error("No URL provided"));
         return;
       }
-
 
       if (this.failedImages.has(url)) {
         reject(new Error(`Image previously failed to load: ${url}`));
         return;
       }
 
-      const existingIndex = this.queue.findIndex(item => item.url === url);
+      const existingIndex = this.queue.findIndex((item) => item.url === url);
       if (existingIndex >= 0) {
         const existing = this.queue[existingIndex];
-        if (priority > existing.priority || (extractColors && !existing.extractColors)) {
+        if (
+          priority > existing.priority ||
+          (extractColors && !existing.extractColors)
+        ) {
           this.queue[existingIndex] = {
             ...existing,
             priority: Math.max(priority, existing.priority),
             extractColors: extractColors || existing.extractColors,
             resolve,
-            reject
+            reject,
           };
         }
         return;
       }
 
-      const queueItem = { url, resolve, reject, priority, extractColors, fetchImageFn, wsConnected };
-      const insertIndex = this.queue.findIndex(item => item.priority < priority);
+      const queueItem = {
+        url,
+        resolve,
+        reject,
+        priority,
+        extractColors,
+        fetchImageFn,
+        wsConnected,
+      };
+      const insertIndex = this.queue.findIndex(
+        (item) => item.priority < priority,
+      );
       if (insertIndex >= 0) {
         this.queue.splice(insertIndex, 0, queueItem);
       } else {
         this.queue.push(queueItem);
       }
-      
+
       if (!this.isProcessing) {
         this.processQueue();
       }
@@ -75,13 +95,13 @@ class ImageLoadQueue {
     this.isProcessing = true;
 
     while (this.queue.length > 0) {
-      const { url, resolve, reject, extractColors, fetchImageFn, wsConnected } = this.queue.shift();
-      
+      const { url, resolve, reject, extractColors, fetchImageFn, wsConnected } =
+        this.queue.shift();
+
       if (!wsConnected) {
-        reject(new Error('WebSocket not connected'));
+        reject(new Error("WebSocket not connected"));
         continue;
       }
-
 
       if (this.failedImages.has(url)) {
         reject(new Error(`Image failed to load: ${url}`));
@@ -93,7 +113,7 @@ class ImageLoadQueue {
 
       try {
         const result = await fetchImageFn(url);
-        
+
         if (result && result.data) {
           let extractedColors = null;
           if (extractColors) {
@@ -103,23 +123,30 @@ class ImageLoadQueue {
               console.error(`Error extracting colors for ${url}:`, colorError);
             }
           }
-          
+
           this.loadingImages.delete(url);
           this.retryCount.delete(url);
           this.notifyListeners();
-          
+
           resolve({ data: result.data, colors: extractedColors });
         } else {
-          throw new Error('No image data received');
+          throw new Error("No image data received");
         }
       } catch (error) {
         console.error(`Error fetching image ${url}:`, error);
-        
+
         const retryCount = this.retryCount.get(url) || 0;
-        
+
         if (retryCount < this.maxRetries) {
           this.retryCount.set(url, retryCount + 1);
-          this.queue.unshift({ url, resolve, reject, extractColors, fetchImageFn, wsConnected });
+          this.queue.unshift({
+            url,
+            resolve,
+            reject,
+            extractColors,
+            fetchImageFn,
+            wsConnected,
+          });
         } else {
           this.failedImages.add(url);
           this.loadingImages.delete(url);
@@ -128,7 +155,7 @@ class ImageLoadQueue {
         }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     this.isProcessing = false;
@@ -169,9 +196,18 @@ export function useImageLoader() {
     return unsubscribe;
   }, []);
 
-  const loadImage = useCallback((url, priority = 0, extractColors = false) => {
-    return globalImageQueue.loadImage(url, priority, extractColors, fetchImage, wsConnected);
-  }, [fetchImage, wsConnected]);
+  const loadImage = useCallback(
+    (url, priority = 0, extractColors = false) => {
+      return globalImageQueue.loadImage(
+        url,
+        priority,
+        extractColors,
+        fetchImage,
+        wsConnected,
+      );
+    },
+    [fetchImage, wsConnected],
+  );
 
   const getImageSize = useCallback((images, preferredIndex = 1) => {
     if (!images || !Array.isArray(images) || images.length === 0) {

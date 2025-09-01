@@ -15,10 +15,10 @@ export function useSpotifyPlayerControls() {
   const isVolumeProcessingRef = useRef(false);
   const lastVolumeUpdateTimeRef = useRef(0);
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
-  const { 
-    wsConnected, 
-    isLoading, 
-    error, 
+  const {
+    wsConnected,
+    isLoading,
+    error,
     playTrack: playTrackWS,
     pausePlayback: pausePlaybackWS,
     skipToNext: skipToNextWS,
@@ -32,7 +32,7 @@ export function useSpotifyPlayerControls() {
     removeTrack,
     transferPlayback,
     getDevices,
-    getPlayerState
+    getPlayerState,
   } = useSpotifyWebSocket();
 
   useEffect(() => {
@@ -62,7 +62,10 @@ export function useSpotifyPlayerControls() {
           try {
             await getPlayerState();
           } catch (err) {
-            console.error("Error fetching player state after play:", err.message);
+            console.error(
+              "Error fetching player state after play:",
+              err.message,
+            );
           }
         }, 100);
         return true;
@@ -95,7 +98,10 @@ export function useSpotifyPlayerControls() {
         try {
           await getPlayerState();
         } catch (err) {
-          console.error("Error fetching player state after pause:", err.message);
+          console.error(
+            "Error fetching player state after pause:",
+            err.message,
+          );
         }
       }, 100);
       return true;
@@ -114,7 +120,10 @@ export function useSpotifyPlayerControls() {
         try {
           await getPlayerState();
         } catch (err) {
-          console.error("Error fetching player state after skip next:", err.message);
+          console.error(
+            "Error fetching player state after skip next:",
+            err.message,
+          );
         }
       }, 100);
       return true;
@@ -133,7 +142,10 @@ export function useSpotifyPlayerControls() {
         try {
           await getPlayerState();
         } catch (err) {
-          console.error("Error fetching player state after skip previous:", err.message);
+          console.error(
+            "Error fetching player state after skip previous:",
+            err.message,
+          );
         }
       }, 100);
       return true;
@@ -240,7 +252,7 @@ export function useSpotifyPlayerControls() {
 
       try {
         const result = await checkIsTrackSaved(trackId);
-        return result && result[0] || false;
+        return (result && result[0]) || false;
       } catch (err) {
         console.error("Error checking if track is liked:", err.message);
         return false;

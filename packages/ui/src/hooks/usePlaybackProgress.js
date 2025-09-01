@@ -7,10 +7,7 @@ const sharedState = {
   maxDriftHistory: 10,
 };
 
-export const usePlaybackProgress = (
-  currentPlayback,
-  refreshPlaybackState,
-) => {
+export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const [progressMs, setProgressMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
