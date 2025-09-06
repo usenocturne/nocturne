@@ -49,6 +49,8 @@ const ContentView = ({
   const {
     getPlaylist,
     getPlaylistTracks,
+    getAlbum,
+    getAlbumTracks,
     playTrackAtPosition,
     getPlayerState,
     toggleShuffle,
@@ -371,8 +373,25 @@ const ContentView = ({
 
         switch (contentType) {
           case "album": {
-            // TODO: Implement WebSocket album fetching
-            throw new Error("Album fetching via WebSocket not yet implemented");
+            try {
+              const [albumInfo, tracksResponse] = await Promise.all([
+                getAlbum(contentId),
+                getAlbumTracks(contentId),
+              ]);
+
+              contentData = albumInfo;
+              tracksData = tracksResponse.items || [];
+
+              setHasMoreTracks(false);
+              setTracksPerPage(tracksData.length);
+              setLoadedPages(1);
+            } catch (error) {
+              console.error("WebSocket album fetch failed:", error);
+              throw new Error(
+                `Failed to fetch album via WebSocket: ${error.message}`,
+              );
+            }
+            break;
           }
 
           case "playlist": {

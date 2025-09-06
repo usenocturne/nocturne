@@ -574,6 +574,31 @@ export function useSpotifyWebSocket() {
     [sendSpotifyCommand],
   );
 
+  const getAlbumTracks = useCallback(
+    async (albumId, params = {}) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const requestParams = {
+          id: albumId,
+          limit: 50,
+          ...params,
+        };
+        const result = await sendSpotifyCommand(
+          "spotify.album.tracks",
+          requestParams,
+        );
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendSpotifyCommand],
+  );
+
   const getPlaylist = useCallback(
     async (playlistId, fields = null) => {
       try {
@@ -722,6 +747,7 @@ export function useSpotifyWebSocket() {
     getArtist,
     getArtistTopTracks,
     getAlbum,
+    getAlbumTracks,
     getPlaylist,
     getPlaylistTracks,
     getShow,
