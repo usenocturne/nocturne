@@ -693,7 +693,7 @@ export default function NowPlaying({
               }
               width={280}
               height={280}
-              priority={10}
+              priority={100}
               extractColors={true}
               onColorsExtracted={handleColorsExtracted}
               fallbackSrc="/images/not-playing.webp"
