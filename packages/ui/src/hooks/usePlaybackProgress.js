@@ -1,12 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const sharedState = {
-  refreshTimeoutId: null,
-  lastRefreshTime: 0,
-  driftHistory: [],
-  maxDriftHistory: 10,
-};
-
 export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const [progressMs, setProgressMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -17,41 +10,51 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const animationFrameRef = useRef(null);
   const serverProgressRef = useRef(0);
   const frameSkipCounterRef = useRef(0);
+  const refreshTimeoutRef = useRef(null);
+  const lastRefreshTimeRef = useRef(0);
+  const driftHistoryRef = useRef([]);
+  const maxDriftHistory = 10;
 
   const scheduleNextRefresh = useCallback(() => {
     const REFRESH_INTERVAL = 15000;
 
-    if (sharedState.refreshTimeoutId) {
-      clearTimeout(sharedState.refreshTimeoutId);
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
     }
 
-    sharedState.refreshTimeoutId = setTimeout(() => {
+    refreshTimeoutRef.current = setTimeout(() => {
+      console.log('🔄 Periodic refresh triggered (every 15s)');
       refreshPlaybackState();
-      sharedState.lastRefreshTime = Date.now();
+      lastRefreshTimeRef.current = Date.now();
       scheduleNextRefresh();
     }, REFRESH_INTERVAL);
   }, [refreshPlaybackState]);
 
   const triggerRefresh = useCallback(() => {
-    if (sharedState.refreshTimeoutId) {
-      clearTimeout(sharedState.refreshTimeoutId);
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
     }
 
     refreshPlaybackState();
-    sharedState.lastRefreshTime = Date.now();
+    lastRefreshTimeRef.current = Date.now();
     scheduleNextRefresh();
   }, [refreshPlaybackState, scheduleNextRefresh]);
 
   useEffect(() => {
     const now = Date.now();
     if (
-      !sharedState.refreshTimeoutId ||
-      now - sharedState.lastRefreshTime > 10000
+      !refreshTimeoutRef.current ||
+      now - lastRefreshTimeRef.current > 10000
     ) {
       triggerRefresh();
     }
 
-    return () => {};
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    };
   }, [triggerRefresh]);
 
   useEffect(() => {
@@ -62,7 +65,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         serverProgressRef.current = currentPlayback.progress_ms || 0;
         setProgressMs(currentPlayback.progress_ms || 0);
         lastUpdateTimeRef.current = Date.now();
-        sharedState.driftHistory = [];
+        driftHistoryRef.current = [];
       } else if (typeof currentPlayback?.progress_ms === "number") {
         const now = Date.now();
         const elapsed = now - lastUpdateTimeRef.current;
@@ -71,9 +74,9 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         const drift = estimatedProgress - actualProgress;
 
         if (elapsed > 1000 && Math.abs(drift) < 10000) {
-          sharedState.driftHistory.push(drift);
-          if (sharedState.driftHistory.length > sharedState.maxDriftHistory) {
-            sharedState.driftHistory.shift();
+          driftHistoryRef.current.push(drift);
+          if (driftHistoryRef.current.length > maxDriftHistory) {
+            driftHistoryRef.current.shift();
           }
         }
 
@@ -100,10 +103,10 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       const elapsed = now - lastUpdateTimeRef.current;
 
       let driftCorrectionFactor = 0.98;
-      if (sharedState.driftHistory.length >= 3) {
+      if (driftHistoryRef.current.length >= 3) {
         const averageDrift =
-          sharedState.driftHistory.reduce((sum, drift) => sum + drift, 0) /
-          sharedState.driftHistory.length;
+          driftHistoryRef.current.reduce((sum, drift) => sum + drift, 0) /
+          driftHistoryRef.current.length;
         if (averageDrift > 100) {
           driftCorrectionFactor = 0.96;
         } else if (averageDrift > 50) {
