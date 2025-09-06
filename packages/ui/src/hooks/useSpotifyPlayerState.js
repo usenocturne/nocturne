@@ -577,8 +577,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   useEffect(() => {
     if (wsConnected) {
       if (!initialPlaybackFetchDone) {
+        console.log("Effect: Making initial fetchCurrentPlayback call");
         initialPlaybackFetchDone = true;
         fetchCurrentPlayback(true);
+      } else {
+        console.log("Effect: Skipping fetchCurrentPlayback (already done)");
       }
 
       const handleNetworkRestored = () => {

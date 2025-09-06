@@ -14,6 +14,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const lastRefreshTimeRef = useRef(0);
   const driftHistoryRef = useRef([]);
   const maxDriftHistory = 10;
+  const initialRefreshDoneRef = useRef(false);
 
   const scheduleNextRefresh = useCallback(() => {
     const REFRESH_INTERVAL = 15000;
@@ -43,9 +44,11 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   useEffect(() => {
     const now = Date.now();
     if (
-      !refreshTimeoutRef.current ||
-      now - lastRefreshTimeRef.current > 10000
+      !initialRefreshDoneRef.current &&
+      (!refreshTimeoutRef.current ||
+      now - lastRefreshTimeRef.current > 10000)
     ) {
+      initialRefreshDoneRef.current = true;
       triggerRefresh();
     }
 

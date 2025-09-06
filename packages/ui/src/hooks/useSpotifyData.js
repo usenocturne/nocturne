@@ -81,6 +81,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   const retryTimeoutRef = useRef(null);
   const abortControllerRef = useRef(null);
   const lazyLoadTimeoutRef = useRef(null);
+  const extractedCurrentAlbumRef = useRef(null);
   const sectionTimeoutRefs = useRef({
     playlists: null,
     artists: null,
@@ -256,12 +257,46 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     }
   }, [skipInitialFetch]);
 
+  // Function to extract album from raw player state response
+  const extractAlbumFromPlayerState = useCallback((playerStateData) => {
+    if (!playerStateData?.item) return null;
+    
+    if (playerStateData.item.type === "track" || playerStateData.item.album) {
+      const currentAlbum = playerStateData.item.is_local
+        ? {
+            id: `local-${playerStateData.item.uri}`,
+            name: playerStateData.item.album?.name || playerStateData.item.name,
+            images: [{ url: "/images/not-playing.webp" }],
+            artists: playerStateData.item.artists,
+            type: "local-track",
+            uri: playerStateData.item.uri,
+          }
+        : playerStateData.item.album;
+      return currentAlbum;
+    } else if (playerStateData.item.type === "episode") {
+      return playerStateData.item.show;
+    }
+    
+    return null;
+  }, []);
+
+  // Effect to extract and save currently playing album data from player state
   useEffect(() => {
-    if (currentlyPlayingAlbum?.id) {
+    if (currentlyPlayingAlbum?.id && !extractedCurrentAlbumRef.current) {
+      console.log("💾 Extracting currently playing album from player state:", currentlyPlayingAlbum.name);
+      extractedCurrentAlbumRef.current = currentlyPlayingAlbum;
+    }
+  }, [currentlyPlayingAlbum]);
+
+  // Effect to handle currently playing album changes during normal operation (after initial load)
+  useEffect(() => {
+    if (currentlyPlayingAlbum?.id && initialDataLoaded) {
+      // Handle changes after initial data is loaded (for real-time updates)
       if (
-        !recentAlbums.length ||
+        recentAlbums.length > 0 &&
         recentAlbums[0]?.id !== currentlyPlayingAlbum.id
       ) {
+        console.log('🔄 Real-time update: Moving currently playing album to front:', currentlyPlayingAlbum.name);
         lastPlayedAlbumIdRef.current = currentlyPlayingAlbum.id;
         setRecentAlbums((prevAlbums) => {
           const filteredAlbums = prevAlbums.filter(
@@ -280,7 +315,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     }
-  }, [currentlyPlayingAlbum, recentAlbums, activeSection]);
+  }, [currentlyPlayingAlbum, recentAlbums, activeSection, initialDataLoaded]);
 
   const fetchRecentlyPlayed = useCallback(
     async (isLoadMore = false) => {
@@ -289,6 +324,28 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       try {
         if (!isLoadMore) {
           setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
+          
+          // If this is the initial load and we don't have extracted album yet, get player state
+          if (!extractedCurrentAlbumRef.current) {
+            try {
+              console.log("🎯 Fetching player state to extract currently playing album before recently played...");
+              const playerStateResponse = await getPlayerState();
+              console.log("🎯 Player state response received:", playerStateResponse);
+              const playerState = playerStateResponse?.result?.result || playerStateResponse?.result || playerStateResponse;
+              console.log("🎯 Extracted player state:", playerState);
+              
+              if (playerState) {
+                const extractedAlbum = extractAlbumFromPlayerState(playerState);
+                if (extractedAlbum) {
+                  console.log("💾 Extracted album from player state:", extractedAlbum.name);
+                  extractedCurrentAlbumRef.current = extractedAlbum;
+                }
+              }
+            } catch (playerStateError) {
+              console.log("Failed to get player state for album extraction:", playerStateError);
+              // Continue with recently played fetch even if player state fails
+            }
+          }
         }
 
         let params = { limit: 5, additional_types: "track,episode" };
@@ -345,11 +402,42 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           });
         } else {
           console.log('Setting recentAlbums to:', uniqueAlbums.map(a => a.name));
-          setRecentAlbums(uniqueAlbums);
-          setItemCounts((prev) => ({
-            ...prev,
-            recentAlbums: uniqueAlbums.length,
-          }));
+          
+          // Check if we have an extracted currently playing album to add to the front
+          if (extractedCurrentAlbumRef.current?.id) {
+            const currentAlbum = extractedCurrentAlbumRef.current;
+            console.log('🎯 Adding extracted currently playing album to front of recently played:', currentAlbum.name);
+            
+            // Remove the current album if it already exists in the list
+            const filteredAlbums = uniqueAlbums.filter(
+              (album) => album.id !== currentAlbum.id,
+            );
+            
+            // Add current album to the front
+            const finalAlbums = [currentAlbum, ...filteredAlbums].slice(0, 50);
+            setRecentAlbums(finalAlbums);
+            setItemCounts((prev) => ({
+              ...prev,
+              recentAlbums: finalAlbums.length,
+            }));
+            
+            // Trigger scroll animation if we're on recents section
+            if (activeSection === "recents") {
+              setTimeout(() => {
+                const event = new CustomEvent("albumOrderChanged", {
+                  detail: { albumId: currentAlbum.id },
+                });
+                window.dispatchEvent(event);
+              }, 50);
+            }
+          } else {
+            console.log('🎯 No extracted currently playing album available yet');
+            setRecentAlbums(uniqueAlbums);
+            setItemCounts((prev) => ({
+              ...prev,
+              recentAlbums: uniqueAlbums.length,
+            }));
+          }
         }
 
         setErrors((prev) => ({ ...prev, recentAlbums: null }));
@@ -380,6 +468,8 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       currentlyPlayingAlbum,
       lastOffsets,
       recentAlbums.length,
+      getPlayerState,
+      extractAlbumFromPlayerState,
     ],
   );
 
@@ -1182,68 +1272,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         failedRequests.push("fetchUserShows");
       }
 
-      try {
-        console.log("Final step: Fetching current player state to add currently playing album...");
-        const playerStateResponse = await getPlayerState();
-        console.log("Player state response:", playerStateResponse);
-        
-        const playerState = playerStateResponse?.result?.result || playerStateResponse?.result || playerStateResponse;
-        console.log("Extracted player state:", playerState);
-        
-        if (playerState?.item) {
-          console.log("Item found:", playerState.item);
-          console.log("Item type:", playerState.item.type);
-          console.log("Has album:", !!playerState.item.album);
-        }
-        
-        if (playerState?.item && (playerState.item.type === "track" || playerState.item.album)) {
-          const currentAlbum = playerState.item.is_local
-            ? {
-                id: `local-${playerState.item.uri}`,
-                name: playerState.item.album?.name || playerState.item.name,
-                images: [{ url: "/images/not-playing.webp" }],
-                artists: playerState.item.artists,
-                type: "local-track",
-                uri: playerState.item.uri,
-              }
-            : playerState.item.album;
-
-          console.log("Found currently playing album:", currentAlbum?.name);
-          
-          setRecentAlbums((prevAlbums) => {
-            if (prevAlbums.length === 0 || prevAlbums[0]?.id !== currentAlbum.id) {
-              console.log("Adding currently playing album to front of recently played carousel");
-              const filteredAlbums = prevAlbums.filter(
-                (album) => album.id !== currentAlbum.id,
-              );
-              return [currentAlbum, ...filteredAlbums].slice(0, 50);
-            } else {
-              console.log("Currently playing album is already at front, no update needed");
-              return prevAlbums;
-            }
-          });
-        } else if (playerState?.item && playerState.item.type === "episode") {
-          const currentShow = playerState.item.show;
-          console.log("Found currently playing show:", currentShow?.name);
-          
-          setRecentAlbums((prevAlbums) => {
-            if (prevAlbums.length === 0 || prevAlbums[0]?.id !== currentShow.id) {
-              console.log("Adding currently playing show to front of recently played carousel");
-              const filteredAlbums = prevAlbums.filter(
-                (album) => album.id !== currentShow.id,
-              );
-              return [currentShow, ...filteredAlbums].slice(0, 50);
-            } else {
-              console.log("Currently playing show is already at front, no update needed");
-              return prevAlbums;
-            }
-          });
-        } else {
-          console.log("No currently playing item found or unsupported type. Player state:", playerState);
-        }
-      } catch (error) {
-        console.error("Failed to fetch player state for currently playing album:", error);
-      }
+       console.log("Sequential data loading completed!");
 
       if (failedRequests.length > 0) {
         console.error("Some data fetching operations failed:", failedRequests);
@@ -1294,7 +1323,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     fetchRadioMixes,
     fetchUserShows,
     skipInitialFetch,
-    getPlayerState,
+    currentlyPlayingAlbum,
   ]);
 
   useEffect(() => {
