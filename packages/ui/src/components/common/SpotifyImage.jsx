@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useImageLoader } from "../../hooks/useImageLoader";
 
 export default function SpotifyImage({
@@ -27,6 +27,11 @@ export default function SpotifyImage({
   const [hasError, setHasError] = useState(false);
 
   const imageUrl = getImageSize(images, preferredSizeIndex);
+
+  const delayMs = useMemo(() => {
+    const maxPriority = 100;
+    return Math.max(0, maxPriority - priority) * 100;
+  }, [priority]);
 
   const loadImageData = useCallback(async () => {
     if (!imageUrl || hasImageFailed(imageUrl)) {
@@ -104,9 +109,6 @@ export default function SpotifyImage({
 
   useEffect(() => {
     if (imageUrl) {
-      const maxPriority = 100;
-      const delayMs = Math.max(0, maxPriority - priority) * 100;
-
       if (delayMs > 0) {
         const timeoutId = setTimeout(() => {
           loadImageData();
@@ -132,7 +134,7 @@ export default function SpotifyImage({
         URL.revokeObjectURL(currentSrc);
       }
     };
-  }, [imageUrl, loadImageData, fallbackSrc, priority]);
+  }, [imageUrl, loadImageData, fallbackSrc, delayMs]);
 
   useEffect(() => {
     if (

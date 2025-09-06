@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import Sidebar from "../components/common/navigation/Sidebar";
 import HorizontalScroll from "../components/common/navigation/HorizontalScroll";
 import Settings from "../components/settings/Settings";
@@ -225,6 +225,105 @@ export default function Home({
     }
   };
 
+  const memoizedAlbumItems = useMemo(() => {
+    if (isLoading.recentAlbums) {
+      return Array(5)
+        .fill()
+        .map((_, index) => (
+          <div
+            key={`loading-${index}`}
+            className="min-w-[280px] pl-2 mr-10 snap-start"
+          >
+            <div
+              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
+              style={{ width: 280, height: 280 }}
+            ></div>
+            <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
+            <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
+          </div>
+        ));
+    }
+
+    if (recentAlbums.length === 0) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          No recent albums found
+        </div>
+      );
+    }
+
+    return recentAlbums.map((album) => (
+      <div
+        key={album.id}
+        className="min-w-[280px] pl-2 mr-10 snap-start"
+        data-id={album.id}
+        data-playing={
+          album.id === currentlyPlayingAlbum?.id ? "true" : "false"
+        }
+      >
+        <div
+          className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+          style={{ width: 280, height: 280 }}
+          onClick={() =>
+            album.type !== "local-track" &&
+            onOpenContent(
+              album.id,
+              album.type === "show" ? "show" : "album",
+            )
+          }
+        >
+          {album.type !== "local-track" ? (
+            <SpotifyImage
+              images={album.images}
+              preferredSizeIndex={1}
+              alt="Album Cover"
+              priority={50}
+              className="w-full h-full object-cover rounded-[12px]"
+            />
+          ) : album.type === "local-track" ? (
+            <img
+              src="/images/not-playing.webp"
+              alt="Local File"
+              className="w-full h-full object-cover rounded-[12px]"
+            />
+          ) : (
+            <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+          )}
+        </div>
+
+        <h4
+          className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+          onClick={() =>
+            album.type !== "local-track" &&
+            onOpenContent(
+              album.id,
+              album.type === "show" ? "show" : "album",
+            )
+          }
+        >
+          {album.name}
+        </h4>
+
+        {album.type === "show"
+          ? album.publisher && (
+              <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                {album.publisher}
+              </h4>
+            )
+          : album.artists?.[0] && (
+              <h4
+                className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
+                onClick={() =>
+                  onOpenContent(album.artists[0].id, "artist")
+                }
+              >
+                {album.artists.map((artist) => artist.name).join(", ")}
+              </h4>
+            )}
+      </div>
+    ));
+  }, [recentAlbums, isLoading.recentAlbums, currentlyPlayingAlbum?.id, onOpenContent]);
+
   const renderRecentsSection = () => {
     return (
       <HorizontalScroll
@@ -240,98 +339,7 @@ export default function Home({
           className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
           style={{ willChange: "transform" }}
         >
-          {isLoading.recentAlbums ? (
-            Array(5)
-              .fill()
-              .map((_, index) => (
-                <div
-                  key={`loading-${index}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                >
-                  <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
-                    style={{ width: 280, height: 280 }}
-                  ></div>
-                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
-                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
-                </div>
-              ))
-          ) : recentAlbums.length > 0 ? (
-            recentAlbums.map((album, index) => (
-              <div
-                key={album.id}
-                className="min-w-[280px] pl-2 mr-10 snap-start"
-                data-id={album.id}
-                data-playing={
-                  album.id === currentlyPlayingAlbum?.id ? "true" : "false"
-                }
-              >
-                <div
-                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-                  style={{ width: 280, height: 280 }}
-                  onClick={() =>
-                    album.type !== "local-track" &&
-                    onOpenContent(
-                      album.id,
-                      album.type === "show" ? "show" : "album",
-                    )
-                  }
-                >
-                  {album.type !== "local-track" ? (
-                    <SpotifyImage
-                      images={album.images}
-                      preferredSizeIndex={1}
-                      alt="Album Cover"
-                      priority={100 - index}
-                      className="w-full h-full object-cover rounded-[12px]"
-                    />
-                  ) : album.type === "local-track" ? (
-                    <img
-                      src="/images/not-playing.webp"
-                      alt="Local File"
-                      className="w-full h-full object-cover rounded-[12px]"
-                    />
-                  ) : (
-                    <div className="w-full h-full rounded-[12px] bg-white/10"></div>
-                  )}
-                </div>
-
-                <h4
-                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-                  onClick={() =>
-                    album.type !== "local-track" &&
-                    onOpenContent(
-                      album.id,
-                      album.type === "show" ? "show" : "album",
-                    )
-                  }
-                >
-                  {album.name}
-                </h4>
-
-                {album.type === "show"
-                  ? album.publisher && (
-                      <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                        {album.publisher}
-                      </h4>
-                    )
-                  : album.artists?.[0] && (
-                      <h4
-                        className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
-                        onClick={() =>
-                          onOpenContent(album.artists[0].id, "artist")
-                        }
-                      >
-                        {album.artists.map((artist) => artist.name).join(", ")}
-                      </h4>
-                    )}
-              </div>
-            ))
-          ) : (
-            <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-              No recent albums found
-            </div>
-          )}
+          {memoizedAlbumItems}
           <div className="min-w-4 flex-shrink-0"></div>
         </div>
       </HorizontalScroll>
@@ -430,7 +438,7 @@ export default function Home({
                         images={playlist.images}
                         preferredSizeIndex={1}
                         alt={`${playlist.name} Cover`}
-                        priority={50 - index}
+                        priority={30}
                         className="w-full h-full object-cover rounded-[12px]"
                       />
                     ) : (
@@ -526,7 +534,7 @@ export default function Home({
                       images={artist.images}
                       preferredSizeIndex={1}
                       alt={`${artist.name} Profile`}
-                      priority={25 - index}
+                      priority={20}
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
