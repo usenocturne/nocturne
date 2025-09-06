@@ -24,7 +24,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     }
 
     refreshTimeoutRef.current = setTimeout(() => {
-      console.log('🔄 Periodic refresh triggered (every 15s)');
+      console.log("🔄 Periodic refresh triggered (every 15s)");
       refreshPlaybackState();
       lastRefreshTimeRef.current = Date.now();
       scheduleNextRefresh();
@@ -45,8 +45,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     const now = Date.now();
     if (
       !initialRefreshDoneRef.current &&
-      (!refreshTimeoutRef.current ||
-      now - lastRefreshTimeRef.current > 10000)
+      (!refreshTimeoutRef.current || now - lastRefreshTimeRef.current > 10000)
     ) {
       initialRefreshDoneRef.current = true;
       triggerRefresh();

@@ -257,10 +257,9 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     }
   }, [skipInitialFetch]);
 
-  // Function to extract album from raw player state response
   const extractAlbumFromPlayerState = useCallback((playerStateData) => {
     if (!playerStateData?.item) return null;
-    
+
     if (playerStateData.item.type === "track" || playerStateData.item.album) {
       const currentAlbum = playerStateData.item.is_local
         ? {
@@ -276,27 +275,22 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     } else if (playerStateData.item.type === "episode") {
       return playerStateData.item.show;
     }
-    
+
     return null;
   }, []);
 
-  // Effect to extract and save currently playing album data from player state
   useEffect(() => {
     if (currentlyPlayingAlbum?.id && !extractedCurrentAlbumRef.current) {
-      console.log("💾 Extracting currently playing album from player state:", currentlyPlayingAlbum.name);
       extractedCurrentAlbumRef.current = currentlyPlayingAlbum;
     }
   }, [currentlyPlayingAlbum]);
 
-  // Effect to handle currently playing album changes during normal operation (after initial load)
   useEffect(() => {
     if (currentlyPlayingAlbum?.id && initialDataLoaded) {
-      // Handle changes after initial data is loaded (for real-time updates)
       if (
         recentAlbums.length > 0 &&
         recentAlbums[0]?.id !== currentlyPlayingAlbum.id
       ) {
-        console.log('🔄 Real-time update: Moving currently playing album to front:', currentlyPlayingAlbum.name);
         lastPlayedAlbumIdRef.current = currentlyPlayingAlbum.id;
         setRecentAlbums((prevAlbums) => {
           const filteredAlbums = prevAlbums.filter(
@@ -324,26 +318,26 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       try {
         if (!isLoadMore) {
           setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
-          
-          // If this is the initial load and we don't have extracted album yet, get player state
+
           if (!extractedCurrentAlbumRef.current) {
             try {
-              console.log("🎯 Fetching player state to extract currently playing album before recently played...");
               const playerStateResponse = await getPlayerState();
-              console.log("🎯 Player state response received:", playerStateResponse);
-              const playerState = playerStateResponse?.result?.result || playerStateResponse?.result || playerStateResponse;
-              console.log("🎯 Extracted player state:", playerState);
-              
+              const playerState =
+                playerStateResponse?.result?.result ||
+                playerStateResponse?.result ||
+                playerStateResponse;
+
               if (playerState) {
                 const extractedAlbum = extractAlbumFromPlayerState(playerState);
                 if (extractedAlbum) {
-                  console.log("💾 Extracted album from player state:", extractedAlbum.name);
                   extractedCurrentAlbumRef.current = extractedAlbum;
                 }
               }
             } catch (playerStateError) {
-              console.log("Failed to get player state for album extraction:", playerStateError);
-              // Continue with recently played fetch even if player state fails
+              console.error(
+                "Failed to get player state for album extraction:",
+                playerStateError,
+              );
             }
           }
         }
@@ -401,27 +395,20 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
             return limitedAlbums;
           });
         } else {
-          console.log('Setting recentAlbums to:', uniqueAlbums.map(a => a.name));
-          
-          // Check if we have an extracted currently playing album to add to the front
           if (extractedCurrentAlbumRef.current?.id) {
             const currentAlbum = extractedCurrentAlbumRef.current;
-            console.log('🎯 Adding extracted currently playing album to front of recently played:', currentAlbum.name);
-            
-            // Remove the current album if it already exists in the list
+
             const filteredAlbums = uniqueAlbums.filter(
               (album) => album.id !== currentAlbum.id,
             );
-            
-            // Add current album to the front
+
             const finalAlbums = [currentAlbum, ...filteredAlbums].slice(0, 50);
             setRecentAlbums(finalAlbums);
             setItemCounts((prev) => ({
               ...prev,
               recentAlbums: finalAlbums.length,
             }));
-            
-            // Trigger scroll animation if we're on recents section
+
             if (activeSection === "recents") {
               setTimeout(() => {
                 const event = new CustomEvent("albumOrderChanged", {
@@ -431,7 +418,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
               }, 50);
             }
           } else {
-            console.log('🎯 No extracted currently playing album available yet');
             setRecentAlbums(uniqueAlbums);
             setItemCounts((prev) => ({
               ...prev,
@@ -1194,11 +1180,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
     dataLoadingAttemptedRef.current = true;
     dataFetchingInProgressRef.current = true;
-    console.log("Starting initial data load via WebSocket...", {
-      wsConnected,
-      initialDataLoaded,
-      isInitializing,
-    });
 
     setIsLoading({
       recentAlbums: true,
@@ -1214,7 +1195,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
       abortControllerRef.current = new AbortController();
 
-      console.log("Fetching data sequentially...");
       const failedRequests = [];
 
       try {
@@ -1266,13 +1246,12 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       try {
         console.log("6/6: Fetching user shows...");
         await fetchUserShows();
-        console.log("Sequential data loading completed!");
       } catch (error) {
         console.error("Failed to fetch user shows:", error);
         failedRequests.push("fetchUserShows");
       }
 
-       console.log("Sequential data loading completed!");
+      console.log("Sequential data loading completed!");
 
       if (failedRequests.length > 0) {
         console.error("Some data fetching operations failed:", failedRequests);

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
@@ -64,34 +70,45 @@ const ContentView = ({
   }, [contentType]);
 
   const imageAlt = useMemo(() => {
-    return `${content?.name || 'Unknown'} Cover`;
+    return `${content?.name || "Unknown"} Cover`;
   }, [content?.name]);
 
   const containerStyle = useMemo(() => ({ minWidth: "280px" }), []);
-  
-  const scrollContainerStyle = useMemo(() => ({ 
-    height: "calc(100vh - 5rem)", 
-    paddingTop: "6px" 
-  }), []);
 
-  const titleStyle = useMemo(() => ({ 
-    fontSize: "36px", 
-    fontWeight: "580", 
-    maxWidth: "280px" 
-  }), []);
+  const scrollContainerStyle = useMemo(
+    () => ({
+      height: "calc(100vh - 5rem)",
+      paddingTop: "6px",
+    }),
+    [],
+  );
 
-  const subtitleStyle = useMemo(() => ({ 
-    fontSize: "28px", 
-    fontWeight: "560", 
-    maxWidth: "280px" 
-  }), []);
+  const titleStyle = useMemo(
+    () => ({
+      fontSize: "36px",
+      fontWeight: "580",
+      maxWidth: "280px",
+    }),
+    [],
+  );
 
+  const subtitleStyle = useMemo(
+    () => ({
+      fontSize: "28px",
+      fontWeight: "560",
+      maxWidth: "280px",
+    }),
+    [],
+  );
 
-  const handleColorsExtracted = useCallback((colors) => {
-    if (colors && updateGradientColors) {
-      updateGradientColors(colors, contentType);
-    }
-  }, [updateGradientColors, contentType]);
+  const handleColorsExtracted = useCallback(
+    (colors) => {
+      if (colors && updateGradientColors) {
+        updateGradientColors(colors, contentType);
+      }
+    },
+    [updateGradientColors, contentType],
+  );
 
   const handleBack = useCallback(() => {
     if (onClose) {
@@ -101,14 +118,17 @@ const ContentView = ({
     }
   }, [onClose, navigate]);
 
-  const handleTrackSelect = useCallback((index, trackElement) => {
-    if (index >= 0 && index < tracks.length) {
-      const track = tracks[index];
-      if (track) {
-        handleTrackPlay(track, index);
+  const handleTrackSelect = useCallback(
+    (index, trackElement) => {
+      if (index >= 0 && index < tracks.length) {
+        const track = tracks[index];
+        if (track) {
+          handleTrackPlay(track, index);
+        }
       }
-    }
-  }, [tracks]);
+    },
+    [tracks],
+  );
 
   const { showMappingOverlay, activeButton, mappingInProgress, setTrackUris } =
     useButtonMapping({
@@ -135,39 +155,35 @@ const ContentView = ({
     inactivityTimeout: 3000,
     vertical: true,
   });
-  
+
   const lazyLoadNextBatch = useCallback(async () => {
-    if (
-      contentType !== "playlist" ||
-      isLazyLoading ||
-      !content
-    ) {
+    if (contentType !== "playlist" || isLazyLoading || !content) {
       return;
     }
 
     try {
       setIsLazyLoading(true);
-      
+
       const data = await getPlaylistTracks(contentId, {
         offset: tracksLengthRef.current,
         limit: 50,
-        fields: "offset,items(track(name,id,uri,artists(name,id)))"
+        fields: "offset,items(track(name,id,uri,artists(name,id)))",
       });
-      
+
       if (data.items && data.items.length > 0) {
         const newTracks = data.items.map((item) => item.track);
-        
+
         setTracks((prevTracks) => {
           const updatedTracks = [...prevTracks, ...newTracks];
-          
+
           const currentTotal = updatedTracks.length;
           const playlistTotal = content?.tracks?.total || 0;
           const hasMore = currentTotal < playlistTotal;
-          
+
           setHasMoreTracks(hasMore);
           return updatedTracks;
         });
-        
+
         setNextUrl(data.next);
       }
     } catch (error) {
@@ -179,8 +195,7 @@ const ContentView = ({
 
   useEffect(() => {
     tracksLengthRef.current = tracks.length;
-    
-    
+
     if (
       content &&
       tracks.length > 0 &&
@@ -191,12 +206,19 @@ const ContentView = ({
       if (lazyLoadTimeoutRef.current) {
         clearTimeout(lazyLoadTimeoutRef.current);
       }
-      
+
       lazyLoadTimeoutRef.current = setTimeout(() => {
         lazyLoadNextBatch();
       }, 3000);
     }
-  }, [tracks.length, content, contentType, isLazyLoading, hasMoreTracks, lazyLoadNextBatch]);
+  }, [
+    tracks.length,
+    content,
+    contentType,
+    isLazyLoading,
+    hasMoreTracks,
+    lazyLoadNextBatch,
+  ]);
 
   const loadMoreTracks = useCallback(async () => {
     if (
@@ -208,17 +230,17 @@ const ContentView = ({
 
     try {
       setIsLoadingMore(true);
-      
+
       if (contentType === "playlist") {
         try {
           const offset = tracksLengthRef.current;
-          
+
           const data = await getPlaylistTracks(contentId, {
             offset,
             limit: 50,
-            fields: "offset,items(track(name,id,uri,artists(name,id)))"
+            fields: "offset,items(track(name,id,uri,artists(name,id)))",
           });
-          
+
           const newTracks = data.items.map((item) => item.track);
           setTracks((prevTracks) => [...prevTracks, ...newTracks]);
           setNextUrl(data.next);
@@ -229,7 +251,10 @@ const ContentView = ({
           throw error;
         }
       } else {
-        console.error("Load more tracks not implemented for content type:", contentType);
+        console.error(
+          "Load more tracks not implemented for content type:",
+          contentType,
+        );
         return;
       }
     } catch (err) {
@@ -297,7 +322,6 @@ const ContentView = ({
     contentType,
   ]);
 
-
   useEffect(() => {
     if (
       tracks.length > 0 &&
@@ -317,29 +341,17 @@ const ContentView = ({
     }
   }, [currentPlayback?.shuffle_state]);
 
-
-
-
   useEffect(() => {
     if (contentType === "mix") return;
-    
-    console.log("WebSocket content useEffect triggered", {
-      contentId,
-      contentType,
-      wsConnected,
-      getPlaylist: !!getPlaylist,
-      getPlaylistTracks: !!getPlaylistTracks,
-      timestamp: Date.now()
-    });
-    
+
     const fetchWebSocketContent = async () => {
       if (!contentId && contentType !== "liked-songs") return;
-      
+
       if (!wsConnected) {
         console.log("WebSocket not connected, skipping fetch");
         return;
       }
-      
+
       if (isFetchingRef.current) {
         console.log("Already fetching, skipping duplicate request");
         return;
@@ -365,24 +377,22 @@ const ContentView = ({
 
           case "playlist": {
             try {
-              console.log("Fetching playlist data for:", contentId);
               const [playlistInfo, tracksResponse] = await Promise.all([
                 getPlaylist(contentId, "images,name,tracks.total"),
                 getPlaylistTracks(contentId, {
                   offset: 0,
                   limit: 50,
-                  fields: "offset,items(track(name,id,uri,artists(name,id)))"
-                })
+                  fields: "offset,items(track(name,id,uri,artists(name,id)))",
+                }),
               ]);
-              console.log("Playlist data fetched successfully");
 
               contentData = playlistInfo;
               tracksData = tracksResponse.items.map((item) => item.track);
-              
+
               const currentOffset = tracksResponse.offset || 0;
               const currentItems = tracksResponse.items?.length || 0;
               const totalTracks = playlistInfo.tracks?.total || 0;
-              const hasMore = (currentOffset + currentItems) < totalTracks;
+              const hasMore = currentOffset + currentItems < totalTracks;
 
               setNextUrl(tracksResponse.next);
               setHasMoreTracks(hasMore);
@@ -390,19 +400,25 @@ const ContentView = ({
               setLoadedPages(1);
             } catch (error) {
               console.error("WebSocket playlist fetch failed:", error);
-              throw new Error(`Failed to fetch playlist via WebSocket: ${error.message}`);
+              throw new Error(
+                `Failed to fetch playlist via WebSocket: ${error.message}`,
+              );
             }
             break;
           }
 
           case "artist": {
             // TODO: Implement WebSocket artist fetching
-            throw new Error("Artist fetching via WebSocket not yet implemented");
+            throw new Error(
+              "Artist fetching via WebSocket not yet implemented",
+            );
           }
 
           case "liked-songs": {
             // TODO: Implement WebSocket liked songs fetching
-            throw new Error("Liked songs fetching via WebSocket not yet implemented");
+            throw new Error(
+              "Liked songs fetching via WebSocket not yet implemented",
+            );
           }
 
           case "show": {
@@ -426,7 +442,7 @@ const ContentView = ({
     };
 
     fetchWebSocketContent();
-    
+
     return () => {
       isFetchingRef.current = false;
       if (lazyLoadTimeoutRef.current) {
@@ -437,13 +453,7 @@ const ContentView = ({
 
   useEffect(() => {
     if (contentType !== "mix") return;
-    
-    console.log("Mix content useEffect triggered", {
-      contentId,
-      contentType,
-      radioMixesLength: radioMixes?.length
-    });
-    
+
     const fetchMixContent = async () => {
       if (!contentId) return;
 
@@ -478,7 +488,7 @@ const ContentView = ({
           }
 
           const tracksData = foundMix.tracks || [];
-          
+
           setContent(contentData);
           setTracks(tracksData);
         } else {
@@ -495,7 +505,6 @@ const ContentView = ({
     fetchMixContent();
   }, [contentId, contentType, radioMixes, updateGradientColors]);
 
-
   const handleTrackPlay = async (track, index) => {
     if (!track || !track.uri) {
       console.warn("Attempted to play an invalid track:", track);
@@ -510,7 +519,10 @@ const ContentView = ({
     try {
       originalPlayerState = await getPlayerState();
     } catch (error) {
-      console.warn("Could not get player state, proceeding without preserving settings:", error);
+      console.warn(
+        "Could not get player state, proceeding without preserving settings:",
+        error,
+      );
     }
 
     try {
@@ -565,7 +577,7 @@ const ContentView = ({
             if (originalPlayerState.shuffle_state !== undefined) {
               await toggleShuffle(originalPlayerState.shuffle_state);
             }
-            
+
             if (originalPlayerState.repeat_state !== undefined) {
               await setRepeatMode(originalPlayerState.repeat_state);
             }
@@ -594,7 +606,10 @@ const ContentView = ({
     try {
       originalPlayerState = await getPlayerState();
     } catch (error) {
-      console.warn("Could not get player state, proceeding without preserving settings:", error);
+      console.warn(
+        "Could not get player state, proceeding without preserving settings:",
+        error,
+      );
     }
 
     if (contentType === "mix") {
@@ -620,7 +635,7 @@ const ContentView = ({
           if (originalPlayerState.shuffle_state !== undefined) {
             await toggleShuffle(originalPlayerState.shuffle_state);
           }
-          
+
           if (originalPlayerState.repeat_state !== undefined) {
             await setRepeatMode(originalPlayerState.repeat_state);
           }
@@ -732,7 +747,6 @@ const ContentView = ({
         return "";
     }
   };
-
 
   const getMappingStatusText = () => {
     if (mappingInProgress) {

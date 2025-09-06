@@ -577,11 +577,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   useEffect(() => {
     if (wsConnected) {
       if (!initialPlaybackFetchDone) {
-        console.log("Effect: Making initial fetchCurrentPlayback call");
         initialPlaybackFetchDone = true;
         fetchCurrentPlayback(true);
-      } else {
-        console.log("Effect: Skipping fetchCurrentPlayback (already done)");
       }
 
       const handleNetworkRestored = () => {
@@ -656,12 +653,9 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         data.type === "event" &&
         data.topic === "spotify.player.state_changed"
       ) {
-        console.log("Received player state change event:", data);
-
         const events = data.data?.events || [];
         if (events.length > 0 && events[0].event?.state) {
           const newState = events[0].event.state;
-          console.log("Processing new player state:", newState);
           processPlaybackState(newState);
         }
       }
@@ -679,14 +673,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       if (!wsConnected) return;
 
       try {
-        console.log("Refreshing playback state via WebSocket...");
         const data = await getPlayerState();
 
         if (!data || Object.keys(data).length === 0) {
-          console.log("No playback data received, resetting state");
           resetPlaybackState();
         } else {
-          console.log("Processing new playback data:", data);
           processPlaybackState(data);
         }
       } catch (err) {

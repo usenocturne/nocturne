@@ -257,19 +257,14 @@ export default function Home({
         key={album.id}
         className="min-w-[280px] pl-2 mr-10 snap-start"
         data-id={album.id}
-        data-playing={
-          album.id === currentlyPlayingAlbum?.id ? "true" : "false"
-        }
+        data-playing={album.id === currentlyPlayingAlbum?.id ? "true" : "false"}
       >
         <div
           className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
           style={{ width: 280, height: 280 }}
           onClick={() =>
             album.type !== "local-track" &&
-            onOpenContent(
-              album.id,
-              album.type === "show" ? "show" : "album",
-            )
+            onOpenContent(album.id, album.type === "show" ? "show" : "album")
           }
         >
           {album.type !== "local-track" ? (
@@ -295,10 +290,7 @@ export default function Home({
           className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
           onClick={() =>
             album.type !== "local-track" &&
-            onOpenContent(
-              album.id,
-              album.type === "show" ? "show" : "album",
-            )
+            onOpenContent(album.id, album.type === "show" ? "show" : "album")
           }
         >
           {album.name}
@@ -313,16 +305,19 @@ export default function Home({
           : album.artists?.[0] && (
               <h4
                 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
-                onClick={() =>
-                  onOpenContent(album.artists[0].id, "artist")
-                }
+                onClick={() => onOpenContent(album.artists[0].id, "artist")}
               >
                 {album.artists.map((artist) => artist.name).join(", ")}
               </h4>
             )}
       </div>
     ));
-  }, [recentAlbums, isLoading.recentAlbums, currentlyPlayingAlbum?.id, onOpenContent]);
+  }, [
+    recentAlbums,
+    isLoading.recentAlbums,
+    currentlyPlayingAlbum?.id,
+    onOpenContent,
+  ]);
 
   const renderRecentsSection = () => {
     return (

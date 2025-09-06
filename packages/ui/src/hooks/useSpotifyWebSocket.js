@@ -25,16 +25,19 @@ export function useSpotifyWebSocket() {
       return new Promise((resolve, reject) => {
         const globalWs = getGlobalWebSocket();
 
-        console.log(`sendSpotifyCommand - method: ${method}, wsConnected: ${wsConnected}, globalWs: ${!!globalWs}, readyState: ${globalWs?.readyState}`);
-
         if (!globalWs) {
           reject(new Error("WebSocket not available"));
           return;
         }
 
         if (globalWs.readyState !== WebSocket.OPEN) {
-          console.warn(`WebSocket readyState is ${globalWs.readyState}, but attempting to send anyway`);
-          if (globalWs.readyState === WebSocket.CLOSED || globalWs.readyState === WebSocket.CLOSING) {
+          console.warn(
+            `WebSocket readyState is ${globalWs.readyState}, but attempting to send anyway`,
+          );
+          if (
+            globalWs.readyState === WebSocket.CLOSED ||
+            globalWs.readyState === WebSocket.CLOSING
+          ) {
             reject(new Error("WebSocket is closed"));
             return;
           }
@@ -52,7 +55,6 @@ export function useSpotifyWebSocket() {
 
         try {
           globalWs.send(JSON.stringify(message));
-          console.log(`WebSocket message sent successfully: ${method}`);
         } catch (err) {
           console.error(`WebSocket send failed: ${err.message}`);
           reject(err);
@@ -163,9 +165,9 @@ export function useSpotifyWebSocket() {
 
         const params = {
           context_uri: contextUri,
-          offset: { position }
+          offset: { position },
         };
-        
+
         if (deviceId) {
           params.device_id = deviceId;
         }
@@ -598,12 +600,15 @@ export function useSpotifyWebSocket() {
       try {
         setIsLoading(true);
         setError(null);
-        const requestParams = { 
+        const requestParams = {
           id: playlistId,
           limit: 50,
-          ...params
+          ...params,
         };
-        const result = await sendSpotifyCommand("spotify.playlist.tracks", requestParams);
+        const result = await sendSpotifyCommand(
+          "spotify.playlist.tracks",
+          requestParams,
+        );
         return result;
       } catch (err) {
         setError(err.message);
