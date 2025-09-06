@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
 export function useButtonMapping({
-  accessToken,
   contentId,
   contentType,
   contentImage,

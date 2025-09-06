@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
+import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
 import { useNavigation } from "../../hooks/useNavigation";
 import { CarThingIcon } from "../common/icons";
 import { useButtonMapping } from "../../hooks/useButtonMapping";
@@ -9,7 +10,6 @@ import ScrollingText from "../common/ScrollingText";
 import SpotifyImage from "../common/SpotifyImage";
 
 const ContentView = ({
-  accessToken,
   contentId,
   contentType = "album",
   onClose,
@@ -38,39 +38,165 @@ const ContentView = ({
     playTrack,
     isLoading: isPlaybackLoading,
     error: playbackError,
+  } = useSpotifyPlayerControls();
+
+  const {
+    getPlaylist,
+    getPlaylistTracks,
+    playTrackAtPosition,
+    getPlayerState,
     toggleShuffle,
-  } = useSpotifyPlayerControls(accessToken);
+    setRepeatMode,
+    wsConnected,
+  } = useSpotifyWebSocket();
 
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isLazyLoading, setIsLazyLoading] = useState(false);
+  const lazyLoadTimeoutRef = useRef(null);
 
-  const fetchPlaylistTracks = async (
-    playlistId,
-    initialTracks,
-    initialNext,
-  ) => {
-    let allTracks = [...initialTracks];
-    let nextUrl = initialNext;
+  const tracksLengthRef = useRef(0);
+  const isFetchingRef = useRef(false);
 
-    while (nextUrl) {
-      const response = await fetch(nextUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+  const imageStyle = useMemo(() => {
+    return contentType === "artist"
+      ? "w-[280px] h-[280px] rounded-full drop-shadow-xl object-cover"
+      : "w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-xl";
+  }, [contentType]);
 
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch additional tracks: ${response.status}`,
-        );
+  const imageAlt = useMemo(() => {
+    return `${content?.name || 'Unknown'} Cover`;
+  }, [content?.name]);
+
+  const containerStyle = useMemo(() => ({ minWidth: "280px" }), []);
+  
+  const scrollContainerStyle = useMemo(() => ({ 
+    height: "calc(100vh - 5rem)", 
+    paddingTop: "6px" 
+  }), []);
+
+  const titleStyle = useMemo(() => ({ 
+    fontSize: "36px", 
+    fontWeight: "580", 
+    maxWidth: "280px" 
+  }), []);
+
+  const subtitleStyle = useMemo(() => ({ 
+    fontSize: "28px", 
+    fontWeight: "560", 
+    maxWidth: "280px" 
+  }), []);
+
+
+  const handleColorsExtracted = useCallback((colors) => {
+    if (colors && updateGradientColors) {
+      updateGradientColors(colors, contentType);
+    }
+  }, [updateGradientColors, contentType]);
+
+  const handleBack = useCallback(() => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigate(-1);
+    }
+  }, [onClose, navigate]);
+
+  const handleTrackSelect = useCallback((index, trackElement) => {
+    if (index >= 0 && index < tracks.length) {
+      const track = tracks[index];
+      if (track) {
+        handleTrackPlay(track, index);
       }
+    }
+  }, [tracks]);
 
-      const data = await response.json();
-      allTracks = [...allTracks, ...data.items.map((item) => item.track)];
-      nextUrl = data.next;
+  const { showMappingOverlay, activeButton, mappingInProgress, setTrackUris } =
+    useButtonMapping({
+      contentId,
+      contentType,
+      contentImage:
+        content?.images?.[1]?.url || content?.images?.[0]?.url || "",
+      contentName: content?.name || "",
+      playTrack,
+      isActive: !!content,
+      setIgnoreNextRelease,
+    });
+
+  const { selectedIndex } = useNavigation({
+    containerRef: tracksContainerRef,
+    enableScrollTracking: true,
+    enableWheelNavigation: true,
+    enableKeyboardNavigation: true,
+    enableItemSelection: true,
+    enableEscapeKey: true,
+    onEscape: handleBack,
+    onItemSelect: handleTrackSelect,
+    onItemFocus: (index) => setSelectedTrackIndex(index),
+    inactivityTimeout: 3000,
+    vertical: true,
+  });
+  
+  const lazyLoadNextBatch = useCallback(async () => {
+    if (
+      contentType !== "playlist" ||
+      isLazyLoading ||
+      !content
+    ) {
+      return;
     }
 
-    return allTracks;
-  };
+    try {
+      setIsLazyLoading(true);
+      
+      const data = await getPlaylistTracks(contentId, {
+        offset: tracksLengthRef.current,
+        limit: 50,
+        fields: "offset,items(track(name,id,uri,artists(name,id)))"
+      });
+      
+      if (data.items && data.items.length > 0) {
+        const newTracks = data.items.map((item) => item.track);
+        
+        setTracks((prevTracks) => {
+          const updatedTracks = [...prevTracks, ...newTracks];
+          
+          const currentTotal = updatedTracks.length;
+          const playlistTotal = content?.tracks?.total || 0;
+          const hasMore = currentTotal < playlistTotal;
+          
+          setHasMoreTracks(hasMore);
+          return updatedTracks;
+        });
+        
+        setNextUrl(data.next);
+      }
+    } catch (error) {
+      console.error("Lazy loading failed:", error);
+    } finally {
+      setIsLazyLoading(false);
+    }
+  }, [contentType, isLazyLoading, content, contentId, getPlaylistTracks]);
+
+  useEffect(() => {
+    tracksLengthRef.current = tracks.length;
+    
+    
+    if (
+      content &&
+      tracks.length > 0 &&
+      contentType === "playlist" &&
+      !isLazyLoading &&
+      hasMoreTracks
+    ) {
+      if (lazyLoadTimeoutRef.current) {
+        clearTimeout(lazyLoadTimeoutRef.current);
+      }
+      
+      lazyLoadTimeoutRef.current = setTimeout(() => {
+        lazyLoadNextBatch();
+      }, 3000);
+    }
+  }, [tracks.length, content, contentType, isLazyLoading, hasMoreTracks, lazyLoadNextBatch]);
 
   const loadMoreTracks = useCallback(async () => {
     if (
@@ -82,32 +208,36 @@ const ContentView = ({
 
     try {
       setIsLoadingMore(true);
-      const response = await fetch(nextUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch more tracks: ${response.status}`);
+      
+      if (contentType === "playlist") {
+        try {
+          const offset = tracksLengthRef.current;
+          
+          const data = await getPlaylistTracks(contentId, {
+            offset,
+            limit: 50,
+            fields: "offset,items(track(name,id,uri,artists(name,id)))"
+          });
+          
+          const newTracks = data.items.map((item) => item.track);
+          setTracks((prevTracks) => [...prevTracks, ...newTracks]);
+          setNextUrl(data.next);
+          setHasMoreTracks(!!data.next);
+          setLoadedPages((prev) => prev + 1);
+        } catch (error) {
+          console.error("WebSocket load more tracks failed:", error);
+          throw error;
+        }
+      } else {
+        console.error("Load more tracks not implemented for content type:", contentType);
+        return;
       }
-
-      const data = await response.json();
-      const newTracks =
-        contentType === "playlist"
-          ? data.items.map((item) => item.track)
-          : data.items;
-
-      setTracks((prevTracks) => [...prevTracks, ...newTracks]);
-      setNextUrl(data.next);
-      setHasMoreTracks(!!data.next);
-      setLoadedPages((prev) => prev + 1);
     } catch (err) {
       console.error("Error loading more tracks:", err);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [nextUrl, isLoadingMore, contentType, accessToken]);
+  }, [nextUrl, isLoadingMore, contentType, contentId, getPlaylistTracks]);
 
   useEffect(() => {
     const container = tracksContainerRef.current;
@@ -145,11 +275,12 @@ const ContentView = ({
         const currentPageMidpoint =
           currentPageStart + Math.floor(tracksPerPage / 2);
 
+        const loadThreshold = Math.floor(tracksLengthRef.current * 0.8);
         if (
-          currentVisibleTrackIndex >= currentPageMidpoint &&
-          currentPage >= loadedPages - 1 &&
+          currentVisibleTrackIndex >= loadThreshold &&
           hasMoreTracks &&
-          !isLoadingMore
+          !isLoadingMore &&
+          !isLazyLoading
         ) {
           loadMoreTracks();
         }
@@ -161,24 +292,11 @@ const ContentView = ({
   }, [
     hasMoreTracks,
     isLoadingMore,
+    isLazyLoading,
     loadMoreTracks,
     contentType,
-    tracksPerPage,
-    loadedPages,
   ]);
 
-  const { showMappingOverlay, activeButton, mappingInProgress, setTrackUris } =
-    useButtonMapping({
-      accessToken,
-      contentId,
-      contentType,
-      contentImage:
-        content?.images?.[1]?.url || content?.images?.[0]?.url || "",
-      contentName: content?.name || "",
-      playTrack,
-      isActive: !!content,
-      setIgnoreNextRelease,
-    });
 
   useEffect(() => {
     if (
@@ -199,32 +317,36 @@ const ContentView = ({
     }
   }, [currentPlayback?.shuffle_state]);
 
-  const handleTrackSelect = (index, trackElement) => {
-    if (index >= 0 && index < tracks.length) {
-      handleTrackPlay(tracks[index], index);
-    }
-  };
 
-  const { selectedIndex } = useNavigation({
-    containerRef: tracksContainerRef,
-    enableScrollTracking: true,
-    enableWheelNavigation: true,
-    enableKeyboardNavigation: true,
-    enableItemSelection: true,
-    enableEscapeKey: true,
-    onEscape: handleBack,
-    onItemSelect: handleTrackSelect,
-    onItemFocus: (index) => setSelectedTrackIndex(index),
-    inactivityTimeout: 3000,
-    vertical: true,
-  });
+
 
   useEffect(() => {
-    const fetchContent = async () => {
-      if (!accessToken) return;
+    if (contentType === "mix") return;
+    
+    console.log("WebSocket content useEffect triggered", {
+      contentId,
+      contentType,
+      wsConnected,
+      getPlaylist: !!getPlaylist,
+      getPlaylistTracks: !!getPlaylistTracks,
+      timestamp: Date.now()
+    });
+    
+    const fetchWebSocketContent = async () => {
       if (!contentId && contentType !== "liked-songs") return;
+      
+      if (!wsConnected) {
+        console.log("WebSocket not connected, skipping fetch");
+        return;
+      }
+      
+      if (isFetchingRef.current) {
+        console.log("Already fetching, skipping duplicate request");
+        return;
+      }
 
       try {
+        isFetchingRef.current = true;
         setIsLoading(true);
         setNextUrl(null);
         setHasMoreTracks(false);
@@ -237,183 +359,55 @@ const ContentView = ({
 
         switch (contentType) {
           case "album": {
-            const albumResponse = await fetch(
-              `https://api.spotify.com/v1/albums/${contentId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              },
-            );
-
-            if (!albumResponse.ok) {
-              throw new Error(
-                `Failed to fetch album data: ${albumResponse.status}`,
-              );
-            }
-
-            contentData = await albumResponse.json();
-
-            tracksData = contentData.tracks.items;
-            break;
+            // TODO: Implement WebSocket album fetching
+            throw new Error("Album fetching via WebSocket not yet implemented");
           }
 
           case "playlist": {
-            const playlistResponse = await fetch(
-              `https://api.spotify.com/v1/playlists/${contentId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              },
-            );
+            try {
+              console.log("Fetching playlist data for:", contentId);
+              const [playlistInfo, tracksResponse] = await Promise.all([
+                getPlaylist(contentId, "images,name,tracks.total"),
+                getPlaylistTracks(contentId, {
+                  offset: 0,
+                  limit: 50,
+                  fields: "offset,items(track(name,id,uri,artists(name,id)))"
+                })
+              ]);
+              console.log("Playlist data fetched successfully");
 
-            if (!playlistResponse.ok) {
-              throw new Error(
-                `Failed to fetch playlist data: ${playlistResponse.status}`,
-              );
+              contentData = playlistInfo;
+              tracksData = tracksResponse.items.map((item) => item.track);
+              
+              const currentOffset = tracksResponse.offset || 0;
+              const currentItems = tracksResponse.items?.length || 0;
+              const totalTracks = playlistInfo.tracks?.total || 0;
+              const hasMore = (currentOffset + currentItems) < totalTracks;
+
+              setNextUrl(tracksResponse.next);
+              setHasMoreTracks(hasMore);
+              setTracksPerPage(tracksData.length);
+              setLoadedPages(1);
+            } catch (error) {
+              console.error("WebSocket playlist fetch failed:", error);
+              throw new Error(`Failed to fetch playlist via WebSocket: ${error.message}`);
             }
-
-            contentData = await playlistResponse.json();
-
-            tracksData = contentData.tracks.items.map((item) => item.track);
-            setNextUrl(contentData.tracks.next);
-            setHasMoreTracks(!!contentData.tracks.next);
-            setTracksPerPage(tracksData.length);
-            setLoadedPages(1);
             break;
           }
 
           case "artist": {
-            const [artistResponse, topTracksResponse] = await Promise.all([
-              fetch(`https://api.spotify.com/v1/artists/${contentId}`, {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              }),
-              fetch(
-                `https://api.spotify.com/v1/artists/${contentId}/top-tracks?market=from_token`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                },
-              ),
-            ]);
-
-            if (!artistResponse.ok || !topTracksResponse.ok) {
-              throw new Error(
-                `Failed to fetch artist data: ${
-                  !artistResponse.ok
-                    ? artistResponse.status
-                    : topTracksResponse.status
-                }`,
-              );
-            }
-
-            contentData = await artistResponse.json();
-            const topTracksData = await topTracksResponse.json();
-
-            tracksData = topTracksData.tracks;
-            break;
+            // TODO: Implement WebSocket artist fetching
+            throw new Error("Artist fetching via WebSocket not yet implemented");
           }
 
           case "liked-songs": {
-            const likedSongsResponse = await fetch(
-              "https://api.spotify.com/v1/me/tracks?limit=50",
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              },
-            );
-
-            if (!likedSongsResponse.ok) {
-              throw new Error(
-                `Failed to fetch liked songs: ${likedSongsResponse.status}`,
-              );
-            }
-
-            const likedSongsData = await likedSongsResponse.json();
-
-            contentData = {
-              id: "liked-songs",
-              name: "Liked Songs",
-              type: "liked-songs",
-              images: [{ url: "/images/liked-songs.webp" }],
-              tracks: { total: likedSongsData.total },
-              owner: { display_name: "You" },
-            };
-
-            tracksData = likedSongsData.items.map((item) => item.track);
-            break;
-          }
-
-          case "mix": {
-            const foundMix = radioMixes.find((m) => m.id === contentId);
-
-            if (foundMix) {
-              contentData = {
-                ...foundMix,
-                type: "mix",
-                images: foundMix.images?.[1]
-                  ? foundMix.images
-                  : [foundMix.images?.[0], foundMix.images?.[0]],
-              };
-
-              if (
-                contentData?.images &&
-                contentData.images.length > 0 &&
-                updateGradientColors
-              ) {
-                updateGradientColors(
-                  contentData.images[1]?.url || contentData.images[0].url,
-                  contentType,
-                );
-              }
-
-              tracksData = foundMix.tracks || [];
-            } else {
-              throw new Error(`Mix not found: ${contentId}`);
-            }
-            break;
+            // TODO: Implement WebSocket liked songs fetching
+            throw new Error("Liked songs fetching via WebSocket not yet implemented");
           }
 
           case "show": {
-            const [showResponse, episodesResponse] = await Promise.all([
-              fetch(`https://api.spotify.com/v1/shows/${contentId}`, {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              }),
-              fetch(
-                `https://api.spotify.com/v1/shows/${contentId}/episodes?limit=50`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                  },
-                },
-              ),
-            ]);
-
-            if (!showResponse.ok || !episodesResponse.ok) {
-              throw new Error(
-                `Failed to fetch show data: ${
-                  !showResponse.ok
-                    ? showResponse.status
-                    : episodesResponse.status
-                }`,
-              );
-            }
-
-            contentData = await showResponse.json();
-            const episodesData = await episodesResponse.json();
-            tracksData = episodesData.items;
-            setNextUrl(episodesData.next);
-            setHasMoreTracks(!!episodesData.next);
-            setTracksPerPage(tracksData.length);
-            setLoadedPages(1);
-            break;
+            // TODO: Implement WebSocket show fetching
+            throw new Error("Show fetching via WebSocket not yet implemented");
           }
 
           default:
@@ -426,20 +420,81 @@ const ContentView = ({
         console.error(`Error fetching ${contentType} data:`, err);
         setError(err.message);
       } finally {
+        isFetchingRef.current = false;
         setIsLoading(false);
       }
     };
 
-    fetchContent();
-  }, [contentId, contentType, accessToken, radioMixes, updateGradientColors]);
+    fetchWebSocketContent();
+    
+    return () => {
+      isFetchingRef.current = false;
+      if (lazyLoadTimeoutRef.current) {
+        clearTimeout(lazyLoadTimeoutRef.current);
+      }
+    };
+  }, [contentId, contentType, wsConnected]);
 
-  function handleBack() {
-    if (onClose) {
-      onClose();
-    } else {
-      navigate(-1);
-    }
-  }
+  useEffect(() => {
+    if (contentType !== "mix") return;
+    
+    console.log("Mix content useEffect triggered", {
+      contentId,
+      contentType,
+      radioMixesLength: radioMixes?.length
+    });
+    
+    const fetchMixContent = async () => {
+      if (!contentId) return;
+
+      try {
+        setIsLoading(true);
+        setNextUrl(null);
+        setHasMoreTracks(false);
+        setIsLoadingMore(false);
+        setTracksPerPage(0);
+        setLoadedPages(0);
+
+        const foundMix = radioMixes.find((m) => m.id === contentId);
+
+        if (foundMix) {
+          const contentData = {
+            ...foundMix,
+            type: "mix",
+            images: foundMix.images?.[1]
+              ? foundMix.images
+              : [foundMix.images?.[0], foundMix.images?.[0]],
+          };
+
+          if (
+            contentData?.images &&
+            contentData.images.length > 0 &&
+            updateGradientColors
+          ) {
+            updateGradientColors(
+              contentData.images[1]?.url || contentData.images[0].url,
+              contentType,
+            );
+          }
+
+          const tracksData = foundMix.tracks || [];
+          
+          setContent(contentData);
+          setTracks(tracksData);
+        } else {
+          throw new Error(`Mix not found: ${contentId}`);
+        }
+      } catch (err) {
+        console.error(`Error fetching mix data:`, err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMixContent();
+  }, [contentId, contentType, radioMixes, updateGradientColors]);
+
 
   const handleTrackPlay = async (track, index) => {
     if (!track || !track.uri) {
@@ -449,40 +504,53 @@ const ContentView = ({
 
     let contextUri = null;
     let uris = null;
-    let wasShuffleEnabled = isShuffleEnabled;
+    let success = false;
+    let originalPlayerState = null;
 
-    if (wasShuffleEnabled) {
-      await toggleShuffle(false);
+    try {
+      originalPlayerState = await getPlayerState();
+    } catch (error) {
+      console.warn("Could not get player state, proceeding without preserving settings:", error);
     }
 
-    if (contentType === "album") {
-      contextUri = `spotify:album:${contentId}`;
-    } else if (contentType === "playlist") {
-      contextUri = `spotify:playlist:${contentId}`;
-    } else if (contentType === "artist") {
-      uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-      const startIndex = index || 0;
-      uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
-    } else if (contentType === "show") {
-      contextUri = `spotify:show:${contentId}`;
-    } else if (contentType === "mix") {
-      const currentMix = radioMixes.find((m) => m.id === contentId);
-      if (currentMix && currentMix.type === "spotify-radio") {
-        contextUri = currentMix.uri;
-      } else {
+    try {
+      if (contentType === "playlist") {
+        contextUri = `spotify:playlist:${contentId}`;
+        success = await playTrackAtPosition(contextUri, index);
+      } else if (contentType === "album") {
+        contextUri = `spotify:album:${contentId}`;
+        success = await playTrack(track.uri, contextUri);
+      } else if (contentType === "artist") {
         uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
         const startIndex = index || 0;
         uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+        success = await playTrack(track.uri, null, uris);
+      } else if (contentType === "show") {
+        contextUri = `spotify:show:${contentId}`;
+        success = await playTrack(track.uri, contextUri);
+      } else if (contentType === "mix") {
+        const currentMix = radioMixes.find((m) => m.id === contentId);
+        if (currentMix && currentMix.type === "spotify-radio") {
+          contextUri = currentMix.uri;
+          success = await playTrack(track.uri, contextUri);
+        } else {
+          uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+          const startIndex = index || 0;
+          uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+          success = await playTrack(track.uri, null, uris);
+        }
+        localStorage.setItem("currentPlayingMixId", contentId);
+      } else if (contentType === "liked-songs") {
+        uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+        const startIndex = index || 0;
+        uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+        success = await playTrack(track.uri, null, uris);
+        localStorage.setItem("playingLikedSongs", "true");
       }
-      localStorage.setItem("currentPlayingMixId", contentId);
-    } else if (contentType === "liked-songs") {
-      uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-      const startIndex = index || 0;
-      uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
-      localStorage.setItem("playingLikedSongs", "true");
+    } catch (error) {
+      console.error("Failed to play track:", error);
+      success = false;
     }
-
-    const success = await playTrack(track.uri, contextUri, uris);
 
     if (success) {
       if (refreshPlaybackState) {
@@ -491,17 +559,24 @@ const ContentView = ({
         }, 1000);
       }
 
-      if (wasShuffleEnabled) {
+      if (originalPlayerState) {
         setTimeout(async () => {
-          await toggleShuffle(true);
+          try {
+            if (originalPlayerState.shuffle_state !== undefined) {
+              await toggleShuffle(originalPlayerState.shuffle_state);
+            }
+            
+            if (originalPlayerState.repeat_state !== undefined) {
+              await setRepeatMode(originalPlayerState.repeat_state);
+            }
+          } catch (error) {
+            console.warn("Could not restore player settings:", error);
+          }
         }, 500);
       }
+
       if (onNavigateToNowPlaying) {
         onNavigateToNowPlaying();
-      }
-    } else {
-      if (wasShuffleEnabled) {
-        await toggleShuffle(true);
       }
     }
   };
@@ -514,6 +589,13 @@ const ContentView = ({
 
     let contextUri = null;
     let uris = null;
+    let originalPlayerState = null;
+
+    try {
+      originalPlayerState = await getPlayerState();
+    } catch (error) {
+      console.warn("Could not get player state, proceeding without preserving settings:", error);
+    }
 
     if (contentType === "mix") {
       const currentMix = radioMixes.find((m) => m.id === contentId);
@@ -530,11 +612,21 @@ const ContentView = ({
       localStorage.setItem("playingLikedSongs", "true");
     }
 
-    await playTrack(null, contextUri, uris);
+    const success = await playTrack(null, contextUri, uris);
 
-    if (contentType === "liked-songs" && isShuffleEnabled) {
+    if (success && originalPlayerState) {
       setTimeout(async () => {
-        await toggleShuffle(true);
+        try {
+          if (originalPlayerState.shuffle_state !== undefined) {
+            await toggleShuffle(originalPlayerState.shuffle_state);
+          }
+          
+          if (originalPlayerState.repeat_state !== undefined) {
+            await setRepeatMode(originalPlayerState.repeat_state);
+          }
+        } catch (error) {
+          console.warn("Could not restore player settings:", error);
+        }
       }, 500);
     }
   };
@@ -641,11 +733,6 @@ const ContentView = ({
     }
   };
 
-  const getImageStyle = () => {
-    return contentType === "artist"
-      ? "w-[280px] h-[280px] rounded-full drop-shadow-xl object-cover"
-      : "w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-xl";
-  };
 
   const getMappingStatusText = () => {
     if (mappingInProgress) {
@@ -661,32 +748,28 @@ const ContentView = ({
   return (
     <div className="flex flex-col md:flex-row pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10 mb-8 md:mb-0 md:mr-8">
-        <div className="mr-10 relative" style={{ minWidth: "280px" }}>
+        <div className="mr-10 relative" style={containerStyle}>
           <SpotifyImage
             images={content.images}
             preferredSizeIndex={1}
-            alt={`${content.name} Cover`}
+            alt={imageAlt}
             width={280}
             height={280}
             priority={8}
             extractColors={true}
-            onColorsExtracted={(colors) => {
-              if (colors && updateGradientColors) {
-                updateGradientColors(colors, contentType);
-              }
-            }}
-            className={`${getImageStyle()}`}
+            onColorsExtracted={handleColorsExtracted}
+            className={imageStyle}
           />
           {getMappingStatusText()}
           <h4
             className="mt-2 text-white truncate tracking-tight"
-            style={{ fontSize: "36px", fontWeight: "580", maxWidth: "280px" }}
+            style={titleStyle}
           >
             {content.name}
           </h4>
           <h4
             className="text-white/60 truncate tracking-tight"
-            style={{ fontSize: "28px", fontWeight: "560", maxWidth: "280px" }}
+            style={subtitleStyle}
           >
             {getSubtitle()}
           </h4>
@@ -695,7 +778,7 @@ const ContentView = ({
 
       <div
         className="md:w-2/3 md:pl-20 overflow-y-auto scroll-container scroll-smooth pb-12"
-        style={{ height: "calc(100vh - 5rem)", paddingTop: "6px" }}
+        style={scrollContainerStyle}
         ref={tracksContainerRef}
       >
         {tracks.map((track, index) => {
@@ -819,6 +902,20 @@ const ContentView = ({
               </div>
             </div>
           )}
+
+        {isLazyLoading && contentType === "playlist" && (
+          <div className="flex justify-center items-center py-2">
+            <div className="flex items-center opacity-60">
+              <div className="w-3 h-3 border border-white/20 border-t-white/40 rounded-full animate-spin mr-2"></div>
+              <p
+                className="text-white/40"
+                style={{ fontSize: "16px", fontWeight: "400" }}
+              >
+                Loading...
+              </p>
+            </div>
+          </div>
+        )}
 
         {playbackError && (
           <div className="mt-4 p-4 bg-red-500/20 rounded-lg">

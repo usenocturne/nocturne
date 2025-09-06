@@ -25,13 +25,19 @@ export function useSpotifyWebSocket() {
       return new Promise((resolve, reject) => {
         const globalWs = getGlobalWebSocket();
 
-        if (
-          !wsConnected ||
-          !globalWs ||
-          globalWs.readyState !== WebSocket.OPEN
-        ) {
-          reject(new Error("WebSocket not connected"));
+        console.log(`sendSpotifyCommand - method: ${method}, wsConnected: ${wsConnected}, globalWs: ${!!globalWs}, readyState: ${globalWs?.readyState}`);
+
+        if (!globalWs) {
+          reject(new Error("WebSocket not available"));
           return;
+        }
+
+        if (globalWs.readyState !== WebSocket.OPEN) {
+          console.warn(`WebSocket readyState is ${globalWs.readyState}, but attempting to send anyway`);
+          if (globalWs.readyState === WebSocket.CLOSED || globalWs.readyState === WebSocket.CLOSING) {
+            reject(new Error("WebSocket is closed"));
+            return;
+          }
         }
 
         const messageId = crypto.randomUUID();
@@ -46,7 +52,9 @@ export function useSpotifyWebSocket() {
 
         try {
           globalWs.send(JSON.stringify(message));
+          console.log(`WebSocket message sent successfully: ${method}`);
         } catch (err) {
+          console.error(`WebSocket send failed: ${err.message}`);
           reject(err);
           pendingRequestsRef.current.delete(messageId);
         }
@@ -131,6 +139,33 @@ export function useSpotifyWebSocket() {
         } else if (trackUri) {
           params.uris = [trackUri];
         }
+        if (deviceId) {
+          params.device_id = deviceId;
+        }
+
+        const result = await sendSpotifyCommand("spotify.player.play", params);
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendSpotifyCommand],
+  );
+
+  const playTrackAtPosition = useCallback(
+    async (contextUri, position, deviceId = null) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const params = {
+          context_uri: contextUri,
+          offset: { position }
+        };
+        
         if (deviceId) {
           params.device_id = deviceId;
         }
@@ -232,8 +267,9 @@ export function useSpotifyWebSocket() {
       try {
         setIsLoading(true);
         setError(null);
+        const stateString = String(Boolean(state));
         const result = await sendSpotifyCommand("spotify.player.shuffle", {
-          state,
+          state: stateString,
         });
         return result;
       } catch (err) {
@@ -537,13 +573,37 @@ export function useSpotifyWebSocket() {
   );
 
   const getPlaylist = useCallback(
-    async (playlistId) => {
+    async (playlistId, fields = null) => {
       try {
         setIsLoading(true);
         setError(null);
-        const result = await sendSpotifyCommand("spotify.playlist.get", {
+        const params = { id: playlistId };
+        if (fields) {
+          params.fields = fields;
+        }
+        const result = await sendSpotifyCommand("spotify.playlist.get", params);
+        return result;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendSpotifyCommand],
+  );
+
+  const getPlaylistTracks = useCallback(
+    async (playlistId, params = {}) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const requestParams = { 
           id: playlistId,
-        });
+          limit: 50,
+          ...params
+        };
+        const result = await sendSpotifyCommand("spotify.playlist.tracks", requestParams);
         return result;
       } catch (err) {
         setError(err.message);
@@ -632,6 +692,7 @@ export function useSpotifyWebSocket() {
 
     getPlayerState,
     playTrack,
+    playTrackAtPosition,
     pausePlayback,
     skipToNext,
     skipToPrevious,
@@ -657,6 +718,7 @@ export function useSpotifyWebSocket() {
     getArtistTopTracks,
     getAlbum,
     getPlaylist,
+    getPlaylistTracks,
     getShow,
     getShowEpisodes,
     getUserShows,
