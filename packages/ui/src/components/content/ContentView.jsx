@@ -51,6 +51,8 @@ const ContentView = ({
     getPlaylistTracks,
     getAlbum,
     getAlbumTracks,
+    getArtist,
+    getArtistTopTracks,
     playTrackAtPosition,
     getPlayerState,
     toggleShuffle,
@@ -427,10 +429,25 @@ const ContentView = ({
           }
 
           case "artist": {
-            // TODO: Implement WebSocket artist fetching
-            throw new Error(
-              "Artist fetching via WebSocket not yet implemented",
-            );
+            try {
+              const [artistInfo, tracksResponse] = await Promise.all([
+                getArtist(contentId),
+                getArtistTopTracks(contentId),
+              ]);
+
+              contentData = artistInfo;
+              tracksData = tracksResponse.tracks || [];
+
+              setHasMoreTracks(false);
+              setTracksPerPage(tracksData.length);
+              setLoadedPages(1);
+            } catch (error) {
+              console.error("WebSocket artist fetch failed:", error);
+              throw new Error(
+                `Failed to fetch artist via WebSocket: ${error.message}`,
+              );
+            }
+            break;
           }
 
           case "liked-songs": {
@@ -542,6 +559,14 @@ const ContentView = ({
         "Could not get player state, proceeding without preserving settings:",
         error,
       );
+    }
+
+    if (originalPlayerState?.shuffle_state) {
+      try {
+        await toggleShuffle(false);
+      } catch (error) {
+        console.warn("Could not disable shuffle before playing:", error);
+      }
     }
 
     try {
