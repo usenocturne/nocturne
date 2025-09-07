@@ -26,8 +26,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   const [radioMixes, setRadioMixes] = useState([]);
   const [userShows, setUserShows] = useState([]);
   const [retryCount, setRetryCount] = useState(0);
-  const [nextRecentTracksAfter, setNextRecentTracksAfter] = useState(null);
-  const [isLazyLoading, setIsLazyLoading] = useState(false);
 
   const [nextTokens, setNextTokens] = useState({
     userPlaylists: null,
@@ -80,14 +78,12 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   const lastPlayedAlbumIdRef = useRef(null);
   const retryTimeoutRef = useRef(null);
   const abortControllerRef = useRef(null);
-  const lazyLoadTimeoutRef = useRef(null);
   const extractedCurrentAlbumRef = useRef(null);
   const sectionTimeoutRefs = useRef({
     playlists: null,
     artists: null,
     liked: null,
     shows: null,
-    recents: null,
   });
 
   const sectionLoadingRefs = useRef({
@@ -95,7 +91,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     artists: false,
     liked: false,
     shows: false,
-    recents: false,
   });
 
   const offsetRefs = useRef({
@@ -137,118 +132,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     getPlayerState,
   } = useSpotifyWebSocket();
 
-  const scheduleLazyLoad = useCallback(() => {
-    if (
-      !nextRecentTracksAfter ||
-      isLazyLoading ||
-      activeSection !== "recents"
-    ) {
-      return;
-    }
-
-    if (itemCounts.recentAlbums >= 50) {
-      return;
-    }
-
-    if (sectionLoadingRefs.current.recents) {
-      return;
-    }
-
-    if (lazyLoadTimeoutRef.current) {
-      return;
-    }
-
-    if (sectionTimeoutRefs.current.recents) {
-      return;
-    }
-
-    sectionLoadingRefs.current.recents = true;
-    sectionLoadingRefs.current.recents = true;
-
-    const delay = 3000;
-    lazyLoadTimeoutRef.current = setTimeout(async () => {
-      if (
-        nextRecentTracksAfter &&
-        !isLazyLoading &&
-        activeSection === "recents"
-      ) {
-        try {
-          setIsLazyLoading(true);
-          const data = await getNextRecentlyPlayed(nextRecentTracksAfter);
-          const uniqueAlbums = [];
-          const existingAlbumIds = new Set(
-            recentAlbums.map((album) => album.id),
-          );
-
-          if (data.nextAfter) {
-            setNextRecentTracksAfter(data.nextAfter);
-          } else {
-            setNextRecentTracksAfter(null);
-          }
-
-          const items = data.items || [];
-          items.forEach((item) => {
-            if (
-              item.track &&
-              item.track.type === "track" &&
-              item.track.album &&
-              !existingAlbumIds.has(item.track.album.id)
-            ) {
-              existingAlbumIds.add(item.track.album.id);
-              uniqueAlbums.push(item.track.album);
-            } else if (
-              item.track &&
-              item.track.type === "episode" &&
-              item.track.show &&
-              !existingAlbumIds.has(item.track.show.id)
-            ) {
-              existingAlbumIds.add(item.track.show.id);
-              uniqueAlbums.push(item.track.show);
-            }
-          });
-
-          setRecentAlbums((prevAlbums) => {
-            const existingIds = new Set(prevAlbums.map((album) => album.id));
-            const newUniqueAlbums = uniqueAlbums.filter(
-              (album) => !existingIds.has(album.id),
-            );
-            const newTotal = [...prevAlbums, ...newUniqueAlbums];
-            const limitedAlbums = newTotal.slice(0, 50);
-            setItemCounts((prev) => ({
-              ...prev,
-              recentAlbums: limitedAlbums.length,
-            }));
-
-            if (
-              data.nextAfter &&
-              limitedAlbums.length < 50 &&
-              activeSection === "recents"
-            ) {
-              setTimeout(() => scheduleLazyLoad(), 100);
-            } else {
-              sectionLoadingRefs.current.recents = false;
-            }
-
-            return limitedAlbums;
-          });
-        } catch (err) {
-          console.error("Error in lazy loading recent tracks:", err);
-          sectionLoadingRefs.current.recents = false;
-        } finally {
-          setIsLazyLoading(false);
-        }
-      } else {
-        sectionLoadingRefs.current.recents = false;
-      }
-    }, delay);
-  }, [
-    nextRecentTracksAfter,
-    isLazyLoading,
-    activeSection,
-    getNextRecentlyPlayed,
-    recentAlbums,
-    itemCounts.recentAlbums,
-  ]);
 
   useEffect(() => {
     if (skipInitialFetch) return;
@@ -311,242 +194,105 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     }
   }, [currentlyPlayingAlbum, recentAlbums, activeSection, initialDataLoaded]);
 
-  const fetchRecentlyPlayed = useCallback(
-    async (isLoadMore = false) => {
-      if (!wsConnected) return;
+  const fetchRecentlyPlayed = useCallback(async () => {
+    if (!wsConnected) return;
 
-      try {
-        if (!isLoadMore) {
-          setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
+    try {
+      setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
 
-          if (!extractedCurrentAlbumRef.current) {
-            try {
-              const playerStateResponse = await getPlayerState();
-              const playerState =
-                playerStateResponse?.result?.result ||
-                playerStateResponse?.result ||
-                playerStateResponse;
+      if (!extractedCurrentAlbumRef.current) {
+        try {
+          const playerStateResponse = await getPlayerState();
+          const playerState =
+            playerStateResponse?.result?.result ||
+            playerStateResponse?.result ||
+            playerStateResponse;
 
-              if (playerState) {
-                const extractedAlbum = extractAlbumFromPlayerState(playerState);
-                if (extractedAlbum) {
-                  extractedCurrentAlbumRef.current = extractedAlbum;
-                }
-              }
-            } catch (playerStateError) {
-              console.error(
-                "Failed to get player state for album extraction:",
-                playerStateError,
-              );
+          if (playerState) {
+            const extractedAlbum = extractAlbumFromPlayerState(playerState);
+            if (extractedAlbum) {
+              extractedCurrentAlbumRef.current = extractedAlbum;
             }
           }
-        }
-
-        let params = { limit: 5, additional_types: "track,episode" };
-        if (isLoadMore) {
-          params.offset = lastOffsets.recentTracks + 5;
-        }
-
-        const data = await getRecentlyPlayed(params);
-        const uniqueAlbums = [];
-        const albumIds = new Set();
-
-        setLastOffsets((prev) => ({ ...prev, recentTracks: data.offset || 0 }));
-
-        if (data.nextAfter) {
-          setNextRecentTracksAfter(data.nextAfter);
-        } else if (data.next) {
-          setNextTokens((prev) => ({ ...prev, recentTracks: data.next }));
-        }
-
-        const items = data.items || [];
-        items.forEach((item) => {
-          if (
-            item.track &&
-            item.track.type === "track" &&
-            item.track.album &&
-            !albumIds.has(item.track.album.id)
-          ) {
-            albumIds.add(item.track.album.id);
-            uniqueAlbums.push(item.track.album);
-          } else if (
-            item.track &&
-            item.track.type === "episode" &&
-            item.track.show &&
-            !albumIds.has(item.track.show.id)
-          ) {
-            albumIds.add(item.track.show.id);
-            uniqueAlbums.push(item.track.show);
-          }
-        });
-
-        if (isLoadMore) {
-          setRecentAlbums((prev) => {
-            const existingIds = new Set(prev.map((album) => album.id));
-            const newUniqueAlbums = uniqueAlbums.filter(
-              (album) => !existingIds.has(album.id),
-            );
-            const newTotal = [...prev, ...newUniqueAlbums];
-            const limitedAlbums = newTotal.slice(0, 50);
-            setItemCounts((prevCounts) => ({
-              ...prevCounts,
-              recentAlbums: limitedAlbums.length,
-            }));
-            return limitedAlbums;
-          });
-        } else {
-          if (extractedCurrentAlbumRef.current?.id) {
-            const currentAlbum = extractedCurrentAlbumRef.current;
-
-            const filteredAlbums = uniqueAlbums.filter(
-              (album) => album.id !== currentAlbum.id,
-            );
-
-            const finalAlbums = [currentAlbum, ...filteredAlbums].slice(0, 50);
-            setRecentAlbums(finalAlbums);
-            setItemCounts((prev) => ({
-              ...prev,
-              recentAlbums: finalAlbums.length,
-            }));
-
-            if (activeSection === "recents") {
-              setTimeout(() => {
-                const event = new CustomEvent("albumOrderChanged", {
-                  detail: { albumId: currentAlbum.id },
-                });
-                window.dispatchEvent(event);
-              }, 50);
-            }
-          } else {
-            setRecentAlbums(uniqueAlbums);
-            setItemCounts((prev) => ({
-              ...prev,
-              recentAlbums: uniqueAlbums.length,
-            }));
-          }
-        }
-
-        setErrors((prev) => ({ ...prev, recentAlbums: null }));
-
-        if (
-          data.next &&
-          (isLoadMore
-            ? recentAlbums.length + uniqueAlbums.length
-            : uniqueAlbums.length) < 50
-        ) {
-          setNextTokens((prev) => ({ ...prev, recentTracks: data.next }));
-        } else {
-          setNextTokens((prev) => ({ ...prev, recentTracks: null }));
-        }
-
-        return uniqueAlbums;
-      } catch (err) {
-        console.error("Error fetching recently played:", err);
-        setErrors((prev) => ({ ...prev, recentAlbums: err.message }));
-        throw err;
-      } finally {
-        setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
-      }
-    },
-    [
-      wsConnected,
-      getRecentlyPlayed,
-      currentlyPlayingAlbum,
-      lastOffsets,
-      recentAlbums.length,
-      getPlayerState,
-      extractAlbumFromPlayerState,
-    ],
-  );
-
-  const loadMoreRecentTracks = useCallback(
-    async (isLazyLoad = false) => {
-      if (!wsConnected || !nextRecentTracksAfter) return [];
-
-      try {
-        if (isLazyLoad) {
-          setIsLazyLoading(true);
-        } else {
-          setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
-        }
-
-        const data = await getNextRecentlyPlayed(nextRecentTracksAfter);
-        const uniqueAlbums = [];
-        const existingAlbumIds = new Set(recentAlbums.map((album) => album.id));
-
-        if (data.nextAfter) {
-          setNextRecentTracksAfter(data.nextAfter);
-        } else {
-          setNextRecentTracksAfter(null);
-        }
-
-        const items = data.items || [];
-        items.forEach((item) => {
-          if (
-            item.track &&
-            item.track.type === "track" &&
-            item.track.album &&
-            !existingAlbumIds.has(item.track.album.id)
-          ) {
-            existingAlbumIds.add(item.track.album.id);
-            uniqueAlbums.push(item.track.album);
-          } else if (
-            item.track &&
-            item.track.type === "episode" &&
-            item.track.show &&
-            !existingAlbumIds.has(item.track.show.id)
-          ) {
-            existingAlbumIds.add(item.track.show.id);
-            uniqueAlbums.push(item.track.show);
-          }
-        });
-
-        setRecentAlbums((prevAlbums) => {
-          const existingIds = new Set(prevAlbums.map((album) => album.id));
-          const newUniqueAlbums = uniqueAlbums.filter(
-            (album) => !existingIds.has(album.id),
+        } catch (playerStateError) {
+          console.error(
+            "Failed to get player state for album extraction:",
+            playerStateError,
           );
-          const newTotal = [...prevAlbums, ...newUniqueAlbums];
-          const limitedAlbums = newTotal.slice(0, 50);
-          setItemCounts((prev) => ({
-            ...prev,
-            recentAlbums: limitedAlbums.length,
-          }));
-          return limitedAlbums;
-        });
-        setErrors((prev) => ({ ...prev, recentAlbums: null }));
-
-        if (
-          isLazyLoad &&
-          nextRecentTracksAfter &&
-          itemCounts.recentAlbums < 50 &&
-          activeSection === "recents"
-        ) {
-          scheduleLazyLoad();
-        }
-
-        return uniqueAlbums;
-      } catch (err) {
-        console.error("Error loading more recent tracks:", err);
-        setErrors((prev) => ({ ...prev, recentAlbums: err.message }));
-        throw err;
-      } finally {
-        if (isLazyLoad) {
-          setIsLazyLoading(false);
-        } else {
-          setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
         }
       }
-    },
-    [
-      wsConnected,
-      getNextRecentlyPlayed,
-      nextRecentTracksAfter,
-      recentAlbums,
-      activeSection,
-      itemCounts.recentAlbums,
-    ],
-  );
+
+      const params = { limit: 30, additional_types: "track,episode" };
+      const data = await getRecentlyPlayed(params);
+      const uniqueAlbums = [];
+      const albumIds = new Set();
+
+      const items = data.items || [];
+      items.forEach((item) => {
+        if (
+          item.track &&
+          item.track.type === "track" &&
+          item.track.album &&
+          !albumIds.has(item.track.album.id)
+        ) {
+          albumIds.add(item.track.album.id);
+          uniqueAlbums.push(item.track.album);
+        } else if (
+          item.track &&
+          item.track.type === "episode" &&
+          item.track.show &&
+          !albumIds.has(item.track.show.id)
+        ) {
+          albumIds.add(item.track.show.id);
+          uniqueAlbums.push(item.track.show);
+        }
+      });
+
+      if (extractedCurrentAlbumRef.current?.id) {
+        const currentAlbum = extractedCurrentAlbumRef.current;
+        const filteredAlbums = uniqueAlbums.filter(
+          (album) => album.id !== currentAlbum.id,
+        );
+        const finalAlbums = [currentAlbum, ...filteredAlbums];
+        setRecentAlbums(finalAlbums);
+        setItemCounts((prev) => ({
+          ...prev,
+          recentAlbums: finalAlbums.length,
+        }));
+
+        if (activeSection === "recents") {
+          setTimeout(() => {
+            const event = new CustomEvent("albumOrderChanged", {
+              detail: { albumId: currentAlbum.id },
+            });
+            window.dispatchEvent(event);
+          }, 50);
+        }
+      } else {
+        setRecentAlbums(uniqueAlbums);
+        setItemCounts((prev) => ({
+          ...prev,
+          recentAlbums: uniqueAlbums.length,
+        }));
+      }
+
+      setErrors((prev) => ({ ...prev, recentAlbums: null }));
+      return uniqueAlbums;
+    } catch (err) {
+      console.error("Error fetching recently played:", err);
+      setErrors((prev) => ({ ...prev, recentAlbums: err.message }));
+      throw err;
+    } finally {
+      setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
+    }
+  }, [
+    wsConnected,
+    getRecentlyPlayed,
+    getPlayerState,
+    extractAlbumFromPlayerState,
+    activeSection,
+  ]);
+
 
   const fetchUserPlaylists = useCallback(
     async (isLoadMore = false) => {
@@ -979,24 +725,9 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       });
 
-      if (section !== "recents") {
-        if (lazyLoadTimeoutRef.current) {
-          clearTimeout(lazyLoadTimeoutRef.current);
-          lazyLoadTimeoutRef.current = null;
-        }
-        sectionLoadingRefs.current.recents = false;
-      }
-
-      if (section === "recents") {
-        if (sectionLoadingRefs.current.recents) {
-          return;
-        }
-        if (lazyLoadTimeoutRef.current) {
-          return;
-        }
-      }
-
       const shouldStartLoading = () => {
+        if (section === "recents") return false;
+        
         const currentOffset =
           section === "playlists"
             ? lastOffsets.userPlaylists
@@ -1004,9 +735,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
               ? offsetRefs.current.topArtists
               : section === "liked"
                 ? lastOffsets.likedSongs
-                : section === "recents"
-                  ? lastOffsets.recentTracks
-                  : lastOffsets.userShows;
+                : lastOffsets.userShows;
 
         const nextOffset = currentOffset + 5;
         const tokenKey =
@@ -1016,9 +745,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
               ? "topArtists"
               : section === "liked"
                 ? "likedSongs"
-                : section === "recents"
-                  ? "recentTracks"
-                  : "userShows";
+                : "userShows";
 
         return nextOffset < 50 && nextTokens[tokenKey];
       };
@@ -1035,7 +762,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
             liked: "liked",
             shows: "shows",
             podcasts: "shows",
-            recents: "recents",
           };
 
           const currentMappedSection = sectionMap[activeSection];
@@ -1052,9 +778,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
                   ? offsetRefs.current.topArtists
                   : section === "liked"
                     ? lastOffsets.likedSongs
-                    : section === "recents"
-                      ? lastOffsets.recentTracks
-                      : lastOffsets.userShows;
+                    : lastOffsets.userShows;
 
             const nextOffset = currentOffset + 5;
             const tokenKey =
@@ -1064,9 +788,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
                   ? "topArtists"
                   : section === "liked"
                     ? "likedSongs"
-                    : section === "recents"
-                      ? "recentTracks"
-                      : "userShows";
+                    : "userShows";
 
             if (nextOffset < 50 && nextTokens[tokenKey]) {
               sectionTimeoutRefs.current[section] = setTimeout(() => {
@@ -1099,17 +821,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   useEffect(() => {
     if (!activeSection || !initialDataLoaded) return;
 
-    if (activeSection === "recents") {
-      if (nextRecentTracksAfter && itemCounts.recentAlbums < 50) {
-        scheduleLazyLoad();
-      }
-    } else {
-      if (lazyLoadTimeoutRef.current) {
-        clearTimeout(lazyLoadTimeoutRef.current);
-        lazyLoadTimeoutRef.current = null;
-      }
-    }
-
     const sectionMap = {
       playlists: "playlists",
       artists: "artists",
@@ -1122,34 +833,8 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     if (mappedSection) {
       handleSectionAccess(mappedSection);
     }
-  }, [
-    activeSection,
-    initialDataLoaded,
-    handleSectionAccess,
-    nextRecentTracksAfter,
-    itemCounts.recentAlbums,
-    scheduleLazyLoad,
-  ]);
+  }, [activeSection, initialDataLoaded, handleSectionAccess]);
 
-  useEffect(() => {
-    if (!initialDataLoaded || activeSection !== "recents") return;
-
-    const hasTimestampPagination = nextRecentTracksAfter;
-
-    if (
-      hasTimestampPagination &&
-      itemCounts.recentAlbums < 50 &&
-      !lazyLoadTimeoutRef.current
-    ) {
-      scheduleLazyLoad();
-    }
-  }, [
-    nextRecentTracksAfter,
-    initialDataLoaded,
-    activeSection,
-    itemCounts.recentAlbums,
-    scheduleLazyLoad,
-  ]);
 
   const loadInitialData = useCallback(async () => {
     if (skipInitialFetch) return;
@@ -1318,9 +1003,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      if (lazyLoadTimeoutRef.current) {
-        clearTimeout(lazyLoadTimeoutRef.current);
-      }
       Object.keys(sectionTimeoutRefs.current).forEach((key) => {
         if (sectionTimeoutRefs.current[key]) {
           clearTimeout(sectionTimeoutRefs.current[key]);
@@ -1408,9 +1090,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     errors,
     refreshData,
     refreshRecentlyPlayed: fetchRecentlyPlayed,
-    loadMoreRecentTracks,
-    hasMoreRecentTracks: !!nextRecentTracksAfter,
-    isLazyLoading,
     handleSectionAccess,
     loadMoreForSection,
     hasMoreItems: {

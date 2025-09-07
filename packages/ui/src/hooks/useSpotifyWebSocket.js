@@ -423,7 +423,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getRecentlyPlayed = useCallback(
-    async (params = { limit: 5, additional_types: "track,episode" }) => {
+    async (params = { limit: 30, additional_types: "track,episode" }) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -450,7 +450,7 @@ export function useSpotifyWebSocket() {
   const getNextRecentlyPlayed = useCallback(
     async (afterTimestamp, additionalParams = {}) => {
       const params = {
-        limit: 5,
+        limit: 30,
         additional_types: "track,episode",
         after: afterTimestamp,
         ...additionalParams,
