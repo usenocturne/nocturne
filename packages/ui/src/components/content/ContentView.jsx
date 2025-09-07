@@ -53,6 +53,7 @@ const ContentView = ({
     getAlbumTracks,
     getArtist,
     getArtistTopTracks,
+    getUserTracks,
     playTrackAtPosition,
     getPlayerState,
     toggleShuffle,
@@ -451,10 +452,34 @@ const ContentView = ({
           }
 
           case "liked-songs": {
-            // TODO: Implement WebSocket liked songs fetching
-            throw new Error(
-              "Liked songs fetching via WebSocket not yet implemented",
-            );
+            try {
+              const tracksResponse = await getUserTracks({
+                limit: 50,
+                offset: 0,
+              });
+
+              contentData = {
+                name: "Liked Songs",
+                images: [{ url: "/images/liked-songs.webp" }],
+                tracks: { total: tracksResponse.total || 0 },
+              };
+              tracksData = tracksResponse.items?.map(item => item.track) || [];
+
+              const currentOffset = tracksResponse.offset || 0;
+              const currentItems = tracksResponse.items?.length || 0;
+              const totalTracks = tracksResponse.total || 0;
+              const hasMore = currentOffset + currentItems < totalTracks;
+
+              setHasMoreTracks(hasMore);
+              setTracksPerPage(tracksData.length);
+              setLoadedPages(1);
+            } catch (error) {
+              console.error("WebSocket liked songs fetch failed:", error);
+              throw new Error(
+                `Failed to fetch liked songs via WebSocket: ${error.message}`,
+              );
+            }
+            break;
           }
 
           case "show": {
@@ -807,17 +832,27 @@ const ContentView = ({
     <div className="flex flex-col md:flex-row pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10 mb-8 md:mb-0 md:mr-8">
         <div className="mr-10 relative" style={containerStyle}>
-          <SpotifyImage
-            images={content.images}
-            preferredSizeIndex={1}
-            alt={imageAlt}
-            width={280}
-            height={280}
-            priority={8}
-            extractColors={true}
-            onColorsExtracted={handleColorsExtracted}
-            className={imageStyle}
-          />
+          {contentType === "liked-songs" ? (
+            <img
+              src={content.images[0].url}
+              alt={imageAlt}
+              width={280}
+              height={280}
+              className={imageStyle}
+            />
+          ) : (
+            <SpotifyImage
+              images={content.images}
+              preferredSizeIndex={1}
+              alt={imageAlt}
+              width={280}
+              height={280}
+              priority={8}
+              extractColors={true}
+              onColorsExtracted={handleColorsExtracted}
+              className={imageStyle}
+            />
+          )}
           {getMappingStatusText()}
           <h4
             className="mt-2 text-white truncate tracking-tight"
