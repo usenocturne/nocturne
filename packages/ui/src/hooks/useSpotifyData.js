@@ -163,17 +163,14 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   }, []);
 
   useEffect(() => {
-    if (currentlyPlayingAlbum?.id && !extractedCurrentAlbumRef.current) {
+    if (currentlyPlayingAlbum?.id) {
       extractedCurrentAlbumRef.current = currentlyPlayingAlbum;
     }
   }, [currentlyPlayingAlbum]);
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.id && initialDataLoaded) {
-      if (
-        recentAlbums.length > 0 &&
-        recentAlbums[0]?.id !== currentlyPlayingAlbum.id
-      ) {
+      if (lastPlayedAlbumIdRef.current !== currentlyPlayingAlbum.id) {
         lastPlayedAlbumIdRef.current = currentlyPlayingAlbum.id;
         setRecentAlbums((prevAlbums) => {
           const filteredAlbums = prevAlbums.filter(
@@ -192,7 +189,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     }
-  }, [currentlyPlayingAlbum, recentAlbums, activeSection, initialDataLoaded]);
+  }, [currentlyPlayingAlbum, activeSection, initialDataLoaded]);
 
   const fetchRecentlyPlayed = useCallback(async () => {
     if (!wsConnected) return;
