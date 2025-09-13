@@ -24,7 +24,6 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     }
 
     refreshTimeoutRef.current = setTimeout(() => {
-      console.log("🔄 Periodic refresh triggered (every 15s)");
       refreshPlaybackState();
       lastRefreshTimeRef.current = Date.now();
       scheduleNextRefresh();
@@ -49,6 +48,8 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     ) {
       initialRefreshDoneRef.current = true;
       triggerRefresh();
+    } else if (isPlaying && !refreshTimeoutRef.current) {
+      scheduleNextRefresh();
     }
 
     return () => {
@@ -57,7 +58,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         refreshTimeoutRef.current = null;
       }
     };
-  }, [triggerRefresh]);
+  }, [triggerRefresh, scheduleNextRefresh, isPlaying]);
 
   useEffect(() => {
     if (currentPlayback) {
@@ -68,6 +69,10 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         setProgressMs(currentPlayback.progress_ms || 0);
         lastUpdateTimeRef.current = Date.now();
         driftHistoryRef.current = [];
+        
+        if (!refreshTimeoutRef.current && currentPlayback.is_playing) {
+          scheduleNextRefresh();
+        }
       } else if (typeof currentPlayback?.progress_ms === "number") {
         const now = Date.now();
         const elapsed = now - lastUpdateTimeRef.current;
@@ -90,7 +95,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       setIsPlaying(currentPlayback.is_playing || false);
       setDuration(currentPlayback.item?.duration_ms || 0);
     }
-  }, [currentPlayback, trackId]);
+  }, [currentPlayback, trackId, scheduleNextRefresh]);
 
   useEffect(() => {
     if (animationFrameRef.current) {
