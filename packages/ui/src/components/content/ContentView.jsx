@@ -164,15 +164,19 @@ const ContentView = ({
   });
 
   const lazyLoadNextBatch = useCallback(async () => {
-    if ((contentType !== "playlist" && contentType !== "mix") || isLazyLoading || !content) {
+    if (
+      (contentType !== "playlist" && contentType !== "mix") ||
+      isLazyLoading ||
+      !content
+    ) {
       return;
     }
 
     try {
       setIsLazyLoading(true);
-      
+
       let playlistId = contentId;
-      
+
       if (contentType === "mix") {
         const foundMix = radioMixes.find((m) => m.id === contentId);
         if (foundMix && foundMix.uri) {
@@ -207,7 +211,14 @@ const ContentView = ({
     } finally {
       setIsLazyLoading(false);
     }
-  }, [contentType, isLazyLoading, content, contentId, getPlaylistTracks, radioMixes]);
+  }, [
+    contentType,
+    isLazyLoading,
+    content,
+    contentId,
+    getPlaylistTracks,
+    radioMixes,
+  ]);
 
   useEffect(() => {
     tracksLengthRef.current = tracks.length;
@@ -240,7 +251,9 @@ const ContentView = ({
     if (
       !nextUrl ||
       isLoadingMore ||
-      (contentType !== "playlist" && contentType !== "show" && contentType !== "mix")
+      (contentType !== "playlist" &&
+        contentType !== "show" &&
+        contentType !== "mix")
     )
       return;
 
@@ -251,7 +264,7 @@ const ContentView = ({
         try {
           const offset = tracksLengthRef.current;
           let playlistId = contentId;
-          
+
           if (contentType === "mix") {
             const foundMix = radioMixes.find((m) => m.id === contentId);
             if (foundMix && foundMix.uri) {
@@ -286,7 +299,14 @@ const ContentView = ({
     } finally {
       setIsLoadingMore(false);
     }
-  }, [nextUrl, isLoadingMore, contentType, contentId, getPlaylistTracks, radioMixes]);
+  }, [
+    nextUrl,
+    isLoadingMore,
+    contentType,
+    contentId,
+    getPlaylistTracks,
+    radioMixes,
+  ]);
 
   useEffect(() => {
     const container = tracksContainerRef.current;
@@ -428,7 +448,7 @@ const ContentView = ({
               ]);
 
               contentData = playlistInfo;
-              tracksData = Array.isArray(tracksResponse.items) 
+              tracksData = Array.isArray(tracksResponse.items)
                 ? tracksResponse.items.map((item) => item.track).filter(Boolean)
                 : [];
 
@@ -458,10 +478,10 @@ const ContentView = ({
               ]);
 
               contentData = artistInfo;
-              tracksData = Array.isArray(tracksResponse.tracks) 
-                ? tracksResponse.tracks 
-                : Array.isArray(tracksResponse) 
-                  ? tracksResponse 
+              tracksData = Array.isArray(tracksResponse.tracks)
+                ? tracksResponse.tracks
+                : Array.isArray(tracksResponse)
+                  ? tracksResponse
                   : [];
 
               setHasMoreTracks(false);
@@ -488,10 +508,10 @@ const ContentView = ({
                 images: [{ url: "/images/liked-songs.webp" }],
                 tracks: { total: tracksResponse.total || 0 },
               };
-              tracksData = Array.isArray(tracksResponse.items) 
-                ? tracksResponse.items.map(item => item.track).filter(Boolean)
-                : Array.isArray(tracksResponse.tracks) 
-                  ? tracksResponse.tracks 
+              tracksData = Array.isArray(tracksResponse.items)
+                ? tracksResponse.items.map((item) => item.track).filter(Boolean)
+                : Array.isArray(tracksResponse.tracks)
+                  ? tracksResponse.tracks
                   : [];
 
               const currentOffset = tracksResponse.offset || 0;
@@ -569,10 +589,11 @@ const ContentView = ({
             contentData.images.length > 0 &&
             updateGradientColors
           ) {
-            const imageUrl = contentData.images[1]?.url || contentData.images[0].url;
-            
+            const imageUrl =
+              contentData.images[1]?.url || contentData.images[0].url;
+
             if (foundMix.type === "static" && imageUrl.startsWith("/images/")) {
-              extractColorsFromImage(imageUrl).then(colors => {
+              extractColorsFromImage(imageUrl).then((colors) => {
                 if (colors && updateGradientColors) {
                   updateGradientColors(colors, contentType);
                 }
@@ -593,7 +614,7 @@ const ContentView = ({
                   fields: "offset,items(track(name,id,uri,artists(name,id)))",
                 }),
               ]);
-              
+
               const tracksData = Array.isArray(tracksResponse.items)
                 ? tracksResponse.items.map((item) => item.track).filter(Boolean)
                 : [];
@@ -601,11 +622,11 @@ const ContentView = ({
               const currentItems = tracksResponse.items?.length || 0;
               const totalTracks = playlistInfo.tracks?.total || 0;
               const hasMore = currentOffset + currentItems < totalTracks;
-              
+
               setContent({
                 ...contentData,
                 images: playlistInfo.images || contentData.images,
-                tracks: { total: totalTracks }
+                tracks: { total: totalTracks },
               });
               setTracks(tracksData);
               setNextUrl(tracksResponse.next);
@@ -624,14 +645,18 @@ const ContentView = ({
                 if (foundMix.id === "top-mix") {
                   result = await sendSpotifyCommand("spotify.radio.topMix");
                 } else if (foundMix.id === "discoveries-mix") {
-                  result = await sendSpotifyCommand("spotify.radio.discoveries");
+                  result = await sendSpotifyCommand(
+                    "spotify.radio.discoveries",
+                  );
                 }
-                
+
                 if (result && result.tracks) {
-                  const tracksData = Array.isArray(result.tracks) ? result.tracks : [];
+                  const tracksData = Array.isArray(result.tracks)
+                    ? result.tracks
+                    : [];
                   setContent({
                     ...contentData,
-                    tracks: { total: tracksData.length }
+                    tracks: { total: tracksData.length },
                   });
                   setTracks(tracksData);
                   setHasMoreTracks(false);
@@ -642,13 +667,16 @@ const ContentView = ({
                   setTracks([]);
                 }
               } catch (error) {
-                console.error(`Failed to fetch ${foundMix.name} tracks:`, error);
+                console.error(
+                  `Failed to fetch ${foundMix.name} tracks:`,
+                  error,
+                );
                 setContent(contentData);
                 setTracks([]);
               }
             } else {
-              const tracksData = Array.isArray(foundMix.tracks) 
-                ? foundMix.tracks 
+              const tracksData = Array.isArray(foundMix.tracks)
+                ? foundMix.tracks
                 : [];
               setContent(contentData);
               setTracks(tracksData);
@@ -666,7 +694,16 @@ const ContentView = ({
     };
 
     fetchMixContent();
-  }, [contentId, contentType, radioMixes, updateGradientColors, wsConnected, getPlaylist, getPlaylistTracks, sendSpotifyCommand]);
+  }, [
+    contentId,
+    contentType,
+    radioMixes,
+    updateGradientColors,
+    wsConnected,
+    getPlaylist,
+    getPlaylistTracks,
+    sendSpotifyCommand,
+  ]);
 
   const handleTrackPlay = async (track, index) => {
     if (!track || !track.uri) {
@@ -934,7 +971,8 @@ const ContentView = ({
     <div className="flex flex-col md:flex-row pt-10 px-12 fadeIn-animation">
       <div className="md:w-1/3 sticky top-10 mb-8 md:mb-0 md:mr-8">
         <div className="mr-10 relative" style={containerStyle}>
-          {contentType === "liked-songs" || (contentType === "mix" && content.type === "static") ? (
+          {contentType === "liked-songs" ||
+          (contentType === "mix" && content.type === "static") ? (
             <img
               src={getImageUrl()}
               alt={imageAlt}
@@ -943,7 +981,7 @@ const ContentView = ({
               className={imageStyle}
               onLoad={(e) => {
                 if (contentType === "mix" && content.type === "static") {
-                  extractColorsFromImage(e.target.src).then(colors => {
+                  extractColorsFromImage(e.target.src).then((colors) => {
                     if (colors && updateGradientColors) {
                       updateGradientColors(colors, contentType);
                     }

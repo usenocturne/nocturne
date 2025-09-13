@@ -155,11 +155,11 @@ export default function Home({
 
   const isPlayingFromMix = (mixId) => {
     const mix = radioMixes.find((m) => m.id === mixId);
-    
+
     if (mix && mix.uri) {
       return currentPlayback?.context?.uri === mix.uri;
     }
-    
+
     if (mixId.startsWith("spotify-")) {
       const spotifyMix = radioMixes.find(
         (mix) => mix.id === mixId && mix.type === "spotify-radio",
