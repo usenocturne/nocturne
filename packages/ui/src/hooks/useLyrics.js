@@ -46,6 +46,7 @@ export function useLyrics(currentPlayback) {
     setShowLyrics(newShowLyrics);
 
     if (newShowLyrics && currentPlayback?.item?.id) {
+      trackIdRef.current = currentPlayback.item.id;
       await fetchLyrics(currentPlayback.item.id);
     }
   }, [showLyrics, currentPlayback?.item?.id, fetchLyrics]);
