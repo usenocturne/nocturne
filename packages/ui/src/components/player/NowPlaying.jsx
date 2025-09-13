@@ -333,15 +333,19 @@ export default function NowPlaying({
 
   useEffect(() => {
     const fetchPlaylistDetails = async () => {
-      if (!playlistId) return;
+      if (!playlistId) {
+        setPlaylistDetails({ name: "", image: "" });
+        return;
+      }
       try {
-        const data = await getPlaylist(playlistId);
+        const data = await getPlaylist(playlistId, "id,name,images");
         setPlaylistDetails({
           name: data.name || "",
           image: data.images?.[1]?.url || data.images?.[0]?.url || "",
         });
       } catch (err) {
         console.error("Failed to fetch playlist details", err);
+        setPlaylistDetails({ name: "", image: "" });
       }
     };
 
@@ -351,12 +355,8 @@ export default function NowPlaying({
   const { showMappingOverlay, activeButton } = useButtonMapping({
     contentId: playlistId,
     contentType: playlistId ? "playlist" : null,
-    contentImage:
-      playlistDetails.image ||
-      albumImages?.[1]?.url ||
-      albumImages?.[0]?.url ||
-      "/images/not-playing.webp",
-    contentName: playlistDetails.name || trackName,
+    contentImage: playlistId ? playlistDetails.image : (albumImages?.[1]?.url || albumImages?.[0]?.url || "/images/not-playing.webp"),
+    contentName: playlistId ? playlistDetails.name : trackName,
     playTrack,
     isActive: !!playlistId,
     setIgnoreNextRelease,
