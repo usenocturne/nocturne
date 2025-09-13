@@ -66,7 +66,7 @@ export function useSpotifyWebSocket() {
             pendingRequestsRef.current.delete(messageId);
             reject(new Error("Request timeout"));
           }
-        }, 10000);
+        }, 30000);
       });
     },
     [wsConnected],

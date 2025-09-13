@@ -10,6 +10,7 @@ class ImageLoadQueue {
     this.loadingImages = new Set();
     this.retryCount = new Map();
     this.maxRetries = 3;
+    this.retryDelay = 0;
     this.listeners = new Set();
   }
 
@@ -146,6 +147,7 @@ class ImageLoadQueue {
             extractColors,
             fetchImageFn,
             wsConnected,
+            priority: 100,
           });
         } else {
           this.failedImages.add(url);
@@ -155,7 +157,7 @@ class ImageLoadQueue {
         }
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
     this.isProcessing = false;
