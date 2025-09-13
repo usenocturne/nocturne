@@ -949,7 +949,7 @@ export default function NowPlaying({
         <div className="flex items-center">
           {isDJPlaylist && (
             <div
-              onClick={sendDJSignal}
+              onClick={() => sendDJSignal(currentPlayback?.device?.id)}
               className="focus:outline-none outline-none border-none bg-transparent appearance-none"
               style={{
                 WebkitAppearance: "none",

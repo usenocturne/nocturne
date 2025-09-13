@@ -599,7 +599,7 @@ export default function Home({
               className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10"
               style={{ width: 280, height: 280 }}
               onClick={() =>
-                playDJMix().then((success) => {
+                playDJMix(currentPlayback?.device?.id).then((success) => {
                   if (success) {
                     setTimeout(() => {
                       refreshPlaybackState();

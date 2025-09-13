@@ -33,6 +33,7 @@ export function useSpotifyPlayerControls() {
     transferPlayback,
     getDevices,
     getPlayerState,
+    sendSpotifyCommand,
   } = useSpotifyWebSocket();
 
   useEffect(() => {
@@ -321,29 +322,37 @@ export function useSpotifyPlayerControls() {
     [wsConnected, setRepeatModeWS],
   );
 
-  const playDJMix = useCallback(async () => {
+  const playDJMix = useCallback(async (deviceId = null) => {
     if (!wsConnected) return false;
 
     try {
-      console.log("DJ mix functionality disabled in WebSocket mode");
-      return false;
+      const params = {};
+      if (deviceId) {
+        params.device_id = deviceId;
+      }
+      await sendSpotifyCommand("spotify.dj.start", params);
+      return true;
     } catch (err) {
       console.error("Error playing DJ mix:", err);
       return false;
     }
-  }, [wsConnected]);
+  }, [wsConnected, sendSpotifyCommand]);
 
-  const sendDJSignal = useCallback(async () => {
+  const sendDJSignal = useCallback(async (deviceId = null) => {
     if (!wsConnected) return false;
 
     try {
-      console.log("DJ signal functionality disabled in WebSocket mode");
-      return false;
+      const params = {};
+      if (deviceId) {
+        params.device_id = deviceId;
+      }
+      await sendSpotifyCommand("spotify.dj.signal", params);
+      return true;
     } catch (err) {
       console.error("Error sending DJ signal:", err);
       return false;
     }
-  }, [wsConnected]);
+  }, [wsConnected, sendSpotifyCommand]);
 
   const getCurrentDeviceOptions = useCallback(async () => {
     if (!wsConnected) return null;

@@ -54,6 +54,7 @@ function useGlobalButtonMapping({
   setActiveSection,
   isTutorialActive,
   isDisabled = false,
+  currentPlayback,
 }) {
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [activeButton, setActiveButton] = useState(null);
@@ -123,7 +124,7 @@ function useGlobalButtonMapping({
 
         if (mappedType === "playlist" && mappedId === DJ_PLAYLIST_ID) {
           success = await (playDJMix
-            ? playDJMix()
+            ? playDJMix(currentPlayback?.device?.id)
             : playTrack(null, contextUri));
         } else if (contextUri) {
           success = await playTrack(null, contextUri);
@@ -158,6 +159,7 @@ function useGlobalButtonMapping({
       isProcessingButtonPress,
       isTutorialActive,
       isDisabled,
+      currentPlayback,
     ],
   );
 
@@ -410,6 +412,7 @@ function App() {
     setActiveSection,
     isTutorialActive: showTutorial,
     isDisabled: powerMenuVisible || isUpdating,
+    currentPlayback,
   });
 
   const handleOpenDeviceSwitcher = (
