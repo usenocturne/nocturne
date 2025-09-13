@@ -18,24 +18,25 @@ import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
 
 const DeviceSwitcherModal = ({ isOpen, onClose, initialDevices }) => {
   const { wsConnected, getDevices, transferPlayback } = useSpotifyWebSocket();
-  const safeInitialDevices = Array.isArray(initialDevices)
-    ? initialDevices
-    : [];
-
-  const [devices, setDevices] = useState(safeInitialDevices);
-  const [isLoading, setIsLoading] = useState(safeInitialDevices.length === 0);
+  const [devices, setDevices] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !wsConnected) return;
 
-    if (Array.isArray(initialDevices) && initialDevices.length > 0) {
-      setDevices(initialDevices);
-      setIsLoading(false);
-    } else {
+    if (!hasFetched) {
       fetchDevices();
+      setHasFetched(true);
     }
-  }, [isOpen, wsConnected, initialDevices]);
+  }, [isOpen, wsConnected]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHasFetched(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -165,7 +166,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, initialDevices }) => {
                   >
                     {devices.map((device) => (
                       <button
-                        key={device.id}
+                        key={device.device_id}
                         onClick={() => handleDeviceSelect(device.device_id)}
                         disabled={isTransferring}
                         className="w-full flex items-center justify-between p-4 mb-2 rounded-xl hover:bg-white hover:bg-opacity-5 transition-colors disabled:opacity-50"
