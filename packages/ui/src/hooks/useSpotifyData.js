@@ -130,6 +130,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     getNextRecentlyPlayed,
     getUserShows,
     getPlayerState,
+    getPlaylist,
   } = useSpotifyWebSocket();
 
 
@@ -169,7 +170,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   }, [currentlyPlayingAlbum]);
 
   useEffect(() => {
-    if (currentlyPlayingAlbum?.id && initialDataLoaded) {
+    if (currentlyPlayingAlbum?.id) {
       if (lastPlayedAlbumIdRef.current !== currentlyPlayingAlbum.id) {
         lastPlayedAlbumIdRef.current = currentlyPlayingAlbum.id;
         setRecentAlbums((prevAlbums) => {
@@ -189,7 +190,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     }
-  }, [currentlyPlayingAlbum, activeSection, initialDataLoaded]);
+  }, [currentlyPlayingAlbum, activeSection]);
 
   const fetchRecentlyPlayed = useCallback(async () => {
     if (!wsConnected) return;
@@ -614,17 +615,64 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
       const result = await sendSpotifyCommand("spotify.radio.mixes");
 
-      if (result && result.mixes) {
-        setRadioMixes(result.mixes);
-        setErrors((prev) => ({ ...prev, radioMixes: null }));
-        return result.mixes;
-      } else {
-        const fallbackMixes = [
+      if (result?.data?.homeSections?.sections?.[0]?.sectionItems?.items) {
+        const items = result.data.homeSections.sections[0].sectionItems.items;
+        
+        const spotifyMixes = items
+          .filter((item) => {
+            const format = item.content?.data?.format;
+            const name = item.content?.data?.name;
+            return (format === "daily-mix" || 
+                   format === "release-radar" || 
+                   format === "discover-weekly") &&
+                   name !== "DJ";
+          })
+          .map((item, index) => {
+            const playlist = item.content.data;
+            const imageUrl = playlist.images?.items?.[0]?.sources?.[0]?.url || "";
+            
+            let type = "spotify-radio";
+            let id = playlist.uri.split(":").pop();
+            
+            if (playlist.format === "daily-mix") {
+              type = "daily-mix";
+            } else if (playlist.format === "release-radar") {
+              type = "release-radar";
+            } else if (playlist.format === "discover-weekly") {
+              type = "discover-weekly";
+            }
+            
+            let trackCount = 0;
+            if (playlist.attributes) {
+              const trackCountAttr = playlist.attributes.find(attr => 
+                attr.key === "track_count" || 
+                attr.key === "total_tracks" ||
+                attr.key === "tracks.total"
+              );
+              if (trackCountAttr) {
+                trackCount = parseInt(trackCountAttr.value) || 0;
+              }
+            }
+            
+            return {
+              id,
+              name: playlist.name,
+              images: [{ url: imageUrl }],
+              uri: playlist.uri,
+              type,
+              sortOrder: index + 100,
+              tracks: { total: trackCount },
+              trackCount
+            };
+          });
+        
+        const nocturneMixes = [
           {
             id: "top-mix",
             name: "Your Top Mix",
             images: [{ url: "/images/radio-cover/top.webp" }],
-            tracks: [],
+            tracks: { total: 50 },
+            trackCount: 50,
             type: "static",
             sortOrder: 1,
           },
@@ -632,16 +680,101 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
             id: "discoveries-mix",
             name: "Discoveries",
             images: [{ url: "/images/radio-cover/discoveries.webp" }],
-            tracks: [],
+            tracks: { total: 50 },
+            trackCount: 50,
             type: "static",
             sortOrder: 2,
           },
         ];
+        
+        const mixes = [...nocturneMixes, ...spotifyMixes];
 
-        setRadioMixes(fallbackMixes);
-        setErrors((prev) => ({ ...prev, radioMixes: null }));
-        return fallbackMixes;
+        if (mixes.length > 0) {
+          const mixesWithCounts = await Promise.all(
+            mixes.map(async (mix) => {
+              if (mix.uri && mix.trackCount === 0) {
+                try {
+                  const playlistId = mix.uri.split(":").pop();
+                  const playlistInfo = await getPlaylist(playlistId, "tracks.total");
+                  return {
+                    ...mix,
+                    tracks: { total: playlistInfo.tracks?.total || 0 },
+                    trackCount: playlistInfo.tracks?.total || 0
+                  };
+                } catch (error) {
+                  console.warn(`Failed to fetch track count for ${mix.name}:`, error);
+                  return mix;
+                }
+              }
+              return mix;
+            })
+          );
+          
+          setRadioMixes(mixesWithCounts);
+          setErrors((prev) => ({ ...prev, radioMixes: null }));
+          return mixesWithCounts;
+        }
       }
+      
+      if (result && result.mixes) {
+        const nocturneMixes = [
+          {
+            id: "top-mix",
+            name: "Your Top Mix",
+            images: [{ url: "/images/radio-cover/top.webp" }],
+            tracks: { total: 50 },
+            trackCount: 50,
+            type: "static",
+            sortOrder: 1,
+          },
+          {
+            id: "discoveries-mix",
+            name: "Discoveries",
+            images: [{ url: "/images/radio-cover/discoveries.webp" }],
+            tracks: { total: 50 },
+            trackCount: 50,
+            type: "static",
+            sortOrder: 2,
+          },
+        ];
+        
+        const legacyMixes = result.mixes.filter(
+          mix => mix.id !== "top-mix" && mix.id !== "discoveries-mix"
+        ).map((mix, index) => ({
+          ...mix,
+          sortOrder: index + 100
+        }));
+        
+        const combinedMixes = [...nocturneMixes, ...legacyMixes];
+        setRadioMixes(combinedMixes);
+        setErrors((prev) => ({ ...prev, radioMixes: null }));
+        return combinedMixes;
+      }
+      
+      const fallbackMixes = [
+        {
+          id: "top-mix",
+          name: "Your Top Mix",
+          images: [{ url: "/images/radio-cover/top.webp" }],
+          tracks: { total: 50 },
+          trackCount: 50,
+          type: "static",
+          sortOrder: 1,
+        },
+        {
+          id: "discoveries-mix",
+          name: "Discoveries",
+          images: [{ url: "/images/radio-cover/discoveries.webp" }],
+          tracks: { total: 50 },
+          trackCount: 50,
+          type: "static",
+          sortOrder: 2,
+        },
+      ];
+
+      setRadioMixes(fallbackMixes);
+      setErrors((prev) => ({ ...prev, radioMixes: null }));
+      return fallbackMixes;
     } catch (err) {
       console.error("Error fetching radio mixes:", err);
       setErrors((prev) => ({ ...prev, radioMixes: err.message }));
@@ -649,7 +782,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     } finally {
       setIsLoading((prev) => ({ ...prev, radioMixes: false }));
     }
-  }, [wsConnected, sendSpotifyCommand]);
+  }, [wsConnected, sendSpotifyCommand, getPlaylist]);
 
   const loadMoreForSection = useCallback(
     async (section) => {

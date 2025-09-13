@@ -13,6 +13,7 @@ export default function SpotifyImage({
   onError = null,
   extractColors = false,
   onColorsExtracted = null,
+  useDirectUrl = false,
   ...props
 }) {
   const {
@@ -37,6 +38,16 @@ export default function SpotifyImage({
     if (!imageUrl || hasImageFailed(imageUrl)) {
       setCurrentSrc(fallbackSrc);
       setHasError(true);
+      return;
+    }
+
+    if (useDirectUrl) {
+      setCurrentSrc(imageUrl);
+      setIsLoading(false);
+      setHasError(false);
+      if (onLoad) {
+        onLoad();
+      }
       return;
     }
 
@@ -105,6 +116,7 @@ export default function SpotifyImage({
     onLoad,
     onError,
     onColorsExtracted,
+    useDirectUrl,
   ]);
 
   useEffect(() => {

@@ -154,6 +154,12 @@ export default function Home({
   };
 
   const isPlayingFromMix = (mixId) => {
+    const mix = radioMixes.find((m) => m.id === mixId);
+    
+    if (mix && mix.uri) {
+      return currentPlayback?.context?.uri === mix.uri;
+    }
+    
     if (mixId.startsWith("spotify-")) {
       const spotifyMix = radioMixes.find(
         (mix) => mix.id === mixId && mix.type === "spotify-radio",
@@ -659,10 +665,18 @@ export default function Home({
                   style={{ width: 280, height: 280 }}
                   onClick={() => onOpenContent(mix.id, "mix")}
                 >
-                  {mix.images?.[0]?.url ? (
+                  {mix.type === "static" && mix.images?.[0]?.url ? (
                     <img
                       src={mix.images[0].url}
                       alt={`${mix.name} Cover`}
+                      className="w-full h-full object-cover rounded-[12px]"
+                    />
+                  ) : mix.images?.length > 0 ? (
+                    <SpotifyImage
+                      images={mix.images}
+                      preferredSizeIndex={0}
+                      alt={`${mix.name} Cover`}
+                      priority={10}
                       className="w-full h-full object-cover rounded-[12px]"
                     />
                   ) : (
@@ -689,7 +703,7 @@ export default function Home({
                       Now Playing
                     </>
                   ) : (
-                    `${mix.tracks ? mix.tracks.length : 0} Tracks`
+                    `${mix.tracks?.total || mix.trackCount || (mix.tracks ? mix.tracks.length : 0)} Tracks`
                   )}
                 </h4>
               </div>
