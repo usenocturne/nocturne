@@ -460,7 +460,8 @@ export default function NowPlaying({
     toggleLyrics,
     suspendAutoScroll,
     resumeAutoScrollOnNextLyric,
-  } = useLyrics(currentPlayback, contentContainerRef);
+    scrollToTop,
+  } = useLyrics(currentPlayback, progressMs);
 
   const handleColorsExtracted = useCallback(
     (colors) => {
@@ -515,6 +516,7 @@ export default function NowPlaying({
     if (progressMs > RESTART_THRESHOLD_MS) {
       await seekToPosition(0);
       updateProgress(0);
+      if (showLyrics) scrollToTop();
     } else {
       await skipToPrevious();
     }
@@ -524,6 +526,8 @@ export default function NowPlaying({
     seekToPosition,
     updateProgress,
     skipToPrevious,
+    showLyrics,
+    scrollToTop,
   ]);
 
   const handleToggleLike = useCallback(async () => {
@@ -570,14 +574,32 @@ export default function NowPlaying({
   );
 
   const handleLyricClick = useCallback(
-    (lyricTimeSeconds) => {
+    (lyricTimeSeconds, lyricIndex) => {
       if (typeof suspendAutoScroll === "function") suspendAutoScroll(5000);
       if (typeof resumeAutoScrollOnNextLyric === "function")
         resumeAutoScrollOnNextLyric();
+      
+      if (lyricsContainerRef.current && lyricIndex >= 0) {
+        const container = lyricsContainerRef.current;
+        const lyricElements = container.children;
+        if (lyricElements[lyricIndex]) {
+          const lyricElement = lyricElements[lyricIndex];
+          const containerHeight = container.clientHeight;
+          const lyricTop = lyricElement.offsetTop;
+          const lyricHeight = lyricElement.offsetHeight;
+          
+          const scrollTo = lyricTop - (containerHeight / 2) + (lyricHeight / 2);
+          container.scrollTo({
+            top: scrollTo,
+            behavior: 'smooth'
+          });
+        }
+      }
+      
       const targetMs = Math.max(0, Math.floor(lyricTimeSeconds * 1000));
       handleSeek(targetMs);
     },
-    [handleSeek, suspendAutoScroll, resumeAutoScrollOnNextLyric],
+    [handleSeek, suspendAutoScroll, resumeAutoScrollOnNextLyric, lyricsContainerRef],
   );
 
   const handleToggleShuffle = useCallback(async () => {
@@ -771,17 +793,17 @@ export default function NowPlaying({
                         outline: "none",
                         boxShadow: "none",
                       }}
-                      onClick={() => handleLyricClick(lyric.time)}
+                      onClick={() => handleLyricClick(parseInt(lyric.startTimeMs) / 1000, index)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleLyricClick(lyric.time);
+                          handleLyricClick(parseInt(lyric.startTimeMs) / 1000, index);
                         }
                       }}
                     >
-                      {lyric.text}
+                      {lyric.words}
                     </p>
                   ))
                 ) : (
