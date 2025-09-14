@@ -655,7 +655,7 @@ export function useSpotifyWebSocket() {
         setIsLoading(true);
         setError(null);
         const result = await sendSpotifyCommand("spotify.show.get", {
-          id: showId,
+          content_id: showId,
         });
         return result;
       } catch (err) {
@@ -674,7 +674,7 @@ export function useSpotifyWebSocket() {
         setIsLoading(true);
         setError(null);
         const result = await sendSpotifyCommand("spotify.show.episodes", {
-          id: showId,
+          content_id: showId,
           ...params,
         });
         return result;

@@ -61,11 +61,14 @@ const ContentView = ({
     setRepeatMode,
     wsConnected,
     sendSpotifyCommand,
+    getShow,
+    getShowEpisodes,
   } = useSpotifyWebSocket();
 
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
   const [isLazyLoading, setIsLazyLoading] = useState(false);
   const lazyLoadTimeoutRef = useRef(null);
+  const showEpisodeLazyLoadRef = useRef(null);
 
   const tracksLengthRef = useRef(0);
   const isFetchingRef = useRef(false);
@@ -163,6 +166,49 @@ const ContentView = ({
     vertical: true,
   });
 
+  const lazyLoadShowEpisodes = useCallback(async () => {
+    if (contentType !== "show" || isLazyLoading || !content || tracksLengthRef.current >= 50) {
+      return;
+    }
+
+    try {
+      setIsLazyLoading(true);
+      
+      const offset = tracksLengthRef.current;
+      const data = await getShowEpisodes(contentId, {
+        offset,
+        limit: 5,
+      });
+
+      if (data.items && data.items.length > 0) {
+        setTracks((prevTracks) => {
+          const updatedTracks = [...prevTracks, ...data.items];
+          const limitedTracks = updatedTracks.slice(0, 50);
+          
+          tracksLengthRef.current = limitedTracks.length;
+          
+          if (limitedTracks.length < 50 && data.items.length > 0) {
+            if (showEpisodeLazyLoadRef.current) {
+              clearTimeout(showEpisodeLazyLoadRef.current);
+            }
+            showEpisodeLazyLoadRef.current = setTimeout(() => {
+              lazyLoadShowEpisodes();
+            }, 2000);
+          }
+          
+          return limitedTracks;
+        });
+        
+        setNextUrl(data.next);
+        setHasMoreTracks(tracksLengthRef.current < 50 && !!data.next);
+      }
+    } catch (error) {
+      console.error("Show episode lazy loading failed:", error);
+    } finally {
+      setIsLazyLoading(false);
+    }
+  }, [contentType, isLazyLoading, content, contentId, getShowEpisodes]);
+
   const lazyLoadNextBatch = useCallback(async () => {
     if (
       (contentType !== "playlist" && contentType !== "mix") ||
@@ -247,6 +293,26 @@ const ContentView = ({
     lazyLoadNextBatch,
   ]);
 
+  useEffect(() => {
+    if (contentType === "show" && content && tracks.length > 0 && tracks.length < 50 && hasMoreTracks && !isLazyLoading) {
+      if (showEpisodeLazyLoadRef.current) {
+        clearTimeout(showEpisodeLazyLoadRef.current);
+      }
+      
+      if (tracksLengthRef.current < 50) {
+        showEpisodeLazyLoadRef.current = setTimeout(() => {
+          lazyLoadShowEpisodes();
+        }, 2000);
+      }
+    }
+
+    return () => {
+      if (showEpisodeLazyLoadRef.current) {
+        clearTimeout(showEpisodeLazyLoadRef.current);
+      }
+    };
+  }, [contentType, content, tracks.length, hasMoreTracks, isLazyLoading, lazyLoadShowEpisodes]);
+
   const loadMoreTracks = useCallback(async () => {
     if (
       !nextUrl ||
@@ -285,6 +351,35 @@ const ContentView = ({
           setLoadedPages((prev) => prev + 1);
         } catch (error) {
           console.error("WebSocket load more tracks failed:", error);
+          throw error;
+        }
+      } else if (contentType === "show") {
+        try {
+          const offset = tracksLengthRef.current;
+          
+          if (offset >= 50) {
+            setHasMoreTracks(false);
+            return;
+          }
+          
+          const data = await getShowEpisodes(contentId, {
+            offset,
+            limit: 5,
+          });
+
+          const newEpisodes = data.items || [];
+          setTracks((prevTracks) => {
+            const updatedTracks = [...prevTracks, ...newEpisodes];
+            const limitedTracks = updatedTracks.slice(0, 50);
+            tracksLengthRef.current = limitedTracks.length;
+            return limitedTracks;
+          });
+          
+          setNextUrl(data.next);
+          setHasMoreTracks(tracksLengthRef.current < 50 && !!data.next);
+          setLoadedPages((prev) => prev + 1);
+        } catch (error) {
+          console.error("WebSocket load more episodes failed:", error);
           throw error;
         }
       } else {
@@ -532,8 +627,39 @@ const ContentView = ({
           }
 
           case "show": {
-            // TODO: Implement WebSocket show fetching
-            throw new Error("Show fetching via WebSocket not yet implemented");
+            try {
+              const [showInfo, episodesResponse] = await Promise.all([
+                getShow(contentId),
+                getShowEpisodes(contentId, { limit: 5 }),
+              ]);
+
+              contentData = showInfo;
+              tracksData = Array.isArray(episodesResponse.items)
+                ? episodesResponse.items
+                : [];
+
+              const currentOffset = episodesResponse.offset || 0;
+              const currentItems = episodesResponse.items?.length || 0;
+              const totalEpisodes = showInfo.total_episodes || 0;
+              const hasMore = currentItems < 50 && currentOffset + currentItems < totalEpisodes;
+
+              setNextUrl(episodesResponse.next);
+              setHasMoreTracks(hasMore);
+              setTracksPerPage(tracksData.length);
+              setLoadedPages(1);
+              
+              if (tracksData.length < 50 && hasMore) {
+                showEpisodeLazyLoadRef.current = setTimeout(() => {
+                  lazyLoadShowEpisodes();
+                }, 2000);
+              }
+            } catch (error) {
+              console.error("WebSocket show fetch failed:", error);
+              throw new Error(
+                `Failed to fetch show via WebSocket: ${error.message}`,
+              );
+            }
+            break;
           }
 
           default:
@@ -557,6 +683,9 @@ const ContentView = ({
       isFetchingRef.current = false;
       if (lazyLoadTimeoutRef.current) {
         clearTimeout(lazyLoadTimeoutRef.current);
+      }
+      if (showEpisodeLazyLoadRef.current) {
+        clearTimeout(showEpisodeLazyLoadRef.current);
       }
     };
   }, [contentId, contentType, wsConnected]);
@@ -1145,7 +1274,7 @@ const ContentView = ({
             </div>
           )}
 
-        {isLazyLoading && contentType === "playlist" && (
+        {isLazyLoading && (contentType === "playlist" || contentType === "show") && (
           <div className="flex justify-center items-center py-2">
             <div className="flex items-center opacity-60">
               <div className="w-3 h-3 border border-white/20 border-t-white/40 rounded-full animate-spin mr-2"></div>
