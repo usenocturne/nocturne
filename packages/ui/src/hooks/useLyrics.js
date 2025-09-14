@@ -16,7 +16,7 @@ export function useLyrics(currentPlayback, progressMs) {
   const { wsConnected, sendSpotifyCommand } = useSpotifyWebSocket();
 
   const fetchLyrics = useCallback(
-    async (trackId) => {
+    async (trackId, trackName, artistName) => {
       if (!wsConnected || !trackId) return;
 
       try {
@@ -25,6 +25,8 @@ export function useLyrics(currentPlayback, progressMs) {
 
         const result = await sendSpotifyCommand("spotify.track.lyrics", {
           track_id: trackId,
+          track_name: trackName,
+          artist_name: artistName,
         });
 
         if (result && result.lyrics && result.lyrics.lines) {
@@ -50,9 +52,11 @@ export function useLyrics(currentPlayback, progressMs) {
 
     if (newShowLyrics && currentPlayback?.item?.id) {
       trackIdRef.current = currentPlayback.item.id;
-      await fetchLyrics(currentPlayback.item.id);
+      const trackName = currentPlayback.item.name;
+      const artistName = currentPlayback.item.artists?.[0]?.name || '';
+      await fetchLyrics(currentPlayback.item.id, trackName, artistName);
     }
-  }, [showLyrics, currentPlayback?.item?.id, fetchLyrics]);
+  }, [showLyrics, currentPlayback?.item, fetchLyrics]);
 
   useEffect(() => {
     if (
@@ -61,9 +65,11 @@ export function useLyrics(currentPlayback, progressMs) {
       currentPlayback.item.id !== trackIdRef.current
     ) {
       trackIdRef.current = currentPlayback.item.id;
-      fetchLyrics(currentPlayback.item.id);
+      const trackName = currentPlayback.item.name;
+      const artistName = currentPlayback.item.artists?.[0]?.name || '';
+      fetchLyrics(currentPlayback.item.id, trackName, artistName);
     }
-  }, [showLyrics, currentPlayback?.item?.id, fetchLyrics]);
+  }, [showLyrics, currentPlayback?.item, fetchLyrics]);
 
   useEffect(() => {
     if (lyrics.length > 0 && progressMs !== undefined) {
