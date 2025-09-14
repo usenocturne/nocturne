@@ -7,6 +7,7 @@ export default function LockView({
   onClose,
   currentPlayback,
   refreshPlaybackState,
+  updateGradientColors,
 }) {
   const { currentTime } = useCurrentTime();
   const containerRef = useRef(null);
@@ -60,6 +61,23 @@ export default function LockView({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose, handlePlayPause]);
+
+  useEffect(() => {
+    if (currentPlayback?.item && updateGradientColors) {
+      let imageUrl = null;
+      
+      if (currentPlayback.item.type === "episode") {
+        imageUrl = currentPlayback.item.show?.images?.[0]?.url || 
+                   currentPlayback.item.images?.[0]?.url;
+      } else if (currentPlayback.item.type === "track") {
+        imageUrl = currentPlayback.item.album?.images?.[0]?.url;
+      }
+      
+      if (imageUrl) {
+        updateGradientColors(imageUrl, "lock");
+      }
+    }
+  }, [currentPlayback?.item?.id, currentPlayback?.item?.type, updateGradientColors]);
 
   return (
     <div

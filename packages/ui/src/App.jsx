@@ -820,6 +820,7 @@ function App() {
       <LockView
         currentPlayback={currentPlayback}
         refreshPlaybackState={refreshPlaybackState}
+        updateGradientColors={updateGradientColors}
         onClose={() => setActiveSection("recents")}
       />
     );
