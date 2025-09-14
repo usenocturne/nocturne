@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, memo } from "react";
+import { useSpotifyWebSocket } from "../../../hooks/useSpotifyWebSocket";
 
 const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
   show,
@@ -11,31 +12,86 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
   const [internalActiveButton, setInternalActiveButton] = useState(null);
   const preloadImagesCacheRef = useRef({});
   const timerRef = useRef(null);
+  const blobUrlsRef = useRef([]);
+  
+  const { sendSpotifyCommand } = useSpotifyWebSocket();
 
   useEffect(() => {
-    const preloadImages = () => {
+    const preloadImages = async () => {
       const images = {};
       const types = {};
       let hasChanged = false;
 
-      [1, 2, 3, 4].forEach((buttonNum) => {
+      const promises = [1, 2, 3, 4].map(async (buttonNum) => {
         const imageUrl = localStorage.getItem(`button${buttonNum}Image`);
         const contentType = localStorage.getItem(`button${buttonNum}Type`);
 
         if (imageUrl) {
+          const isLocalImage = imageUrl.startsWith('/images/') || imageUrl.startsWith('images/');
+          
           if (
             !preloadImagesCacheRef.current[buttonNum] ||
             preloadImagesCacheRef.current[buttonNum] !== imageUrl
           ) {
-            const img = new Image();
-            img.src = imageUrl;
-            preloadImagesCacheRef.current[buttonNum] = imageUrl;
-            hasChanged = true;
+            if (isLocalImage) {
+              const img = new Image();
+              img.src = imageUrl;
+              preloadImagesCacheRef.current[buttonNum] = imageUrl;
+              preloadImagesCacheRef.current[buttonNum + '_data'] = imageUrl;
+              hasChanged = true;
+              images[buttonNum] = imageUrl;
+              types[buttonNum] = contentType;
+            } else {
+              try {
+                const result = await sendSpotifyCommand("spotify.image.fetch", {
+                  url: imageUrl
+                });
+                
+                if (result && result.data) {
+                  let blobUrl;
+                  const imageData = result.data;
+                  
+                  if (typeof imageData === "string") {
+                    if (imageData.startsWith("data:") || imageData.startsWith("blob:")) {
+                      blobUrl = imageData;
+                    } else {
+                      blobUrl = `data:image/jpeg;base64,${imageData}`;
+                    }
+                  } else if (
+                    imageData instanceof ArrayBuffer ||
+                    imageData instanceof Uint8Array
+                  ) {
+                    const blob = new Blob([imageData], { type: "image/jpeg" });
+                    blobUrl = URL.createObjectURL(blob);
+                    blobUrlsRef.current.push(blobUrl);
+                  } else {
+                    blobUrl = String(imageData);
+                  }
+                  
+                  const img = new Image();
+                  img.src = blobUrl;
+                  
+                  preloadImagesCacheRef.current[buttonNum] = imageUrl;
+                  preloadImagesCacheRef.current[buttonNum + '_data'] = blobUrl;
+                  hasChanged = true;
+                  images[buttonNum] = blobUrl;
+                  types[buttonNum] = contentType;
+                }
+              } catch (error) {
+                console.error(`Failed to fetch image for button ${buttonNum}:`, error);
+              }
+            }
+          } else {
+            const cachedData = preloadImagesCacheRef.current[buttonNum + '_data'];
+            if (cachedData) {
+              images[buttonNum] = cachedData;
+              types[buttonNum] = contentType;
+            }
           }
-          images[buttonNum] = imageUrl;
-          types[buttonNum] = contentType;
         }
       });
+
+      await Promise.all(promises);
 
       if (
         hasChanged ||
@@ -58,7 +114,16 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
         timerRef.current = null;
       }
     };
-  }, [show, preloadedImages]);
+  }, [show, preloadedImages, sendSpotifyCommand]);
+
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+      blobUrlsRef.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     if (show) {
