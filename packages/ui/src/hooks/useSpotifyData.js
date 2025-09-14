@@ -116,7 +116,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     refreshPlaybackState,
   } = useSpotifyPlayerState();
 
-  const playerControls = useSpotifyPlayerControls();
+  const playerControls = useSpotifyPlayerControls(currentPlayback);
   const { loadImage, getImageSize } = useImageLoader();
 
   const {
@@ -241,7 +241,16 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           !albumIds.has(item.track.show.id)
         ) {
           albumIds.add(item.track.show.id);
-          uniqueAlbums.push(item.track.show);
+          const showAsAlbum = {
+            ...item.track.show,
+            artists: item.track.show.publisher ? [{
+              id: `publisher-${item.track.show.id}`,
+              name: item.track.show.publisher,
+              type: "show"
+            }] : [],
+            type: "show"
+          };
+          uniqueAlbums.push(showAsAlbum);
         }
       });
 

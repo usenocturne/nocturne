@@ -11,7 +11,7 @@ export default function LockView({
   const { currentTime } = useCurrentTime();
   const containerRef = useRef(null);
   const { playTrack, pausePlayback, skipToNext, skipToPrevious } =
-    useSpotifyPlayerControls();
+    useSpotifyPlayerControls(currentPlayback);
 
   const handlePlayPause = useCallback(async () => {
     if (currentPlayback?.is_playing) {

@@ -7,7 +7,7 @@ export const DeviceSwitcherContext = React.createContext({
   openDeviceSwitcher: (playbackIntent = null) => {},
 });
 
-export function useSpotifyPlayerControls() {
+export function useSpotifyPlayerControls(currentPlayback = null) {
   const [volume, setVolumeState] = useState(50);
   const [isAdjustingVolume, setIsAdjustingVolume] = useState(false);
   const volumeTimeoutRef = useRef(null);
@@ -358,27 +358,40 @@ export function useSpotifyPlayerControls() {
     if (!wsConnected) return null;
 
     try {
-      console.log("Device options functionality disabled in WebSocket mode");
-      return null;
+      return {
+        playback_speed: currentPlayback?.playback_speed || 1
+      };
     } catch (err) {
       console.error("Error getting device options:", err);
       return null;
     }
-  }, [wsConnected]);
+  }, [wsConnected, currentPlayback]);
 
   const setPlaybackSpeed = useCallback(
     async (speed) => {
       if (!wsConnected) return false;
 
       try {
-        console.log("Playback speed functionality disabled in WebSocket mode");
-        return false;
+        const playerState = await getPlayerState();
+        const deviceId = playerState?.device?.id;
+        
+        if (!deviceId) {
+          console.error("No active device found for speed change");
+          return false;
+        }
+
+        await sendSpotifyCommand("spotify.player.speed", {
+          speed: speed,
+          device_id: deviceId
+        });
+        
+        return true;
       } catch (err) {
         console.error("Error setting playback speed:", err);
         return false;
       }
     },
-    [wsConnected],
+    [wsConnected, sendSpotifyCommand, getPlayerState],
   );
 
   return {

@@ -45,7 +45,7 @@ const ContentView = ({
     playTrack,
     isLoading: isPlaybackLoading,
     error: playbackError,
-  } = useSpotifyPlayerControls();
+  } = useSpotifyPlayerControls(currentPlayback);
 
   const {
     getPlaylist,

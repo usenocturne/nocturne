@@ -29,7 +29,7 @@ export default function Home({
   const scrollContainerRef = useRef(null);
   const itemWidth = 290;
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
-  const { playDJMix } = useSpotifyPlayerControls(accessToken);
+  const { playDJMix } = useSpotifyPlayerControls(currentPlayback);
   const [showDonationModal, setShowDonationModal] = useState(false);
 
   const handleOpenDonationModal = () => {

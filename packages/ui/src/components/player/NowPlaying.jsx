@@ -98,7 +98,7 @@ export default function NowPlaying({
     setPlaybackSpeed: setPlaybackSpeedApi,
     getCurrentDeviceOptions,
     transferPlayback,
-  } = useSpotifyPlayerControls();
+  } = useSpotifyPlayerControls(currentPlayback);
 
   const {
     progressMs,
@@ -276,8 +276,8 @@ export default function NowPlaying({
 
     const artistName = hasCurrentItem
       ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.show.name
-        : currentPlayback.item.artists.map((artist) => artist.name).join(", ")
+        ? currentPlayback.item.show?.publisher || currentPlayback.item.show?.name || ""
+        : currentPlayback.item.artists?.map((artist) => artist.name).join(", ") || ""
       : "";
 
     const firstArtistId =
@@ -289,7 +289,7 @@ export default function NowPlaying({
 
     const albumImages = hasCurrentItem
       ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.show.images
+        ? currentPlayback.item.images || currentPlayback.item.show?.images || null
         : currentPlayback.item.type === "local" ||
             !currentPlayback.item?.album?.images
           ? null
