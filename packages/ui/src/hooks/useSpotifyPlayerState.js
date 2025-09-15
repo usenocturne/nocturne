@@ -690,13 +690,22 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                 id: playerState.track.metadata.album_uri?.split(':')[2],
                 uri: playerState.track.metadata.album_uri,
                 name: playerState.track.metadata.album_title,
-                images: playerState.track.metadata.image_url ? [
+                images: playerState.track.metadata.is_narration === "true" || 
+                        playerState.track.metadata.album_artist_name === "DJ X" ? [
+                  { url: "/images/radio-cover/dj.webp" }
+                ] : playerState.track.metadata.image_url ? [
                   { url: playerState.track.metadata.image_url.startsWith('http') ? 
                     playerState.track.metadata.image_url : 
                     `https://${playerState.track.metadata.image_url}` }
                 ] : []
               },
-              artists: playerState.track.metadata.artists ? 
+              artists: playerState.track.metadata.is_narration === "true" || 
+                      playerState.track.metadata.album_artist_name === "DJ X" ? [{
+                id: "dj-x",
+                uri: "spotify:artist:dj-x",
+                name: "DJ X",
+                type: "artist"
+              }] : playerState.track.metadata.artists ? 
                 playerState.track.metadata.artists.map(artist => ({
                   id: artist.id || artist.uri?.split(':')[2],
                   uri: artist.uri || `spotify:artist:${artist.id}`,

@@ -74,6 +74,7 @@ export default function NowPlaying({
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
   const isPodcast = currentPlayback?.item?.type === "episode";
+  const isDJTrack = currentPlayback?.item?.album?.images?.[0]?.url?.includes("/images/radio-cover/dj.webp");
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
@@ -723,9 +724,10 @@ export default function NowPlaying({
               extractColors={true}
               onColorsExtracted={handleColorsExtracted}
               fallbackSrc="/images/not-playing.webp"
-              useDirectUrl={albumImages?.[0]?.url?.includes(
-                "/images/not-playing.webp",
-              )}
+              useDirectUrl={
+                albumImages?.[0]?.url?.includes("/images/not-playing.webp") ||
+                albumImages?.[0]?.url?.includes("/images/radio-cover/")
+              }
               className="w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
             />
           </div>
