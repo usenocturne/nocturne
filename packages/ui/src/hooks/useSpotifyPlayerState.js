@@ -338,21 +338,20 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                       id: playerState.track.metadata.album_uri?.split(":")[2],
                       uri: playerState.track.metadata.album_uri,
                       name: playerState.track.metadata.album_title,
-                      images:
-                        playerState.track.metadata.is_narration === "true" ||
-                        playerState.track.metadata.album_artist_name === "DJ X"
+                      images: playerState.track.metadata.image_url
+                        ? [
+                            {
+                              url: playerState.track.metadata.image_url.startsWith(
+                                "http",
+                              )
+                                ? playerState.track.metadata.image_url
+                                : `https://${playerState.track.metadata.image_url}`,
+                            },
+                          ]
+                        : playerState.track.metadata.is_narration === "true" ||
+                            playerState.track.metadata.album_artist_name === "DJ X"
                           ? [{ url: "/images/radio-cover/dj.webp" }]
-                          : playerState.track.metadata.image_url
-                            ? [
-                                {
-                                  url: playerState.track.metadata.image_url.startsWith(
-                                    "http",
-                                  )
-                                    ? playerState.track.metadata.image_url
-                                    : `https://${playerState.track.metadata.image_url}`,
-                                },
-                              ]
-                            : [],
+                          : [],
                     },
                     artists:
                       playerState.track.metadata.is_narration === "true" ||
