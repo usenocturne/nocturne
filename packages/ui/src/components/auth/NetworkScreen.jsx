@@ -66,9 +66,11 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
-    const bluetoothOption = networkOptions.find(opt => opt.id === 'bluetooth');
+    const bluetoothOption = networkOptions.find(
+      (opt) => opt.id === "bluetooth",
+    );
     setActiveSubItem(bluetoothOption);
-    
+
     setMainClasses("-translate-x-full opacity-0");
     setSubpageClasses("translate-x-0 opacity-100");
 
@@ -189,8 +191,8 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
                     Connection Lost
                   </h2>
                   <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                    Enable Bluetooth Tethering and connect to "Nocturne" in
-                    your phone's settings.
+                    Enable Bluetooth Tethering and connect to "Nocturne" in your
+                    phone's settings.
                   </p>
 
                   <button

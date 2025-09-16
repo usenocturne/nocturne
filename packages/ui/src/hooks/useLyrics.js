@@ -53,7 +53,7 @@ export function useLyrics(currentPlayback, progressMs) {
     if (newShowLyrics && currentPlayback?.item?.id) {
       trackIdRef.current = currentPlayback.item.id;
       const trackName = currentPlayback.item.name;
-      const artistName = currentPlayback.item.artists?.[0]?.name || '';
+      const artistName = currentPlayback.item.artists?.[0]?.name || "";
       await fetchLyrics(currentPlayback.item.id, trackName, artistName);
     }
   }, [showLyrics, currentPlayback?.item, fetchLyrics]);
@@ -66,7 +66,7 @@ export function useLyrics(currentPlayback, progressMs) {
     ) {
       trackIdRef.current = currentPlayback.item.id;
       const trackName = currentPlayback.item.name;
-      const artistName = currentPlayback.item.artists?.[0]?.name || '';
+      const artistName = currentPlayback.item.artists?.[0]?.name || "";
       fetchLyrics(currentPlayback.item.id, trackName, artistName);
     }
   }, [showLyrics, currentPlayback?.item, fetchLyrics]);
@@ -74,14 +74,18 @@ export function useLyrics(currentPlayback, progressMs) {
   useEffect(() => {
     if (lyrics.length > 0 && progressMs !== undefined) {
       const currentTimeMs = progressMs;
-      
-      if (currentTimeMs < 500 && lyricsContainerRef.current && !autoScrollSuspended) {
+
+      if (
+        currentTimeMs < 500 &&
+        lyricsContainerRef.current &&
+        !autoScrollSuspended
+      ) {
         lyricsContainerRef.current.scrollTo({
           top: 0,
-          behavior: 'smooth'
+          behavior: "smooth",
         });
       }
-      
+
       let newIndex = -1;
       for (let i = lyrics.length - 1; i >= 0; i--) {
         const lyricStartTime = parseInt(lyrics[i].startTimeMs);
@@ -90,16 +94,20 @@ export function useLyrics(currentPlayback, progressMs) {
           break;
         }
       }
-      
+
       if (newIndex !== currentLyricIndex) {
         setCurrentLyricIndex(newIndex);
-        
+
         if (resumeOnNextLyric && autoScrollSuspended) {
           setAutoScrollSuspended(false);
           setResumeOnNextLyric(false);
         }
-        
-        if (newIndex >= 0 && lyricsContainerRef.current && !autoScrollSuspended) {
+
+        if (
+          newIndex >= 0 &&
+          lyricsContainerRef.current &&
+          !autoScrollSuspended
+        ) {
           const container = lyricsContainerRef.current;
           const lyricElements = container.children;
           if (lyricElements[newIndex]) {
@@ -107,26 +115,32 @@ export function useLyrics(currentPlayback, progressMs) {
             const containerHeight = container.clientHeight;
             const lyricTop = lyricElement.offsetTop;
             const lyricHeight = lyricElement.offsetHeight;
-            
-            const scrollTo = lyricTop - (containerHeight / 2) + (lyricHeight / 2);
+
+            const scrollTo = lyricTop - containerHeight / 2 + lyricHeight / 2;
             container.scrollTo({
               top: scrollTo,
-              behavior: 'smooth'
+              behavior: "smooth",
             });
           }
         }
       }
     }
-  }, [lyrics, progressMs, currentLyricIndex, autoScrollSuspended, resumeOnNextLyric]);
+  }, [
+    lyrics,
+    progressMs,
+    currentLyricIndex,
+    autoScrollSuspended,
+    resumeOnNextLyric,
+  ]);
 
   const suspendAutoScroll = useCallback((durationMs) => {
     setAutoScrollSuspended(true);
     setResumeOnNextLyric(false);
-    
+
     if (autoScrollTimeoutRef.current) {
       clearTimeout(autoScrollTimeoutRef.current);
     }
-    
+
     if (durationMs && durationMs > 0) {
       autoScrollTimeoutRef.current = setTimeout(() => {
         setAutoScrollSuspended(false);
@@ -142,7 +156,7 @@ export function useLyrics(currentPlayback, progressMs) {
     if (lyricsContainerRef.current) {
       lyricsContainerRef.current.scrollTo({
         top: 0,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     }
   }, []);
@@ -156,13 +170,14 @@ export function useLyrics(currentPlayback, progressMs) {
 
     const handleScroll = () => {
       if (!isUserScrolling) return;
-      
+
       setAutoScrollSuspended(true);
       setResumeOnNextLyric(false);
-      
+
       if (scrollTimeout) clearTimeout(scrollTimeout);
-      if (autoScrollTimeoutRef.current) clearTimeout(autoScrollTimeoutRef.current);
-      
+      if (autoScrollTimeoutRef.current)
+        clearTimeout(autoScrollTimeoutRef.current);
+
       scrollTimeout = setTimeout(() => {
         setAutoScrollSuspended(false);
       }, 5000);
@@ -170,7 +185,9 @@ export function useLyrics(currentPlayback, progressMs) {
 
     const handleWheel = () => {
       isUserScrolling = true;
-      setTimeout(() => { isUserScrolling = false; }, 50);
+      setTimeout(() => {
+        isUserScrolling = false;
+      }, 50);
     };
 
     const handleTouchStart = () => {
@@ -178,19 +195,21 @@ export function useLyrics(currentPlayback, progressMs) {
     };
 
     const handleTouchEnd = () => {
-      setTimeout(() => { isUserScrolling = false; }, 50);
+      setTimeout(() => {
+        isUserScrolling = false;
+      }, 50);
     };
 
-    container.addEventListener('scroll', handleScroll);
-    container.addEventListener('wheel', handleWheel);
-    container.addEventListener('touchstart', handleTouchStart);
-    container.addEventListener('touchend', handleTouchEnd);
+    container.addEventListener("scroll", handleScroll);
+    container.addEventListener("wheel", handleWheel);
+    container.addEventListener("touchstart", handleTouchStart);
+    container.addEventListener("touchend", handleTouchEnd);
 
     return () => {
-      container.removeEventListener('scroll', handleScroll);
-      container.removeEventListener('wheel', handleWheel);
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener("scroll", handleScroll);
+      container.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchend", handleTouchEnd);
       if (scrollTimeout) clearTimeout(scrollTimeout);
     };
   }, [showLyrics]);

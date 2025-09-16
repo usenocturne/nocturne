@@ -322,44 +322,50 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     [wsConnected, setRepeatModeWS],
   );
 
-  const playDJMix = useCallback(async (deviceId = null) => {
-    if (!wsConnected) return false;
+  const playDJMix = useCallback(
+    async (deviceId = null) => {
+      if (!wsConnected) return false;
 
-    try {
-      const params = {};
-      if (deviceId) {
-        params.device_id = deviceId;
+      try {
+        const params = {};
+        if (deviceId) {
+          params.device_id = deviceId;
+        }
+        await sendSpotifyCommand("spotify.dj.start", params);
+        return true;
+      } catch (err) {
+        console.error("Error playing DJ mix:", err);
+        return false;
       }
-      await sendSpotifyCommand("spotify.dj.start", params);
-      return true;
-    } catch (err) {
-      console.error("Error playing DJ mix:", err);
-      return false;
-    }
-  }, [wsConnected, sendSpotifyCommand]);
+    },
+    [wsConnected, sendSpotifyCommand],
+  );
 
-  const sendDJSignal = useCallback(async (deviceId = null) => {
-    if (!wsConnected) return false;
+  const sendDJSignal = useCallback(
+    async (deviceId = null) => {
+      if (!wsConnected) return false;
 
-    try {
-      const params = {};
-      if (deviceId) {
-        params.device_id = deviceId;
+      try {
+        const params = {};
+        if (deviceId) {
+          params.device_id = deviceId;
+        }
+        await sendSpotifyCommand("spotify.dj.signal", params);
+        return true;
+      } catch (err) {
+        console.error("Error sending DJ signal:", err);
+        return false;
       }
-      await sendSpotifyCommand("spotify.dj.signal", params);
-      return true;
-    } catch (err) {
-      console.error("Error sending DJ signal:", err);
-      return false;
-    }
-  }, [wsConnected, sendSpotifyCommand]);
+    },
+    [wsConnected, sendSpotifyCommand],
+  );
 
   const getCurrentDeviceOptions = useCallback(async () => {
     if (!wsConnected) return null;
 
     try {
       return {
-        playback_speed: currentPlayback?.playback_speed || 1
+        playback_speed: currentPlayback?.playback_speed || 1,
       };
     } catch (err) {
       console.error("Error getting device options:", err);
@@ -374,7 +380,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       try {
         const playerState = await getPlayerState();
         const deviceId = playerState?.device?.id;
-        
+
         if (!deviceId) {
           console.error("No active device found for speed change");
           return false;
@@ -382,9 +388,9 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
         await sendSpotifyCommand("spotify.player.speed", {
           speed: speed,
-          device_id: deviceId
+          device_id: deviceId,
         });
-        
+
         return true;
       } catch (err) {
         console.error("Error setting playback speed:", err);

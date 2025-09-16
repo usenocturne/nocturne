@@ -22,9 +22,12 @@ export function useCurrentTime() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/device/date/settimezone", {
-        method: "POST",
-      });
+      const response = await fetch(
+        "http://localhost:5000/device/date/settimezone",
+        {
+          method: "POST",
+        },
+      );
 
       if (!response.ok) {
         console.error(
@@ -53,7 +56,6 @@ export function useCurrentTime() {
       setTimezone(null);
     }
   }, [settings.autoTimezoneEnabled]);
-
 
   useEffect(() => {
     const updateTime = async () => {

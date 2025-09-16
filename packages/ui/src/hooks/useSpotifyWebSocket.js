@@ -328,7 +328,7 @@ export function useSpotifyWebSocket() {
       setIsLoading(true);
       setError(null);
       const result = await sendSpotifyCommand("spotify.devices");
-      if (result && result.devices && typeof result.devices === 'object') {
+      if (result && result.devices && typeof result.devices === "object") {
         const devicesArray = Object.values(result.devices);
         return { devices: devicesArray };
       }

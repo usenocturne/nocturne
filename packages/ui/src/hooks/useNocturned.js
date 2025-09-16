@@ -169,7 +169,6 @@ const setupGlobalWebSocket = async () => {
       console.log("Connected to WebSocket");
       cleanupWsReconnection();
 
-
       globalWsListeners.forEach(
         (listener) => listener.onOpen && listener.onOpen(socket),
       );

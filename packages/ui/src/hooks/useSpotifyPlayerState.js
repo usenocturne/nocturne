@@ -42,7 +42,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       const isEpisode =
         data.currently_playing_type === "episode" ||
         (data?.item && data.item.type === "episode") ||
-        (data?.item && data.item.show && !data.item.album && !data.item.artists);
+        (data?.item &&
+          data.item.show &&
+          !data.item.album &&
+          !data.item.artists);
       const hasIncompleteEpisodeData =
         data.currently_playing_type === "episode" && !data.item;
 
@@ -113,11 +116,14 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           },
           shuffle_state: data.shuffle_state,
           repeat_state: data.repeat_state,
-          
-          item: data.item && isEpisode && !data.item.type ? {
-            ...data.item,
-            type: "episode"
-          } : data.item,
+
+          item:
+            data.item && isEpisode && !data.item.type
+              ? {
+                  ...data.item,
+                  type: "episode",
+                }
+              : data.item,
         };
         currentPlaybackRef.current = newPlayback;
         return newPlayback;
@@ -135,7 +141,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             }
           : {
               ...data.item.album,
-              artists: data.item.artists, 
+              artists: data.item.artists,
             };
 
         setCurrentlyPlayingAlbum(currentAlbum);
@@ -152,15 +158,19 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         }
       } else if (data?.item && data.item.type === "episode") {
         const currentShow = data.item.show;
-        
+
         const showAsAlbum = {
           ...currentShow,
-          artists: currentShow.publisher ? [{
-            id: `publisher-${currentShow.id}`,
-            name: currentShow.publisher,
-            type: "show"
-          }] : [],
-          type: "show"
+          artists: currentShow.publisher
+            ? [
+                {
+                  id: `publisher-${currentShow.id}`,
+                  name: currentShow.publisher,
+                  type: "show",
+                },
+              ]
+            : [],
+          type: "show",
         };
         setCurrentlyPlayingAlbum(showAsAlbum);
 
@@ -243,16 +253,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         setInitialFetchInProgress(false);
       }
     },
-    [
-      wsConnected,
-      getPlayerState,
-      processPlaybackState,
-      resetPlaybackState,
-    ],
+    [wsConnected, getPlayerState, processPlaybackState, resetPlaybackState],
   );
-
-
-
 
   useEffect(() => {
     if (wsConnected && !initialPlaybackFetchDone) {
@@ -261,14 +263,12 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     }
   }, [wsConnected, fetchCurrentPlayback]);
 
-
   useEffect(() => {
     if (wsConnected && immediateLoad && !initialPlaybackFetchDone) {
       initialPlaybackFetchDone = true;
       fetchCurrentPlayback(true);
     }
   }, [wsConnected, immediateLoad, fetchCurrentPlayback]);
-
 
   useEffect(() => {
     if (!wsConnected) return;
@@ -281,101 +281,139 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const payloads = data.data?.payloads || [];
         if (payloads.length > 0 && payloads[0]?.cluster?.player_state) {
           const playerState = payloads[0].cluster.player_state;
-          
-          const isEpisode = playerState.track?.uri?.startsWith('spotify:episode:');
-          
+
+          const isEpisode =
+            playerState.track?.uri?.startsWith("spotify:episode:");
+
           const transformedState = {
             is_playing: playerState.is_paused === 0,
             timestamp: Date.now(),
             progress_ms: parseInt(playerState.position_as_of_timestamp) || 0,
-            
-            context: playerState.context_uri ? {
-              uri: playerState.context_uri,
-              type: playerState.context_uri.split(':')[1],
-              href: null
-            } : null,
-            
-            item: playerState.track ? (isEpisode ? {
-             
-              id: playerState.track.uri.split(':')[2],
-              uri: playerState.track.uri,
-              type: "episode",
-              name: playerState.track.metadata.title,
-              show: {
-                id: playerState.context_uri?.split(':')[2],
-                uri: playerState.context_uri,
-                name: playerState.track.metadata.album_title || "Unknown Show",
-                publisher: playerState.track.metadata.author_name || "Unknown Publisher",
-                images: playerState.track.metadata.image_url ? [
-                  { url: playerState.track.metadata.image_url.startsWith('http') ? 
-                    playerState.track.metadata.image_url : 
-                    `https://${playerState.track.metadata.image_url}` }
-                ] : []
-              },
-              duration_ms: parseInt(playerState.duration) || 0,
-              is_local: false
-            } : {
-              
-              id: playerState.track.uri.split(':')[2],
-              uri: playerState.track.uri,
-              type: "track",
-              name: playerState.track.metadata.title,
-              album: {
-                id: playerState.track.metadata.album_uri?.split(':')[2],
-                uri: playerState.track.metadata.album_uri,
-                name: playerState.track.metadata.album_title,
-                images: playerState.track.metadata.is_narration === "true" || 
-                        playerState.track.metadata.album_artist_name === "DJ X" ? [
-                  { url: "/images/radio-cover/dj.webp" }
-                ] : playerState.track.metadata.image_url ? [
-                  { url: playerState.track.metadata.image_url.startsWith('http') ? 
-                    playerState.track.metadata.image_url : 
-                    `https://${playerState.track.metadata.image_url}` }
-                ] : []
-              },
-              artists: playerState.track.metadata.is_narration === "true" || 
-                      playerState.track.metadata.album_artist_name === "DJ X" ? [{
-                id: "dj-x",
-                uri: "spotify:artist:dj-x",
-                name: "DJ X",
-                type: "artist"
-              }] : playerState.track.metadata.artists ? 
-                playerState.track.metadata.artists.map(artist => ({
-                  id: artist.id || artist.uri?.split(':')[2],
-                  uri: artist.uri || `spotify:artist:${artist.id}`,
-                  name: artist.name,
-                  type: artist.type || 'artist'
-                })) : [],
-              duration_ms: parseInt(playerState.duration) || 0,
-              is_local: false
-            }) : null,
-            
-            
+
+            context: playerState.context_uri
+              ? {
+                  uri: playerState.context_uri,
+                  type: playerState.context_uri.split(":")[1],
+                  href: null,
+                }
+              : null,
+
+            item: playerState.track
+              ? isEpisode
+                ? {
+                    id: playerState.track.uri.split(":")[2],
+                    uri: playerState.track.uri,
+                    type: "episode",
+                    name: playerState.track.metadata.title,
+                    show: {
+                      id: playerState.context_uri?.split(":")[2],
+                      uri: playerState.context_uri,
+                      name:
+                        playerState.track.metadata.album_title ||
+                        "Unknown Show",
+                      publisher:
+                        playerState.track.metadata.author_name ||
+                        "Unknown Publisher",
+                      images: playerState.track.metadata.image_url
+                        ? [
+                            {
+                              url: playerState.track.metadata.image_url.startsWith(
+                                "http",
+                              )
+                                ? playerState.track.metadata.image_url
+                                : `https://${playerState.track.metadata.image_url}`,
+                            },
+                          ]
+                        : [],
+                    },
+                    duration_ms: parseInt(playerState.duration) || 0,
+                    is_local: false,
+                  }
+                : {
+                    id: playerState.track.uri.split(":")[2],
+                    uri: playerState.track.uri,
+                    type: "track",
+                    name: playerState.track.metadata.title,
+                    album: {
+                      id: playerState.track.metadata.album_uri?.split(":")[2],
+                      uri: playerState.track.metadata.album_uri,
+                      name: playerState.track.metadata.album_title,
+                      images:
+                        playerState.track.metadata.is_narration === "true" ||
+                        playerState.track.metadata.album_artist_name === "DJ X"
+                          ? [{ url: "/images/radio-cover/dj.webp" }]
+                          : playerState.track.metadata.image_url
+                            ? [
+                                {
+                                  url: playerState.track.metadata.image_url.startsWith(
+                                    "http",
+                                  )
+                                    ? playerState.track.metadata.image_url
+                                    : `https://${playerState.track.metadata.image_url}`,
+                                },
+                              ]
+                            : [],
+                    },
+                    artists:
+                      playerState.track.metadata.is_narration === "true" ||
+                      playerState.track.metadata.album_artist_name === "DJ X"
+                        ? [
+                            {
+                              id: "dj-x",
+                              uri: "spotify:artist:dj-x",
+                              name: "DJ X",
+                              type: "artist",
+                            },
+                          ]
+                        : playerState.track.metadata.artists
+                          ? playerState.track.metadata.artists.map(
+                              (artist) => ({
+                                id: artist.id || artist.uri?.split(":")[2],
+                                uri:
+                                  artist.uri || `spotify:artist:${artist.id}`,
+                                name: artist.name,
+                                type: artist.type || "artist",
+                              }),
+                            )
+                          : [],
+                    duration_ms: parseInt(playerState.duration) || 0,
+                    is_local: false,
+                  }
+              : null,
+
             shuffle_state: playerState.options?.shuffling_context === 1,
-            repeat_state: playerState.options?.repeating_track === 1 ? "track" : 
-                         playerState.options?.repeating_context === 1 ? "context" : "off",
-            
-            
-            device: payloads[0]?.cluster?.devices && payloads[0]?.cluster?.active_device_id ? 
-              (() => {
-                const activeDeviceId = payloads[0].cluster.active_device_id;
-                const device = payloads[0].cluster.devices[activeDeviceId];
-                return device ? {
-                  id: device.device_id,
-                  is_active: true,
-                  name: device.name,
-                  type: device.device_type,
-                  volume_percent: Math.round((device.volume / 65535) * 100)
-                } : null;
-              })() : null,
-            
-            
+            repeat_state:
+              playerState.options?.repeating_track === 1
+                ? "track"
+                : playerState.options?.repeating_context === 1
+                  ? "context"
+                  : "off",
+
+            device:
+              payloads[0]?.cluster?.devices &&
+              payloads[0]?.cluster?.active_device_id
+                ? (() => {
+                    const activeDeviceId = payloads[0].cluster.active_device_id;
+                    const device = payloads[0].cluster.devices[activeDeviceId];
+                    return device
+                      ? {
+                          id: device.device_id,
+                          is_active: true,
+                          name: device.name,
+                          type: device.device_type,
+                          volume_percent: Math.round(
+                            (device.volume / 65535) * 100,
+                          ),
+                        }
+                      : null;
+                  })()
+                : null,
+
             currently_playing_type: isEpisode ? "episode" : "track",
-            
-            
-            playback_speed: playerState.options?.playback_speed || 1
+
+            playback_speed: playerState.options?.playback_speed || 1,
           };
-          
+
           processPlaybackState(transformedState);
         }
       }

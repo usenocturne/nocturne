@@ -718,14 +718,18 @@ export default function Settings({
     setIsAnimating(true);
     shouldExitToRecents.current = false;
 
-    if (showMain && settingsStructure[page]?.type === "custom" && settingsStructure[page]?.component) {
+    if (
+      showMain &&
+      settingsStructure[page]?.type === "custom" &&
+      settingsStructure[page]?.component
+    ) {
       setMainClasses("-translate-x-full opacity-0");
       setSubpageClasses("translate-x-0 opacity-100");
-      setActiveSubItem({ 
-        id: page, 
+      setActiveSubItem({
+        id: page,
         title: settingsStructure[page].title,
         type: "custom",
-        component: settingsStructure[page].component
+        component: settingsStructure[page].component,
       });
 
       setTimeout(() => {
@@ -785,7 +789,10 @@ export default function Settings({
     setIsAnimating(true);
 
     if (showSubpage) {
-      if (activeSubItem && settingsStructure[activeSubItem.id]?.type === "custom") {
+      if (
+        activeSubItem &&
+        settingsStructure[activeSubItem.id]?.type === "custom"
+      ) {
         setSubpageClasses("translate-x-full opacity-0");
         setMainClasses("translate-x-0 opacity-100");
 

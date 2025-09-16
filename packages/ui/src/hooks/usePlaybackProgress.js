@@ -69,7 +69,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         setProgressMs(currentPlayback.progress_ms || 0);
         lastUpdateTimeRef.current = Date.now();
         driftHistoryRef.current = [];
-        
+
         if (!refreshTimeoutRef.current && currentPlayback.is_playing) {
           scheduleNextRefresh();
         }

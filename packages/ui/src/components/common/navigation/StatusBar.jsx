@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  BatteryIcon,
-  BluetoothIcon,
-  USBIcon,
-} from "../../common/icons";
+import { BatteryIcon, BluetoothIcon, USBIcon } from "../../common/icons";
 import { useBluetooth } from "../../../hooks/useNocturned";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
 

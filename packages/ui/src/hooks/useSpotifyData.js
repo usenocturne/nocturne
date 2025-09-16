@@ -239,12 +239,16 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           albumIds.add(item.track.show.id);
           const showAsAlbum = {
             ...item.track.show,
-            artists: item.track.show.publisher ? [{
-              id: `publisher-${item.track.show.id}`,
-              name: item.track.show.publisher,
-              type: "show"
-            }] : [],
-            type: "show"
+            artists: item.track.show.publisher
+              ? [
+                  {
+                    id: `publisher-${item.track.show.id}`,
+                    name: item.track.show.publisher,
+                    type: "show",
+                  },
+                ]
+              : [],
+            type: "show",
           };
           uniqueAlbums.push(showAsAlbum);
         }
@@ -1018,7 +1022,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     });
 
     try {
-
       abortControllerRef.current = new AbortController();
 
       const failedRequests = [];

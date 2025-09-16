@@ -45,17 +45,19 @@ export default function SpotifyImage({
       setCurrentSrc(imageUrl);
       setIsLoading(false);
       setHasError(false);
-      
+
       if (extractColors && onColorsExtracted) {
-        import("../../utils/colorExtractor").then(({ extractColorsFromImage }) => {
-          extractColorsFromImage(imageUrl).then((colors) => {
-            if (colors && onColorsExtracted) {
-              onColorsExtracted(colors);
-            }
-          });
-        });
+        import("../../utils/colorExtractor").then(
+          ({ extractColorsFromImage }) => {
+            extractColorsFromImage(imageUrl).then((colors) => {
+              if (colors && onColorsExtracted) {
+                onColorsExtracted(colors);
+              }
+            });
+          },
+        );
       }
-      
+
       if (onLoad) {
         onLoad();
       }

@@ -13,7 +13,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
   const preloadImagesCacheRef = useRef({});
   const timerRef = useRef(null);
   const blobUrlsRef = useRef([]);
-  
+
   const { sendSpotifyCommand } = useSpotifyWebSocket();
 
   useEffect(() => {
@@ -27,8 +27,9 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
         const contentType = localStorage.getItem(`button${buttonNum}Type`);
 
         if (imageUrl) {
-          const isLocalImage = imageUrl.startsWith('/images/') || imageUrl.startsWith('images/');
-          
+          const isLocalImage =
+            imageUrl.startsWith("/images/") || imageUrl.startsWith("images/");
+
           if (
             !preloadImagesCacheRef.current[buttonNum] ||
             preloadImagesCacheRef.current[buttonNum] !== imageUrl
@@ -37,22 +38,25 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
               const img = new Image();
               img.src = imageUrl;
               preloadImagesCacheRef.current[buttonNum] = imageUrl;
-              preloadImagesCacheRef.current[buttonNum + '_data'] = imageUrl;
+              preloadImagesCacheRef.current[buttonNum + "_data"] = imageUrl;
               hasChanged = true;
               images[buttonNum] = imageUrl;
               types[buttonNum] = contentType;
             } else {
               try {
                 const result = await sendSpotifyCommand("spotify.image.fetch", {
-                  url: imageUrl
+                  url: imageUrl,
                 });
-                
+
                 if (result && result.data) {
                   let blobUrl;
                   const imageData = result.data;
-                  
+
                   if (typeof imageData === "string") {
-                    if (imageData.startsWith("data:") || imageData.startsWith("blob:")) {
+                    if (
+                      imageData.startsWith("data:") ||
+                      imageData.startsWith("blob:")
+                    ) {
                       blobUrl = imageData;
                     } else {
                       blobUrl = `data:image/jpeg;base64,${imageData}`;
@@ -67,22 +71,26 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
                   } else {
                     blobUrl = String(imageData);
                   }
-                  
+
                   const img = new Image();
                   img.src = blobUrl;
-                  
+
                   preloadImagesCacheRef.current[buttonNum] = imageUrl;
-                  preloadImagesCacheRef.current[buttonNum + '_data'] = blobUrl;
+                  preloadImagesCacheRef.current[buttonNum + "_data"] = blobUrl;
                   hasChanged = true;
                   images[buttonNum] = blobUrl;
                   types[buttonNum] = contentType;
                 }
               } catch (error) {
-                console.error(`Failed to fetch image for button ${buttonNum}:`, error);
+                console.error(
+                  `Failed to fetch image for button ${buttonNum}:`,
+                  error,
+                );
               }
             }
           } else {
-            const cachedData = preloadImagesCacheRef.current[buttonNum + '_data'];
+            const cachedData =
+              preloadImagesCacheRef.current[buttonNum + "_data"];
             if (cachedData) {
               images[buttonNum] = cachedData;
               types[buttonNum] = contentType;
@@ -118,7 +126,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
 
   useEffect(() => {
     return () => {
-      blobUrlsRef.current.forEach(url => {
+      blobUrlsRef.current.forEach((url) => {
         URL.revokeObjectURL(url);
       });
       blobUrlsRef.current = [];

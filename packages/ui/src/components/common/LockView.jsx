@@ -65,19 +65,24 @@ export default function LockView({
   useEffect(() => {
     if (currentPlayback?.item && updateGradientColors) {
       let imageUrl = null;
-      
+
       if (currentPlayback.item.type === "episode") {
-        imageUrl = currentPlayback.item.show?.images?.[0]?.url || 
-                   currentPlayback.item.images?.[0]?.url;
+        imageUrl =
+          currentPlayback.item.show?.images?.[0]?.url ||
+          currentPlayback.item.images?.[0]?.url;
       } else if (currentPlayback.item.type === "track") {
         imageUrl = currentPlayback.item.album?.images?.[0]?.url;
       }
-      
+
       if (imageUrl) {
         updateGradientColors(imageUrl, "lock");
       }
     }
-  }, [currentPlayback?.item?.id, currentPlayback?.item?.type, updateGradientColors]);
+  }, [
+    currentPlayback?.item?.id,
+    currentPlayback?.item?.type,
+    updateGradientColors,
+  ]);
 
   return (
     <div

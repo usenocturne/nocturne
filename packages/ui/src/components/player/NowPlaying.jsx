@@ -74,7 +74,9 @@ export default function NowPlaying({
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
   const isPodcast = currentPlayback?.item?.type === "episode";
-  const isDJTrack = currentPlayback?.item?.album?.images?.[0]?.url?.includes("/images/radio-cover/dj.webp");
+  const isDJTrack = currentPlayback?.item?.album?.images?.[0]?.url?.includes(
+    "/images/radio-cover/dj.webp",
+  );
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
@@ -277,8 +279,12 @@ export default function NowPlaying({
 
     const artistName = hasCurrentItem
       ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.show?.publisher || currentPlayback.item.show?.name || ""
-        : currentPlayback.item.artists?.map((artist) => artist.name).join(", ") || ""
+        ? currentPlayback.item.show?.publisher ||
+          currentPlayback.item.show?.name ||
+          ""
+        : currentPlayback.item.artists
+            ?.map((artist) => artist.name)
+            .join(", ") || ""
       : "";
 
     const firstArtistId =
@@ -290,7 +296,9 @@ export default function NowPlaying({
 
     const albumImages = hasCurrentItem
       ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.images || currentPlayback.item.show?.images || null
+        ? currentPlayback.item.images ||
+          currentPlayback.item.show?.images ||
+          null
         : currentPlayback.item.type === "local" ||
             !currentPlayback.item?.album?.images
           ? null
@@ -579,7 +587,7 @@ export default function NowPlaying({
       if (typeof suspendAutoScroll === "function") suspendAutoScroll(5000);
       if (typeof resumeAutoScrollOnNextLyric === "function")
         resumeAutoScrollOnNextLyric();
-      
+
       if (lyricsContainerRef.current && lyricIndex >= 0) {
         const container = lyricsContainerRef.current;
         const lyricElements = container.children;
@@ -588,19 +596,24 @@ export default function NowPlaying({
           const containerHeight = container.clientHeight;
           const lyricTop = lyricElement.offsetTop;
           const lyricHeight = lyricElement.offsetHeight;
-          
-          const scrollTo = lyricTop - (containerHeight / 2) + (lyricHeight / 2);
+
+          const scrollTo = lyricTop - containerHeight / 2 + lyricHeight / 2;
           container.scrollTo({
             top: scrollTo,
-            behavior: 'smooth'
+            behavior: "smooth",
           });
         }
       }
-      
+
       const targetMs = Math.max(0, Math.floor(lyricTimeSeconds * 1000));
       handleSeek(targetMs);
     },
-    [handleSeek, suspendAutoScroll, resumeAutoScrollOnNextLyric, lyricsContainerRef],
+    [
+      handleSeek,
+      suspendAutoScroll,
+      resumeAutoScrollOnNextLyric,
+      lyricsContainerRef,
+    ],
   );
 
   const handleToggleShuffle = useCallback(async () => {
@@ -795,13 +808,21 @@ export default function NowPlaying({
                         outline: "none",
                         boxShadow: "none",
                       }}
-                      onClick={() => handleLyricClick(parseInt(lyric.startTimeMs) / 1000, index)}
+                      onClick={() =>
+                        handleLyricClick(
+                          parseInt(lyric.startTimeMs) / 1000,
+                          index,
+                        )
+                      }
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleLyricClick(parseInt(lyric.startTimeMs) / 1000, index);
+                          handleLyricClick(
+                            parseInt(lyric.startTimeMs) / 1000,
+                            index,
+                          );
                         }
                       }}
                     >

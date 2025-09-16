@@ -167,13 +167,18 @@ const ContentView = ({
   });
 
   const lazyLoadShowEpisodes = useCallback(async () => {
-    if (contentType !== "show" || isLazyLoading || !content || tracksLengthRef.current >= 50) {
+    if (
+      contentType !== "show" ||
+      isLazyLoading ||
+      !content ||
+      tracksLengthRef.current >= 50
+    ) {
       return;
     }
 
     try {
       setIsLazyLoading(true);
-      
+
       const offset = tracksLengthRef.current;
       const data = await getShowEpisodes(contentId, {
         offset,
@@ -184,9 +189,9 @@ const ContentView = ({
         setTracks((prevTracks) => {
           const updatedTracks = [...prevTracks, ...data.items];
           const limitedTracks = updatedTracks.slice(0, 50);
-          
+
           tracksLengthRef.current = limitedTracks.length;
-          
+
           if (limitedTracks.length < 50 && data.items.length > 0) {
             if (showEpisodeLazyLoadRef.current) {
               clearTimeout(showEpisodeLazyLoadRef.current);
@@ -195,10 +200,10 @@ const ContentView = ({
               lazyLoadShowEpisodes();
             }, 2000);
           }
-          
+
           return limitedTracks;
         });
-        
+
         setNextUrl(data.next);
         setHasMoreTracks(tracksLengthRef.current < 50 && !!data.next);
       }
@@ -294,11 +299,18 @@ const ContentView = ({
   ]);
 
   useEffect(() => {
-    if (contentType === "show" && content && tracks.length > 0 && tracks.length < 50 && hasMoreTracks && !isLazyLoading) {
+    if (
+      contentType === "show" &&
+      content &&
+      tracks.length > 0 &&
+      tracks.length < 50 &&
+      hasMoreTracks &&
+      !isLazyLoading
+    ) {
       if (showEpisodeLazyLoadRef.current) {
         clearTimeout(showEpisodeLazyLoadRef.current);
       }
-      
+
       if (tracksLengthRef.current < 50) {
         showEpisodeLazyLoadRef.current = setTimeout(() => {
           lazyLoadShowEpisodes();
@@ -311,7 +323,14 @@ const ContentView = ({
         clearTimeout(showEpisodeLazyLoadRef.current);
       }
     };
-  }, [contentType, content, tracks.length, hasMoreTracks, isLazyLoading, lazyLoadShowEpisodes]);
+  }, [
+    contentType,
+    content,
+    tracks.length,
+    hasMoreTracks,
+    isLazyLoading,
+    lazyLoadShowEpisodes,
+  ]);
 
   const loadMoreTracks = useCallback(async () => {
     if (
@@ -356,12 +375,12 @@ const ContentView = ({
       } else if (contentType === "show") {
         try {
           const offset = tracksLengthRef.current;
-          
+
           if (offset >= 50) {
             setHasMoreTracks(false);
             return;
           }
-          
+
           const data = await getShowEpisodes(contentId, {
             offset,
             limit: 5,
@@ -374,7 +393,7 @@ const ContentView = ({
             tracksLengthRef.current = limitedTracks.length;
             return limitedTracks;
           });
-          
+
           setNextUrl(data.next);
           setHasMoreTracks(tracksLengthRef.current < 50 && !!data.next);
           setLoadedPages((prev) => prev + 1);
@@ -641,13 +660,15 @@ const ContentView = ({
               const currentOffset = episodesResponse.offset || 0;
               const currentItems = episodesResponse.items?.length || 0;
               const totalEpisodes = showInfo.total_episodes || 0;
-              const hasMore = currentItems < 50 && currentOffset + currentItems < totalEpisodes;
+              const hasMore =
+                currentItems < 50 &&
+                currentOffset + currentItems < totalEpisodes;
 
               setNextUrl(episodesResponse.next);
               setHasMoreTracks(hasMore);
               setTracksPerPage(tracksData.length);
               setLoadedPages(1);
-              
+
               if (tracksData.length < 50 && hasMore) {
                 showEpisodeLazyLoadRef.current = setTimeout(() => {
                   lazyLoadShowEpisodes();
@@ -1274,19 +1295,20 @@ const ContentView = ({
             </div>
           )}
 
-        {isLazyLoading && (contentType === "playlist" || contentType === "show") && (
-          <div className="flex justify-center items-center py-2">
-            <div className="flex items-center opacity-60">
-              <div className="w-3 h-3 border border-white/20 border-t-white/40 rounded-full animate-spin mr-2"></div>
-              <p
-                className="text-white/40"
-                style={{ fontSize: "16px", fontWeight: "400" }}
-              >
-                Loading...
-              </p>
+        {isLazyLoading &&
+          (contentType === "playlist" || contentType === "show") && (
+            <div className="flex justify-center items-center py-2">
+              <div className="flex items-center opacity-60">
+                <div className="w-3 h-3 border border-white/20 border-t-white/40 rounded-full animate-spin mr-2"></div>
+                <p
+                  className="text-white/40"
+                  style={{ fontSize: "16px", fontWeight: "400" }}
+                >
+                  Loading...
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {playbackError && (
           <div className="mt-4 p-4 bg-red-500/20 rounded-lg">
