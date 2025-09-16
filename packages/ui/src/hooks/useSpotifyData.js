@@ -3,10 +3,6 @@ import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
 import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useImageLoader } from "./useImageLoader";
-import {
-  networkAwareRequest,
-  waitForNetwork,
-} from "../utils/networkAwareRequest";
 import { getCachedTimezone } from "../components/common/navigation/StatusBar";
 
 const MAX_RETRIES = 3;
@@ -1022,7 +1018,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     });
 
     try {
-      await waitForNetwork();
 
       abortControllerRef.current = new AbortController();
 

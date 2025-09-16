@@ -1,31 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  networkAwareRequest,
-  waitForNetwork,
-} from "../utils/networkAwareRequest";
-import { useNetwork } from "./useNetwork";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useNocturned, addGlobalWsListener } from "./useNocturned";
 
-let globalWebSocket = null;
-let globalConnectionId = null;
-let connectionCount = 0;
-let isConnecting = false;
-let isAttemptingReconnect = false;
-let connectionErrors = 0;
-let retryTimeout = null;
-let eventSubscribers = [];
 let lastFetchTimestamp = 0;
 let pendingFetch = null;
-let keepAliveInterval = null;
-let isInitialized = false;
 let podcastPollingInterval = null;
 let isPodcastPlaying = false;
 let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
 export function useSpotifyPlayerState(immediateLoad = false) {
-  const { isConnected: isNetworkConnected } = useNetwork();
   const { wsConnected, getPlayerState } = useSpotifyWebSocket();
   const [currentPlayback, setCurrentPlayback] = useState(null);
   const [currentlyPlayingAlbum, setCurrentlyPlayingAlbum] = useState(null);
@@ -34,13 +18,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   const [error, setError] = useState(null);
   const [initialFetchInProgress, setInitialFetchInProgress] = useState(false);
 
-  const webSocketRef = useRef(null);
-  const connectionIdRef = useRef(null);
   const initialStateLoadedRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
-  const subscriberIdRef = useRef(`subscriber-${Date.now()}-${Math.random()}`);
-  const reconnectTimeoutRef = useRef(null);
-  const maxRetryAttempts = 5;
   const currentPlaybackRef = useRef(null);
 
   const stopPodcastPolling = useCallback(() => {
@@ -73,13 +52,12 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           if (podcastPollingInterval || !isPodcastPlaying) return;
 
           podcastPollingInterval = setInterval(async () => {
-            if (isPodcastPlaying && wsConnected && isNetworkConnected) {
+            if (isPodcastPlaying && wsConnected) {
               try {
                 const now = Date.now();
                 if (now - lastPodcastFetch < 25000) return;
 
                 lastPodcastFetch = now;
-                await waitForNetwork();
                 const polledData = await getPlayerState();
 
                 if (polledData && Object.keys(polledData).length > 0) {
@@ -213,7 +191,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
   const fetchCurrentPlayback = useCallback(
     async (forceRefresh = false) => {
-      if (!wsConnected || !isNetworkConnected) {
+      if (!wsConnected) {
         if (!initialStateLoadedRef.current) {
           setCurrentPlayback(null);
         }
@@ -231,7 +209,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       }
 
       try {
-        await waitForNetwork();
         lastFetchTimestamp = now;
         pendingFetch = true;
         setIsLoading(true);
@@ -249,7 +226,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
         if (err.message.includes("401") || err.message.includes("403")) {
           resetPlaybackState(true);
-          cleanupWebSocket();
           return;
         }
 
@@ -258,9 +234,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           return;
         }
 
-        if (err.name === "NetworkError" || !isNetworkConnected) {
+        if (err.name === "NetworkError") {
           resetPlaybackState();
-          cleanupWebSocket();
         }
       } finally {
         pendingFetch = false;
@@ -273,337 +248,19 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       getPlayerState,
       processPlaybackState,
       resetPlaybackState,
-      isNetworkConnected,
     ],
   );
 
-  const cleanupWebSocket = useCallback(() => {
-    connectionCount = Math.max(0, connectionCount - 1);
 
-    if (connectionCount <= 0) {
-      if (retryTimeout) {
-        clearTimeout(retryTimeout);
-        retryTimeout = null;
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
 
-      if (podcastPollingInterval) {
-        clearInterval(podcastPollingInterval);
-        podcastPollingInterval = null;
-      }
-      if (podcastFetchDebounceTimeout) {
-        clearTimeout(podcastFetchDebounceTimeout);
-        podcastFetchDebounceTimeout = null;
-      }
-      isPodcastPlaying = false;
-      lastPodcastFetch = 0;
-
-      isAttemptingReconnect = false;
-      isConnecting = false;
-
-      if (globalWebSocket) {
-        if (keepAliveInterval) {
-          clearInterval(keepAliveInterval);
-          keepAliveInterval = null;
-        }
-
-        globalWebSocket.onclose = null;
-        globalWebSocket.onerror = null;
-        globalWebSocket.onmessage = null;
-        globalWebSocket.onopen = null;
-
-        if (
-          globalWebSocket.readyState === WebSocket.OPEN ||
-          globalWebSocket.readyState === WebSocket.CONNECTING
-        ) {
-          try {
-            globalWebSocket.close(1000, "Client cleanup");
-          } catch (e) {
-            /* ignore */
-          }
-        }
-        globalWebSocket = null;
-        globalConnectionId = null;
-        isInitialized = false;
-        connectionErrors = 0;
-      }
-    }
-    webSocketRef.current = null;
-  }, [reconnectTimeoutRef]);
-
-  const connectWebSocket = useCallback(async () => {
-    if (
-      (isConnecting &&
-        globalWebSocket &&
-        globalWebSocket.readyState === WebSocket.CONNECTING) ||
-      isAttemptingReconnect ||
-      !isNetworkConnected
-    ) {
-      return;
-    }
-
-    isAttemptingReconnect = true;
-
-    try {
-      await waitForNetwork();
-    } catch (error) {
-      isAttemptingReconnect = false;
-      return;
-    }
-
-    connectionCount++;
-
-    if (globalWebSocket) {
-      if (globalWebSocket.readyState === WebSocket.OPEN) {
-        webSocketRef.current = globalWebSocket;
-        connectionIdRef.current = globalConnectionId;
-        if (!initialStateLoadedRef.current) {
-          await networkAwareRequest(() => fetchCurrentPlayback());
-        }
-        isAttemptingReconnect = false;
-        return;
-      }
-      if (globalWebSocket.readyState === WebSocket.CONNECTING) {
-        webSocketRef.current = globalWebSocket;
-        isAttemptingReconnect = false;
-        return;
-      }
-      globalWebSocket.onopen = null;
-      globalWebSocket.onmessage = null;
-      globalWebSocket.onerror = null;
-      globalWebSocket.onclose = null;
-      if (keepAliveInterval) {
-        clearInterval(keepAliveInterval);
-        keepAliveInterval = null;
-      }
-      if (
-        globalWebSocket.readyState !== WebSocket.CLOSING &&
-        globalWebSocket.readyState !== WebSocket.CLOSED
-      ) {
-        try {
-          globalWebSocket.close(1000, "Replacing defunct WebSocket");
-        } catch (e) {
-          /* ignore */
-        }
-      }
-      globalWebSocket = null;
-      globalConnectionId = null;
-    }
-
-    connectionErrors = 0;
-
-    if (isConnecting) {
-      isAttemptingReconnect = false;
-      connectionCount = Math.max(0, connectionCount - 1);
-      return;
-    }
-
-    isConnecting = true;
-
-    try {
-      throw new Error(
-        "WebSocket connection should be handled by useSpotifyWebSocket hook",
-      );
-      webSocketRef.current = globalWebSocket;
-
-      globalWebSocket.onopen = () => {
-        isConnecting = false;
-        isAttemptingReconnect = false;
-        connectionErrors = 0;
-        isInitialized = true;
-
-        if (keepAliveInterval) {
-          clearInterval(keepAliveInterval);
-        }
-
-        keepAliveInterval = setInterval(() => {
-          if (
-            globalWebSocket &&
-            globalWebSocket.readyState === WebSocket.OPEN
-          ) {
-            globalWebSocket.send(JSON.stringify({ type: "ping" }));
-          } else {
-            clearInterval(keepAliveInterval);
-            keepAliveInterval = null;
-          }
-        }, 15000);
-      };
-
-      globalWebSocket.onmessage = async (event) => {
-        const message = JSON.parse(event.data);
-
-        if ("headers" in message && message.headers["Spotify-Connection-Id"]) {
-          globalConnectionId = message.headers["Spotify-Connection-Id"];
-          connectionIdRef.current = globalConnectionId;
-
-          try {
-            console.log("WebSocket connection established");
-
-            if (!initialStateLoadedRef.current) {
-              await networkAwareRequest(() => fetchCurrentPlayback());
-            }
-          } catch (error) {
-            console.error("Error setting up notifications:", error);
-            if (error.name === "NetworkError" || !isNetworkConnected) {
-              cleanupWebSocket();
-            }
-          }
-        } else if (message.type === "message" && message.payloads) {
-          // Old PLAYER_STATE_CHANGED handler removed - now handled by global listener
-        }
-      };
-
-      globalWebSocket.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        if (isConnecting) isConnecting = false;
-        if (isAttemptingReconnect) isAttemptingReconnect = false;
-        connectionErrors += 1;
-
-        if (connectionErrors > maxRetryAttempts) {
-          if (
-            globalWebSocket &&
-            (globalWebSocket.readyState === WebSocket.OPEN ||
-              globalWebSocket.readyState === WebSocket.CONNECTING)
-          ) {
-            try {
-              globalWebSocket.close(1008, "Too many errors");
-            } catch (e) {
-              /*ignore*/
-            }
-          }
-        }
-      };
-
-      globalWebSocket.onclose = (event) => {
-        const wasGloballyConnecting = isConnecting;
-        isConnecting = false;
-        isAttemptingReconnect = false;
-
-        if (keepAliveInterval) {
-          clearInterval(keepAliveInterval);
-          keepAliveInterval = null;
-        }
-
-        if (connectionCount > 0 && isNetworkConnected) {
-          const backoffTime = Math.min(
-            1000 *
-              Math.pow(
-                1.5,
-                Math.min(
-                  connectionErrors,
-                  wasGloballyConnecting
-                    ? connectionErrors + 1
-                    : connectionErrors,
-                ),
-              ),
-            15000,
-          );
-          connectionErrors++;
-
-          if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current);
-          }
-
-          reconnectTimeoutRef.current = setTimeout(async () => {
-            if (connectionCount > 0 && isNetworkConnected) {
-              try {
-                await waitForNetwork();
-                if (isNetworkConnected) {
-                  await fetchCurrentPlayback();
-                  connectWebSocket();
-                } else {
-                  isAttemptingReconnect = false;
-                }
-              } catch (error) {
-                console.error("Failed during pre-reconnect sequence:", error);
-                isAttemptingReconnect = false;
-                if (connectionCount > 0 && isNetworkConnected) {
-                  const nextRetryTime = Math.min(backoffTime * 2, 30000);
-                  reconnectTimeoutRef.current = setTimeout(() => {
-                    connectWebSocket();
-                  }, nextRetryTime);
-                }
-              }
-            } else {
-              isAttemptingReconnect = false;
-            }
-          }, backoffTime);
-        } else {
-          isAttemptingReconnect = false;
-        }
-      };
-    } catch (error) {
-      console.error("Error creating WebSocket:", error);
-      isConnecting = false;
-      isAttemptingReconnect = false;
-      connectionErrors += 1;
-      connectionCount = Math.max(0, connectionCount - 1);
-      if (globalWebSocket === webSocketRef.current) {
-        globalWebSocket = null;
-      }
-    }
-  }, [
-    fetchCurrentPlayback,
-    cleanupWebSocket,
-    processPlaybackState,
-    isNetworkConnected,
-  ]);
 
   useEffect(() => {
-    const subscriberId = subscriberIdRef.current;
-    eventSubscribers.push({
-      id: subscriberId,
-      onPlaybackState: processPlaybackState,
-    });
-    return () => {
-      eventSubscribers = eventSubscribers.filter(
-        (sub) => sub.id !== subscriberId,
-      );
-    };
-  }, [processPlaybackState]);
-
-  useEffect(() => {
-    if (wsConnected) {
-      if (!initialPlaybackFetchDone) {
-        initialPlaybackFetchDone = true;
-        fetchCurrentPlayback(true);
-      }
-
-      const handleNetworkRestored = () => {
-        if (
-          !globalWebSocket ||
-          (globalWebSocket.readyState !== WebSocket.OPEN &&
-            globalWebSocket.readyState !== WebSocket.CONNECTING)
-        ) {
-          connectWebSocket();
-          fetchCurrentPlayback(true);
-        }
-      };
-
-      window.addEventListener("online", handleNetworkRestored);
-      window.addEventListener("networkRestored", handleNetworkRestored);
-
-      return () => {
-        cleanupWebSocket();
-        window.removeEventListener("online", handleNetworkRestored);
-        window.removeEventListener("networkRestored", handleNetworkRestored);
-      };
+    if (wsConnected && !initialPlaybackFetchDone) {
+      initialPlaybackFetchDone = true;
+      fetchCurrentPlayback(true);
     }
-    return () => {
-      cleanupWebSocket();
-    };
-  }, [wsConnected, connectWebSocket, cleanupWebSocket, fetchCurrentPlayback]);
+  }, [wsConnected, fetchCurrentPlayback]);
 
-  useEffect(() => {
-    if (reconnectTimeoutRef.current) {
-      return () => {
-        clearTimeout(reconnectTimeoutRef.current);
-      };
-    }
-  }, []);
 
   useEffect(() => {
     if (wsConnected && immediateLoad && !initialPlaybackFetchDone) {
@@ -612,29 +269,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     }
   }, [wsConnected, immediateLoad, fetchCurrentPlayback]);
 
-  useEffect(() => {
-    const handleNetworkRestored = async () => {
-      if (
-        globalWebSocket &&
-        (globalWebSocket.readyState === WebSocket.OPEN ||
-          globalWebSocket.readyState === WebSocket.CONNECTING)
-      ) {
-        return;
-      }
-
-      cleanupWebSocket();
-      connectionErrors = 0;
-      isAttemptingReconnect = false;
-      connectWebSocket();
-      await fetchCurrentPlayback(true);
-    };
-
-    window.addEventListener("networkRestored", handleNetworkRestored);
-
-    return () => {
-      window.removeEventListener("networkRestored", handleNetworkRestored);
-    };
-  }, [connectWebSocket, fetchCurrentPlayback, cleanupWebSocket]);
 
   useEffect(() => {
     if (!wsConnected) return;

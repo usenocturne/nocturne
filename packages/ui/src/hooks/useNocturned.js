@@ -1,10 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNetwork } from "./useNetwork";
-import {
-  networkAwareRequest,
-  waitForNetwork,
-} from "../utils/networkAwareRequest";
-import { checkNetworkConnectivity } from "../utils/networkChecker";
 
 const API_BASE = "http://localhost:5000";
 
@@ -175,18 +169,6 @@ const setupGlobalWebSocket = async () => {
       console.log("Connected to WebSocket");
       cleanupWsReconnection();
 
-      try {
-        const networkStatus = await checkNetworkConnectivity();
-        console.log(
-          "Network status after WebSocket reconnection:",
-          networkStatus,
-        );
-      } catch (error) {
-        console.error(
-          "Failed to check network status after WebSocket reconnection:",
-          error,
-        );
-      }
 
       globalWsListeners.forEach(
         (listener) => listener.onOpen && listener.onOpen(socket),
@@ -287,9 +269,7 @@ export const useNocturned = () => {
           options.body = JSON.stringify(body);
         }
 
-        const response = await networkAwareRequest(() => fetch(url, options), {
-          skipNetworkCheck: true,
-        });
+        const response = await fetch(url, options);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -607,13 +587,6 @@ export const useBluetooth = () => {
   const RECONNECT_INTERVAL = 5000;
   const INITIAL_RECONNECT_DELAY = 1000;
 
-  const { isConnected: isInternetConnected } = useNetwork();
-  const networkCheckBypass =
-    typeof localStorage !== "undefined" &&
-    localStorage.getItem("networkCheckBypass") === "true";
-
-  const skipBluetoothStep = isInternetConnected || networkCheckBypass;
-
   const cleanupReconnectTimer = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
@@ -756,10 +729,6 @@ export const useBluetooth = () => {
   );
 
   useEffect(() => {
-    if (skipBluetoothStep) {
-      return;
-    }
-
     const lastDeviceAddress = localStorage.getItem(
       "lastConnectedBluetoothDevice",
     );
@@ -779,7 +748,7 @@ export const useBluetooth = () => {
       setReconnectAttempt(0);
       isReconnecting.current = false;
     };
-  }, [attemptReconnect, cleanupReconnectTimer, skipBluetoothStep]);
+  }, [attemptReconnect, cleanupReconnectTimer]);
 
   const stopNetworkPolling = useCallback(() => {
     isNetworkPollingActive = false;

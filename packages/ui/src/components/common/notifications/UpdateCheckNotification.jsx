@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useNotifications } from "../../../contexts/NotificationContext";
 import { useUpdateCheck } from "../../../hooks/useUpdateCheck";
-import { waitForStableNetwork } from "../../../utils/networkAwareRequest";
 import { SettingsUpdateIcon } from "../icons";
 
 function UpdateCheckNotification({
@@ -24,10 +23,6 @@ function UpdateCheckNotification({
     hasCheckedRef.current = true;
 
     (async () => {
-      try {
-        await waitForStableNetwork(5000);
-      } catch {}
-      await new Promise((r) => setTimeout(r, 3000));
       await refetchInfo();
       checkForUpdates();
     })();

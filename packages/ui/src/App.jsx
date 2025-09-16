@@ -6,12 +6,8 @@ import Home from "./pages/Home";
 import ContentView from "./components/content/ContentView";
 import NowPlaying from "./components/player/NowPlaying";
 import DeviceSwitcherModal from "./components/player/DeviceSwitcherModal";
-import NetworkPasswordModal from "./components/common/modals/NetworkPasswordModal";
-import ConnectorQRModal from "./components/common/modals/ConnectorQRModal";
 import ButtonMappingOverlay from "./components/common/overlays/ButtonMappingOverlay";
-import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import GradientBackground from "./components/common/GradientBackground";
-import { useNetwork } from "./hooks/useNetwork";
 import { useGradientState } from "./hooks/useGradientState";
 import { DeviceSwitcherContext } from "./hooks/useSpotifyPlayerControls";
 import {
@@ -22,7 +18,6 @@ import {
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
 import { SettingsProvider } from "./contexts/SettingsContext";
-import { ConnectorProvider } from "./contexts/ConnectorContext";
 import React from "react";
 import {
   NotificationProvider,
@@ -36,16 +31,8 @@ import { CheckIcon } from "./components/common/icons";
 import { SettingsUpdateIcon } from "./components/common/icons";
 import UpdateCheckNotification from "./components/common/notifications/UpdateCheckNotification";
 import UpdateScreen from "./components/common/UpdateScreen";
-
-export const NetworkContext = React.createContext({
-  selectedNetwork: null,
-  setSelectedNetwork: () => {},
-});
-
-export const ConnectorContext = React.createContext({
-  showConnectorModal: false,
-  setShowConnectorModal: () => {},
-});
+import NetworkScreen from "./components/auth/NetworkScreen";
+import NetworkBanner from "./components/common/overlays/NetworkBanner";
 
 function useGlobalButtonMapping({
   playTrack,
@@ -280,13 +267,12 @@ function App() {
   const [viewingContent, setViewingContent] = useState(null);
   const [contentSourceSection, setContentSourceSection] = useState(null);
   const [isDeviceSwitcherOpen, setIsDeviceSwitcherOpen] = useState(false);
-  const [selectedNetwork, setSelectedNetwork] = useState(null);
-  const [showConnectorModal, setShowConnectorModal] = useState(false);
   const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] =
     useState(null);
   const [prefetchedDevices, setPrefetchedDevices] = useState(null);
   const [powerMenuVisible, setPowerMenuVisible] = useState(false);
   const powerMenuVisibleRef = useRef(false);
+  const [showNetworkBanner, setShowNetworkBanner] = useState(false);
 
   useEffect(() => {
     powerMenuVisibleRef.current = powerMenuVisible;
@@ -313,13 +299,6 @@ function App() {
     refreshRecentlyPlayed,
   } = useSpotifyData(activeSection, false, true);
 
-  const {
-    isConnected: isInternetConnected,
-    showNetworkBanner,
-    initialCheckDone,
-    initialConnectionFailed,
-    hasEverConnectedThisSession,
-  } = useNetwork();
 
   const {
     version: nocturneVersion,
@@ -345,7 +324,19 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!isInternetConnected) return;
+    const handleShowBanner = () => setShowNetworkBanner(true);
+    const handleHideBanner = () => setShowNetworkBanner(false);
+
+    window.addEventListener("networkBannerShow", handleShowBanner);
+    window.addEventListener("networkBannerHide", handleHideBanner);
+
+    return () => {
+      window.removeEventListener("networkBannerShow", handleShowBanner);
+      window.removeEventListener("networkBannerHide", handleHideBanner);
+    };
+  }, []);
+
+  useEffect(() => {
     if (isInfoLoading) return;
     if (!serial) return;
 
@@ -376,7 +367,7 @@ function App() {
     script.id = "analytics";
 
     document.body.appendChild(script);
-  }, [isInternetConnected, isInfoLoading, serial, analyticsEnabled]);
+  }, [isInfoLoading, serial, analyticsEnabled]);
 
   const {
     pairingRequest,
@@ -488,20 +479,6 @@ function App() {
     openDeviceSwitcher: handleOpenDeviceSwitcher,
   };
 
-  const handleNetworkClose = () => {
-    setSelectedNetwork(null);
-  };
-
-  const networkContextValue = {
-    selectedNetwork,
-    setSelectedNetwork,
-  };
-
-  const connectorContextValue = {
-    showConnectorModal,
-    setShowConnectorModal,
-  };
-
   useEffect(() => {
     const handleNetworkRestored = () => {
       refreshPlaybackState(true);
@@ -578,12 +555,12 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (lastConnectedDevice && isInternetConnected) {
+    if (lastConnectedDevice) {
       setDiscoverable(false);
     } else {
       setDiscoverable(true);
     }
-  }, [lastConnectedDevice, isInternetConnected, setDiscoverable]);
+  }, [lastConnectedDevice, setDiscoverable]);
 
   useEffect(() => {
     if (showTetheringScreen) {
@@ -747,12 +724,6 @@ function App() {
     setActiveSection("artists");
   };
 
-  const handleNetworkCancel = () => {
-    if (lastConnectedDevice) {
-      disconnectDevice(lastConnectedDevice.address);
-    }
-  };
-
   const handleConnectionRestored = () => {
     refreshPlaybackState(true);
     if (!initialDataLoaded) {
@@ -764,25 +735,10 @@ function App() {
   const isUpdateScreenVisible =
     isUpdating || (updateStatus.stage && updateStatus.stage !== "");
 
-  const showConnectionLostScreen =
-    initialCheckDone &&
-    !isUpdateScreenVisible &&
-    !pairingRequest &&
-    !showTetheringScreen &&
-    ((initialConnectionFailed &&
-      !isInternetConnected &&
-      !hasEverConnectedThisSession) ||
-      (!hasEverConnectedThisSession && !isInternetConnected));
+  const showConnectionLostScreen = !isUpdateScreenVisible && !showTutorial && !pairingRequest && !lastConnectedDevice;
+  // const showConnectionLostScreen = false;
 
-  const displayNetworkBanner =
-    initialCheckDone &&
-    !showConnectionLostScreen &&
-    !pairingRequest &&
-    !isUpdating &&
-    updateStatus.stage !== "download" &&
-    updateStatus.stage !== "flash" &&
-    showNetworkBanner &&
-    hasEverConnectedThisSession;
+  const displayNetworkBanner = showNetworkBanner && !showConnectionLostScreen && !isUpdateScreenVisible;
 
   let content;
   if (isUpdateScreenVisible) {
@@ -882,11 +838,8 @@ function App() {
           refetchInfo={refetchInfo}
         />
       )}
-      <ConnectorProvider>
         <SettingsProvider>
           <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
-            <NetworkContext.Provider value={networkContextValue}>
-              <ConnectorContext.Provider value={connectorContextValue}>
                 <Router>
                   <FontLoader />
                   <main
@@ -917,21 +870,14 @@ function App() {
                             ) : null}
                           </>
                         )}
-                      <NetworkBanner visible={displayNetworkBanner} />
+                      <NetworkBanner 
+                        visible={displayNetworkBanner} 
+                        onClose={() => setShowNetworkBanner(false)} 
+                      />
                       <DeviceSwitcherModal
                         isOpen={isDeviceSwitcherOpen}
                         onClose={handleCloseDeviceSwitcher}
                         initialDevices={prefetchedDevices}
-                      />
-                      {showConnectorModal && (
-                        <ConnectorQRModal
-                          onClose={() => setShowConnectorModal(false)}
-                        />
-                      )}
-                      <NetworkPasswordModal
-                        network={selectedNetwork}
-                        onClose={handleNetworkClose}
-                        onConnect={handleNetworkClose}
                       />
                       {!showTutorial && (
                         <ButtonMappingOverlay
@@ -949,11 +895,8 @@ function App() {
                   </main>
                   <NotificationsContainer />
                 </Router>
-              </ConnectorContext.Provider>
-            </NetworkContext.Provider>
           </DeviceSwitcherContext.Provider>
         </SettingsProvider>
-      </ConnectorProvider>
     </NotificationProvider>
   );
 }

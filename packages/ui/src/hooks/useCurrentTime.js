@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "../contexts/SettingsContext";
-import {
-  networkAwareRequest,
-  waitForStableNetwork,
-} from "../utils/networkAwareRequest";
 
 let cachedTimezone = null;
 export const getCachedTimezone = () => cachedTimezone;
@@ -26,15 +22,9 @@ export function useCurrentTime() {
     }
 
     try {
-      await waitForStableNetwork();
-      const response = await networkAwareRequest(
-        () =>
-          fetch("http://localhost:5000/device/date/settimezone", {
-            method: "POST",
-          }),
-        0,
-        { requireNetwork: true },
-      );
+      const response = await fetch("http://localhost:5000/device/date/settimezone", {
+        method: "POST",
+      });
 
       if (!response.ok) {
         console.error(
@@ -64,18 +54,6 @@ export function useCurrentTime() {
     }
   }, [settings.autoTimezoneEnabled]);
 
-  useEffect(() => {
-    const handleNetworkRestored = () => {
-      if (settings.autoTimezoneEnabled && !cachedTimezone) {
-        fetchTimezone();
-      }
-    };
-
-    window.addEventListener("networkRestored", handleNetworkRestored);
-    return () => {
-      window.removeEventListener("networkRestored", handleNetworkRestored);
-    };
-  }, [settings.autoTimezoneEnabled]);
 
   useEffect(() => {
     const updateTime = async () => {

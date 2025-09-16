@@ -1,68 +1,27 @@
 import React, { useEffect } from "react";
-import { waitForStableNetwork } from "../../utils/networkAwareRequest";
-import { useAuth } from "../../hooks/useAuth";
 import { useGradientState } from "../../hooks/useGradientState";
-import { useNetwork } from "../../hooks/useNetwork";
 import NocturneIcon from "../common/icons/NocturneIcon";
-import { useConnector } from "../../contexts/ConnectorContext";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  WifiMaxIcon,
   BluetoothIcon,
 } from "../common/icons";
-import WiFiNetworks from "../settings/network/WiFiNetworks";
 import BluetoothDevices from "../settings/network/BluetoothDevices";
 import GradientBackground from "../common/GradientBackground";
 
 const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
-  const { refreshTokens } = useAuth();
   const [showMain, setShowMain] = React.useState(true);
   const [showParent, setShowParent] = React.useState(false);
   const [showSubpage, setShowSubpage] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [activeSubItem, setActiveSubItem] = React.useState(null);
-  const { isConnected: isInternetConnected, hasEverConnectedThisSession } =
-    useNetwork();
-  const { isRestoringWifiNetworks, isConnectorAvailable } = useConnector();
-  const showWifiConnectMessage =
-    isConnectorAvailable && isRestoringWifiNetworks;
 
   useEffect(() => {
     let cancelled = false;
 
     const handleNetworkRestored = async () => {
-      if (isInternetConnected && hasEverConnectedThisSession) {
-        try {
-          await waitForStableNetwork();
-          let refreshSuccess = false;
-
-          try {
-            refreshSuccess = await refreshTokens();
-          } catch (tokenErr) {
-            console.error("Token refresh attempt failed:", tokenErr);
-          }
-
-          if (!refreshSuccess) {
-            for (let i = 0; i < 2 && !refreshSuccess; i++) {
-              await new Promise((res) => setTimeout(res, 3000));
-              try {
-                refreshSuccess = await refreshTokens();
-              } catch (retryErr) {
-                console.error(`Retry ${i + 1} token refresh failed:`, retryErr);
-              }
-            }
-          }
-        } catch (err) {
-          console.error(
-            "Error while waiting for stable network or refreshing token:",
-            err,
-          );
-        } finally {
-          if (!cancelled && onConnectionRestored) {
-            onConnectionRestored();
-          }
-        }
+      if (!cancelled && onConnectionRestored) {
+        onConnectionRestored();
       }
     };
 
@@ -71,12 +30,7 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
     return () => {
       cancelled = true;
     };
-  }, [
-    isInternetConnected,
-    hasEverConnectedThisSession,
-    refreshTokens,
-    onConnectionRestored,
-  ]);
+  }, [onConnectionRestored]);
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100",
@@ -98,15 +52,6 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
 
   const networkOptions = [
     {
-      id: "wifi",
-      title: "Wi-Fi",
-      icon: WifiMaxIcon,
-      subpage: {
-        type: "custom",
-        component: WiFiNetworks,
-      },
-    },
-    {
       id: "bluetooth",
       title: "Bluetooth",
       icon: BluetoothIcon,
@@ -121,8 +66,11 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
+    const bluetoothOption = networkOptions.find(opt => opt.id === 'bluetooth');
+    setActiveSubItem(bluetoothOption);
+    
     setMainClasses("-translate-x-full opacity-0");
-    setParentClasses("translate-x-0 opacity-100");
+    setSubpageClasses("translate-x-0 opacity-100");
 
     setTimeout(() => {
       if (document.querySelector(".settings-scroll-container")) {
@@ -132,7 +80,7 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
 
     setTimeout(() => {
       setShowMain(false);
-      setShowParent(true);
+      setShowSubpage(true);
       setIsAnimating(false);
     }, ANIMATION_DURATION);
   };
@@ -164,7 +112,7 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
 
     if (showSubpage) {
       setSubpageClasses("translate-x-full opacity-0");
-      setParentClasses("translate-x-0 opacity-100");
+      setMainClasses("translate-x-0 opacity-100");
 
       setTimeout(() => {
         if (document.querySelector(".settings-scroll-container")) {
@@ -174,7 +122,7 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
 
       setTimeout(() => {
         setShowSubpage(false);
-        setShowParent(true);
+        setShowMain(true);
         setActiveSubItem(null);
         setIsAnimating(false);
       }, ANIMATION_DURATION);
@@ -238,27 +186,19 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
 
                 <div className="space-y-4">
                   <h2 className="text-5xl text-white tracking-tight font-semibold w-[24rem]">
-                    {showWifiConnectMessage
-                      ? "Connecting to Wi-Fi"
-                      : "Connection Lost"}
+                    Connection Lost
                   </h2>
-                  {showWifiConnectMessage ? (
-                    <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                      Connecting to Wi-Fi...
-                    </p>
-                  ) : (
-                    <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                      Enable Bluetooth Tethering and connect to "Nocturne" in
-                      your phone's settings.
-                    </p>
-                  )}
+                  <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
+                    Enable Bluetooth Tethering and connect to "Nocturne" in
+                    your phone's settings.
+                  </p>
 
                   <button
                     onClick={openNetworkSettings}
                     className="mt-4 bg-white/10 hover:bg-white/20 transition-colors duration-200 rounded-xl px-6 py-3 border border-white/10 focus:outline-none"
                   >
                     <span className="text-[28px] font-[560] text-white tracking-tight">
-                      Network Settings
+                      Bluetooth Settings
                     </span>
                   </button>
                 </div>

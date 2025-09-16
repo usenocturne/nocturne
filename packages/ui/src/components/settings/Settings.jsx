@@ -23,11 +23,9 @@ import {
   SettingsPlaybackIcon,
   SettingsSupportIcon,
   BluetoothIcon,
-  WifiMaxIcon,
 } from "../common/icons";
 import AccountInfo from "./AccountInfo";
 import SoftwareUpdate from "./SoftwareUpdate";
-import WiFiNetworks from "./network/WiFiNetworks";
 import BluetoothDevices from "./network/BluetoothDevices";
 import { useSettings } from "../../contexts/SettingsContext";
 
@@ -100,30 +98,11 @@ const settingsStructure = {
       },
     ],
   },
-  network: {
-    title: "Network",
-    icon: WifiMaxIcon,
-    type: "parent",
-    items: [
-      {
-        id: "wifi",
-        title: "Wi-Fi",
-        icon: WifiMaxIcon,
-        subpage: {
-          type: "custom",
-          component: WiFiNetworks,
-        },
-      },
-      {
-        id: "bluetooth",
-        title: "Bluetooth",
-        icon: BluetoothIcon,
-        subpage: {
-          type: "custom",
-          component: BluetoothDevices,
-        },
-      },
-    ],
+  bluetooth: {
+    title: "Bluetooth",
+    icon: BluetoothIcon,
+    type: "custom",
+    component: BluetoothDevices,
   },
   playback: {
     title: "Playback",
@@ -739,7 +718,28 @@ export default function Settings({
     setIsAnimating(true);
     shouldExitToRecents.current = false;
 
-    if (showMain) {
+    if (showMain && settingsStructure[page]?.type === "custom" && settingsStructure[page]?.component) {
+      setMainClasses("-translate-x-full opacity-0");
+      setSubpageClasses("translate-x-0 opacity-100");
+      setActiveSubItem({ 
+        id: page, 
+        title: settingsStructure[page].title,
+        type: "custom",
+        component: settingsStructure[page].component
+      });
+
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      }, ANIMATION_DURATION / 3);
+
+      setTimeout(() => {
+        setShowMain(false);
+        setShowSubpage(true);
+        setIsAnimating(false);
+      }, ANIMATION_DURATION);
+    } else if (showMain) {
       setMainClasses("-translate-x-full opacity-0");
       setParentClasses("translate-x-0 opacity-100");
       setActiveParent(page);
@@ -785,21 +785,39 @@ export default function Settings({
     setIsAnimating(true);
 
     if (showSubpage) {
-      setSubpageClasses("translate-x-full opacity-0");
-      setParentClasses("translate-x-0 opacity-100");
+      if (activeSubItem && settingsStructure[activeSubItem.id]?.type === "custom") {
+        setSubpageClasses("translate-x-full opacity-0");
+        setMainClasses("translate-x-0 opacity-100");
 
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = 0;
-        }
-      }, ANIMATION_DURATION / 3);
+        setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0;
+          }
+        }, ANIMATION_DURATION / 3);
 
-      setTimeout(() => {
-        setShowSubpage(false);
-        setShowParent(true);
-        setActiveSubItem(null);
-        setIsAnimating(false);
-      }, ANIMATION_DURATION);
+        setTimeout(() => {
+          setShowSubpage(false);
+          setShowMain(true);
+          setActiveSubItem(null);
+          setIsAnimating(false);
+        }, ANIMATION_DURATION);
+      } else {
+        setSubpageClasses("translate-x-full opacity-0");
+        setParentClasses("translate-x-0 opacity-100");
+
+        setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0;
+          }
+        }, ANIMATION_DURATION / 3);
+
+        setTimeout(() => {
+          setShowSubpage(false);
+          setShowParent(true);
+          setActiveSubItem(null);
+          setIsAnimating(false);
+        }, ANIMATION_DURATION);
+      }
     } else if (showParent) {
       setParentClasses("translate-x-full opacity-0");
       setMainClasses("translate-x-0 opacity-100");
