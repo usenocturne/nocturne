@@ -97,7 +97,7 @@ Nocturne is a massive endeavor, and the team has spent every day over the last y
 
 All donations are split between the three members of the Nocturne team and go towards the development of future features. We are so grateful for your support!
 
-[Donation Page](https://usenocturne.com/donate)
+[Donation Page](https://usenocturne.com/support)
 
 ## Building
 
