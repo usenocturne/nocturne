@@ -483,11 +483,7 @@ export default function NowPlaying({
 
   useEffect(() => {
     const checkCurrentTrackLiked = async () => {
-      if (
-        trackId &&
-        currentPlayback?.item?.type === "track" &&
-        !isCheckingLike
-      ) {
+      if (trackId && !isCheckingLike) {
         setIsCheckingLike(true);
         try {
           if (trackId !== currentTrackIdRef.current) {
@@ -500,14 +496,14 @@ export default function NowPlaying({
         } finally {
           setIsCheckingLike(false);
         }
-      } else if (currentPlayback?.item?.type !== "track") {
+      } else if (!trackId) {
         setIsLiked(false);
         currentTrackIdRef.current = null;
       }
     };
 
     checkCurrentTrackLiked();
-  }, [trackId, currentPlayback?.item?.type, isCheckingLike, checkIsTrackLiked]);
+  }, [trackId, isCheckingLike, checkIsTrackLiked]);
 
   const handleSkipNext = useCallback(async () => {
     await skipToNext();
@@ -540,8 +536,7 @@ export default function NowPlaying({
   ]);
 
   const handleToggleLike = useCallback(async () => {
-    if (!trackId || currentPlayback?.item?.type !== "track" || isCheckingLike)
-      return;
+    if (!trackId || isCheckingLike) return;
 
     try {
       if (isLiked) {
@@ -555,14 +550,7 @@ export default function NowPlaying({
       setIsLiked(!isLiked);
       console.error("Error toggling track like:", error);
     }
-  }, [
-    trackId,
-    currentPlayback?.item?.type,
-    isCheckingLike,
-    isLiked,
-    unlikeTrack,
-    likeTrack,
-  ]);
+  }, [trackId, isCheckingLike, isLiked, unlikeTrack, likeTrack]);
 
   const handleScrubbingChange = (scrubbing) => {
     setIsProgressScrubbing(scrubbing);
