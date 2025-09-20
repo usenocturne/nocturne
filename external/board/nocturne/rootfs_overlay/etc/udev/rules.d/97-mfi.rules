@@ -1,0 +1,2 @@
+SUBSYSTEM=="module" DEVPATH=="/module/apple_mfi_auth_i2c" ACTION=="add" RUN+="/bin/add-mfi-dev"
+SUBSYSTEM=="module" DEVPATH=="/module/apple_mfi_auth_i2c" ACTION=="remove" RUN+="/bin/remove-mfi-dev"
