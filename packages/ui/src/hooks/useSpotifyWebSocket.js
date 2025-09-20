@@ -19,6 +19,7 @@ export function useSpotifyWebSocket() {
   const [error, setError] = useState(null);
   const pendingRequestsRef = useRef(new Map());
   const listenerIdRef = useRef(null);
+  const messageQueueRef = useRef([]);
 
   const sendSpotifyCommand = useCallback(
     (method, params = {}) => {
@@ -30,47 +31,81 @@ export function useSpotifyWebSocket() {
           return;
         }
 
-        if (globalWs.readyState !== WebSocket.OPEN) {
-          console.warn(
-            `WebSocket readyState is ${globalWs.readyState}, but attempting to send anyway`,
-          );
-          if (
-            globalWs.readyState === WebSocket.CLOSED ||
-            globalWs.readyState === WebSocket.CLOSING
-          ) {
-            reject(new Error("WebSocket is closed"));
-            return;
-          }
+        if (globalWs.readyState === WebSocket.CONNECTING) {
+          const waitForConnection = () => {
+            const ws = getGlobalWebSocket();
+            if (!ws) {
+              reject(new Error("WebSocket disconnected while waiting"));
+              return;
+            }
+            
+            if (ws.readyState === WebSocket.OPEN) {
+              sendMessage(ws, method, params, resolve, reject);
+            } else if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+              reject(new Error("WebSocket closed while waiting"));
+            } else {
+              setTimeout(waitForConnection, 100);
+            }
+          };
+          
+          const timeoutId = setTimeout(() => {
+            reject(new Error("WebSocket connection timeout"));
+          }, 10000);
+          
+          const originalResolve = resolve;
+          const originalReject = reject;
+          
+          resolve = (...args) => {
+            clearTimeout(timeoutId);
+            originalResolve(...args);
+          };
+          
+          reject = (...args) => {
+            clearTimeout(timeoutId);
+            originalReject(...args);
+          };
+          
+          waitForConnection();
+          return;
         }
 
-        const messageId = crypto.randomUUID();
-        const message = {
-          type: "request",
-          id: messageId,
-          method,
-          params,
-        };
-
-        pendingRequestsRef.current.set(messageId, { resolve, reject });
-
-        try {
-          globalWs.send(JSON.stringify(message));
-        } catch (err) {
-          console.error(`WebSocket send failed: ${err.message}`);
-          reject(err);
-          pendingRequestsRef.current.delete(messageId);
+        if (globalWs.readyState === WebSocket.CLOSED || globalWs.readyState === WebSocket.CLOSING) {
+          reject(new Error("WebSocket is closed"));
+          return;
         }
 
-        setTimeout(() => {
-          if (pendingRequestsRef.current.has(messageId)) {
-            pendingRequestsRef.current.delete(messageId);
-            reject(new Error("Request timeout"));
-          }
-        }, 30000);
+        sendMessage(globalWs, method, params, resolve, reject);
       });
     },
     [wsConnected],
   );
+
+  const sendMessage = (ws, method, params, resolve, reject) => {
+    const messageId = crypto.randomUUID();
+    const message = {
+      type: "request",
+      id: messageId,
+      method,
+      params,
+    };
+
+    pendingRequestsRef.current.set(messageId, { resolve, reject });
+
+    try {
+      ws.send(JSON.stringify(message));
+    } catch (err) {
+      console.error(`WebSocket send failed: ${err.message}`);
+      reject(err);
+      pendingRequestsRef.current.delete(messageId);
+    }
+
+    setTimeout(() => {
+      if (pendingRequestsRef.current.has(messageId)) {
+        pendingRequestsRef.current.delete(messageId);
+        reject(new Error("Request timeout"));
+      }
+    }, 30000);
+  };
 
   const handleSpotifyResponse = useCallback((data) => {
     if (data.type === "response" && data.id) {
@@ -109,6 +144,19 @@ export function useSpotifyWebSocket() {
       }
     };
   }, [addMessageListener, removeMessageListener, handleSpotifyResponse]);
+
+  useEffect(() => {
+    if (wsConnected && messageQueueRef.current.length > 0) {
+      const queue = [...messageQueueRef.current];
+      messageQueueRef.current = [];
+      
+      queue.forEach(({ method, params, resolve, reject }) => {
+        sendSpotifyCommand(method, params)
+          .then(resolve)
+          .catch(reject);
+      });
+    }
+  }, [wsConnected, sendSpotifyCommand]);
 
   const getPlayerState = useCallback(async () => {
     try {
