@@ -16,22 +16,6 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [activeSubItem, setActiveSubItem] = React.useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const handleNetworkRestored = async () => {
-      if (!cancelled && onConnectionRestored) {
-        onConnectionRestored();
-      }
-    };
-
-    handleNetworkRestored();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [onConnectionRestored]);
-
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100",
   );
