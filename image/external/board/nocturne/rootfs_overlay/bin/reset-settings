@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+printToKmsg() { echo "RESET_SETTINGS: $1" && echo "RESET_SETTINGS: $1" > /dev/kmsg; }
+
+PARTITION="/dev/settings"
+MOUNT="/mnt"
+
+if ! grep -q "${PARTITION}" /proc/mounts; then
+    /sbin/mkfs.ext4 ${PARTITION} -L settings -F
+
+    mount -t ext4 -o rw ${PARTITION} ${MOUNT}
+
+    chmod 755 -R ${MOUNT}
+
+    mkdir ${MOUNT}/nocturned
+    chown -R nocturne ${MOUNT}/nocturned
+
+    sync
+
+    umount ${MOUNT}
+
+    printToKmsg "${PARTITION} was reset successfully."
+else
+    printToKmsg "${PARTITION} is mounted, exiting..."
+    exit 1
+fi

@@ -1,0 +1,10 @@
+config BR2_PACKAGE_STOCK_BLOBS
+    bool "Install stock blobs"
+	  depends on BR2_INSTALL_LIBSTDCPP
+    help
+      Uses stock binaries for GPU, Weston, Chromium, etc.
+      Must first run ./external/packages/stock-blobs/fetch-stock.sh
+      to populate dl/stock-blobs/.
+
+comment "stock blobs needs a toolchain w/ C++"
+	depends on !BR2_INSTALL_LIBSTDCPP

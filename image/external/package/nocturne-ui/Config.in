@@ -1,0 +1,4 @@
+config BR2_PACKAGE_NOCTURNE_UI
+    bool "Nocturne UI"
+    help
+      Nocturne UI files.

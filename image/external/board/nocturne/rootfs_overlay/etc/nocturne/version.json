@@ -1,0 +1,6 @@
+{
+    "version": "v4.0.0-release-${GIT_HASH}",
+    "shortVersion": "v4.0.0-release",
+    "gitHash": "${GIT_HASH}",
+    "buildDate": "${BUILD_DATE}"
+}

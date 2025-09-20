@@ -1,0 +1,34 @@
+#!/bin/sh
+set -e
+
+printToKmsg() { echo "RESET_DATA: $1" && echo "RESET_DATA: $1" > /dev/kmsg; }
+
+PARTITION="/dev/data"
+MOUNT="/mnt"
+
+if ! grep -q "${PARTITION}" /proc/mounts; then
+    /sbin/mkfs.ext4 ${PARTITION} -d /var -L data -F
+
+    mount -t ext4 -o rw ${PARTITION} ${MOUNT}
+
+    mkdir -p ${MOUNT}/local/etc
+    mkdir -p ${MOUNT}/local/root
+    mkdir -p ${MOUNT}/local/home/nocturne
+    mkdir -p ${MOUNT}/cache/nocturned
+
+    chown -R nocturne ${MOUNT}/local/home/nocturne
+    chown -R nocturne ${MOUNT}/cache/nocturned
+
+    fallocate -l 256M ${MOUNT}/swapfile
+    mkswap ${MOUNT}/swapfile
+    chmod 600 ${MOUNT}/swapfile
+
+    sync
+
+    umount ${MOUNT}
+
+    printToKmsg "${PARTITION} was reset successfully."
+else
+    printToKmsg "${PARTITION} is mounted, exiting..."
+    exit 1
+fi

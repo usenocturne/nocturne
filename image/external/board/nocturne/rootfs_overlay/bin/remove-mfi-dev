@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rm /dev/apple_mfi
