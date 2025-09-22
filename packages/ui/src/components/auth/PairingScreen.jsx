@@ -3,7 +3,7 @@ import { useGradientState } from "../../hooks/useGradientState";
 import { NocturneIcon } from "../common/icons";
 import GradientBackground from "../common/GradientBackground";
 
-const PairingScreen = ({ onAccept, onReject, pin, isConnecting }) => {
+const PairingScreen = ({pin}) => {
   const [gradientState, updateGradientColors] = useGradientState();
 
   useEffect(() => {
@@ -26,22 +26,6 @@ const PairingScreen = ({ onAccept, onReject, pin, isConnecting }) => {
             <p className="text-[28px] text-white tracking-tight">
               Confirm that this pin matches the one on your phone.
             </p>
-            <div className="mt-4 flex space-x-4 justify-center">
-              <button
-                onClick={onReject}
-                disabled={isConnecting}
-                className="flex w-full justify-center text-4xl font-[560] text-white tracking-tight transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10 hover:bg-white/10 disabled:opacity-50 bg-black/20"
-              >
-                Reject
-              </button>
-              <button
-                onClick={onAccept}
-                disabled={isConnecting}
-                className="flex w-full justify-center bg-black/20 hover:bg-white/10 text-4xl font-[560] text-white tracking-tight transition-colors duration-200 rounded-[12px] px-6 py-3 border border-white/10 disabled:opacity-50"
-              >
-                {isConnecting ? "Connecting..." : "Accept"}
-              </button>
-            </div>
           </div>
         </div>
 
