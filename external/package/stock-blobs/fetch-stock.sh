@@ -62,6 +62,7 @@ cp -a "$MNT_PATH"/usr/lib/{libweston-3,weston} "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libasound.so.2.0.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libatomic.so.1.2.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libcairo.so.2.11512.0 "$BUILD_PATH"/usr/lib/
+cp "$MNT_PATH"/usr/lib/libcrypto.so.1.1 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libdrm.so.2.4.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libevdev.so.2.2.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libffi.so.7.1.0 "$BUILD_PATH"/usr/lib/
@@ -69,6 +70,7 @@ cp "$MNT_PATH"/usr/lib/libfontconfig.so.1.12.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libfreetype.so.6.16.1 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libinput.so.10.13.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libjpeg.so.9.3.0 "$BUILD_PATH"/usr/lib/
+cp "$MNT_PATH"/usr/lib/liblua.so.5.3.5 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libMali.so "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libmtdev.so.1.0.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libnspr4.so "$BUILD_PATH"/usr/lib/
