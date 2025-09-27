@@ -21,7 +21,7 @@ export default function SpotifyImage({
     getImageSize,
     isImageLoading,
     hasImageFailed,
-    wsConnected,
+    isSpotifyReady,
   } = useImageLoader();
   const [currentSrc, setCurrentSrc] = useState(fallbackSrc);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,8 +64,7 @@ export default function SpotifyImage({
       return;
     }
 
-    if (!wsConnected) {
-      setCurrentSrc(fallbackSrc);
+    if (!isSpotifyReady) {
       setIsLoading(false);
       return;
     }
@@ -125,7 +124,7 @@ export default function SpotifyImage({
     extractColors,
     fallbackSrc,
     hasImageFailed,
-    wsConnected,
+    isSpotifyReady,
     onLoad,
     onError,
     onColorsExtracted,
@@ -163,7 +162,7 @@ export default function SpotifyImage({
 
   useEffect(() => {
     if (
-      wsConnected &&
+      isSpotifyReady &&
       imageUrl &&
       currentSrc === fallbackSrc &&
       !isLoading &&
@@ -172,7 +171,7 @@ export default function SpotifyImage({
       loadImageData();
     }
   }, [
-    wsConnected,
+    isSpotifyReady,
     imageUrl,
     currentSrc,
     fallbackSrc,

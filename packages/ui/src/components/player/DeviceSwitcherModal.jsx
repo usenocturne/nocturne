@@ -17,20 +17,20 @@ import {
 import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
 
 const DeviceSwitcherModal = ({ isOpen, onClose, initialDevices }) => {
-  const { wsConnected, getDevices, transferPlayback } = useSpotifyWebSocket();
+  const { isSpotifyReady, getDevices, transferPlayback } = useSpotifyWebSocket();
   const [devices, setDevices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || !wsConnected) return;
+    if (!isOpen || !isSpotifyReady) return;
 
     if (!hasFetched) {
       fetchDevices();
       setHasFetched(true);
     }
-  }, [isOpen, wsConnected]);
+  }, [isOpen, isSpotifyReady]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -48,7 +48,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, initialDevices }) => {
   }, [isOpen]);
 
   const fetchDevices = async () => {
-    if (!wsConnected) return;
+    if (!isSpotifyReady) return;
 
     try {
       setIsLoading(true);
@@ -63,7 +63,7 @@ const DeviceSwitcherModal = ({ isOpen, onClose, initialDevices }) => {
   };
 
   const handleDeviceSelect = async (deviceId) => {
-    if (!wsConnected) return;
+    if (!isSpotifyReady) return;
 
     try {
       setIsTransferring(true);

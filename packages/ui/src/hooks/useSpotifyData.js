@@ -116,7 +116,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   const { loadImage, getImageSize } = useImageLoader();
 
   const {
-    wsConnected,
+    isSpotifyReady,
     sendSpotifyCommand,
     getUserPlaylists,
     getUserTopTracks,
@@ -188,7 +188,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   }, [currentlyPlayingAlbum, activeSection]);
 
   const fetchRecentlyPlayed = useCallback(async () => {
-    if (!wsConnected) return;
+    if (!isSpotifyReady) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
@@ -292,7 +292,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
     }
   }, [
-    wsConnected,
+    isSpotifyReady,
     getRecentlyPlayed,
     getPlayerState,
     extractAlbumFromPlayerState,
@@ -301,7 +301,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
   const fetchUserPlaylists = useCallback(
     async (isLoadMore = false) => {
-      if (!wsConnected) return;
+      if (!isSpotifyReady) return;
 
       if (isLoadMore && sectionLoadingRefs.current.playlists) {
         return;
@@ -374,12 +374,12 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [wsConnected, getUserPlaylists, lastOffsets],
+    [isSpotifyReady, getUserPlaylists, lastOffsets],
   );
 
   const fetchTopArtists = useCallback(
     async (isLoadMore = false) => {
-      if (!wsConnected) return;
+      if (!isSpotifyReady) return;
 
       if (isLoadMore && sectionLoadingRefs.current.artists) {
         return;
@@ -449,12 +449,12 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [wsConnected, getUserTopArtists],
+    [isSpotifyReady, getUserTopArtists],
   );
 
   const fetchLikedSongs = useCallback(
     async (isLoadMore = false) => {
-      if (!wsConnected) return;
+      if (!isSpotifyReady) return;
 
       if (isLoadMore && sectionLoadingRefs.current.liked) {
         return;
@@ -534,12 +534,12 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [wsConnected, getUserTracks, lastOffsets],
+    [isSpotifyReady, getUserTracks, lastOffsets],
   );
 
   const fetchUserShows = useCallback(
     async (isLoadMore = false) => {
-      if (!wsConnected) return;
+      if (!isSpotifyReady) return;
 
       if (isLoadMore && sectionLoadingRefs.current.shows) {
         return;
@@ -611,11 +611,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [wsConnected, getUserShows, lastOffsets],
+    [isSpotifyReady, getUserShows, lastOffsets],
   );
 
   const fetchRadioMixes = useCallback(async () => {
-    if (!wsConnected) return [];
+    if (!isSpotifyReady) return [];
 
     try {
       setIsLoading((prev) => ({ ...prev, radioMixes: true }));
@@ -799,11 +799,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     } finally {
       setIsLoading((prev) => ({ ...prev, radioMixes: false }));
     }
-  }, [wsConnected, sendSpotifyCommand, getPlaylist]);
+  }, [isSpotifyReady, sendSpotifyCommand, getPlaylist]);
 
   const loadMoreForSection = useCallback(
     async (section) => {
-      if (!wsConnected) return;
+      if (!isSpotifyReady) return;
 
       if (section === "recents") {
         return null;
@@ -852,7 +852,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       return null;
     },
     [
-      wsConnected,
+      isSpotifyReady,
       nextTokens,
       fetchUserPlaylists,
       fetchTopArtists,
@@ -984,8 +984,8 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
   const loadInitialData = useCallback(async () => {
     if (skipInitialFetch) return;
-    if (!wsConnected) {
-      console.log("WebSocket not connected, skipping data load");
+    if (!isSpotifyReady) {
+      console.log("Spotify not ready, skipping data load");
       return;
     }
     if (
@@ -1120,7 +1120,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       }
     }
   }, [
-    wsConnected,
+    isSpotifyReady,
     isInitializing,
     initialDataLoaded,
     retryCount,
@@ -1136,7 +1136,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
   useEffect(() => {
     if (skipInitialFetch) return;
-    if (wsConnected && !initialDataLoaded && !isInitializing) {
+    if (isSpotifyReady && !initialDataLoaded && !isInitializing) {
       loadInitialData();
     }
 
@@ -1155,7 +1155,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       });
     };
   }, [
-    wsConnected,
+    isSpotifyReady,
     initialDataLoaded,
     isInitializing,
     loadInitialData,
@@ -1163,7 +1163,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   ]);
 
   const refreshData = useCallback(async () => {
-    if (!wsConnected) return;
+    if (!isSpotifyReady) return;
 
     if (dataFetchingInProgressRef.current) {
       console.log("Skipping refresh - data fetching already in progress");
@@ -1194,6 +1194,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       dataFetchingInProgressRef.current = false;
     }
   }, [
+    isSpotifyReady,
     fetchUserPlaylists,
     fetchTopArtists,
     fetchLikedSongs,

@@ -8,8 +8,10 @@ import {
 } from "../common/icons";
 import BluetoothDevices from "../settings/network/BluetoothDevices";
 import GradientBackground from "../common/GradientBackground";
+import { useBluetooth } from "../../hooks/useNocturned";
 
-const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
+const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored, reconnectionExhausted = false }) => {
+  const { setDiscoverable } = useBluetooth();
   const [showMain, setShowMain] = React.useState(true);
   const [showParent, setShowParent] = React.useState(false);
   const [showSubpage, setShowSubpage] = React.useState(false);
@@ -33,6 +35,18 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored }) => {
   useEffect(() => {
     updateGradientColors(null, "auth");
   }, [updateGradientColors]);
+
+  // Ensure Bluetooth is discoverable while this screen is visible (unless reconnection exhausted)
+  useEffect(() => {
+    // Only set discoverable if reconnection attempts are not exhausted
+    // When exhausted, the user needs to manually go to Bluetooth settings
+    if (!reconnectionExhausted) {
+      setDiscoverable(true);
+    }
+    return () => {
+      setDiscoverable(false);
+    };
+  }, [setDiscoverable, reconnectionExhausted]);
 
   const networkOptions = [
     {

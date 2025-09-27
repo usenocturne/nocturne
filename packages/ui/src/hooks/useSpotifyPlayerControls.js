@@ -16,7 +16,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
   const lastVolumeUpdateTimeRef = useRef(0);
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
   const {
-    wsConnected,
+    isSpotifyReady,
     isLoading,
     error,
     playTrack: playTrackWS,
@@ -55,7 +55,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
   const playTrack = useCallback(
     async (trackUri, contextUri = null, uris = null, deviceId = null) => {
-      if (!wsConnected) return false;
+      if (!isSpotifyReady) return false;
 
       try {
         const result = await playTrackWS(trackUri, contextUri, uris, deviceId);
@@ -87,11 +87,11 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, playTrackWS, openDeviceSwitcher, getPlayerState],
+    [isSpotifyReady, playTrackWS, openDeviceSwitcher, getPlayerState],
   );
 
   const pausePlayback = useCallback(async () => {
-    if (!wsConnected) return false;
+    if (!isSpotifyReady) return false;
 
     try {
       await pausePlaybackWS();
@@ -110,10 +110,10 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       console.error("Error pausing playback:", err.message);
       return false;
     }
-  }, [wsConnected, pausePlaybackWS, getPlayerState]);
+  }, [isSpotifyReady, pausePlaybackWS, getPlayerState]);
 
   const skipToNext = useCallback(async () => {
-    if (!wsConnected) return false;
+    if (!isSpotifyReady) return false;
 
     try {
       await skipToNextWS();
@@ -132,10 +132,10 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       console.error("Error skipping to next track:", err.message);
       return false;
     }
-  }, [wsConnected, skipToNextWS, getPlayerState]);
+  }, [isSpotifyReady, skipToNextWS, getPlayerState]);
 
   const skipToPrevious = useCallback(async () => {
-    if (!wsConnected) return false;
+    if (!isSpotifyReady) return false;
 
     try {
       await skipToPreviousWS();
@@ -154,11 +154,11 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       console.error("Error skipping to previous track:", err.message);
       return false;
     }
-  }, [wsConnected, skipToPreviousWS, getPlayerState]);
+  }, [isSpotifyReady, skipToPreviousWS, getPlayerState]);
 
   const seekToPosition = useCallback(
     async (positionMs) => {
-      if (!wsConnected) return false;
+      if (!isSpotifyReady) return false;
 
       try {
         await seekToPositionWS(positionMs);
@@ -168,14 +168,14 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, seekToPositionWS],
+    [isSpotifyReady, seekToPositionWS],
   );
 
   const processVolumeQueue = useCallback(async () => {
     if (
       isVolumeProcessingRef.current ||
       volumeQueueRef.current.length === 0 ||
-      !wsConnected
+      !isSpotifyReady
     ) {
       return;
     }
@@ -220,11 +220,11 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     } else {
       await processRequest();
     }
-  }, [wsConnected, setVolumeWS, openDeviceSwitcher]);
+  }, [isSpotifyReady, setVolumeWS, openDeviceSwitcher]);
 
   const setVolume = useCallback(
     async (volumePercent) => {
-      if (!wsConnected) return false;
+      if (!isSpotifyReady) return false;
 
       const boundedVolume = Math.max(
         0,
@@ -244,12 +244,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
       return true;
     },
-    [wsConnected, processVolumeQueue, volume],
+    [isSpotifyReady, processVolumeQueue, volume],
   );
 
   const checkIsTrackLiked = useCallback(
     async (trackId) => {
-      if (!wsConnected || !trackId) return false;
+      if (!isSpotifyReady || !trackId) return false;
 
       try {
         const result = await checkIsTrackSaved(trackId);
@@ -259,12 +259,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, checkIsTrackSaved],
+    [isSpotifyReady, checkIsTrackSaved],
   );
 
   const likeTrack = useCallback(
     async (trackId) => {
-      if (!wsConnected || !trackId) return false;
+      if (!isSpotifyReady || !trackId) return false;
 
       try {
         await saveTrack(trackId);
@@ -274,12 +274,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, saveTrack],
+    [isSpotifyReady, saveTrack],
   );
 
   const unlikeTrack = useCallback(
     async (trackId) => {
-      if (!wsConnected || !trackId) return false;
+      if (!isSpotifyReady || !trackId) return false;
 
       try {
         await removeTrack(trackId);
@@ -289,12 +289,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, removeTrack],
+    [isSpotifyReady, removeTrack],
   );
 
   const toggleShuffle = useCallback(
     async (state) => {
-      if (!wsConnected) return false;
+      if (!isSpotifyReady) return false;
 
       try {
         await toggleShuffleWS(state);
@@ -304,12 +304,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, toggleShuffleWS],
+    [isSpotifyReady, toggleShuffleWS],
   );
 
   const setRepeatMode = useCallback(
     async (state) => {
-      if (!wsConnected) return false;
+      if (!isSpotifyReady) return false;
 
       try {
         await setRepeatModeWS(state);
@@ -319,12 +319,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, setRepeatModeWS],
+    [isSpotifyReady, setRepeatModeWS],
   );
 
   const playDJMix = useCallback(
     async (deviceId = null) => {
-      if (!wsConnected) return false;
+      if (!isSpotifyReady) return false;
 
       try {
         const params = {};
@@ -338,12 +338,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, sendSpotifyCommand],
+    [isSpotifyReady, sendSpotifyCommand],
   );
 
   const sendDJSignal = useCallback(
     async (deviceId = null) => {
-      if (!wsConnected) return false;
+      if (!isSpotifyReady) return false;
 
       try {
         const params = {};
@@ -357,11 +357,11 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, sendSpotifyCommand],
+    [isSpotifyReady, sendSpotifyCommand],
   );
 
   const getCurrentDeviceOptions = useCallback(async () => {
-    if (!wsConnected) return null;
+    if (!isSpotifyReady) return null;
 
     try {
       return {
@@ -371,11 +371,11 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       console.error("Error getting device options:", err);
       return null;
     }
-  }, [wsConnected, currentPlayback]);
+  }, [isSpotifyReady, currentPlayback]);
 
   const setPlaybackSpeed = useCallback(
     async (speed) => {
-      if (!wsConnected) return false;
+      if (!isSpotifyReady) return false;
 
       try {
         const playerState = await getPlayerState();
@@ -397,7 +397,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         return false;
       }
     },
-    [wsConnected, sendSpotifyCommand, getPlayerState],
+    [isSpotifyReady, sendSpotifyCommand, getPlayerState],
   );
 
   return {

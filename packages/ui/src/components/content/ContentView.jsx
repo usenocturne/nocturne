@@ -59,7 +59,7 @@ const ContentView = ({
     getPlayerState,
     toggleShuffle,
     setRepeatMode,
-    wsConnected,
+    isSpotifyReady,
     sendSpotifyCommand,
     getShow,
     getShowEpisodes,
@@ -505,8 +505,8 @@ const ContentView = ({
     const fetchWebSocketContent = async () => {
       if (!contentId && contentType !== "liked-songs") return;
 
-      if (!wsConnected) {
-        console.log("WebSocket not connected, skipping fetch");
+      if (!isSpotifyReady) {
+        console.log("Spotify not ready, skipping fetch");
         return;
       }
 
@@ -709,13 +709,13 @@ const ContentView = ({
         clearTimeout(showEpisodeLazyLoadRef.current);
       }
     };
-  }, [contentId, contentType, wsConnected]);
+  }, [contentId, contentType, isSpotifyReady]);
 
   useEffect(() => {
     if (contentType !== "mix") return;
 
     const fetchMixContent = async () => {
-      if (!contentId || !wsConnected) return;
+      if (!contentId || !isSpotifyReady) return;
 
       try {
         setIsLoading(true);
@@ -849,7 +849,7 @@ const ContentView = ({
     contentType,
     radioMixes,
     updateGradientColors,
-    wsConnected,
+    isSpotifyReady,
     getPlaylist,
     getPlaylistTracks,
     sendSpotifyCommand,

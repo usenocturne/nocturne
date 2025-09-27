@@ -10,7 +10,7 @@ let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
 export function useSpotifyPlayerState(immediateLoad = false) {
-  const { wsConnected, getPlayerState } = useSpotifyWebSocket();
+  const { isSpotifyReady, getPlayerState } = useSpotifyWebSocket();
   const [currentPlayback, setCurrentPlayback] = useState(null);
   const [currentlyPlayingAlbum, setCurrentlyPlayingAlbum] = useState(null);
   const [albumChangeEvent, setAlbumChangeEvent] = useState(null);
@@ -55,7 +55,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           if (podcastPollingInterval || !isPodcastPlaying) return;
 
           podcastPollingInterval = setInterval(async () => {
-            if (isPodcastPlaying && wsConnected) {
+            if (isPodcastPlaying && isSpotifyReady) {
               try {
                 const now = Date.now();
                 if (now - lastPodcastFetch < 25000) return;
@@ -201,7 +201,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
   const fetchCurrentPlayback = useCallback(
     async (forceRefresh = false) => {
-      if (!wsConnected) {
+      if (!isSpotifyReady) {
         if (!initialStateLoadedRef.current) {
           setCurrentPlayback(null);
         }
@@ -253,25 +253,25 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         setInitialFetchInProgress(false);
       }
     },
-    [wsConnected, getPlayerState, processPlaybackState, resetPlaybackState],
+    [isSpotifyReady, getPlayerState, processPlaybackState, resetPlaybackState],
   );
 
   useEffect(() => {
-    if (wsConnected && !initialPlaybackFetchDone) {
+    if (isSpotifyReady && !initialPlaybackFetchDone) {
       initialPlaybackFetchDone = true;
       fetchCurrentPlayback(true);
     }
-  }, [wsConnected, fetchCurrentPlayback]);
+  }, [isSpotifyReady, fetchCurrentPlayback]);
 
   useEffect(() => {
-    if (wsConnected && immediateLoad && !initialPlaybackFetchDone) {
+    if (isSpotifyReady && immediateLoad && !initialPlaybackFetchDone) {
       initialPlaybackFetchDone = true;
       fetchCurrentPlayback(true);
     }
-  }, [wsConnected, immediateLoad, fetchCurrentPlayback]);
+  }, [isSpotifyReady, immediateLoad, fetchCurrentPlayback]);
 
   useEffect(() => {
-    if (!wsConnected) return;
+    if (!isSpotifyReady) return;
 
     const handlePlayerStateChanged = (data) => {
       if (
@@ -349,7 +349,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                             },
                           ]
                         : playerState.track.metadata.is_narration === "true" ||
-                            playerState.track.metadata.album_artist_name === "DJ X"
+                            playerState.track.metadata.album_artist_name ===
+                              "DJ X"
                           ? [{ url: "/images/radio-cover/dj.webp" }]
                           : [],
                     },
@@ -423,11 +424,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     });
 
     return cleanup;
-  }, [wsConnected, processPlaybackState]);
+  }, [isSpotifyReady, processPlaybackState]);
 
   const refreshPlaybackState = useCallback(
     async (forceRefresh = false) => {
-      if (!wsConnected) return;
+      if (!isSpotifyReady) return;
 
       try {
         const data = await getPlayerState();
@@ -442,7 +443,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         setError(err.message);
       }
     },
-    [wsConnected, getPlayerState, resetPlaybackState, processPlaybackState],
+    [isSpotifyReady, getPlayerState, resetPlaybackState, processPlaybackState],
   );
 
   return {

@@ -1,5 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useNocturned, getGlobalWebSocket } from "./useNocturned";
+import {
+  useNocturned,
+  getGlobalWebSocket,
+  getBluetoothConnectionState,
+  subscribeBluetoothConnectionState,
+} from "./useNocturned";
 
 const extractAfterFromNextUrl = (nextUrl) => {
   if (!nextUrl) return null;
@@ -20,10 +25,31 @@ export function useSpotifyWebSocket() {
   const pendingRequestsRef = useRef(new Map());
   const listenerIdRef = useRef(null);
   const messageQueueRef = useRef([]);
+  const [deviceConnected, setDeviceConnected] = useState(() => {
+    const state = getBluetoothConnectionState();
+    return Boolean(state?.connected);
+  });
+
+  useEffect(() => {
+    const unsubscribe = subscribeBluetoothConnectionState((state) => {
+      setDeviceConnected(Boolean(state?.connected));
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   const sendSpotifyCommand = useCallback(
     (method, params = {}) => {
       return new Promise((resolve, reject) => {
+        if (!deviceConnected) {
+          reject(new Error("No Bluetooth device connected"));
+          return;
+        }
+
         const globalWs = getGlobalWebSocket();
 
         if (!globalWs) {
@@ -38,38 +64,44 @@ export function useSpotifyWebSocket() {
               reject(new Error("WebSocket disconnected while waiting"));
               return;
             }
-            
+
             if (ws.readyState === WebSocket.OPEN) {
               sendMessage(ws, method, params, resolve, reject);
-            } else if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+            } else if (
+              ws.readyState === WebSocket.CLOSED ||
+              ws.readyState === WebSocket.CLOSING
+            ) {
               reject(new Error("WebSocket closed while waiting"));
             } else {
               setTimeout(waitForConnection, 100);
             }
           };
-          
+
           const timeoutId = setTimeout(() => {
             reject(new Error("WebSocket connection timeout"));
           }, 10000);
-          
+
           const originalResolve = resolve;
           const originalReject = reject;
-          
+
           resolve = (...args) => {
             clearTimeout(timeoutId);
             originalResolve(...args);
           };
-          
+
           reject = (...args) => {
             clearTimeout(timeoutId);
             originalReject(...args);
           };
-          
+
           waitForConnection();
           return;
         }
 
-        if (globalWs.readyState === WebSocket.CLOSED || globalWs.readyState === WebSocket.CLOSING) {
+        if (
+          globalWs.readyState === WebSocket.CLOSED ||
+          globalWs.readyState === WebSocket.CLOSING
+        ) {
           reject(new Error("WebSocket is closed"));
           return;
         }
@@ -77,7 +109,7 @@ export function useSpotifyWebSocket() {
         sendMessage(globalWs, method, params, resolve, reject);
       });
     },
-    [wsConnected],
+    [wsConnected, deviceConnected],
   );
 
   const sendMessage = (ws, method, params, resolve, reject) => {
@@ -130,6 +162,8 @@ export function useSpotifyWebSocket() {
     }
   }, []);
 
+  const isSpotifyReady = wsConnected && deviceConnected;
+
   useEffect(() => {
     if (!listenerIdRef.current) {
       listenerIdRef.current = addMessageListener(
@@ -146,17 +180,15 @@ export function useSpotifyWebSocket() {
   }, [addMessageListener, removeMessageListener, handleSpotifyResponse]);
 
   useEffect(() => {
-    if (wsConnected && messageQueueRef.current.length > 0) {
+    if (wsConnected && deviceConnected && messageQueueRef.current.length > 0) {
       const queue = [...messageQueueRef.current];
       messageQueueRef.current = [];
-      
+
       queue.forEach(({ method, params, resolve, reject }) => {
-        sendSpotifyCommand(method, params)
-          .then(resolve)
-          .catch(reject);
+        sendSpotifyCommand(method, params).then(resolve).catch(reject);
       });
     }
-  }, [wsConnected, sendSpotifyCommand]);
+  }, [wsConnected, deviceConnected, sendSpotifyCommand]);
 
   const getPlayerState = useCallback(async () => {
     try {
@@ -768,6 +800,8 @@ export function useSpotifyWebSocket() {
 
   return {
     wsConnected,
+    deviceConnected,
+    isSpotifyReady,
     isLoading,
     error,
     sendSpotifyCommand,

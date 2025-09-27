@@ -13,8 +13,9 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
   const preloadImagesCacheRef = useRef({});
   const timerRef = useRef(null);
   const blobUrlsRef = useRef([]);
+  const pendingFetchesRef = useRef(new Map());
 
-  const { sendSpotifyCommand } = useSpotifyWebSocket();
+  const { sendSpotifyCommand, isSpotifyReady } = useSpotifyWebSocket();
 
   useEffect(() => {
     const preloadImages = async () => {
@@ -43,10 +44,21 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
               images[buttonNum] = imageUrl;
               types[buttonNum] = contentType;
             } else {
+              if (!isSpotifyReady) {
+                return;
+              }
               try {
-                const result = await sendSpotifyCommand("spotify.image.fetch", {
-                  url: imageUrl,
-                });
+                let fetchPromise = pendingFetchesRef.current.get(imageUrl);
+                if (!fetchPromise) {
+                  fetchPromise = sendSpotifyCommand("spotify.image.fetch", {
+                    url: imageUrl,
+                  }).finally(() => {
+                    pendingFetchesRef.current.delete(imageUrl);
+                  });
+                  pendingFetchesRef.current.set(imageUrl, fetchPromise);
+                }
+
+                const result = await fetchPromise;
 
                 if (result && result.data) {
                   let blobUrl;
@@ -122,7 +134,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
         timerRef.current = null;
       }
     };
-  }, [show, preloadedImages, sendSpotifyCommand]);
+  }, [show, preloadedImages, sendSpotifyCommand, isSpotifyReady]);
 
   useEffect(() => {
     return () => {
@@ -130,6 +142,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
         URL.revokeObjectURL(url);
       });
       blobUrlsRef.current = [];
+      pendingFetchesRef.current.clear();
     };
   }, []);
 

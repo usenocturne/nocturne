@@ -13,7 +13,7 @@ const BluetoothDevices = () => {
     loading,
     error,
     fetchDevices,
-    connectDevice,
+    connectDeviceNoRetry,
     disconnectDevice,
     forgetDevice,
     startDiscovery,
@@ -43,7 +43,7 @@ const BluetoothDevices = () => {
   }, [startDiscovery, fetchDevices, stopDiscovery]);
 
   const handleConnect = async (deviceAddress) => {
-    await connectDevice(deviceAddress);
+    await connectDeviceNoRetry(deviceAddress);
   };
 
   const handleDisconnect = async (deviceAddress) => {
@@ -132,7 +132,7 @@ const BluetoothDevices = () => {
         <div className="flex justify-between items-center">
           <div className="min-w-0 flex-1">
             <h4 className="text-[28px] font-[580] text-white tracking-tight truncate pr-4">
-              {device.name || device.alias}
+              {device?.device_info?.name || device.name || device.alias || device.address}
             </h4>
             {device.connected && (
               <p className="text-[24px] font-[560] text-white/60 tracking-tight mt-1">

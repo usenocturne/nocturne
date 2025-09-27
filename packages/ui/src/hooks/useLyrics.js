@@ -13,11 +13,11 @@ export function useLyrics(currentPlayback, progressMs) {
   const trackIdRef = useRef(null);
   const autoScrollTimeoutRef = useRef(null);
 
-  const { wsConnected, sendSpotifyCommand } = useSpotifyWebSocket();
+  const { isSpotifyReady, sendSpotifyCommand } = useSpotifyWebSocket();
 
   const fetchLyrics = useCallback(
     async (trackId, trackName, artistName) => {
-      if (!wsConnected || !trackId) return;
+      if (!isSpotifyReady || !trackId) return;
 
       try {
         setIsLoading(true);
@@ -43,7 +43,7 @@ export function useLyrics(currentPlayback, progressMs) {
         setIsLoading(false);
       }
     },
-    [wsConnected, sendSpotifyCommand],
+    [isSpotifyReady, sendSpotifyCommand],
   );
 
   const toggleLyrics = useCallback(async () => {

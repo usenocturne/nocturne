@@ -273,6 +273,7 @@ function App() {
   const [powerMenuVisible, setPowerMenuVisible] = useState(false);
   const powerMenuVisibleRef = useRef(false);
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
+  const [showExhaustedReconnectScreen, setShowExhaustedReconnectScreen] = useState(false);
 
   useEffect(() => {
     powerMenuVisibleRef.current = powerMenuVisible;
@@ -325,13 +326,19 @@ function App() {
   useEffect(() => {
     const handleShowBanner = () => setShowNetworkBanner(true);
     const handleHideBanner = () => setShowNetworkBanner(false);
+    const handleShowNetworkScreen = () => setShowExhaustedReconnectScreen(true);
+    const handleHideNetworkScreen = () => setShowExhaustedReconnectScreen(false);
 
     window.addEventListener("networkBannerShow", handleShowBanner);
     window.addEventListener("networkBannerHide", handleHideBanner);
+    window.addEventListener("networkScreenShow", handleShowNetworkScreen);
+    window.addEventListener("networkScreenHide", handleHideNetworkScreen);
 
     return () => {
       window.removeEventListener("networkBannerShow", handleShowBanner);
       window.removeEventListener("networkBannerHide", handleHideBanner);
+      window.removeEventListener("networkScreenShow", handleShowNetworkScreen);
+      window.removeEventListener("networkScreenHide", handleHideNetworkScreen);
     };
   }, []);
 
@@ -373,6 +380,8 @@ function App() {
     isConnecting,
     showTetheringScreen,
     lastConnectedDevice,
+    connectedDevices,
+    hasFetchedInitialDevices,
     acceptPairing,
     denyPairing,
     setDiscoverable,
@@ -734,11 +743,16 @@ function App() {
   const isUpdateScreenVisible =
     isUpdating || (updateStatus.stage && updateStatus.stage !== "");
 
+  const hasActiveBluetoothConnection =
+    Array.isArray(connectedDevices) &&
+    connectedDevices.some((device) => device?.connected);
+
   const showConnectionLostScreen =
     !isUpdateScreenVisible &&
     !showTutorial &&
     !pairingRequest &&
-    !lastConnectedDevice;
+    ((!lastConnectedDevice && !hasActiveBluetoothConnection && hasFetchedInitialDevices) ||
+      showExhaustedReconnectScreen);
   // const showConnectionLostScreen = false;
 
   const displayNetworkBanner =
@@ -753,6 +767,7 @@ function App() {
         isConnectionLost={true}
         deviceName={lastConnectedDevice?.name}
         onConnectionRestored={handleConnectionRestored}
+        reconnectionExhausted={showExhaustedReconnectScreen}
       />
     );
   } else if (showTutorial) {
