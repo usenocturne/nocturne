@@ -36,10 +36,7 @@ const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored, reconnec
     updateGradientColors(null, "auth");
   }, [updateGradientColors]);
 
-  // Ensure Bluetooth is discoverable while this screen is visible (unless reconnection exhausted)
   useEffect(() => {
-    // Only set discoverable if reconnection attempts are not exhausted
-    // When exhausted, the user needs to manually go to Bluetooth settings
     if (!reconnectionExhausted) {
       setDiscoverable(true);
     }

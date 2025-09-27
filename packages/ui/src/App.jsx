@@ -14,6 +14,8 @@ import {
   useBluetooth,
   useSystemUpdate,
   useNocturneInfo,
+  useNocturned,
+  sendNocturneWsRequest,
 } from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
@@ -33,6 +35,7 @@ import UpdateCheckNotification from "./components/common/notifications/UpdateChe
 import UpdateScreen from "./components/common/UpdateScreen";
 import NetworkScreen from "./components/auth/NetworkScreen";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
+import AuthScreen from "./components/auth/AuthScreen";
 
 function useGlobalButtonMapping({
   playTrack,
@@ -274,6 +277,17 @@ function App() {
   const powerMenuVisibleRef = useRef(false);
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
   const [showExhaustedReconnectScreen, setShowExhaustedReconnectScreen] = useState(false);
+  const [showAuthScreen, setShowAuthScreen] = useState(true);
+  const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(null);
+  const [needsSpotifyAuthorization, setNeedsSpotifyAuthorization] =
+    useState(false);
+  const [authStatusMessage, setAuthStatusMessage] = useState(null);
+  const [hasSeenTutorialFlag, setHasSeenTutorialFlag] = useState(
+    () => localStorage.getItem("hasSeenTutorial") === "true",
+  );
+  const [isAuthCheckInProgress, setIsAuthCheckInProgress] = useState(false);
+  const [requestedSpotifyStatus, setRequestedSpotifyStatus] = useState(false);
+  const startSectionAppliedRef = useRef(false);
 
   useEffect(() => {
     powerMenuVisibleRef.current = powerMenuVisible;
@@ -312,14 +326,21 @@ function App() {
   );
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      setAnalyticsEnabled(localStorage.getItem("analyticsEnabled") !== "false");
+    const syncFromStorage = () => {
+      setAnalyticsEnabled(
+        localStorage.getItem("analyticsEnabled") !== "false",
+      );
+      setHasSeenTutorialFlag(
+        localStorage.getItem("hasSeenTutorial") === "true",
+      );
     };
 
-    window.addEventListener("storage", handleStorageChange);
+    syncFromStorage();
+
+    window.addEventListener("storage", syncFromStorage);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("storage", syncFromStorage);
     };
   }, []);
 
@@ -376,6 +397,7 @@ function App() {
   }, [isInfoLoading, serial, analyticsEnabled]);
 
   const {
+    devices,
     pairingRequest,
     isConnecting,
     showTetheringScreen,
@@ -390,8 +412,192 @@ function App() {
     stopRetrying,
   } = useBluetooth();
 
+  const { addMessageListener, removeMessageListener, wsConnected } =
+    useNocturned();
+
+  const hasDevices =
+    (Array.isArray(devices) && devices.length > 0) ||
+    (Array.isArray(connectedDevices) && connectedDevices.length > 0) ||
+    Boolean(lastConnectedDevice);
+
+  const processSpotifyAuthMessage = useCallback(
+    (message) => {
+      if (!message) return false;
+
+      let topic = message.topic;
+      let data =
+        message.data ??
+        message.payload ??
+        message.result?.data ??
+        message.result?.payload ??
+        null;
+
+      if (!topic && message.result?.topic) {
+        topic = message.result.topic;
+      }
+
+      if (!topic && message.type === "event") {
+        topic = message.topic;
+      }
+
+      if (!topic && message.authenticated !== undefined) {
+        topic = "spotify.auth.status";
+        data = message;
+      }
+
+      if (!topic || !data) {
+        return false;
+      }
+
+      if (data.authenticated === undefined && data.data) {
+        data = data.data;
+      }
+
+      const authenticatedValue = data.authenticated;
+      const needsAuthorizationValue = data.needsAuthorization;
+
+      const isAuthenticated =
+        authenticatedValue === true ||
+        authenticatedValue === 1 ||
+        authenticatedValue === "1";
+
+      const needsAuthorization = isAuthenticated
+        ? false
+        : needsAuthorizationValue === undefined
+          ? true
+          : needsAuthorizationValue === true ||
+            needsAuthorizationValue === 1 ||
+            needsAuthorizationValue === "1";
+
+      setIsSpotifyAuthenticated(isAuthenticated);
+      setNeedsSpotifyAuthorization(needsAuthorization);
+      setAuthStatusMessage(
+        needsAuthorization
+          ? "Open the Nocturne app to finish logging into Spotify."
+          : null,
+      );
+
+      setIsAuthCheckInProgress(false);
+      return true;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!hasFetchedInitialDevices) return;
+
+    if (hasDevices) return;
+
+    setRequestedSpotifyStatus(false);
+    setIsSpotifyAuthenticated(null);
+    setNeedsSpotifyAuthorization(false);
+    setAuthStatusMessage(null);
+    setIsAuthCheckInProgress(false);
+  }, [hasFetchedInitialDevices, hasDevices]);
+
+  useEffect(() => {
+    if (!wsConnected) return;
+    if (requestedSpotifyStatus) return;
+
+    if (!hasSeenTutorialFlag && !hasDevices) return;
+
+    let cancelled = false;
+
+    setIsAuthCheckInProgress(true);
+    setRequestedSpotifyStatus(true);
+
+    sendNocturneWsRequest("spotify.auth.getStatus", {})
+      .then((result) => {
+        if (cancelled) return;
+        const handled = processSpotifyAuthMessage(result);
+        if (!handled) {
+          setIsAuthCheckInProgress(false);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Failed to fetch Spotify auth status", err);
+        setRequestedSpotifyStatus(false);
+        setIsAuthCheckInProgress(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hasDevices,
+    hasSeenTutorialFlag,
+    wsConnected,
+    requestedSpotifyStatus,
+    processSpotifyAuthMessage,
+  ]);
+
+  useEffect(() => {
+    if (needsSpotifyAuthorization || isSpotifyAuthenticated === false) {
+      setShowAuthScreen(true);
+      setShowTutorial(false);
+      return;
+    }
+
+    if (!hasSeenTutorialFlag) {
+      if (isSpotifyAuthenticated) {
+        setShowAuthScreen(false);
+        setShowTutorial(true);
+      } else {
+        setShowAuthScreen(true);
+        setShowTutorial(false);
+      }
+      return;
+    }
+
+    if (!hasDevices && isSpotifyAuthenticated !== true) {
+      setShowAuthScreen(true);
+      setShowTutorial(false);
+      return;
+    }
+
+    setShowAuthScreen(false);
+    setShowTutorial(false);
+  }, [
+    hasDevices,
+    hasSeenTutorialFlag,
+    needsSpotifyAuthorization,
+    isSpotifyAuthenticated,
+  ]);
+
+  useEffect(() => {
+    if (!hasSeenTutorialFlag) return;
+    if (showTutorial) return;
+    if (startSectionAppliedRef.current) return;
+
+    const shouldStartWithNowPlaying =
+      localStorage.getItem("startWithNowPlaying") === "true";
+    if (shouldStartWithNowPlaying) {
+      setActiveSection("nowPlaying");
+    }
+    startSectionAppliedRef.current = true;
+  }, [hasSeenTutorialFlag, showTutorial, setActiveSection]);
+
   const { updateStatus, progress, isUpdating, isError, errorMessage } =
     useSystemUpdate();
+
+  useEffect(() => {
+    const listenerId = addMessageListener("spotify-auth", (message) => {
+      if (
+        message?.type === "event" &&
+        typeof message.topic === "string" &&
+        message.topic.startsWith("spotify.auth.")
+      ) {
+        processSpotifyAuthMessage(message);
+      }
+    });
+
+    return () => {
+      if (listenerId) {
+        removeMessageListener(listenerId);
+      }
+    };
+  }, [addMessageListener, removeMessageListener, processSpotifyAuthMessage]);
 
   const [gradientState, updateGradientColors] = useGradientState(activeSection);
 
@@ -507,22 +713,8 @@ function App() {
   ]);
 
   useEffect(() => {
-    const hasSeenTutorial = localStorage.getItem("hasSeenTutorial") === "true";
-    if (hasSeenTutorial) {
-      setShowTutorial(false);
-      const shouldStartWithNowPlaying =
-        localStorage.getItem("startWithNowPlaying") === "true";
-      if (shouldStartWithNowPlaying) {
-        setActiveSection("nowPlaying");
-      }
-    } else {
-      setShowTutorial(true);
-    }
-  }, [setActiveSection]);
-
-  useEffect(() => {
     if (viewingContent) return;
-    if (showTutorial) {
+    if (showTutorial || showAuthScreen) {
       updateGradientColors(null, "auth");
     } else if (activeSection === "recents" && recentAlbums.length > 0) {
       const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url;
@@ -560,6 +752,7 @@ function App() {
     topArtists,
     currentlyPlayingAlbum,
     showTutorial,
+    showAuthScreen,
   ]);
 
   useEffect(() => {
@@ -681,6 +874,8 @@ function App() {
     setShowTutorial(false);
     setCurrentTutorialStep(0);
     localStorage.setItem("hasSeenTutorial", "true");
+    setHasSeenTutorialFlag(true);
+    startSectionAppliedRef.current = true;
     const shouldStartWithNowPlaying =
       localStorage.getItem("startWithNowPlaying") === "true";
     if (shouldStartWithNowPlaying) {
@@ -756,11 +951,22 @@ function App() {
   // const showConnectionLostScreen = false;
 
   const displayNetworkBanner =
-    showNetworkBanner && !showConnectionLostScreen && !isUpdateScreenVisible;
+    showNetworkBanner &&
+    !showConnectionLostScreen &&
+    !isUpdateScreenVisible &&
+    !showTutorial &&
+    !showAuthScreen;
 
   let content;
   if (isUpdateScreenVisible) {
     content = <UpdateScreen />;
+  } else if (showAuthScreen) {
+    content = (
+      <AuthScreen
+        isLoading={isAuthCheckInProgress}
+        statusMessage={authStatusMessage}
+      />
+    );
   } else if (showConnectionLostScreen) {
     content = (
       <NetworkScreen
@@ -877,7 +1083,8 @@ function App() {
                 {content}
                 {!isUpdateScreenVisible &&
                   !showTetheringScreen &&
-                  !showConnectionLostScreen && (
+                  !showConnectionLostScreen &&
+                  !showTutorial && (
                     <>
                       {pairingRequest ? (
                         <PairingScreen

@@ -5,7 +5,6 @@ const API_BASE = "http://localhost:5000";
 let globalWsRef = null;
 let globalWsListeners = [];
 let wsInitialized = false;
-// Map of pending WS requests awaiting responses
 const pendingWsRequests = new Map();
 
 let wsReconnectAttempts = 0;
@@ -17,9 +16,7 @@ const WS_RECONNECT_INTERVAL = 2000; // 2 seconds
 let isInitializingDiscovery = false;
 let isStoppingDiscovery = false;
 let isDevicesFetching = false;
-// Track a single in-flight devices fetch to avoid spamming the daemon
 let pendingDevicesFetchPromise = null;
-// Lower-level dedupe + short-term cache for raw bluetooth.devices.list
 let pendingDevicesListWsPromise = null;
 let lastDevicesListCache = null; // { resp, timestamp }
 const DEVICES_LIST_CACHE_TTL_MS = 3000;
@@ -31,7 +28,6 @@ let bluetoothConnectionState = {
   devices: [],
 };
 
-// Track if reconnection attempts are exhausted
 let reconnectionExhausted = false;
 
 const bluetoothConnectionSubscribers = new Set();
@@ -98,7 +94,6 @@ export const subscribeBluetoothConnectionState = (listener) => {
 
   bluetoothConnectionSubscribers.add(listener);
 
-  // Emit current state immediately for new subscribers
   listener({ ...bluetoothConnectionState });
 
   return () => {
@@ -187,7 +182,6 @@ const processConnectQueue = async () => {
           : {}),
       });
     } catch (err) {
-      // Normalize error into result object to preserve facade shape
       result = { error: err?.message || "Connection failed" };
     }
 
@@ -280,7 +274,6 @@ const setupGlobalWebSocket = async () => {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        // If this is a request/response style message, resolve pending promise
         if (data && data.type === "response" && data.id) {
           const pending = pendingWsRequests.get(data.id);
           if (pending) {
@@ -317,7 +310,6 @@ const setupGlobalWebSocket = async () => {
   }
 };
 
-// Generic WS request helper that waits for OPEN state
 const sendWsRequest = (method, params = {}, { timeoutMs = 30000 } = {}) => {
   return new Promise((resolve, reject) => {
     const start = Date.now();
@@ -362,7 +354,6 @@ const sendWsRequest = (method, params = {}, { timeoutMs = 30000 } = {}) => {
         return;
       }
 
-      // OPEN
       const id =
         globalThis.crypto && globalThis.crypto.randomUUID
           ? globalThis.crypto.randomUUID()
@@ -393,7 +384,9 @@ const sendWsRequest = (method, params = {}, { timeoutMs = 30000 } = {}) => {
   });
 };
 
-// Dedupe bluetooth.devices.list over WS across all callers and cache briefly
+export const sendNocturneWsRequest = (method, params = {}, options = {}) =>
+  sendWsRequest(method, params, options);
+
 const requestDevicesListDeduped = async () => {
   const now = Date.now();
   if (
@@ -990,19 +983,16 @@ export const useBluetooth = () => {
   }, [stopNetworkPolling, stopRetrying]);
 
   const fetchDevices = useCallback(async (force = false) => {
-    // If a fetch is already in progress, reuse it to prevent WS spam
     if (pendingDevicesFetchPromise) {
       return pendingDevicesFetchPromise;
     }
 
-    // Legacy guard: if a fetch is in progress and not forced, bail
     if (isDevicesFetching && !force) {
       return [];
     }
 
     setLoading(true);
 
-    // Create a shared promise so concurrent callers reuse the same request
     pendingDevicesFetchPromise = (async () => {
       try {
         isDevicesFetching = true;
@@ -1105,15 +1095,14 @@ export const useBluetooth = () => {
       try {
         setLoading(true);
         stopRetrying();
-        retryIsCancelled = true; // Prevent any retries
+        retryIsCancelled = true;
         reconnectionExhausted = false;
-        retryDeviceAddressRef.current = null; // Don't track for retry
+        retryDeviceAddressRef.current = null;
 
         const response = await queueConnectRequest(deviceAddress);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          // No retries, just return error
           setError(errorData.error || "Failed to connect device");
           return false;
         }
@@ -1280,7 +1269,6 @@ export const useBluetooth = () => {
 
   const handleWsMessage = useCallback(
     (data) => {
-      // New WS events
       if (data?.type === "event") {
         const topic = data.topic;
         const ev = data.data || {};
@@ -1296,7 +1284,6 @@ export const useBluetooth = () => {
           }
         } else if (topic === "bluetooth.pairing") {
           if (ev.type === "pairing_succeeded") {
-            // Daemon will emit connection event; no need to poll device list here
             setPairingRequest(null);
           }
         } else if (topic === "bluetooth.connection") {
@@ -1304,7 +1291,9 @@ export const useBluetooth = () => {
             const address = ev.device;
             localStorage.setItem("lastConnectedBluetoothDevice", address);
 
-            // Update local state without polling device list
+            setPairingRequest(null);
+            setIsConnecting(false);
+
             setConnectedDevices((prev) => {
               const exists = (prev || []).some((d) => d.address === address);
               if (exists) return prev;
@@ -1352,76 +1341,6 @@ export const useBluetooth = () => {
           }
         }
         return;
-      }
-
-      // Legacy messages (keep for compatibility)
-      switch (data.type) {
-        case "bluetooth/pairing":
-          setPairingRequest(data.payload);
-          break;
-        case "bluetooth/paired":
-          // Legacy event path: pairing succeeded, but do not auto-connect
-          setPairingRequest(null);
-          setConnectedDevices((prev) => [...prev, data.payload.device]);
-          setLastConnectedDevice(data.payload.device);
-          localStorage.setItem(
-            "lastConnectedBluetoothDevice",
-            data.payload.device.address,
-          );
-          window.dispatchEvent(new Event("networkBannerHide"));
-          window.dispatchEvent(new Event("networkScreenHide"));
-          break;
-        case "bluetooth/connect":
-          startNetworkPolling(data.payload.address);
-          window.dispatchEvent(new Event("networkBannerHide"));
-          window.dispatchEvent(new Event("networkScreenHide"));
-          cleanupReconnectTimer();
-          reconnectAttemptsRef.current = 0;
-          setReconnectAttempt(0);
-          isReconnecting.current = false;
-          reconnectionExhausted = false;
-          break;
-        case "network_status":
-          if (data.payload.status === "online") {
-            cleanupReconnectTimer();
-            reconnectAttemptsRef.current = 0;
-            setReconnectAttempt(0);
-            isReconnecting.current = false;
-            reconnectionExhausted = false;
-            retryIsCancelled = true;
-            window.dispatchEvent(new Event("networkBannerHide"));
-            window.dispatchEvent(new Event("networkScreenHide"));
-          }
-          break;
-        case "bluetooth/disconnect":
-          setConnectedDevices((prev) =>
-            prev.filter((device) => device.address !== data.payload.address),
-          );
-          if (lastConnectedDevice?.address === data.payload.address) {
-            setLastConnectedDevice(null);
-            stopNetworkPolling();
-            stopRetrying();
-            reconnectAttemptsRef.current = 0;
-            setReconnectAttempt(0);
-            isReconnecting.current = false;
-            setTimeout(() => {
-              attemptReconnect();
-            }, INITIAL_RECONNECT_DELAY);
-          }
-          break;
-        case "bluetooth/network/disconnect":
-          if (isReconnecting.current) {
-            cleanupReconnectTimer();
-            isReconnecting.current = false;
-          }
-          reconnectAttemptsRef.current = 0;
-          setReconnectAttempt(0);
-          setTimeout(() => {
-            attemptReconnect();
-          }, INITIAL_RECONNECT_DELAY);
-          break;
-        default:
-          break;
       }
     },
     [
@@ -1487,7 +1406,6 @@ export const useBluetooth = () => {
 
     try {
       setIsConnecting(true);
-      // Daemon auto-accepts via WS; just clear local prompt
       setPairingRequest(null);
     } catch (error) {
       console.error("Error accepting pair:", error);
@@ -1501,7 +1419,6 @@ export const useBluetooth = () => {
     if (!pairingRequest) return;
 
     try {
-      // Daemon manages pairing flow; clear prompt
       setPairingRequest(null);
     } catch (error) {
       console.error("Error denying pair:", error);
