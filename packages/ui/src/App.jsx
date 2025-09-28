@@ -288,6 +288,7 @@ function App() {
   const [isAuthCheckInProgress, setIsAuthCheckInProgress] = useState(false);
   const [requestedSpotifyStatus, setRequestedSpotifyStatus] = useState(false);
   const startSectionAppliedRef = useRef(false);
+  const lastSpotifyAuthStateRef = useRef(null);
 
   useEffect(() => {
     powerMenuVisibleRef.current = powerMenuVisible;
@@ -477,10 +478,16 @@ function App() {
           : null,
       );
 
+      if (isAuthenticated && lastSpotifyAuthStateRef.current !== true) {
+        refreshPlaybackState(true);
+      }
+
+      lastSpotifyAuthStateRef.current = isAuthenticated;
+
       setIsAuthCheckInProgress(false);
       return true;
     },
-    [],
+    [refreshPlaybackState],
   );
 
   useEffect(() => {
