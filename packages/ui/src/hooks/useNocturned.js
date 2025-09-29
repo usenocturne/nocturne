@@ -251,6 +251,19 @@ const setupGlobalWebSocket = async () => {
       console.log("Connected to WebSocket");
       cleanupWsReconnection();
 
+      try {
+        const messageId = crypto.randomUUID();
+        const resetBootCounterMessage = {
+          type: "request",
+          id: messageId,
+          method: "reset_boot_counter",
+          params: {}
+        };
+        socket.send(JSON.stringify(resetBootCounterMessage));
+      } catch (err) {
+        console.error("Failed to send reset_boot_counter request:", err);
+      }
+
       globalWsListeners.forEach(
         (listener) => listener.onOpen && listener.onOpen(socket),
       );
