@@ -869,8 +869,6 @@ export const useBluetooth = () => {
         reconnectAttemptsRef.current++;
         setReconnectAttempt(reconnectAttemptsRef.current);
 
-        await new Promise((r) => setTimeout(r, 5000));
-
         const response = await queueConnectRequest(lastDeviceAddress);
 
         if (response.ok) {
