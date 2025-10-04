@@ -14,11 +14,11 @@ if ! grep -q "${PARTITION}" /proc/mounts; then
     mkdir -p ${MOUNT}/local/etc/dropbear
     mkdir -p ${MOUNT}/local/root
     mkdir -p ${MOUNT}/local/home/nocturne
-    mkdir -p ${MOUNT}/cache/nocturned
 
     chown -R nocturne ${MOUNT}/local/home/nocturne
-    chown -R nocturne ${MOUNT}/cache/nocturned
 
+    dropbearkey -t rsa -f ${MOUNT}/local/etc/dropbear/dropbear_rsa_host_key
+    dropbearkey -t ecdsa -f ${MOUNT}/local/etc/dropbear/dropbear_ecdsa_host_key
     dropbearkey -t ed25519 -f ${MOUNT}/local/etc/dropbear/dropbear_ed25519_host_key
 
     fallocate -l 256M ${MOUNT}/swapfile
