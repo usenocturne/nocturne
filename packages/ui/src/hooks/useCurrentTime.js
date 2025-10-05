@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "../contexts/SettingsContext";
+import { sendNocturneWsRequest } from "./useNocturned";
 
 let cachedTimezone = null;
 export const getCachedTimezone = () => cachedTimezone;
@@ -22,26 +23,10 @@ export function useCurrentTime() {
     }
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/device/date/settimezone",
-        {
-          method: "POST",
-        },
-      );
-
-      if (!response.ok) {
-        console.error(
-          "Failed to fetch timezone from API, status:",
-          response.status,
-        );
-        return;
-      }
-
-      const data = await response.json();
-      if (data.status === "success" && data.timezone) {
-        cachedTimezone = data.timezone;
-        setTimezone(data.timezone);
-        console.log("Timezone set to:", data.timezone);
+      const data = await sendNocturneWsRequest("device.timezone.get", {});
+      if (data && data.identifier) {
+        cachedTimezone = data.identifier;
+        setTimezone(data.identifier);
       }
     } catch (error) {
       console.error("Error fetching timezone:", error);
@@ -60,9 +45,9 @@ export function useCurrentTime() {
   useEffect(() => {
     const updateTime = async () => {
       try {
-        const response = await fetch("http://localhost:5000/device/date");
-        if (response.ok) {
-          const data = await response.json();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const data = await sendNocturneWsRequest("device.time.get", {});
+        if (data && data.time) {
           const timeString = data.time;
           const [hours24, minutes] = timeString.split(":");
 
