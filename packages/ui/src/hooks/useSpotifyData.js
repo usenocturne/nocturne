@@ -1136,8 +1136,19 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
   useEffect(() => {
     if (skipInitialFetch) return;
-    if (isSpotifyReady && !initialDataLoaded && !isInitializing) {
-      loadInitialData();
+
+    if (isSpotifyReady) {
+      if (!initialDataLoaded && !isInitializing) {
+        initialLoadTriggeredRef.current = false;
+        dataLoadingAttemptedRef.current = false;
+        loadInitialData();
+      }
+    } else {
+      if (initialDataLoaded) {
+        initialLoadTriggeredRef.current = false;
+        dataLoadingAttemptedRef.current = false;
+        setInitialDataLoaded(false);
+      }
     }
 
     return () => {

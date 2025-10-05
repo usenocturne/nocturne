@@ -64,11 +64,6 @@ export default function SpotifyImage({
       return;
     }
 
-    if (!isSpotifyReady) {
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     setHasError(false);
 

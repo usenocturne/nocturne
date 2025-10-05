@@ -4,6 +4,10 @@ import {
   getGlobalWebSocket,
   getBluetoothConnectionState,
   subscribeBluetoothConnectionState,
+  getEaSessionState,
+  subscribeEaSessionState,
+  getSpotifyAuthState,
+  subscribeSpotifyAuthState,
 } from "./useNocturned";
 
 const extractAfterFromNextUrl = (nextUrl) => {
@@ -29,6 +33,12 @@ export function useSpotifyWebSocket() {
     const state = getBluetoothConnectionState();
     return Boolean(state?.connected);
   });
+  const [eaSessionReady, setEaSessionReady] = useState(() => {
+    return getEaSessionState();
+  });
+  const [spotifyAuthenticated, setSpotifyAuthenticated] = useState(() => {
+    return getSpotifyAuthState();
+  });
 
   useEffect(() => {
     const unsubscribe = subscribeBluetoothConnectionState((state) => {
@@ -42,14 +52,33 @@ export function useSpotifyWebSocket() {
     };
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeEaSessionState((isReady) => {
+      setEaSessionReady(isReady);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeSpotifyAuthState((isAuthenticated) => {
+      setSpotifyAuthenticated(isAuthenticated);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   const sendSpotifyCommand = useCallback(
     (method, params = {}) => {
       return new Promise((resolve, reject) => {
-        if (!deviceConnected) {
-          reject(new Error("No Bluetooth device connected"));
-          return;
-        }
-
         const globalWs = getGlobalWebSocket();
 
         if (!globalWs) {
@@ -162,7 +191,7 @@ export function useSpotifyWebSocket() {
     }
   }, []);
 
-  const isSpotifyReady = wsConnected && deviceConnected;
+  const isSpotifyReady = wsConnected && eaSessionReady && spotifyAuthenticated;
 
   useEffect(() => {
     if (!listenerIdRef.current) {
@@ -180,7 +209,7 @@ export function useSpotifyWebSocket() {
   }, [addMessageListener, removeMessageListener, handleSpotifyResponse]);
 
   useEffect(() => {
-    if (wsConnected && deviceConnected && messageQueueRef.current.length > 0) {
+    if (wsConnected && deviceConnected && eaSessionReady && spotifyAuthenticated && messageQueueRef.current.length > 0) {
       const queue = [...messageQueueRef.current];
       messageQueueRef.current = [];
 
@@ -188,7 +217,7 @@ export function useSpotifyWebSocket() {
         sendSpotifyCommand(method, params).then(resolve).catch(reject);
       });
     }
-  }, [wsConnected, deviceConnected, sendSpotifyCommand]);
+  }, [wsConnected, deviceConnected, eaSessionReady, spotifyAuthenticated, sendSpotifyCommand]);
 
   const getPlayerState = useCallback(async () => {
     try {

@@ -6,6 +6,10 @@ let globalWsRef = null;
 let globalWsListeners = [];
 let wsInitialized = false;
 const pendingWsRequests = new Map();
+let eaSessionStarted = false;
+const eaSessionSubscribers = new Set();
+let spotifyAuthenticated = false;
+const spotifyAuthSubscribers = new Set();
 
 let wsReconnectAttempts = 0;
 let wsReconnectTimer = null;
@@ -85,6 +89,56 @@ export const isReconnectionExhausted = () => reconnectionExhausted;
 
 export const resetReconnectionExhausted = () => {
   reconnectionExhausted = false;
+};
+
+export const getEaSessionState = () => eaSessionStarted;
+
+const emitEaSessionState = () => {
+  eaSessionSubscribers.forEach((listener) => {
+    try {
+      listener(eaSessionStarted);
+    } catch (err) {
+      console.error("EA session listener error:", err);
+    }
+  });
+};
+
+export const subscribeEaSessionState = (listener) => {
+  if (typeof listener !== "function") {
+    return () => {};
+  }
+
+  eaSessionSubscribers.add(listener);
+  listener(eaSessionStarted);
+
+  return () => {
+    eaSessionSubscribers.delete(listener);
+  };
+};
+
+export const getSpotifyAuthState = () => spotifyAuthenticated;
+
+const emitSpotifyAuthState = () => {
+  spotifyAuthSubscribers.forEach((listener) => {
+    try {
+      listener(spotifyAuthenticated);
+    } catch (err) {
+      console.error("Spotify auth listener error:", err);
+    }
+  });
+};
+
+export const subscribeSpotifyAuthState = (listener) => {
+  if (typeof listener !== "function") {
+    return () => {};
+  }
+
+  spotifyAuthSubscribers.add(listener);
+  listener(spotifyAuthenticated);
+
+  return () => {
+    spotifyAuthSubscribers.delete(listener);
+  };
 };
 
 export const subscribeBluetoothConnectionState = (listener) => {
@@ -271,6 +325,13 @@ const setupGlobalWebSocket = async () => {
 
     socket.onclose = (event) => {
       console.log("Disconnected from WebSocket");
+
+      eaSessionStarted = false;
+      emitEaSessionState();
+
+      spotifyAuthenticated = false;
+      emitSpotifyAuthState();
+
       globalWsListeners.forEach(
         (listener) => listener.onClose && listener.onClose(),
       );
@@ -287,6 +348,21 @@ const setupGlobalWebSocket = async () => {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        if (data && data.type === "event" && data.topic === "ea.session.started") {
+          eaSessionStarted = true;
+          emitEaSessionState();
+        }
+
+        if (data && data.type === "event" && data.topic === "spotify.auth.status") {
+          const authData = data.data || {};
+          const isAuthenticated = authData.authenticated === true ||
+                                 authData.authenticated === 1 ||
+                                 authData.authenticated === "1";
+          spotifyAuthenticated = isAuthenticated;
+          emitSpotifyAuthState();
+        }
+
         if (data && data.type === "response" && data.id) {
           const pending = pendingWsRequests.get(data.id);
           if (pending) {
@@ -1307,7 +1383,9 @@ export const useBluetooth = () => {
 
             setConnectedDevices((prev) => {
               const exists = (prev || []).some((d) => d.address === address);
-              if (exists) return prev;
+              if (exists) {
+                return prev;
+              }
               return [
                 ...prev,
                 { address, connected: true },

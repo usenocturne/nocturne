@@ -44,6 +44,7 @@ class ImageLoadQueue {
     this.listeners = new Set();
     this.cache = new Map();
     this.cacheTtlMs = 5 * 60 * 1000;
+    this.imageFetchDelayMs = 150;
   }
 
   addListener(callback) {
@@ -249,9 +250,11 @@ class ImageLoadQueue {
 
       if (!isSpotifyReady) {
         this.queue.unshift(queueItem);
+        this.isProcessing = false;
         await new Promise((r) => setTimeout(r, 150));
-        continue;
+        return;
       }
+
 
       const failure = this.getFailure(url);
       if (failure) {
@@ -271,6 +274,8 @@ class ImageLoadQueue {
         fetchImageFn,
       });
       this.notifyListeners();
+
+      await new Promise((resolve) => setTimeout(resolve, this.imageFetchDelayMs));
 
       try {
         const result = await fetchImageFn(url);
@@ -360,11 +365,20 @@ class ImageLoadQueue {
           requestListeners.forEach(({ reject }) => reject(error));
         }
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
     this.isProcessing = false;
+  }
+
+  updateQueueReadyState(isSpotifyReady) {
+
+    this.queue.forEach(item => {
+      item.isSpotifyReady = isSpotifyReady;
+    });
+
+    if (isSpotifyReady && this.queue.length > 0 && !this.isProcessing) {
+      this.processQueue();
+    }
   }
 
   clearCache() {
@@ -448,9 +462,7 @@ export function useImageLoader() {
   }, []);
 
   useEffect(() => {
-    if (isSpotifyReady && globalImageQueue.getQueueLength() > 0) {
-      globalImageQueue.processQueue();
-    }
+    globalImageQueue.updateQueueReadyState(isSpotifyReady);
   }, [isSpotifyReady]);
 
   return {
