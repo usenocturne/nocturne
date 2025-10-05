@@ -191,7 +191,8 @@ export function useSpotifyWebSocket() {
     }
   }, []);
 
-  const isSpotifyReady = wsConnected && eaSessionReady && spotifyAuthenticated;
+  const isSpotifyReady =
+    wsConnected && (eaSessionReady || deviceConnected) && spotifyAuthenticated;
 
   useEffect(() => {
     if (!listenerIdRef.current) {

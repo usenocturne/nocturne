@@ -432,6 +432,7 @@ function App() {
         message.payload ??
         message.result?.data ??
         message.result?.payload ??
+        message.result ??
         null;
 
       if (!topic && message.result?.topic) {
@@ -442,9 +443,16 @@ function App() {
         topic = message.topic;
       }
 
-      if (!topic && message.authenticated !== undefined) {
+      if (
+        !topic &&
+        (message.authenticated !== undefined ||
+          message.result?.authenticated !== undefined)
+      ) {
         topic = "spotify.auth.status";
-        data = message;
+        data =
+          message.result?.authenticated !== undefined
+            ? message.result
+            : message;
       }
 
       if (!topic || !data) {
@@ -479,8 +487,13 @@ function App() {
           : null,
       );
 
-      if (isAuthenticated && lastSpotifyAuthStateRef.current !== true) {
+      if (isAuthenticated) {
         refreshPlaybackState(true);
+        if (!initialDataLoaded) {
+          setTimeout(() => {
+            refreshData();
+          }, 1000);
+        }
       }
 
       lastSpotifyAuthStateRef.current = isAuthenticated;
@@ -488,20 +501,8 @@ function App() {
       setIsAuthCheckInProgress(false);
       return true;
     },
-    [refreshPlaybackState],
+    [refreshPlaybackState, initialDataLoaded, refreshData],
   );
-
-  useEffect(() => {
-    if (!hasFetchedInitialDevices) return;
-
-    if (hasDevices) return;
-
-    setRequestedSpotifyStatus(false);
-    setIsSpotifyAuthenticated(null);
-    setNeedsSpotifyAuthorization(false);
-    setAuthStatusMessage(null);
-    setIsAuthCheckInProgress(false);
-  }, [hasFetchedInitialDevices, hasDevices]);
 
   useEffect(() => {
     const unsubscribe = subscribeSpotifyAuthState((isAuthenticated) => {
@@ -529,27 +530,58 @@ function App() {
 
   useEffect(() => {
     if (!wsConnected) return;
-    if (requestedSpotifyStatus) return;
 
-    if (!hasSeenTutorialFlag && !hasDevices) return;
+    if (!hasSeenTutorialFlag) return;
+
+    if (requestedSpotifyStatus) return;
 
     let cancelled = false;
 
     setIsAuthCheckInProgress(true);
-    setRequestedSpotifyStatus(true);
 
-    sendNocturneWsRequest("spotify.auth.getStatus", {})
-      .then((result) => {
+    sendNocturneWsRequest("bluetooth.devices.list", {})
+      .then((bluetoothResult) => {
         if (cancelled) return;
-        const handled = processSpotifyAuthMessage(result);
-        if (!handled) {
+
+        const devices =
+          bluetoothResult?.result?.payload || bluetoothResult?.payload || [];
+        const hasConnectedDevice = devices.some((device) => device?.connected);
+
+        if (!hasConnectedDevice) {
+          setIsSpotifyAuthenticated(null);
+          setNeedsSpotifyAuthorization(false);
+          setAuthStatusMessage(null);
           setIsAuthCheckInProgress(false);
+          return;
         }
+
+        return sendNocturneWsRequest(
+          "spotify.auth.getStatus",
+          {},
+          { timeoutMs: 5000 },
+        )
+          .then((result) => {
+            if (cancelled) {
+              return;
+            }
+            setRequestedSpotifyStatus(true);
+            const handled = processSpotifyAuthMessage(result);
+            if (!handled) {
+              setIsAuthCheckInProgress(false);
+            }
+          })
+          .catch((err) => {
+            if (cancelled) return;
+            console.error("Failed to fetch Spotify auth status", err);
+            setIsSpotifyAuthenticated(null);
+            setNeedsSpotifyAuthorization(false);
+            setAuthStatusMessage(null);
+            setIsAuthCheckInProgress(false);
+          });
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error("Failed to fetch Spotify auth status", err);
-        setRequestedSpotifyStatus(false);
+        console.error("Failed to fetch bluetooth devices", err);
         setIsAuthCheckInProgress(false);
       });
 
@@ -557,7 +589,6 @@ function App() {
       cancelled = true;
     };
   }, [
-    hasDevices,
     hasSeenTutorialFlag,
     wsConnected,
     requestedSpotifyStatus,

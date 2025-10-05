@@ -1143,12 +1143,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         dataLoadingAttemptedRef.current = false;
         loadInitialData();
       }
-    } else {
-      if (initialDataLoaded) {
-        initialLoadTriggeredRef.current = false;
-        dataLoadingAttemptedRef.current = false;
-        setInitialDataLoaded(false);
-      }
     }
 
     return () => {
@@ -1174,7 +1168,10 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   ]);
 
   const refreshData = useCallback(async () => {
-    if (!isSpotifyReady) return;
+    if (!isSpotifyReady) {
+      console.log("Spotify not ready, skipping refresh");
+      return;
+    }
 
     if (dataFetchingInProgressRef.current) {
       console.log("Skipping refresh - data fetching already in progress");

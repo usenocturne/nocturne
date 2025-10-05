@@ -407,6 +407,25 @@ class ImageLoadQueue {
       item.isSpotifyReady = isSpotifyReady;
     });
 
+    if (isSpotifyReady && this.failedImages.size > 0) {
+      const failedUrls = Array.from(this.failedImages.keys());
+      failedUrls.forEach((url) => {
+        const meta = this.failedImages.get(url);
+        if (meta) {
+          this.failedImages.delete(url);
+          this.retryCount.delete(url);
+          this.queue.unshift({
+            url,
+            priority: 100,
+            extractColors: meta.extractColors || false,
+            fetchImageFn: meta.fetchImageFn,
+            isSpotifyReady: true,
+            listeners: [],
+          });
+        }
+      });
+    }
+
     if (isSpotifyReady && this.queue.length > 0 && !this.isProcessing) {
       this.processQueue();
     }

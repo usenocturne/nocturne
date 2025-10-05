@@ -379,6 +379,16 @@ const setupGlobalWebSocket = async () => {
           if (pending) {
             pendingWsRequests.delete(data.id);
             const result = data.result ?? data;
+
+            if (result && result.authenticated !== undefined) {
+              const isAuthenticated =
+                result.authenticated === true ||
+                result.authenticated === 1 ||
+                result.authenticated === "1";
+              spotifyAuthenticated = isAuthenticated;
+              emitSpotifyAuthState();
+            }
+
             if (result && (result.error || data.error)) {
               const message =
                 (result && result.error) ||
