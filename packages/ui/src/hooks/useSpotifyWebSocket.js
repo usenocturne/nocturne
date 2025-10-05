@@ -209,7 +209,13 @@ export function useSpotifyWebSocket() {
   }, [addMessageListener, removeMessageListener, handleSpotifyResponse]);
 
   useEffect(() => {
-    if (wsConnected && deviceConnected && eaSessionReady && spotifyAuthenticated && messageQueueRef.current.length > 0) {
+    if (
+      wsConnected &&
+      deviceConnected &&
+      eaSessionReady &&
+      spotifyAuthenticated &&
+      messageQueueRef.current.length > 0
+    ) {
       const queue = [...messageQueueRef.current];
       messageQueueRef.current = [];
 
@@ -217,7 +223,13 @@ export function useSpotifyWebSocket() {
         sendSpotifyCommand(method, params).then(resolve).catch(reject);
       });
     }
-  }, [wsConnected, deviceConnected, eaSessionReady, spotifyAuthenticated, sendSpotifyCommand]);
+  }, [
+    wsConnected,
+    deviceConnected,
+    eaSessionReady,
+    spotifyAuthenticated,
+    sendSpotifyCommand,
+  ]);
 
   const getPlayerState = useCallback(async () => {
     try {

@@ -17,7 +17,8 @@ import {
 import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
 
 const DeviceSwitcherModal = ({ isOpen, onClose, initialDevices }) => {
-  const { isSpotifyReady, getDevices, transferPlayback } = useSpotifyWebSocket();
+  const { isSpotifyReady, getDevices, transferPlayback } =
+    useSpotifyWebSocket();
   const [devices, setDevices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);

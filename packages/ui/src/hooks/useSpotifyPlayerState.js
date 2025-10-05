@@ -286,7 +286,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             playerState.track?.uri?.startsWith("spotify:episode:");
 
           const transformedState = {
-            is_playing: playerState.is_paused === false || playerState.is_paused === 0,
+            is_playing:
+              playerState.is_paused === false || playerState.is_paused === 0,
             timestamp: Date.now(),
             progress_ms: parseInt(playerState.position_as_of_timestamp) || 0,
 
@@ -381,11 +382,15 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                   }
               : null,
 
-            shuffle_state: playerState.options?.shuffling_context === true || playerState.options?.shuffling_context === 1,
+            shuffle_state:
+              playerState.options?.shuffling_context === true ||
+              playerState.options?.shuffling_context === 1,
             repeat_state:
-              playerState.options?.repeating_track === true || playerState.options?.repeating_track === 1
+              playerState.options?.repeating_track === true ||
+              playerState.options?.repeating_track === 1
                 ? "track"
-                : playerState.options?.repeating_context === true || playerState.options?.repeating_context === 1
+                : playerState.options?.repeating_context === true ||
+                    playerState.options?.repeating_context === 1
                   ? "context"
                   : "off",
 

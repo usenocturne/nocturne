@@ -53,8 +53,10 @@ const didBluetoothStateChange = (nextDevices) => {
       return true;
     }
   }
-  return bluetoothConnectionState.connected !==
-    nextDevices.some((device) => device.connected);
+  return (
+    bluetoothConnectionState.connected !==
+    nextDevices.some((device) => device.connected)
+  );
 };
 
 const emitBluetoothConnectionState = () => {
@@ -311,7 +313,7 @@ const setupGlobalWebSocket = async () => {
           type: "request",
           id: messageId,
           method: "reset_boot_counter",
-          params: {}
+          params: {},
         };
         socket.send(JSON.stringify(resetBootCounterMessage));
       } catch (err) {
@@ -349,16 +351,25 @@ const setupGlobalWebSocket = async () => {
       try {
         const data = JSON.parse(event.data);
 
-        if (data && data.type === "event" && data.topic === "ea.session.started") {
+        if (
+          data &&
+          data.type === "event" &&
+          data.topic === "ea.session.started"
+        ) {
           eaSessionStarted = true;
           emitEaSessionState();
         }
 
-        if (data && data.type === "event" && data.topic === "spotify.auth.status") {
+        if (
+          data &&
+          data.type === "event" &&
+          data.topic === "spotify.auth.status"
+        ) {
           const authData = data.data || {};
-          const isAuthenticated = authData.authenticated === true ||
-                                 authData.authenticated === 1 ||
-                                 authData.authenticated === "1";
+          const isAuthenticated =
+            authData.authenticated === true ||
+            authData.authenticated === 1 ||
+            authData.authenticated === "1";
           spotifyAuthenticated = isAuthenticated;
           emitSpotifyAuthState();
         }
@@ -433,7 +444,10 @@ const sendWsRequest = (method, params = {}, { timeoutMs = 30000 } = {}) => {
         return;
       }
 
-      if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
+      if (
+        ws.readyState === WebSocket.CLOSING ||
+        ws.readyState === WebSocket.CLOSED
+      ) {
         if (Date.now() - start >= timeoutMs) {
           reject(new Error("WebSocket is closed"));
           return;
@@ -851,7 +865,8 @@ export const useBluetooth = () => {
 
   const [pairingRequest, setPairingRequest] = useState(null);
   const [connectedDevices, setConnectedDevices] = useState([]);
-  const [hasFetchedInitialDevices, setHasFetchedInitialDevices] = useState(false);
+  const [hasFetchedInitialDevices, setHasFetchedInitialDevices] =
+    useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [lastConnectedDevice, setLastConnectedDevice] = useState(null);
   const [devices, setDevices] = useState([]);
@@ -1386,12 +1401,11 @@ export const useBluetooth = () => {
               if (exists) {
                 return prev;
               }
-              return [
-                ...prev,
-                { address, connected: true },
-              ];
+              return [...prev, { address, connected: true }];
             });
-            setLastConnectedDevice((prev) => prev || { address, connected: true });
+            setLastConnectedDevice(
+              (prev) => prev || { address, connected: true },
+            );
             setDevices((prev) => {
               const idx = (prev || []).findIndex((d) => d.address === address);
               if (idx === -1) {

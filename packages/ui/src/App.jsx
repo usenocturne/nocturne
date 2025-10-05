@@ -277,7 +277,8 @@ function App() {
   const [powerMenuVisible, setPowerMenuVisible] = useState(false);
   const powerMenuVisibleRef = useRef(false);
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
-  const [showExhaustedReconnectScreen, setShowExhaustedReconnectScreen] = useState(false);
+  const [showExhaustedReconnectScreen, setShowExhaustedReconnectScreen] =
+    useState(false);
   const [showAuthScreen, setShowAuthScreen] = useState(true);
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(null);
   const [needsSpotifyAuthorization, setNeedsSpotifyAuthorization] =
@@ -329,9 +330,7 @@ function App() {
 
   useEffect(() => {
     const syncFromStorage = () => {
-      setAnalyticsEnabled(
-        localStorage.getItem("analyticsEnabled") !== "false",
-      );
+      setAnalyticsEnabled(localStorage.getItem("analyticsEnabled") !== "false");
       setHasSeenTutorialFlag(
         localStorage.getItem("hasSeenTutorial") === "true",
       );
@@ -350,7 +349,8 @@ function App() {
     const handleShowBanner = () => setShowNetworkBanner(true);
     const handleHideBanner = () => setShowNetworkBanner(false);
     const handleShowNetworkScreen = () => setShowExhaustedReconnectScreen(true);
-    const handleHideNetworkScreen = () => setShowExhaustedReconnectScreen(false);
+    const handleHideNetworkScreen = () =>
+      setShowExhaustedReconnectScreen(false);
 
     window.addEventListener("networkBannerShow", handleShowBanner);
     window.addEventListener("networkBannerHide", handleHideBanner);
@@ -978,7 +978,9 @@ function App() {
     !isUpdateScreenVisible &&
     !showTutorial &&
     !pairingRequest &&
-    ((!lastConnectedDevice && !hasActiveBluetoothConnection && hasFetchedInitialDevices) ||
+    ((!lastConnectedDevice &&
+      !hasActiveBluetoothConnection &&
+      hasFetchedInitialDevices) ||
       showExhaustedReconnectScreen);
   // const showConnectionLostScreen = false;
 

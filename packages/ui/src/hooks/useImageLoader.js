@@ -55,7 +55,9 @@ class ImageLoadQueue {
   notifyListeners() {
     const failedImages = new Set(this.getActiveFailedImages());
     const loadingImages = new Set(this.loadingImages);
-    this.listeners.forEach((callback) => callback({ loadingImages, failedImages }));
+    this.listeners.forEach((callback) =>
+      callback({ loadingImages, failedImages }),
+    );
   }
 
   getActiveFailedImages() {
@@ -90,7 +92,10 @@ class ImageLoadQueue {
     if (!meta) return null;
 
     const now = Date.now();
-    if (typeof meta.timestamp !== "number" || now - meta.timestamp > this.failureTtlMs) {
+    if (
+      typeof meta.timestamp !== "number" ||
+      now - meta.timestamp > this.failureTtlMs
+    ) {
       this.failedImages.delete(url);
       return null;
     }
@@ -117,10 +122,7 @@ class ImageLoadQueue {
 
     const entry = {
       data: data ?? existing?.data ?? null,
-      colors:
-        colors !== undefined
-          ? colors
-          : existing?.colors ?? null,
+      colors: colors !== undefined ? colors : (existing?.colors ?? null),
       timestamp: Date.now(),
       colorPromise: null,
     };
@@ -152,7 +154,10 @@ class ImageLoadQueue {
           return colors;
         })
         .catch((err) => {
-          console.error(`Error extracting colors from cached image ${url}:`, err);
+          console.error(
+            `Error extracting colors from cached image ${url}:`,
+            err,
+          );
           entry.colorPromise = null;
           return null;
         });
@@ -167,14 +172,24 @@ class ImageLoadQueue {
       });
   }
 
-  async loadImage(url, priority = 0, extractColors = false, fetchImageFn, isSpotifyReady) {
+  async loadImage(
+    url,
+    priority = 0,
+    extractColors = false,
+    fetchImageFn,
+    isSpotifyReady,
+  ) {
     return new Promise((resolve, reject) => {
       if (!url) {
         reject(new Error("No URL provided"));
         return;
       }
 
-      const listener = { resolve, reject, extractColors: Boolean(extractColors) };
+      const listener = {
+        resolve,
+        reject,
+        extractColors: Boolean(extractColors),
+      };
 
       const cachedEntry = this.getCachedEntry(url);
       if (cachedEntry) {
@@ -222,7 +237,9 @@ class ImageLoadQueue {
         isSpotifyReady,
         listeners: [listener],
       };
-      const insertIndex = this.queue.findIndex((item) => item.priority < priority);
+      const insertIndex = this.queue.findIndex(
+        (item) => item.priority < priority,
+      );
       if (insertIndex >= 0) {
         this.queue.splice(insertIndex, 0, queueItem);
       } else {
@@ -246,7 +263,8 @@ class ImageLoadQueue {
       const queueItem = this.queue.shift();
       if (!queueItem) break;
 
-      const { url, extractColors, fetchImageFn, isSpotifyReady, listeners } = queueItem;
+      const { url, extractColors, fetchImageFn, isSpotifyReady, listeners } =
+        queueItem;
 
       if (!isSpotifyReady) {
         this.queue.unshift(queueItem);
@@ -254,7 +272,6 @@ class ImageLoadQueue {
         await new Promise((r) => setTimeout(r, 150));
         return;
       }
-
 
       const failure = this.getFailure(url);
       if (failure) {
@@ -270,18 +287,22 @@ class ImageLoadQueue {
       this.activeRequests.set(url, {
         listeners: [...listeners],
         extractColors:
-          listeners.some((listener) => listener.extractColors) || Boolean(extractColors),
+          listeners.some((listener) => listener.extractColors) ||
+          Boolean(extractColors),
         fetchImageFn,
       });
       this.notifyListeners();
 
-      await new Promise((resolve) => setTimeout(resolve, this.imageFetchDelayMs));
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.imageFetchDelayMs),
+      );
 
       try {
         const result = await fetchImageFn(url);
         const activeRequest = this.activeRequests.get(url);
         const requestListeners = activeRequest?.listeners || listeners;
-        const shouldExtractColors = activeRequest?.extractColors || Boolean(extractColors);
+        const shouldExtractColors =
+          activeRequest?.extractColors || Boolean(extractColors);
 
         if (result && result.data) {
           let extractedColors = null;
@@ -297,14 +318,22 @@ class ImageLoadQueue {
           this.retryCount.delete(url);
           this.activeRequests.delete(url);
           this.failedImages.delete(url);
-          const colorsForCache = shouldExtractColors ? extractedColors ?? null : undefined;
+          const colorsForCache = shouldExtractColors
+            ? (extractedColors ?? null)
+            : undefined;
           this.setCache(url, result.data, colorsForCache);
-          const cachedResult = this.getCachedEntry(url) || { data: result.data, colors: extractedColors ?? null };
+          const cachedResult = this.getCachedEntry(url) || {
+            data: result.data,
+            colors: extractedColors ?? null,
+          };
 
           this.notifyListeners();
 
           requestListeners.forEach(({ resolve }) =>
-            resolve({ data: cachedResult.data, colors: cachedResult.colors ?? extractedColors ?? null }),
+            resolve({
+              data: cachedResult.data,
+              colors: cachedResult.colors ?? extractedColors ?? null,
+            }),
           );
         } else {
           throw new Error("No image data received");
@@ -333,7 +362,10 @@ class ImageLoadQueue {
           });
         } else if (retryCount < this.maxRetries + this.maxExtendedRetries) {
           const extendedAttempt = retryCount - this.maxRetries + 1;
-          const retryDelay = Math.min(2000, 150 * 2 ** Math.min(extendedAttempt, 4));
+          const retryDelay = Math.min(
+            2000,
+            150 * 2 ** Math.min(extendedAttempt, 4),
+          );
 
           this.retryCount.set(url, retryCount + 1);
           this.loadingImages.delete(url);
@@ -371,8 +403,7 @@ class ImageLoadQueue {
   }
 
   updateQueueReadyState(isSpotifyReady) {
-
-    this.queue.forEach(item => {
+    this.queue.forEach((item) => {
       item.isSpotifyReady = isSpotifyReady;
     });
 

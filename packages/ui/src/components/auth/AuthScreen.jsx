@@ -4,7 +4,11 @@ import NocturneIcon from "../common/icons/NocturneIcon";
 import GradientBackground from "../common/GradientBackground";
 import QRCodeDisplay from "./QRCodeDisplay";
 
-const AuthScreen = ({ isLoading = false, error = null, statusMessage = null }) => {
+const AuthScreen = ({
+  isLoading = false,
+  error = null,
+  statusMessage = null,
+}) => {
   const [gradientState, updateGradientColors] = useGradientState();
 
   useEffect(() => {

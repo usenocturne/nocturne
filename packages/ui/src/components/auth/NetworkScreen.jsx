@@ -10,7 +10,11 @@ import BluetoothDevices from "../settings/network/BluetoothDevices";
 import GradientBackground from "../common/GradientBackground";
 import { useBluetooth } from "../../hooks/useNocturned";
 
-const NetworkScreen = ({ isConnectionLost = true, onConnectionRestored, reconnectionExhausted = false }) => {
+const NetworkScreen = ({
+  isConnectionLost = true,
+  onConnectionRestored,
+  reconnectionExhausted = false,
+}) => {
   const { setDiscoverable } = useBluetooth();
   const [showMain, setShowMain] = React.useState(true);
   const [showParent, setShowParent] = React.useState(false);
