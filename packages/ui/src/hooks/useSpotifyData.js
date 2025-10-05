@@ -3,7 +3,7 @@ import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
 import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useImageLoader } from "./useImageLoader";
-import { getCachedTimezone } from "../components/common/navigation/StatusBar";
+import { getCachedTimezone } from "./useCurrentTime";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;

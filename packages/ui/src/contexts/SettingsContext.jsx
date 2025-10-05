@@ -28,7 +28,6 @@ export function SettingsProvider({ children }) {
     showStatusBar: getDefaultSettingValue("showStatusBar", true),
     startWithNowPlaying: getDefaultSettingValue("startWithNowPlaying", false),
     analyticsEnabled: getDefaultSettingValue("analyticsEnabled", true),
-    autoTimezoneEnabled: getDefaultSettingValue("autoTimezoneEnabled", true),
   });
 
   useEffect(() => {

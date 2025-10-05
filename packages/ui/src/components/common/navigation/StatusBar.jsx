@@ -3,10 +3,6 @@ import { BatteryIcon, BluetoothIcon, USBIcon } from "../../common/icons";
 import { useBluetooth } from "../../../hooks/useNocturned";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
 
-let cachedTimezone = null;
-
-export const getCachedTimezone = () => cachedTimezone;
-
 export default function StatusBar() {
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const { lastConnectedDevice, connectedDevices, devices } = useBluetooth();
