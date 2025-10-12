@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { sendNocturneWsRequest } from "./useNocturned";
 
 const compareVersions = (v1, v2) => {
   const parseVersion = (version) => {
@@ -97,110 +98,55 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     setError(null);
 
     try {
-      const releasesResponse = await fetch(
-        `https://api.github.com/repos/usenocturne/nocturne/releases`,
-      );
+      const versionToCheck = currentVersionRef.current
+        ? (currentVersionRef.current.startsWith('v')
+            ? currentVersionRef.current
+            : `v${currentVersionRef.current}`)
+        : 'v4.0.0';
 
-      if (!releasesResponse.ok) {
-        throw new Error(`Failed to fetch releases: ${releasesResponse.status}`);
-      }
+      const otaCheckResult = await sendNocturneWsRequest("device.ota.check", {
+        currentVersion: versionToCheck,
+      });
 
-      const releases = await releasesResponse.json();
-      const validReleases = [];
-
-      for (const release of releases) {
-        const updateJsonAsset = release.assets.find(
-          (asset) => asset.name === "update.json",
-        );
-        if (!updateJsonAsset) continue;
-
-        try {
-          const updateJsonResponse = await fetch(
-            "http://localhost:5000/fetchjson",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                url: updateJsonAsset.browser_download_url,
-              }),
-            },
-          );
-          if (!updateJsonResponse.ok) continue;
-
-          const updateJson = await updateJsonResponse.json();
-
-          const releaseData = {
-            ...updateJson,
-            tag: release.tag_name,
-            releaseNotes: release.body,
-            releaseDate: release.published_at,
-            releaseSize: release.assets.find(
-              (a) => a.name === updateJson.files.update,
-            ).size,
-            assetUrls: {},
-            assetSums: {},
-          };
-
-          for (const [key, fileName] of Object.entries(updateJson.files)) {
-            const asset = release.assets.find((a) => a.name === fileName);
-            if (asset) {
-              releaseData.assetUrls[key] = asset.browser_download_url;
-              if (asset.digest) {
-                releaseData.assetSums[key] = asset.digest.replace(
-                  /^sha256:/,
-                  "",
-                );
-              }
-            }
-          }
-
-          validReleases.push(releaseData);
-        } catch (error) {
-          console.warn(`Failed to process release ${release.tag_name}:`, error);
-        }
-      }
-
-      validReleases.sort((a, b) => compareVersions(b.version, a.version));
-
-      const chain = findUpdateChain(currentVersionRef.current, validReleases);
-      setUpdateChain(chain);
-
-      if (chain.length > 0) {
-        const nextUpdate = chain[0];
+      if (!otaCheckResult.updateAvailable) {
         setUpdateInfo({
-          ...nextUpdate,
-          hasUpdate: true,
-          canUpdate: true,
-          nextInChain: chain.length > 1,
-          totalUpdates: chain.length,
+          hasUpdate: false,
+          canUpdate: false,
+          nextInChain: false,
+          totalUpdates: 0,
+          version: currentVersionRef.current,
         });
-      } else if (validReleases.length > 0) {
-        const latestRelease = validReleases[0];
-        const isNewer =
-          compareVersions(latestRelease.version, currentVersionRef.current) > 0;
-
-        if (isNewer) {
-          setUpdateInfo({
-            ...latestRelease,
-            hasUpdate: true,
-            canUpdate: false,
-            nextInChain: false,
-            totalUpdates: 1,
-            noCompatiblePath: true,
-          });
-        } else {
-          setUpdateInfo({
-            ...latestRelease,
-            hasUpdate: false,
-            canUpdate: false,
-            nextInChain: false,
-            totalUpdates: 0,
-          });
-        }
-      } else {
-        setUpdateInfo(null);
+        setLastChecked(new Date());
+        return;
       }
 
+      const updateVersion = otaCheckResult.version.replace(/^v/, '');
+      const canUpdate = otaCheckResult.metadata?.auto_updateable !== false;
+
+      const releaseData = {
+        version: updateVersion,
+        tag: otaCheckResult.version,
+        shortDescription: "This update brings new features and bug fixes.",
+        fullDescription: "This update brings new features and bug fixes.",
+        releaseNotes: "This update brings new features and bug fixes.",
+        releaseDate: new Date().toISOString(),
+        releaseSize: 0,
+        imageUrl: "/images/os/nocturne/3.0.0.webp",
+        assetUrls: {},
+        assetSums: {},
+      };
+
+      setUpdateInfo({
+        ...releaseData,
+        hasUpdate: true,
+        canUpdate: canUpdate,
+        nextInChain: false,
+        totalUpdates: 1,
+        channel: otaCheckResult.channel,
+        critical: otaCheckResult.metadata?.critical || false,
+      });
+
+      setUpdateChain([releaseData]);
       setLastChecked(new Date());
     } catch (err) {
       console.error("Error checking for updates:", err);

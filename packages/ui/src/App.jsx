@@ -33,7 +33,6 @@ import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
 import { CheckIcon } from "./components/common/icons";
 import { SettingsUpdateIcon } from "./components/common/icons";
 import UpdateCheckNotification from "./components/common/notifications/UpdateCheckNotification";
-import UpdateScreen from "./components/common/UpdateScreen";
 import NetworkScreen from "./components/auth/NetworkScreen";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import AuthScreen from "./components/auth/AuthScreen";
@@ -998,15 +997,11 @@ function App() {
     }
   };
 
-  const isUpdateScreenVisible =
-    isUpdating || (updateStatus.stage && updateStatus.stage !== "");
-
   const hasActiveBluetoothConnection =
     Array.isArray(connectedDevices) &&
     connectedDevices.some((device) => device?.connected);
 
   const showConnectionLostScreen =
-    !isUpdateScreenVisible &&
     !showTutorial &&
     !pairingRequest &&
     ((!lastConnectedDevice &&
@@ -1018,14 +1013,11 @@ function App() {
   const displayNetworkBanner =
     showNetworkBanner &&
     !showConnectionLostScreen &&
-    !isUpdateScreenVisible &&
     !showTutorial &&
     !showAuthScreen;
 
   let content;
-  if (isUpdateScreenVisible) {
-    content = <UpdateScreen />;
-  } else if (showAuthScreen) {
+  if (showAuthScreen) {
     content = (
       <AuthScreen
         isLoading={isAuthCheckInProgress}
@@ -1146,8 +1138,7 @@ function App() {
 
               <div className="relative z-10">
                 {content}
-                {!isUpdateScreenVisible &&
-                  !showTetheringScreen &&
+                {!showTetheringScreen &&
                   !showConnectionLostScreen &&
                   !showTutorial && (
                     <>

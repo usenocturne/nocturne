@@ -6,7 +6,6 @@ import {
 } from "../common/icons";
 import { useSystemUpdate, useNocturneInfo } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
-import UpdateScreen from "../common/UpdateScreen";
 
 let updateCompletedInSession = false;
 
@@ -18,6 +17,7 @@ const SoftwareUpdate = () => {
     isError,
     errorMessage,
     startUpdate,
+    isApplyComplete,
   } = useSystemUpdate();
 
   const {
@@ -43,9 +43,6 @@ const SoftwareUpdate = () => {
 
   const hasNocturneUpdate = updateInfo?.hasUpdate || false;
   const nocturneLatestVersion = updateInfo?.version || nocturneCurrentVersion;
-  const isDownloadStage = updateStatus.stage === "download";
-  const isFlashStage = updateStatus.stage === "flash";
-  const isDownloading = isUpdating && (isDownloadStage || isFlashStage);
   const isCompleted =
     updateStatus.stage === "complete" && !isUpdating && !isError;
 
@@ -55,6 +52,13 @@ const SoftwareUpdate = () => {
       setSessionCompleted(true);
     }
   }, [isCompleted]);
+
+  useEffect(() => {
+    if (isApplyComplete) {
+      updateCompletedInSession = true;
+      setSessionCompleted(true);
+    }
+  }, [isApplyComplete]);
 
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return "0 Bytes";
@@ -112,17 +116,18 @@ const SoftwareUpdate = () => {
   const noCompatiblePath = updateInfo?.noCompatiblePath === true;
 
   const handleNocturneUpdate = async () => {
-    if (!updateInfo || !updateInfo.assetUrls) return;
+    if (!updateInfo || !updateInfo.version) return;
 
-    const imageURL = updateInfo.assetUrls.update;
-    const sum = updateInfo.assetSums && updateInfo.assetSums.update;
-
-    if (!imageURL) {
-      console.error("Missing update files");
+    if (!nocturneCurrentVersion) {
+      console.error("Current version not available");
       return;
     }
 
-    await startUpdate(imageURL, sum, updateInfo?.commands || {});
+    await startUpdate(
+      nocturneCurrentVersion,
+      updateInfo.version,
+      updateInfo?.commands || {}
+    );
   };
 
   const handleReboot = useCallback(() => {
@@ -149,11 +154,9 @@ const SoftwareUpdate = () => {
     noCompatiblePath,
     isCompleted,
     onReboot,
-    stage,
     checkForUpdates,
+    isRebootReady,
   }) => {
-    const [iconError, setIconError] = useState(false);
-
     return (
       <div className="space-y-4">
         {(isChecking || !hasUpdate || sessionCompleted) && (
@@ -208,26 +211,16 @@ const SoftwareUpdate = () => {
           </div>
         )}
 
-        {hasUpdate && !sessionCompleted && (
+        {hasUpdate && !sessionCompleted && !isRebootReady && (
           <div className="space-y-4">
             <div className="p-4 bg-white/10 rounded-xl border border-white/10">
               <div className="flex items-center mb-4">
-                {iconError ? (
-                  <SettingsUpdateIcon className="w-16 h-16 text-white" />
-                ) : (
-                  <img
-                    src={imagePath}
-                    alt={`${name} ${latestVersion}`}
-                    className="w-16 h-16 rounded-xl object-cover"
-                    onError={() => setIconError(true)}
-                  />
-                )}
+                <SettingsUpdateIcon className="w-16 h-16 text-white" />
                 <div className="ml-4">
                   <div className="text-[28px] font-[580] text-white tracking-tight">
                     {name} {latestVersion}
                   </div>
                   <div className="text-[20px] font-[560] text-white/80 tracking-tight">
-                    {formatBytes(updateInfo?.releaseSize || 0)} •{" "}
                     {updateInfo?.releaseDate.split("T")[0]}
                   </div>
                 </div>
@@ -294,23 +287,31 @@ const SoftwareUpdate = () => {
               )}
             </div>
 
-            {isDownloading || isFlashStage ? (
-              <UpdateScreen />
-            ) : (
-              <button
-                className={`w-full p-4 rounded-xl border ${
-                  canUpdate
+            <button
+              className={`w-full p-4 rounded-xl border ${
+                isRebootReady
+                  ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
+                  : canUpdate && !isDownloading
                     ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
                     : "bg-white/5 border-white/5 text-white/40"
-                }`}
-                onClick={canUpdate ? onUpdate : undefined}
-                disabled={!canUpdate}
-              >
-                <span className="text-[28px] font-[580] tracking-tight">
-                  Download and Install
-                </span>
-              </button>
-            )}
+              }`}
+              onClick={
+                isRebootReady
+                  ? onReboot
+                  : canUpdate && !isDownloading
+                    ? onUpdate
+                    : undefined
+              }
+              disabled={!isRebootReady && (!canUpdate || isDownloading)}
+            >
+              <span className="text-[28px] font-[580] tracking-tight">
+                {isRebootReady
+                  ? "Reboot Now"
+                  : isDownloading
+                    ? "Applying update..."
+                    : "Download and Install"}
+              </span>
+            </button>
           </div>
         )}
       </div>
@@ -353,7 +354,7 @@ const SoftwareUpdate = () => {
         hasUpdate={effectiveHasUpdate}
         imagePath={updateInfo?.imageUrl || "/images/os/nocturne/3.0.0.webp"}
         onUpdate={handleNocturneUpdate}
-        isDownloading={isDownloading}
+        isDownloading={isUpdating}
         canUpdate={canUpdate}
         isChecking={effectiveIsChecking}
         isMultiStepUpdate={isMultiStepUpdate}
@@ -362,8 +363,8 @@ const SoftwareUpdate = () => {
         noCompatiblePath={noCompatiblePath}
         isCompleted={isCompleted}
         onReboot={handleReboot}
-        stage={updateStatus.stage}
         checkForUpdates={checkForUpdates}
+        isRebootReady={isApplyComplete}
       />
     </div>
   );

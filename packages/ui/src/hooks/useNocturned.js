@@ -205,6 +205,7 @@ export const addGlobalWsListener = (id, handlers) => {
 
 let retryIsCancelled = false;
 let isNetworkPollingActive = false;
+let otaApplyTriggered = false;
 
 const queueConnectRequest = async (deviceAddress, options = {}) => {
   return new Promise((resolve, reject) => {
@@ -380,6 +381,10 @@ const setupGlobalWebSocket = async () => {
             pendingWsRequests.delete(data.id);
             const result = data.result ?? data;
 
+            if (pending.method && !data.method) {
+              data.method = pending.method;
+            }
+
             if (result && result.authenticated !== undefined) {
               const isAuthenticated =
                 result.authenticated === true ||
@@ -472,7 +477,7 @@ const sendWsRequest = (method, params = {}, { timeoutMs = 30000 } = {}) => {
           ? globalThis.crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const payload = { type: "request", id, method, params };
-      pendingWsRequests.set(id, { resolve, reject });
+      pendingWsRequests.set(id, { resolve, reject, method });
 
       try {
         ws.send(JSON.stringify(payload));
@@ -627,17 +632,17 @@ export const useNocturneInfo = () => {
   const [serial, setSerial] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { apiRequest } = useNocturned();
 
   const fetchInfo = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const data = await apiRequest("/info");
+      const data = await sendWsRequest("device.version", {});
 
-      if (data && data.version) {
-        const cleanVersion = data.version.replace(/^v/, "");
+      if (data && (data.version || data.shortVersion)) {
+        const versionString = data.shortVersion || data.version;
+        const cleanVersion = versionString.replace(/^v/, "");
         setVersion(cleanVersion);
       } else {
         setVersion(null);
@@ -656,7 +661,7 @@ export const useNocturneInfo = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [apiRequest]);
+  }, []);
 
   useEffect(() => {
     fetchInfo();
@@ -689,34 +694,10 @@ export const useSystemUpdate = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isApplyComplete, setIsApplyComplete] = useState(false);
   const listenerIdRef = useRef(null);
   const lastSuccessfulStageRef = useRef(null);
   const postCommandsRef = useRef([]);
-
-  const checkUpdateStatus = useCallback(async () => {
-    try {
-      const status = await apiRequest("/update/status");
-      setUpdateStatus(status);
-      setIsUpdating(status.inProgress);
-
-      if (status.stage) {
-        lastSuccessfulStageRef.current = status.stage;
-      }
-
-      if (status.error) {
-        setIsError(true);
-        setErrorMessage(status.error);
-      } else {
-        setIsError(false);
-        setErrorMessage("");
-      }
-
-      return status;
-    } catch (error) {
-      console.error("Error checking update status:", error);
-      return null;
-    }
-  }, [apiRequest]);
 
   const execCommands = useCallback(
     async (commands) => {
@@ -731,7 +712,7 @@ export const useSystemUpdate = () => {
   );
 
   const startUpdate = useCallback(
-    async (imageURL, sum, commands = {}) => {
+    async (currentVersion, targetVersion, commands = {}) => {
       try {
         const pre = commands.pre || [];
         const post = commands.post || [];
@@ -739,9 +720,12 @@ export const useSystemUpdate = () => {
           await execCommands(pre);
         }
 
+        otaApplyTriggered = false;
+
         setIsUpdating(true);
         setIsError(false);
         setErrorMessage("");
+        setIsApplyComplete(false);
 
         setProgress({
           bytesComplete: 0,
@@ -750,10 +734,23 @@ export const useSystemUpdate = () => {
           percent: 0,
         });
 
-        const data = await apiRequest("/update", "POST", {
-          image_url: imageURL,
-          sum,
+        setUpdateStatus({
+          inProgress: true,
+          stage: "downloading",
+          error: "",
         });
+
+        const currentVersionWithPrefix = currentVersion?.startsWith('v')
+          ? currentVersion
+          : `v${currentVersion}`;
+        const targetVersionWithPrefix = targetVersion?.startsWith('v')
+          ? targetVersion
+          : `v${targetVersion}`;
+
+        const data = await sendWsRequest("device.ota.download", {
+          currentVersion: currentVersionWithPrefix,
+          targetVersion: targetVersionWithPrefix,
+        }, { timeoutMs: 0 });
 
         postCommandsRef.current = post;
 
@@ -766,12 +763,81 @@ export const useSystemUpdate = () => {
         return null;
       }
     },
-    [apiRequest, execCommands],
+    [execCommands],
   );
 
   const handleWsMessage = useCallback(
-    (data) => {
-      if (data.type === "update_progress" && data.payload) {
+    async (data) => {
+      if (
+        data.type === "response" &&
+        (data.method === "device.ota.apply" || otaApplyTriggered)
+      ) {
+        const result = data.result ?? data;
+
+        if (result && result.success) {
+          setUpdateStatus((prev) => ({
+            ...prev,
+            inProgress: false,
+            stage: "complete",
+          }));
+          setIsUpdating(false);
+          setIsApplyComplete(true);
+          otaApplyTriggered = false;
+
+          if (postCommandsRef.current && postCommandsRef.current.length) {
+            execCommands(postCommandsRef.current);
+            postCommandsRef.current = [];
+          }
+        } else {
+          const message =
+            result?.message ||
+            result?.error ||
+            "Update apply failed";
+          setIsError(true);
+          setErrorMessage(`Failed to apply update: ${message}`);
+          setIsUpdating(false);
+          setUpdateStatus((prev) => ({
+            ...prev,
+            inProgress: false,
+            error: message,
+          }));
+          setIsApplyComplete(false);
+          otaApplyTriggered = false;
+        }
+
+        return;
+      }
+
+      if (data.type === "event" && data.topic === "device.ota.complete") {
+
+        if (otaApplyTriggered) {
+          return;
+        }
+
+        otaApplyTriggered = true;
+
+        setUpdateStatus((prev) => ({
+          ...prev,
+          stage: "installing",
+          inProgress: true,
+        }));
+
+        try {
+          await sendWsRequest("device.ota.apply", {}, { timeoutMs: 0 });
+        } catch (error) {
+          console.error("Failed to apply OTA update:", error);
+          setIsError(true);
+          setErrorMessage(`Failed to apply update: ${error.message}`);
+          setIsUpdating(false);
+          setUpdateStatus((prev) => ({
+            ...prev,
+            inProgress: false,
+            error: error.message,
+          }));
+          setIsApplyComplete(false);
+          otaApplyTriggered = false;
+        }
+      } else if (data.type === "update_progress" && data.payload) {
         const payload = data.payload;
 
         if (payload.type === "progress") {
@@ -803,6 +869,7 @@ export const useSystemUpdate = () => {
               stage: "complete",
             }));
             setIsUpdating(false);
+            setIsApplyComplete(true);
             if (postCommandsRef.current && postCommandsRef.current.length) {
               execCommands(postCommandsRef.current);
               postCommandsRef.current = [];
@@ -816,34 +883,17 @@ export const useSystemUpdate = () => {
               inProgress: false,
               error: payload.error || "Update failed",
             }));
+            setIsApplyComplete(false);
           }
         }
       }
     },
-    [checkUpdateStatus, execCommands],
+    [execCommands],
   );
-
-  useEffect(() => {
-    let statusIntervalId = null;
-
-    if (isUpdating) {
-      statusIntervalId = setInterval(() => {
-        checkUpdateStatus();
-      }, 5000);
-    }
-
-    return () => {
-      if (statusIntervalId) {
-        clearInterval(statusIntervalId);
-      }
-    };
-  }, [isUpdating, checkUpdateStatus]);
 
   useEffect(() => {
     const listenerId = addMessageListener("system-update", handleWsMessage);
     listenerIdRef.current = listenerId;
-
-    checkUpdateStatus();
 
     return () => {
       if (listenerIdRef.current) {
@@ -854,7 +904,6 @@ export const useSystemUpdate = () => {
     addMessageListener,
     removeMessageListener,
     handleWsMessage,
-    checkUpdateStatus,
   ]);
 
   return {
@@ -865,7 +914,7 @@ export const useSystemUpdate = () => {
     errorMessage,
     wsConnected,
     startUpdate,
-    checkUpdateStatus,
+    isApplyComplete,
   };
 };
 
