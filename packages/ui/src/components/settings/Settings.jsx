@@ -591,7 +591,6 @@ export default function Settings({
     }
   }, [accessToken]);
 
-
   const fetchSpotifyProfile = async () => {
     try {
       const response = await fetch("https://api.spotify.com/v1/me", {
@@ -1056,7 +1055,9 @@ export default function Settings({
                 </h2>
               </div>
               <div className="space-y-6 mb-12">
-                {activeSubItem && activeSubItem.type === "navigate" && activeSubItem.items
+                {activeSubItem &&
+                activeSubItem.type === "navigate" &&
+                activeSubItem.items
                   ? activeSubItem.items.map((item) => renderSettingItem(item))
                   : activeSubItem && renderSettingItem(activeSubItem)}
               </div>

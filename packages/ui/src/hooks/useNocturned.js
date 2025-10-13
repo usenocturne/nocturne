@@ -742,17 +742,21 @@ export const useSystemUpdate = () => {
           error: "",
         });
 
-        const currentVersionWithPrefix = currentVersion?.startsWith('v')
+        const currentVersionWithPrefix = currentVersion?.startsWith("v")
           ? currentVersion
           : `v${currentVersion}`;
-        const targetVersionWithPrefix = targetVersion?.startsWith('v')
+        const targetVersionWithPrefix = targetVersion?.startsWith("v")
           ? targetVersion
           : `v${targetVersion}`;
 
-        const data = await sendWsRequest("device.ota.download", {
-          currentVersion: currentVersionWithPrefix,
-          targetVersion: targetVersionWithPrefix,
-        }, { timeoutMs: 0 });
+        const data = await sendWsRequest(
+          "device.ota.download",
+          {
+            currentVersion: currentVersionWithPrefix,
+            targetVersion: targetVersionWithPrefix,
+          },
+          { timeoutMs: 0 },
+        );
 
         postCommandsRef.current = post;
 
@@ -792,9 +796,7 @@ export const useSystemUpdate = () => {
           }
         } else {
           const message =
-            result?.message ||
-            result?.error ||
-            "Update apply failed";
+            result?.message || result?.error || "Update apply failed";
           setIsError(true);
           setErrorMessage(`Failed to apply update: ${message}`);
           setIsUpdating(false);
@@ -811,7 +813,6 @@ export const useSystemUpdate = () => {
       }
 
       if (data.type === "event" && data.topic === "device.ota.complete") {
-
         if (otaApplyTriggered) {
           return;
         }
@@ -902,11 +903,7 @@ export const useSystemUpdate = () => {
         removeMessageListener(listenerIdRef.current);
       }
     };
-  }, [
-    addMessageListener,
-    removeMessageListener,
-    handleWsMessage,
-  ]);
+  }, [addMessageListener, removeMessageListener, handleWsMessage]);
 
   return {
     updateStatus,
@@ -926,13 +923,8 @@ export const AutoUpdateManager = () => {
   const { settings } = useSettings();
   const { version: currentVersion, isLoading: isInfoLoading } =
     useNocturneInfo();
-  const {
-    updateStatus,
-    isUpdating,
-    isError,
-    startUpdate,
-    isApplyComplete,
-  } = useSystemUpdate();
+  const { updateStatus, isUpdating, isError, startUpdate, isApplyComplete } =
+    useSystemUpdate();
   const { updateInfo, isChecking, checkForUpdates } =
     useUpdateCheck(currentVersion);
 

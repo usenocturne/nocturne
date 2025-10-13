@@ -32,7 +32,6 @@ export default function Home({
   const { playDJMix } = useSpotifyPlayerControls(currentPlayback);
   const [showDonationModal, setShowDonationModal] = useState(false);
 
-
   const handleOpenDonationModal = () => {
     setShowDonationModal(true);
   };
@@ -137,7 +136,6 @@ export default function Home({
       }
     }
   }, [currentlyPlayingAlbum, activeSection, updateGradientColors]);
-
 
   const isPlayingLikedSongs = () => {
     return (

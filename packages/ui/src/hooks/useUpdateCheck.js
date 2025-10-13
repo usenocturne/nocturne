@@ -99,10 +99,10 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
 
     try {
       const versionToCheck = currentVersionRef.current
-        ? (currentVersionRef.current.startsWith('v')
-            ? currentVersionRef.current
-            : `v${currentVersionRef.current}`)
-        : 'v4.0.0';
+        ? currentVersionRef.current.startsWith("v")
+          ? currentVersionRef.current
+          : `v${currentVersionRef.current}`
+        : "v4.0.0";
 
       const otaCheckResult = await sendNocturneWsRequest("device.ota.check", {
         currentVersion: versionToCheck,
@@ -120,7 +120,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
         return;
       }
 
-      const updateVersion = otaCheckResult.version.replace(/^v/, '');
+      const updateVersion = otaCheckResult.version.replace(/^v/, "");
       const canUpdate = otaCheckResult.metadata?.auto_updateable !== false;
 
       const releaseData = {
