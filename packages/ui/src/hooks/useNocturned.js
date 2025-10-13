@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSettings } from "../contexts/SettingsContext";
+import { useUpdateCheck } from "./useUpdateCheck";
 
 const API_BASE = "http://localhost:5000";
 
@@ -916,6 +918,122 @@ export const useSystemUpdate = () => {
     startUpdate,
     isApplyComplete,
   };
+};
+
+const AUTO_UPDATE_DELAY_MS = 60000;
+
+export const AutoUpdateManager = () => {
+  const { settings } = useSettings();
+  const { version: currentVersion, isLoading: isInfoLoading } =
+    useNocturneInfo();
+  const {
+    updateStatus,
+    isUpdating,
+    isError,
+    startUpdate,
+    isApplyComplete,
+  } = useSystemUpdate();
+  const { updateInfo, isChecking, checkForUpdates } =
+    useUpdateCheck(currentVersion);
+
+  const autoUpdateTimerRef = useRef(null);
+  const autoUpdateTriggeredRef = useRef(false);
+
+  const sessionCompleted =
+    (updateStatus.stage === "complete" && !isUpdating && !isError) ||
+    isApplyComplete;
+  const hasNocturneUpdate = updateInfo?.hasUpdate || false;
+  const canUpdate = updateInfo?.canUpdate !== false;
+
+  const clearAutoUpdateTimer = useCallback(() => {
+    if (autoUpdateTimerRef.current) {
+      clearTimeout(autoUpdateTimerRef.current);
+      autoUpdateTimerRef.current = null;
+    }
+  }, []);
+
+  const handleNocturneUpdate = useCallback(async () => {
+    if (!updateInfo?.version || !currentVersion) return;
+
+    try {
+      await startUpdate(
+        currentVersion,
+        updateInfo.version,
+        updateInfo?.commands || {},
+      );
+    } catch (error) {
+      console.error("Auto-update installation failed:", error);
+    }
+  }, [currentVersion, startUpdate, updateInfo]);
+
+  useEffect(() => {
+    if (!settings?.autoUpdateEnabled) {
+      autoUpdateTriggeredRef.current = false;
+      clearAutoUpdateTimer();
+      return;
+    }
+
+    if (
+      autoUpdateTriggeredRef.current ||
+      isInfoLoading ||
+      !currentVersion ||
+      sessionCompleted ||
+      isUpdating ||
+      isError
+    ) {
+      return;
+    }
+
+    autoUpdateTimerRef.current = setTimeout(async () => {
+      try {
+        autoUpdateTriggeredRef.current = true;
+        await checkForUpdates();
+      } catch (error) {
+        console.error("Auto-update check failed:", error);
+      }
+    }, AUTO_UPDATE_DELAY_MS);
+
+    return clearAutoUpdateTimer;
+  }, [
+    settings?.autoUpdateEnabled,
+    isInfoLoading,
+    currentVersion,
+    sessionCompleted,
+    isUpdating,
+    isError,
+    checkForUpdates,
+    clearAutoUpdateTimer,
+  ]);
+
+  useEffect(() => {
+    if (
+      !settings?.autoUpdateEnabled ||
+      !autoUpdateTriggeredRef.current ||
+      !hasNocturneUpdate ||
+      isUpdating ||
+      isError ||
+      sessionCompleted ||
+      !canUpdate ||
+      isChecking
+    ) {
+      return;
+    }
+
+    handleNocturneUpdate();
+  }, [
+    settings?.autoUpdateEnabled,
+    hasNocturneUpdate,
+    isUpdating,
+    isError,
+    sessionCompleted,
+    canUpdate,
+    isChecking,
+    handleNocturneUpdate,
+  ]);
+
+  useEffect(() => clearAutoUpdateTimer, [clearAutoUpdateTimer]);
+
+  return null;
 };
 
 export const useBluetooth = () => {

@@ -77,6 +77,23 @@ const settingsStructure = {
     icon: SettingsUpdateIcon,
     items: [
       {
+        id: "update-settings",
+        title: "Update Settings",
+        type: "navigate",
+        icon: SettingsGeneralIcon,
+        items: [
+          {
+            id: "auto-update",
+            title: "Automatic Updates",
+            type: "toggle",
+            description:
+              "Automatically download and install updates when available.",
+            storageKey: "autoUpdateEnabled",
+            defaultValue: true,
+          },
+        ],
+      },
+      {
         id: "software-update",
         type: "custom",
         component: SoftwareUpdate,
@@ -769,6 +786,25 @@ export default function Settings({
     }
 
     switch (item.type) {
+      case "navigate":
+        return (
+          <button
+            key={item.id}
+            onClick={() => navigateTo(activeParent, item)}
+            className="flex items-center justify-between w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border border-white/10 focus:outline-none mb-4"
+            disabled={isAnimating}
+          >
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                <item.icon className="w-7 h-7 text-white" />
+              </div>
+              <span className="text-[32px] ml-4 font-[580] text-white tracking-tight">
+                {item.title}
+              </span>
+            </div>
+            <ChevronRightIcon className="w-8 h-8 text-white/60" />
+          </button>
+        );
       case "toggle":
         return (
           <div key={item.id} className="mb-8">
@@ -1020,7 +1056,9 @@ export default function Settings({
                 </h2>
               </div>
               <div className="space-y-6 mb-12">
-                {activeSubItem && renderSettingItem(activeSubItem)}
+                {activeSubItem && activeSubItem.type === "navigate" && activeSubItem.items
+                  ? activeSubItem.items.map((item) => renderSettingItem(item))
+                  : activeSubItem && renderSettingItem(activeSubItem)}
               </div>
             </div>
           </div>

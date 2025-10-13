@@ -17,10 +17,11 @@ import {
   useNocturned,
   sendNocturneWsRequest,
   subscribeSpotifyAuthState,
+  AutoUpdateManager,
 } from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
-import { SettingsProvider } from "./contexts/SettingsContext";
+import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import React from "react";
 import {
   NotificationProvider,
@@ -36,7 +37,6 @@ import UpdateCheckNotification from "./components/common/notifications/UpdateChe
 import NetworkScreen from "./components/auth/NetworkScreen";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import AuthScreen from "./components/auth/AuthScreen";
-
 function useGlobalButtonMapping({
   playTrack,
   playDJMix,
@@ -212,13 +212,16 @@ function NotificationEffects({
   const { addNotification, removeNotification } = useNotifications();
   const notificationShownRef = useRef(false);
   const lastErrorMessageRef = useRef(null);
+  const { settings } = useSettings();
+  const autoUpdateEnabled = settings?.autoUpdateEnabled;
 
   useEffect(() => {
     if (
       !isUpdating &&
       updateStatus.stage === "complete" &&
       activeSection !== "settings" &&
-      !notificationShownRef.current
+      !notificationShownRef.current &&
+      !autoUpdateEnabled
     ) {
       notificationShownRef.current = true;
       addNotification({
@@ -234,6 +237,7 @@ function NotificationEffects({
     activeSection,
     addNotification,
     handleReboot,
+    autoUpdateEnabled,
   ]);
 
   useEffect(() => {
@@ -1103,24 +1107,25 @@ function App() {
   }
 
   return (
-    <NotificationProvider>
-      <NotificationEffects
-        isUpdating={isUpdating}
-        updateStatus={updateStatus}
-        activeSection={activeSection}
-        handleReboot={handleReboot}
-        isError={isError}
-        errorMessage={errorMessage}
-      />
-      {!showConnectionLostScreen && !showTutorial && (
-        <UpdateCheckNotification
-          setActiveSection={setActiveSection}
-          currentVersion={nocturneVersion}
-          isInfoLoading={isInfoLoading}
-          refetchInfo={refetchInfo}
+    <SettingsProvider>
+      <AutoUpdateManager />
+      <NotificationProvider>
+        <NotificationEffects
+          isUpdating={isUpdating}
+          updateStatus={updateStatus}
+          activeSection={activeSection}
+          handleReboot={handleReboot}
+          isError={isError}
+          errorMessage={errorMessage}
         />
-      )}
-      <SettingsProvider>
+        {!showConnectionLostScreen && !showTutorial && (
+          <UpdateCheckNotification
+            setActiveSection={setActiveSection}
+            currentVersion={nocturneVersion}
+            isInfoLoading={isInfoLoading}
+            refetchInfo={refetchInfo}
+          />
+        )}
         <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
           <Router>
             <FontLoader />
@@ -1178,8 +1183,8 @@ function App() {
             <NotificationsContainer />
           </Router>
         </DeviceSwitcherContext.Provider>
-      </SettingsProvider>
-    </NotificationProvider>
+      </NotificationProvider>
+    </SettingsProvider>
   );
 }
 

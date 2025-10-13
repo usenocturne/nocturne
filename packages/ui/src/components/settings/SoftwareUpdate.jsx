@@ -6,6 +6,7 @@ import {
 } from "../common/icons";
 import { useSystemUpdate, useNocturneInfo } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
+import { useSettings } from "../../contexts/SettingsContext";
 
 let updateCompletedInSession = false;
 
@@ -35,6 +36,8 @@ const SoftwareUpdate = () => {
     advanceUpdateChain,
     updateChain,
   } = useUpdateCheck(nocturneCurrentVersion);
+
+  const { settings } = useSettings();
 
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(
@@ -156,10 +159,11 @@ const SoftwareUpdate = () => {
     onReboot,
     checkForUpdates,
     isRebootReady,
+    hideUpdateNotification,
   }) => {
     return (
       <div className="space-y-4">
-        {(isChecking || !hasUpdate || sessionCompleted) && (
+        {(isChecking || !hasUpdate || sessionCompleted || hideUpdateNotification) && (
           <div className="space-y-4">
             <div className="p-1.5 bg-white/10 rounded-xl border border-white/10">
               <div className="flex flex-col items-center justify-center text-center py-8">
@@ -211,7 +215,7 @@ const SoftwareUpdate = () => {
           </div>
         )}
 
-        {hasUpdate && !sessionCompleted && !isRebootReady && (
+        {hasUpdate && !sessionCompleted && !isRebootReady && !hideUpdateNotification && (
           <div className="space-y-4">
             <div className="p-4 bg-white/10 rounded-xl border border-white/10">
               <div className="flex items-center mb-4">
@@ -365,6 +369,7 @@ const SoftwareUpdate = () => {
         onReboot={handleReboot}
         checkForUpdates={checkForUpdates}
         isRebootReady={isApplyComplete}
+        hideUpdateNotification={settings.autoUpdateEnabled}
       />
     </div>
   );

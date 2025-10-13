@@ -28,6 +28,7 @@ export function SettingsProvider({ children }) {
     showStatusBar: getDefaultSettingValue("showStatusBar", true),
     startWithNowPlaying: getDefaultSettingValue("startWithNowPlaying", false),
     analyticsEnabled: getDefaultSettingValue("analyticsEnabled", true),
+    autoUpdateEnabled: getDefaultSettingValue("autoUpdateEnabled", true),
   });
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useNotifications } from "../../../contexts/NotificationContext";
 import { useUpdateCheck } from "../../../hooks/useUpdateCheck";
+import { useSettings } from "../../../contexts/SettingsContext";
 import { SettingsUpdateIcon } from "../icons";
 
 function UpdateCheckNotification({
@@ -13,6 +14,9 @@ function UpdateCheckNotification({
   const { addNotification } = useNotifications();
   const hasCheckedRef = useRef(false);
   const hasNotifiedRef = useRef(false);
+
+  const { settings } = useSettings();
+  const autoUpdateEnabled = settings?.autoUpdateEnabled;
 
   const { updateInfo, checkForUpdates } = useUpdateCheck(currentVersion, false);
 
@@ -30,6 +34,7 @@ function UpdateCheckNotification({
 
   useEffect(() => {
     if (!updateInfo?.hasUpdate) return;
+    if (autoUpdateEnabled) return;
     if (hasNotifiedRef.current) return;
     hasNotifiedRef.current = true;
 
@@ -42,7 +47,7 @@ function UpdateCheckNotification({
         onPress: () => setActiveSection("settings"),
       },
     });
-  }, [updateInfo, addNotification, setActiveSection]);
+  }, [updateInfo, addNotification, setActiveSection, autoUpdateEnabled]);
 
   return null;
 }
