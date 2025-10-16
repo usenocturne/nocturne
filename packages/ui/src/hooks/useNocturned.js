@@ -366,7 +366,8 @@ const setupGlobalWebSocket = async () => {
         if (
           data &&
           data.type === "event" &&
-          data.topic === "spotify.auth.status"
+          (data.topic === "spotify.auth.status" ||
+            data.topic === "spotify.auth.completed")
         ) {
           const authData = data.data || {};
           const isAuthenticated =

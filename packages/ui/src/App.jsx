@@ -17,6 +17,7 @@ import {
   useNocturned,
   sendNocturneWsRequest,
   subscribeSpotifyAuthState,
+  subscribeEaSessionState,
   AutoUpdateManager,
 } from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
@@ -292,6 +293,7 @@ function App() {
   );
   const [isAuthCheckInProgress, setIsAuthCheckInProgress] = useState(false);
   const [requestedSpotifyStatus, setRequestedSpotifyStatus] = useState(false);
+  const [eaSessionStarted, setEaSessionStarted] = useState(false);
   const startSectionAppliedRef = useRef(false);
   const lastSpotifyAuthStateRef = useRef(null);
 
@@ -519,6 +521,11 @@ function App() {
 
       if (isAuthenticated && lastSpotifyAuthStateRef.current !== true) {
         refreshPlaybackState(true);
+        if (!initialDataLoaded) {
+          setTimeout(() => {
+            refreshData();
+          }, 1000);
+        }
       }
 
       lastSpotifyAuthStateRef.current = isAuthenticated;
@@ -529,12 +536,24 @@ function App() {
         unsubscribe();
       }
     };
-  }, [refreshPlaybackState]);
+  }, [refreshPlaybackState, initialDataLoaded, refreshData]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeEaSessionState((isStarted) => {
+      setEaSessionStarted(isStarted);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!wsConnected) return;
 
-    if (!hasSeenTutorialFlag) return;
+    if (!eaSessionStarted) return;
 
     if (requestedSpotifyStatus) return;
 
@@ -592,8 +611,8 @@ function App() {
       cancelled = true;
     };
   }, [
-    hasSeenTutorialFlag,
     wsConnected,
+    eaSessionStarted,
     requestedSpotifyStatus,
     processSpotifyAuthMessage,
   ]);
@@ -635,6 +654,7 @@ function App() {
     if (!hasSeenTutorialFlag) return;
     if (showTutorial) return;
     if (startSectionAppliedRef.current) return;
+    if (isSpotifyAuthenticated !== true) return;
 
     const shouldStartWithNowPlaying =
       localStorage.getItem("startWithNowPlaying") === "true";
@@ -642,7 +662,7 @@ function App() {
       setActiveSection("nowPlaying");
     }
     startSectionAppliedRef.current = true;
-  }, [hasSeenTutorialFlag, showTutorial, setActiveSection]);
+  }, [hasSeenTutorialFlag, showTutorial, isSpotifyAuthenticated, setActiveSection]);
 
   const { updateStatus, progress, isUpdating, isError, errorMessage } =
     useSystemUpdate();
