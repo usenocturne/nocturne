@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { sendNocturneWsRequest } from "./useNocturned";
+import { sendNocturneWsRequest, subscribeEaSessionState } from "./useNocturned";
 
 const compareVersions = (v1, v2) => {
   const parseVersion = (version) => {
@@ -83,12 +83,25 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   const [error, setError] = useState(null);
   const [lastChecked, setLastChecked] = useState(null);
   const [updateChain, setUpdateChain] = useState([]);
+  const [eaSessionStarted, setEaSessionStarted] = useState(false);
   const checkInProgress = useRef(false);
   const currentVersionRef = useRef(currentVersion);
 
   useEffect(() => {
     currentVersionRef.current = currentVersion;
   }, [currentVersion]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeEaSessionState((isStarted) => {
+      setEaSessionStarted(isStarted);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   const checkForUpdates = useCallback(async () => {
     if (isChecking || checkInProgress.current) return;
@@ -227,10 +240,10 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   };
 
   useEffect(() => {
-    if (autoCheck) {
+    if (autoCheck && eaSessionStarted) {
       checkForUpdates();
     }
-  }, [autoCheck]);
+  }, [autoCheck, eaSessionStarted, checkForUpdates]);
 
   const advanceUpdateChain = useCallback(() => {
     if (updateChain.length <= 1) {

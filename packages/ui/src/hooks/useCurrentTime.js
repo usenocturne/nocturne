@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "../contexts/SettingsContext";
-import { sendNocturneWsRequest } from "./useNocturned";
+import { sendNocturneWsRequest, subscribeEaSessionState } from "./useNocturned";
 
 let cachedTimezone = null;
 
@@ -9,9 +9,24 @@ export const getCachedTimezone = () => cachedTimezone;
 export function useCurrentTime() {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
+  const [eaSessionStarted, setEaSessionStarted] = useState(false);
   const { settings } = useSettings();
 
   useEffect(() => {
+    const unsubscribe = subscribeEaSessionState((isStarted) => {
+      setEaSessionStarted(isStarted);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!eaSessionStarted) return;
+
     const fetchTimezone = async () => {
       if (cachedTimezone) return;
 
@@ -26,32 +41,34 @@ export function useCurrentTime() {
     };
 
     fetchTimezone();
-  }, []);
+  }, [eaSessionStarted]);
 
   useEffect(() => {
     const updateTime = async () => {
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        const data = await sendNocturneWsRequest("device.time.get", {});
-        if (data && data.time) {
-          const timeString = data.time;
-          const [hours24, minutes] = timeString.split(":");
+      if (eaSessionStarted) {
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          const data = await sendNocturneWsRequest("device.time.get", {});
+          if (data && data.time) {
+            const timeString = data.time;
+            const [hours24, minutes] = timeString.split(":");
 
-          let displayHours;
-          if (settings.use24HourTime) {
-            displayHours = hours24;
-            setIsFourDigits(true);
-          } else {
-            const hour24 = parseInt(hours24);
-            displayHours = (hour24 % 12 || 12).toString();
-            setIsFourDigits(parseInt(displayHours) >= 10);
+            let displayHours;
+            if (settings.use24HourTime) {
+              displayHours = hours24;
+              setIsFourDigits(true);
+            } else {
+              const hour24 = parseInt(hours24);
+              displayHours = (hour24 % 12 || 12).toString();
+              setIsFourDigits(parseInt(displayHours) >= 10);
+            }
+
+            setCurrentTime(`${displayHours}:${minutes}`);
+            return;
           }
-
-          setCurrentTime(`${displayHours}:${minutes}`);
-          return;
+        } catch (error) {
+          console.error("Error fetching time from server:", error);
         }
-      } catch (error) {
-        console.error("Error fetching time from server:", error);
       }
 
       const now = new Date();
@@ -83,7 +100,7 @@ export function useCurrentTime() {
       clearInterval(interval);
       window.removeEventListener("timeFormatChanged", handleTimeFormatChange);
     };
-  }, [settings.use24HourTime]);
+  }, [settings.use24HourTime, eaSessionStarted]);
 
   return {
     currentTime,
