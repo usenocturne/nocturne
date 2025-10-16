@@ -26,7 +26,7 @@ export function SettingsProvider({ children }) {
     elapsedTimeEnabled: getDefaultSettingValue("elapsedTimeEnabled", false),
     remainingTimeEnabled: getDefaultSettingValue("remainingTimeEnabled", false),
     showStatusBar: getDefaultSettingValue("showStatusBar", true),
-    startWithNowPlaying: getDefaultSettingValue("startWithNowPlaying", false),
+    startWithNowPlaying: getDefaultSettingValue("startWithNowPlaying", true),
     analyticsEnabled: getDefaultSettingValue("analyticsEnabled", true),
     autoUpdateEnabled: getDefaultSettingValue("autoUpdateEnabled", true),
   });
