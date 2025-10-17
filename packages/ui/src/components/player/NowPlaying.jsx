@@ -407,7 +407,7 @@ export default function NowPlaying({
         "/images/not-playing.webp",
     contentName: playlistId ? playlistDetails.name : trackName,
     playTrack,
-    isActive: !!playlistId,
+    isActive: !!playlistId && !isLocalMedia,
     setIgnoreNextRelease,
   });
 
@@ -641,6 +641,10 @@ export default function NowPlaying({
 
   const handleSeek = useCallback(
     async (position) => {
+      if (isLocalMedia) {
+        return;
+      }
+
       try {
         if (currentPlayback?.item) {
           await seekToPosition(position);
@@ -650,7 +654,7 @@ export default function NowPlaying({
         console.error("Error seeking:", error);
       }
     },
-    [currentPlayback?.item, seekToPosition, updateProgress],
+    [isLocalMedia, currentPlayback?.item, seekToPosition, updateProgress],
   );
 
   const handleLyricClick = useCallback(
@@ -977,6 +981,7 @@ export default function NowPlaying({
           onPlayPause={handlePlayPause}
           onScrubbingChange={handleScrubbingChange}
           updateProgress={updateProgress}
+          disabled={isLocalMedia}
         />
       </div>
 

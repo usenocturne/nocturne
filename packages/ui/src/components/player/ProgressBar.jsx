@@ -8,6 +8,7 @@ const ProgressBar = ({
   onPlayPause,
   onScrubbingChange,
   updateProgress,
+  disabled = false,
 }) => {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubbingProgress, setScrubbingProgress] = useState(null);
@@ -15,6 +16,8 @@ const ProgressBar = ({
   const containerRef = useRef(null);
 
   const handleClick = () => {
+    if (disabled) return;
+
     setIsScrubbing(true);
     onScrubbingChange(true);
     wasPlayingRef.current = isPlaying;
