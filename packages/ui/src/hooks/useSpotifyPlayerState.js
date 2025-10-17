@@ -474,6 +474,12 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
         if (!media || !playback) return;
 
+        if (!playback.PlaybackAppName) {
+          if (currentPlaybackRef.current?.item && !currentPlaybackRef.current?.item?.is_local) {
+            return;
+          }
+        }
+
         const shuffleState = playback.PlaybackShuffleMode === "albums" || playback.PlaybackShuffleMode === "songs";
 
         const repeatState =
