@@ -511,7 +511,6 @@ function App() {
     [refreshPlaybackState, initialDataLoaded, refreshData, hasDevices],
   );
 
-
   useEffect(() => {
     const unsubscribe = subscribeEaSessionState((isStarted) => {
       setEaSessionStarted(isStarted);
@@ -644,7 +643,12 @@ function App() {
       setActiveSection("nowPlaying");
     }
     startSectionAppliedRef.current = true;
-  }, [hasSeenTutorialFlag, showTutorial, isSpotifyAuthenticated, setActiveSection]);
+  }, [
+    hasSeenTutorialFlag,
+    showTutorial,
+    isSpotifyAuthenticated,
+    setActiveSection,
+  ]);
 
   useEffect(() => {
     if (!wsConnected) return;

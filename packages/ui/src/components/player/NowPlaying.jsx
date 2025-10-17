@@ -58,7 +58,8 @@ export default function NowPlaying({
     animation: "hidden",
   });
   const [phoneVolume, setPhoneVolume] = useState(null);
-  const [localMediaVolumeDirection, setLocalMediaVolumeDirection] = useState(null);
+  const [localMediaVolumeDirection, setLocalMediaVolumeDirection] =
+    useState(null);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -436,7 +437,7 @@ export default function NowPlaying({
 
         if (isLocalMedia || isSmartphoneDevice) {
           manualVolumeChangeRef.current = true;
-          setLocalMediaVolumeDirection(direction > 0 ? 'up' : 'down');
+          setLocalMediaVolumeDirection(direction > 0 ? "up" : "down");
           showVolumeOverlay();
 
           if (direction > 0) {
@@ -462,7 +463,16 @@ export default function NowPlaying({
         }
       }
     },
-    [isProgressScrubbing, volume, setVolume, isLocalMedia, isSmartphoneDevice, localMediaVolumeUp, localMediaVolumeDown, showVolumeOverlay],
+    [
+      isProgressScrubbing,
+      volume,
+      setVolume,
+      isLocalMedia,
+      isSmartphoneDevice,
+      localMediaVolumeUp,
+      localMediaVolumeDown,
+      showVolumeOverlay,
+    ],
   );
 
   useEffect(() => {
@@ -758,15 +768,19 @@ export default function NowPlaying({
   }, [isLocalMedia, isSmartphoneDevice, phoneVolume, volume]);
 
   const VolumeIcon = useMemo(() => {
-    if ((isLocalMedia || isSmartphoneDevice) && phoneVolume === null && localMediaVolumeDirection) {
-      if (localMediaVolumeDirection === 'up') {
+    if (
+      (isLocalMedia || isSmartphoneDevice) &&
+      phoneVolume === null &&
+      localMediaVolumeDirection
+    ) {
+      if (localMediaVolumeDirection === "up") {
         return (
           <svg
             className="w-12 h-12"
             viewBox="0 0 24 24"
             fill="currentColor"
             style={{
-              animation: 'bounce 0.6s ease-in-out infinite'
+              animation: "bounce 0.6s ease-in-out infinite",
             }}
           >
             <path d="M7 14l5-5 5 5z" />
@@ -779,7 +793,7 @@ export default function NowPlaying({
             viewBox="0 0 24 24"
             fill="currentColor"
             style={{
-              animation: 'bounce 0.6s ease-in-out infinite'
+              animation: "bounce 0.6s ease-in-out infinite",
             }}
           >
             <path d="M7 10l5 5 5-5z" />
@@ -788,7 +802,10 @@ export default function NowPlaying({
       }
     }
 
-    const volumeToCheck = (isLocalMedia || isSmartphoneDevice) && phoneVolume !== null ? phoneVolume : volume;
+    const volumeToCheck =
+      (isLocalMedia || isSmartphoneDevice) && phoneVolume !== null
+        ? phoneVolume
+        : volume;
 
     if (volumeToCheck === 0) {
       return <VolumeOffIcon className="w-7 h-7" />;
@@ -797,7 +814,13 @@ export default function NowPlaying({
     } else {
       return <VolumeLoudIcon className="w-7 h-7" />;
     }
-  }, [volume, isLocalMedia, isSmartphoneDevice, phoneVolume, localMediaVolumeDirection]);
+  }, [
+    volume,
+    isLocalMedia,
+    isSmartphoneDevice,
+    phoneVolume,
+    localMediaVolumeDirection,
+  ]);
 
   const PlayPauseIcon = useMemo(() => {
     return currentPlayback?.is_playing ? (

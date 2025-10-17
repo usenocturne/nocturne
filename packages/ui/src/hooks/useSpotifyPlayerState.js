@@ -155,7 +155,9 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           ? {
               id: `local-${data.item.uri}`,
               name: data.item.album?.name || data.item.name,
-              images: data.item.album?.images || [{ url: "/images/not-playing.webp" }],
+              images: data.item.album?.images || [
+                { url: "/images/not-playing.webp" },
+              ],
               artists: data.item.artists,
               type: "local-track",
               uri: data.item.uri,
@@ -307,7 +309,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             lastSpotifyDeviceStateChange = Date.now();
           }
 
-          if (currentPlaybackRef.current?.item?.is_local && localMediaArtworkBlobUrl) {
+          if (
+            currentPlaybackRef.current?.item?.is_local &&
+            localMediaArtworkBlobUrl
+          ) {
             URL.revokeObjectURL(localMediaArtworkBlobUrl);
             localMediaArtworkBlobUrl = null;
           }
@@ -464,7 +469,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   useEffect(() => {
     const handleLocalMediaEvent = (data) => {
       if (data.type === "event" && data.topic === "media.nowPlaying.update") {
-        const timeSinceSpotifyStateChange = Date.now() - lastSpotifyDeviceStateChange;
+        const timeSinceSpotifyStateChange =
+          Date.now() - lastSpotifyDeviceStateChange;
         if (timeSinceSpotifyStateChange < 5000) {
           return;
         }
@@ -475,12 +481,17 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         if (!media || !playback) return;
 
         if (!playback.PlaybackAppName) {
-          if (currentPlaybackRef.current?.item && !currentPlaybackRef.current?.item?.is_local) {
+          if (
+            currentPlaybackRef.current?.item &&
+            !currentPlaybackRef.current?.item?.is_local
+          ) {
             return;
           }
         }
 
-        const shuffleState = playback.PlaybackShuffleMode === "albums" || playback.PlaybackShuffleMode === "songs";
+        const shuffleState =
+          playback.PlaybackShuffleMode === "albums" ||
+          playback.PlaybackShuffleMode === "songs";
 
         const repeatState =
           playback.PlaybackRepeatMode === "one"
@@ -489,13 +500,21 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               ? "context"
               : "off";
 
-        const hasTitle = media.MediaItemTitle && media.MediaItemTitle.trim() !== "";
-        const hasArtist = media.MediaItemArtist && media.MediaItemArtist.trim() !== "";
+        const hasTitle =
+          media.MediaItemTitle && media.MediaItemTitle.trim() !== "";
+        const hasArtist =
+          media.MediaItemArtist && media.MediaItemArtist.trim() !== "";
         const isNotPlaying = !hasTitle && !hasArtist;
 
-        const title = isNotPlaying ? "Not Playing" : (media.MediaItemTitle || "Unknown Title");
-        const artist = isNotPlaying ? "" : (media.MediaItemArtist || "Unknown Artist");
-        const albumName = isNotPlaying ? "Not Playing" : (media.MediaItemAlbumName || title);
+        const title = isNotPlaying
+          ? "Not Playing"
+          : media.MediaItemTitle || "Unknown Title";
+        const artist = isNotPlaying
+          ? ""
+          : media.MediaItemArtist || "Unknown Artist";
+        const albumName = isNotPlaying
+          ? "Not Playing"
+          : media.MediaItemAlbumName || title;
         const durationMs = media.MediaItemPlaybackDurationInMilliSeconds || 0;
         const elapsedMs = playback.PlaybackElapsedTimeInMilliseconds || 0;
 
@@ -515,9 +534,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               id: `local-album-${albumName}`,
               uri: `local:album:${albumName}`,
               name: albumName,
-              images: isNotPlaying || !localMediaArtworkBlobUrl
-                ? [{ url: "/images/not-playing.webp" }]
-                : [{ url: localMediaArtworkBlobUrl }],
+              images:
+                isNotPlaying || !localMediaArtworkBlobUrl
+                  ? [{ url: "/images/not-playing.webp" }]
+                  : [{ url: localMediaArtworkBlobUrl }],
             },
             artists: [
               {

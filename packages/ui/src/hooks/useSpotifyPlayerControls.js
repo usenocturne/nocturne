@@ -84,7 +84,11 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       const now = Date.now();
       const timeSinceManualChange = now - lastManualVolumeChangeRef.current;
 
-      if (!isAdjustingVolume && deviceVolume !== undefined && timeSinceManualChange > 1000) {
+      if (
+        !isAdjustingVolume &&
+        deviceVolume !== undefined &&
+        timeSinceManualChange > 1000
+      ) {
         setVolumeState(deviceVolume);
       }
     },
