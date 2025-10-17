@@ -11,6 +11,25 @@ let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
 let localMediaArtworkBlobUrl = null;
 let lastSpotifyDeviceStateChange = 0;
+let phoneVolumeListeners = [];
+
+export const subscribeToPhoneVolume = (listener) => {
+  phoneVolumeListeners.push(listener);
+  return () => {
+    phoneVolumeListeners = phoneVolumeListeners.filter((l) => l !== listener);
+  };
+};
+
+const notifyPhoneVolumeListeners = (volumePercent) => {
+  phoneVolumeListeners.forEach((listener) => {
+    try {
+      listener(volumePercent);
+    } catch (err) {
+      console.error("Phone volume listener error:", err);
+    }
+  });
+};
+
 export function useSpotifyPlayerState(immediateLoad = false) {
   const { isSpotifyReady, getPlayerState } = useSpotifyWebSocket();
   const [currentPlayback, setCurrentPlayback] = useState(null);
@@ -574,6 +593,14 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           } catch (err) {
             console.error("Error decoding artwork data:", err);
           }
+        }
+      } else if (
+        data.type === "event" &&
+        data.topic === "phone.volume.update"
+      ) {
+        const volumePercent = data.data?.volumePercent;
+        if (volumePercent !== undefined) {
+          notifyPhoneVolumeListeners(volumePercent);
         }
       }
     };

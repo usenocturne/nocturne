@@ -8,6 +8,7 @@ import React, {
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
+import { subscribeToPhoneVolume } from "../../hooks/useSpotifyPlayerState";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useLyrics } from "../../hooks/useLyrics";
 import { useGestureControls } from "../../hooks/useGestureControls";
@@ -56,6 +57,8 @@ export default function NowPlaying({
     visible: false,
     animation: "hidden",
   });
+  const [phoneVolume, setPhoneVolume] = useState(null);
+  const [localMediaVolumeDirection, setLocalMediaVolumeDirection] = useState(null);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -70,6 +73,7 @@ export default function NowPlaying({
   const currentTrackIdRef = useRef(null);
   const prevVolumeRef = useRef(null);
   const manualVolumeChangeRef = useRef(false);
+  const phoneVolumeTimeoutRef = useRef(null);
 
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
@@ -107,6 +111,8 @@ export default function NowPlaying({
     localMediaPrevious,
     localMediaShuffle,
     localMediaRepeat,
+    localMediaVolumeUp,
+    localMediaVolumeDown,
   } = useSpotifyPlayerControls(currentPlayback);
 
   const {
@@ -178,12 +184,30 @@ export default function NowPlaying({
   }, []);
 
   useEffect(() => {
+    const unsubscribe = subscribeToPhoneVolume((volumePercent) => {
+      if (isLocalMedia) {
+        setPhoneVolume(volumePercent);
+        setLocalMediaVolumeDirection(null);
+        manualVolumeChangeRef.current = true;
+        showVolumeOverlay();
+
+        if (phoneVolumeTimeoutRef.current) {
+          clearTimeout(phoneVolumeTimeoutRef.current);
+          phoneVolumeTimeoutRef.current = null;
+        }
+      }
+    });
+
     return () => {
+      unsubscribe();
       if (volumeTimerRef.current) {
         clearTimeout(volumeTimerRef.current);
       }
+      if (phoneVolumeTimeoutRef.current) {
+        clearTimeout(phoneVolumeTimeoutRef.current);
+      }
     };
-  }, []);
+  }, [isLocalMedia, showVolumeOverlay]);
 
   useEffect(() => {
     if (prevVolumeRef.current === null) {
@@ -406,17 +430,38 @@ export default function NowPlaying({
 
       if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
         const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
-        const newVolume = Math.max(0, Math.min(100, volume + direction * 5));
 
         wheelDeltaAccumulatorRef.current = 0;
 
-        if (newVolume !== volume) {
+        if (isLocalMedia) {
           manualVolumeChangeRef.current = true;
-          setVolume(newVolume);
+          setLocalMediaVolumeDirection(direction > 0 ? 'up' : 'down');
+          showVolumeOverlay();
+
+          if (direction > 0) {
+            localMediaVolumeUp();
+          } else {
+            localMediaVolumeDown();
+          }
+
+          if (phoneVolumeTimeoutRef.current) {
+            clearTimeout(phoneVolumeTimeoutRef.current);
+          }
+
+          phoneVolumeTimeoutRef.current = setTimeout(() => {
+            setPhoneVolume(null);
+            phoneVolumeTimeoutRef.current = null;
+          }, 500);
+        } else {
+          const newVolume = Math.max(0, Math.min(100, volume + direction * 5));
+          if (newVolume !== volume) {
+            manualVolumeChangeRef.current = true;
+            setVolume(newVolume);
+          }
         }
       }
     },
-    [isProgressScrubbing, volume, setVolume],
+    [isProgressScrubbing, volume, setVolume, isLocalMedia, localMediaVolumeUp, localMediaVolumeDown, showVolumeOverlay],
   );
 
   useEffect(() => {
@@ -521,6 +566,13 @@ export default function NowPlaying({
 
     checkCurrentTrackLiked();
   }, [trackId, isCheckingLike, checkIsTrackLiked, isLocalMedia]);
+
+  useEffect(() => {
+    if (!isLocalMedia) {
+      setPhoneVolume(null);
+      setLocalMediaVolumeDirection(null);
+    }
+  }, [isLocalMedia, trackId]);
 
   const handleSkipNext = useCallback(async () => {
     if (isLocalMedia) {
@@ -693,15 +745,54 @@ export default function NowPlaying({
     }
   };
 
+  const displayVolume = useMemo(() => {
+    if (isLocalMedia) {
+      return phoneVolume !== null ? phoneVolume : 100;
+    }
+    return volume;
+  }, [isLocalMedia, phoneVolume, volume]);
+
   const VolumeIcon = useMemo(() => {
-    if (volume === 0) {
+    if (isLocalMedia && phoneVolume === null && localMediaVolumeDirection) {
+      if (localMediaVolumeDirection === 'up') {
+        return (
+          <svg
+            className="w-12 h-12"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            style={{
+              animation: 'bounce 0.6s ease-in-out infinite'
+            }}
+          >
+            <path d="M7 14l5-5 5 5z" />
+          </svg>
+        );
+      } else {
+        return (
+          <svg
+            className="w-12 h-12"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            style={{
+              animation: 'bounce 0.6s ease-in-out infinite'
+            }}
+          >
+            <path d="M7 10l5 5 5-5z" />
+          </svg>
+        );
+      }
+    }
+
+    const volumeToCheck = isLocalMedia && phoneVolume !== null ? phoneVolume : volume;
+
+    if (volumeToCheck === 0) {
       return <VolumeOffIcon className="w-7 h-7" />;
-    } else if (volume > 0 && volume <= 60) {
+    } else if (volumeToCheck > 0 && volumeToCheck <= 60) {
       return <VolumeLowIcon className="w-7 h-7 ml-1.5" />;
     } else {
       return <VolumeLoudIcon className="w-7 h-7" />;
     }
-  }, [volume]);
+  }, [volume, isLocalMedia, phoneVolume, localMediaVolumeDirection]);
 
   const PlayPauseIcon = useMemo(() => {
     return currentPlayback?.is_playing ? (
@@ -1147,7 +1238,7 @@ export default function NowPlaying({
         <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
           <div
             className="bg-white w-full transition-height duration-300 rounded-b-[13px]"
-            style={{ height: `${volume}%` }}
+            style={{ height: `${displayVolume}%` }}
           >
             <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
               {VolumeIcon}

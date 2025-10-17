@@ -436,6 +436,16 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     [sendLocalMediaControl],
   );
 
+  const localMediaVolumeUp = useCallback(
+    () => sendLocalMediaControl("media.control.volumeUp"),
+    [sendLocalMediaControl],
+  );
+
+  const localMediaVolumeDown = useCallback(
+    () => sendLocalMediaControl("media.control.volumeDown"),
+    [sendLocalMediaControl],
+  );
+
   return {
     playTrack,
     pausePlayback,
@@ -462,5 +472,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     localMediaPrevious,
     localMediaShuffle,
     localMediaRepeat,
+    localMediaVolumeUp,
+    localMediaVolumeDown,
   };
 }
