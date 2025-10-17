@@ -16,7 +16,6 @@ import {
   useNocturneInfo,
   useNocturned,
   sendNocturneWsRequest,
-  subscribeSpotifyAuthState,
   subscribeEaSessionState,
   AutoUpdateManager,
 } from "./hooks/useNocturned";
@@ -512,34 +511,6 @@ function App() {
     [refreshPlaybackState, initialDataLoaded, refreshData, hasDevices],
   );
 
-  useEffect(() => {
-    const unsubscribe = subscribeSpotifyAuthState((isAuthenticated) => {
-      setIsSpotifyAuthenticated(isAuthenticated);
-      setNeedsSpotifyAuthorization(!isAuthenticated);
-      setAuthStatusMessage(
-        hasDevices && isAuthenticated === false
-          ? "Open the Nocturne app to finish logging into Spotify."
-          : null,
-      );
-
-      if (isAuthenticated && lastSpotifyAuthStateRef.current !== true) {
-        refreshPlaybackState(true);
-        if (!initialDataLoaded) {
-          setTimeout(() => {
-            refreshData();
-          }, 1000);
-        }
-      }
-
-      lastSpotifyAuthStateRef.current = isAuthenticated;
-    });
-
-    return () => {
-      if (typeof unsubscribe === "function") {
-        unsubscribe();
-      }
-    };
-  }, [refreshPlaybackState, initialDataLoaded, refreshData, hasDevices]);
 
   useEffect(() => {
     const unsubscribe = subscribeEaSessionState((isStarted) => {
