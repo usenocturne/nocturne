@@ -10,6 +10,8 @@ import {
   subscribeSpotifyAuthState,
 } from "./useNocturned";
 
+const SPOTIFY_IMAGE_FETCH_TIMEOUT_MS = 30000;
+
 const extractAfterFromNextUrl = (nextUrl) => {
   if (!nextUrl) return null;
   try {
@@ -829,12 +831,29 @@ export function useSpotifyWebSocket() {
 
   const fetchImage = useCallback(
     async (url) => {
+      const timeoutError = new Error("Spotify image fetch timed out");
+      let timeoutId;
+
+      const fetchPromise = sendSpotifyCommand("spotify.image.fetch", { url });
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(timeoutError);
+        }, SPOTIFY_IMAGE_FETCH_TIMEOUT_MS);
+      });
+
       try {
-        const result = await sendSpotifyCommand("spotify.image.fetch", { url });
+        const result = await Promise.race([fetchPromise, timeoutPromise]);
         return result;
       } catch (err) {
+        if (err === timeoutError) {
+          fetchPromise.catch(() => {});
+        }
         console.error("Error fetching image:", err);
         throw err;
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
       }
     },
     [sendSpotifyCommand],
