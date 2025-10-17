@@ -283,7 +283,7 @@ export default function Home({
             />
           ) : album.type === "local-track" ? (
             <img
-              src="/images/not-playing.webp"
+              src={album.images?.[0]?.url || "/images/not-playing.webp"}
               alt="Local File"
               className="w-full h-full object-cover rounded-[12px]"
             />

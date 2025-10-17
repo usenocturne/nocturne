@@ -725,9 +725,10 @@ export default function NowPlaying({
               extractColors={true}
               onColorsExtracted={handleColorsExtracted}
               fallbackSrc="/images/not-playing.webp"
-              useDirectUrl={albumImages?.[0]?.url?.includes(
-                "/images/not-playing.webp",
-              )}
+              useDirectUrl={
+                albumImages?.[0]?.url?.includes("/images/not-playing.webp") ||
+                albumImages?.[0]?.url?.startsWith("blob:")
+              }
               className="w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
             />
           </div>

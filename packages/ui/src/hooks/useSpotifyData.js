@@ -168,6 +168,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     if (currentlyPlayingAlbum?.id) {
       if (lastPlayedAlbumIdRef.current !== currentlyPlayingAlbum.id) {
         lastPlayedAlbumIdRef.current = currentlyPlayingAlbum.id;
+
+        if (currentlyPlayingAlbum.type === "local-track") {
+          return;
+        }
+
         setRecentAlbums((prevAlbums) => {
           const filteredAlbums = prevAlbums.filter(
             (album) => album.id !== currentlyPlayingAlbum.id,
@@ -256,23 +261,32 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
       if (extractedCurrentAlbumRef.current?.id) {
         const currentAlbum = extractedCurrentAlbumRef.current;
-        const filteredAlbums = uniqueAlbums.filter(
-          (album) => album.id !== currentAlbum.id,
-        );
-        const finalAlbums = [currentAlbum, ...filteredAlbums];
-        setRecentAlbums(finalAlbums);
-        setItemCounts((prev) => ({
-          ...prev,
-          recentAlbums: finalAlbums.length,
-        }));
 
-        if (activeSection === "recents") {
-          setTimeout(() => {
-            const event = new CustomEvent("albumOrderChanged", {
-              detail: { albumId: currentAlbum.id },
-            });
-            window.dispatchEvent(event);
-          }, 50);
+        if (currentAlbum.type === "local-track") {
+          setRecentAlbums(uniqueAlbums);
+          setItemCounts((prev) => ({
+            ...prev,
+            recentAlbums: uniqueAlbums.length,
+          }));
+        } else {
+          const filteredAlbums = uniqueAlbums.filter(
+            (album) => album.id !== currentAlbum.id,
+          );
+          const finalAlbums = [currentAlbum, ...filteredAlbums];
+          setRecentAlbums(finalAlbums);
+          setItemCounts((prev) => ({
+            ...prev,
+            recentAlbums: finalAlbums.length,
+          }));
+
+          if (activeSection === "recents") {
+            setTimeout(() => {
+              const event = new CustomEvent("albumOrderChanged", {
+                detail: { albumId: currentAlbum.id },
+              });
+              window.dispatchEvent(event);
+            }, 50);
+          }
         }
       } else {
         setRecentAlbums(uniqueAlbums);

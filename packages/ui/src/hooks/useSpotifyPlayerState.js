@@ -9,6 +9,7 @@ let isPodcastPlaying = false;
 let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
+let localMediaArtworkBlobUrl = null;
 export function useSpotifyPlayerState(immediateLoad = false) {
   const { isSpotifyReady, getPlayerState } = useSpotifyWebSocket();
   const [currentPlayback, setCurrentPlayback] = useState(null);
@@ -134,7 +135,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           ? {
               id: `local-${data.item.uri}`,
               name: data.item.album?.name || data.item.name,
-              images: [{ url: "/images/not-playing.webp" }],
+              images: data.item.album?.images || [{ url: "/images/not-playing.webp" }],
               artists: data.item.artists,
               type: "local-track",
               uri: data.item.uri,
@@ -430,6 +431,146 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
     return cleanup;
   }, [isSpotifyReady, processPlaybackState]);
+
+  useEffect(() => {
+    const handleLocalMediaEvent = (data) => {
+      if (data.type === "event" && data.topic === "media.nowPlaying.update") {
+        const media = data.data?.MediaItemAttributes;
+        const playback = data.data?.PlaybackAttributes;
+
+        if (!media || !playback) return;
+
+        const shuffleState = playback.ShuffleMode === "albums";
+
+        const repeatState =
+          playback.RepeatMode === "one"
+            ? "track"
+            : playback.RepeatMode === "all"
+              ? "context"
+              : "off";
+
+        const hasTitle = media.MediaItemTitle && media.MediaItemTitle.trim() !== "";
+        const hasArtist = media.MediaItemArtist && media.MediaItemArtist.trim() !== "";
+        const isNotPlaying = !hasTitle && !hasArtist;
+
+        const title = isNotPlaying ? "Not Playing" : (media.MediaItemTitle || "Unknown Title");
+        const artist = isNotPlaying ? "" : (media.MediaItemArtist || "Unknown Artist");
+        const albumName = isNotPlaying ? "Not Playing" : (media.MediaItemAlbumName || title);
+        const durationMs = media.MediaItemPlaybackDurationInMilliSeconds || 0;
+        const elapsedMs = playback.PlaybackElapsedTimeInMilliseconds || 0;
+
+        const transformedState = {
+          is_playing: playback.PlaybackStatus === "playing",
+          timestamp: Date.now(),
+          progress_ms: elapsedMs,
+
+          context: null,
+
+          item: {
+            id: `local-media-${title}`,
+            uri: `local:media:${title}`,
+            type: "track",
+            name: title,
+            album: {
+              id: `local-album-${albumName}`,
+              uri: `local:album:${albumName}`,
+              name: albumName,
+              images: isNotPlaying || !localMediaArtworkBlobUrl
+                ? [{ url: "/images/not-playing.webp" }]
+                : [{ url: localMediaArtworkBlobUrl }],
+            },
+            artists: [
+              {
+                id: `local-artist-${artist}`,
+                uri: `local:artist:${artist}`,
+                name: artist,
+                type: "artist",
+              },
+            ],
+            duration_ms: durationMs,
+            is_local: true,
+          },
+
+          shuffle_state: shuffleState,
+          repeat_state: repeatState,
+
+          device: null,
+
+          currently_playing_type: "track",
+
+          playback_speed: playback.PlaybackRate || 1,
+        };
+
+        processPlaybackState(transformedState);
+      } else if (
+        data.type === "event" &&
+        data.topic === "media.nowPlaying.artwork"
+      ) {
+        const artworkData = data.data?.data;
+
+        if (artworkData && artworkData.trim() !== "") {
+          try {
+            const binaryString = atob(artworkData);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const blob = new Blob([bytes], { type: "image/jpeg" });
+            const oldBlobUrl = localMediaArtworkBlobUrl;
+            localMediaArtworkBlobUrl = URL.createObjectURL(blob);
+
+            setCurrentPlayback((prevPlayback) => {
+              if (
+                prevPlayback?.item?.is_local &&
+                prevPlayback.item.album?.images
+              ) {
+                const updatedPlayback = {
+                  ...prevPlayback,
+                  item: {
+                    ...prevPlayback.item,
+                    album: {
+                      ...prevPlayback.item.album,
+                      images: [{ url: localMediaArtworkBlobUrl }],
+                    },
+                  },
+                };
+                currentPlaybackRef.current = updatedPlayback;
+                return updatedPlayback;
+              }
+              return prevPlayback;
+            });
+
+            setCurrentlyPlayingAlbum((prevAlbum) => {
+              if (prevAlbum?.type === "local-track" && prevAlbum.images) {
+                return {
+                  ...prevAlbum,
+                  images: [{ url: localMediaArtworkBlobUrl }],
+                };
+              }
+              return prevAlbum;
+            });
+
+            if (oldBlobUrl) {
+              setTimeout(() => {
+                URL.revokeObjectURL(oldBlobUrl);
+              }, 100);
+            }
+          } catch (err) {
+            console.error("Error decoding artwork data:", err);
+          }
+        }
+      }
+    };
+
+    const cleanup = addGlobalWsListener(`local-media-${Date.now()}`, {
+      onMessage: handleLocalMediaEvent,
+    });
+
+    return () => {
+      cleanup();
+    };
+  }, [processPlaybackState]);
 
   const refreshPlaybackState = useCallback(
     async (forceRefresh = false) => {

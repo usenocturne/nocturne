@@ -135,7 +135,7 @@ export default function SpotifyImage({
 
         return () => {
           clearTimeout(timeoutId);
-          if (currentSrc && currentSrc.startsWith("blob:")) {
+          if (!useDirectUrl && currentSrc && currentSrc.startsWith("blob:")) {
             URL.revokeObjectURL(currentSrc);
           }
         };
@@ -149,11 +149,11 @@ export default function SpotifyImage({
     }
 
     return () => {
-      if (currentSrc && currentSrc.startsWith("blob:")) {
+      if (!useDirectUrl && currentSrc && currentSrc.startsWith("blob:")) {
         URL.revokeObjectURL(currentSrc);
       }
     };
-  }, [imageUrl, loadImageData, fallbackSrc, delayMs]);
+  }, [imageUrl, loadImageData, fallbackSrc, delayMs, useDirectUrl, currentSrc]);
 
   useEffect(() => {
     if (
