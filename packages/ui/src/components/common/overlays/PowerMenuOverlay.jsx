@@ -10,6 +10,7 @@ import RefreshIcon from "../icons/RefreshIcon";
 import BrightnessMidIcon from "../icons/BrightnessMidIcon";
 import BrightnessLowIcon from "../icons/BrightnessLowIcon";
 import BrightnessHighIcon from "../icons/BrightnessHighIcon";
+import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -216,13 +217,31 @@ function PowerMenuOverlay({
       >
         <div className="flex space-x-8">
           <button
-            onClick={onShutdown}
+            onClick={() => {
+              sendNocturneWsRequest("device.power.shutdown", {})
+                .then(() => {
+                  console.log("Shutdown request sent");
+                  onShutdown?.();
+                })
+                .catch((err) => {
+                  console.error("Shutdown request failed:", err);
+                });
+            }}
             className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center hover:bg-red-700 transition-colors focus:outline-none"
           >
             <PowerIcon className="w-10 h-10 text-white" />
           </button>
           <button
-            onClick={onReboot}
+            onClick={() => {
+              sendNocturneWsRequest("device.power.reboot", {})
+                .then(() => {
+                  console.log("Reboot request sent");
+                  onReboot?.();
+                })
+                .catch((err) => {
+                  console.error("Reboot request failed:", err);
+                });
+            }}
             className="w-24 h-24 rounded-full bg-neutral-700 flex items-center justify-center hover:bg-neutral-600 transition-colors focus:outline-none"
           >
             <RefreshIcon className="w-10 h-10 text-white" />
