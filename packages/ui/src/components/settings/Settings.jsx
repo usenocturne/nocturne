@@ -22,6 +22,7 @@ import AccountInfo from "./AccountInfo";
 import SoftwareUpdate from "./SoftwareUpdate";
 import BluetoothDevices from "./network/BluetoothDevices";
 import { useSettings } from "../../contexts/SettingsContext";
+import { sendNocturneWsRequest } from "../../hooks/useNocturned";
 
 const settingsStructure = {
   general: {
@@ -611,8 +612,18 @@ export default function Settings({
 
   const handleFactoryReset = async () => {
     try {
-      fetch("http://localhost:5000/device/factoryreset", { method: "POST" });
+      await sendNocturneWsRequest("device.factoryreset", {});
+      console.log("Factory reset request sent");
       setShowFactoryResetDialog(false);
+
+      setTimeout(async () => {
+        try {
+          await sendNocturneWsRequest("device.power.reboot", {});
+          console.log("Reboot request sent after factory reset");
+        } catch (rebootError) {
+          console.error("Reboot request failed:", rebootError);
+        }
+      }, 1000);
     } catch (error) {
       console.error("Error during factory reset:", error);
       setShowFactoryResetDialog(false);
