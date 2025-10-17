@@ -490,7 +490,7 @@ function App() {
       setIsSpotifyAuthenticated(isAuthenticated);
       setNeedsSpotifyAuthorization(needsAuthorization);
       setAuthStatusMessage(
-        needsAuthorization
+        hasDevices && needsAuthorization && isAuthenticated === false
           ? "Open the Nocturne app to finish logging into Spotify."
           : null,
       );
@@ -509,7 +509,7 @@ function App() {
       setIsAuthCheckInProgress(false);
       return true;
     },
-    [refreshPlaybackState, initialDataLoaded, refreshData],
+    [refreshPlaybackState, initialDataLoaded, refreshData, hasDevices],
   );
 
   useEffect(() => {
@@ -517,7 +517,7 @@ function App() {
       setIsSpotifyAuthenticated(isAuthenticated);
       setNeedsSpotifyAuthorization(!isAuthenticated);
       setAuthStatusMessage(
-        !isAuthenticated
+        hasDevices && isAuthenticated === false
           ? "Open the Nocturne app to finish logging into Spotify."
           : null,
       );
@@ -539,7 +539,7 @@ function App() {
         unsubscribe();
       }
     };
-  }, [refreshPlaybackState, initialDataLoaded, refreshData]);
+  }, [refreshPlaybackState, initialDataLoaded, refreshData, hasDevices]);
 
   useEffect(() => {
     const unsubscribe = subscribeEaSessionState((isStarted) => {
