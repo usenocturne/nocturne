@@ -10,6 +10,7 @@ let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
 let localMediaArtworkBlobUrl = null;
+let lastSpotifyDeviceStateChange = 0;
 export function useSpotifyPlayerState(immediateLoad = false) {
   const { isSpotifyReady, getPlayerState } = useSpotifyWebSocket();
   const [currentPlayback, setCurrentPlayback] = useState(null);
@@ -283,6 +284,15 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         if (payloads.length > 0 && payloads[0]?.cluster?.player_state) {
           const playerState = payloads[0].cluster.player_state;
 
+          if (currentPlaybackRef.current?.item?.is_local) {
+            lastSpotifyDeviceStateChange = Date.now();
+          }
+
+          if (currentPlaybackRef.current?.item?.is_local && localMediaArtworkBlobUrl) {
+            URL.revokeObjectURL(localMediaArtworkBlobUrl);
+            localMediaArtworkBlobUrl = null;
+          }
+
           const isEpisode =
             playerState.track?.uri?.startsWith("spotify:episode:");
 
@@ -435,6 +445,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   useEffect(() => {
     const handleLocalMediaEvent = (data) => {
       if (data.type === "event" && data.topic === "media.nowPlaying.update") {
+        const timeSinceSpotifyStateChange = Date.now() - lastSpotifyDeviceStateChange;
+        if (timeSinceSpotifyStateChange < 5000) {
+          return;
+        }
+
         const media = data.data?.MediaItemAttributes;
         const playback = data.data?.PlaybackAttributes;
 
