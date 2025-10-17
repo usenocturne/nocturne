@@ -483,6 +483,12 @@ export default function NowPlaying({
   );
 
   useEffect(() => {
+    if (isLocalMedia) {
+      setIsLiked(false);
+      currentTrackIdRef.current = null;
+      return;
+    }
+
     const checkCurrentTrackLiked = async () => {
       if (trackId && !isCheckingLike) {
         setIsCheckingLike(true);
@@ -504,7 +510,7 @@ export default function NowPlaying({
     };
 
     checkCurrentTrackLiked();
-  }, [trackId, isCheckingLike, checkIsTrackLiked]);
+  }, [trackId, isCheckingLike, checkIsTrackLiked, isLocalMedia]);
 
   const handleSkipNext = useCallback(async () => {
     await skipToNext();
@@ -673,7 +679,7 @@ export default function NowPlaying({
   }, [currentPlayback?.is_playing]);
 
   useEffect(() => {
-    if (currentPlayback?.is_playing) {
+    if (currentPlayback?.is_playing && !isLocalMedia) {
       const handleVisibilityChange = () => {
         if (document.visibilityState === "visible") {
           triggerRefresh();
@@ -689,7 +695,7 @@ export default function NowPlaying({
         );
       };
     }
-  }, [currentPlayback?.is_playing]);
+  }, [currentPlayback?.is_playing, isLocalMedia, triggerRefresh]);
 
   const handleBackNavigation = () => {
     if (onClose) {

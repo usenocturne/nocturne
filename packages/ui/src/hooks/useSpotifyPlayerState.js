@@ -576,6 +576,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     async (forceRefresh = false) => {
       if (!isSpotifyReady) return;
 
+      if (currentPlaybackRef.current?.item?.is_local) {
+        return;
+      }
+
       try {
         const data = await getPlayerState();
 
