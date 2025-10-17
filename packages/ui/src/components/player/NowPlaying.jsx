@@ -82,6 +82,7 @@ export default function NowPlaying({
     "/images/radio-cover/dj.webp",
   );
   const isLocalMedia = currentPlayback?.item?.is_local === true;
+  const isSmartphoneDevice = currentPlayback?.device?.type === "Smartphone";
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
@@ -185,7 +186,7 @@ export default function NowPlaying({
 
   useEffect(() => {
     const unsubscribe = subscribeToPhoneVolume((volumePercent) => {
-      if (isLocalMedia) {
+      if (isLocalMedia || isSmartphoneDevice) {
         setPhoneVolume(volumePercent);
         setLocalMediaVolumeDirection(null);
         manualVolumeChangeRef.current = true;
@@ -207,7 +208,7 @@ export default function NowPlaying({
         clearTimeout(phoneVolumeTimeoutRef.current);
       }
     };
-  }, [isLocalMedia, showVolumeOverlay]);
+  }, [isLocalMedia, isSmartphoneDevice, showVolumeOverlay]);
 
   useEffect(() => {
     if (prevVolumeRef.current === null) {
@@ -433,7 +434,7 @@ export default function NowPlaying({
 
         wheelDeltaAccumulatorRef.current = 0;
 
-        if (isLocalMedia) {
+        if (isLocalMedia || isSmartphoneDevice) {
           manualVolumeChangeRef.current = true;
           setLocalMediaVolumeDirection(direction > 0 ? 'up' : 'down');
           showVolumeOverlay();
@@ -461,7 +462,7 @@ export default function NowPlaying({
         }
       }
     },
-    [isProgressScrubbing, volume, setVolume, isLocalMedia, localMediaVolumeUp, localMediaVolumeDown, showVolumeOverlay],
+    [isProgressScrubbing, volume, setVolume, isLocalMedia, isSmartphoneDevice, localMediaVolumeUp, localMediaVolumeDown, showVolumeOverlay],
   );
 
   useEffect(() => {
@@ -568,11 +569,11 @@ export default function NowPlaying({
   }, [trackId, isCheckingLike, checkIsTrackLiked, isLocalMedia]);
 
   useEffect(() => {
-    if (!isLocalMedia) {
+    if (!isLocalMedia && !isSmartphoneDevice) {
       setPhoneVolume(null);
       setLocalMediaVolumeDirection(null);
     }
-  }, [isLocalMedia, trackId]);
+  }, [isLocalMedia, isSmartphoneDevice, trackId]);
 
   const handleSkipNext = useCallback(async () => {
     if (isLocalMedia) {
@@ -746,14 +747,14 @@ export default function NowPlaying({
   };
 
   const displayVolume = useMemo(() => {
-    if (isLocalMedia) {
+    if (isLocalMedia || isSmartphoneDevice) {
       return phoneVolume !== null ? phoneVolume : 100;
     }
     return volume;
-  }, [isLocalMedia, phoneVolume, volume]);
+  }, [isLocalMedia, isSmartphoneDevice, phoneVolume, volume]);
 
   const VolumeIcon = useMemo(() => {
-    if (isLocalMedia && phoneVolume === null && localMediaVolumeDirection) {
+    if ((isLocalMedia || isSmartphoneDevice) && phoneVolume === null && localMediaVolumeDirection) {
       if (localMediaVolumeDirection === 'up') {
         return (
           <svg
@@ -783,7 +784,7 @@ export default function NowPlaying({
       }
     }
 
-    const volumeToCheck = isLocalMedia && phoneVolume !== null ? phoneVolume : volume;
+    const volumeToCheck = (isLocalMedia || isSmartphoneDevice) && phoneVolume !== null ? phoneVolume : volume;
 
     if (volumeToCheck === 0) {
       return <VolumeOffIcon className="w-7 h-7" />;
@@ -792,7 +793,7 @@ export default function NowPlaying({
     } else {
       return <VolumeLoudIcon className="w-7 h-7" />;
     }
-  }, [volume, isLocalMedia, phoneVolume, localMediaVolumeDirection]);
+  }, [volume, isLocalMedia, isSmartphoneDevice, phoneVolume, localMediaVolumeDirection]);
 
   const PlayPauseIcon = useMemo(() => {
     return currentPlayback?.is_playing ? (
