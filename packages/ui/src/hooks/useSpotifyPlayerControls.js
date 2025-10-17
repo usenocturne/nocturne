@@ -2,6 +2,7 @@ import { useCallback, useState, useContext, useRef, useEffect } from "react";
 import React from "react";
 import { generateRandomString } from "../utils/helpers";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
+import { sendNocturneWsRequest } from "./useNocturned";
 
 export const DeviceSwitcherContext = React.createContext({
   openDeviceSwitcher: (playbackIntent = null) => {},
@@ -400,6 +401,41 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     [isSpotifyReady, sendSpotifyCommand, getPlayerState],
   );
 
+  const sendLocalMediaControl = useCallback(async (method) => {
+    try {
+      await sendNocturneWsRequest(method, {});
+      return true;
+    } catch (err) {
+      console.error(`Error sending local media control (${method}):`, err);
+      return false;
+    }
+  }, []);
+
+  const localMediaPlayPause = useCallback(
+    () => sendLocalMediaControl("media.control.playPause"),
+    [sendLocalMediaControl],
+  );
+
+  const localMediaNext = useCallback(
+    () => sendLocalMediaControl("media.control.next"),
+    [sendLocalMediaControl],
+  );
+
+  const localMediaPrevious = useCallback(
+    () => sendLocalMediaControl("media.control.previous"),
+    [sendLocalMediaControl],
+  );
+
+  const localMediaShuffle = useCallback(
+    () => sendLocalMediaControl("media.control.shuffle"),
+    [sendLocalMediaControl],
+  );
+
+  const localMediaRepeat = useCallback(
+    () => sendLocalMediaControl("media.control.repeat"),
+    [sendLocalMediaControl],
+  );
+
   return {
     playTrack,
     pausePlayback,
@@ -421,5 +457,10 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     getCurrentDeviceOptions,
     isLoading,
     error,
+    localMediaPlayPause,
+    localMediaNext,
+    localMediaPrevious,
+    localMediaShuffle,
+    localMediaRepeat,
   };
 }

@@ -102,6 +102,11 @@ export default function NowPlaying({
     setPlaybackSpeed: setPlaybackSpeedApi,
     getCurrentDeviceOptions,
     transferPlayback,
+    localMediaPlayPause,
+    localMediaNext,
+    localMediaPrevious,
+    localMediaShuffle,
+    localMediaRepeat,
   } = useSpotifyPlayerControls(currentPlayback);
 
   const {
@@ -213,6 +218,11 @@ export default function NowPlaying({
   }, [isStartingPlayback, currentPlayback?.item, currentPlayback?.is_playing]);
 
   const handlePlayPause = async () => {
+    if (isLocalMedia) {
+      await localMediaPlayPause();
+      return;
+    }
+
     if (currentPlayback?.is_playing) {
       await pausePlayback();
       return;
@@ -513,8 +523,14 @@ export default function NowPlaying({
   }, [trackId, isCheckingLike, checkIsTrackLiked, isLocalMedia]);
 
   const handleSkipNext = useCallback(async () => {
-    await skipToNext();
+    if (isLocalMedia) {
+      await localMediaNext();
+    } else {
+      await skipToNext();
+    }
   }, [
+    isLocalMedia,
+    localMediaNext,
     currentPlayback?.item?.type,
     progressMs,
     duration,
@@ -524,6 +540,11 @@ export default function NowPlaying({
   ]);
 
   const handleSkipPrevious = useCallback(async () => {
+    if (isLocalMedia) {
+      await localMediaPrevious();
+      return;
+    }
+
     const RESTART_THRESHOLD_MS = 3000;
     if (progressMs > RESTART_THRESHOLD_MS) {
       await seekToPosition(0);
@@ -533,6 +554,8 @@ export default function NowPlaying({
       await skipToPrevious();
     }
   }, [
+    isLocalMedia,
+    localMediaPrevious,
     currentPlayback?.item?.type,
     progressMs,
     seekToPosition,
@@ -613,26 +636,36 @@ export default function NowPlaying({
 
   const handleToggleShuffle = useCallback(async () => {
     try {
-      const newShuffleState = !shuffleEnabled;
-      setShuffleEnabled(newShuffleState);
-      await toggleShuffle(newShuffleState);
+      if (isLocalMedia) {
+        await localMediaShuffle();
+      } else {
+        const newShuffleState = !shuffleEnabled;
+        setShuffleEnabled(newShuffleState);
+        await toggleShuffle(newShuffleState);
+      }
     } catch (error) {
       console.error("Error toggling shuffle:", error);
-      setShuffleEnabled(!shuffleEnabled);
+      if (!isLocalMedia) {
+        setShuffleEnabled(!shuffleEnabled);
+      }
     }
-  }, [shuffleEnabled, toggleShuffle]);
+  }, [isLocalMedia, localMediaShuffle, shuffleEnabled, toggleShuffle]);
 
   const handleToggleRepeat = useCallback(async () => {
     try {
-      const nextModeMap = { off: "context", context: "track", track: "off" };
-      const newRepeatMode = nextModeMap[repeatMode] || "off";
+      if (isLocalMedia) {
+        await localMediaRepeat();
+      } else {
+        const nextModeMap = { off: "context", context: "track", track: "off" };
+        const newRepeatMode = nextModeMap[repeatMode] || "off";
 
-      setRepeatMode(newRepeatMode);
-      await setRepeatModeApi(newRepeatMode);
+        setRepeatMode(newRepeatMode);
+        await setRepeatModeApi(newRepeatMode);
+      }
     } catch (error) {
       console.error("Error toggling repeat mode:", error);
     }
-  }, [repeatMode, setRepeatModeApi]);
+  }, [isLocalMedia, localMediaRepeat, repeatMode, setRepeatModeApi]);
 
   const fetchCurrentPlaybackSpeed = useCallback(async () => {
     try {
