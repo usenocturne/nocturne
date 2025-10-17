@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Switch } from "@headlessui/react";
-import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogPanel,
@@ -550,14 +549,12 @@ export default function Settings({
   onOpenDonationModal,
   setActiveSection,
 }) {
-  const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState(null);
   const [versionInfo, setVersionInfo] = useState("Loading versions...");
   const [activeParent, setActiveParent] = useState(null);
   const [activeSubItem, setActiveSubItem] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const shouldExitToRecents = useRef(false);
-  const isProcessingEscape = useRef(false);
   const scrollContainerRef = useRef(null);
   const { settings, updateSetting } = useSettings();
   const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false);
