@@ -29,15 +29,16 @@ import {
   useNotifications,
 } from "./contexts/NotificationContext";
 import NotificationsContainer from "./components/common/notifications/NotificationsContainer";
-import PairingScreen from "./components/auth/PairingScreen";
+import PairingScreen from "./components/screens/PairingScreen";
 import LockView from "./components/common/LockView";
 import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
 import { CheckIcon } from "./components/common/icons";
 import { SettingsUpdateIcon } from "./components/common/icons";
 import UpdateCheckNotification from "./components/common/notifications/UpdateCheckNotification";
-import NetworkScreen from "./components/auth/NetworkScreen";
+import NetworkScreen from "./components/screens/NetworkScreen";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
-import AuthScreen from "./components/auth/AuthScreen";
+import AuthScreen from "./components/screens/AuthScreen";
+import SplashScreen from "./components/screens/SplashScreen";
 function useGlobalButtonMapping({
   playTrack,
   playDJMix,
@@ -294,8 +295,10 @@ function App() {
   const [isAuthCheckInProgress, setIsAuthCheckInProgress] = useState(false);
   const [requestedSpotifyStatus, setRequestedSpotifyStatus] = useState(false);
   const [eaSessionStarted, setEaSessionStarted] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const startSectionAppliedRef = useRef(false);
   const lastSpotifyAuthStateRef = useRef(null);
+  const splashFlowWithDeviceRef = useRef(false);
 
   useEffect(() => {
     powerMenuVisibleRef.current = powerMenuVisible;
@@ -618,6 +621,10 @@ function App() {
   ]);
 
   useEffect(() => {
+    if (splashFlowWithDeviceRef.current) {
+      return;
+    }
+
     if (needsSpotifyAuthorization || isSpotifyAuthenticated === false) {
       setShowAuthScreen(true);
       setShowTutorial(false);
@@ -663,6 +670,30 @@ function App() {
     }
     startSectionAppliedRef.current = true;
   }, [hasSeenTutorialFlag, showTutorial, isSpotifyAuthenticated, setActiveSection]);
+
+  useEffect(() => {
+    if (!wsConnected) return;
+
+    const lastDeviceAddress = localStorage.getItem(
+      "lastConnectedBluetoothDevice",
+    );
+
+    if (lastDeviceAddress) {
+      splashFlowWithDeviceRef.current = true;
+      const checkReconnectTriggered = setInterval(() => {
+        if (useBluetooth.__reconnectInitTriggered) {
+          clearInterval(checkReconnectTriggered);
+          setShowSplash(false);
+          setShowAuthScreen(false);
+          setActiveSection("nowPlaying");
+        }
+      }, 100);
+
+      return () => clearInterval(checkReconnectTriggered);
+    } else {
+      setShowSplash(false);
+    }
+  }, [wsConnected]);
 
   const { updateStatus, progress, isUpdating, isError, errorMessage } =
     useSystemUpdate();
@@ -1038,10 +1069,14 @@ function App() {
     showNetworkBanner &&
     !showConnectionLostScreen &&
     !showTutorial &&
-    !showAuthScreen;
+    !showAuthScreen &&
+    !showSplash &&
+    !splashFlowWithDeviceRef.current;
 
   let content;
-  if (showAuthScreen) {
+  if (showSplash) {
+    content = <SplashScreen />;
+  } else if (showAuthScreen) {
     content = (
       <AuthScreen
         isLoading={isAuthCheckInProgress}
