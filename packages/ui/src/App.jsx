@@ -621,13 +621,17 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (splashFlowWithDeviceRef.current) {
-      return;
-    }
-
     if (needsSpotifyAuthorization || isSpotifyAuthenticated === false) {
       setShowAuthScreen(true);
       setShowTutorial(false);
+
+      if (splashFlowWithDeviceRef.current) {
+        splashFlowWithDeviceRef.current = false;
+      }
+      return;
+    }
+
+    if (splashFlowWithDeviceRef.current) {
       return;
     }
 
