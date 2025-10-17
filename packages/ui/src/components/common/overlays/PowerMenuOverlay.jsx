@@ -157,8 +157,7 @@ function PowerMenuOverlay({
       setShouldRender(true);
       const t = setTimeout(() => setIsVisible(true), 10);
 
-      fetch("http://localhost:5000/device/brightness")
-        .then((response) => response.json())
+      sendNocturneWsRequest("device.brightness.get", {})
         .then((data) => {
           setBrightnessToggled(data.auto);
           setBrightnessValue(data.brightness);
@@ -252,15 +251,17 @@ function PowerMenuOverlay({
               setBrightnessToggled(newToggleState);
               onBrightnessToggle?.(newToggleState);
 
-              fetch("http://localhost:5000/device/brightness/auto", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ enabled: newToggleState }),
-              }).catch((error) => {
-                console.error("Failed to toggle auto brightness:", error);
-              });
+              sendNocturneWsRequest("device.brightness.auto", {
+                enabled: newToggleState,
+              })
+                .then((data) => {
+                  setBrightnessToggled(data.auto);
+                  setBrightnessValue(data.brightness);
+                })
+                .catch((error) => {
+                  console.error("Failed to toggle auto brightness:", error);
+                  setBrightnessToggled(!newToggleState);
+                });
             }}
             className={`w-24 h-24 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-0 ${
               brightnessToggled
@@ -285,11 +286,16 @@ function PowerMenuOverlay({
               onChange={(sliderPos) => {
                 const newValue = 221 - sliderPos;
                 setBrightnessValue(newValue);
-                fetch(`http://localhost:5000/device/brightness/${newValue}`, {
-                  method: "POST",
-                }).catch((error) => {
-                  console.error("Failed to set brightness:", error);
-                });
+                sendNocturneWsRequest("device.brightness.set", {
+                  brightness: newValue,
+                })
+                  .then((data) => {
+                    setBrightnessToggled(data.auto);
+                    setBrightnessValue(data.brightness);
+                  })
+                  .catch((error) => {
+                    console.error("Failed to set brightness:", error);
+                  });
               }}
             />
           </div>
