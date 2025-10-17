@@ -836,8 +836,9 @@ export default function NowPlaying({
       <div ref={contentContainerRef}>
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div
-            className={`min-w-[280px] h-[280px] mr-8 ${albumId ? "cursor-pointer" : ""}`}
+            className={`min-w-[280px] h-[280px] mr-8 ${albumId && !isLocalMedia ? "cursor-pointer" : ""}`}
             onClick={() =>
+              !isLocalMedia &&
               albumId &&
               onNavigateToAlbum &&
               onNavigateToAlbum(albumId, "album")
@@ -877,8 +878,9 @@ export default function NowPlaying({
                 />
               </div>
               <h4
-                className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId ? "cursor-pointer" : ""}`}
+                className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId && !isLocalMedia ? "cursor-pointer" : ""}`}
                 onClick={() =>
+                  !isLocalMedia &&
                   firstArtistId &&
                   onNavigateToArtist &&
                   onNavigateToArtist(firstArtistId, "artist")
