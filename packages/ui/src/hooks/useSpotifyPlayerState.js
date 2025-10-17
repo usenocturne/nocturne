@@ -440,12 +440,12 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
         if (!media || !playback) return;
 
-        const shuffleState = playback.ShuffleMode === "albums";
+        const shuffleState = playback.PlaybackShuffleMode === "albums";
 
         const repeatState =
-          playback.RepeatMode === "one"
+          playback.PlaybackRepeatMode === "one"
             ? "track"
-            : playback.RepeatMode === "all"
+            : playback.PlaybackRepeatMode === "all"
               ? "context"
               : "off";
 
