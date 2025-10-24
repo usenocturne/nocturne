@@ -79,8 +79,13 @@ export function useSpotifyWebSocket() {
   }, []);
 
   const sendSpotifyCommand = useCallback(
-    (method, params = {}) => {
+    (method, params = {}, signal = null) => {
       return new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+          reject(new Error("Request cancelled"));
+          return;
+        }
+
         const globalWs = getGlobalWebSocket();
 
         if (!globalWs) {
@@ -90,6 +95,11 @@ export function useSpotifyWebSocket() {
 
         if (globalWs.readyState === WebSocket.CONNECTING) {
           const waitForConnection = () => {
+            if (signal?.aborted) {
+              reject(new Error("Request cancelled"));
+              return;
+            }
+
             const ws = getGlobalWebSocket();
             if (!ws) {
               reject(new Error("WebSocket disconnected while waiting"));
@@ -97,7 +107,7 @@ export function useSpotifyWebSocket() {
             }
 
             if (ws.readyState === WebSocket.OPEN) {
-              sendMessage(ws, method, params, resolve, reject);
+              sendMessage(ws, method, params, resolve, reject, signal);
             } else if (
               ws.readyState === WebSocket.CLOSED ||
               ws.readyState === WebSocket.CLOSING
@@ -137,13 +147,13 @@ export function useSpotifyWebSocket() {
           return;
         }
 
-        sendMessage(globalWs, method, params, resolve, reject);
+        sendMessage(globalWs, method, params, resolve, reject, signal);
       });
     },
     [wsConnected, deviceConnected],
   );
 
-  const sendMessage = (ws, method, params, resolve, reject) => {
+  const sendMessage = (ws, method, params, resolve, reject, signal) => {
     const messageId = crypto.randomUUID();
     const message = {
       type: "request",
@@ -152,22 +162,53 @@ export function useSpotifyWebSocket() {
       params,
     };
 
-    pendingRequestsRef.current.set(messageId, { resolve, reject });
-
-    try {
-      ws.send(JSON.stringify(message));
-    } catch (err) {
-      console.error(`WebSocket send failed: ${err.message}`);
-      reject(err);
-      pendingRequestsRef.current.delete(messageId);
-    }
-
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (pendingRequestsRef.current.has(messageId)) {
         pendingRequestsRef.current.delete(messageId);
         reject(new Error("Request timeout"));
       }
     }, 30000);
+
+    const abortHandler = () => {
+      if (pendingRequestsRef.current.has(messageId)) {
+        clearTimeout(timeoutId);
+        pendingRequestsRef.current.delete(messageId);
+        reject(new Error("Request cancelled"));
+      }
+    };
+
+    if (signal) {
+      signal.addEventListener("abort", abortHandler);
+    }
+
+    pendingRequestsRef.current.set(messageId, {
+      resolve: (...args) => {
+        clearTimeout(timeoutId);
+        if (signal) {
+          signal.removeEventListener("abort", abortHandler);
+        }
+        resolve(...args);
+      },
+      reject: (...args) => {
+        clearTimeout(timeoutId);
+        if (signal) {
+          signal.removeEventListener("abort", abortHandler);
+        }
+        reject(...args);
+      },
+    });
+
+    try {
+      ws.send(JSON.stringify(message));
+    } catch (err) {
+      console.error(`WebSocket send failed: ${err.message}`);
+      clearTimeout(timeoutId);
+      if (signal) {
+        signal.removeEventListener("abort", abortHandler);
+      }
+      reject(err);
+      pendingRequestsRef.current.delete(messageId);
+    }
   };
 
   const handleSpotifyResponse = useCallback((data) => {
@@ -830,25 +871,40 @@ export function useSpotifyWebSocket() {
   );
 
   const fetchImage = useCallback(
-    async (url) => {
+    async (url, signal = null) => {
+      if (signal?.aborted) {
+        throw new Error("Request cancelled");
+      }
+
       const timeoutError = new Error("Spotify image fetch timed out");
       let timeoutId;
 
-      const fetchPromise = sendSpotifyCommand("spotify.image.fetch", { url });
+      const fetchPromise = sendSpotifyCommand("spotify.image.fetch", { url }, signal);
       const timeoutPromise = new Promise((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(timeoutError);
         }, SPOTIFY_IMAGE_FETCH_TIMEOUT_MS);
       });
 
+      const abortPromise = signal
+        ? new Promise((_, reject) => {
+            const abortHandler = () => {
+              reject(new Error("Request cancelled"));
+            };
+            signal.addEventListener("abort", abortHandler, { once: true });
+          })
+        : null;
+
       try {
-        const result = await Promise.race([fetchPromise, timeoutPromise]);
+        const promises = abortPromise
+          ? [fetchPromise, timeoutPromise, abortPromise]
+          : [fetchPromise, timeoutPromise];
+        const result = await Promise.race(promises);
         return result;
       } catch (err) {
         if (err === timeoutError) {
           fetchPromise.catch(() => {});
         }
-        console.error("Error fetching image:", err);
         throw err;
       } finally {
         if (timeoutId) {

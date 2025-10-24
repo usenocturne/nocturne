@@ -13,7 +13,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
   const preloadImagesCacheRef = useRef({});
   const timerRef = useRef(null);
   const blobUrlsRef = useRef([]);
-  const pendingFetchesRef = useRef(new Map());
+  const abortControllersRef = useRef(new Map());
 
   const { fetchImage, isSpotifyReady } = useSpotifyWebSocket();
 
@@ -48,15 +48,12 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
                 return;
               }
               try {
-                let fetchPromise = pendingFetchesRef.current.get(imageUrl);
-                if (!fetchPromise) {
-                  fetchPromise = fetchImage(imageUrl).finally(() => {
-                    pendingFetchesRef.current.delete(imageUrl);
-                  });
-                  pendingFetchesRef.current.set(imageUrl, fetchPromise);
-                }
+                const abortController = new AbortController();
+                abortControllersRef.current.set(imageUrl, abortController);
 
-                const result = await fetchPromise;
+                const result = await fetchImage(imageUrl, abortController.signal);
+
+                abortControllersRef.current.delete(imageUrl);
 
                 if (result && result.data) {
                   let blobUrl;
@@ -92,6 +89,9 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
                   types[buttonNum] = contentType;
                 }
               } catch (error) {
+                if (error.message === "Request cancelled") {
+                  return;
+                }
                 console.error(
                   `Failed to fetch image for button ${buttonNum}:`,
                   error,
@@ -136,11 +136,15 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
 
   useEffect(() => {
     return () => {
+      abortControllersRef.current.forEach((controller) => {
+        controller.abort();
+      });
+      abortControllersRef.current.clear();
+
       blobUrlsRef.current.forEach((url) => {
         URL.revokeObjectURL(url);
       });
       blobUrlsRef.current = [];
-      pendingFetchesRef.current.clear();
     };
   }, []);
 

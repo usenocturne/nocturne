@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useImageLoader } from "../../hooks/useImageLoader";
 
 export default function SpotifyImage({
@@ -19,13 +19,16 @@ export default function SpotifyImage({
   const {
     loadImage,
     getImageSize,
-    isImageLoading,
+    cancelRequest,
     hasImageFailed,
     isSpotifyReady,
   } = useImageLoader();
   const [currentSrc, setCurrentSrc] = useState(fallbackSrc);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const isMountedRef = useRef(true);
+  const currentImageUrlRef = useRef(null);
+  const blobUrlRef = useRef(null);
 
   const imageUrl = getImageSize(images, preferredSizeIndex);
 
@@ -34,14 +37,25 @@ export default function SpotifyImage({
     return Math.max(0, maxPriority - priority) * 100;
   }, [priority]);
 
+  const cleanupBlobUrl = useCallback(() => {
+    if (blobUrlRef.current && blobUrlRef.current.startsWith("blob:")) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+  }, []);
+
   const loadImageData = useCallback(async () => {
+    if (!isMountedRef.current) return;
+
     if (!imageUrl || hasImageFailed(imageUrl)) {
       setCurrentSrc(fallbackSrc);
       setHasError(true);
+      setIsLoading(false);
       return;
     }
 
     if (useDirectUrl) {
+      cleanupBlobUrl();
       setCurrentSrc(imageUrl);
       setIsLoading(false);
       setHasError(false);
@@ -50,7 +64,7 @@ export default function SpotifyImage({
         import("../../utils/colorExtractor").then(
           ({ extractColorsFromImage }) => {
             extractColorsFromImage(imageUrl).then((colors) => {
-              if (colors && onColorsExtracted) {
+              if (colors && onColorsExtracted && isMountedRef.current) {
                 onColorsExtracted(colors);
               }
             });
@@ -69,6 +83,8 @@ export default function SpotifyImage({
 
     try {
       const result = await loadImage(imageUrl, priority, extractColors);
+      if (!isMountedRef.current) return;
+
       const { data: imageData, colors } = result;
 
       if (colors && onColorsExtracted) {
@@ -93,6 +109,15 @@ export default function SpotifyImage({
           blobUrl = String(imageData);
         }
 
+        if (!isMountedRef.current) {
+          if (blobUrl.startsWith("blob:")) {
+            URL.revokeObjectURL(blobUrl);
+          }
+          return;
+        }
+
+        cleanupBlobUrl();
+        blobUrlRef.current = blobUrl;
         setCurrentSrc(blobUrl);
 
         if (onLoad) {
@@ -102,6 +127,12 @@ export default function SpotifyImage({
         throw new Error("No image data received");
       }
     } catch (error) {
+      if (!isMountedRef.current) return;
+
+      if (error.message === "Request cancelled") {
+        return;
+      }
+
       console.error("Failed to load image:", error);
       setCurrentSrc(fallbackSrc);
       setHasError(true);
@@ -110,7 +141,9 @@ export default function SpotifyImage({
         onError(error);
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [
     imageUrl,
@@ -119,41 +152,52 @@ export default function SpotifyImage({
     extractColors,
     fallbackSrc,
     hasImageFailed,
-    isSpotifyReady,
     onLoad,
     onError,
     onColorsExtracted,
     useDirectUrl,
+    cleanupBlobUrl,
   ]);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      if (currentImageUrlRef.current) {
+        cancelRequest(currentImageUrlRef.current);
+      }
+      cleanupBlobUrl();
+    };
+  }, [cancelRequest, cleanupBlobUrl]);
+
+  useEffect(() => {
+    if (currentImageUrlRef.current && currentImageUrlRef.current !== imageUrl) {
+      cancelRequest(currentImageUrlRef.current);
+    }
+    currentImageUrlRef.current = imageUrl;
+
     if (imageUrl) {
       if (delayMs > 0) {
         const timeoutId = setTimeout(() => {
-          loadImageData();
+          if (isMountedRef.current) {
+            loadImageData();
+          }
         }, delayMs);
 
         return () => {
           clearTimeout(timeoutId);
-          if (!useDirectUrl && currentSrc && currentSrc.startsWith("blob:")) {
-            URL.revokeObjectURL(currentSrc);
-          }
         };
       } else {
         loadImageData();
       }
     } else {
+      cleanupBlobUrl();
       setCurrentSrc(fallbackSrc);
       setHasError(false);
       setIsLoading(false);
     }
-
-    return () => {
-      if (!useDirectUrl && currentSrc && currentSrc.startsWith("blob:")) {
-        URL.revokeObjectURL(currentSrc);
-      }
-    };
-  }, [imageUrl, loadImageData, fallbackSrc, delayMs, useDirectUrl, currentSrc]);
+  }, [imageUrl, loadImageData, fallbackSrc, delayMs, cancelRequest, cleanupBlobUrl]);
 
   useEffect(() => {
     if (
@@ -177,6 +221,7 @@ export default function SpotifyImage({
 
   const handleImageError = useCallback(
     (e) => {
+      if (!isMountedRef.current) return;
       if (currentSrc !== fallbackSrc) {
         setCurrentSrc(fallbackSrc);
         setHasError(true);
@@ -190,6 +235,7 @@ export default function SpotifyImage({
   );
 
   const handleImageLoad = useCallback(() => {
+    if (!isMountedRef.current) return;
     if (onLoad && !hasError) {
       onLoad();
     }

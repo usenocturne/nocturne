@@ -185,10 +185,12 @@ class ImageLoadQueue {
         return;
       }
 
+      const abortController = new AbortController();
       const listener = {
         resolve,
         reject,
         extractColors: Boolean(extractColors),
+        abortController,
       };
 
       const cachedEntry = this.getCachedEntry(url);
@@ -252,6 +254,34 @@ class ImageLoadQueue {
     });
   }
 
+  cancelRequest(url) {
+    const activeRequest = this.activeRequests.get(url);
+    if (activeRequest) {
+      if (activeRequest.abortController) {
+        activeRequest.abortController.abort();
+      }
+      activeRequest.listeners.forEach(({ abortController }) => {
+        if (abortController) {
+          abortController.abort();
+        }
+      });
+      this.activeRequests.delete(url);
+      this.loadingImages.delete(url);
+      this.notifyListeners();
+    }
+
+    const queueIndex = this.queue.findIndex((item) => item.url === url);
+    if (queueIndex >= 0) {
+      const queueItem = this.queue[queueIndex];
+      queueItem.listeners.forEach(({ abortController }) => {
+        if (abortController) {
+          abortController.abort();
+        }
+      });
+      this.queue.splice(queueIndex, 1);
+    }
+  }
+
   async processQueue() {
     if (this.isProcessing || this.queue.length === 0) {
       return;
@@ -283,6 +313,8 @@ class ImageLoadQueue {
         continue;
       }
 
+      const abortController = new AbortController();
+
       this.loadingImages.add(url);
       this.activeRequests.set(url, {
         listeners: [...listeners],
@@ -290,6 +322,7 @@ class ImageLoadQueue {
           listeners.some((listener) => listener.extractColors) ||
           Boolean(extractColors),
         fetchImageFn,
+        abortController,
       });
       this.notifyListeners();
 
@@ -298,7 +331,7 @@ class ImageLoadQueue {
       );
 
       try {
-        const result = await fetchImageFn(url);
+        const result = await fetchImageFn(url, abortController.signal);
         const activeRequest = this.activeRequests.get(url);
         const requestListeners = activeRequest?.listeners || listeners;
         const shouldExtractColors =
@@ -339,6 +372,13 @@ class ImageLoadQueue {
           throw new Error("No image data received");
         }
       } catch (error) {
+        if (error.message === "Request cancelled") {
+          this.loadingImages.delete(url);
+          this.activeRequests.delete(url);
+          this.notifyListeners();
+          continue;
+        }
+
         console.error(`Error fetching image ${url}:`, error);
 
         const retryCount = this.retryCount.get(url) || 0;
@@ -432,6 +472,25 @@ class ImageLoadQueue {
   }
 
   clearCache() {
+    this.activeRequests.forEach((request) => {
+      if (request.abortController) {
+        request.abortController.abort();
+      }
+      request.listeners.forEach(({ abortController }) => {
+        if (abortController) {
+          abortController.abort();
+        }
+      });
+    });
+
+    this.queue.forEach((item) => {
+      item.listeners.forEach(({ abortController }) => {
+        if (abortController) {
+          abortController.abort();
+        }
+      });
+    });
+
     this.failedImages.clear();
     this.loadingImages.clear();
     this.retryCount.clear();
@@ -481,6 +540,10 @@ export function useImageLoader() {
     [fetchImage, isSpotifyReady],
   );
 
+  const cancelRequest = useCallback((url) => {
+    globalImageQueue.cancelRequest(url);
+  }, []);
+
   const getImageSize = useCallback((images, preferredIndex = 1) => {
     if (!images || !Array.isArray(images) || images.length === 0) {
       return null;
@@ -521,6 +584,7 @@ export function useImageLoader() {
     hasImageFailed,
     getImageSize,
     clearCache,
+    cancelRequest,
     queueLength: globalImageQueue.getQueueLength(),
     isSpotifyReady,
   };
