@@ -1,0 +1,5 @@
+config BR2_PACKAGE_FASTFETCH
+    bool "fastfetch"
+    select BR2_PACKAGE_CJSON
+    help
+      fastfetch with Nocturne configuration.
