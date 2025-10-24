@@ -64,7 +64,6 @@ export { default as SpeedIcon } from "./SpeedIcon";
 export { default as BackspaceIcon } from "./BackspaceIcon";
 export { default as ShiftIcon } from "./ShiftIcon";
 export { default as CapsLockIcon } from "./CapsLockIcon";
-export { default as KeyboardHideIcon } from "./KeyboardHideIcon";
 export { default as BrightnessLowIcon } from "./BrightnessLowIcon";
 export { default as BrightnessMidIcon } from "./BrightnessMidIcon";
 export { default as BrightnessHighIcon } from "./BrightnessHighIcon";
