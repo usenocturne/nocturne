@@ -575,10 +575,10 @@ function App() {
     }
 
     if (!hasSeenTutorialFlag) {
-      if (isSpotifyAuthenticated) {
+      if (isSpotifyAuthenticated && eaSessionStarted) {
         setShowAuthScreen(false);
         setShowTutorial(true);
-      } else if (!hasDevices) {
+      } else if (!hasDevices || !eaSessionStarted) {
         setShowAuthScreen(true);
         setShowTutorial(false);
       } else {
@@ -601,6 +601,7 @@ function App() {
     hasSeenTutorialFlag,
     needsSpotifyAuthorization,
     isSpotifyAuthenticated,
+    eaSessionStarted,
   ]);
 
   useEffect(() => {
@@ -643,8 +644,11 @@ function App() {
       return () => clearInterval(checkReconnectTriggered);
     } else {
       setShowSplash(false);
+      if (!hasSeenTutorialFlag) {
+        setShowAuthScreen(true);
+      }
     }
-  }, [wsConnected]);
+  }, [wsConnected, hasSeenTutorialFlag]);
 
   const { updateStatus, progress, isUpdating, isError, errorMessage } =
     useSystemUpdate();
