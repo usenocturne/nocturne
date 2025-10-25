@@ -56,8 +56,24 @@ export default function SpotifyImage({
       return;
     }
 
-    if (useDirectUrl) {
-      cleanupBlobUrl();
+    if (imageUrl === fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+      setIsLoading(false);
+      setHasError(false);
+      return;
+    }
+
+    const isLocalUrl = imageUrl.startsWith('/') ||
+                       imageUrl.startsWith('./') ||
+                       imageUrl.startsWith('../') ||
+                       imageUrl.startsWith('blob:') ||
+                       imageUrl.startsWith('data:') ||
+                       (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://'));
+
+    if (useDirectUrl || isLocalUrl) {
+      if (!imageUrl.startsWith('blob:')) {
+        cleanupBlobUrl();
+      }
       setCurrentSrc(imageUrl);
       setIsLoading(false);
       setHasError(false);
