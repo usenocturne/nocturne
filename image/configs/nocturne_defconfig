@@ -1,11 +1,11 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Buildroot 2025.08 Configuration
+# Buildroot 2025.08.1 Configuration
 #
 BR2_HAVE_DOT_CONFIG=y
 BR2_EXTERNAL_NAMES="Nocturne"
 BR2_EXTERNAL_Nocturne_PATH="/home/dominic/nocturne-test/image/external"
-BR2_EXTERNAL_Nocturne_VERSION="-g0e73ece-dirty"
+BR2_EXTERNAL_Nocturne_VERSION="-g5bba3e3"
 BR2_HOST_GCC_AT_LEAST_4_9=y
 BR2_HOST_GCC_AT_LEAST_5=y
 BR2_HOST_GCC_AT_LEAST_6=y
@@ -472,7 +472,7 @@ BR2_GLOBAL_PATCH_DIR=""
 #
 # BR2_FORCE_HOST_BUILD is not set
 # BR2_DOWNLOAD_FORCE_CHECK_HASHES is not set
-# BR2_REPRODUCIBLE is not set
+BR2_REPRODUCIBLE=y
 # BR2_PER_PACKAGE_DIRECTORIES is not set
 # BR2_TIME_BITS_64 is not set
 
@@ -2393,7 +2393,7 @@ BR2_PACKAGE_WEBKITGTK_ARCH_SUPPORTS=y
 # BR2_PACKAGE_WEBP is not set
 
 #
-# wlroots needs udev, EGL and OpenGL ES support
+# wlroots needs udev, EGL, OpenGL ES and GBM support
 #
 # BR2_PACKAGE_WOFF2 is not set
 
@@ -3568,7 +3568,10 @@ BR2_PACKAGE_CRIU_ARCH_SUPPORTS=y
 #
 # BR2_PACKAGE_DOCKER_CREDENTIAL_ACR_ENV is not set
 # BR2_PACKAGE_DOCKER_CREDENTIAL_GCR is not set
-# BR2_PACKAGE_DOCKER_ENGINE is not set
+
+#
+# docker-engine needs a glibc or musl toolchain w/ threads, headers >= 5.2
+#
 # BR2_PACKAGE_EARLYOOM is not set
 # BR2_PACKAGE_EFIBOOTMGR is not set
 BR2_PACKAGE_EFIVAR_ARCH_SUPPORTS=y
