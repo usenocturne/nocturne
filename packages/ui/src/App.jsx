@@ -578,6 +578,9 @@ function App() {
       if (isSpotifyAuthenticated) {
         setShowAuthScreen(false);
         setShowTutorial(true);
+      } else if (!hasDevices) {
+        setShowAuthScreen(true);
+        setShowTutorial(false);
       } else {
         setShowAuthScreen(false);
         setShowTutorial(false);
