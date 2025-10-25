@@ -628,6 +628,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         data.type === "event" &&
         data.topic === "media.nowPlaying.artwork"
       ) {
+        if (!isReceivingNowPlayingUpdatesGlobal) {
+          return;
+        }
+
         const artworkData = data.data?.data;
 
         if (artworkData && artworkData.trim() !== "") {
