@@ -4,6 +4,17 @@ import { useUpdateCheck } from "./useUpdateCheck";
 
 const API_BASE = "http://localhost:5000";
 
+const generateUUID = () => {
+  if (globalThis.crypto && globalThis.crypto.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 let globalWsRef = null;
 let globalWsListeners = [];
 let wsInitialized = false;
@@ -311,7 +322,7 @@ const setupGlobalWebSocket = async () => {
       cleanupWsReconnection();
 
       try {
-        const messageId = crypto.randomUUID();
+        const messageId = generateUUID();
         const resetBootCounterMessage = {
           type: "request",
           id: messageId,
@@ -475,10 +486,7 @@ const sendWsRequest = (method, params = {}, { timeoutMs = 30000 } = {}) => {
         return;
       }
 
-      const id =
-        globalThis.crypto && globalThis.crypto.randomUUID
-          ? globalThis.crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const id = generateUUID();
       const payload = { type: "request", id, method, params };
       pendingWsRequests.set(id, { resolve, reject, method });
 

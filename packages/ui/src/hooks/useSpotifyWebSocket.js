@@ -12,6 +12,17 @@ import {
 
 const SPOTIFY_IMAGE_FETCH_TIMEOUT_MS = 30000;
 
+const generateUUID = () => {
+  if (globalThis.crypto && globalThis.crypto.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 const extractAfterFromNextUrl = (nextUrl) => {
   if (!nextUrl) return null;
   try {
@@ -154,7 +165,7 @@ export function useSpotifyWebSocket() {
   );
 
   const sendMessage = (ws, method, params, resolve, reject, signal) => {
-    const messageId = crypto.randomUUID();
+    const messageId = generateUUID();
     const message = {
       type: "request",
       id: messageId,
