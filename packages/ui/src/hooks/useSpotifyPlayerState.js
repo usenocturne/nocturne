@@ -538,6 +538,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
         if (!media || !playback) return;
 
+        if (playback.PlaybackAppName === "Spotify") {
+          return;
+        }
+
         if (!playback.PlaybackAppName) {
           if (
             currentPlaybackRef.current?.item &&
