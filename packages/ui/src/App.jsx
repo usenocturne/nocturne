@@ -310,6 +310,7 @@ function App() {
     playerIsLoading,
     playerError,
     refreshPlaybackState,
+    isReceivingNowPlayingUpdates,
     playerControls,
     recentAlbums,
     userPlaylists,
@@ -1089,6 +1090,7 @@ function App() {
         onNavigateToArtist={handleNavigateToArtistFromNowPlaying}
         onNavigateToAlbum={handleNavigateToAlbumFromNowPlaying}
         setIgnoreNextRelease={setIgnoreNextRelease}
+        isReceivingNowPlayingUpdates={isReceivingNowPlayingUpdates}
       />
     );
   } else if (activeSection === "lock") {

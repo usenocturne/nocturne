@@ -49,6 +49,7 @@ export default function NowPlaying({
   onNavigateToArtist,
   onNavigateToAlbum,
   setIgnoreNextRelease,
+  isReceivingNowPlayingUpdates = false,
 }) {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
@@ -889,6 +890,8 @@ export default function NowPlaying({
                 albumImages?.[0]?.url?.includes("/images/not-playing.webp") ||
                 albumImages?.[0]?.url?.startsWith("blob:")
               }
+              skipFetchWhenNowPlaying={true}
+              isReceivingNowPlayingUpdates={isReceivingNowPlayingUpdates}
               className="w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
             />
           </div>

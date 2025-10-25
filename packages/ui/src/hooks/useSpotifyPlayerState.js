@@ -12,6 +12,25 @@ let initialPlaybackFetchDone = false;
 let localMediaArtworkBlobUrl = null;
 let lastSpotifyDeviceStateChange = 0;
 let phoneVolumeListeners = [];
+let nowPlayingUpdateTimeout = null;
+let isReceivingNowPlayingUpdatesGlobal = false;
+let isProcessingArtwork = false;
+let artworkCache = new Map();
+const MAX_ARTWORK_CACHE_SIZE = 10;
+
+const cleanupArtworkCache = () => {
+  if (artworkCache.size > MAX_ARTWORK_CACHE_SIZE) {
+    const entriesToRemove = artworkCache.size - MAX_ARTWORK_CACHE_SIZE;
+    const keysToRemove = Array.from(artworkCache.keys()).slice(0, entriesToRemove);
+    keysToRemove.forEach((key) => {
+      const blobUrl = artworkCache.get(key);
+      if (blobUrl && blobUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      artworkCache.delete(key);
+    });
+  }
+};
 
 export const subscribeToPhoneVolume = (listener) => {
   phoneVolumeListeners.push(listener);
@@ -38,6 +57,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [initialFetchInProgress, setInitialFetchInProgress] = useState(false);
+  const [isReceivingNowPlayingUpdates, setIsReceivingNowPlayingUpdates] = useState(false);
 
   const initialStateLoadedRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
@@ -129,6 +149,25 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       }
 
       setCurrentPlayback((prevPlayback) => {
+        const trackUri = data.item?.uri;
+        const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+
+        let itemWithArtwork = data.item;
+        if (cachedArtworkUrl && data.item?.album?.images) {
+          itemWithArtwork = {
+            ...data.item,
+            album: {
+              ...data.item.album,
+              images: [{ url: cachedArtworkUrl }],
+            },
+          };
+        } else if (data.item && isEpisode && !data.item.type) {
+          itemWithArtwork = {
+            ...data.item,
+            type: "episode",
+          };
+        }
+
         const newPlayback = {
           ...data,
           device: {
@@ -137,33 +176,34 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           },
           shuffle_state: data.shuffle_state,
           repeat_state: data.repeat_state,
-
-          item:
-            data.item && isEpisode && !data.item.type
-              ? {
-                  ...data.item,
-                  type: "episode",
-                }
-              : data.item,
+          item: itemWithArtwork,
         };
         currentPlaybackRef.current = newPlayback;
         return newPlayback;
       });
 
       if (data?.item && data.item.type === "track") {
+        const trackUri = data.item.uri;
+        const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+
         const currentAlbum = data.item.is_local
           ? {
               id: `local-${data.item.uri}`,
               name: data.item.album?.name || data.item.name,
-              images: data.item.album?.images || [
-                { url: "/images/not-playing.webp" },
-              ],
+              images: cachedArtworkUrl
+                ? [{ url: cachedArtworkUrl }]
+                : data.item.album?.images || [
+                    { url: "/images/not-playing.webp" },
+                  ],
               artists: data.item.artists,
               type: "local-track",
               uri: data.item.uri,
             }
           : {
               ...data.item.album,
+              images: cachedArtworkUrl
+                ? [{ url: cachedArtworkUrl }]
+                : data.item.album?.images,
               artists: data.item.artists,
             };
 
@@ -181,9 +221,14 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         }
       } else if (data?.item && data.item.type === "episode") {
         const currentShow = data.item.show;
+        const trackUri = data.item.uri;
+        const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
         const showAsAlbum = {
           ...currentShow,
+          images: cachedArtworkUrl
+            ? [{ url: cachedArtworkUrl }]
+            : currentShow?.images,
           artists: currentShow.publisher
             ? [
                 {
@@ -469,6 +514,19 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   useEffect(() => {
     const handleLocalMediaEvent = (data) => {
       if (data.type === "event" && data.topic === "media.nowPlaying.update") {
+        setIsReceivingNowPlayingUpdates(true);
+        isReceivingNowPlayingUpdatesGlobal = true;
+        isProcessingArtwork = false;
+
+        if (nowPlayingUpdateTimeout) {
+          clearTimeout(nowPlayingUpdateTimeout);
+        }
+
+        nowPlayingUpdateTimeout = setTimeout(() => {
+          setIsReceivingNowPlayingUpdates(false);
+          isReceivingNowPlayingUpdatesGlobal = false;
+        }, 5000);
+
         const timeSinceSpotifyStateChange =
           Date.now() - lastSpotifyDeviceStateChange;
         if (timeSinceSpotifyStateChange < 5000) {
@@ -569,6 +627,17 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const artworkData = data.data?.data;
 
         if (artworkData && artworkData.trim() !== "") {
+          const currentImageUrl = currentPlaybackRef.current?.item?.album?.images?.[0]?.url;
+          if (currentImageUrl && currentImageUrl.startsWith("blob:")) {
+            return;
+          }
+
+          if (isProcessingArtwork) {
+            return;
+          }
+
+          isProcessingArtwork = true;
+
           try {
             const binaryString = atob(artworkData);
             const bytes = new Uint8Array(binaryString.length);
@@ -580,11 +649,20 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             const oldBlobUrl = localMediaArtworkBlobUrl;
             localMediaArtworkBlobUrl = URL.createObjectURL(blob);
 
+            const trackUri = currentPlaybackRef.current?.item?.uri;
+            if (trackUri) {
+              if (artworkCache.has(trackUri)) {
+                const oldCachedUrl = artworkCache.get(trackUri);
+                if (oldCachedUrl && oldCachedUrl !== localMediaArtworkBlobUrl) {
+                  URL.revokeObjectURL(oldCachedUrl);
+                }
+              }
+              artworkCache.set(trackUri, localMediaArtworkBlobUrl);
+              cleanupArtworkCache();
+            }
+
             setCurrentPlayback((prevPlayback) => {
-              if (
-                prevPlayback?.item?.is_local &&
-                prevPlayback.item.album?.images
-              ) {
+              if (prevPlayback?.item?.album?.images) {
                 const updatedPlayback = {
                   ...prevPlayback,
                   item: {
@@ -602,7 +680,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             });
 
             setCurrentlyPlayingAlbum((prevAlbum) => {
-              if (prevAlbum?.type === "local-track" && prevAlbum.images) {
+              if (prevAlbum?.images) {
                 return {
                   ...prevAlbum,
                   images: [{ url: localMediaArtworkBlobUrl }],
@@ -611,13 +689,20 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               return prevAlbum;
             });
 
-            if (oldBlobUrl) {
-              setTimeout(() => {
-                URL.revokeObjectURL(oldBlobUrl);
-              }, 100);
+            if (oldBlobUrl && oldBlobUrl !== localMediaArtworkBlobUrl) {
+              const isInCache = Array.from(artworkCache.values()).includes(oldBlobUrl);
+              if (!isInCache) {
+                setTimeout(() => {
+                  URL.revokeObjectURL(oldBlobUrl);
+                }, 100);
+              }
             }
           } catch (err) {
             console.error("Error decoding artwork data:", err);
+          } finally {
+            setTimeout(() => {
+              isProcessingArtwork = false;
+            }, 100);
           }
         }
       } else if (
@@ -671,5 +756,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     isLoading,
     error,
     refreshPlaybackState,
+    isReceivingNowPlayingUpdates,
   };
 }

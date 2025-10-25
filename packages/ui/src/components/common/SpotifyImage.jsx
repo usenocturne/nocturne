@@ -14,6 +14,8 @@ export default function SpotifyImage({
   extractColors = false,
   onColorsExtracted = null,
   useDirectUrl = false,
+  skipFetchWhenNowPlaying = false,
+  isReceivingNowPlayingUpdates = false,
   ...props
 }) {
   const {
@@ -75,6 +77,12 @@ export default function SpotifyImage({
       if (onLoad) {
         onLoad();
       }
+      return;
+    }
+
+    if (skipFetchWhenNowPlaying && isReceivingNowPlayingUpdates) {
+      setIsLoading(true);
+      setHasError(false);
       return;
     }
 
@@ -157,6 +165,8 @@ export default function SpotifyImage({
     onColorsExtracted,
     useDirectUrl,
     cleanupBlobUrl,
+    skipFetchWhenNowPlaying,
+    isReceivingNowPlayingUpdates,
   ]);
 
   useEffect(() => {
@@ -205,7 +215,8 @@ export default function SpotifyImage({
       imageUrl &&
       currentSrc === fallbackSrc &&
       !isLoading &&
-      !hasImageFailed(imageUrl)
+      !hasImageFailed(imageUrl) &&
+      !(skipFetchWhenNowPlaying && isReceivingNowPlayingUpdates)
     ) {
       loadImageData();
     }
@@ -217,6 +228,8 @@ export default function SpotifyImage({
     isLoading,
     hasImageFailed,
     loadImageData,
+    skipFetchWhenNowPlaying,
+    isReceivingNowPlayingUpdates,
   ]);
 
   const handleImageError = useCallback(
