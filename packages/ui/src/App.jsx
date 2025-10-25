@@ -283,7 +283,7 @@ function App() {
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
   const [showExhaustedReconnectScreen, setShowExhaustedReconnectScreen] =
     useState(false);
-  const [showAuthScreen, setShowAuthScreen] = useState(true);
+  const [showAuthScreen, setShowAuthScreen] = useState(false);
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(null);
   const [needsSpotifyAuthorization, setNeedsSpotifyAuthorization] =
     useState(false);
@@ -579,14 +579,14 @@ function App() {
         setShowAuthScreen(false);
         setShowTutorial(true);
       } else {
-        setShowAuthScreen(true);
+        setShowAuthScreen(false);
         setShowTutorial(false);
       }
       return;
     }
 
     if (!hasDevices && isSpotifyAuthenticated !== true) {
-      setShowAuthScreen(true);
+      setShowAuthScreen(false);
       setShowTutorial(false);
       return;
     }
