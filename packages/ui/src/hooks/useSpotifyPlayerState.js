@@ -631,8 +631,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const artworkData = data.data?.data;
 
         if (artworkData && artworkData.trim() !== "") {
+          const trackUri = currentPlaybackRef.current?.item?.uri;
+          const cachedUrl = trackUri ? artworkCache.get(trackUri) : null;
           const currentImageUrl = currentPlaybackRef.current?.item?.album?.images?.[0]?.url;
-          if (currentImageUrl && currentImageUrl.startsWith("blob:")) {
+
+          if (currentImageUrl && currentImageUrl === cachedUrl && currentImageUrl.startsWith("blob:")) {
             return;
           }
 

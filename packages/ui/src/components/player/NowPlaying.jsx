@@ -337,10 +337,7 @@ export default function NowPlaying({
         ? currentPlayback.item.images ||
           currentPlayback.item.show?.images ||
           null
-        : currentPlayback.item.type === "local" ||
-            !currentPlayback.item?.album?.images
-          ? null
-          : currentPlayback.item.album.images
+        : currentPlayback.item.album?.images || null
       : null;
 
     const trackId = hasCurrentItem ? currentPlayback?.item?.id : null;
