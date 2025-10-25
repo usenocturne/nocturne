@@ -1,19 +1,14 @@
-             'o0WMNl                    
-         .lONMMMMMMMK.        .         
-      .oXMMMMMMMMMMMMM:        c:.      
-    .kMMMMMMMMMMMMMMMMMo        xxl.    
-   cMMMMMMMMMMMMMMMMMMMM,       .xxx;   
-  kMMMMMMMMMMMMMMMMMMMMMW        xxxxc  
- xMMMMMMMMMMMMMMMMMMMMMMMk       'xxxxc 
-.MMMMMMMMMMMMMMMMMMMMMMMMM        xxxxx.
-kMMMMMMMMMMMMMMMMMMMMMMMMM.       xxxxxc
-MMMMMMMMMMMMMMMMMMMMMMMMMM,       xxxxxx
-XMMMMMMMMMMMMMMMMMMMMMMMMM'       xxxxxo
-:MMMMMMMMMMMMMMMMMMMMMMMMM.       xxxxx'
- WMMMMMMMMMMMMMMMMMMMMMMMN       .xxxxx 
-  MMMMMMMMMMMMMMMMMMMMMMM'       lxxxx  
-   MMMMMMMMMMMMMMMMMMMMMk        xxxx   
-    oMMMMMMMMMMMMMMMMMMN        lxxc    
-      xMMMMMMMMMMMMMMMX        'xd      
-         WMMMMMMMMMMMx        ..        
-             OMMMMMM                    
+         'oKWMO
+      ;kNMMMMMMN.      '
+    dWMMMMMMMMMMM:      xc
+  cWMMMMMMMMMMMMMM'     'xx,
+ dMMMMMMMMMMMMMMMMW      xxx:
+'MMMMMMMMMMMMMMMMMM;     :xxx.
+KMMMMMMMMMMMMMMMMMMO     'xxxo
+WMMMMMMMMMMMMMMMMMM0     .xxxx
+oMMMMMMMMMMMMMMMMMMo     ,xxx;
+ MMMMMMMMMMMMMMMMMM.     dxxx
+  WMMMMMMMMMMMMMMMk      xxx
+   lMMMMMMMMMMMMMX      ox:
+     ,MMMMMMMMMM0      ,;
+         XMMMMM'
