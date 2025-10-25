@@ -46,6 +46,7 @@ let bluetoothConnectionState = {
 };
 
 let reconnectionExhausted = false;
+let manualDisconnectInProgress = false;
 
 const bluetoothConnectionSubscribers = new Set();
 
@@ -1374,6 +1375,7 @@ export const useBluetooth = () => {
     async (deviceAddress) => {
       try {
         setLoading(true);
+        manualDisconnectInProgress = false;
         stopRetrying();
         retryIsCancelled = true;
         reconnectionExhausted = false;
@@ -1389,7 +1391,6 @@ export const useBluetooth = () => {
 
         localStorage.setItem("lastConnectedBluetoothDevice", deviceAddress);
         await fetchDevices(true);
-        startNetworkPolling(deviceAddress);
         window.dispatchEvent(new Event("networkBannerHide"));
         window.dispatchEvent(new Event("networkScreenHide"));
         reconnectionExhausted = false;
@@ -1401,13 +1402,14 @@ export const useBluetooth = () => {
         setLoading(false);
       }
     },
-    [fetchDevices, stopRetrying, startNetworkPolling],
+    [fetchDevices, stopRetrying],
   );
 
   const connectDevice = useCallback(
     async (deviceAddress) => {
       try {
         setLoading(true);
+        manualDisconnectInProgress = false;
         stopRetrying();
         retryIsCancelled = false;
         reconnectionExhausted = false;
@@ -1434,7 +1436,6 @@ export const useBluetooth = () => {
                       deviceAddress,
                     );
                     fetchDevices(true);
-                    startNetworkPolling(deviceAddress);
                     retryIsCancelled = true;
                     reconnectionExhausted = false;
                     window.dispatchEvent(new Event("networkBannerHide"));
@@ -1468,7 +1469,6 @@ export const useBluetooth = () => {
 
         localStorage.setItem("lastConnectedBluetoothDevice", deviceAddress);
         await fetchDevices(true);
-        startNetworkPolling(deviceAddress);
         window.dispatchEvent(new Event("networkBannerHide"));
         window.dispatchEvent(new Event("networkScreenHide"));
         return true;
@@ -1480,12 +1480,18 @@ export const useBluetooth = () => {
         setLoading(false);
       }
     },
-    [fetchDevices, stopRetrying, startNetworkPolling],
+    [fetchDevices, stopRetrying],
   );
 
   const disconnectDevice = useCallback(
     async (address) => {
       try {
+        manualDisconnectInProgress = true;
+
+        setTimeout(() => {
+          manualDisconnectInProgress = false;
+        }, 3000);
+
         stopNetworkPolling();
         stopRetrying();
         retryIsCancelled = true;
@@ -1508,6 +1514,7 @@ export const useBluetooth = () => {
         return true;
       } catch (error) {
         console.error("Error disconnecting:", error);
+        manualDisconnectInProgress = false;
         return false;
       }
     },
@@ -1613,9 +1620,13 @@ export const useBluetooth = () => {
               reconnectAttemptsRef.current = 0;
               setReconnectAttempt(0);
               isReconnecting.current = false;
-              setTimeout(() => {
-                attemptReconnect();
-              }, INITIAL_RECONNECT_DELAY);
+              if (!manualDisconnectInProgress) {
+                setTimeout(() => {
+                  attemptReconnect();
+                }, INITIAL_RECONNECT_DELAY);
+              } else {
+                manualDisconnectInProgress = false;
+              }
             }
           } else if (ev.event === "connection_failed") {
             window.dispatchEvent(new Event("networkBannerShow"));
