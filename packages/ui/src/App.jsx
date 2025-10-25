@@ -292,7 +292,6 @@ function App() {
     () => localStorage.getItem("hasSeenTutorial") === "true",
   );
   const [isAuthCheckInProgress, setIsAuthCheckInProgress] = useState(false);
-  const [requestedSpotifyStatus, setRequestedSpotifyStatus] = useState(false);
   const [eaSessionStarted, setEaSessionStarted] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const startSectionAppliedRef = useRef(false);
@@ -529,8 +528,6 @@ function App() {
 
     if (!eaSessionStarted) return;
 
-    if (requestedSpotifyStatus) return;
-
     let cancelled = false;
 
     setIsAuthCheckInProgress(true);
@@ -550,30 +547,6 @@ function App() {
           setIsAuthCheckInProgress(false);
           return;
         }
-
-        return sendNocturneWsRequest(
-          "spotify.auth.getStatus",
-          {},
-          { timeoutMs: 5000 },
-        )
-          .then((result) => {
-            if (cancelled) {
-              return;
-            }
-            setRequestedSpotifyStatus(true);
-            const handled = processSpotifyAuthMessage(result);
-            if (!handled) {
-              setIsAuthCheckInProgress(false);
-            }
-          })
-          .catch((err) => {
-            if (cancelled) return;
-            console.error("Failed to fetch Spotify auth status", err);
-            setIsSpotifyAuthenticated(null);
-            setNeedsSpotifyAuthorization(false);
-            setAuthStatusMessage(null);
-            setIsAuthCheckInProgress(false);
-          });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -584,12 +557,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [
-    wsConnected,
-    eaSessionStarted,
-    requestedSpotifyStatus,
-    processSpotifyAuthMessage,
-  ]);
+  }, [wsConnected, eaSessionStarted]);
 
   useEffect(() => {
     if (needsSpotifyAuthorization || isSpotifyAuthenticated === false) {
