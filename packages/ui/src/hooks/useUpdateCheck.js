@@ -106,6 +106,11 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   const checkForUpdates = useCallback(async () => {
     if (isChecking || checkInProgress.current) return;
 
+    if (!eaSessionStarted) {
+      console.log("Skipping update check: EA session not started yet");
+      return;
+    }
+
     checkInProgress.current = true;
     setIsChecking(true);
     setError(null);
@@ -168,7 +173,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
       setIsChecking(false);
       checkInProgress.current = false;
     }
-  }, []);
+  }, [eaSessionStarted]);
 
   const findUpdateChain = (currentVersion, releases) => {
     if (!releases || releases.length === 0) return [];
