@@ -373,8 +373,22 @@ export function useGradientTransition(activeSection) {
         }
       } else {
         try {
-          const imageResult = await loadImage(imageUrlOrColors, 1, true);
-          const extracted = imageResult.colors;
+          const isLocalUrl =
+            imageUrlOrColors.startsWith("/") ||
+            imageUrlOrColors.startsWith("./") ||
+            imageUrlOrColors.startsWith("../") ||
+            imageUrlOrColors.startsWith("blob:") ||
+            imageUrlOrColors.startsWith("data:") ||
+            (!imageUrlOrColors.startsWith("http://") &&
+              !imageUrlOrColors.startsWith("https://"));
+
+          let extracted;
+          if (isLocalUrl) {
+            extracted = await extractColorsFromImageUrl(imageUrlOrColors);
+          } else {
+            const imageResult = await loadImage(imageUrlOrColors, 1, true);
+            extracted = imageResult.colors;
+          }
 
           if (!extracted) {
             throw new Error("No colors extracted from image");
