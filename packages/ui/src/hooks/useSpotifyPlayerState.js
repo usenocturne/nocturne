@@ -21,7 +21,10 @@ const MAX_ARTWORK_CACHE_SIZE = 10;
 const cleanupArtworkCache = () => {
   if (artworkCache.size > MAX_ARTWORK_CACHE_SIZE) {
     const entriesToRemove = artworkCache.size - MAX_ARTWORK_CACHE_SIZE;
-    const keysToRemove = Array.from(artworkCache.keys()).slice(0, entriesToRemove);
+    const keysToRemove = Array.from(artworkCache.keys()).slice(
+      0,
+      entriesToRemove,
+    );
     keysToRemove.forEach((key) => {
       const blobUrl = artworkCache.get(key);
       if (blobUrl && blobUrl.startsWith("blob:")) {
@@ -57,7 +60,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [initialFetchInProgress, setInitialFetchInProgress] = useState(false);
-  const [isReceivingNowPlayingUpdates, setIsReceivingNowPlayingUpdates] = useState(false);
+  const [isReceivingNowPlayingUpdates, setIsReceivingNowPlayingUpdates] =
+    useState(false);
 
   const initialStateLoadedRef = useRef(false);
   const lastPlayedAlbumIdRef = useRef(null);
@@ -637,9 +641,14 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         if (artworkData && artworkData.trim() !== "") {
           const trackUri = currentPlaybackRef.current?.item?.uri;
           const cachedUrl = trackUri ? artworkCache.get(trackUri) : null;
-          const currentImageUrl = currentPlaybackRef.current?.item?.album?.images?.[0]?.url;
+          const currentImageUrl =
+            currentPlaybackRef.current?.item?.album?.images?.[0]?.url;
 
-          if (currentImageUrl && currentImageUrl === cachedUrl && currentImageUrl.startsWith("blob:")) {
+          if (
+            currentImageUrl &&
+            currentImageUrl === cachedUrl &&
+            currentImageUrl.startsWith("blob:")
+          ) {
             return;
           }
 
@@ -701,7 +710,9 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             });
 
             if (oldBlobUrl && oldBlobUrl !== localMediaArtworkBlobUrl) {
-              const isInCache = Array.from(artworkCache.values()).includes(oldBlobUrl);
+              const isInCache = Array.from(artworkCache.values()).includes(
+                oldBlobUrl,
+              );
               if (!isInCache) {
                 setTimeout(() => {
                   URL.revokeObjectURL(oldBlobUrl);

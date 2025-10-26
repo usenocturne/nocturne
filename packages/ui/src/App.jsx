@@ -542,7 +542,10 @@ function App() {
         })
         .catch((err) => {
           if (cancelled) return;
-          console.error(`Failed to fetch spotify auth status (attempt ${retryCount + 1}/${maxRetries}):`, err);
+          console.error(
+            `Failed to fetch spotify auth status (attempt ${retryCount + 1}/${maxRetries}):`,
+            err,
+          );
 
           if (retryCount < maxRetries) {
             retryCount++;

@@ -890,7 +890,11 @@ export function useSpotifyWebSocket() {
       const timeoutError = new Error("Spotify image fetch timed out");
       let timeoutId;
 
-      const fetchPromise = sendSpotifyCommand("spotify.image.fetch", { url }, signal);
+      const fetchPromise = sendSpotifyCommand(
+        "spotify.image.fetch",
+        { url },
+        signal,
+      );
       const timeoutPromise = new Promise((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(timeoutError);

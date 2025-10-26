@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useImageLoader } from "../../hooks/useImageLoader";
 
 export default function SpotifyImage({
@@ -63,15 +69,16 @@ export default function SpotifyImage({
       return;
     }
 
-    const isLocalUrl = imageUrl.startsWith('/') ||
-                       imageUrl.startsWith('./') ||
-                       imageUrl.startsWith('../') ||
-                       imageUrl.startsWith('blob:') ||
-                       imageUrl.startsWith('data:') ||
-                       (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://'));
+    const isLocalUrl =
+      imageUrl.startsWith("/") ||
+      imageUrl.startsWith("./") ||
+      imageUrl.startsWith("../") ||
+      imageUrl.startsWith("blob:") ||
+      imageUrl.startsWith("data:") ||
+      (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://"));
 
     if (useDirectUrl || isLocalUrl) {
-      if (!imageUrl.startsWith('blob:')) {
+      if (!imageUrl.startsWith("blob:")) {
         cleanupBlobUrl();
       }
       setCurrentSrc(imageUrl);
@@ -223,7 +230,14 @@ export default function SpotifyImage({
       setHasError(false);
       setIsLoading(false);
     }
-  }, [imageUrl, loadImageData, fallbackSrc, delayMs, cancelRequest, cleanupBlobUrl]);
+  }, [
+    imageUrl,
+    loadImageData,
+    fallbackSrc,
+    delayMs,
+    cancelRequest,
+    cleanupBlobUrl,
+  ]);
 
   useEffect(() => {
     if (

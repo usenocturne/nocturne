@@ -51,7 +51,10 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
                 const abortController = new AbortController();
                 abortControllersRef.current.set(imageUrl, abortController);
 
-                const result = await fetchImage(imageUrl, abortController.signal);
+                const result = await fetchImage(
+                  imageUrl,
+                  abortController.signal,
+                );
 
                 abortControllersRef.current.delete(imageUrl);
 
