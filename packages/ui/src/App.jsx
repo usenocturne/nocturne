@@ -529,30 +529,32 @@ function App() {
     if (!eaSessionStarted) return;
 
     let cancelled = false;
+    let retryCount = 0;
+    const maxRetries = 5;
 
     setIsAuthCheckInProgress(true);
 
-    sendNocturneWsRequest("bluetooth.devices.list", {})
-      .then((bluetoothResult) => {
-        if (cancelled) return;
+    const attemptRequest = () => {
+      sendNocturneWsRequest("spotify.auth.getStatus", {}, { timeoutMs: 5000 })
+        .then((authResult) => {
+          if (cancelled) return;
+          processSpotifyAuthMessage(authResult);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          console.error(`Failed to fetch spotify auth status (attempt ${retryCount + 1}/${maxRetries}):`, err);
 
-        const devices =
-          bluetoothResult?.result?.payload || bluetoothResult?.payload || [];
-        const hasConnectedDevice = devices.some((device) => device?.connected);
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(attemptRequest, 1000);
+          } else {
+            console.error("Max retry attempts reached for spotify auth status");
+            setIsAuthCheckInProgress(false);
+          }
+        });
+    };
 
-        if (!hasConnectedDevice) {
-          setIsSpotifyAuthenticated(null);
-          setNeedsSpotifyAuthorization(false);
-          setAuthStatusMessage(null);
-          setIsAuthCheckInProgress(false);
-          return;
-        }
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        console.error("Failed to fetch bluetooth devices", err);
-        setIsAuthCheckInProgress(false);
-      });
+    attemptRequest();
 
     return () => {
       cancelled = true;
