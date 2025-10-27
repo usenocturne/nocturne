@@ -9,7 +9,7 @@ build_date=$(date +%Y-%m-%d-%H-%M-%S)
 sed -i "s|\${GIT_HASH}|${git_hash}|g" "$TARGET_DIR"/etc/nocturne/version.json
 sed -i "s|\${BUILD_DATE}|${build_date}|g" "$TARGET_DIR"/etc/nocturne/version.json
 
-version=$(cat "$TARGET_DIR"/etc/nocturne/version.json | jq -r '.shortVersion')
+version=$(jq -r '.shortVersion' "$TARGET_DIR"/etc/nocturne/version.json)
 
 sed -i "s|\${VERSION}|${version}|g" "$TARGET_DIR"/etc/motd
 sed -i "s|\${GIT_HASH}|${git_hash}|g" "$TARGET_DIR"/etc/motd

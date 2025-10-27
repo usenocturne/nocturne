@@ -76,6 +76,8 @@ Available recipes:
     install package
     menuconfig
     wslpath
+    pre-commit-install
+    wslpath
 ```
 
 ## Subprojects

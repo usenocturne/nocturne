@@ -25,3 +25,9 @@ flashconnector slot:
 
 wslpath:
     @echo "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib\""
+
+pre-commit-install:
+    pre-commit install
+
+lint:
+    pre-commit run --all-files

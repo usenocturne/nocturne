@@ -35,8 +35,8 @@ mkdir -p "$BUILD_PATH"
 cp -a "$EXTRACT_PATH"/* "$BUILD_PATH"
 
 (
-    cd "$BUILD_PATH"
-    rm -f system_a.ext2 system_b.ext2 env.txt env.dump logo.dump
+  cd "$BUILD_PATH"
+  rm -f system_a.ext2 system_b.ext2 env.txt env.dump logo.dump
 )
 
 cp output/images/rootfs.ext2 "$BUILD_PATH"/system_a.ext2
@@ -46,10 +46,10 @@ cp resources/logo.dump "$BUILD_PATH"/logo.dump
 
 echo "Creating zip"
 (
-    cd "$BUILD_PATH"
-    rm "$OUTPUT_PATH"/* 2> /dev/null || true
-    mkdir -p "$OUTPUT_PATH"
-    zip -r "$OUTPUT_PATH"/nocturne.zip .
+  cd "$BUILD_PATH"
+  rm "$OUTPUT_PATH"/* 2> /dev/null || true
+  mkdir -p "$OUTPUT_PATH"
+  zip -r "$OUTPUT_PATH"/nocturne.zip .
 )
 
 echo "Done"
