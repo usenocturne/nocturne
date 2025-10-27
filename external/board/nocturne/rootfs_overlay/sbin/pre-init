@@ -1,7 +1,7 @@
 #!/bin/sh
 
 get_opt() {
-    echo "$@" | cut -d "=" -f 2
+  echo "$@" | cut -d "=" -f 2
 }
 
 /bin/mount -t sysfs sysfs /sys
@@ -15,17 +15,17 @@ firstboot=0
 # shellcheck disable=SC2013
 # shellcheck disable=SC1001
 for i in $(cat /proc/cmdline); do
-    case $i in
-        nocturne.firstboot\=*)
-            firstboot=$(get_opt "$i")
-            ;;
-    esac
+  case $i in
+    nocturne.firstboot\=*)
+      firstboot=$(get_opt "$i")
+      ;;
+  esac
 done
 
 if [ "${firstboot}" -eq 1 ]; then
-    /bin/reset-data
-    /bin/reset-settings
-    uenv set firstboot 0
+  /bin/reset-data
+  /bin/reset-settings
+  uenv set firstboot 0
 fi
 
 exec /sbin/init "$@"

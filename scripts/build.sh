@@ -8,5 +8,5 @@ make -C buildroot O="$ROOT/output" source
 make -C buildroot O="$ROOT/output" -j"$(nproc)"
 
 if [ "${1:-}" == "package" ]; then
-    "$ROOT"/scripts/package.sh
+  "$ROOT"/scripts/package.sh
 fi

@@ -13,20 +13,21 @@ DAEMON=/usr/bin/weston
 PIDFILE=/var/run/weston.pid
 
 case "$1" in
-    start)
-        echo "Starting weston..."
-        # shellcheck disable=SC2086
-        start-stop-daemon -S -m -p "$PIDFILE" -b -x "$DAEMON" -- $START_PARAMTERS
-        ;;
-    stop)
-        echo "Stopping weston..."
-        killall weston
-        start-stop-daemon -K -o -p "$PIDFILE"
-        rm -f "$PIDFILE"
-        ;;
-    *)
-        echo "Usage: $0 {start|stop|restart}"
-        exit 1
+  start)
+    echo "Starting weston..."
+    # shellcheck disable=SC2086
+    start-stop-daemon -S -m -p "$PIDFILE" -b -x "$DAEMON" -- $START_PARAMTERS
+    ;;
+  stop)
+    echo "Stopping weston..."
+    killall weston
+    start-stop-daemon -K -o -p "$PIDFILE"
+    rm -f "$PIDFILE"
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart}"
+    exit 1
+    ;;
 esac
 
 exit $?

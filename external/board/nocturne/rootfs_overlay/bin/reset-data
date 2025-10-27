@@ -7,30 +7,30 @@ PARTITION="/dev/data"
 MOUNT="/mnt"
 
 if ! grep -q "${PARTITION}" /proc/mounts; then
-    /sbin/mkfs.ext4 ${PARTITION} -d /var -L data -F
+  /sbin/mkfs.ext4 ${PARTITION} -d /var -L data -F
 
-    mount -t ext4 -o rw ${PARTITION} ${MOUNT}
+  mount -t ext4 -o rw ${PARTITION} ${MOUNT}
 
-    mkdir -p ${MOUNT}/local/etc/dropbear
-    mkdir -p ${MOUNT}/local/root
-    mkdir -p ${MOUNT}/local/home/nocturne
+  mkdir -p ${MOUNT}/local/etc/dropbear
+  mkdir -p ${MOUNT}/local/root
+  mkdir -p ${MOUNT}/local/home/nocturne
 
-    chown -R nocturne ${MOUNT}/local/home/nocturne
+  chown -R nocturne ${MOUNT}/local/home/nocturne
 
-    dropbearkey -t rsa -f ${MOUNT}/local/etc/dropbear/dropbear_rsa_host_key
-    dropbearkey -t ecdsa -f ${MOUNT}/local/etc/dropbear/dropbear_ecdsa_host_key
-    dropbearkey -t ed25519 -f ${MOUNT}/local/etc/dropbear/dropbear_ed25519_host_key
+  dropbearkey -t rsa -f ${MOUNT}/local/etc/dropbear/dropbear_rsa_host_key
+  dropbearkey -t ecdsa -f ${MOUNT}/local/etc/dropbear/dropbear_ecdsa_host_key
+  dropbearkey -t ed25519 -f ${MOUNT}/local/etc/dropbear/dropbear_ed25519_host_key
 
-    fallocate -l 256M ${MOUNT}/swapfile
-    mkswap ${MOUNT}/swapfile
-    chmod 600 ${MOUNT}/swapfile
+  fallocate -l 256M ${MOUNT}/swapfile
+  mkswap ${MOUNT}/swapfile
+  chmod 600 ${MOUNT}/swapfile
 
-    sync
+  sync
 
-    umount ${MOUNT}
+  umount ${MOUNT}
 
-    printToKmsg "${PARTITION} was reset successfully."
+  printToKmsg "${PARTITION} was reset successfully."
 else
-    printToKmsg "${PARTITION} is mounted, exiting..."
-    exit 1
+  printToKmsg "${PARTITION} is mounted, exiting..."
+  exit 1
 fi

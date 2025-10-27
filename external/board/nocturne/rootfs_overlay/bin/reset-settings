@@ -7,21 +7,21 @@ PARTITION="/dev/settings"
 MOUNT="/mnt"
 
 if ! grep -q "${PARTITION}" /proc/mounts; then
-    /sbin/mkfs.ext4 ${PARTITION} -L settings -F
+  /sbin/mkfs.ext4 ${PARTITION} -L settings -F
 
-    mount -t ext4 -o rw ${PARTITION} ${MOUNT}
+  mount -t ext4 -o rw ${PARTITION} ${MOUNT}
 
-    chmod 755 -R ${MOUNT}
+  chmod 755 -R ${MOUNT}
 
-    mkdir ${MOUNT}/nocturned
-    chown -R nocturne ${MOUNT}/nocturned
+  mkdir ${MOUNT}/nocturned
+  chown -R nocturne ${MOUNT}/nocturned
 
-    sync
+  sync
 
-    umount ${MOUNT}
+  umount ${MOUNT}
 
-    printToKmsg "${PARTITION} was reset successfully."
+  printToKmsg "${PARTITION} was reset successfully."
 else
-    printToKmsg "${PARTITION} is mounted, exiting..."
-    exit 1
+  printToKmsg "${PARTITION} is mounted, exiting..."
+  exit 1
 fi
