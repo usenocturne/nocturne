@@ -21,6 +21,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
 
   const isLocalMedia = currentPlayback?.item?.is_local === true;
+  const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
   const isSmartphoneDevice = currentPlayback?.device?.type === "Smartphone";
 
   const {
@@ -77,7 +78,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
   const updateVolumeFromDevice = useCallback(
     (deviceVolume) => {
-      if (isLocalMedia || isSmartphoneDevice) {
+      if (isPhoneMedia || isSmartphoneDevice) {
         return;
       }
 
@@ -92,7 +93,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         setVolumeState(deviceVolume);
       }
     },
-    [isAdjustingVolume, isLocalMedia, isSmartphoneDevice],
+    [isAdjustingVolume, isPhoneMedia, isSmartphoneDevice],
   );
 
   const playTrack = useCallback(
@@ -449,49 +450,49 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     [isSpotifyReady, sendSpotifyCommand, getPlayerState],
   );
 
-  const sendLocalMediaControl = useCallback(async (method) => {
+  const sendPhoneMediaControl = useCallback(async (method) => {
     try {
       await sendNocturneWsRequest(method, {});
       return true;
     } catch (err) {
-      console.error(`Error sending local media control (${method}):`, err);
+      console.error(`Error sending phone media control (${method}):`, err);
       return false;
     }
   }, []);
 
-  const localMediaPlayPause = useCallback(
-    () => sendLocalMediaControl("media.control.playPause"),
-    [sendLocalMediaControl],
+  const phoneMediaPlayPause = useCallback(
+    () => sendPhoneMediaControl("media.control.playPause"),
+    [sendPhoneMediaControl],
   );
 
-  const localMediaNext = useCallback(
-    () => sendLocalMediaControl("media.control.next"),
-    [sendLocalMediaControl],
+  const phoneMediaNext = useCallback(
+    () => sendPhoneMediaControl("media.control.next"),
+    [sendPhoneMediaControl],
   );
 
-  const localMediaPrevious = useCallback(
-    () => sendLocalMediaControl("media.control.previous"),
-    [sendLocalMediaControl],
+  const phoneMediaPrevious = useCallback(
+    () => sendPhoneMediaControl("media.control.previous"),
+    [sendPhoneMediaControl],
   );
 
-  const localMediaShuffle = useCallback(
-    () => sendLocalMediaControl("media.control.shuffle"),
-    [sendLocalMediaControl],
+  const phoneMediaShuffle = useCallback(
+    () => sendPhoneMediaControl("media.control.shuffle"),
+    [sendPhoneMediaControl],
   );
 
-  const localMediaRepeat = useCallback(
-    () => sendLocalMediaControl("media.control.repeat"),
-    [sendLocalMediaControl],
+  const phoneMediaRepeat = useCallback(
+    () => sendPhoneMediaControl("media.control.repeat"),
+    [sendPhoneMediaControl],
   );
 
-  const localMediaVolumeUp = useCallback(
-    () => sendLocalMediaControl("media.control.volumeUp"),
-    [sendLocalMediaControl],
+  const phoneMediaVolumeUp = useCallback(
+    () => sendPhoneMediaControl("media.control.volumeUp"),
+    [sendPhoneMediaControl],
   );
 
-  const localMediaVolumeDown = useCallback(
-    () => sendLocalMediaControl("media.control.volumeDown"),
-    [sendLocalMediaControl],
+  const phoneMediaVolumeDown = useCallback(
+    () => sendPhoneMediaControl("media.control.volumeDown"),
+    [sendPhoneMediaControl],
   );
 
   return {
@@ -515,12 +516,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     getCurrentDeviceOptions,
     isLoading,
     error,
-    localMediaPlayPause,
-    localMediaNext,
-    localMediaPrevious,
-    localMediaShuffle,
-    localMediaRepeat,
-    localMediaVolumeUp,
-    localMediaVolumeDown,
+    phoneMediaPlayPause,
+    phoneMediaNext,
+    phoneMediaPrevious,
+    phoneMediaShuffle,
+    phoneMediaRepeat,
+    phoneMediaVolumeUp,
+    phoneMediaVolumeDown,
   };
 }

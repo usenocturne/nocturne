@@ -59,7 +59,7 @@ export default function NowPlaying({
     animation: "hidden",
   });
   const [phoneVolume, setPhoneVolume] = useState(null);
-  const [localMediaVolumeDirection, setLocalMediaVolumeDirection] =
+  const [phoneMediaVolumeDirection, setPhoneMediaVolumeDirection] =
     useState(null);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
@@ -84,6 +84,7 @@ export default function NowPlaying({
     "/images/radio-cover/dj.webp",
   );
   const isLocalMedia = currentPlayback?.item?.is_local === true;
+  const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
   const isSmartphoneDevice = currentPlayback?.device?.type === "Smartphone";
   const contentContainerRef = useRef(null);
 
@@ -109,13 +110,13 @@ export default function NowPlaying({
     setPlaybackSpeed: setPlaybackSpeedApi,
     getCurrentDeviceOptions,
     transferPlayback,
-    localMediaPlayPause,
-    localMediaNext,
-    localMediaPrevious,
-    localMediaShuffle,
-    localMediaRepeat,
-    localMediaVolumeUp,
-    localMediaVolumeDown,
+    phoneMediaPlayPause,
+    phoneMediaNext,
+    phoneMediaPrevious,
+    phoneMediaShuffle,
+    phoneMediaRepeat,
+    phoneMediaVolumeUp,
+    phoneMediaVolumeDown,
   } = useSpotifyPlayerControls(currentPlayback);
 
   const {
@@ -188,9 +189,9 @@ export default function NowPlaying({
 
   useEffect(() => {
     const unsubscribe = subscribeToPhoneVolume((volumePercent) => {
-      if (isLocalMedia || isSmartphoneDevice) {
+      if (isPhoneMedia || isSmartphoneDevice) {
         setPhoneVolume(volumePercent);
-        setLocalMediaVolumeDirection(null);
+        setPhoneMediaVolumeDirection(null);
         manualVolumeChangeRef.current = true;
         showVolumeOverlay();
 
@@ -210,7 +211,7 @@ export default function NowPlaying({
         clearTimeout(phoneVolumeTimeoutRef.current);
       }
     };
-  }, [isLocalMedia, isSmartphoneDevice, showVolumeOverlay]);
+  }, [isPhoneMedia, isSmartphoneDevice, showVolumeOverlay]);
 
   useEffect(() => {
     if (prevVolumeRef.current === null) {
@@ -245,8 +246,8 @@ export default function NowPlaying({
   }, [isStartingPlayback, currentPlayback?.item, currentPlayback?.is_playing]);
 
   const handlePlayPause = async () => {
-    if (isLocalMedia) {
-      await localMediaPlayPause();
+    if (isPhoneMedia) {
+      await phoneMediaPlayPause();
       return;
     }
 
@@ -406,7 +407,7 @@ export default function NowPlaying({
         "/images/not-playing.webp",
     contentName: playlistId ? playlistDetails.name : trackName,
     playTrack,
-    isActive: !!playlistId && !isLocalMedia,
+    isActive: !!playlistId && !isLocalMedia && !isPhoneMedia,
     setIgnoreNextRelease,
   });
 
@@ -433,15 +434,15 @@ export default function NowPlaying({
 
         wheelDeltaAccumulatorRef.current = 0;
 
-        if (isLocalMedia || isSmartphoneDevice) {
+        if (isPhoneMedia || isSmartphoneDevice) {
           manualVolumeChangeRef.current = true;
-          setLocalMediaVolumeDirection(direction > 0 ? "up" : "down");
+          setPhoneMediaVolumeDirection(direction > 0 ? "up" : "down");
           showVolumeOverlay();
 
           if (direction > 0) {
-            localMediaVolumeUp();
+            phoneMediaVolumeUp();
           } else {
-            localMediaVolumeDown();
+            phoneMediaVolumeDown();
           }
 
           if (phoneVolumeTimeoutRef.current) {
@@ -465,10 +466,10 @@ export default function NowPlaying({
       isProgressScrubbing,
       volume,
       setVolume,
-      isLocalMedia,
+      isPhoneMedia,
       isSmartphoneDevice,
-      localMediaVolumeUp,
-      localMediaVolumeDown,
+      phoneMediaVolumeUp,
+      phoneMediaVolumeDown,
       showVolumeOverlay,
     ],
   );
@@ -547,7 +548,7 @@ export default function NowPlaying({
   );
 
   useEffect(() => {
-    if (isLocalMedia) {
+    if (isLocalMedia || isPhoneMedia) {
       setIsLiked(false);
       currentTrackIdRef.current = null;
       return;
@@ -574,24 +575,24 @@ export default function NowPlaying({
     };
 
     checkCurrentTrackLiked();
-  }, [trackId, isCheckingLike, checkIsTrackLiked, isLocalMedia]);
+  }, [trackId, isCheckingLike, checkIsTrackLiked, isLocalMedia, isPhoneMedia]);
 
   useEffect(() => {
-    if (!isLocalMedia && !isSmartphoneDevice) {
+    if (!isPhoneMedia && !isSmartphoneDevice) {
       setPhoneVolume(null);
-      setLocalMediaVolumeDirection(null);
+      setPhoneMediaVolumeDirection(null);
     }
-  }, [isLocalMedia, isSmartphoneDevice, trackId]);
+  }, [isPhoneMedia, isSmartphoneDevice, trackId]);
 
   const handleSkipNext = useCallback(async () => {
-    if (isLocalMedia) {
-      await localMediaNext();
+    if (isPhoneMedia) {
+      await phoneMediaNext();
     } else {
       await skipToNext();
     }
   }, [
-    isLocalMedia,
-    localMediaNext,
+    isPhoneMedia,
+    phoneMediaNext,
     currentPlayback?.item?.type,
     progressMs,
     duration,
@@ -601,8 +602,8 @@ export default function NowPlaying({
   ]);
 
   const handleSkipPrevious = useCallback(async () => {
-    if (isLocalMedia) {
-      await localMediaPrevious();
+    if (isPhoneMedia) {
+      await phoneMediaPrevious();
       return;
     }
 
@@ -615,8 +616,8 @@ export default function NowPlaying({
       await skipToPrevious();
     }
   }, [
-    isLocalMedia,
-    localMediaPrevious,
+    isPhoneMedia,
+    phoneMediaPrevious,
     currentPlayback?.item?.type,
     progressMs,
     seekToPosition,
@@ -649,7 +650,7 @@ export default function NowPlaying({
 
   const handleSeek = useCallback(
     async (position) => {
-      if (isLocalMedia) {
+      if (isPhoneMedia) {
         return;
       }
 
@@ -662,7 +663,7 @@ export default function NowPlaying({
         console.error("Error seeking:", error);
       }
     },
-    [isLocalMedia, currentPlayback?.item, seekToPosition, updateProgress],
+    [isPhoneMedia, currentPlayback?.item, seekToPosition, updateProgress],
   );
 
   const handleLyricClick = useCallback(
@@ -701,8 +702,8 @@ export default function NowPlaying({
 
   const handleToggleShuffle = useCallback(async () => {
     try {
-      if (isLocalMedia) {
-        await localMediaShuffle();
+      if (isPhoneMedia) {
+        await phoneMediaShuffle();
       } else {
         const newShuffleState = !shuffleEnabled;
         setShuffleEnabled(newShuffleState);
@@ -710,16 +711,16 @@ export default function NowPlaying({
       }
     } catch (error) {
       console.error("Error toggling shuffle:", error);
-      if (!isLocalMedia) {
+      if (!isPhoneMedia) {
         setShuffleEnabled(!shuffleEnabled);
       }
     }
-  }, [isLocalMedia, localMediaShuffle, shuffleEnabled, toggleShuffle]);
+  }, [isPhoneMedia, phoneMediaShuffle, shuffleEnabled, toggleShuffle]);
 
   const handleToggleRepeat = useCallback(async () => {
     try {
-      if (isLocalMedia) {
-        await localMediaRepeat();
+      if (isPhoneMedia) {
+        await phoneMediaRepeat();
       } else {
         const nextModeMap = { off: "context", context: "track", track: "off" };
         const newRepeatMode = nextModeMap[repeatMode] || "off";
@@ -730,7 +731,7 @@ export default function NowPlaying({
     } catch (error) {
       console.error("Error toggling repeat mode:", error);
     }
-  }, [isLocalMedia, localMediaRepeat, repeatMode, setRepeatModeApi]);
+  }, [isPhoneMedia, phoneMediaRepeat, repeatMode, setRepeatModeApi]);
 
   const fetchCurrentPlaybackSpeed = useCallback(async () => {
     try {
@@ -759,19 +760,19 @@ export default function NowPlaying({
   };
 
   const displayVolume = useMemo(() => {
-    if (isLocalMedia || isSmartphoneDevice) {
+    if (isPhoneMedia || isSmartphoneDevice) {
       return phoneVolume !== null ? phoneVolume : 100;
     }
     return volume;
-  }, [isLocalMedia, isSmartphoneDevice, phoneVolume, volume]);
+  }, [isPhoneMedia, isSmartphoneDevice, phoneVolume, volume]);
 
   const VolumeIcon = useMemo(() => {
     if (
-      (isLocalMedia || isSmartphoneDevice) &&
+      (isPhoneMedia || isSmartphoneDevice) &&
       phoneVolume === null &&
-      localMediaVolumeDirection
+      phoneMediaVolumeDirection
     ) {
-      if (localMediaVolumeDirection === "up") {
+      if (phoneMediaVolumeDirection === "up") {
         return (
           <svg
             className="w-12 h-12"
@@ -801,7 +802,7 @@ export default function NowPlaying({
     }
 
     const volumeToCheck =
-      (isLocalMedia || isSmartphoneDevice) && phoneVolume !== null
+      (isPhoneMedia || isSmartphoneDevice) && phoneVolume !== null
         ? phoneVolume
         : volume;
 
@@ -814,10 +815,10 @@ export default function NowPlaying({
     }
   }, [
     volume,
-    isLocalMedia,
+    isPhoneMedia,
     isSmartphoneDevice,
     phoneVolume,
-    localMediaVolumeDirection,
+    phoneMediaVolumeDirection,
   ]);
 
   const PlayPauseIcon = useMemo(() => {
@@ -829,7 +830,7 @@ export default function NowPlaying({
   }, [currentPlayback?.is_playing]);
 
   useEffect(() => {
-    if (currentPlayback?.is_playing && !isLocalMedia) {
+    if (currentPlayback?.is_playing && !isPhoneMedia) {
       const handleVisibilityChange = () => {
         if (document.visibilityState === "visible") {
           triggerRefresh();
@@ -845,7 +846,7 @@ export default function NowPlaying({
         );
       };
     }
-  }, [currentPlayback?.is_playing, isLocalMedia, triggerRefresh]);
+  }, [currentPlayback?.is_playing, isPhoneMedia, triggerRefresh]);
 
   const handleBackNavigation = () => {
     if (onClose) {
@@ -861,9 +862,10 @@ export default function NowPlaying({
       <div ref={contentContainerRef}>
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div
-            className={`min-w-[280px] h-[280px] mr-8 ${albumId && !isLocalMedia ? "cursor-pointer" : ""}`}
+            className={`min-w-[280px] h-[280px] mr-8 ${albumId && !isLocalMedia && !isPhoneMedia ? "cursor-pointer" : ""}`}
             onClick={() =>
               !isLocalMedia &&
+              !isPhoneMedia &&
               albumId &&
               onNavigateToAlbum &&
               onNavigateToAlbum(albumId, "album")
@@ -905,9 +907,10 @@ export default function NowPlaying({
                 />
               </div>
               <h4
-                className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId && !isLocalMedia ? "cursor-pointer" : ""}`}
+                className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId && !isLocalMedia && !isPhoneMedia ? "cursor-pointer" : ""}`}
                 onClick={() =>
                   !isLocalMedia &&
+                  !isPhoneMedia &&
                   firstArtistId &&
                   onNavigateToArtist &&
                   onNavigateToArtist(firstArtistId, "artist")
@@ -1004,7 +1007,7 @@ export default function NowPlaying({
           onPlayPause={handlePlayPause}
           onScrubbingChange={handleScrubbingChange}
           updateProgress={updateProgress}
-          disabled={isLocalMedia}
+          disabled={isPhoneMedia}
         />
       </div>
 
@@ -1087,7 +1090,7 @@ export default function NowPlaying({
               </>
             )}
           </Menu>
-        ) : isLocalMedia ? (
+        ) : isLocalMedia || isPhoneMedia ? (
           <div className="w-14 h-14"></div>
         ) : (
           <div
@@ -1175,7 +1178,7 @@ export default function NowPlaying({
               className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
             >
               <div className="py-1">
-                {!isPodcast && !isLocalMedia && (
+                {!isPodcast && !isLocalMedia && !isPhoneMedia && (
                   <MenuItem onClick={toggleLyrics}>
                     <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
                       <span className="text-[28px]">
@@ -1235,7 +1238,7 @@ export default function NowPlaying({
                     </MenuItem>
                   </>
                 )}
-                {!isLocalMedia && (
+                {!isLocalMedia && !isPhoneMedia && (
                   <MenuItem onClick={() => setShowDeviceSwitcher(true)}>
                     <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
                       <span className="text-[28px]">Switch Device</span>

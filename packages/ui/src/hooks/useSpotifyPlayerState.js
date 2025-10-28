@@ -9,7 +9,7 @@ let isPodcastPlaying = false;
 let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
-let localMediaArtworkBlobUrl = null;
+let phoneMediaArtworkBlobUrl = null;
 let lastSpotifyDeviceStateChange = 0;
 let phoneVolumeListeners = [];
 let nowPlayingUpdateTimeout = null;
@@ -354,16 +354,16 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         if (payloads.length > 0 && payloads[0]?.cluster?.player_state) {
           const playerState = payloads[0].cluster.player_state;
 
-          if (currentPlaybackRef.current?.item?.is_local) {
+          if (currentPlaybackRef.current?.item?.is_phone_media) {
             lastSpotifyDeviceStateChange = Date.now();
           }
 
           if (
-            currentPlaybackRef.current?.item?.is_local &&
-            localMediaArtworkBlobUrl
+            currentPlaybackRef.current?.item?.is_phone_media &&
+            phoneMediaArtworkBlobUrl
           ) {
-            URL.revokeObjectURL(localMediaArtworkBlobUrl);
-            localMediaArtworkBlobUrl = null;
+            URL.revokeObjectURL(phoneMediaArtworkBlobUrl);
+            phoneMediaArtworkBlobUrl = null;
           }
 
           const isEpisode =
@@ -516,7 +516,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   }, [isSpotifyReady, processPlaybackState]);
 
   useEffect(() => {
-    const handleLocalMediaEvent = (data) => {
+    const handlePhoneMediaEvent = (data) => {
       if (data.type === "event" && data.topic === "media.nowPlaying.update") {
         setIsReceivingNowPlayingUpdates(true);
         isReceivingNowPlayingUpdatesGlobal = true;
@@ -549,7 +549,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         if (!playback.PlaybackAppName) {
           if (
             currentPlaybackRef.current?.item &&
-            !currentPlaybackRef.current?.item?.is_local
+            !currentPlaybackRef.current?.item?.is_phone_media
           ) {
             return;
           }
@@ -601,9 +601,9 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               uri: `local:album:${albumName}`,
               name: albumName,
               images:
-                isNotPlaying || !localMediaArtworkBlobUrl
+                isNotPlaying || !phoneMediaArtworkBlobUrl
                   ? [{ url: "/images/not-playing.webp" }]
-                  : [{ url: localMediaArtworkBlobUrl }],
+                  : [{ url: phoneMediaArtworkBlobUrl }],
             },
             artists: [
               {
@@ -614,7 +614,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               },
             ],
             duration_ms: durationMs,
-            is_local: true,
+            is_phone_media: true,
           },
 
           shuffle_state: shuffleState,
@@ -666,8 +666,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             }
 
             const blob = new Blob([bytes], { type: "image/jpeg" });
-            const oldBlobUrl = localMediaArtworkBlobUrl;
-            localMediaArtworkBlobUrl = URL.createObjectURL(blob);
+            const oldBlobUrl = phoneMediaArtworkBlobUrl;
+            phoneMediaArtworkBlobUrl = URL.createObjectURL(blob);
 
             const trackUri = currentPlaybackRef.current?.item?.uri;
             if (trackUri) {
@@ -682,14 +682,17 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             }
 
             setCurrentPlayback((prevPlayback) => {
-              if (prevPlayback?.item?.album?.images) {
+              if (
+                prevPlayback?.item?.is_phone_media &&
+                prevPlayback.item.album?.images
+              ) {
                 const updatedPlayback = {
                   ...prevPlayback,
                   item: {
                     ...prevPlayback.item,
                     album: {
                       ...prevPlayback.item.album,
-                      images: [{ url: localMediaArtworkBlobUrl }],
+                      images: [{ url: phoneMediaArtworkBlobUrl }],
                     },
                   },
                 };
@@ -703,7 +706,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               if (prevAlbum?.images) {
                 return {
                   ...prevAlbum,
-                  images: [{ url: localMediaArtworkBlobUrl }],
+                  images: [{ url: phoneMediaArtworkBlobUrl }],
                 };
               }
               return prevAlbum;
@@ -738,8 +741,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       }
     };
 
-    const cleanup = addGlobalWsListener(`local-media-${Date.now()}`, {
-      onMessage: handleLocalMediaEvent,
+    const cleanup = addGlobalWsListener(`phone-media-${Date.now()}`, {
+      onMessage: handlePhoneMediaEvent,
     });
 
     return () => {
@@ -751,7 +754,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     async (forceRefresh = false) => {
       if (!isSpotifyReady) return;
 
-      if (currentPlaybackRef.current?.item?.is_local) {
+      if (currentPlaybackRef.current?.item?.is_phone_media) {
         return;
       }
 
