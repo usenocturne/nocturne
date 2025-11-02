@@ -141,7 +141,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     if (!playerStateData?.item) return null;
 
     if (playerStateData.item.type === "track" || playerStateData.item.album) {
-      const currentAlbum = playerStateData.item.is_local
+      const currentAlbum = playerStateData.item.is_local || playerStateData.item.is_phone_media
         ? {
             id: `local-${playerStateData.item.uri}`,
             name: playerStateData.item.album?.name || playerStateData.item.name,

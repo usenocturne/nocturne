@@ -190,7 +190,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const trackUri = data.item.uri;
         const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
-        const currentAlbum = data.item.is_local
+        const currentAlbum = data.item.is_local || data.item.is_phone_media
           ? {
               id: `local-${data.item.uri}`,
               name: data.item.album?.name || data.item.name,
@@ -673,11 +673,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             if (trackUri) {
               if (artworkCache.has(trackUri)) {
                 const oldCachedUrl = artworkCache.get(trackUri);
-                if (oldCachedUrl && oldCachedUrl !== localMediaArtworkBlobUrl) {
+                if (oldCachedUrl && oldCachedUrl !== phoneMediaArtworkBlobUrl) {
                   URL.revokeObjectURL(oldCachedUrl);
                 }
               }
-              artworkCache.set(trackUri, localMediaArtworkBlobUrl);
+              artworkCache.set(trackUri, phoneMediaArtworkBlobUrl);
               cleanupArtworkCache();
             }
 
