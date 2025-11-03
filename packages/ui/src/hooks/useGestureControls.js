@@ -123,7 +123,7 @@ export function useGestureControls({
       element.removeEventListener("touchend", handleTouchEnd);
     };
   }, [
-    contentRef?.current,
+    contentRef,
     isActive,
     settings.showLyricsGestureEnabled,
     settings.songChangeGestureEnabled,

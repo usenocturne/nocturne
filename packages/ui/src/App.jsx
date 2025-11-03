@@ -972,17 +972,23 @@ function App() {
     }
   };
 
-  const handleNavigateToArtistFromNowPlaying = (artistId, contentType) => {
-    setContentSourceSection("nowPlaying");
-    setViewingContent({ id: artistId, type: contentType });
-    setActiveSection("artists");
-  };
+  const handleNavigateToArtistFromNowPlaying = useCallback(
+    (artistId, contentType) => {
+      setContentSourceSection("nowPlaying");
+      setViewingContent({ id: artistId, type: contentType });
+      setActiveSection("artists");
+    },
+    [],
+  );
 
-  const handleNavigateToAlbumFromNowPlaying = (albumId, contentType) => {
-    setContentSourceSection("nowPlaying");
-    setViewingContent({ id: albumId, type: contentType });
-    setActiveSection("recents");
-  };
+  const handleNavigateToAlbumFromNowPlaying = useCallback(
+    (albumId, contentType) => {
+      setContentSourceSection("nowPlaying");
+      setViewingContent({ id: albumId, type: contentType });
+      setActiveSection("recents");
+    },
+    [],
+  );
 
   const handleCloseContent = () => {
     const source = contentSourceSection;

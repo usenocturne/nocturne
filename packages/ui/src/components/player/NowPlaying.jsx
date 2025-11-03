@@ -503,27 +503,6 @@ export default function NowPlaying({
     activeSection: "nowPlaying",
   });
 
-  useGestureControls({
-    contentRef: contentContainerRef,
-    onSwipeLeft: () => {
-      handleSkipNext();
-    },
-    onSwipeRight: () => {
-      handleSkipPrevious();
-    },
-    onSwipeUp: () => {
-      if (!isPodcast && !showLyrics) {
-        toggleLyrics();
-      }
-    },
-    onSwipeDown: () => {
-      if (!isPodcast && showLyrics) {
-        toggleLyrics();
-      }
-    },
-    isActive: true,
-  });
-
   const {
     showLyrics,
     lyrics,
@@ -546,6 +525,35 @@ export default function NowPlaying({
     },
     [updateGradientColors],
   );
+
+  const handleSwipeLeft = useCallback(() => {
+    handleSkipNext();
+  }, [handleSkipNext]);
+
+  const handleSwipeRight = useCallback(() => {
+    handleSkipPrevious();
+  }, [handleSkipPrevious]);
+
+  const handleSwipeUp = useCallback(() => {
+    if (!isPodcast && !showLyrics) {
+      toggleLyrics();
+    }
+  }, [isPodcast, showLyrics, toggleLyrics]);
+
+  const handleSwipeDown = useCallback(() => {
+    if (!isPodcast && showLyrics) {
+      toggleLyrics();
+    }
+  }, [isPodcast, showLyrics, toggleLyrics]);
+
+  useGestureControls({
+    contentRef: contentContainerRef,
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    onSwipeUp: handleSwipeUp,
+    onSwipeDown: handleSwipeDown,
+    isActive: true,
+  });
 
   useEffect(() => {
     if (isLocalMedia || isPhoneMedia) {
@@ -854,6 +862,23 @@ export default function NowPlaying({
     }
   };
 
+  const handleArtistClick = useCallback(() => {
+    if (
+      !isLocalMedia &&
+      !isPhoneMedia &&
+      firstArtistId &&
+      onNavigateToArtist
+    ) {
+      onNavigateToArtist(firstArtistId, "artist");
+    }
+  }, [isLocalMedia, isPhoneMedia, firstArtistId, onNavigateToArtist]);
+
+  const handleAlbumClick = useCallback(() => {
+    if (!isLocalMedia && !isPhoneMedia && albumId && onNavigateToAlbum) {
+      onNavigateToAlbum(albumId, "album");
+    }
+  }, [isLocalMedia, isPhoneMedia, albumId, onNavigateToAlbum]);
+
   return (
     <div
       className="flex flex-col gap-1 h-screen w-full z-10 fadeIn-animation"
@@ -863,13 +888,7 @@ export default function NowPlaying({
         <div className="md:w-1/3 flex flex-row items-center px-12 pt-10">
           <div
             className={`min-w-[280px] h-[280px] mr-8 ${albumId && !isLocalMedia && !isPhoneMedia ? "cursor-pointer" : ""}`}
-            onClick={() =>
-              !isLocalMedia &&
-              !isPhoneMedia &&
-              albumId &&
-              onNavigateToAlbum &&
-              onNavigateToAlbum(albumId, "album")
-            }
+            onClick={handleAlbumClick}
           >
             <SpotifyImage
               images={albumImages}
@@ -908,13 +927,7 @@ export default function NowPlaying({
               </div>
               <h4
                 className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${firstArtistId && !isLocalMedia && !isPhoneMedia ? "cursor-pointer" : ""}`}
-                onClick={() =>
-                  !isLocalMedia &&
-                  !isPhoneMedia &&
-                  firstArtistId &&
-                  onNavigateToArtist &&
-                  onNavigateToArtist(firstArtistId, "artist")
-                }
+                onClick={handleArtistClick}
               >
                 {artistName}
               </h4>
