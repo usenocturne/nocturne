@@ -526,6 +526,49 @@ export default function NowPlaying({
     [updateGradientColors],
   );
 
+  const handleSkipNext = useCallback(async () => {
+    if (isPhoneMedia) {
+      await phoneMediaNext();
+    } else {
+      await skipToNext();
+    }
+  }, [
+    isPhoneMedia,
+    phoneMediaNext,
+    currentPlayback?.item?.type,
+    progressMs,
+    duration,
+    seekToPosition,
+    updateProgress,
+    skipToNext,
+  ]);
+
+  const handleSkipPrevious = useCallback(async () => {
+    if (isPhoneMedia) {
+      await phoneMediaPrevious();
+      return;
+    }
+
+    const RESTART_THRESHOLD_MS = 3000;
+    if (progressMs > RESTART_THRESHOLD_MS) {
+      await seekToPosition(0);
+      updateProgress(0);
+      if (showLyrics) scrollToTop();
+    } else {
+      await skipToPrevious();
+    }
+  }, [
+    isPhoneMedia,
+    phoneMediaPrevious,
+    currentPlayback?.item?.type,
+    progressMs,
+    seekToPosition,
+    updateProgress,
+    skipToPrevious,
+    showLyrics,
+    scrollToTop,
+  ]);
+
   const handleSwipeLeft = useCallback(() => {
     handleSkipNext();
   }, [handleSkipNext]);
@@ -591,49 +634,6 @@ export default function NowPlaying({
       setPhoneMediaVolumeDirection(null);
     }
   }, [isPhoneMedia, isSmartphoneDevice, trackId]);
-
-  const handleSkipNext = useCallback(async () => {
-    if (isPhoneMedia) {
-      await phoneMediaNext();
-    } else {
-      await skipToNext();
-    }
-  }, [
-    isPhoneMedia,
-    phoneMediaNext,
-    currentPlayback?.item?.type,
-    progressMs,
-    duration,
-    seekToPosition,
-    updateProgress,
-    skipToNext,
-  ]);
-
-  const handleSkipPrevious = useCallback(async () => {
-    if (isPhoneMedia) {
-      await phoneMediaPrevious();
-      return;
-    }
-
-    const RESTART_THRESHOLD_MS = 3000;
-    if (progressMs > RESTART_THRESHOLD_MS) {
-      await seekToPosition(0);
-      updateProgress(0);
-      if (showLyrics) scrollToTop();
-    } else {
-      await skipToPrevious();
-    }
-  }, [
-    isPhoneMedia,
-    phoneMediaPrevious,
-    currentPlayback?.item?.type,
-    progressMs,
-    seekToPosition,
-    updateProgress,
-    skipToPrevious,
-    showLyrics,
-    scrollToTop,
-  ]);
 
   const handleToggleLike = useCallback(async () => {
     if (!trackId || isCheckingLike) return;
