@@ -202,6 +202,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               artists: data.item.artists,
               type: "local-track",
               uri: data.item.uri,
+              is_phone_media: data.item.is_phone_media || false,
+              is_local: data.item.is_local || false,
             }
           : {
               ...data.item.album,

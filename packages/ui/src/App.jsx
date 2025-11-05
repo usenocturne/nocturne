@@ -851,6 +851,8 @@ function App() {
 
     if (viewingContent) return;
 
+    if (currentlyPlayingAlbum?.is_phone_media) return;
+
     if (currentlyPlayingAlbum?.images?.[1]?.url) {
       if (activeSection === "nowPlaying") {
         updateGradientColors(currentlyPlayingAlbum.images[1].url, "nowPlaying");
