@@ -22,6 +22,7 @@ export default function SpotifyImage({
   useDirectUrl = false,
   skipFetchWhenNowPlaying = false,
   isReceivingNowPlayingUpdates = false,
+  disableSpotifyFetch = false,
   ...props
 }) {
   const {
@@ -37,6 +38,7 @@ export default function SpotifyImage({
   const isMountedRef = useRef(true);
   const currentImageUrlRef = useRef(null);
   const blobUrlRef = useRef(null);
+  const failedImageUrlRef = useRef(null);
 
   const imageUrl = getImageSize(images, preferredSizeIndex);
 
@@ -54,6 +56,16 @@ export default function SpotifyImage({
 
   const loadImageData = useCallback(async () => {
     if (!isMountedRef.current) return;
+
+    if (
+      failedImageUrlRef.current &&
+      failedImageUrlRef.current === imageUrl
+    ) {
+      setCurrentSrc(fallbackSrc);
+      setHasError(true);
+      setIsLoading(false);
+      return;
+    }
 
     if (!imageUrl || hasImageFailed(imageUrl)) {
       setCurrentSrc(fallbackSrc);
@@ -103,8 +115,9 @@ export default function SpotifyImage({
       return;
     }
 
-    if (skipFetchWhenNowPlaying && isReceivingNowPlayingUpdates) {
-      setIsLoading(true);
+    if (disableSpotifyFetch || (skipFetchWhenNowPlaying && isReceivingNowPlayingUpdates)) {
+      cancelRequest(imageUrl);
+      setIsLoading(false);
       setHasError(false);
       return;
     }
@@ -165,6 +178,9 @@ export default function SpotifyImage({
       }
 
       console.error("Failed to load image:", error);
+      if (imageUrl) {
+        failedImageUrlRef.current = imageUrl;
+      }
       setCurrentSrc(fallbackSrc);
       setHasError(true);
 
@@ -190,6 +206,8 @@ export default function SpotifyImage({
     cleanupBlobUrl,
     skipFetchWhenNowPlaying,
     isReceivingNowPlayingUpdates,
+    disableSpotifyFetch,
+    cancelRequest,
   ]);
 
   useEffect(() => {
@@ -241,6 +259,15 @@ export default function SpotifyImage({
 
   useEffect(() => {
     if (
+      failedImageUrlRef.current &&
+      failedImageUrlRef.current !== imageUrl
+    ) {
+      failedImageUrlRef.current = null;
+    }
+  }, [imageUrl]);
+
+  useEffect(() => {
+    if (
       isSpotifyReady &&
       imageUrl &&
       currentSrc === fallbackSrc &&
@@ -265,6 +292,9 @@ export default function SpotifyImage({
   const handleImageError = useCallback(
     (e) => {
       if (!isMountedRef.current) return;
+      if (imageUrl) {
+        failedImageUrlRef.current = imageUrl;
+      }
       if (currentSrc !== fallbackSrc) {
         setCurrentSrc(fallbackSrc);
         setHasError(true);
@@ -274,7 +304,7 @@ export default function SpotifyImage({
         }
       }
     },
-    [currentSrc, fallbackSrc, onError],
+    [currentSrc, fallbackSrc, onError, imageUrl],
   );
 
   const handleImageLoad = useCallback(() => {

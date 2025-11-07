@@ -188,7 +188,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
       if (data?.item && data.item.type === "track") {
         const trackUri = data.item.uri;
-        const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+        let cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
         const currentAlbum = data.item.is_local || data.item.is_phone_media
           ? {
@@ -329,6 +329,20 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     },
     [isSpotifyReady, getPlayerState, processPlaybackState, resetPlaybackState],
   );
+
+  const beginNowPlayingUpdateWindow = useCallback(() => {
+    setIsReceivingNowPlayingUpdates(true);
+    isReceivingNowPlayingUpdatesGlobal = true;
+
+    if (nowPlayingUpdateTimeout) {
+      clearTimeout(nowPlayingUpdateTimeout);
+    }
+
+    nowPlayingUpdateTimeout = setTimeout(() => {
+      setIsReceivingNowPlayingUpdates(false);
+      isReceivingNowPlayingUpdatesGlobal = false;
+    }, 5000);
+  }, []);
 
   useEffect(() => {
     if (isSpotifyReady && !initialPlaybackFetchDone) {
@@ -520,18 +534,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   useEffect(() => {
     const handlePhoneMediaEvent = (data) => {
       if (data.type === "event" && data.topic === "media.nowPlaying.update") {
-        setIsReceivingNowPlayingUpdates(true);
-        isReceivingNowPlayingUpdatesGlobal = true;
+        beginNowPlayingUpdateWindow();
         isProcessingArtwork = false;
-
-        if (nowPlayingUpdateTimeout) {
-          clearTimeout(nowPlayingUpdateTimeout);
-        }
-
-        nowPlayingUpdateTimeout = setTimeout(() => {
-          setIsReceivingNowPlayingUpdates(false);
-          isReceivingNowPlayingUpdatesGlobal = false;
-        }, 5000);
 
         const timeSinceSpotifyStateChange =
           Date.now() - lastSpotifyDeviceStateChange;
@@ -634,26 +638,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         data.type === "event" &&
         data.topic === "media.nowPlaying.artwork"
       ) {
-        if (!isReceivingNowPlayingUpdatesGlobal) {
-          return;
-        }
+        beginNowPlayingUpdateWindow();
 
         const artworkData = data.data?.data;
 
         if (artworkData && artworkData.trim() !== "") {
-          const trackUri = currentPlaybackRef.current?.item?.uri;
-          const cachedUrl = trackUri ? artworkCache.get(trackUri) : null;
-          const currentImageUrl =
-            currentPlaybackRef.current?.item?.album?.images?.[0]?.url;
-
-          if (
-            currentImageUrl &&
-            currentImageUrl === cachedUrl &&
-            currentImageUrl.startsWith("blob:")
-          ) {
-            return;
-          }
-
           if (isProcessingArtwork) {
             return;
           }
@@ -672,6 +661,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             phoneMediaArtworkBlobUrl = URL.createObjectURL(blob);
 
             const trackUri = currentPlaybackRef.current?.item?.uri;
+
             if (trackUri) {
               if (artworkCache.has(trackUri)) {
                 const oldCachedUrl = artworkCache.get(trackUri);
@@ -681,38 +671,43 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               }
               artworkCache.set(trackUri, phoneMediaArtworkBlobUrl);
               cleanupArtworkCache();
-            }
 
-            setCurrentPlayback((prevPlayback) => {
-              if (
-                prevPlayback?.item?.is_phone_media &&
-                prevPlayback.item.album?.images
-              ) {
-                const updatedPlayback = {
-                  ...prevPlayback,
-                  item: {
-                    ...prevPlayback.item,
-                    album: {
-                      ...prevPlayback.item.album,
-                      images: [{ url: phoneMediaArtworkBlobUrl }],
+              setCurrentPlayback((prevPlayback) => {
+                if (
+                  prevPlayback?.item?.uri === trackUri &&
+                  prevPlayback.item?.album?.images
+                ) {
+                  const updatedPlayback = {
+                    ...prevPlayback,
+                    item: {
+                      ...prevPlayback.item,
+                      album: {
+                        ...prevPlayback.item.album,
+                        images: [{ url: phoneMediaArtworkBlobUrl }],
+                      },
                     },
-                  },
-                };
-                currentPlaybackRef.current = updatedPlayback;
-                return updatedPlayback;
-              }
-              return prevPlayback;
-            });
+                  };
+                  currentPlaybackRef.current = updatedPlayback;
+                  return updatedPlayback;
+                }
+                return prevPlayback;
+              });
 
-            setCurrentlyPlayingAlbum((prevAlbum) => {
-              if (prevAlbum?.images) {
-                return {
-                  ...prevAlbum,
-                  images: [{ url: phoneMediaArtworkBlobUrl }],
-                };
-              }
-              return prevAlbum;
-            });
+              setCurrentlyPlayingAlbum((prevAlbum) => {
+                if (
+                  prevAlbum?.images &&
+                  (prevAlbum?.uri === trackUri ||
+                    prevAlbum?.id ===
+                      currentPlaybackRef.current?.item?.album?.id)
+                ) {
+                  return {
+                    ...prevAlbum,
+                    images: [{ url: phoneMediaArtworkBlobUrl }],
+                  };
+                }
+                return prevAlbum;
+              });
+            }
 
             if (oldBlobUrl && oldBlobUrl !== phoneMediaArtworkBlobUrl) {
               const isInCache = Array.from(artworkCache.values()).includes(
@@ -750,7 +745,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     return () => {
       cleanup();
     };
-  }, [processPlaybackState]);
+  }, [processPlaybackState, beginNowPlayingUpdateWindow]);
 
   const refreshPlaybackState = useCallback(
     async (forceRefresh = false) => {

@@ -910,6 +910,7 @@ export default function NowPlaying({
               }
               skipFetchWhenNowPlaying={true}
               isReceivingNowPlayingUpdates={isReceivingNowPlayingUpdates}
+              disableSpotifyFetch={isPhoneMedia}
               className="w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
             />
           </div>
