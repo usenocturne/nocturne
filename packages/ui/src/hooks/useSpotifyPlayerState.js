@@ -714,7 +714,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               return prevAlbum;
             });
 
-            if (oldBlobUrl && oldBlobUrl !== localMediaArtworkBlobUrl) {
+            if (oldBlobUrl && oldBlobUrl !== phoneMediaArtworkBlobUrl) {
               const isInCache = Array.from(artworkCache.values()).includes(
                 oldBlobUrl,
               );
