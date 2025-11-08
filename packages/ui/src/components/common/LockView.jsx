@@ -74,13 +74,16 @@ export default function LockView({
         imageUrl = currentPlayback.item.album?.images?.[0]?.url;
       }
 
-      if (imageUrl) {
+      if (imageUrl && imageUrl !== "/images/not-playing.webp") {
         updateGradientColors(imageUrl, "lock");
       }
     }
   }, [
     currentPlayback?.item?.id,
     currentPlayback?.item?.type,
+    currentPlayback?.item?.album?.images?.[0]?.url,
+    currentPlayback?.item?.show?.images?.[0]?.url,
+    currentPlayback?.item?.images?.[0]?.url,
     updateGradientColors,
   ]);
 

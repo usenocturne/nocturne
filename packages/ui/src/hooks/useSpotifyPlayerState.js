@@ -10,6 +10,7 @@ let lastPodcastFetch = 0;
 let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
 let phoneMediaArtworkBlobUrl = null;
+let currentArtworkTrackUri = null;
 let lastSpotifyDeviceStateChange = 0;
 let phoneVolumeListeners = [];
 let nowPlayingUpdateTimeout = null;
@@ -590,6 +591,9 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const durationMs = media.MediaItemPlaybackDurationInMilliSeconds || 0;
         const elapsedMs = playback.PlaybackElapsedTimeInMilliseconds || 0;
 
+        const newTrackUri = `local:media:${title}`;
+        const cachedArtworkForTrack = artworkCache.get(newTrackUri);
+
         const transformedState = {
           is_playing: playback.PlaybackStatus === "playing",
           timestamp: Date.now(),
@@ -599,7 +603,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
           item: {
             id: `local-media-${title}`,
-            uri: `local:media:${title}`,
+            uri: newTrackUri,
             type: "track",
             name: title,
             album: {
@@ -607,9 +611,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               uri: `local:album:${albumName}`,
               name: albumName,
               images:
-                isNotPlaying || !phoneMediaArtworkBlobUrl
+                isNotPlaying
                   ? [{ url: "/images/not-playing.webp" }]
-                  : [{ url: phoneMediaArtworkBlobUrl }],
+                  : cachedArtworkForTrack
+                    ? [{ url: cachedArtworkForTrack }]
+                    : [{ url: "/images/not-playing.webp" }],
             },
             artists: [
               {
@@ -670,6 +676,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                 }
               }
               artworkCache.set(trackUri, phoneMediaArtworkBlobUrl);
+              currentArtworkTrackUri = trackUri;
               cleanupArtworkCache();
 
               setCurrentPlayback((prevPlayback) => {
