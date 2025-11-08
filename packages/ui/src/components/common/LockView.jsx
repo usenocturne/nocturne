@@ -11,10 +11,27 @@ export default function LockView({
 }) {
   const { currentTime } = useCurrentTime();
   const containerRef = useRef(null);
-  const { playTrack, pausePlayback, skipToNext, skipToPrevious } =
-    useSpotifyPlayerControls(currentPlayback);
+  const {
+    playTrack,
+    pausePlayback,
+    skipToNext,
+    skipToPrevious,
+    phoneMediaPlayPause,
+    phoneMediaNext,
+    phoneMediaPrevious,
+  } = useSpotifyPlayerControls(currentPlayback);
+
+  const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
 
   const handlePlayPause = useCallback(async () => {
+    if (isPhoneMedia) {
+      await phoneMediaPlayPause();
+      if (refreshPlaybackState) {
+        setTimeout(() => refreshPlaybackState(true), 300);
+      }
+      return;
+    }
+
     if (currentPlayback?.is_playing) {
       const ok = await pausePlayback();
       if (ok && refreshPlaybackState) {
@@ -30,20 +47,41 @@ export default function LockView({
       }
       return;
     }
-  }, [currentPlayback, playTrack, pausePlayback, refreshPlaybackState]);
+  }, [
+    currentPlayback,
+    playTrack,
+    pausePlayback,
+    phoneMediaPlayPause,
+    isPhoneMedia,
+    refreshPlaybackState,
+  ]);
 
   useGestureControls({
     contentRef: containerRef,
     onSwipeLeft: async () => {
-      const ok = await skipToNext();
-      if (ok && refreshPlaybackState) {
-        setTimeout(() => refreshPlaybackState(true), 500);
+      if (isPhoneMedia) {
+        await phoneMediaNext();
+        if (refreshPlaybackState) {
+          setTimeout(() => refreshPlaybackState(true), 500);
+        }
+      } else {
+        const ok = await skipToNext();
+        if (ok && refreshPlaybackState) {
+          setTimeout(() => refreshPlaybackState(true), 500);
+        }
       }
     },
     onSwipeRight: async () => {
-      const ok = await skipToPrevious();
-      if (ok && refreshPlaybackState) {
-        setTimeout(() => refreshPlaybackState(true), 500);
+      if (isPhoneMedia) {
+        await phoneMediaPrevious();
+        if (refreshPlaybackState) {
+          setTimeout(() => refreshPlaybackState(true), 500);
+        }
+      } else {
+        const ok = await skipToPrevious();
+        if (ok && refreshPlaybackState) {
+          setTimeout(() => refreshPlaybackState(true), 500);
+        }
       }
     },
     isActive: true,
