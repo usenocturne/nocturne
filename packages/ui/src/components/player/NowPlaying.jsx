@@ -1008,12 +1008,12 @@ export default function NowPlaying({
 
       <div
         className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}
+        style={{ visibility: isPhoneMedia ? "hidden" : "visible" }}
+        aria-hidden={isPhoneMedia}
       >
         <ProgressBar
           progress={
-            currentPlayback?.item && !isStartingPlayback
-              ? progressPercentage
-              : 0
+            currentPlayback?.item && !isStartingPlayback ? progressPercentage : 0
           }
           isPlaying={isPlaying && !isStartingPlayback}
           durationMs={duration}
@@ -1032,6 +1032,8 @@ export default function NowPlaying({
               ? "translate-y-24 opacity-0"
               : "translate-y-0 opacity-100"
           }`}
+          style={{ visibility: isPhoneMedia ? "hidden" : "visible" }}
+          aria-hidden={isPhoneMedia}
         >
           <div className="flex justify-between">
             {currentPlayback && currentPlayback.item ? (
