@@ -578,16 +578,16 @@ export default function NowPlaying({
   }, [handleSkipPrevious]);
 
   const handleSwipeUp = useCallback(() => {
-    if (!isPodcast && !showLyrics) {
+    if (!isPodcast && !isPhoneMedia && !showLyrics) {
       toggleLyrics();
     }
-  }, [isPodcast, showLyrics, toggleLyrics]);
+  }, [isPodcast, isPhoneMedia, showLyrics, toggleLyrics]);
 
   const handleSwipeDown = useCallback(() => {
-    if (!isPodcast && showLyrics) {
+    if (!isPodcast && !isPhoneMedia && showLyrics) {
       toggleLyrics();
     }
-  }, [isPodcast, showLyrics, toggleLyrics]);
+  }, [isPodcast, isPhoneMedia, showLyrics, toggleLyrics]);
 
   useGestureControls({
     contentRef: contentContainerRef,
@@ -634,6 +634,12 @@ export default function NowPlaying({
       setPhoneMediaVolumeDirection(null);
     }
   }, [isPhoneMedia, isSmartphoneDevice, trackId]);
+
+  useEffect(() => {
+    if (isPhoneMedia && showLyrics) {
+      toggleLyrics();
+    }
+  }, [isPhoneMedia, showLyrics, toggleLyrics]);
 
   const handleToggleLike = useCallback(async () => {
     if (!trackId || isCheckingLike) return;
