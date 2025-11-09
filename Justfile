@@ -5,7 +5,7 @@ copyconfig:
     rm -f configs/nocturne_defconfig
     cp output/.config configs/nocturne_defconfig
 
-clean:
+clean: cleandeps
     make -C buildroot O="$PWD/output" clean
     rm -rf output/package
 
