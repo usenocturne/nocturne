@@ -1063,6 +1063,7 @@ export const useBluetooth = () => {
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef(null);
   const retryDeviceAddressRef = useRef(null);
+  const reconnectInitTriggeredRef = useRef(false);
 
   const MAX_RECONNECT_ATTEMPTS = 5;
   const RECONNECT_INTERVAL = 5000;
@@ -1082,6 +1083,14 @@ export const useBluetooth = () => {
   const attemptReconnect = useCallback(
     async (continuous = false) => {
       if (isReconnecting.current || reconnectTimeoutRef.current) {
+        return;
+      }
+
+      if (!globalWsRef || globalWsRef.readyState !== WebSocket.OPEN) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeoutRef.current = null;
+          attemptReconnect(continuous);
+        }, RECONNECT_INTERVAL);
         return;
       }
 
@@ -1215,8 +1224,8 @@ export const useBluetooth = () => {
     const lastDeviceAddress = localStorage.getItem(
       "lastConnectedBluetoothDevice",
     );
-    if (lastDeviceAddress && !useBluetooth.__reconnectInitTriggered) {
-      useBluetooth.__reconnectInitTriggered = true;
+    if (lastDeviceAddress && !reconnectInitTriggeredRef.current && wsConnected) {
+      reconnectInitTriggeredRef.current = true;
       reconnectAttemptsRef.current = 0;
       setReconnectAttempt(0);
       isReconnecting.current = false;
@@ -1232,7 +1241,7 @@ export const useBluetooth = () => {
       setReconnectAttempt(0);
       isReconnecting.current = false;
     };
-  }, [attemptReconnect, cleanupReconnectTimer]);
+  }, [wsConnected]);
 
   const stopNetworkPolling = useCallback(() => {
     isNetworkPollingActive = false;

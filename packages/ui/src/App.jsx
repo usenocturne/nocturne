@@ -637,16 +637,9 @@ function App() {
 
     if (lastDeviceAddress) {
       splashFlowWithDeviceRef.current = true;
-      const checkReconnectTriggered = setInterval(() => {
-        if (useBluetooth.__reconnectInitTriggered) {
-          clearInterval(checkReconnectTriggered);
-          setShowSplash(false);
-          setShowAuthScreen(false);
-          setActiveSection("nowPlaying");
-        }
-      }, 100);
-
-      return () => clearInterval(checkReconnectTriggered);
+      setShowSplash(false);
+      setShowAuthScreen(false);
+      setActiveSection("nowPlaying");
     } else {
       setShowSplash(false);
       if (!hasSeenTutorialFlag) {
