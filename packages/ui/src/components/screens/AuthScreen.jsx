@@ -39,7 +39,7 @@ const AuthScreen = ({
 
         <div className="flex justify-center">
           <QRCodeDisplay
-            verificationUri={null}
+            verificationUri="https://usenocturne.com/app"
             isLoading={isLoading}
             error={error}
           />
