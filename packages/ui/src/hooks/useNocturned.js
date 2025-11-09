@@ -1224,7 +1224,11 @@ export const useBluetooth = () => {
     const lastDeviceAddress = localStorage.getItem(
       "lastConnectedBluetoothDevice",
     );
-    if (lastDeviceAddress && !reconnectInitTriggeredRef.current && wsConnected) {
+    if (
+      lastDeviceAddress &&
+      !reconnectInitTriggeredRef.current &&
+      wsConnected
+    ) {
       reconnectInitTriggeredRef.current = true;
       reconnectAttemptsRef.current = 0;
       setReconnectAttempt(0);

@@ -141,16 +141,18 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     if (!playerStateData?.item) return null;
 
     if (playerStateData.item.type === "track" || playerStateData.item.album) {
-      const currentAlbum = playerStateData.item.is_local || playerStateData.item.is_phone_media
-        ? {
-            id: `local-${playerStateData.item.uri}`,
-            name: playerStateData.item.album?.name || playerStateData.item.name,
-            images: [{ url: "/images/not-playing.webp" }],
-            artists: playerStateData.item.artists,
-            type: "local-track",
-            uri: playerStateData.item.uri,
-          }
-        : playerStateData.item.album;
+      const currentAlbum =
+        playerStateData.item.is_local || playerStateData.item.is_phone_media
+          ? {
+              id: `local-${playerStateData.item.uri}`,
+              name:
+                playerStateData.item.album?.name || playerStateData.item.name,
+              images: [{ url: "/images/not-playing.webp" }],
+              artists: playerStateData.item.artists,
+              type: "local-track",
+              uri: playerStateData.item.uri,
+            }
+          : playerStateData.item.album;
       return currentAlbum;
     } else if (playerStateData.item.type === "episode") {
       return playerStateData.item.show;

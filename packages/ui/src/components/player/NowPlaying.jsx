@@ -869,12 +869,7 @@ export default function NowPlaying({
   };
 
   const handleArtistClick = useCallback(() => {
-    if (
-      !isLocalMedia &&
-      !isPhoneMedia &&
-      firstArtistId &&
-      onNavigateToArtist
-    ) {
+    if (!isLocalMedia && !isPhoneMedia && firstArtistId && onNavigateToArtist) {
       onNavigateToArtist(firstArtistId, "artist");
     }
   }, [isLocalMedia, isPhoneMedia, firstArtistId, onNavigateToArtist]);
@@ -1019,7 +1014,9 @@ export default function NowPlaying({
       >
         <ProgressBar
           progress={
-            currentPlayback?.item && !isStartingPlayback ? progressPercentage : 0
+            currentPlayback?.item && !isStartingPlayback
+              ? progressPercentage
+              : 0
           }
           isPlaying={isPlaying && !isStartingPlayback}
           durationMs={duration}

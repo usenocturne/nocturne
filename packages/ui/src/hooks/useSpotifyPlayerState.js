@@ -191,28 +191,29 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const trackUri = data.item.uri;
         let cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
-        const currentAlbum = data.item.is_local || data.item.is_phone_media
-          ? {
-              id: `local-${data.item.uri}`,
-              name: data.item.album?.name || data.item.name,
-              images: cachedArtworkUrl
-                ? [{ url: cachedArtworkUrl }]
-                : data.item.album?.images || [
-                    { url: "/images/not-playing.webp" },
-                  ],
-              artists: data.item.artists,
-              type: "local-track",
-              uri: data.item.uri,
-              is_phone_media: data.item.is_phone_media || false,
-              is_local: data.item.is_local || false,
-            }
-          : {
-              ...data.item.album,
-              images: cachedArtworkUrl
-                ? [{ url: cachedArtworkUrl }]
-                : data.item.album?.images,
-              artists: data.item.artists,
-            };
+        const currentAlbum =
+          data.item.is_local || data.item.is_phone_media
+            ? {
+                id: `local-${data.item.uri}`,
+                name: data.item.album?.name || data.item.name,
+                images: cachedArtworkUrl
+                  ? [{ url: cachedArtworkUrl }]
+                  : data.item.album?.images || [
+                      { url: "/images/not-playing.webp" },
+                    ],
+                artists: data.item.artists,
+                type: "local-track",
+                uri: data.item.uri,
+                is_phone_media: data.item.is_phone_media || false,
+                is_local: data.item.is_local || false,
+              }
+            : {
+                ...data.item.album,
+                images: cachedArtworkUrl
+                  ? [{ url: cachedArtworkUrl }]
+                  : data.item.album?.images,
+                artists: data.item.artists,
+              };
 
         setCurrentlyPlayingAlbum(currentAlbum);
 
@@ -610,12 +611,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               id: `local-album-${albumName}`,
               uri: `local:album:${albumName}`,
               name: albumName,
-              images:
-                isNotPlaying
-                  ? [{ url: "/images/not-playing.webp" }]
-                  : cachedArtworkForTrack
-                    ? [{ url: cachedArtworkForTrack }]
-                    : [{ url: "/images/not-playing.webp" }],
+              images: isNotPlaying
+                ? [{ url: "/images/not-playing.webp" }]
+                : cachedArtworkForTrack
+                  ? [{ url: cachedArtworkForTrack }]
+                  : [{ url: "/images/not-playing.webp" }],
             },
             artists: [
               {

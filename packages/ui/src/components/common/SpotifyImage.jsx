@@ -57,10 +57,7 @@ export default function SpotifyImage({
   const loadImageData = useCallback(async () => {
     if (!isMountedRef.current) return;
 
-    if (
-      failedImageUrlRef.current &&
-      failedImageUrlRef.current === imageUrl
-    ) {
+    if (failedImageUrlRef.current && failedImageUrlRef.current === imageUrl) {
       setCurrentSrc(fallbackSrc);
       setHasError(true);
       setIsLoading(false);
@@ -115,7 +112,10 @@ export default function SpotifyImage({
       return;
     }
 
-    if (disableSpotifyFetch || (skipFetchWhenNowPlaying && isReceivingNowPlayingUpdates)) {
+    if (
+      disableSpotifyFetch ||
+      (skipFetchWhenNowPlaying && isReceivingNowPlayingUpdates)
+    ) {
       cancelRequest(imageUrl);
       setIsLoading(false);
       setHasError(false);
@@ -258,10 +258,7 @@ export default function SpotifyImage({
   ]);
 
   useEffect(() => {
-    if (
-      failedImageUrlRef.current &&
-      failedImageUrlRef.current !== imageUrl
-    ) {
+    if (failedImageUrlRef.current && failedImageUrlRef.current !== imageUrl) {
       failedImageUrlRef.current = null;
     }
   }, [imageUrl]);
