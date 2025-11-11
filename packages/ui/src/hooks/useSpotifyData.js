@@ -8,6 +8,34 @@ import { getCachedTimezone } from "./useCurrentTime";
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
 
+let initialDataLoadComplete = false;
+const initialDataLoadSubscribers = new Set();
+
+const emitInitialDataLoadState = () => {
+  initialDataLoadSubscribers.forEach((listener) => {
+    try {
+      listener(initialDataLoadComplete);
+    } catch (err) {
+      console.error("Initial data load listener error:", err);
+    }
+  });
+};
+
+export const subscribeInitialDataLoadState = (listener) => {
+  if (typeof listener !== "function") {
+    return () => {};
+  }
+
+  initialDataLoadSubscribers.add(listener);
+  listener(initialDataLoadComplete);
+
+  return () => {
+    initialDataLoadSubscribers.delete(listener);
+  };
+};
+
+export const getInitialDataLoadState = () => initialDataLoadComplete;
+
 export function useSpotifyData(activeSection, skipInitialFetch = false) {
   const [isInitializing, setIsInitializing] = useState(false);
   const [recentAlbums, setRecentAlbums] = useState([]);
@@ -1117,6 +1145,8 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       }
 
       setInitialDataLoaded(true);
+      initialDataLoadComplete = true;
+      emitInitialDataLoadState();
       setRetryCount(0);
       dataFetchingInProgressRef.current = false;
     } catch (error) {

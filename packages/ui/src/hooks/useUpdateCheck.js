@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { sendNocturneWsRequest, subscribeEaSessionState } from "./useNocturned";
+import { subscribeInitialDataLoadState } from "./useSpotifyData";
 
 const compareVersions = (v1, v2) => {
   const parseVersion = (version) => {
@@ -84,6 +85,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   const [lastChecked, setLastChecked] = useState(null);
   const [updateChain, setUpdateChain] = useState([]);
   const [eaSessionStarted, setEaSessionStarted] = useState(false);
+  const [initialDataLoadComplete, setInitialDataLoadComplete] = useState(false);
   const checkInProgress = useRef(false);
   const currentVersionRef = useRef(currentVersion);
 
@@ -103,11 +105,28 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     };
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeInitialDataLoadState((isComplete) => {
+      setInitialDataLoadComplete(isComplete);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   const checkForUpdates = useCallback(async () => {
     if (isChecking || checkInProgress.current) return;
 
     if (!eaSessionStarted) {
       console.log("Skipping update check: EA session not started yet");
+      return;
+    }
+
+    if (!initialDataLoadComplete) {
+      console.log("Skipping update check: Initial data load not complete yet");
       return;
     }
 
@@ -173,7 +192,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
       setIsChecking(false);
       checkInProgress.current = false;
     }
-  }, [eaSessionStarted]);
+  }, [eaSessionStarted, initialDataLoadComplete]);
 
   const findUpdateChain = (currentVersion, releases) => {
     if (!releases || releases.length === 0) return [];
@@ -245,10 +264,10 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   };
 
   useEffect(() => {
-    if (autoCheck && eaSessionStarted) {
+    if (autoCheck && eaSessionStarted && initialDataLoadComplete) {
       checkForUpdates();
     }
-  }, [autoCheck, eaSessionStarted, checkForUpdates]);
+  }, [autoCheck, eaSessionStarted, initialDataLoadComplete, checkForUpdates]);
 
   const advanceUpdateChain = useCallback(() => {
     if (updateChain.length <= 1) {
