@@ -398,10 +398,8 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           setUserPlaylists(items);
           setItemCounts((prev) => ({ ...prev, userPlaylists: items.length }));
 
-          if (data.next && items.length < 50) {
-            setNextTokens((prev) => ({ ...prev, userPlaylists: data.next }));
-          } else if (items.length === 5 && data.total > 5) {
-            setNextTokens((prev) => ({ ...prev, userPlaylists: "has-more" }));
+          if (data.total > 5 && items.length < 50) {
+            setNextTokens((prev) => ({ ...prev, userPlaylists: data.next || "has-more" }));
           }
         }
 
@@ -419,7 +417,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [isSpotifyReady, getUserPlaylists, lastOffsets],
+    [isSpotifyReady, getUserPlaylists, lastOffsets, itemCounts],
   );
 
   const fetchTopArtists = useCallback(
@@ -946,9 +944,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         setSectionsAccessed((prev) => new Set([...prev, section]));
       }
 
-      if (shouldStartLoading()) {
+      const shouldLoad = shouldStartLoading();
+      if (shouldLoad) {
         const loadMore = async () => {
           const sectionMap = {
+            library: "playlists",
             playlists: "playlists",
             artists: "artists",
             liked: "liked",
@@ -1014,6 +1014,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     if (!activeSection || !initialDataLoaded) return;
 
     const sectionMap = {
+      library: "playlists",
       playlists: "playlists",
       artists: "artists",
       liked: "liked",
