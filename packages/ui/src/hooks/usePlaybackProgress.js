@@ -6,18 +6,22 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const [duration, setDuration] = useState(0);
   const [trackId, setTrackId] = useState(null);
 
-  const lastUpdateTimeRef = useRef(Date.now());
+  const lastUpdateTimeRef = useRef(performance.now());
   const animationFrameRef = useRef(null);
   const serverProgressRef = useRef(0);
   const frameSkipCounterRef = useRef(0);
+  const lastFrameTimeRef = useRef(performance.now());
   const refreshTimeoutRef = useRef(null);
   const lastRefreshTimeRef = useRef(0);
   const driftHistoryRef = useRef([]);
-  const maxDriftHistory = 10;
+  const maxDriftHistory = 30;
   const initialRefreshDoneRef = useRef(false);
+  const estimatedLatencyRef = useRef(0);
+  const latencyHistoryRef = useRef([]);
+  const maxLatencyHistory = 10;
 
   const scheduleNextRefresh = useCallback(() => {
-    const REFRESH_INTERVAL = 15000;
+    const REFRESH_INTERVAL = 8000;
 
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
@@ -67,28 +71,58 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         setDuration(currentPlayback.item?.duration_ms || 0);
         serverProgressRef.current = currentPlayback.progress_ms || 0;
         setProgressMs(currentPlayback.progress_ms || 0);
-        lastUpdateTimeRef.current = Date.now();
+        lastUpdateTimeRef.current = performance.now();
+        lastFrameTimeRef.current = performance.now();
+        frameSkipCounterRef.current = 0;
         driftHistoryRef.current = [];
+        latencyHistoryRef.current = [];
+        estimatedLatencyRef.current = 0;
 
         if (!refreshTimeoutRef.current && currentPlayback.is_playing) {
           scheduleNextRefresh();
         }
       } else if (typeof currentPlayback?.progress_ms === "number") {
-        const now = Date.now();
+        const now = performance.now();
         const elapsed = now - lastUpdateTimeRef.current;
         const estimatedProgress = serverProgressRef.current + elapsed;
         const actualProgress = currentPlayback.progress_ms;
-        const drift = estimatedProgress - actualProgress;
 
-        if (elapsed > 1000 && Math.abs(drift) < 10000) {
+        if (isPlaying && elapsed > 500) {
+          const impliedLatency = Math.max(0, estimatedProgress - actualProgress);
+          if (impliedLatency < 1000) {
+            latencyHistoryRef.current.push(impliedLatency);
+            if (latencyHistoryRef.current.length > maxLatencyHistory) {
+              latencyHistoryRef.current.shift();
+            }
+            if (latencyHistoryRef.current.length > 0) {
+              estimatedLatencyRef.current =
+                latencyHistoryRef.current.reduce((sum, l) => sum + l, 0) /
+                latencyHistoryRef.current.length;
+            }
+          }
+        }
+
+        const compensatedProgress = actualProgress + Math.min(estimatedLatencyRef.current * 0.3, 200);
+        const drift = estimatedProgress - compensatedProgress;
+
+        if (elapsed > 1000 && Math.abs(drift) < 5000) {
           driftHistoryRef.current.push(drift);
           if (driftHistoryRef.current.length > maxDriftHistory) {
             driftHistoryRef.current.shift();
           }
         }
 
-        serverProgressRef.current = currentPlayback.progress_ms;
-        setProgressMs(currentPlayback.progress_ms);
+        const wouldMoveBackwards = compensatedProgress < progressMs;
+        const backwardsAmount = progressMs - compensatedProgress;
+        const isNearEnd = duration > 0 && progressMs > duration * 0.98;
+        const isVerySmallBackwardsJump = backwardsAmount < 500;
+
+        if (wouldMoveBackwards && isNearEnd && isVerySmallBackwardsJump) {
+          return;
+        }
+
+        serverProgressRef.current = compensatedProgress;
+        setProgressMs(compensatedProgress);
         lastUpdateTimeRef.current = now;
       }
 
@@ -105,23 +139,30 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
 
     if (!isPlaying || duration <= 0) return;
 
-    const animate = () => {
-      const now = Date.now();
-      const elapsed = now - lastUpdateTimeRef.current;
+    const animate = (timestamp) => {
+      const elapsed = timestamp - lastUpdateTimeRef.current;
 
-      let driftCorrectionFactor = 0.98;
-      if (driftHistoryRef.current.length >= 3) {
+      const frameTime = timestamp - lastFrameTimeRef.current;
+      if (frameTime > 50) {
+        frameSkipCounterRef.current++;
+        if (frameSkipCounterRef.current > 5) {
+          triggerRefresh();
+          frameSkipCounterRef.current = 0;
+        }
+      }
+      lastFrameTimeRef.current = timestamp;
+
+      let driftCorrectionFactor = 0.99;
+      if (driftHistoryRef.current.length >= 1) {
         const averageDrift =
           driftHistoryRef.current.reduce((sum, drift) => sum + drift, 0) /
           driftHistoryRef.current.length;
-        if (averageDrift > 100) {
-          driftCorrectionFactor = 0.96;
-        } else if (averageDrift > 50) {
-          driftCorrectionFactor = 0.97;
-        } else if (averageDrift < -50) {
-          driftCorrectionFactor = 1.01;
-        } else {
-          driftCorrectionFactor = 0.98;
+
+        const driftInfluence = Math.max(-0.04, Math.min(0.04, averageDrift / 3000));
+        driftCorrectionFactor = 0.99 + driftInfluence;
+
+        if (Math.abs(averageDrift) < 30) {
+          driftCorrectionFactor = 0.99;
         }
       }
 
@@ -131,17 +172,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         duration,
       );
 
-      if (estimated > duration * 0.98) {
-        const remaining = duration - serverProgressRef.current;
-        const safeProgression = remaining * 0.1;
-        const safeEstimated = Math.min(
-          serverProgressRef.current + safeProgression,
-          duration,
-        );
-        setProgressMs(safeEstimated);
-      } else {
-        setProgressMs(estimated);
-      }
+      setProgressMs(estimated);
 
       animationFrameRef.current = requestAnimationFrame(animate);
     };
@@ -156,10 +187,26 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     };
   }, [isPlaying, duration]);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isPlaying) {
+        lastUpdateTimeRef.current = performance.now();
+        lastFrameTimeRef.current = performance.now();
+        frameSkipCounterRef.current = 0;
+        triggerRefresh();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isPlaying, triggerRefresh]);
+
   const updateProgress = useCallback((newProgressMs) => {
     serverProgressRef.current = newProgressMs;
     setProgressMs(newProgressMs);
-    lastUpdateTimeRef.current = Date.now();
+    lastUpdateTimeRef.current = performance.now();
   }, []);
 
   return {

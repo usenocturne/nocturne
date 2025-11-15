@@ -390,7 +390,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           const transformedState = {
             is_playing:
               playerState.is_paused === false || playerState.is_paused === 0,
-            timestamp: Date.now(),
+            timestamp: data.server_timestamp_ms || Date.now(),
             progress_ms: parseInt(playerState.position_as_of_timestamp) || 0,
 
             context: playerState.context_uri
@@ -597,7 +597,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
         const transformedState = {
           is_playing: playback.PlaybackStatus === "playing",
-          timestamp: Date.now(),
+          timestamp: data.server_timestamp_ms || Date.now(),
           progress_ms: elapsedMs,
 
           context: null,
