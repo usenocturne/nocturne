@@ -114,7 +114,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         }, 100);
         return true;
       } catch (err) {
-        if (err.message.includes("NO_ACTIVE_DEVICE") && !deviceId) {
+        if ((err.message.includes("NO_ACTIVE_DEVICE") || err.message.includes("No playback devices available")) && !deviceId) {
           if (openDeviceSwitcher) {
             console.log(
               "No active device, opening device switcher with playback intent.",
@@ -150,10 +150,15 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       }, 100);
       return true;
     } catch (err) {
+      if (err.message.includes("No playback devices available")) {
+        if (openDeviceSwitcher) {
+          openDeviceSwitcher({});
+        }
+      }
       console.error("Error pausing playback:", err.message);
       return false;
     }
-  }, [isSpotifyReady, pausePlaybackWS, getPlayerState]);
+  }, [isSpotifyReady, pausePlaybackWS, getPlayerState, openDeviceSwitcher]);
 
   const skipToNext = useCallback(async () => {
     if (!isSpotifyReady) return false;
@@ -172,10 +177,15 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       }, 100);
       return true;
     } catch (err) {
+      if (err.message.includes("No playback devices available")) {
+        if (openDeviceSwitcher) {
+          openDeviceSwitcher({});
+        }
+      }
       console.error("Error skipping to next track:", err.message);
       return false;
     }
-  }, [isSpotifyReady, skipToNextWS, getPlayerState]);
+  }, [isSpotifyReady, skipToNextWS, getPlayerState, openDeviceSwitcher]);
 
   const skipToPrevious = useCallback(async () => {
     if (!isSpotifyReady) return false;
@@ -194,10 +204,15 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       }, 100);
       return true;
     } catch (err) {
+      if (err.message.includes("No playback devices available")) {
+        if (openDeviceSwitcher) {
+          openDeviceSwitcher({});
+        }
+      }
       console.error("Error skipping to previous track:", err.message);
       return false;
     }
-  }, [isSpotifyReady, skipToPreviousWS, getPlayerState]);
+  }, [isSpotifyReady, skipToPreviousWS, getPlayerState, openDeviceSwitcher]);
 
   const seekToPosition = useCallback(
     async (positionMs) => {
@@ -207,11 +222,16 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         await seekToPositionWS(positionMs);
         return true;
       } catch (err) {
+        if (err.message.includes("No playback devices available")) {
+          if (openDeviceSwitcher) {
+            openDeviceSwitcher({});
+          }
+        }
         console.error("Error seeking to position:", err.message);
         return false;
       }
     },
-    [isSpotifyReady, seekToPositionWS],
+    [isSpotifyReady, seekToPositionWS, openDeviceSwitcher],
   );
 
   const processVolumeQueue = useCallback(async () => {

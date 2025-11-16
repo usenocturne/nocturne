@@ -223,7 +223,7 @@ export function useSpotifyWebSocket() {
   };
 
   const handleSpotifyResponse = useCallback((data) => {
-    if (data.type === "response" && data.id) {
+    if ((data.type === "response" || data.type === "error") && data.id) {
       const messageId = data.id;
       const pendingRequest = pendingRequestsRef.current.get(messageId);
 
@@ -232,7 +232,7 @@ export function useSpotifyWebSocket() {
 
         if (data.error) {
           pendingRequest.reject(
-            new Error(data.error.message || "Spotify command failed"),
+            new Error(typeof data.error === "string" ? data.error : data.error.message || "Spotify command failed"),
           );
         } else {
           let result = data.result;

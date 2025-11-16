@@ -303,6 +303,11 @@ export default function NowPlaying({
       }, 2000);
     } catch (err) {
       console.error("Error attempting to resume playback:", err);
+      if (err.message?.includes("No playback devices available")) {
+        if (typeof onOpenDeviceSwitcher === "function") {
+          onOpenDeviceSwitcher([]);
+        }
+      }
       setIsStartingPlayback(false);
     }
   };
