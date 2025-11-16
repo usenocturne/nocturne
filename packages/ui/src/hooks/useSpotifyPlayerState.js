@@ -436,27 +436,34 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                     id: playerState.track.uri.split(":")[2],
                     uri: playerState.track.uri,
                     type: "track",
-                    name: playerState.track.metadata.title,
-                    album: {
-                      id: playerState.track.metadata.album_uri?.split(":")[2],
-                      uri: playerState.track.metadata.album_uri,
-                      name: playerState.track.metadata.album_title,
-                      images: playerState.track.metadata.image_url
-                        ? [
-                            {
-                              url: playerState.track.metadata.image_url.startsWith(
-                                "http",
-                              )
-                                ? playerState.track.metadata.image_url
-                                : `https://${playerState.track.metadata.image_url}`,
-                            },
-                          ]
-                        : playerState.track.metadata.is_narration === "true" ||
-                            playerState.track.metadata.album_artist_name ===
-                              "DJ X"
-                          ? [{ url: "/images/radio-cover/dj.webp" }]
-                          : [],
-                    },
+                    name: playerState.track.metadata.title ||
+                          (currentPlaybackRef.current?.item?.uri === playerState.track.uri
+                            ? currentPlaybackRef.current.item.name
+                            : undefined),
+                    album: (playerState.track.metadata.album_uri || playerState.track.metadata.album_title || playerState.track.metadata.image_url)
+                      ? {
+                          id: playerState.track.metadata.album_uri?.split(":")[2],
+                          uri: playerState.track.metadata.album_uri,
+                          name: playerState.track.metadata.album_title,
+                          images: playerState.track.metadata.image_url
+                            ? [
+                                {
+                                  url: playerState.track.metadata.image_url.startsWith(
+                                    "http",
+                                  )
+                                    ? playerState.track.metadata.image_url
+                                    : `https://${playerState.track.metadata.image_url}`,
+                                },
+                              ]
+                            : playerState.track.metadata.is_narration === "true" ||
+                                playerState.track.metadata.album_artist_name ===
+                                  "DJ X"
+                              ? [{ url: "/images/radio-cover/dj.webp" }]
+                              : [],
+                        }
+                      : (currentPlaybackRef.current?.item?.uri === playerState.track.uri
+                          ? currentPlaybackRef.current.item.album
+                          : {}),
                     artists:
                       playerState.track.metadata.is_narration === "true" ||
                       playerState.track.metadata.album_artist_name === "DJ X"
