@@ -812,7 +812,6 @@ export default function Home({
       case "settings":
         return (
           <Settings
-            accessToken={accessToken}
             onOpenDonationModal={handleOpenDonationModal}
             setActiveSection={setActiveSection}
           />

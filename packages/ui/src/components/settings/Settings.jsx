@@ -9,7 +9,6 @@ import {
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  SettingsAccountIcon,
   SettingsUpdateIcon,
   SettingsCreditsIcon,
   SettingsGeneralIcon,
@@ -17,7 +16,6 @@ import {
   SettingsSupportIcon,
   BluetoothIcon,
 } from "../common/icons";
-import AccountInfo from "./AccountInfo";
 import SoftwareUpdate from "./SoftwareUpdate";
 import BluetoothDevices from "./network/BluetoothDevices";
 import { useSettings } from "../../contexts/SettingsContext";
@@ -135,24 +133,6 @@ const settingsStructure = {
         description: "Display the elapsed track time below the progress bar.",
         storageKey: "elapsedTimeEnabled",
         defaultValue: false,
-      },
-    ],
-  },
-  account: {
-    title: "Account",
-    icon: SettingsAccountIcon,
-    items: [
-      {
-        id: "profile-info",
-        title: "Profile Information",
-        type: "custom",
-      },
-      {
-        id: "sign-out",
-        title: "Sign Out",
-        type: "action",
-        description: "Sign out of your Spotify account.",
-        action: "signOut",
       },
     ],
   },
@@ -536,11 +516,9 @@ const settingsStructure = {
 };
 
 export default function Settings({
-  accessToken,
   onOpenDonationModal,
   setActiveSection,
 }) {
-  const [userProfile, setUserProfile] = useState(null);
   const [versionInfo, setVersionInfo] = useState("Loading versions...");
   const [activeParent, setActiveParent] = useState(null);
   const [activeSubItem, setActiveSubItem] = useState(null);
@@ -574,25 +552,7 @@ export default function Settings({
     setTimeout(() => {
       setVersionInfo("Client version: 3.0.0\nOS version: 1.0.0");
     }, 1000);
-
-    if (accessToken) {
-      fetchSpotifyProfile();
-    }
-  }, [accessToken]);
-
-  const fetchSpotifyProfile = async () => {
-    try {
-      const response = await fetch("https://api.spotify.com/v1/me", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const profile = await response.json();
-      setUserProfile(profile);
-    } catch (error) {
-      console.error("Error fetching Spotify profile:", error);
-    }
-  };
+  }, []);
 
   const handleToggle = (key) => {
     updateSetting(key, !settings[key]);
@@ -877,8 +837,6 @@ export default function Settings({
         if (item.component) {
           const Component = item.component;
           return <Component key={item.id} />;
-        } else if (item.id === "profile-info") {
-          return <AccountInfo key={item.id} userProfile={userProfile} />;
         }
         return null;
       default:

@@ -37,7 +37,6 @@ export { default as ArrowLeftIcon } from "./ArrowLeftIcon";
 export { default as EyeIcon } from "./EyeIcon";
 export { default as EyeOffIcon } from "./EyeOffIcon";
 export { default as SettingsUpdateIcon } from "./SettingsUpdateIcon";
-export { default as SettingsAccountIcon } from "./SettingsAccountIcon";
 export { default as SettingsCreditsIcon } from "./SettingsCreditsIcon";
 export { default as SettingsGeneralIcon } from "./SettingsGeneralIcon";
 export { default as SettingsPlaybackIcon } from "./SettingsPlaybackIcon";
