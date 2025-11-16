@@ -130,16 +130,19 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
       return;
     }
 
+    if (!currentVersionRef.current) {
+      console.log("Skipping update check: Current version not loaded yet");
+      return;
+    }
+
     checkInProgress.current = true;
     setIsChecking(true);
     setError(null);
 
     try {
-      const versionToCheck = currentVersionRef.current
-        ? currentVersionRef.current.startsWith("v")
-          ? currentVersionRef.current
-          : `v${currentVersionRef.current}`
-        : "v4.0.0";
+      const versionToCheck = currentVersionRef.current.startsWith("v")
+        ? currentVersionRef.current
+        : `v${currentVersionRef.current}`;
 
       const otaCheckResult = await sendNocturneWsRequest("device.ota.check", {
         currentVersion: versionToCheck,
@@ -264,10 +267,10 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   };
 
   useEffect(() => {
-    if (autoCheck && eaSessionStarted && initialDataLoadComplete) {
+    if (autoCheck && eaSessionStarted && initialDataLoadComplete && currentVersion) {
       checkForUpdates();
     }
-  }, [autoCheck, eaSessionStarted, initialDataLoadComplete, checkForUpdates]);
+  }, [autoCheck, eaSessionStarted, initialDataLoadComplete, currentVersion, checkForUpdates]);
 
   const advanceUpdateChain = useCallback(() => {
     if (updateChain.length <= 1) {

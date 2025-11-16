@@ -4,7 +4,7 @@ import {
   CheckCircleIcon,
   RefreshIcon,
 } from "../common/icons";
-import { useSystemUpdate, useNocturneInfo } from "../../hooks/useNocturned";
+import { useSystemUpdate, useNocturneInfo, sendNocturneWsRequest } from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
 import { useSettings } from "../../contexts/SettingsContext";
 
@@ -134,9 +134,13 @@ const SoftwareUpdate = () => {
   };
 
   const handleReboot = useCallback(() => {
-    fetch("http://localhost:5000/device/power/reboot", {
-      method: "POST",
-    }).catch((err) => console.error("Restart request failed", err));
+    sendNocturneWsRequest("device.power.reboot", {})
+      .then(() => {
+        console.log("Reboot request sent");
+      })
+      .catch((err) => {
+        console.error("Reboot request failed:", err);
+      });
   }, []);
 
   const UpdateSection = ({
