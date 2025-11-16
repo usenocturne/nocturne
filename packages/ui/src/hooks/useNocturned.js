@@ -641,7 +641,6 @@ export const useNocturned = () => {
 
 export const useNocturneInfo = () => {
   const [version, setVersion] = useState(null);
-  const [serial, setSerial] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -659,17 +658,10 @@ export const useNocturneInfo = () => {
       } else {
         setVersion(null);
       }
-
-      if (data && data.serial) {
-        setSerial(data.serial);
-      } else {
-        setSerial(null);
-      }
     } catch (err) {
       console.error("Failed to fetch info from nocturned:", err);
       setError(err.message);
       setVersion(null);
-      setSerial(null);
     } finally {
       setIsLoading(false);
     }
@@ -681,7 +673,6 @@ export const useNocturneInfo = () => {
 
   return {
     version,
-    serial,
     isLoading,
     error,
     refetch: fetchInfo,

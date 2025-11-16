@@ -326,18 +326,12 @@ function App() {
 
   const {
     version: nocturneVersion,
-    serial,
     isLoading: isInfoLoading,
     refetch: refetchInfo,
   } = useNocturneInfo();
 
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(
-    () => localStorage.getItem("analyticsEnabled") !== "false",
-  );
-
   useEffect(() => {
     const syncFromStorage = () => {
-      setAnalyticsEnabled(localStorage.getItem("analyticsEnabled") !== "false");
       setHasSeenTutorialFlag(
         localStorage.getItem("hasSeenTutorial") === "true",
       );
@@ -371,39 +365,6 @@ function App() {
       window.removeEventListener("networkScreenHide", handleHideNetworkScreen);
     };
   }, []);
-
-  useEffect(() => {
-    if (isInfoLoading) return;
-    if (!serial) return;
-
-    const existing = document.getElementById("analytics");
-
-    if (!analyticsEnabled) {
-      if (existing) {
-        existing.remove();
-      }
-      return;
-    }
-
-    if (existing) return;
-
-    window.umamiBeforeSend = (type, payload) => {
-      if (!payload) return false;
-      return { ...payload, id: serial };
-    };
-
-    const script = document.createElement("script");
-    script.defer = true;
-    script.src = "https://p.itsnebula.net/script.js";
-    script.setAttribute(
-      "data-website-id",
-      "3465cd10-6beb-4dd9-969c-f7f44704fd18",
-    );
-    script.setAttribute("data-before-send", "umamiBeforeSend");
-    script.id = "analytics";
-
-    document.body.appendChild(script);
-  }, [isInfoLoading, serial, analyticsEnabled]);
 
   const {
     devices,
