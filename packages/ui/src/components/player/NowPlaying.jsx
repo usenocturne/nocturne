@@ -234,14 +234,10 @@ export default function NowPlaying({
   }, [currentPlayback?.shuffle_state, currentPlayback?.repeat_state]);
 
   useEffect(() => {
-    if (
-      isStartingPlayback &&
-      currentPlayback?.item &&
-      currentPlayback?.is_playing
-    ) {
+    if (isStartingPlayback && currentPlayback?.item) {
       setIsStartingPlayback(false);
     }
-  }, [isStartingPlayback, currentPlayback?.item, currentPlayback?.is_playing]);
+  }, [isStartingPlayback, currentPlayback?.item]);
 
   const handlePlayPause = async () => {
     if (isPhoneMedia) {
