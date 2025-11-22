@@ -18,6 +18,7 @@ let isReceivingNowPlayingUpdatesGlobal = false;
 let isProcessingArtwork = false;
 let artworkCache = new Map();
 const MAX_ARTWORK_CACHE_SIZE = 10;
+let lastEaSessionStartTime = 0;
 
 const cleanupArtworkCache = () => {
   if (artworkCache.size > MAX_ARTWORK_CACHE_SIZE) {
@@ -541,6 +542,20 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   }, [isSpotifyReady, processPlaybackState]);
 
   useEffect(() => {
+    const handleEaSessionStart = (data) => {
+      if (data.type === "event" && data.topic === "ea.session.started") {
+        lastEaSessionStartTime = Date.now();
+      }
+    };
+
+    const cleanup = addGlobalWsListener(`ea-session-tracker-${Date.now()}`, {
+      onMessage: handleEaSessionStart,
+    });
+
+    return cleanup;
+  }, []);
+
+  useEffect(() => {
     const handlePhoneMediaEvent = (data) => {
       if (data.type === "event" && data.topic === "media.nowPlaying.update") {
         beginNowPlayingUpdateWindow();
@@ -570,6 +585,20 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           }
         }
 
+        const hasTitle =
+          media.MediaItemTitle && media.MediaItemTitle.trim() !== "";
+        const hasArtist =
+          media.MediaItemArtist && media.MediaItemArtist.trim() !== "";
+        const isStopped = playback.PlaybackStatus === "stopped";
+        const isEmpty = !hasTitle && !hasArtist && isStopped;
+
+        if (isEmpty) {
+          const timeSinceConnection = Date.now() - lastEaSessionStartTime;
+          if (timeSinceConnection < 10000) {
+            return;
+          }
+        }
+
         const shuffleState =
           playback.PlaybackShuffleMode === "albums" ||
           playback.PlaybackShuffleMode === "songs";
@@ -581,10 +610,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               ? "context"
               : "off";
 
-        const hasTitle =
-          media.MediaItemTitle && media.MediaItemTitle.trim() !== "";
-        const hasArtist =
-          media.MediaItemArtist && media.MediaItemArtist.trim() !== "";
         const isNotPlaying = !hasTitle && !hasArtist;
 
         const title = isNotPlaying
