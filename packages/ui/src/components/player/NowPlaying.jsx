@@ -157,8 +157,6 @@ export default function NowPlaying({
   }, [currentPlayback?.device?.volume_percent, updateVolumeFromDevice]);
 
   const showVolumeOverlay = useCallback(() => {
-    if (!manualVolumeChangeRef.current) return;
-
     volumeLastAdjustedRef.current = Date.now();
 
     if (volumeTimerRef.current) {
