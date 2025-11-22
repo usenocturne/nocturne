@@ -1011,6 +1011,18 @@ export const AutoUpdateManager = () => {
   }, [currentVersion, startUpdate, updateInfo]);
 
   useEffect(() => {
+    if (
+      !settings?.autoUpdateEnabled ||
+      autoUpdateTriggeredRef.current ||
+      !hasNocturneUpdate
+    ) {
+      return;
+    }
+
+    autoUpdateTriggeredRef.current = true;
+  }, [settings?.autoUpdateEnabled, hasNocturneUpdate]);
+
+  useEffect(() => {
     if (!settings?.autoUpdateEnabled) {
       autoUpdateTriggeredRef.current = false;
       clearAutoUpdateTimer();
