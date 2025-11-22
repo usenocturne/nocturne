@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogBackdrop,
 } from "@headlessui/react";
-import { useBluetooth } from "../../../hooks/useNocturned";
+import { useBluetooth, useDeviceInfo } from "../../../hooks/useNocturned";
 
 const BluetoothDevices = () => {
   const {
@@ -19,6 +19,7 @@ const BluetoothDevices = () => {
     startDiscovery,
     stopDiscovery,
   } = useBluetooth();
+  const { deviceInfo } = useDeviceInfo();
 
   const [showForgetDialog, setShowForgetDialog] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -105,7 +106,7 @@ const BluetoothDevices = () => {
             No Devices Found
           </p>
           <p className="text-[24px] font-[560] text-white/60 tracking-tight mt-2">
-            Connect to "Nocturne" in your phone's Bluetooth settings.
+            Connect to "{deviceInfo?.device || "Nocturne"}" in your phone's Bluetooth settings.
           </p>
         </div>
       );

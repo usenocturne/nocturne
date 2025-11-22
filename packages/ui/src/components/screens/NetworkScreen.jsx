@@ -8,7 +8,7 @@ import {
 } from "../common/icons";
 import BluetoothDevices from "../settings/network/BluetoothDevices";
 import GradientBackground from "../common/GradientBackground";
-import { useBluetooth } from "../../hooks/useNocturned";
+import { useBluetooth, useDeviceInfo } from "../../hooks/useNocturned";
 
 const NetworkScreen = ({
   isConnectionLost = true,
@@ -16,6 +16,7 @@ const NetworkScreen = ({
   reconnectionExhausted = false,
 }) => {
   const { setDiscoverable } = useBluetooth();
+  const { deviceInfo } = useDeviceInfo();
   const [showMain, setShowMain] = React.useState(true);
   const [showParent, setShowParent] = React.useState(false);
   const [showSubpage, setShowSubpage] = React.useState(false);
@@ -186,11 +187,11 @@ const NetworkScreen = ({
                 <NocturneIcon className="h-12 w-auto" />
 
                 <div className="space-y-4">
-                  <h2 className="text-5xl text-white tracking-tight font-semibold w-[24rem]">
-                    Connection Lost
+                  <h2 className="text-5xl text-white tracking-tight font-semibold w-[32rem]">
+                    Phone Disconnected
                   </h2>
                   <p className="text-[28px] text-white/60 tracking-tight w-[32rem]">
-                    Enable Bluetooth Tethering and connect to "Nocturne" in your
+                    Connect to "{deviceInfo?.device || "Nocturne"}" in your
                     phone's settings.
                   </p>
 

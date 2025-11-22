@@ -692,6 +692,44 @@ export const useNocturneInfo = () => {
   };
 };
 
+export const useDeviceInfo = () => {
+  const [deviceInfo, setDeviceInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchDeviceInfo = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const data = await sendWsRequest("device.info", {});
+
+      if (data) {
+        setDeviceInfo(data);
+      } else {
+        setDeviceInfo(null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch device info from nocturned:", err);
+      setError(err.message);
+      setDeviceInfo(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDeviceInfo();
+  }, [fetchDeviceInfo]);
+
+  return {
+    deviceInfo,
+    isLoading,
+    error,
+    refetch: fetchDeviceInfo,
+  };
+};
+
 export const useSystemUpdate = () => {
   const { wsConnected, apiRequest, addMessageListener, removeMessageListener } =
     useNocturned();
