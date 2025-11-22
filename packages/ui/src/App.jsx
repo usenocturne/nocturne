@@ -380,6 +380,7 @@ function App() {
     disconnectDevice,
     enableNetworking,
     stopRetrying,
+    reconnectAttempt,
   } = useBluetooth();
 
   const { addMessageListener, removeMessageListener, wsConnected } =
@@ -993,7 +994,7 @@ function App() {
     !showTutorial &&
     !showAuthScreen &&
     !showSplash &&
-    !splashFlowWithDeviceRef.current;
+    reconnectAttempt === 0;
 
   let content;
   if (showSplash) {

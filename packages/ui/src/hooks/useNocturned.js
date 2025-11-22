@@ -390,6 +390,19 @@ const setupGlobalWebSocket = async () => {
           emitSpotifyAuthState();
         }
 
+        if (
+          data &&
+          data.type === "event" &&
+          data.topic === "network.status"
+        ) {
+          const statusData = data.data || {};
+          if (statusData.status === "disconnected") {
+            window.dispatchEvent(new Event("networkBannerShow"));
+          } else if (statusData.status === "connected") {
+            window.dispatchEvent(new Event("networkBannerHide"));
+          }
+        }
+
         if (data && data.type === "response" && data.id) {
           const pending = pendingWsRequests.get(data.id);
           if (pending) {
