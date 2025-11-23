@@ -832,7 +832,16 @@ export const useSystemUpdate = () => {
       ) {
         const result = data.result ?? data;
 
-        if (result && result.success) {
+        if (result && result.current === "in_progress" && result.ota === "started") {
+          setUpdateStatus((prev) => ({
+            ...prev,
+            stage: "installing",
+            inProgress: true,
+          }));
+          return;
+        }
+
+        if (result && (result.success || (result.current === "finished" && result.ota === "complete"))) {
           setUpdateStatus((prev) => ({
             ...prev,
             inProgress: false,
@@ -846,7 +855,19 @@ export const useSystemUpdate = () => {
             execCommands(postCommandsRef.current);
             postCommandsRef.current = [];
           }
-        } else {
+        } else if (result && result.current === "finished" && result.ota === "failed") {
+          const message = result?.message || result?.error || "Update apply failed";
+          setIsError(true);
+          setErrorMessage(`Failed to apply update: ${message}`);
+          setIsUpdating(false);
+          setUpdateStatus((prev) => ({
+            ...prev,
+            inProgress: false,
+            error: message,
+          }));
+          setIsApplyComplete(false);
+          otaApplyTriggered = false;
+        } else if (!result || (!result.success && !result.current)) {
           const message =
             result?.message || result?.error || "Update apply failed";
           setIsError(true);
@@ -865,6 +886,22 @@ export const useSystemUpdate = () => {
       }
 
       if (data.type === "event" && data.topic === "device.ota.complete") {
+        const eventData = data.data || {};
+
+        if (eventData.status !== "complete") {
+          console.error("OTA download failed with status:", eventData.status);
+          setIsError(true);
+          setErrorMessage("Download failed");
+          setIsUpdating(false);
+          setUpdateStatus((prev) => ({
+            ...prev,
+            inProgress: false,
+            error: "Download failed",
+          }));
+          setIsApplyComplete(false);
+          return;
+        }
+
         if (otaApplyTriggered) {
           return;
         }
