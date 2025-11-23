@@ -22,6 +22,7 @@ import {
 import { useSpotifyData } from "./hooks/useSpotifyData";
 import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
+import { OTAProvider } from "./contexts/OTAContext";
 import React from "react";
 import {
   NotificationProvider,
@@ -1087,26 +1088,25 @@ function App() {
 
   return (
     <SettingsProvider>
-      <AutoUpdateManager />
-      <NotificationProvider>
-        <NotificationEffects
-          isUpdating={isUpdating}
-          updateStatus={updateStatus}
-          activeSection={activeSection}
-          handleReboot={handleReboot}
-          isError={isError}
-          errorMessage={errorMessage}
-        />
-        {!showConnectionLostScreen && !showTutorial && (
-          <UpdateCheckNotification
-            setActiveSection={setActiveSection}
-            currentVersion={nocturneVersion}
-            isInfoLoading={isInfoLoading}
-            refetchInfo={refetchInfo}
+      <OTAProvider>
+        <AutoUpdateManager />
+        <NotificationProvider>
+          <NotificationEffects
+            isUpdating={isUpdating}
+            updateStatus={updateStatus}
+            activeSection={activeSection}
+            handleReboot={handleReboot}
+            isError={isError}
+            errorMessage={errorMessage}
           />
-        )}
-        <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
-          <Router>
+          {!showConnectionLostScreen && !showTutorial && (
+            <UpdateCheckNotification
+              setActiveSection={setActiveSection}
+              currentVersion={nocturneVersion}
+            />
+          )}
+          <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
+            <Router>
             <FontLoader />
             <main
               className="overflow-hidden relative min-h-screen rounded-2xl"
@@ -1163,6 +1163,7 @@ function App() {
           </Router>
         </DeviceSwitcherContext.Provider>
       </NotificationProvider>
+      </OTAProvider>
     </SettingsProvider>
   );
 }

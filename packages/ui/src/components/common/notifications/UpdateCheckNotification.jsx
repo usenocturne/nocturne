@@ -5,32 +5,16 @@ import { useSettings } from "../../../contexts/SettingsContext";
 import { SettingsUpdateIcon } from "../icons";
 
 function UpdateCheckNotification({
-  showLoader,
   setActiveSection,
   currentVersion,
-  isInfoLoading,
-  refetchInfo,
 }) {
   const { addNotification } = useNotifications();
-  const hasCheckedRef = useRef(false);
   const hasNotifiedRef = useRef(false);
 
   const { settings } = useSettings();
   const autoUpdateEnabled = settings?.autoUpdateEnabled;
 
-  const { updateInfo, checkForUpdates } = useUpdateCheck(currentVersion, false);
-
-  useEffect(() => {
-    if (showLoader) return;
-    if (isInfoLoading) return;
-    if (hasCheckedRef.current) return;
-    hasCheckedRef.current = true;
-
-    (async () => {
-      await refetchInfo();
-      checkForUpdates();
-    })();
-  }, [showLoader, isInfoLoading, checkForUpdates, refetchInfo]);
+  const { updateInfo } = useUpdateCheck(currentVersion, true);
 
   useEffect(() => {
     if (!updateInfo?.hasUpdate) return;

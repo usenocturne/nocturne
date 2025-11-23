@@ -929,6 +929,13 @@ export const useSystemUpdate = () => {
           setIsApplyComplete(false);
           otaApplyTriggered = false;
         }
+      } else if (data.type === "event" && data.topic === "device.ota.status") {
+        window.dispatchEvent(new CustomEvent('nocturne-ws-message', {
+          detail: {
+            topic: 'device.ota.status',
+            data: data.data
+          }
+        }));
       } else if (data.type === "update_progress" && data.payload) {
         const payload = data.payload;
 
