@@ -19,6 +19,7 @@ let isProcessingArtwork = false;
 let artworkCache = new Map();
 const MAX_ARTWORK_CACHE_SIZE = 10;
 let lastEaSessionStartTime = 0;
+let pendingSpotifyMediaUpdate = null;
 
 const cleanupArtworkCache = () => {
   if (artworkCache.size > MAX_ARTWORK_CACHE_SIZE) {
@@ -85,6 +86,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   const processPlaybackState = useCallback(
     (data) => {
       if (!data) return;
+
+      if (!data.item?.is_spotify_pending) {
+        pendingSpotifyMediaUpdate = null;
+      }
 
       const isEpisode =
         data.currently_playing_type === "episode" ||
@@ -154,12 +159,41 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         return;
       }
 
+      const currentItem = currentPlaybackRef.current?.item;
+      const currentBlobUrl = currentItem?.album?.images?.[0]?.url;
+      const hasBlobArtwork = currentBlobUrl?.startsWith("blob:");
+      const incomingTrackName = data.item?.name?.toLowerCase()?.trim();
+      const currentTrackName = currentItem?.name?.toLowerCase()?.trim();
+      const isSameTrack =
+        incomingTrackName &&
+        currentTrackName &&
+        incomingTrackName === currentTrackName;
+      const preservedBlobArtwork =
+        hasBlobArtwork && isSameTrack ? currentBlobUrl : null;
+
       setCurrentPlayback((prevPlayback) => {
         const trackUri = data.item?.uri;
         const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
+        const prevBlobArtwork = prevPlayback?.item?.album?.images?.[0]?.url;
+        const hasPrevBlobArtwork = prevBlobArtwork?.startsWith("blob:");
+        const prevTrackName = prevPlayback?.item?.name?.toLowerCase()?.trim();
+        const shouldPreservePrevBlob =
+          hasPrevBlobArtwork &&
+          incomingTrackName &&
+          prevTrackName &&
+          incomingTrackName === prevTrackName;
+
         let itemWithArtwork = data.item;
-        if (cachedArtworkUrl && data.item?.album?.images) {
+        if (shouldPreservePrevBlob && data.item?.album?.images) {
+          itemWithArtwork = {
+            ...data.item,
+            album: {
+              ...data.item.album,
+              images: [{ url: prevBlobArtwork }],
+            },
+          };
+        } else if (cachedArtworkUrl && data.item?.album?.images) {
           itemWithArtwork = {
             ...data.item,
             album: {
@@ -192,16 +226,18 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const trackUri = data.item.uri;
         let cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
+        const artworkImages = preservedBlobArtwork
+          ? [{ url: preservedBlobArtwork }]
+          : cachedArtworkUrl
+            ? [{ url: cachedArtworkUrl }]
+            : data.item.album?.images;
+
         const currentAlbum =
           data.item.is_local || data.item.is_phone_media
             ? {
                 id: `local-${data.item.uri}`,
                 name: data.item.album?.name || data.item.name,
-                images: cachedArtworkUrl
-                  ? [{ url: cachedArtworkUrl }]
-                  : data.item.album?.images || [
-                      { url: "/images/not-playing.webp" },
-                    ],
+                images: artworkImages || [{ url: "/images/not-playing.webp" }],
                 artists: data.item.artists,
                 type: "local-track",
                 uri: data.item.uri,
@@ -210,9 +246,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               }
             : {
                 ...data.item.album,
-                images: cachedArtworkUrl
-                  ? [{ url: cachedArtworkUrl }]
-                  : data.item.album?.images,
+                images: artworkImages,
                 artists: data.item.artists,
               };
 
@@ -385,6 +419,16 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             phoneMediaArtworkBlobUrl = null;
           }
 
+          const prevBlobUrl = currentPlaybackRef.current?.item?.album?.images?.[0]?.url;
+          const hasPrevBlobArtwork = prevBlobUrl?.startsWith("blob:");
+          const prevTrackName = currentPlaybackRef.current?.item?.name?.toLowerCase()?.trim();
+          const incomingTrackName = playerState.track?.metadata?.title?.toLowerCase()?.trim();
+          const isSameTrack =
+            incomingTrackName &&
+            prevTrackName &&
+            incomingTrackName === prevTrackName;
+          const shouldPreserveBlobArtwork = hasPrevBlobArtwork && isSameTrack;
+
           const isEpisode =
             playerState.track?.uri?.startsWith("spotify:episode:");
 
@@ -446,25 +490,29 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                           id: playerState.track.metadata.album_uri?.split(":")[2],
                           uri: playerState.track.metadata.album_uri,
                           name: playerState.track.metadata.album_title,
-                          images: playerState.track.metadata.image_url
-                            ? [
-                                {
-                                  url: playerState.track.metadata.image_url.startsWith(
-                                    "http",
-                                  )
-                                    ? playerState.track.metadata.image_url
-                                    : `https://${playerState.track.metadata.image_url}`,
-                                },
-                              ]
-                            : playerState.track.metadata.is_narration === "true" ||
-                                playerState.track.metadata.album_artist_name ===
-                                  "DJ X"
-                              ? [{ url: "/images/radio-cover/dj.webp" }]
-                              : [],
+                          images: shouldPreserveBlobArtwork
+                            ? [{ url: prevBlobUrl }]
+                            : playerState.track.metadata.image_url
+                              ? [
+                                  {
+                                    url: playerState.track.metadata.image_url.startsWith(
+                                      "http",
+                                    )
+                                      ? playerState.track.metadata.image_url
+                                      : `https://${playerState.track.metadata.image_url}`,
+                                  },
+                                ]
+                              : playerState.track.metadata.is_narration === "true" ||
+                                  playerState.track.metadata.album_artist_name ===
+                                    "DJ X"
+                                ? [{ url: "/images/radio-cover/dj.webp" }]
+                                : [],
                         }
-                      : (currentPlaybackRef.current?.item?.uri === playerState.track.uri
-                          ? currentPlaybackRef.current.item.album
-                          : {}),
+                      : shouldPreserveBlobArtwork
+                        ? { images: [{ url: prevBlobUrl }] }
+                        : (currentPlaybackRef.current?.item?.uri === playerState.track.uri
+                            ? currentPlaybackRef.current.item.album
+                            : {}),
                     artists:
                       playerState.track.metadata.is_narration === "true" ||
                       playerState.track.metadata.album_artist_name === "DJ X"
@@ -561,18 +609,48 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         beginNowPlayingUpdateWindow();
         isProcessingArtwork = false;
 
-        const timeSinceSpotifyStateChange =
-          Date.now() - lastSpotifyDeviceStateChange;
-        if (timeSinceSpotifyStateChange < 5000) {
-          return;
-        }
-
         const media = data.data?.MediaItemAttributes;
         const playback = data.data?.PlaybackAttributes;
 
         if (!media || !playback) return;
 
         if (playback.PlaybackAppName === "Spotify") {
+          pendingSpotifyMediaUpdate = { media, playback, timestamp: Date.now() };
+
+          const currentItem = currentPlaybackRef.current?.item;
+          const hasRealSpotifyData =
+            currentItem?.uri?.startsWith("spotify:") &&
+            !currentItem?.is_spotify_pending;
+
+          if (hasRealSpotifyData) {
+            const title = media.MediaItemTitle || currentItem.name;
+            const artist = media.MediaItemArtist || currentItem.artists?.[0]?.name;
+
+            setCurrentPlayback((prevPlayback) => {
+              if (!prevPlayback?.item) return prevPlayback;
+              const updatedPlayback = {
+                ...prevPlayback,
+                item: {
+                  ...prevPlayback.item,
+                  name: title,
+                  artists: artist
+                    ? prevPlayback.item.artists?.map((a, i) =>
+                        i === 0 ? { ...a, name: artist } : a,
+                      ) || [{ name: artist }]
+                    : prevPlayback.item.artists,
+                },
+              };
+              currentPlaybackRef.current = updatedPlayback;
+              return updatedPlayback;
+            });
+          }
+
+          return;
+        }
+
+        const timeSinceSpotifyStateChange =
+          Date.now() - lastSpotifyDeviceStateChange;
+        if (timeSinceSpotifyStateChange < 5000) {
           return;
         }
 
@@ -697,6 +775,77 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             const blob = new Blob([bytes], { type: "image/jpeg" });
             const oldBlobUrl = phoneMediaArtworkBlobUrl;
             phoneMediaArtworkBlobUrl = URL.createObjectURL(blob);
+
+            const currentItem = currentPlaybackRef.current?.item;
+            const currentIsPending = currentItem?.is_spotify_pending;
+            const hasRealSpotifyData = currentItem?.uri?.startsWith("spotify:") && !currentIsPending;
+            if (pendingSpotifyMediaUpdate && !hasRealSpotifyData) {
+              const { media, playback } = pendingSpotifyMediaUpdate;
+              const title = media.MediaItemTitle || "Unknown Title";
+              const artist = media.MediaItemArtist || "Unknown Artist";
+              const albumName = media.MediaItemAlbumName || title;
+              const durationMs = media.MediaItemPlaybackDurationInMilliSeconds || 0;
+
+              const newTrackUri = `spotify:pending:${title}`;
+              artworkCache.set(newTrackUri, phoneMediaArtworkBlobUrl);
+
+              const shuffleState =
+                playback.PlaybackShuffleMode === "albums" ||
+                playback.PlaybackShuffleMode === "songs";
+              const repeatState =
+                playback.PlaybackRepeatMode === "one"
+                  ? "track"
+                  : playback.PlaybackRepeatMode === "all"
+                    ? "context"
+                    : "off";
+
+              const placeholderState = {
+                is_playing: playback.PlaybackStatus === "playing",
+                timestamp: Date.now(),
+                progress_ms: null,
+                context: null,
+                item: {
+                  id: `spotify-pending-${title}`,
+                  uri: newTrackUri,
+                  type: "track",
+                  name: title,
+                  album: {
+                    id: `spotify-pending-album-${albumName}`,
+                    uri: `spotify:pending:album:${albumName}`,
+                    name: albumName,
+                    images: [{ url: phoneMediaArtworkBlobUrl }],
+                  },
+                  artists: [
+                    {
+                      id: `spotify-pending-artist-${artist}`,
+                      uri: `spotify:pending:artist:${artist}`,
+                      name: artist,
+                      type: "artist",
+                    },
+                  ],
+                  duration_ms: durationMs,
+                  is_spotify_pending: true,
+                },
+                shuffle_state: shuffleState,
+                repeat_state: repeatState,
+                device: null,
+                currently_playing_type: "track",
+                playback_speed: playback.PlaybackRate || 1,
+              };
+
+              processPlaybackState(placeholderState);
+              pendingSpotifyMediaUpdate = null;
+
+              if (oldBlobUrl && oldBlobUrl !== phoneMediaArtworkBlobUrl) {
+                const isInCache = Array.from(artworkCache.values()).includes(oldBlobUrl);
+                if (!isInCache) {
+                  setTimeout(() => {
+                    URL.revokeObjectURL(oldBlobUrl);
+                  }, 100);
+                }
+              }
+              return;
+            }
 
             const trackUri = currentPlaybackRef.current?.item?.uri;
 

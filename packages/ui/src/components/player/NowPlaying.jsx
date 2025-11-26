@@ -85,6 +85,7 @@ export default function NowPlaying({
   );
   const isLocalMedia = currentPlayback?.item?.is_local === true;
   const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
+  const isSpotifyPending = currentPlayback?.item?.is_spotify_pending === true;
   const isSmartphoneDevice = currentPlayback?.device?.type === "Smartphone";
   const contentContainerRef = useRef(null);
 
@@ -910,7 +911,7 @@ export default function NowPlaying({
               }
               skipFetchWhenNowPlaying={true}
               isReceivingNowPlayingUpdates={isReceivingNowPlayingUpdates}
-              disableSpotifyFetch={isPhoneMedia}
+              disableSpotifyFetch={isPhoneMedia || isSpotifyPending}
               className="w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
             />
           </div>
@@ -1008,14 +1009,16 @@ export default function NowPlaying({
 
       <div
         className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}
-        style={{ visibility: isPhoneMedia ? "hidden" : "visible" }}
-        aria-hidden={isPhoneMedia}
+        style={{ visibility: isPhoneMedia && !isSpotifyPending ? "hidden" : "visible" }}
+        aria-hidden={isPhoneMedia && !isSpotifyPending}
       >
         <ProgressBar
           progress={
-            currentPlayback?.item && !isStartingPlayback
-              ? progressPercentage
-              : 0
+            isSpotifyPending
+              ? null
+              : currentPlayback?.item && !isStartingPlayback
+                ? progressPercentage
+                : 0
           }
           isPlaying={isPlaying && !isStartingPlayback}
           durationMs={duration}
@@ -1023,7 +1026,7 @@ export default function NowPlaying({
           onPlayPause={handlePlayPause}
           onScrubbingChange={handleScrubbingChange}
           updateProgress={updateProgress}
-          disabled={isPhoneMedia}
+          disabled={isPhoneMedia || isSpotifyPending}
         />
       </div>
 
@@ -1034,14 +1037,14 @@ export default function NowPlaying({
               ? "translate-y-24 opacity-0"
               : "translate-y-0 opacity-100"
           }`}
-          style={{ visibility: isPhoneMedia ? "hidden" : "visible" }}
-          aria-hidden={isPhoneMedia}
+          style={{ visibility: isPhoneMedia && !isSpotifyPending ? "hidden" : "visible" }}
+          aria-hidden={isPhoneMedia && !isSpotifyPending}
         >
           <div className="flex justify-between">
             {currentPlayback && currentPlayback.item ? (
               <>
                 <span className="text-white/60 text-[20px]">
-                  {convertTimeToLength(progressMs, true)}
+                  {isSpotifyPending ? "--:--" : convertTimeToLength(progressMs, true)}
                 </span>
                 <span className="text-white/60 text-[20px]">
                   {convertTimeToLength(currentPlayback.item.duration_ms, true)}

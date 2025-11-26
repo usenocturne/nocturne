@@ -15,8 +15,11 @@ const ProgressBar = ({
   const wasPlayingRef = useRef(false);
   const containerRef = useRef(null);
 
+  const effectiveProgress = progress ?? 0;
+  const isProgressUnknown = progress === null;
+
   const handleClick = () => {
-    if (disabled) return;
+    if (disabled || isProgressUnknown) return;
 
     setIsScrubbing(true);
     onScrubbingChange(true);
@@ -33,14 +36,14 @@ const ProgressBar = ({
       const step = 1.5;
 
       setScrubbingProgress((prev) => {
-        const nextValue = (prev ?? progress) + (delta > 0 ? step : -step);
+        const nextValue = (prev ?? effectiveProgress) + (delta > 0 ? step : -step);
         return Math.max(0, Math.min(100, nextValue));
       });
     };
 
     window.addEventListener("wheel", handleWheel, { passive: false });
     return () => window.removeEventListener("wheel", handleWheel);
-  }, [isScrubbing, progress]);
+  }, [isScrubbing, effectiveProgress]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -84,7 +87,7 @@ const ProgressBar = ({
     updateProgress,
   ]);
 
-  const finalProgress = scrubbingProgress ?? progress;
+  const finalProgress = scrubbingProgress ?? effectiveProgress;
   const shouldShowTimestampOutside = finalProgress < 8;
 
   return (
