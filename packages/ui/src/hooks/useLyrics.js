@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 
 export function useLyrics(currentPlayback, progressMs) {
@@ -14,6 +14,13 @@ export function useLyrics(currentPlayback, progressMs) {
   const autoScrollTimeoutRef = useRef(null);
 
   const { isSpotifyReady, sendSpotifyCommand } = useSpotifyWebSocket();
+
+  const isTimeSynced = useMemo(() => {
+    if (lyrics.length < 2) return false;
+    const timestamps = lyrics.map((l) => parseInt(l.startTimeMs) || 0);
+    const uniqueTimestamps = new Set(timestamps);
+    return uniqueTimestamps.size > 1;
+  }, [lyrics]);
 
   const fetchLyrics = useCallback(
     async (trackId, trackName, artistName) => {
@@ -73,6 +80,13 @@ export function useLyrics(currentPlayback, progressMs) {
 
   useEffect(() => {
     if (lyrics.length > 0 && progressMs !== undefined) {
+      if (!isTimeSynced) {
+        if (currentLyricIndex !== 0) {
+          setCurrentLyricIndex(0);
+        }
+        return;
+      }
+
       const currentTimeMs = progressMs;
 
       if (
@@ -131,6 +145,7 @@ export function useLyrics(currentPlayback, progressMs) {
     currentLyricIndex,
     autoScrollSuspended,
     resumeOnNextLyric,
+    isTimeSynced,
   ]);
 
   const suspendAutoScroll = useCallback((durationMs) => {
@@ -236,5 +251,6 @@ export function useLyrics(currentPlayback, progressMs) {
     suspendAutoScroll,
     resumeAutoScrollOnNextLyric,
     scrollToTop,
+    isTimeSynced,
   };
 }

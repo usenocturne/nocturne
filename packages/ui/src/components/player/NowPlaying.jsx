@@ -515,6 +515,7 @@ export default function NowPlaying({
     suspendAutoScroll,
     resumeAutoScrollOnNextLyric,
     scrollToTop,
+    isTimeSynced,
   } = useLyrics(currentPlayback, progressMs);
 
   const handleColorsExtracted = useCallback(
@@ -960,13 +961,15 @@ export default function NowPlaying({
                     <p
                       key={index}
                       className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto ${
-                        index === currentLyricIndex
-                          ? "text-white current-lyric-animation"
-                          : index === currentLyricIndex - 1 ||
-                              index === currentLyricIndex + 1
-                            ? "text-white/40"
-                            : "text-white/20"
-                      } cursor-pointer select-none`}
+                        isTimeSynced
+                          ? index === currentLyricIndex
+                            ? "text-white current-lyric-animation"
+                            : index === currentLyricIndex - 1 ||
+                                index === currentLyricIndex + 1
+                              ? "text-white/40"
+                              : "text-white/20"
+                          : "text-white/80"
+                      } ${isTimeSynced ? "cursor-pointer" : ""} select-none`}
                       style={{
                         transform: "translateZ(0)",
                         backfaceVisibility: "hidden",
@@ -975,23 +978,30 @@ export default function NowPlaying({
                         outline: "none",
                         boxShadow: "none",
                       }}
-                      onClick={() =>
-                        handleLyricClick(
-                          parseInt(lyric.startTimeMs) / 1000,
-                          index,
-                        )
+                      onClick={
+                        isTimeSynced
+                          ? () =>
+                              handleLyricClick(
+                                parseInt(lyric.startTimeMs) / 1000,
+                                index,
+                              )
+                          : undefined
                       }
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          handleLyricClick(
-                            parseInt(lyric.startTimeMs) / 1000,
-                            index,
-                          );
-                        }
-                      }}
+                      role={isTimeSynced ? "button" : undefined}
+                      tabIndex={isTimeSynced ? 0 : undefined}
+                      onKeyDown={
+                        isTimeSynced
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleLyricClick(
+                                  parseInt(lyric.startTimeMs) / 1000,
+                                  index,
+                                );
+                              }
+                            }
+                          : undefined
+                      }
                     >
                       {lyric.words}
                     </p>
