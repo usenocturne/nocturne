@@ -828,7 +828,9 @@ export const useSystemUpdate = () => {
     async (data) => {
       if (
         data.type === "response" &&
-        (data.method === "device.ota.apply" || otaApplyTriggered)
+        (data.method === "device.ota.apply" ||
+         (otaApplyTriggered && data.result &&
+          (data.result.current !== undefined || data.result.ota !== undefined)))
       ) {
         const result = data.result ?? data;
 
