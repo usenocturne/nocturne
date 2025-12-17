@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 
+const SCRUB_TIMEOUT_MS = 3000;
+
 const ProgressBar = ({
   progress,
   isPlaying,
@@ -14,9 +16,46 @@ const ProgressBar = ({
   const [scrubbingProgress, setScrubbingProgress] = useState(null);
   const wasPlayingRef = useRef(false);
   const containerRef = useRef(null);
+  const scrubTimeoutRef = useRef(null);
+  const hasScrubbedRef = useRef(false);
+  const scrubbingProgressRef = useRef(null);
+  const durationMsRef = useRef(durationMs);
+  const onSeekRef = useRef(onSeek);
+  const onScrubbingChangeRef = useRef(onScrubbingChange);
+  const updateProgressRef = useRef(updateProgress);
+
+  useEffect(() => {
+    durationMsRef.current = durationMs;
+    onSeekRef.current = onSeek;
+    onScrubbingChangeRef.current = onScrubbingChange;
+    updateProgressRef.current = updateProgress;
+  }, [durationMs, onSeek, onScrubbingChange, updateProgress]);
 
   const effectiveProgress = progress ?? 0;
   const isProgressUnknown = progress === null;
+
+  const clearScrubTimeout = () => {
+    if (scrubTimeoutRef.current) {
+      clearTimeout(scrubTimeoutRef.current);
+      scrubTimeoutRef.current = null;
+    }
+  };
+
+  const exitScrubbing = (shouldSeek = false) => {
+    clearScrubTimeout();
+    setIsScrubbing(false);
+    onScrubbingChangeRef.current(false);
+
+    if (shouldSeek && scrubbingProgressRef.current !== null) {
+      const seekMs = Math.floor((scrubbingProgressRef.current / 100) * durationMsRef.current);
+      onSeekRef.current(seekMs);
+      updateProgressRef.current?.(seekMs);
+    }
+
+    setScrubbingProgress(null);
+    scrubbingProgressRef.current = null;
+    hasScrubbedRef.current = false;
+  };
 
   const handleClick = () => {
     if (disabled || isProgressUnknown) return;
@@ -24,6 +63,15 @@ const ProgressBar = ({
     setIsScrubbing(true);
     onScrubbingChange(true);
     wasPlayingRef.current = isPlaying;
+    hasScrubbedRef.current = false;
+    scrubbingProgressRef.current = null;
+
+    clearScrubTimeout();
+    scrubTimeoutRef.current = setTimeout(() => {
+      if (!hasScrubbedRef.current) {
+        exitScrubbing(false);
+      }
+    }, SCRUB_TIMEOUT_MS);
   };
 
   useEffect(() => {
@@ -35,9 +83,19 @@ const ProgressBar = ({
       const delta = event.deltaX;
       const step = 1.5;
 
+      hasScrubbedRef.current = true;
+
       setScrubbingProgress((prev) => {
         const nextValue = (prev ?? effectiveProgress) + (delta > 0 ? step : -step);
-        return Math.max(0, Math.min(100, nextValue));
+        const clampedValue = Math.max(0, Math.min(100, nextValue));
+        scrubbingProgressRef.current = clampedValue;
+
+        clearScrubTimeout();
+        scrubTimeoutRef.current = setTimeout(() => {
+          exitScrubbing(true);
+        }, SCRUB_TIMEOUT_MS);
+
+        return clampedValue;
       });
     };
 
@@ -46,30 +104,22 @@ const ProgressBar = ({
   }, [isScrubbing, effectiveProgress]);
 
   useEffect(() => {
+    return () => clearScrubTimeout();
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Enter" && isScrubbing) {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-
-        setIsScrubbing(false);
-        onScrubbingChange(false);
-
-        if (scrubbingProgress !== null) {
-          const seekMs = Math.floor((scrubbingProgress / 100) * durationMs);
-          onSeek(seekMs);
-          updateProgress?.(seekMs);
-        }
-
-        setScrubbingProgress(null);
+        exitScrubbing(hasScrubbedRef.current);
         return false;
       } else if (event.key === "Escape" && isScrubbing) {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        setIsScrubbing(false);
-        onScrubbingChange(false);
-        setScrubbingProgress(null);
+        exitScrubbing(false);
         return false;
       }
     };
@@ -77,15 +127,7 @@ const ProgressBar = ({
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     return () =>
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [
-    isScrubbing,
-    scrubbingProgress,
-    durationMs,
-    onSeek,
-    onPlayPause,
-    onScrubbingChange,
-    updateProgress,
-  ]);
+  }, [isScrubbing]);
 
   const finalProgress = scrubbingProgress ?? effectiveProgress;
   const shouldShowTimestampOutside = finalProgress < 8;
