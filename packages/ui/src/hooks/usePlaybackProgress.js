@@ -19,6 +19,8 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const estimatedLatencyRef = useRef(0);
   const latencyHistoryRef = useRef([]);
   const maxLatencyHistory = 10;
+  const prevShuffleStateRef = useRef(null);
+  const prevRepeatStateRef = useRef(null);
 
   const scheduleNextRefresh = useCallback(() => {
     const REFRESH_INTERVAL = 8000;
@@ -66,6 +68,17 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
 
   useEffect(() => {
     if (currentPlayback) {
+      const currentShuffle = currentPlayback.shuffle_state;
+      const currentRepeat = currentPlayback.repeat_state;
+      const shuffleChanged = prevShuffleStateRef.current !== null &&
+        prevShuffleStateRef.current !== currentShuffle;
+      const repeatChanged = prevRepeatStateRef.current !== null &&
+        prevRepeatStateRef.current !== currentRepeat;
+      const shuffleOrRepeatJustChanged = shuffleChanged || repeatChanged;
+
+      prevShuffleStateRef.current = currentShuffle;
+      prevRepeatStateRef.current = currentRepeat;
+
       if (currentPlayback?.item?.id !== trackId) {
         setTrackId(currentPlayback.item?.id);
         setDuration(currentPlayback.item?.duration_ms || 0);
@@ -117,8 +130,12 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         const isNearEnd = duration > 0 && progressMs > duration * 0.98;
         const isVerySmallBackwardsJump = backwardsAmount < 500;
         const isSignificantBackwardsJump = backwardsAmount > 2000;
-        
-        if (wouldMoveBackwards && (isSignificantBackwardsJump || (isNearEnd && isVerySmallBackwardsJump))) {
+
+        if (wouldMoveBackwards && isSignificantBackwardsJump && shuffleOrRepeatJustChanged) {
+          return;
+        }
+
+        if (wouldMoveBackwards && isNearEnd && isVerySmallBackwardsJump) {
           return;
         }
 
