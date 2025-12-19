@@ -74,8 +74,8 @@ Available recipes:
     flash slot
     flashconnector slot
     install package
+    lint
     menuconfig
-    wslpath
     pre-commit-install
     wslpath
 ```
