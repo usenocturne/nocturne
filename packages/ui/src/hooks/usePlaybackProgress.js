@@ -116,8 +116,9 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         const backwardsAmount = progressMs - compensatedProgress;
         const isNearEnd = duration > 0 && progressMs > duration * 0.98;
         const isVerySmallBackwardsJump = backwardsAmount < 500;
-
-        if (wouldMoveBackwards && isNearEnd && isVerySmallBackwardsJump) {
+        const isSignificantBackwardsJump = backwardsAmount > 2000;
+        
+        if (wouldMoveBackwards && (isSignificantBackwardsJump || (isNearEnd && isVerySmallBackwardsJump))) {
           return;
         }
 
