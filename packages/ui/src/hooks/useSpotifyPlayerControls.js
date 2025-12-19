@@ -323,7 +323,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
       try {
         const result = await checkIsTrackSaved(trackId);
-        return result?.results?.[0] === 1;
+        return result?.results?.[0] === true || result?.results?.[0] === 1;
       } catch (err) {
         console.error("Error checking if track is liked:", err.message);
         return false;
