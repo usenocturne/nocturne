@@ -16,8 +16,6 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
   const isVolumeProcessingRef = useRef(false);
   const lastVolumeUpdateTimeRef = useRef(0);
   const lastManualVolumeChangeRef = useRef(0);
-  const cachedDeviceTypeRef = useRef(null);
-  const deviceTypeCacheTimeRef = useRef(0);
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
 
   const isLocalMedia = currentPlayback?.item?.is_local === true;
@@ -52,29 +50,6 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       }
     };
   }, []);
-
-  const getCachedDeviceType = useCallback(async () => {
-    const now = Date.now();
-    const cacheAge = now - deviceTypeCacheTimeRef.current;
-    const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
-
-    if (cachedDeviceTypeRef.current && cacheAge < CACHE_TTL) {
-      return cachedDeviceTypeRef.current;
-    }
-
-    try {
-      const playerState = await getPlayerState();
-      const deviceType = playerState?.device?.type || null;
-
-      cachedDeviceTypeRef.current = deviceType;
-      deviceTypeCacheTimeRef.current = now;
-
-      return deviceType;
-    } catch (err) {
-      console.error("Error fetching device type:", err);
-      return cachedDeviceTypeRef.current || null;
-    }
-  }, [getPlayerState]);
 
   const updateVolumeFromDevice = useCallback(
     (deviceVolume) => {
@@ -245,7 +220,9 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
     isVolumeProcessingRef.current = true;
 
-    const latestVolume = volumeQueueRef.current.pop();
+    const latest = volumeQueueRef.current.pop();
+    const latestVolume = latest.volume;
+    const direction = latest.direction;
     volumeQueueRef.current = [];
 
     const now = Date.now();
@@ -258,6 +235,17 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         lastVolumeUpdateTimeRef.current = Date.now();
       } catch (err) {
         console.error("Error setting volume:", err.message);
+
+        try {
+          if (direction === "up") {
+            await sendNocturneWsRequest("media.control.volumeUp", {});
+          } else if (direction === "down") {
+            await sendNocturneWsRequest("media.control.volumeDown", {});
+          }
+        } catch (fallbackErr) {
+          console.error("Error with phone media volume fallback:", fallbackErr);
+        }
+
         if (err.message.includes("NO_ACTIVE_DEVICE")) {
           if (openDeviceSwitcher) {
             openDeviceSwitcher();
@@ -289,9 +277,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     async (volumePercent) => {
       if (!isSpotifyReady) return false;
 
-      const deviceType = await getCachedDeviceType();
-
-      if (deviceType === "Smartphone") {
+      if (isPhoneMedia) {
         return false;
       }
 
@@ -301,11 +287,12 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
       );
 
       if (boundedVolume !== volume) {
+        const direction = boundedVolume > volume ? "up" : "down";
         lastManualVolumeChangeRef.current = Date.now();
         setVolumeState(boundedVolume);
         setIsAdjustingVolume(true);
 
-        volumeQueueRef.current.push(boundedVolume);
+        volumeQueueRef.current.push({ volume: boundedVolume, direction });
 
         if (!isVolumeProcessingRef.current) {
           processVolumeQueue();
@@ -314,7 +301,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
       return true;
     },
-    [isSpotifyReady, processVolumeQueue, volume, getCachedDeviceType],
+    [isSpotifyReady, processVolumeQueue, volume, isPhoneMedia],
   );
 
   const checkIsTrackLiked = useCallback(
