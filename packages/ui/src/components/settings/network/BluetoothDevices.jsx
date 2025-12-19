@@ -7,7 +7,7 @@ import {
 } from "@headlessui/react";
 import { useBluetooth, useDeviceInfo } from "../../../hooks/useNocturned";
 
-const BluetoothDevices = () => {
+const BluetoothDevices = ({ startDiscoveryOnMount = true, stopDiscoveryOnUnmount = true }) => {
   const {
     devices,
     loading,
@@ -31,7 +31,9 @@ const BluetoothDevices = () => {
     const initialize = async () => {
       if (!hasInitialized.current) {
         hasInitialized.current = true;
-        await startDiscovery();
+        if (startDiscoveryOnMount) {
+          await startDiscovery();
+        }
         await fetchDevices(true);
       }
     };
@@ -39,9 +41,11 @@ const BluetoothDevices = () => {
     initialize();
 
     return () => {
-      stopDiscovery();
+      if (stopDiscoveryOnUnmount) {
+        stopDiscovery();
+      }
     };
-  }, [startDiscovery, fetchDevices, stopDiscovery]);
+  }, [startDiscovery, fetchDevices, stopDiscovery, startDiscoveryOnMount, stopDiscoveryOnUnmount]);
 
   const handleConnect = async (deviceAddress) => {
     await connectDeviceNoRetry(deviceAddress);

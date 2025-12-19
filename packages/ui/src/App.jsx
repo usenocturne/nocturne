@@ -867,6 +867,11 @@ function App() {
 
       if (powerMenuVisibleRef.current) {
         setPowerMenuVisible(false);
+        e.stopPropagation();
+        return;
+      }
+
+      if (showAuthScreen) {
         return;
       }
 
@@ -889,7 +894,7 @@ function App() {
       window.removeEventListener("keyup", handleKeyUp, { capture: true });
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
     };
-  }, [showTutorial, currentTutorialStep]);
+  }, [showTutorial, currentTutorialStep, showAuthScreen]);
 
   const handleShutdown = () => {
     fetch("http://localhost:5000/device/power/shutdown", {
