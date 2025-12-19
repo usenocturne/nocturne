@@ -14,14 +14,20 @@ import {
   SettingsGeneralIcon,
   SettingsPlaybackIcon,
   SettingsSupportIcon,
+  SettingsAboutIcon,
   BluetoothIcon,
 } from "../common/icons";
 import SoftwareUpdate from "./SoftwareUpdate";
 import BluetoothDevices from "./network/BluetoothDevices";
+import About from "./About";
 import { useSettings } from "../../contexts/SettingsContext";
 import { sendNocturneWsRequest } from "../../hooks/useNocturned";
 
 const settingsStructure = {
+  support: {
+    title: "Support Nocturne",
+    icon: SettingsSupportIcon,
+  },
   general: {
     title: "General",
     icon: SettingsGeneralIcon,
@@ -135,10 +141,6 @@ const settingsStructure = {
         defaultValue: false,
       },
     ],
-  },
-  support: {
-    title: "Support Nocturne",
-    icon: SettingsSupportIcon,
   },
   credits: {
     title: "Credits",
@@ -512,6 +514,12 @@ const settingsStructure = {
         ],
       },
     ],
+  },
+  about: {
+    title: "About",
+    icon: SettingsAboutIcon,
+    type: "custom",
+    component: About,
   },
 };
 
