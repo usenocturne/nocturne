@@ -861,6 +861,13 @@ const ContentView = ({
       return;
     }
 
+    if (track.uri === currentlyPlayingTrackUri && currentPlayback?.is_playing) {
+      if (onNavigateToNowPlaying) {
+        onNavigateToNowPlaying();
+      }
+      return;
+    }
+
     let contextUri = null;
     let uris = null;
     let success = false;
