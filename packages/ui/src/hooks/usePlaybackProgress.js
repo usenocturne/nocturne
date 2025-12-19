@@ -70,9 +70,11 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     if (currentPlayback) {
       const currentShuffle = currentPlayback.shuffle_state;
       const currentRepeat = currentPlayback.repeat_state;
-      const shuffleChanged = prevShuffleStateRef.current !== null &&
+      const shuffleChanged =
+        prevShuffleStateRef.current !== null &&
         prevShuffleStateRef.current !== currentShuffle;
-      const repeatChanged = prevRepeatStateRef.current !== null &&
+      const repeatChanged =
+        prevRepeatStateRef.current !== null &&
         prevRepeatStateRef.current !== currentRepeat;
       const shuffleOrRepeatJustChanged = shuffleChanged || repeatChanged;
 
@@ -101,7 +103,10 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         const actualProgress = currentPlayback.progress_ms;
 
         if (isPlaying && elapsed > 500) {
-          const impliedLatency = Math.max(0, estimatedProgress - actualProgress);
+          const impliedLatency = Math.max(
+            0,
+            estimatedProgress - actualProgress,
+          );
           if (impliedLatency < 1000) {
             latencyHistoryRef.current.push(impliedLatency);
             if (latencyHistoryRef.current.length > maxLatencyHistory) {
@@ -115,7 +120,8 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
           }
         }
 
-        const compensatedProgress = actualProgress + Math.min(estimatedLatencyRef.current * 0.3, 200);
+        const compensatedProgress =
+          actualProgress + Math.min(estimatedLatencyRef.current * 0.3, 200);
         const drift = estimatedProgress - compensatedProgress;
 
         if (elapsed > 1000 && Math.abs(drift) < 5000) {
@@ -131,7 +137,11 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         const isVerySmallBackwardsJump = backwardsAmount < 500;
         const isSignificantBackwardsJump = backwardsAmount > 2000;
 
-        if (wouldMoveBackwards && isSignificantBackwardsJump && shuffleOrRepeatJustChanged) {
+        if (
+          wouldMoveBackwards &&
+          isSignificantBackwardsJump &&
+          shuffleOrRepeatJustChanged
+        ) {
           return;
         }
 
@@ -176,7 +186,10 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
           driftHistoryRef.current.reduce((sum, drift) => sum + drift, 0) /
           driftHistoryRef.current.length;
 
-        const driftInfluence = Math.max(-0.04, Math.min(0.04, averageDrift / 3000));
+        const driftInfluence = Math.max(
+          -0.04,
+          Math.min(0.04, averageDrift / 3000),
+        );
         driftCorrectionFactor = 0.99 + driftInfluence;
 
         if (Math.abs(averageDrift) < 30) {

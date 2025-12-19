@@ -117,85 +117,90 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     };
   }, []);
 
-  const checkForUpdates = useCallback(async (force = false) => {
-    if (isChecking || checkInProgress.current) return;
+  const checkForUpdates = useCallback(
+    async (force = false) => {
+      if (isChecking || checkInProgress.current) return;
 
-    if (!eaSessionStarted) {
-      console.log("Skipping update check: EA session not started yet");
-      return;
-    }
-
-    if (!force && !initialDataLoadComplete) {
-      console.log("Skipping update check: Initial data load not complete yet");
-      return;
-    }
-
-    if (!currentVersionRef.current) {
-      console.log("Skipping update check: Current version not loaded yet");
-      return;
-    }
-
-    checkInProgress.current = true;
-    setIsChecking(true);
-    setError(null);
-
-    try {
-      const versionToCheck = currentVersionRef.current.startsWith("v")
-        ? currentVersionRef.current
-        : `v${currentVersionRef.current}`;
-
-      const otaCheckResult = await sendNocturneWsRequest("device.ota.check", {
-        currentVersion: versionToCheck,
-      });
-
-      if (!otaCheckResult.updateAvailable) {
-        setUpdateInfo({
-          hasUpdate: false,
-          canUpdate: false,
-          nextInChain: false,
-          totalUpdates: 0,
-          version: currentVersionRef.current,
-        });
-        setLastChecked(new Date());
+      if (!eaSessionStarted) {
+        console.log("Skipping update check: EA session not started yet");
         return;
       }
 
-      const updateVersion = otaCheckResult.version.replace(/^v/, "");
-      const canUpdate = otaCheckResult.metadata?.auto_updateable !== false;
+      if (!force && !initialDataLoadComplete) {
+        console.log(
+          "Skipping update check: Initial data load not complete yet",
+        );
+        return;
+      }
 
-      const releaseData = {
-        version: updateVersion,
-        tag: otaCheckResult.version,
-        shortDescription: "This update brings new features and bug fixes.",
-        fullDescription: "This update brings new features and bug fixes.",
-        releaseNotes: "This update brings new features and bug fixes.",
-        releaseDate: new Date().toISOString(),
-        releaseSize: 0,
-        imageUrl: "/images/os/nocturne/3.0.0.webp",
-        assetUrls: {},
-        assetSums: {},
-      };
+      if (!currentVersionRef.current) {
+        console.log("Skipping update check: Current version not loaded yet");
+        return;
+      }
 
-      setUpdateInfo({
-        ...releaseData,
-        hasUpdate: true,
-        canUpdate: canUpdate,
-        nextInChain: false,
-        totalUpdates: 1,
-        channel: otaCheckResult.channel,
-        critical: otaCheckResult.metadata?.critical || false,
-      });
+      checkInProgress.current = true;
+      setIsChecking(true);
+      setError(null);
 
-      setUpdateChain([releaseData]);
-      setLastChecked(new Date());
-    } catch (err) {
-      console.error("Error checking for updates:", err);
-      setError(err.message);
-    } finally {
-      setIsChecking(false);
-      checkInProgress.current = false;
-    }
-  }, [eaSessionStarted, initialDataLoadComplete]);
+      try {
+        const versionToCheck = currentVersionRef.current.startsWith("v")
+          ? currentVersionRef.current
+          : `v${currentVersionRef.current}`;
+
+        const otaCheckResult = await sendNocturneWsRequest("device.ota.check", {
+          currentVersion: versionToCheck,
+        });
+
+        if (!otaCheckResult.updateAvailable) {
+          setUpdateInfo({
+            hasUpdate: false,
+            canUpdate: false,
+            nextInChain: false,
+            totalUpdates: 0,
+            version: currentVersionRef.current,
+          });
+          setLastChecked(new Date());
+          return;
+        }
+
+        const updateVersion = otaCheckResult.version.replace(/^v/, "");
+        const canUpdate = otaCheckResult.metadata?.auto_updateable !== false;
+
+        const releaseData = {
+          version: updateVersion,
+          tag: otaCheckResult.version,
+          shortDescription: "This update brings new features and bug fixes.",
+          fullDescription: "This update brings new features and bug fixes.",
+          releaseNotes: "This update brings new features and bug fixes.",
+          releaseDate: new Date().toISOString(),
+          releaseSize: 0,
+          imageUrl: "/images/os/nocturne/3.0.0.webp",
+          assetUrls: {},
+          assetSums: {},
+        };
+
+        setUpdateInfo({
+          ...releaseData,
+          hasUpdate: true,
+          canUpdate: canUpdate,
+          nextInChain: false,
+          totalUpdates: 1,
+          channel: otaCheckResult.channel,
+          critical: otaCheckResult.metadata?.critical || false,
+        });
+
+        setUpdateChain([releaseData]);
+        setLastChecked(new Date());
+      } catch (err) {
+        console.error("Error checking for updates:", err);
+        setError(err.message);
+      } finally {
+        setIsChecking(false);
+        checkInProgress.current = false;
+      }
+    },
+    [eaSessionStarted, initialDataLoadComplete],
+  );
 
   const findUpdateChain = (currentVersion, releases) => {
     if (!releases || releases.length === 0) return [];
@@ -267,10 +272,21 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   };
 
   useEffect(() => {
-    if (autoCheck && eaSessionStarted && initialDataLoadComplete && currentVersion) {
+    if (
+      autoCheck &&
+      eaSessionStarted &&
+      initialDataLoadComplete &&
+      currentVersion
+    ) {
       checkForUpdates();
     }
-  }, [autoCheck, eaSessionStarted, initialDataLoadComplete, currentVersion, checkForUpdates]);
+  }, [
+    autoCheck,
+    eaSessionStarted,
+    initialDataLoadComplete,
+    currentVersion,
+    checkForUpdates,
+  ]);
 
   const advanceUpdateChain = useCallback(() => {
     if (updateChain.length <= 1) {

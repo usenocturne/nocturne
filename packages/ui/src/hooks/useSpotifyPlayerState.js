@@ -424,10 +424,15 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             phoneMediaArtworkBlobUrl = null;
           }
 
-          const prevBlobUrl = currentPlaybackRef.current?.item?.album?.images?.[0]?.url;
+          const prevBlobUrl =
+            currentPlaybackRef.current?.item?.album?.images?.[0]?.url;
           const hasPrevBlobArtwork = prevBlobUrl?.startsWith("blob:");
-          const prevTrackName = currentPlaybackRef.current?.item?.name?.toLowerCase()?.trim();
-          const incomingTrackName = playerState.track?.metadata?.title?.toLowerCase()?.trim();
+          const prevTrackName = currentPlaybackRef.current?.item?.name
+            ?.toLowerCase()
+            ?.trim();
+          const incomingTrackName = playerState.track?.metadata?.title
+            ?.toLowerCase()
+            ?.trim();
           const isSameTrack =
             incomingTrackName &&
             prevTrackName &&
@@ -486,38 +491,47 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                     id: playerState.track.uri.split(":")[2],
                     uri: playerState.track.uri,
                     type: "track",
-                    name: playerState.track.metadata.title ||
-                          (currentPlaybackRef.current?.item?.uri === playerState.track.uri
-                            ? currentPlaybackRef.current.item.name
-                            : undefined),
-                    album: (playerState.track.metadata.album_uri || playerState.track.metadata.album_title || playerState.track.metadata.image_url)
-                      ? {
-                          id: playerState.track.metadata.album_uri?.split(":")[2],
-                          uri: playerState.track.metadata.album_uri,
-                          name: playerState.track.metadata.album_title,
-                          images: shouldPreserveBlobArtwork
-                            ? [{ url: prevBlobUrl }]
-                            : playerState.track.metadata.image_url
-                              ? [
-                                  {
-                                    url: playerState.track.metadata.image_url.startsWith(
-                                      "http",
-                                    )
-                                      ? playerState.track.metadata.image_url
-                                      : `https://${playerState.track.metadata.image_url}`,
-                                  },
-                                ]
-                              : playerState.track.metadata.is_narration === "true" ||
-                                  playerState.track.metadata.album_artist_name ===
-                                    "DJ X"
-                                ? [{ url: "/images/radio-cover/dj.webp" }]
-                                : [],
-                        }
-                      : shouldPreserveBlobArtwork
-                        ? { images: [{ url: prevBlobUrl }] }
-                        : (currentPlaybackRef.current?.item?.uri === playerState.track.uri
+                    name:
+                      playerState.track.metadata.title ||
+                      (currentPlaybackRef.current?.item?.uri ===
+                      playerState.track.uri
+                        ? currentPlaybackRef.current.item.name
+                        : undefined),
+                    album:
+                      playerState.track.metadata.album_uri ||
+                      playerState.track.metadata.album_title ||
+                      playerState.track.metadata.image_url
+                        ? {
+                            id: playerState.track.metadata.album_uri?.split(
+                              ":",
+                            )[2],
+                            uri: playerState.track.metadata.album_uri,
+                            name: playerState.track.metadata.album_title,
+                            images: shouldPreserveBlobArtwork
+                              ? [{ url: prevBlobUrl }]
+                              : playerState.track.metadata.image_url
+                                ? [
+                                    {
+                                      url: playerState.track.metadata.image_url.startsWith(
+                                        "http",
+                                      )
+                                        ? playerState.track.metadata.image_url
+                                        : `https://${playerState.track.metadata.image_url}`,
+                                    },
+                                  ]
+                                : playerState.track.metadata.is_narration ===
+                                      "true" ||
+                                    playerState.track.metadata
+                                      .album_artist_name === "DJ X"
+                                  ? [{ url: "/images/radio-cover/dj.webp" }]
+                                  : [],
+                          }
+                        : shouldPreserveBlobArtwork
+                          ? { images: [{ url: prevBlobUrl }] }
+                          : currentPlaybackRef.current?.item?.uri ===
+                              playerState.track.uri
                             ? currentPlaybackRef.current.item.album
-                            : {}),
+                            : {},
                     artists:
                       playerState.track.metadata.is_narration === "true" ||
                       playerState.track.metadata.album_artist_name === "DJ X"
@@ -627,7 +641,11 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         isProcessingArtwork = false;
 
         if (playback.PlaybackAppName === "Spotify") {
-          pendingSpotifyMediaUpdate = { media, playback, timestamp: Date.now() };
+          pendingSpotifyMediaUpdate = {
+            media,
+            playback,
+            timestamp: Date.now(),
+          };
 
           if (spotifyFallbackTimeout) {
             clearTimeout(spotifyFallbackTimeout);
@@ -640,14 +658,17 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               !currentItem?.is_spotify_pending;
 
             if (pendingSpotifyMediaUpdate && !hasRealSpotifyData) {
-              const { media: pendingMedia, playback: pendingPlayback } = pendingSpotifyMediaUpdate;
+              const { media: pendingMedia, playback: pendingPlayback } =
+                pendingSpotifyMediaUpdate;
               const title = pendingMedia.MediaItemTitle || "Unknown Title";
               const artist = pendingMedia.MediaItemArtist || "Unknown Artist";
               const albumName = pendingMedia.MediaItemAlbumName || title;
-              const durationMs = pendingMedia.MediaItemPlaybackDurationInMilliSeconds || 0;
+              const durationMs =
+                pendingMedia.MediaItemPlaybackDurationInMilliSeconds || 0;
 
               const newTrackUri = `spotify:pending:${title}`;
-              const cachedArtwork = artworkCache.get(newTrackUri) || phoneMediaArtworkBlobUrl;
+              const cachedArtwork =
+                artworkCache.get(newTrackUri) || phoneMediaArtworkBlobUrl;
 
               const shuffleState =
                 pendingPlayback.PlaybackShuffleMode === "albums" ||
@@ -860,13 +881,15 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
             const currentItem = currentPlaybackRef.current?.item;
             const currentIsPending = currentItem?.is_spotify_pending;
-            const hasRealSpotifyData = currentItem?.uri?.startsWith("spotify:") && !currentIsPending;
+            const hasRealSpotifyData =
+              currentItem?.uri?.startsWith("spotify:") && !currentIsPending;
             if (pendingSpotifyMediaUpdate && !hasRealSpotifyData) {
               const { media, playback } = pendingSpotifyMediaUpdate;
               const title = media.MediaItemTitle || "Unknown Title";
               const artist = media.MediaItemArtist || "Unknown Artist";
               const albumName = media.MediaItemAlbumName || title;
-              const durationMs = media.MediaItemPlaybackDurationInMilliSeconds || 0;
+              const durationMs =
+                media.MediaItemPlaybackDurationInMilliSeconds || 0;
 
               const newTrackUri = `spotify:pending:${title}`;
               artworkCache.set(newTrackUri, phoneMediaArtworkBlobUrl);
@@ -924,7 +947,9 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               }
 
               if (oldBlobUrl && oldBlobUrl !== phoneMediaArtworkBlobUrl) {
-                const isInCache = Array.from(artworkCache.values()).includes(oldBlobUrl);
+                const isInCache = Array.from(artworkCache.values()).includes(
+                  oldBlobUrl,
+                );
                 if (!isInCache) {
                   setTimeout(() => {
                     URL.revokeObjectURL(oldBlobUrl);

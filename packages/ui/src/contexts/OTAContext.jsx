@@ -8,19 +8,20 @@ export function OTAProvider({ children }) {
 
   useEffect(() => {
     const handleOtaStatus = (event) => {
-      if (event.detail?.topic === 'device.ota.status') {
+      if (event.detail?.topic === "device.ota.status") {
         const data = event.detail.data;
-        if (data?.current === 'finished' && data?.ota === 'complete') {
+        if (data?.current === "finished" && data?.ota === "complete") {
           setUpdateReadyForReboot(true);
-        } else if (data?.current === 'finished' && data?.ota === 'failed') {
+        } else if (data?.current === "finished" && data?.ota === "failed") {
           setUpdateDownloadStarted(false);
           setUpdateReadyForReboot(false);
         }
       }
     };
 
-    window.addEventListener('nocturne-ws-message', handleOtaStatus);
-    return () => window.removeEventListener('nocturne-ws-message', handleOtaStatus);
+    window.addEventListener("nocturne-ws-message", handleOtaStatus);
+    return () =>
+      window.removeEventListener("nocturne-ws-message", handleOtaStatus);
   }, []);
 
   const markDownloadStarted = () => {

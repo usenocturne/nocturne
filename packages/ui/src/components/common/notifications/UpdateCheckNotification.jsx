@@ -4,10 +4,7 @@ import { useUpdateCheck } from "../../../hooks/useUpdateCheck";
 import { useSettings } from "../../../contexts/SettingsContext";
 import { SettingsUpdateIcon } from "../icons";
 
-function UpdateCheckNotification({
-  setActiveSection,
-  currentVersion,
-}) {
+function UpdateCheckNotification({ setActiveSection, currentVersion }) {
   const { addNotification } = useNotifications();
   const hasNotifiedRef = useRef(false);
 

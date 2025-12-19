@@ -18,4 +18,3 @@ const SettingsAboutIcon = ({ className }) => (
 );
 
 export default SettingsAboutIcon;
-

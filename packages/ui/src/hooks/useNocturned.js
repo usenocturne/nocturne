@@ -390,11 +390,7 @@ const setupGlobalWebSocket = async () => {
           emitSpotifyAuthState();
         }
 
-        if (
-          data &&
-          data.type === "event" &&
-          data.topic === "network.status"
-        ) {
+        if (data && data.type === "event" && data.topic === "network.status") {
           const statusData = data.data || {};
           if (statusData.status === "disconnected") {
             window.dispatchEvent(new Event("networkBannerShow"));
@@ -829,12 +825,18 @@ export const useSystemUpdate = () => {
       if (
         data.type === "response" &&
         (data.method === "device.ota.apply" ||
-         (otaApplyTriggered && data.result &&
-          (data.result.current !== undefined || data.result.ota !== undefined)))
+          (otaApplyTriggered &&
+            data.result &&
+            (data.result.current !== undefined ||
+              data.result.ota !== undefined)))
       ) {
         const result = data.result ?? data;
 
-        if (result && result.current === "in_progress" && result.ota === "started") {
+        if (
+          result &&
+          result.current === "in_progress" &&
+          result.ota === "started"
+        ) {
           setUpdateStatus((prev) => ({
             ...prev,
             stage: "installing",
@@ -843,7 +845,11 @@ export const useSystemUpdate = () => {
           return;
         }
 
-        if (result && (result.success || (result.current === "finished" && result.ota === "complete"))) {
+        if (
+          result &&
+          (result.success ||
+            (result.current === "finished" && result.ota === "complete"))
+        ) {
           setUpdateStatus((prev) => ({
             ...prev,
             inProgress: false,
@@ -857,8 +863,13 @@ export const useSystemUpdate = () => {
             execCommands(postCommandsRef.current);
             postCommandsRef.current = [];
           }
-        } else if (result && result.current === "finished" && result.ota === "failed") {
-          const message = result?.message || result?.error || "Update apply failed";
+        } else if (
+          result &&
+          result.current === "finished" &&
+          result.ota === "failed"
+        ) {
+          const message =
+            result?.message || result?.error || "Update apply failed";
           setIsError(true);
           setErrorMessage(`Failed to apply update: ${message}`);
           setIsUpdating(false);
@@ -932,12 +943,14 @@ export const useSystemUpdate = () => {
           otaApplyTriggered = false;
         }
       } else if (data.type === "event" && data.topic === "device.ota.status") {
-        window.dispatchEvent(new CustomEvent('nocturne-ws-message', {
-          detail: {
-            topic: 'device.ota.status',
-            data: data.data
-          }
-        }));
+        window.dispatchEvent(
+          new CustomEvent("nocturne-ws-message", {
+            detail: {
+              topic: "device.ota.status",
+              data: data.data,
+            },
+          }),
+        );
       } else if (data.type === "update_progress" && data.payload) {
         const payload = data.payload;
 

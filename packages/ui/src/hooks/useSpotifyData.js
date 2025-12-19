@@ -399,7 +399,10 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           setItemCounts((prev) => ({ ...prev, userPlaylists: items.length }));
 
           if (data.total > 5 && items.length < 50) {
-            setNextTokens((prev) => ({ ...prev, userPlaylists: data.next || "has-more" }));
+            setNextTokens((prev) => ({
+              ...prev,
+              userPlaylists: data.next || "has-more",
+            }));
           }
         }
 

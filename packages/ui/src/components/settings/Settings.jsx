@@ -523,10 +523,7 @@ const settingsStructure = {
   },
 };
 
-export default function Settings({
-  onOpenDonationModal,
-  setActiveSection,
-}) {
+export default function Settings({ onOpenDonationModal, setActiveSection }) {
   const [versionInfo, setVersionInfo] = useState("Loading versions...");
   const [activeParent, setActiveParent] = useState(null);
   const [activeSubItem, setActiveSubItem] = useState(null);

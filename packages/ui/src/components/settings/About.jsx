@@ -37,7 +37,11 @@ export default function About() {
           Version
         </p>
         <p className="text-[28px] font-[580] text-white tracking-tight">
-          {isLoading ? "Loading..." : deviceInfo?.version ? `v${deviceInfo.version}` : "Unknown"}
+          {isLoading
+            ? "Loading..."
+            : deviceInfo?.version
+              ? `v${deviceInfo.version}`
+              : "Unknown"}
         </p>
       </div>
 

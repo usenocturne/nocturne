@@ -20,7 +20,7 @@ const AuthScreen = ({
 
   const [mainClasses, setMainClasses] = useState("translate-x-0 opacity-100");
   const [subpageClasses, setSubpageClasses] = useState(
-    "translate-x-full opacity-0"
+    "translate-x-full opacity-0",
   );
 
   const ANIMATION_DURATION = 300;
@@ -175,7 +175,12 @@ const AuthScreen = ({
             </div>
 
             <div className="space-y-6 mb-12">
-              {bluetoothMounted && <BluetoothDevices startDiscoveryOnMount={false} stopDiscoveryOnUnmount={false} />}
+              {bluetoothMounted && (
+                <BluetoothDevices
+                  startDiscoveryOnMount={false}
+                  stopDiscoveryOnUnmount={false}
+                />
+              )}
             </div>
           </div>
         </div>

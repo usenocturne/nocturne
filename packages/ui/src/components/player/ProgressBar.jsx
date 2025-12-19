@@ -47,7 +47,9 @@ const ProgressBar = ({
     onScrubbingChangeRef.current(false);
 
     if (shouldSeek && scrubbingProgressRef.current !== null) {
-      const seekMs = Math.floor((scrubbingProgressRef.current / 100) * durationMsRef.current);
+      const seekMs = Math.floor(
+        (scrubbingProgressRef.current / 100) * durationMsRef.current,
+      );
       onSeekRef.current(seekMs);
       updateProgressRef.current?.(seekMs);
     }
@@ -86,7 +88,8 @@ const ProgressBar = ({
       hasScrubbedRef.current = true;
 
       setScrubbingProgress((prev) => {
-        const nextValue = (prev ?? effectiveProgress) + (delta > 0 ? step : -step);
+        const nextValue =
+          (prev ?? effectiveProgress) + (delta > 0 ? step : -step);
         const clampedValue = Math.max(0, Math.min(100, nextValue));
         scrubbingProgressRef.current = clampedValue;
 

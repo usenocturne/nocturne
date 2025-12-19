@@ -232,7 +232,11 @@ export function useSpotifyWebSocket() {
 
         if (data.error) {
           pendingRequest.reject(
-            new Error(typeof data.error === "string" ? data.error : data.error.message || "Spotify command failed"),
+            new Error(
+              typeof data.error === "string"
+                ? data.error
+                : data.error.message || "Spotify command failed",
+            ),
           );
         } else {
           let result = data.result;

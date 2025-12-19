@@ -4,7 +4,11 @@ import {
   CheckCircleIcon,
   RefreshIcon,
 } from "../common/icons";
-import { useSystemUpdate, useNocturneInfo, sendNocturneWsRequest } from "../../hooks/useNocturned";
+import {
+  useSystemUpdate,
+  useNocturneInfo,
+  sendNocturneWsRequest,
+} from "../../hooks/useNocturned";
 import { useUpdateCheck } from "../../hooks/useUpdateCheck";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useOTA } from "../../contexts/OTAContext";
@@ -39,7 +43,12 @@ const SoftwareUpdate = () => {
   } = useUpdateCheck(nocturneCurrentVersion);
 
   const { settings } = useSettings();
-  const { updateDownloadStarted, updateReadyForReboot, markDownloadStarted, resetOTAState } = useOTA();
+  const {
+    updateDownloadStarted,
+    updateReadyForReboot,
+    markDownloadStarted,
+    resetOTAState,
+  } = useOTA();
 
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(
@@ -180,9 +189,7 @@ const SoftwareUpdate = () => {
   }) => {
     return (
       <div className="space-y-4">
-        {(isChecking ||
-          !hasUpdate ||
-          sessionCompleted) && (
+        {(isChecking || !hasUpdate || sessionCompleted) && (
           <div className="space-y-4">
             <div className="p-1.5 bg-white/10 rounded-xl border border-white/10">
               <div className="flex flex-col items-center justify-center text-center py-8">
@@ -234,113 +241,123 @@ const SoftwareUpdate = () => {
           </div>
         )}
 
-        {hasUpdate &&
-          !sessionCompleted &&
-          !isRebootReady && (
-            <div className="space-y-4">
-              <div className="p-4 bg-white/10 rounded-xl border border-white/10">
-                <div className="flex items-center mb-4">
-                  <SettingsUpdateIcon className="w-16 h-16 text-white" />
-                  <div className="ml-4">
-                    <div className="text-[28px] font-[580] text-white tracking-tight">
-                      {name} {latestVersion}
-                    </div>
-                    <div className="text-[20px] font-[560] text-white/80 tracking-tight">
-                      {updateInfo?.releaseDate.split("T")[0]}
-                    </div>
+        {hasUpdate && !sessionCompleted && !isRebootReady && (
+          <div className="space-y-4">
+            <div className="p-4 bg-white/10 rounded-xl border border-white/10">
+              <div className="flex items-center mb-4">
+                <SettingsUpdateIcon className="w-16 h-16 text-white" />
+                <div className="ml-4">
+                  <div className="text-[28px] font-[580] text-white tracking-tight">
+                    {name} {latestVersion}
+                  </div>
+                  <div className="text-[20px] font-[560] text-white/80 tracking-tight">
+                    {updateInfo?.releaseDate.split("T")[0]}
                   </div>
                 </div>
-
-                {isMultiStepUpdate && (
-                  <div className="mb-4 px-4 py-3 bg-blue-600/20 border border-blue-400/30 rounded-lg">
-                    <div className="text-[20px] font-[580] text-blue-300">
-                      Multiple Updates Required
-                    </div>
-                    <div className="text-[18px] text-blue-200/80">
-                      Your system needs {totalUpdates} updates to reach version{" "}
-                      {finalVersion}.
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-3 text-[24px] font-[560] text-white/80 tracking-tight">
-                  <div className="space-y-2">
-                    {formatDescription(
-                      showFullDescription
-                        ? updateInfo?.fullDescription
-                        : updateInfo?.shortDescription,
-                    )}
-                  </div>
-                  {updateInfo?.fullDescription &&
-                    updateInfo?.fullDescription !==
-                      updateInfo?.shortDescription && (
-                      <button
-                        onClick={() =>
-                          setShowFullDescription(!showFullDescription)
-                        }
-                        className="text-blue-400 hover:text-blue-300 transition-colors text-[20px] font-[560]"
-                        style={{ background: "none" }}
-                      >
-                        {showFullDescription ? "Show less" : "Read more"}
-                      </button>
-                    )}
-                </div>
-
-                {noCompatiblePath && (
-                  <div className="mt-4 p-3 bg-amber-600/20 border border-amber-400/30 rounded-lg">
-                    <div className="text-[20px] font-[580] text-amber-400">
-                      No Compatible Update Path
-                    </div>
-                    <div className="text-[18px] text-amber-300/80">
-                      There's no direct update path from your current version.
-                      Please manually update to the latest version using a
-                      computer.
-                    </div>
-                  </div>
-                )}
-
-                {!canUpdate && !noCompatiblePath && (
-                  <div className="mt-4 p-3 bg-amber-600/20 border border-amber-400/30 rounded-lg">
-                    <div className="text-[20px] font-[580] text-amber-400">
-                      Your current version is too old for this update.
-                    </div>
-                    <div className="text-[18px] text-amber-300/80">
-                      Please update to at least version{" "}
-                      {updateInfo?.minimumVersion} first.
-                    </div>
-                  </div>
-                )}
               </div>
 
-              <button
-                className={`w-full p-4 rounded-xl border ${
-                  isRebootReady
-                    ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
-                    : canUpdate && !isDownloading && !updateDownloadStarted && !hideUpdateNotification
-                      ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
-                      : "bg-white/5 border-white/5 text-white/40"
-                }`}
-                onClick={
-                  isRebootReady
-                    ? onReboot
-                    : canUpdate && !isDownloading && !updateDownloadStarted && !hideUpdateNotification
-                      ? onUpdate
-                      : undefined
-                }
-                disabled={!isRebootReady && (!canUpdate || isDownloading || updateDownloadStarted || hideUpdateNotification)}
-              >
-                <span className="text-[28px] font-[580] tracking-tight">
-                  {isRebootReady
-                    ? "Reboot Now"
-                    : isDownloading
-                      ? "Applying update..."
-                      : updateDownloadStarted
-                        ? "Downloading..."
-                        : "Download and Install"}
-                </span>
-              </button>
+              {isMultiStepUpdate && (
+                <div className="mb-4 px-4 py-3 bg-blue-600/20 border border-blue-400/30 rounded-lg">
+                  <div className="text-[20px] font-[580] text-blue-300">
+                    Multiple Updates Required
+                  </div>
+                  <div className="text-[18px] text-blue-200/80">
+                    Your system needs {totalUpdates} updates to reach version{" "}
+                    {finalVersion}.
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3 text-[24px] font-[560] text-white/80 tracking-tight">
+                <div className="space-y-2">
+                  {formatDescription(
+                    showFullDescription
+                      ? updateInfo?.fullDescription
+                      : updateInfo?.shortDescription,
+                  )}
+                </div>
+                {updateInfo?.fullDescription &&
+                  updateInfo?.fullDescription !==
+                    updateInfo?.shortDescription && (
+                    <button
+                      onClick={() =>
+                        setShowFullDescription(!showFullDescription)
+                      }
+                      className="text-blue-400 hover:text-blue-300 transition-colors text-[20px] font-[560]"
+                      style={{ background: "none" }}
+                    >
+                      {showFullDescription ? "Show less" : "Read more"}
+                    </button>
+                  )}
+              </div>
+
+              {noCompatiblePath && (
+                <div className="mt-4 p-3 bg-amber-600/20 border border-amber-400/30 rounded-lg">
+                  <div className="text-[20px] font-[580] text-amber-400">
+                    No Compatible Update Path
+                  </div>
+                  <div className="text-[18px] text-amber-300/80">
+                    There's no direct update path from your current version.
+                    Please manually update to the latest version using a
+                    computer.
+                  </div>
+                </div>
+              )}
+
+              {!canUpdate && !noCompatiblePath && (
+                <div className="mt-4 p-3 bg-amber-600/20 border border-amber-400/30 rounded-lg">
+                  <div className="text-[20px] font-[580] text-amber-400">
+                    Your current version is too old for this update.
+                  </div>
+                  <div className="text-[18px] text-amber-300/80">
+                    Please update to at least version{" "}
+                    {updateInfo?.minimumVersion} first.
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            <button
+              className={`w-full p-4 rounded-xl border ${
+                isRebootReady
+                  ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
+                  : canUpdate &&
+                      !isDownloading &&
+                      !updateDownloadStarted &&
+                      !hideUpdateNotification
+                    ? "bg-white/10 hover:bg-white/20 border-white/10 text-white"
+                    : "bg-white/5 border-white/5 text-white/40"
+              }`}
+              onClick={
+                isRebootReady
+                  ? onReboot
+                  : canUpdate &&
+                      !isDownloading &&
+                      !updateDownloadStarted &&
+                      !hideUpdateNotification
+                    ? onUpdate
+                    : undefined
+              }
+              disabled={
+                !isRebootReady &&
+                (!canUpdate ||
+                  isDownloading ||
+                  updateDownloadStarted ||
+                  hideUpdateNotification)
+              }
+            >
+              <span className="text-[28px] font-[580] tracking-tight">
+                {isRebootReady
+                  ? "Reboot Now"
+                  : isDownloading
+                    ? "Applying update..."
+                    : updateDownloadStarted
+                      ? "Downloading..."
+                      : "Download and Install"}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     );
   };
@@ -381,7 +398,9 @@ const SoftwareUpdate = () => {
         hasUpdate={effectiveHasUpdate}
         imagePath={updateInfo?.imageUrl || "/images/os/nocturne/3.0.0.webp"}
         onUpdate={handleNocturneUpdate}
-        isDownloading={isUpdating || (updateDownloadStarted && !updateReadyForReboot)}
+        isDownloading={
+          isUpdating || (updateDownloadStarted && !updateReadyForReboot)
+        }
         canUpdate={canUpdate}
         isChecking={effectiveIsChecking}
         isMultiStepUpdate={isMultiStepUpdate}

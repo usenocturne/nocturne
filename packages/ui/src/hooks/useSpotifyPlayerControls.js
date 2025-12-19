@@ -89,7 +89,11 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         }, 100);
         return true;
       } catch (err) {
-        if ((err.message.includes("NO_ACTIVE_DEVICE") || err.message.includes("No playback devices available")) && !deviceId) {
+        if (
+          (err.message.includes("NO_ACTIVE_DEVICE") ||
+            err.message.includes("No playback devices available")) &&
+          !deviceId
+        ) {
           if (openDeviceSwitcher) {
             console.log(
               "No active device, opening device switcher with playback intent.",

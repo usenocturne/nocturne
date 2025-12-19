@@ -1112,62 +1112,62 @@ function App() {
           )}
           <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
             <Router>
-            <FontLoader />
-            <main
-              className="overflow-hidden relative min-h-screen rounded-2xl"
-              style={{
-                fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
-                fontOpticalSizing: "auto",
-              }}
-            >
-              <GradientBackground
-                gradientState={gradientState}
-                className="bg-black"
-              />
+              <FontLoader />
+              <main
+                className="overflow-hidden relative min-h-screen rounded-2xl"
+                style={{
+                  fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
+                  fontOpticalSizing: "auto",
+                }}
+              >
+                <GradientBackground
+                  gradientState={gradientState}
+                  className="bg-black"
+                />
 
-              <div className="relative z-10">
-                {content}
-                {!showTetheringScreen &&
-                  !showConnectionLostScreen &&
-                  !showTutorial && (
-                    <>
-                      {pairingRequest ? (
-                        <PairingScreen
-                          pin={pairingRequest.pairingKey}
-                          isConnecting={isConnecting}
-                          onAccept={acceptPairing}
-                          onReject={denyPairing}
-                        />
-                      ) : null}
-                    </>
-                  )}
-                <NetworkBanner
-                  visible={displayNetworkBanner}
-                  onClose={() => setShowNetworkBanner(false)}
-                />
-                <DeviceSwitcherModal
-                  isOpen={isDeviceSwitcherOpen}
-                  onClose={handleCloseDeviceSwitcher}
-                  initialDevices={prefetchedDevices}
-                />
-                {!showTutorial && (
-                  <ButtonMappingOverlay
-                    show={showGlobalMappingOverlay}
-                    activeButton={globalActiveButton}
+                <div className="relative z-10">
+                  {content}
+                  {!showTetheringScreen &&
+                    !showConnectionLostScreen &&
+                    !showTutorial && (
+                      <>
+                        {pairingRequest ? (
+                          <PairingScreen
+                            pin={pairingRequest.pairingKey}
+                            isConnecting={isConnecting}
+                            onAccept={acceptPairing}
+                            onReject={denyPairing}
+                          />
+                        ) : null}
+                      </>
+                    )}
+                  <NetworkBanner
+                    visible={displayNetworkBanner}
+                    onClose={() => setShowNetworkBanner(false)}
                   />
-                )}
-                <PowerMenuOverlay
-                  show={powerMenuVisible}
-                  onShutdown={handleShutdown}
-                  onReboot={handleReboot}
-                  onClose={() => setPowerMenuVisible(false)}
-                />
-              </div>
-            </main>
-            <NotificationsContainer />
-          </Router>
-        </DeviceSwitcherContext.Provider>
-      </NotificationProvider>
+                  <DeviceSwitcherModal
+                    isOpen={isDeviceSwitcherOpen}
+                    onClose={handleCloseDeviceSwitcher}
+                    initialDevices={prefetchedDevices}
+                  />
+                  {!showTutorial && (
+                    <ButtonMappingOverlay
+                      show={showGlobalMappingOverlay}
+                      activeButton={globalActiveButton}
+                    />
+                  )}
+                  <PowerMenuOverlay
+                    show={powerMenuVisible}
+                    onShutdown={handleShutdown}
+                    onReboot={handleReboot}
+                    onClose={() => setPowerMenuVisible(false)}
+                  />
+                </div>
+              </main>
+              <NotificationsContainer />
+            </Router>
+          </DeviceSwitcherContext.Provider>
+        </NotificationProvider>
       </OTAProvider>
     </SettingsProvider>
   );

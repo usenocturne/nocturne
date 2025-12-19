@@ -7,7 +7,10 @@ import {
 } from "@headlessui/react";
 import { useBluetooth, useDeviceInfo } from "../../../hooks/useNocturned";
 
-const BluetoothDevices = ({ startDiscoveryOnMount = true, stopDiscoveryOnUnmount = true }) => {
+const BluetoothDevices = ({
+  startDiscoveryOnMount = true,
+  stopDiscoveryOnUnmount = true,
+}) => {
   const {
     devices,
     loading,
@@ -45,7 +48,13 @@ const BluetoothDevices = ({ startDiscoveryOnMount = true, stopDiscoveryOnUnmount
         stopDiscovery();
       }
     };
-  }, [startDiscovery, fetchDevices, stopDiscovery, startDiscoveryOnMount, stopDiscoveryOnUnmount]);
+  }, [
+    startDiscovery,
+    fetchDevices,
+    stopDiscovery,
+    startDiscoveryOnMount,
+    stopDiscoveryOnUnmount,
+  ]);
 
   const handleConnect = async (deviceAddress) => {
     await connectDeviceNoRetry(deviceAddress);
@@ -110,7 +119,8 @@ const BluetoothDevices = ({ startDiscoveryOnMount = true, stopDiscoveryOnUnmount
             No Devices Found
           </p>
           <p className="text-[24px] font-[560] text-white/60 tracking-tight mt-2">
-            Connect to "{deviceInfo?.device || "Nocturne"}" in your phone's Bluetooth settings.
+            Connect to "{deviceInfo?.device || "Nocturne"}" in your phone's
+            Bluetooth settings.
           </p>
         </div>
       );
