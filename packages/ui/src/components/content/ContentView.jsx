@@ -556,7 +556,7 @@ const ContentView = ({
                 getPlaylist(contentId, "images,name,tracks.total"),
                 getPlaylistTracks(contentId, {
                   offset: 0,
-                  limit: 50,
+                  limit: 20,
                   fields: "offset,items(track(name,id,uri,artists(name,id)))",
                 }),
               ]);
@@ -613,7 +613,7 @@ const ContentView = ({
           case "liked-songs": {
             try {
               const tracksResponse = await getUserTracks({
-                limit: 50,
+                limit: 20,
                 offset: 0,
               });
 
@@ -760,7 +760,7 @@ const ContentView = ({
                 getPlaylist(playlistId, "images,name,tracks.total"),
                 getPlaylistTracks(playlistId, {
                   offset: 0,
-                  limit: 50,
+                  limit: 20,
                   fields: "offset,items(track(name,id,uri,artists(name,id)))",
                 }),
               ]);
