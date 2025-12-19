@@ -215,7 +215,7 @@ const SoftwareUpdate = () => {
               </button>
             ) : (
               <button
-                onClick={isChecking ? undefined : checkForUpdates}
+                onClick={isChecking ? undefined : () => checkForUpdates(true)}
                 disabled={isChecking}
                 className={`w-full p-4 rounded-xl border focus:outline-none transition-colors duration-200 flex items-center justify-center ${
                   isChecking

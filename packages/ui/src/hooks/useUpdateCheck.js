@@ -117,7 +117,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     };
   }, []);
 
-  const checkForUpdates = useCallback(async () => {
+  const checkForUpdates = useCallback(async (force = false) => {
     if (isChecking || checkInProgress.current) return;
 
     if (!eaSessionStarted) {
@@ -125,7 +125,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
       return;
     }
 
-    if (!initialDataLoadComplete) {
+    if (!force && !initialDataLoadComplete) {
       console.log("Skipping update check: Initial data load not complete yet");
       return;
     }
