@@ -611,13 +611,20 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   useEffect(() => {
     const handlePhoneMediaEvent = (data) => {
       if (data.type === "event" && data.topic === "media.nowPlaying.update") {
-        beginNowPlayingUpdateWindow();
-        isProcessingArtwork = false;
-
         const media = data.data?.MediaItemAttributes;
         const playback = data.data?.PlaybackAttributes;
 
         if (!media || !playback) return;
+
+        if (
+          playback.PlaybackAppName === "Spotify" &&
+          media.MediaItemArtist?.startsWith("Listening on ")
+        ) {
+          return;
+        }
+
+        beginNowPlayingUpdateWindow();
+        isProcessingArtwork = false;
 
         if (playback.PlaybackAppName === "Spotify") {
           pendingSpotifyMediaUpdate = { media, playback, timestamp: Date.now() };
