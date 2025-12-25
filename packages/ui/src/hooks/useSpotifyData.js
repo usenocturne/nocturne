@@ -256,77 +256,91 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       const uniqueAlbums = [];
       const albumIds = new Set();
 
-      const items = data.items || [];
-      items.forEach((item) => {
-        const contextType = item.type || item.context?.type;
-
-        if (contextType === "album") {
-          const album = item.context;
-          if (album && !albumIds.has(album.id || item.id)) {
-            albumIds.add(album.id || item.id);
+      if (data.albums && Array.isArray(data.albums)) {
+        data.albums.forEach((album) => {
+          if (album && album.id && !albumIds.has(album.id)) {
+            albumIds.add(album.id);
             uniqueAlbums.push({
-              id: album.id || item.id,
+              id: album.id,
               name: album.name,
-              uri: album.uri || item.uri,
+              uri: album.uri,
               images: album.images || [],
               artists: album.artists || [],
               type: "album",
             });
           }
-        } else if (contextType === "show") {
-          const show = item.context;
-          if (show && !albumIds.has(show.id || item.id)) {
-            albumIds.add(show.id || item.id);
-            uniqueAlbums.push({
-              id: show.id || item.id,
-              name: show.name,
-              uri: show.uri || item.uri,
-              images: show.images || [],
-              artists: show.publisher
+        });
+      } else {
+        const items = data.items || [];
+        items.forEach((item) => {
+          const contextType = item.type || item.context?.type;
+
+          if (contextType === "album") {
+            const album = item.context;
+            if (album && !albumIds.has(album.id || item.id)) {
+              albumIds.add(album.id || item.id);
+              uniqueAlbums.push({
+                id: album.id || item.id,
+                name: album.name,
+                uri: album.uri || item.uri,
+                images: album.images || [],
+                artists: album.artists || [],
+                type: "album",
+              });
+            }
+          } else if (contextType === "show") {
+            const show = item.context;
+            if (show && !albumIds.has(show.id || item.id)) {
+              albumIds.add(show.id || item.id);
+              uniqueAlbums.push({
+                id: show.id || item.id,
+                name: show.name,
+                uri: show.uri || item.uri,
+                images: show.images || [],
+                artists: show.publisher
+                  ? [
+                      {
+                        id: `publisher-${show.id || item.id}`,
+                        name: show.publisher,
+                        type: "show",
+                      },
+                    ]
+                  : [],
+                type: "show",
+              });
+            }
+          } else if (
+            item.track &&
+            item.track.type === "track" &&
+            item.track.album &&
+            !albumIds.has(item.track.album.id)
+          ) {
+            albumIds.add(item.track.album.id);
+            uniqueAlbums.push(item.track.album);
+          } else if (
+            item.track &&
+            item.track.type === "episode" &&
+            item.track.show &&
+            !albumIds.has(item.track.show.id)
+          ) {
+            albumIds.add(item.track.show.id);
+            const showAsAlbum = {
+              ...item.track.show,
+              artists: item.track.show.publisher
                 ? [
                     {
-                      id: `publisher-${show.id || item.id}`,
-                      name: show.publisher,
+                      id: `publisher-${item.track.show.id}`,
+                      name: item.track.show.publisher,
                       type: "show",
                     },
                   ]
                 : [],
               type: "show",
-            });
+            };
+            uniqueAlbums.push(showAsAlbum);
           }
-        }
-
-        else if (
-          item.track &&
-          item.track.type === "track" &&
-          item.track.album &&
-          !albumIds.has(item.track.album.id)
-        ) {
-          albumIds.add(item.track.album.id);
-          uniqueAlbums.push(item.track.album);
-        } else if (
-          item.track &&
-          item.track.type === "episode" &&
-          item.track.show &&
-          !albumIds.has(item.track.show.id)
-        ) {
-          albumIds.add(item.track.show.id);
-          const showAsAlbum = {
-            ...item.track.show,
-            artists: item.track.show.publisher
-              ? [
-                  {
-                    id: `publisher-${item.track.show.id}`,
-                    name: item.track.show.publisher,
-                    type: "show",
-                  },
-                ]
-              : [],
-            type: "show",
-          };
-          uniqueAlbums.push(showAsAlbum);
-        }
-      });
+        });
+      }
 
       if (extractedCurrentAlbumRef.current?.id) {
         const currentAlbum = extractedCurrentAlbumRef.current;
