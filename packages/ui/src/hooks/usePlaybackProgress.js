@@ -83,9 +83,19 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
 
       if (currentPlayback?.item?.id !== trackId) {
         setTrackId(currentPlayback.item?.id);
-        setDuration(currentPlayback.item?.duration_ms || 0);
-        serverProgressRef.current = currentPlayback.progress_ms || 0;
-        setProgressMs(currentPlayback.progress_ms || 0);
+        const newDuration = currentPlayback.item?.duration_ms;
+        if (newDuration && newDuration > 0) {
+          setDuration(newDuration);
+        }
+        let adjustedProgress = currentPlayback.progress_ms || 0;
+        if (currentPlayback.is_playing && currentPlayback.timestamp) {
+          const elapsedSinceTimestamp = Date.now() - currentPlayback.timestamp;
+          if (elapsedSinceTimestamp > 0 && elapsedSinceTimestamp < 30000) {
+            adjustedProgress += elapsedSinceTimestamp;
+          }
+        }
+        serverProgressRef.current = adjustedProgress;
+        setProgressMs(adjustedProgress);
         lastUpdateTimeRef.current = performance.now();
         lastFrameTimeRef.current = performance.now();
         frameSkipCounterRef.current = 0;
@@ -100,7 +110,13 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         const now = performance.now();
         const elapsed = now - lastUpdateTimeRef.current;
         const estimatedProgress = serverProgressRef.current + elapsed;
-        const actualProgress = currentPlayback.progress_ms;
+        let actualProgress = currentPlayback.progress_ms;
+        if (currentPlayback.is_playing && currentPlayback.timestamp) {
+          const elapsedSinceTimestamp = Date.now() - currentPlayback.timestamp;
+          if (elapsedSinceTimestamp > 0 && elapsedSinceTimestamp < 30000) {
+            actualProgress += elapsedSinceTimestamp;
+          }
+        }
 
         if (isPlaying && elapsed > 500) {
           const impliedLatency = Math.max(
@@ -155,7 +171,10 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       }
 
       setIsPlaying(currentPlayback.is_playing || false);
-      setDuration(currentPlayback.item?.duration_ms || 0);
+      const updatedDuration = currentPlayback.item?.duration_ms;
+      if (updatedDuration && updatedDuration > 0) {
+        setDuration(updatedDuration);
+      }
     }
   }, [currentPlayback, trackId, scheduleNextRefresh]);
 

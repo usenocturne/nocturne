@@ -258,7 +258,45 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
       const items = data.items || [];
       items.forEach((item) => {
-        if (
+        const contextType = item.type || item.context?.type;
+
+        if (contextType === "album") {
+          const album = item.context;
+          if (album && !albumIds.has(album.id || item.id)) {
+            albumIds.add(album.id || item.id);
+            uniqueAlbums.push({
+              id: album.id || item.id,
+              name: album.name,
+              uri: album.uri || item.uri,
+              images: album.images || [],
+              artists: album.artists || [],
+              type: "album",
+            });
+          }
+        } else if (contextType === "show") {
+          const show = item.context;
+          if (show && !albumIds.has(show.id || item.id)) {
+            albumIds.add(show.id || item.id);
+            uniqueAlbums.push({
+              id: show.id || item.id,
+              name: show.name,
+              uri: show.uri || item.uri,
+              images: show.images || [],
+              artists: show.publisher
+                ? [
+                    {
+                      id: `publisher-${show.id || item.id}`,
+                      name: show.publisher,
+                      type: "show",
+                    },
+                  ]
+                : [],
+              type: "show",
+            });
+          }
+        }
+
+        else if (
           item.track &&
           item.track.type === "track" &&
           item.track.album &&

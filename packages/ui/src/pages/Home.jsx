@@ -422,9 +422,8 @@ export default function Home({
             userPlaylists
               .filter(
                 (item) =>
-                  item?.type === "playlist" &&
-                  item.id !== "37i9dQZF1EYkqdzj48dyYq" &&
-                  item.tracks?.total > 0,
+                  (item?.type === "playlist" || item?.uri?.includes(":playlist:")) &&
+                  item.id !== "37i9dQZF1EYkqdzj48dyYq",
               )
               .map((playlist, index) => (
                 <div
@@ -464,8 +463,12 @@ export default function Home({
                         </div>
                         Now Playing
                       </>
+                    ) : playlist.tracks?.total != null ? (
+                      `${playlist.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
+                    ) : playlist.owner?.display_name ? (
+                      `by ${playlist.owner.display_name}`
                     ) : (
-                      `${(playlist.tracks?.total || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
+                      "Playlist"
                     )}
                   </h4>
                 </div>
@@ -563,8 +566,10 @@ export default function Home({
                       </div>
                       Now Playing
                     </>
-                  ) : (
+                  ) : artist.followers?.total != null ? (
                     `${formatFollowerCount(artist.followers.total)} Followers`
+                  ) : (
+                    "Top Artist"
                   )}
                 </h4>
               </div>

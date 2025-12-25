@@ -652,6 +652,9 @@ export function useSpotifyWebSocket() {
         const result = await sendSpotifyCommand("spotify.me.tracks.contains", {
           ids: [trackId],
         });
+        if (result && result.results) {
+          return result.results;
+        }
         return result;
       } catch (err) {
         setError(err.message);

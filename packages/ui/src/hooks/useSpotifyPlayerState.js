@@ -213,6 +213,21 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           };
         }
 
+        const prevDuration = currentPlaybackRef.current?.item?.duration_ms;
+        const incomingDuration = itemWithArtwork?.duration_ms;
+        const isSameTrack =
+          itemWithArtwork?.id === currentPlaybackRef.current?.item?.id ||
+          itemWithArtwork?.uri === currentPlaybackRef.current?.item?.uri;
+
+        if (itemWithArtwork && (!incomingDuration || incomingDuration === 0)) {
+          if (prevDuration > 0 && isSameTrack) {
+            itemWithArtwork = {
+              ...itemWithArtwork,
+              duration_ms: prevDuration,
+            };
+          }
+        }
+
         const newPlayback = {
           ...data,
           device: {
