@@ -421,15 +421,46 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         const data = await getUserPlaylists(params);
         const items = data.items || [];
 
+        const DJ_PLAYLIST_ID = "37i9dQZF1EYkqdzj48dyYq";
+        const itemsWithCounts = await Promise.all(
+          items.map(async (playlist) => {
+            if (playlist.id === DJ_PLAYLIST_ID) {
+              return playlist;
+            }
+            if (playlist.id && !playlist.tracks?.total) {
+              try {
+                const playlistInfo = await getPlaylist(
+                  playlist.id,
+                  "tracks.total",
+                );
+                return {
+                  ...playlist,
+                  tracks: { total: playlistInfo.tracks?.total || 0 },
+                };
+              } catch (error) {
+                console.warn(
+                  `Failed to fetch track count for ${playlist.name}:`,
+                  error,
+                );
+                return playlist;
+              }
+            }
+            return playlist;
+          }),
+        );
+
         setLastOffsets((prev) => ({
           ...prev,
           userPlaylists: data.offset || 0,
         }));
 
+        const currentOffset = data.offset || 0;
+        const hasMoreFromServer = data.next || (data.total && currentOffset + itemsWithCounts.length < data.total);
+
         if (isLoadMore) {
           setUserPlaylists((prev) => {
             const existingIds = new Set(prev.map((item) => item.id));
-            const newUniqueItems = items.filter(
+            const newUniqueItems = itemsWithCounts.filter(
               (item) => !existingIds.has(item.id),
             );
             const newTotal = [...prev, ...newUniqueItems];
@@ -441,16 +472,16 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
             return limitedItems;
           });
 
-          if (data.next && itemCounts.userPlaylists + items.length < 50) {
-            setNextTokens((prev) => ({ ...prev, userPlaylists: data.next }));
+          if (hasMoreFromServer && itemCounts.userPlaylists + itemsWithCounts.length < 50) {
+            setNextTokens((prev) => ({ ...prev, userPlaylists: data.next || "has-more" }));
           } else {
             setNextTokens((prev) => ({ ...prev, userPlaylists: null }));
           }
         } else {
-          setUserPlaylists(items);
-          setItemCounts((prev) => ({ ...prev, userPlaylists: items.length }));
+          setUserPlaylists(itemsWithCounts);
+          setItemCounts((prev) => ({ ...prev, userPlaylists: itemsWithCounts.length }));
 
-          if (data.total > 5 && items.length < 50) {
+          if (hasMoreFromServer && itemsWithCounts.length < 50) {
             setNextTokens((prev) => ({
               ...prev,
               userPlaylists: data.next || "has-more",
@@ -459,7 +490,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
 
         setErrors((prev) => ({ ...prev, userPlaylists: null }));
-        return items;
+        return itemsWithCounts;
       } catch (err) {
         console.error("Error fetching user playlists:", err);
         setErrors((prev) => ({ ...prev, userPlaylists: err.message }));
@@ -472,7 +503,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [isSpotifyReady, getUserPlaylists, lastOffsets, itemCounts],
+    [isSpotifyReady, getUserPlaylists, getPlaylist, lastOffsets, itemCounts],
   );
 
   const fetchTopArtists = useCallback(
