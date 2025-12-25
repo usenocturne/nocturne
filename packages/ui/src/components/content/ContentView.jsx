@@ -364,9 +364,13 @@ const ContentView = ({
           });
 
           const newTracks = data.items.map((item) => item.track);
+          const newOffset = (data.offset || offset) + newTracks.length;
+          const totalTracks = content?.tracks?.total || 0;
+          const hasMore = data.next || (totalTracks > 0 && newOffset < totalTracks);
+
           setTracks((prevTracks) => [...prevTracks, ...newTracks]);
-          setNextUrl(data.next);
-          setHasMoreTracks(!!data.next);
+          setNextUrl(hasMore ? (data.next || "has-more") : null);
+          setHasMoreTracks(hasMore);
           setLoadedPages((prev) => prev + 1);
         } catch (error) {
           console.error("WebSocket load more tracks failed:", error);
@@ -418,6 +422,7 @@ const ContentView = ({
     isLoadingMore,
     contentType,
     contentId,
+    content,
     getPlaylistTracks,
     radioMixes,
   ]);
@@ -426,7 +431,7 @@ const ContentView = ({
     const container = tracksContainerRef.current;
     if (
       !container ||
-      (contentType !== "playlist" && contentType !== "show") ||
+      (contentType !== "playlist" && contentType !== "show" && contentType !== "mix") ||
       tracksPerPage === 0
     )
       return;
@@ -479,6 +484,20 @@ const ContentView = ({
     loadMoreTracks,
     contentType,
   ]);
+
+  useEffect(() => {
+    if (
+      hasMoreTracks &&
+      !isLoadingMore &&
+      tracks.length > 0 &&
+      (contentType === "playlist" || contentType === "mix")
+    ) {
+      const timer = setTimeout(() => {
+        loadMoreTracks();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [hasMoreTracks, isLoadingMore, tracks.length, contentType, loadMoreTracks]);
 
   useEffect(() => {
     if (
@@ -571,7 +590,7 @@ const ContentView = ({
               const totalTracks = playlistInfo.tracks?.total || 0;
               const hasMore = currentOffset + currentItems < totalTracks;
 
-              setNextUrl(tracksResponse.next);
+              setNextUrl(hasMore ? (tracksResponse.next || "has-more") : null);
               setHasMoreTracks(hasMore);
               setTracksPerPage(tracksData.length);
               setLoadedPages(1);
@@ -779,7 +798,7 @@ const ContentView = ({
                 tracks: { total: totalTracks },
               });
               setTracks(tracksData);
-              setNextUrl(tracksResponse.next);
+              setNextUrl(hasMore ? (tracksResponse.next || "has-more") : null);
               setHasMoreTracks(hasMore);
               setTracksPerPage(tracksData.length);
               setLoadedPages(1);
