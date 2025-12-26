@@ -102,11 +102,6 @@ export default function Home({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeSection, setActiveSection]);
 
-  useEffect(() => {
-    if (activeSection === "nowPlaying") {
-      refreshPlaybackState();
-    }
-  }, [activeSection, refreshPlaybackState]);
 
   useEffect(() => {
     if (recentAlbums.length > 0 && activeSection === "recents") {

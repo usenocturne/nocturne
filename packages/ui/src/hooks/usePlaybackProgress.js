@@ -23,7 +23,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const prevRepeatStateRef = useRef(null);
 
   const scheduleNextRefresh = useCallback(() => {
-    const REFRESH_INTERVAL = 8000;
+    const REFRESH_INTERVAL = 10000;
 
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
@@ -190,12 +190,14 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       const elapsed = timestamp - lastUpdateTimeRef.current;
 
       const frameTime = timestamp - lastFrameTimeRef.current;
-      if (frameTime > 50) {
+      if (frameTime > 50 && document.visibilityState === "visible") {
         frameSkipCounterRef.current++;
         if (frameSkipCounterRef.current > 5) {
           triggerRefresh();
           frameSkipCounterRef.current = 0;
         }
+      } else if (document.visibilityState !== "visible") {
+        frameSkipCounterRef.current = 0;
       }
       lastFrameTimeRef.current = timestamp;
 
@@ -240,10 +242,8 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && isPlaying) {
-        lastUpdateTimeRef.current = performance.now();
         lastFrameTimeRef.current = performance.now();
         frameSkipCounterRef.current = 0;
-        triggerRefresh();
       }
     };
 
@@ -251,7 +251,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [isPlaying, triggerRefresh]);
+  }, [isPlaying]);
 
   const updateProgress = useCallback((newProgressMs) => {
     serverProgressRef.current = newProgressMs;
