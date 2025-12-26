@@ -201,7 +201,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       }
       lastFrameTimeRef.current = timestamp;
 
-      let driftCorrectionFactor = 0.99;
+      let driftCorrectionFactor = 1.04;
       if (driftHistoryRef.current.length >= 1) {
         const averageDrift =
           driftHistoryRef.current.reduce((sum, drift) => sum + drift, 0) /
@@ -211,10 +211,10 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
           -0.04,
           Math.min(0.04, averageDrift / 3000),
         );
-        driftCorrectionFactor = 0.99 + driftInfluence;
+        driftCorrectionFactor = 1.04 - driftInfluence;
 
         if (Math.abs(averageDrift) < 30) {
-          driftCorrectionFactor = 0.99;
+          driftCorrectionFactor = 1.04;
         }
       }
 
@@ -257,6 +257,9 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     serverProgressRef.current = newProgressMs;
     setProgressMs(newProgressMs);
     lastUpdateTimeRef.current = performance.now();
+    driftHistoryRef.current = [];
+    latencyHistoryRef.current = [];
+    estimatedLatencyRef.current = 0;
   }, []);
 
   return {
