@@ -13,49 +13,26 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const lastFrameTimeRef = useRef(performance.now());
   const refreshTimeoutRef = useRef(null);
   const lastRefreshTimeRef = useRef(0);
-  const driftHistoryRef = useRef([]);
-  const maxDriftHistory = 30;
   const initialRefreshDoneRef = useRef(false);
-  const estimatedLatencyRef = useRef(0);
-  const latencyHistoryRef = useRef([]);
-  const maxLatencyHistory = 10;
   const prevShuffleStateRef = useRef(null);
   const prevRepeatStateRef = useRef(null);
-
-  const scheduleNextRefresh = useCallback(() => {
-    const REFRESH_INTERVAL = 10000;
-
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-    }
-
-    refreshTimeoutRef.current = setTimeout(() => {
-      refreshPlaybackState();
-      lastRefreshTimeRef.current = Date.now();
-      scheduleNextRefresh();
-    }, REFRESH_INTERVAL);
-  }, [refreshPlaybackState]);
+  const anchorPositionRef = useRef(0);
+  const anchorTimestampRef = useRef(0);
 
   const triggerRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = null;
     }
 
     refreshPlaybackState();
     lastRefreshTimeRef.current = Date.now();
-    scheduleNextRefresh();
-  }, [refreshPlaybackState, scheduleNextRefresh]);
+  }, [refreshPlaybackState]);
 
   useEffect(() => {
-    const now = Date.now();
-    if (
-      !initialRefreshDoneRef.current &&
-      (!refreshTimeoutRef.current || now - lastRefreshTimeRef.current > 10000)
-    ) {
+    if (!initialRefreshDoneRef.current) {
       initialRefreshDoneRef.current = true;
       triggerRefresh();
-    } else if (isPlaying && !refreshTimeoutRef.current) {
-      scheduleNextRefresh();
     }
 
     return () => {
@@ -64,7 +41,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         refreshTimeoutRef.current = null;
       }
     };
-  }, [triggerRefresh, scheduleNextRefresh, isPlaying]);
+  }, [triggerRefresh]);
 
   useEffect(() => {
     if (currentPlayback) {
@@ -81,102 +58,82 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       prevShuffleStateRef.current = currentShuffle;
       prevRepeatStateRef.current = currentRepeat;
 
-      if (currentPlayback?.item?.id !== trackId) {
-        setTrackId(currentPlayback.item?.id);
-        const newDuration = currentPlayback.item?.duration_ms;
-        if (newDuration && newDuration > 0) {
-          setDuration(newDuration);
-        }
-        let adjustedProgress = currentPlayback.progress_ms || 0;
-        if (currentPlayback.is_playing && currentPlayback.timestamp) {
-          const elapsedSinceTimestamp = Date.now() - currentPlayback.timestamp;
-          if (elapsedSinceTimestamp > 0 && elapsedSinceTimestamp < 30000) {
-            adjustedProgress += elapsedSinceTimestamp;
-          }
-        }
-        serverProgressRef.current = adjustedProgress;
-        setProgressMs(adjustedProgress);
-        lastUpdateTimeRef.current = performance.now();
-        lastFrameTimeRef.current = performance.now();
-        frameSkipCounterRef.current = 0;
-        driftHistoryRef.current = [];
-        latencyHistoryRef.current = [];
-        estimatedLatencyRef.current = 0;
-
-        if (!refreshTimeoutRef.current && currentPlayback.is_playing) {
-          scheduleNextRefresh();
-        }
-      } else if (typeof currentPlayback?.progress_ms === "number") {
-        const now = performance.now();
-        const elapsed = now - lastUpdateTimeRef.current;
-        const estimatedProgress = serverProgressRef.current + elapsed;
-        let actualProgress = currentPlayback.progress_ms;
-        if (currentPlayback.is_playing && currentPlayback.timestamp) {
-          const elapsedSinceTimestamp = Date.now() - currentPlayback.timestamp;
-          if (elapsedSinceTimestamp > 0 && elapsedSinceTimestamp < 30000) {
-            actualProgress += elapsedSinceTimestamp;
-          }
-        }
-
-        if (isPlaying && elapsed > 500) {
-          const impliedLatency = Math.max(
-            0,
-            estimatedProgress - actualProgress,
-          );
-          if (impliedLatency < 1000) {
-            latencyHistoryRef.current.push(impliedLatency);
-            if (latencyHistoryRef.current.length > maxLatencyHistory) {
-              latencyHistoryRef.current.shift();
-            }
-            if (latencyHistoryRef.current.length > 0) {
-              estimatedLatencyRef.current =
-                latencyHistoryRef.current.reduce((sum, l) => sum + l, 0) /
-                latencyHistoryRef.current.length;
-            }
-          }
-        }
-
-        const compensatedProgress =
-          actualProgress + Math.min(estimatedLatencyRef.current * 0.3, 200);
-        const drift = estimatedProgress - compensatedProgress;
-
-        if (elapsed > 1000 && Math.abs(drift) < 5000) {
-          driftHistoryRef.current.push(drift);
-          if (driftHistoryRef.current.length > maxDriftHistory) {
-            driftHistoryRef.current.shift();
-          }
-        }
-
-        const wouldMoveBackwards = compensatedProgress < progressMs;
-        const backwardsAmount = progressMs - compensatedProgress;
-        const isNearEnd = duration > 0 && progressMs > duration * 0.98;
-        const isVerySmallBackwardsJump = backwardsAmount < 500;
-        const isSignificantBackwardsJump = backwardsAmount > 2000;
-
-        if (
-          wouldMoveBackwards &&
-          isSignificantBackwardsJump &&
-          shuffleOrRepeatJustChanged
-        ) {
-          return;
-        }
-
-        if (wouldMoveBackwards && isNearEnd && isVerySmallBackwardsJump) {
-          return;
-        }
-
-        serverProgressRef.current = compensatedProgress;
-        setProgressMs(compensatedProgress);
-        lastUpdateTimeRef.current = now;
-      }
-
-      setIsPlaying(currentPlayback.is_playing || false);
       const updatedDuration = currentPlayback.item?.duration_ms;
       if (updatedDuration && updatedDuration > 0) {
         setDuration(updatedDuration);
       }
+
+      setIsPlaying(currentPlayback.is_playing || false);
+
+      if (currentPlayback?.item?.id !== trackId) {
+        setTrackId(currentPlayback.item?.id);
+
+        const spotifyPosition = currentPlayback.progress_ms || 0;
+        const spotifyTimestamp = currentPlayback.timestamp || Date.now();
+
+        anchorPositionRef.current = spotifyPosition;
+        anchorTimestampRef.current = spotifyTimestamp;
+
+        const now = Date.now();
+        const elapsed = currentPlayback.is_playing
+          ? Math.max(0, now - spotifyTimestamp)
+          : 0;
+        const currentPosition = Math.min(
+          spotifyPosition + elapsed,
+          updatedDuration || Infinity,
+        );
+
+        serverProgressRef.current = currentPosition;
+        setProgressMs(currentPosition);
+        lastUpdateTimeRef.current = performance.now();
+        lastFrameTimeRef.current = performance.now();
+        frameSkipCounterRef.current = 0;
+      } else if (
+        typeof currentPlayback?.progress_ms === "number" &&
+        currentPlayback.timestamp
+      ) {
+        const spotifyPosition = currentPlayback.progress_ms;
+        const spotifyTimestamp = currentPlayback.timestamp;
+
+        if (spotifyTimestamp > anchorTimestampRef.current) {
+          anchorPositionRef.current = spotifyPosition;
+          anchorTimestampRef.current = spotifyTimestamp;
+
+          const now = Date.now();
+          const elapsed = currentPlayback.is_playing
+            ? Math.max(0, now - spotifyTimestamp)
+            : 0;
+          const truthPosition = Math.min(
+            spotifyPosition + elapsed,
+            duration || Infinity,
+          );
+
+          const wouldMoveBackwards = truthPosition < progressMs;
+          const backwardsAmount = progressMs - truthPosition;
+          const isSignificantBackwardsJump = backwardsAmount > 2000;
+          const isNearEnd = duration > 0 && progressMs > duration * 0.98;
+          const isVerySmallBackwardsJump = backwardsAmount < 500;
+
+          if (
+            wouldMoveBackwards &&
+            isSignificantBackwardsJump &&
+            !shuffleOrRepeatJustChanged
+          ) {
+            serverProgressRef.current = truthPosition;
+            setProgressMs(truthPosition);
+            lastUpdateTimeRef.current = performance.now();
+          } else if (
+            wouldMoveBackwards &&
+            isNearEnd &&
+            isVerySmallBackwardsJump
+          ) {
+          } else {
+            serverProgressRef.current = truthPosition;
+          }
+        }
+      }
     }
-  }, [currentPlayback, trackId, scheduleNextRefresh]);
+  }, [currentPlayback, trackId, duration, progressMs]);
 
   useEffect(() => {
     if (animationFrameRef.current) {
@@ -187,8 +144,6 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
     if (!isPlaying || duration <= 0) return;
 
     const animate = (timestamp) => {
-      const elapsed = timestamp - lastUpdateTimeRef.current;
-
       const frameTime = timestamp - lastFrameTimeRef.current;
       if (frameTime > 50 && document.visibilityState === "visible") {
         frameSkipCounterRef.current++;
@@ -201,30 +156,36 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       }
       lastFrameTimeRef.current = timestamp;
 
-      let driftCorrectionFactor = 1.04;
-      if (driftHistoryRef.current.length >= 1) {
-        const averageDrift =
-          driftHistoryRef.current.reduce((sum, drift) => sum + drift, 0) /
-          driftHistoryRef.current.length;
-
-        const driftInfluence = Math.max(
-          -0.04,
-          Math.min(0.04, averageDrift / 3000),
-        );
-        driftCorrectionFactor = 1.04 - driftInfluence;
-
-        if (Math.abs(averageDrift) < 30) {
-          driftCorrectionFactor = 1.04;
-        }
-      }
-
-      const correctedElapsed = elapsed * driftCorrectionFactor;
-      const estimated = Math.min(
-        serverProgressRef.current + correctedElapsed,
+      const now = Date.now();
+      const elapsedSinceAnchor = Math.max(0, now - anchorTimestampRef.current);
+      const truthPosition = Math.min(
+        anchorPositionRef.current + elapsedSinceAnchor,
         duration,
       );
 
-      setProgressMs(estimated);
+      const elapsedSinceLastFrame = timestamp - lastUpdateTimeRef.current;
+      lastUpdateTimeRef.current = timestamp;
+
+      const currentDisplayed = serverProgressRef.current;
+      const drift = currentDisplayed - truthPosition;
+
+      let playbackSpeed = 1.0;
+      if (Math.abs(drift) > 50) {
+        const correctionFactor = Math.max(-0.05, Math.min(0.05, -drift / 1000));
+        playbackSpeed = 1.0 + correctionFactor;
+      }
+
+      if (Math.abs(drift) > 2000) {
+        serverProgressRef.current = truthPosition;
+        setProgressMs(truthPosition);
+      } else {
+        const newPosition = Math.min(
+          currentDisplayed + elapsedSinceLastFrame * playbackSpeed,
+          duration,
+        );
+        serverProgressRef.current = newPosition;
+        setProgressMs(newPosition);
+      }
 
       animationFrameRef.current = requestAnimationFrame(animate);
     };
@@ -237,7 +198,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         animationFrameRef.current = null;
       }
     };
-  }, [isPlaying, duration]);
+  }, [isPlaying, duration, triggerRefresh]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -254,12 +215,12 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   }, [isPlaying]);
 
   const updateProgress = useCallback((newProgressMs) => {
+    anchorPositionRef.current = newProgressMs;
+    anchorTimestampRef.current = Date.now();
+
     serverProgressRef.current = newProgressMs;
     setProgressMs(newProgressMs);
     lastUpdateTimeRef.current = performance.now();
-    driftHistoryRef.current = [];
-    latencyHistoryRef.current = [];
-    estimatedLatencyRef.current = 0;
   }, []);
 
   return {
