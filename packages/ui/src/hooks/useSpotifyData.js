@@ -770,6 +770,102 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
       const result = await sendSpotifyCommand("spotify.radio.mixes");
 
+      const nocturneMixes = [
+        {
+          id: "top-mix",
+          name: "Your Top Mix",
+          images: [{ url: "/images/radio-cover/top.webp" }],
+          tracks: { total: 50 },
+          trackCount: 50,
+          type: "static",
+          sortOrder: 1,
+        },
+        {
+          id: "discoveries-mix",
+          name: "Discoveries",
+          images: [{ url: "/images/radio-cover/discoveries.webp" }],
+          tracks: { total: 50 },
+          trackCount: 50,
+          type: "static",
+          sortOrder: 2,
+        },
+      ];
+
+      if (result?.sections?.[0]?.items) {
+        const items = result.sections[0].items;
+
+        const spotifyMixes = items
+          .filter((item) => {
+            const format = item.format;
+            const name = item.name;
+            return (
+              (format === "daily-mix" ||
+                format === "release-radar" ||
+                format === "discover-weekly") &&
+              name !== "DJ"
+            );
+          })
+          .map((item, index) => {
+            const imageUrl = item.image_url || "";
+
+            let type = "spotify-radio";
+            let id = item.uri.split(":").pop();
+
+            if (item.format === "daily-mix") {
+              type = "daily-mix";
+            } else if (item.format === "release-radar") {
+              type = "release-radar";
+            } else if (item.format === "discover-weekly") {
+              type = "discover-weekly";
+            }
+
+            return {
+              id,
+              name: item.name,
+              images: [{ url: imageUrl }],
+              uri: item.uri,
+              type,
+              sortOrder: index + 100,
+              tracks: { total: 0 },
+              trackCount: 0,
+            };
+          });
+
+        const mixes = [...nocturneMixes, ...spotifyMixes];
+
+        if (mixes.length > 0) {
+          const mixesWithCounts = await Promise.all(
+            mixes.map(async (mix) => {
+              if (mix.uri && mix.trackCount === 0) {
+                try {
+                  const playlistId = mix.uri.split(":").pop();
+                  const playlistInfo = await getPlaylist(
+                    playlistId,
+                    "tracks.total",
+                  );
+                  return {
+                    ...mix,
+                    tracks: { total: playlistInfo.tracks?.total || 0 },
+                    trackCount: playlistInfo.tracks?.total || 0,
+                  };
+                } catch (error) {
+                  console.warn(
+                    `Failed to fetch track count for ${mix.name}:`,
+                    error,
+                  );
+                  return mix;
+                }
+              }
+              return mix;
+            }),
+          );
+
+          setRadioMixes(mixesWithCounts);
+          setErrors((prev) => ({ ...prev, radioMixes: null }));
+          return mixesWithCounts;
+        }
+      }
+
       if (result?.data?.homeSections?.sections?.[0]?.sectionItems?.items) {
         const items = result.data.homeSections.sections[0].sectionItems.items;
 
@@ -824,27 +920,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
               trackCount,
             };
           });
-
-        const nocturneMixes = [
-          {
-            id: "top-mix",
-            name: "Your Top Mix",
-            images: [{ url: "/images/radio-cover/top.webp" }],
-            tracks: { total: 50 },
-            trackCount: 50,
-            type: "static",
-            sortOrder: 1,
-          },
-          {
-            id: "discoveries-mix",
-            name: "Discoveries",
-            images: [{ url: "/images/radio-cover/discoveries.webp" }],
-            tracks: { total: 50 },
-            trackCount: 50,
-            type: "static",
-            sortOrder: 2,
-          },
-        ];
 
         const mixes = [...nocturneMixes, ...spotifyMixes];
 
