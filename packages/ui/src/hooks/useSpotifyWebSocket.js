@@ -23,17 +23,6 @@ const generateUUID = () => {
   });
 };
 
-const extractAfterFromNextUrl = (nextUrl) => {
-  if (!nextUrl) return null;
-  try {
-    const url = new URL(nextUrl);
-    return url.searchParams.get("after");
-  } catch (error) {
-    console.error("Error extracting after timestamp from URL:", error);
-    return null;
-  }
-};
-
 export function useSpotifyWebSocket() {
   const { wsConnected, addMessageListener, removeMessageListener } =
     useNocturned();
@@ -615,10 +604,6 @@ export function useSpotifyWebSocket() {
           "spotify.me.recentlyPlayed",
           params,
         );
-
-        if (result && result.next) {
-          result.nextAfter = extractAfterFromNextUrl(result.next);
-        }
 
         return result;
       } catch (err) {
