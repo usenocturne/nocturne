@@ -22,6 +22,22 @@ let lastEaSessionStartTime = 0;
 let pendingSpotifyMediaUpdate = null;
 let spotifyFallbackTimeout = null;
 
+const normalizeImageUrl = (url) => {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("blob:") || url.startsWith("/")) {
+    return url;
+  }
+  return `https://${url}`;
+};
+
+const normalizeImageArray = (images) => {
+  if (!images || !Array.isArray(images)) return images;
+  return images.map((img) => ({
+    ...img,
+    url: normalizeImageUrl(img.url),
+  }));
+};
+
 const cleanupArtworkCache = () => {
   if (artworkCache.size > MAX_ARTWORK_CACHE_SIZE) {
     const entriesToRemove = artworkCache.size - MAX_ARTWORK_CACHE_SIZE;
@@ -213,6 +229,26 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           };
         }
 
+        if (itemWithArtwork?.album?.images && !shouldPreservePrevBlob && !cachedArtworkUrl) {
+          itemWithArtwork = {
+            ...itemWithArtwork,
+            album: {
+              ...itemWithArtwork.album,
+              images: normalizeImageArray(itemWithArtwork.album.images),
+            },
+          };
+        }
+
+        if (itemWithArtwork?.show?.images && !cachedArtworkUrl) {
+          itemWithArtwork = {
+            ...itemWithArtwork,
+            show: {
+              ...itemWithArtwork.show,
+              images: normalizeImageArray(itemWithArtwork.show.images),
+            },
+          };
+        }
+
         const prevDuration = currentPlaybackRef.current?.item?.duration_ms;
         const incomingDuration = itemWithArtwork?.duration_ms;
         const isSameTrack =
@@ -250,7 +286,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           ? [{ url: preservedBlobArtwork }]
           : cachedArtworkUrl
             ? [{ url: cachedArtworkUrl }]
-            : data.item.album?.images;
+            : normalizeImageArray(data.item.album?.images);
 
         const currentAlbum =
           data.item.is_local || data.item.is_phone_media
@@ -291,7 +327,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           ...currentShow,
           images: cachedArtworkUrl
             ? [{ url: cachedArtworkUrl }]
-            : currentShow?.images,
+            : normalizeImageArray(currentShow?.images),
           artists: currentShow.publisher
             ? [
                 {
