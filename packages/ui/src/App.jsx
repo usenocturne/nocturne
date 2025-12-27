@@ -491,6 +491,14 @@ function App() {
 
     if (!eaSessionStarted) return;
 
+    sendNocturneWsRequest("device.time.get", {}, { timeoutMs: 5000 })
+      .then(() => {
+        console.log("Device time sync request sent");
+      })
+      .catch((err) => {
+        console.error("Failed to sync device time:", err);
+      });
+
     let cancelled = false;
     let retryCount = 0;
     const maxRetries = 5;
