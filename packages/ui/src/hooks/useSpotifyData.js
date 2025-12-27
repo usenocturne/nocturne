@@ -458,6 +458,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         const hasMoreFromServer = data.next || (data.total && currentOffset + itemsWithCounts.length < data.total);
 
         if (isLoadMore) {
+          let newLength = 0;
           setUserPlaylists((prev) => {
             const existingIds = new Set(prev.map((item) => item.id));
             const newUniqueItems = itemsWithCounts.filter(
@@ -465,17 +466,19 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
             );
             const newTotal = [...prev, ...newUniqueItems];
             const limitedItems = newTotal.slice(0, 50);
-            setItemCounts((prevCounts) => ({
-              ...prevCounts,
-              userPlaylists: limitedItems.length,
-            }));
+            newLength = limitedItems.length;
             return limitedItems;
           });
 
-          if (hasMoreFromServer && itemCounts.userPlaylists + itemsWithCounts.length < 50) {
-            setNextTokens((prev) => ({ ...prev, userPlaylists: data.next || "has-more" }));
+          setItemCounts((prevCounts) => ({
+            ...prevCounts,
+            userPlaylists: newLength,
+          }));
+
+          if (hasMoreFromServer && newLength < 50) {
+            setNextTokens((prevTokens) => ({ ...prevTokens, userPlaylists: data.next || "has-more" }));
           } else {
-            setNextTokens((prev) => ({ ...prev, userPlaylists: null }));
+            setNextTokens((prevTokens) => ({ ...prevTokens, userPlaylists: null }));
           }
         } else {
           setUserPlaylists(itemsWithCounts);
@@ -503,7 +506,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [isSpotifyReady, getUserPlaylists, getPlaylist, lastOffsets, itemCounts],
+    [isSpotifyReady, getUserPlaylists, getPlaylist, lastOffsets],
   );
 
   const fetchTopArtists = useCallback(
@@ -534,6 +537,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         offsetRefs.current.topArtists = data.offset || 0;
 
         if (isLoadMore) {
+          let newLength = 0;
           setTopArtists((prev) => {
             const existingIds = new Set(prev.map((item) => item.id));
             const newUniqueItems = items.filter(
@@ -541,17 +545,19 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
             );
             const newTotal = [...prev, ...newUniqueItems];
             const limitedItems = newTotal.slice(0, 50);
-            setItemCounts((prevCounts) => ({
-              ...prevCounts,
-              topArtists: limitedItems.length,
-            }));
+            newLength = limitedItems.length;
             return limitedItems;
           });
 
-          if (data.next && itemCounts.topArtists + items.length < 50) {
-            setNextTokens((prev) => ({ ...prev, topArtists: data.next }));
+          setItemCounts((prevCounts) => ({
+            ...prevCounts,
+            topArtists: newLength,
+          }));
+
+          if (data.next && newLength < 50) {
+            setNextTokens((prevTokens) => ({ ...prevTokens, topArtists: data.next }));
           } else {
-            setNextTokens((prev) => ({ ...prev, topArtists: null }));
+            setNextTokens((prevTokens) => ({ ...prevTokens, topArtists: null }));
           }
         } else {
           setTopArtists(items);
@@ -606,41 +612,52 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         const data = await getUserTracks(params);
 
         setLastOffsets((prev) => ({ ...prev, likedSongs: data.offset || 0 }));
-        const updatedLikedSongs = {
-          ...likedSongs,
-          tracks: {
-            total: data.total || 0,
-            items: isLoadMore
-              ? (() => {
-                  const existingItems = likedSongs.tracks?.items || [];
-                  const existingIds = new Set(
-                    existingItems.map((item) => item.track?.id),
-                  );
-                  const newUniqueItems = (data.items || []).filter(
-                    (item) => !existingIds.has(item.track?.id),
-                  );
-                  return [...existingItems, ...newUniqueItems];
-                })()
-              : data.items || [],
-          },
-        };
 
-        if (updatedLikedSongs.tracks.items) {
-          updatedLikedSongs.tracks.items = updatedLikedSongs.tracks.items.slice(
-            0,
-            50,
-          );
-          setItemCounts((prev) => ({
-            ...prev,
-            likedSongs: updatedLikedSongs.tracks.items.length,
-          }));
-        }
+        let newItemsLength = 0;
+        let resultLikedSongs = null;
 
-        if (data.next && updatedLikedSongs.tracks.items.length < 50) {
+        setLikedSongs((prevLikedSongs) => {
+          const updatedLikedSongs = {
+            ...prevLikedSongs,
+            tracks: {
+              total: data.total || 0,
+              items: isLoadMore
+                ? (() => {
+                    const existingItems = prevLikedSongs.tracks?.items || [];
+                    const existingIds = new Set(
+                      existingItems.map((item) => item.track?.id),
+                    );
+                    const newUniqueItems = (data.items || []).filter(
+                      (item) => !existingIds.has(item.track?.id),
+                    );
+                    return [...existingItems, ...newUniqueItems];
+                  })()
+                : data.items || [],
+            },
+          };
+
+          if (updatedLikedSongs.tracks.items) {
+            updatedLikedSongs.tracks.items = updatedLikedSongs.tracks.items.slice(
+              0,
+              50,
+            );
+            newItemsLength = updatedLikedSongs.tracks.items.length;
+          }
+
+          resultLikedSongs = updatedLikedSongs;
+          return updatedLikedSongs;
+        });
+
+        setItemCounts((prev) => ({
+          ...prev,
+          likedSongs: newItemsLength,
+        }));
+
+        if (data.next && newItemsLength < 50) {
           setNextTokens((prev) => ({ ...prev, likedSongs: data.next }));
         } else if (
           !isLoadMore &&
-          updatedLikedSongs.tracks.items.length === 5 &&
+          newItemsLength === 5 &&
           data.total > 5
         ) {
           setNextTokens((prev) => ({ ...prev, likedSongs: "has-more" }));
@@ -648,9 +665,8 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           setNextTokens((prev) => ({ ...prev, likedSongs: null }));
         }
 
-        setLikedSongs(updatedLikedSongs);
         setErrors((prev) => ({ ...prev, likedSongs: null }));
-        return updatedLikedSongs;
+        return resultLikedSongs;
       } catch (err) {
         console.error("Error fetching liked songs:", err);
         setErrors((prev) => ({ ...prev, likedSongs: err.message }));
@@ -694,6 +710,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         setLastOffsets((prev) => ({ ...prev, userShows: data.offset || 0 }));
 
         if (isLoadMore) {
+          let newLength = 0;
           setUserShows((prev) => {
             const existingIds = new Set(
               prev.map((item) => item.show?.id || item.id),
@@ -703,14 +720,16 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
             );
             const newTotal = [...prev, ...newUniqueItems];
             const limitedItems = newTotal.slice(0, 50);
-            setItemCounts((prevCounts) => ({
-              ...prevCounts,
-              userShows: limitedItems.length,
-            }));
+            newLength = limitedItems.length;
             return limitedItems;
           });
 
-          if (data.next && itemCounts.userShows + items.length < 50) {
+          setItemCounts((prevCounts) => ({
+            ...prevCounts,
+            userShows: newLength,
+          }));
+
+          if (data.next && newLength < 50) {
             setNextTokens((prev) => ({ ...prev, userShows: data.next }));
           } else {
             setNextTokens((prev) => ({ ...prev, userShows: null }));
