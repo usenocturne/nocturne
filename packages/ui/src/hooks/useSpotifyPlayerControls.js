@@ -471,8 +471,13 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     }
   }, []);
 
-  const phoneMediaPlayPause = useCallback(
-    () => sendPhoneMediaControl("media.control.playPause"),
+  const phoneMediaPlay = useCallback(
+    () => sendPhoneMediaControl("media.control.play"),
+    [sendPhoneMediaControl],
+  );
+
+  const phoneMediaPause = useCallback(
+    () => sendPhoneMediaControl("media.control.pause"),
     [sendPhoneMediaControl],
   );
 
@@ -527,7 +532,8 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     getCurrentDeviceOptions,
     isLoading,
     error,
-    phoneMediaPlayPause,
+    phoneMediaPlay,
+    phoneMediaPause,
     phoneMediaNext,
     phoneMediaPrevious,
     phoneMediaShuffle,

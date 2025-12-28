@@ -16,7 +16,8 @@ export default function LockView({
     pausePlayback,
     skipToNext,
     skipToPrevious,
-    phoneMediaPlayPause,
+    phoneMediaPlay,
+    phoneMediaPause,
     phoneMediaNext,
     phoneMediaPrevious,
   } = useSpotifyPlayerControls(currentPlayback);
@@ -25,7 +26,11 @@ export default function LockView({
 
   const handlePlayPause = useCallback(async () => {
     if (isPhoneMedia) {
-      await phoneMediaPlayPause();
+      if (currentPlayback?.is_playing) {
+        await phoneMediaPause();
+      } else {
+        await phoneMediaPlay();
+      }
       if (refreshPlaybackState) {
         setTimeout(() => refreshPlaybackState(true), 300);
       }
@@ -51,7 +56,8 @@ export default function LockView({
     currentPlayback,
     playTrack,
     pausePlayback,
-    phoneMediaPlayPause,
+    phoneMediaPlay,
+    phoneMediaPause,
     isPhoneMedia,
     refreshPlaybackState,
   ]);

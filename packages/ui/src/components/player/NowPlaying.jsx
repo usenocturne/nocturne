@@ -111,7 +111,8 @@ export default function NowPlaying({
     setPlaybackSpeed: setPlaybackSpeedApi,
     getCurrentDeviceOptions,
     transferPlayback,
-    phoneMediaPlayPause,
+    phoneMediaPlay,
+    phoneMediaPause,
     phoneMediaNext,
     phoneMediaPrevious,
     phoneMediaShuffle,
@@ -242,7 +243,11 @@ export default function NowPlaying({
 
   const handlePlayPause = async () => {
     if (isPhoneMedia) {
-      await phoneMediaPlayPause();
+      if (currentPlayback?.is_playing) {
+        await phoneMediaPause();
+      } else {
+        await phoneMediaPlay();
+      }
       return;
     }
 
