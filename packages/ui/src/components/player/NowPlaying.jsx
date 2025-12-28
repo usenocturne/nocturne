@@ -86,7 +86,7 @@ export default function NowPlaying({
   const isLocalMedia = currentPlayback?.item?.is_local === true;
   const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
   const isSpotifyPending = currentPlayback?.item?.is_spotify_pending === true;
-  const isSmartphoneDevice = currentPlayback?.device?.type === "Smartphone";
+  const isSmartphoneDevice = currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();

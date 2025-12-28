@@ -21,6 +21,9 @@ const MAX_ARTWORK_CACHE_SIZE = 10;
 let lastEaSessionStartTime = 0;
 let pendingSpotifyMediaUpdate = null;
 let spotifyFallbackTimeout = null;
+let cachedActiveDeviceType = null;
+
+export const getActiveDeviceType = () => cachedActiveDeviceType;
 
 const normalizeImageUrl = (url) => {
   if (!url) return url;
@@ -460,6 +463,15 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         data.topic === "spotify.player.device_state_changed"
       ) {
         const payloads = data.data?.payloads || [];
+
+        if (payloads.length > 0 && payloads[0]?.cluster) {
+          const cluster = payloads[0].cluster;
+          const activeDeviceId = cluster.active_device_id;
+          if (activeDeviceId && cluster.devices?.[activeDeviceId]) {
+            cachedActiveDeviceType = cluster.devices[activeDeviceId].device_type;
+          }
+        }
+
         if (payloads.length > 0 && payloads[0]?.cluster?.player_state) {
           const playerState = payloads[0].cluster.player_state;
 

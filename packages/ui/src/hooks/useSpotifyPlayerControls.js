@@ -3,6 +3,7 @@ import React from "react";
 import { generateRandomString } from "../utils/helpers";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { sendNocturneWsRequest } from "./useNocturned";
+import { getActiveDeviceType } from "./useSpotifyPlayerState";
 
 export const DeviceSwitcherContext = React.createContext({
   openDeviceSwitcher: (playbackIntent = null) => {},
@@ -20,7 +21,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
   const isLocalMedia = currentPlayback?.item?.is_local === true;
   const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
-  const isSmartphoneDevice = currentPlayback?.device?.type === "Smartphone";
+  const isSmartphoneDevice = currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
 
   const {
     isSpotifyReady,
@@ -283,6 +284,22 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
       if (isPhoneMedia) {
         return false;
+      }
+
+      const activeDeviceType = getActiveDeviceType();
+      if (activeDeviceType === "SMARTPHONE") {
+        const direction = volumePercent > volume ? "up" : "down";
+        try {
+          if (direction === "up") {
+            await sendNocturneWsRequest("media.control.volumeUp", {});
+          } else {
+            await sendNocturneWsRequest("media.control.volumeDown", {});
+          }
+          return true;
+        } catch (err) {
+          console.error("Error adjusting phone volume:", err);
+          return false;
+        }
       }
 
       const boundedVolume = Math.max(
