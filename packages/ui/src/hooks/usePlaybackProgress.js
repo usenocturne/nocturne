@@ -5,6 +5,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [trackId, setTrackId] = useState(null);
+  const [actualPlaybackSpeed, setActualPlaybackSpeed] = useState(1);
 
   const lastUpdateTimeRef = useRef(performance.now());
   const animationFrameRef = useRef(null);
@@ -18,6 +19,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const prevRepeatStateRef = useRef(null);
   const anchorPositionRef = useRef(0);
   const anchorTimestampRef = useRef(0);
+  const actualPlaybackSpeedRef = useRef(1);
 
   const triggerRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) {
@@ -65,6 +67,12 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
 
       setIsPlaying(currentPlayback.is_playing || false);
 
+      const newPlaybackSpeed = currentPlayback.playback_speed || 1;
+      if (newPlaybackSpeed !== actualPlaybackSpeed) {
+        setActualPlaybackSpeed(newPlaybackSpeed);
+        actualPlaybackSpeedRef.current = newPlaybackSpeed;
+      }
+
       if (currentPlayback?.item?.id !== trackId) {
         setTrackId(currentPlayback.item?.id);
 
@@ -76,7 +84,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
 
         const now = Date.now();
         const elapsed = currentPlayback.is_playing
-          ? Math.max(0, now - spotifyTimestamp)
+          ? Math.max(0, now - spotifyTimestamp) * newPlaybackSpeed
           : 0;
         const currentPosition = Math.min(
           spotifyPosition + elapsed,
@@ -101,7 +109,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
 
           const now = Date.now();
           const elapsed = currentPlayback.is_playing
-            ? Math.max(0, now - spotifyTimestamp)
+            ? Math.max(0, now - spotifyTimestamp) * newPlaybackSpeed
             : 0;
           const truthPosition = Math.min(
             spotifyPosition + elapsed,
@@ -133,7 +141,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         }
       }
     }
-  }, [currentPlayback, trackId, duration, progressMs]);
+  }, [currentPlayback, trackId, duration, progressMs, actualPlaybackSpeed]);
 
   useEffect(() => {
     if (animationFrameRef.current) {
@@ -157,7 +165,8 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       lastFrameTimeRef.current = timestamp;
 
       const now = Date.now();
-      const elapsedSinceAnchor = Math.max(0, now - anchorTimestampRef.current);
+      const currentSpeed = actualPlaybackSpeedRef.current;
+      const elapsedSinceAnchor = Math.max(0, now - anchorTimestampRef.current) * currentSpeed;
       const truthPosition = Math.min(
         anchorPositionRef.current + elapsedSinceAnchor,
         duration,
@@ -169,10 +178,10 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       const currentDisplayed = serverProgressRef.current;
       const drift = currentDisplayed - truthPosition;
 
-      let playbackSpeed = 1.0;
+      let frameSpeed = currentSpeed;
       if (Math.abs(drift) > 50) {
         const correctionFactor = Math.max(-0.05, Math.min(0.05, -drift / 1000));
-        playbackSpeed = 1.0 + correctionFactor;
+        frameSpeed = currentSpeed + correctionFactor;
       }
 
       if (Math.abs(drift) > 2000) {
@@ -180,7 +189,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         setProgressMs(truthPosition);
       } else {
         const newPosition = Math.min(
-          currentDisplayed + elapsedSinceLastFrame * playbackSpeed,
+          currentDisplayed + elapsedSinceLastFrame * frameSpeed,
           duration,
         );
         serverProgressRef.current = newPosition;
