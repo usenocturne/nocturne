@@ -1222,8 +1222,8 @@ export default function NowPlaying({
             >
               <div className="py-1">
                 {!isPodcast && !isLocalMedia && !isPhoneMedia && (
-                  <MenuItem onClick={toggleLyrics}>
-                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
+                  <MenuItem onClick={toggleLyrics} disabled={!currentPlayback}>
+                    <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/50"} font-[560] tracking-tight focus:outline-none outline-none`}>
                       <span className="text-[28px]">
                         {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
                       </span>

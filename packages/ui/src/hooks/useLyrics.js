@@ -66,6 +66,11 @@ export function useLyrics(currentPlayback, progressMs) {
   }, [showLyrics, currentPlayback?.item, fetchLyrics]);
 
   useEffect(() => {
+    if (!currentPlayback || currentPlayback?.item?.type === "episode") {
+      setShowLyrics(false);
+      return;
+    }
+
     if (
       showLyrics &&
       currentPlayback?.item?.id &&
