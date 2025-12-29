@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { sendNocturneWsRequest, subscribeEaSessionState } from "./useNocturned";
+import { sendNocturneWsRequest, subscribeAppReadyState } from "./useNocturned";
 import { subscribeInitialDataLoadState } from "./useSpotifyData";
 
 const compareVersions = (v1, v2) => {
@@ -84,7 +84,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   const [error, setError] = useState(null);
   const [lastChecked, setLastChecked] = useState(null);
   const [updateChain, setUpdateChain] = useState([]);
-  const [eaSessionStarted, setEaSessionStarted] = useState(false);
+  const [appReady, setAppReady] = useState(false);
   const [initialDataLoadComplete, setInitialDataLoadComplete] = useState(false);
   const checkInProgress = useRef(false);
   const currentVersionRef = useRef(currentVersion);
@@ -94,8 +94,8 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   }, [currentVersion]);
 
   useEffect(() => {
-    const unsubscribe = subscribeEaSessionState((isStarted) => {
-      setEaSessionStarted(isStarted);
+    const unsubscribe = subscribeAppReadyState((state) => {
+      setAppReady(state.ready);
     });
 
     return () => {
@@ -121,7 +121,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     async (force = false) => {
       if (isChecking || checkInProgress.current) return;
 
-      if (!eaSessionStarted) {
+      if (!appReady) {
         console.log("Skipping update check: EA session not started yet");
         return;
       }
@@ -199,7 +199,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
         checkInProgress.current = false;
       }
     },
-    [eaSessionStarted, initialDataLoadComplete],
+    [appReady, initialDataLoadComplete],
   );
 
   const findUpdateChain = (currentVersion, releases) => {
@@ -274,7 +274,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   useEffect(() => {
     if (
       autoCheck &&
-      eaSessionStarted &&
+      appReady &&
       initialDataLoadComplete &&
       currentVersion
     ) {
@@ -282,7 +282,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
     }
   }, [
     autoCheck,
-    eaSessionStarted,
+    appReady,
     initialDataLoadComplete,
     currentVersion,
     checkForUpdates,

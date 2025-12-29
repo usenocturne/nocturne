@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "../contexts/SettingsContext";
-import { sendNocturneWsRequest, subscribeEaSessionState } from "./useNocturned";
+import { sendNocturneWsRequest, subscribeAppReadyState } from "./useNocturned";
 
 let cachedTimezone = null;
 
@@ -9,12 +9,12 @@ export const getCachedTimezone = () => cachedTimezone;
 export function useCurrentTime() {
   const [currentTime, setCurrentTime] = useState("");
   const [isFourDigits, setIsFourDigits] = useState(false);
-  const [eaSessionStarted, setEaSessionStarted] = useState(false);
+  const [appReady, setAppReady] = useState(false);
   const { settings } = useSettings();
 
   useEffect(() => {
-    const unsubscribe = subscribeEaSessionState((isStarted) => {
-      setEaSessionStarted(isStarted);
+    const unsubscribe = subscribeAppReadyState((state) => {
+      setAppReady(state.ready);
     });
 
     return () => {
@@ -25,7 +25,7 @@ export function useCurrentTime() {
   }, []);
 
   useEffect(() => {
-    if (!eaSessionStarted) return;
+    if (!appReady) return;
 
     const fetchTimezone = async () => {
       if (cachedTimezone) return;
@@ -41,11 +41,11 @@ export function useCurrentTime() {
     };
 
     fetchTimezone();
-  }, [eaSessionStarted]);
+  }, [appReady]);
 
   useEffect(() => {
     const updateTime = async () => {
-      if (eaSessionStarted) {
+      if (appReady) {
         try {
           await new Promise((resolve) => setTimeout(resolve, 100));
           const data = await sendNocturneWsRequest("device.time.get", {});
@@ -100,7 +100,7 @@ export function useCurrentTime() {
       clearInterval(interval);
       window.removeEventListener("timeFormatChanged", handleTimeFormatChange);
     };
-  }, [settings.use24HourTime, eaSessionStarted]);
+  }, [settings.use24HourTime, appReady]);
 
   return {
     currentTime,

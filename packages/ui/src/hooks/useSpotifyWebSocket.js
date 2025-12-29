@@ -4,8 +4,8 @@ import {
   getGlobalWebSocket,
   getBluetoothConnectionState,
   subscribeBluetoothConnectionState,
-  getEaSessionState,
-  subscribeEaSessionState,
+  getAppReadyState,
+  subscribeAppReadyState,
   getSpotifyAuthState,
   subscribeSpotifyAuthState,
 } from "./useNocturned";
@@ -35,8 +35,8 @@ export function useSpotifyWebSocket() {
     const state = getBluetoothConnectionState();
     return Boolean(state?.connected);
   });
-  const [eaSessionReady, setEaSessionReady] = useState(() => {
-    return getEaSessionState();
+  const [appReady, setAppReady] = useState(() => {
+    return getAppReadyState().ready;
   });
   const [spotifyAuthenticated, setSpotifyAuthenticated] = useState(() => {
     return getSpotifyAuthState();
@@ -55,8 +55,8 @@ export function useSpotifyWebSocket() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeEaSessionState((isReady) => {
-      setEaSessionReady(isReady);
+    const unsubscribe = subscribeAppReadyState((state) => {
+      setAppReady(state.ready);
     });
 
     return () => {
@@ -239,7 +239,7 @@ export function useSpotifyWebSocket() {
   }, []);
 
   const isSpotifyReady =
-    wsConnected && (eaSessionReady || deviceConnected) && spotifyAuthenticated;
+    wsConnected && (appReady || deviceConnected) && spotifyAuthenticated;
 
   useEffect(() => {
     if (!listenerIdRef.current) {
@@ -260,7 +260,7 @@ export function useSpotifyWebSocket() {
     if (
       wsConnected &&
       deviceConnected &&
-      eaSessionReady &&
+      appReady &&
       spotifyAuthenticated &&
       messageQueueRef.current.length > 0
     ) {
@@ -274,7 +274,7 @@ export function useSpotifyWebSocket() {
   }, [
     wsConnected,
     deviceConnected,
-    eaSessionReady,
+    appReady,
     spotifyAuthenticated,
     sendSpotifyCommand,
   ]);

@@ -16,7 +16,7 @@ import {
   useNocturneInfo,
   useNocturned,
   sendNocturneWsRequest,
-  subscribeEaSessionState,
+  subscribeAppReadyState,
   AutoUpdateManager,
 } from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
@@ -293,7 +293,7 @@ function App() {
     () => localStorage.getItem("hasSeenTutorial") === "true",
   );
   const [isAuthCheckInProgress, setIsAuthCheckInProgress] = useState(false);
-  const [eaSessionStarted, setEaSessionStarted] = useState(false);
+  const [appReady, setAppReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const startSectionAppliedRef = useRef(false);
   const lastSpotifyAuthStateRef = useRef(null);
@@ -475,8 +475,8 @@ function App() {
   );
 
   useEffect(() => {
-    const unsubscribe = subscribeEaSessionState((isStarted) => {
-      setEaSessionStarted(isStarted);
+    const unsubscribe = subscribeAppReadyState((state) => {
+      setAppReady(state.ready);
     });
 
     return () => {
@@ -489,7 +489,7 @@ function App() {
   useEffect(() => {
     if (!wsConnected) return;
 
-    if (!eaSessionStarted) return;
+    if (!appReady) return;
 
     sendNocturneWsRequest("device.time.get", {}, { timeoutMs: 5000 })
       .then(() => {
@@ -533,7 +533,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [wsConnected, eaSessionStarted]);
+  }, [wsConnected, appReady]);
 
   useEffect(() => {
     if (needsSpotifyAuthorization || isSpotifyAuthenticated === false) {
@@ -551,10 +551,10 @@ function App() {
     }
 
     if (!hasSeenTutorialFlag) {
-      if (isSpotifyAuthenticated && eaSessionStarted) {
+      if (isSpotifyAuthenticated && appReady) {
         setShowAuthScreen(false);
         setShowTutorial(true);
-      } else if (!hasDevices || !eaSessionStarted) {
+      } else if (!hasDevices || !appReady) {
         setShowAuthScreen(true);
         setShowTutorial(false);
       } else {
@@ -577,7 +577,7 @@ function App() {
     hasSeenTutorialFlag,
     needsSpotifyAuthorization,
     isSpotifyAuthenticated,
-    eaSessionStarted,
+    appReady,
   ]);
 
   useEffect(() => {

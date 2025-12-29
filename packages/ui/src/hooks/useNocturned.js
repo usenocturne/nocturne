@@ -19,8 +19,9 @@ let globalWsRef = null;
 let globalWsListeners = [];
 let wsInitialized = false;
 const pendingWsRequests = new Map();
-let eaSessionStarted = false;
-const eaSessionSubscribers = new Set();
+let appReady = false;
+let appReadyPlatform = null; // "ios" or "android"
+const appReadySubscribers = new Set();
 let spotifyAuthenticated = false;
 const spotifyAuthSubscribers = new Set();
 
@@ -107,28 +108,28 @@ export const resetReconnectionExhausted = () => {
   reconnectionExhausted = false;
 };
 
-export const getEaSessionState = () => eaSessionStarted;
+export const getAppReadyState = () => ({ ready: appReady, platform: appReadyPlatform });
 
-const emitEaSessionState = () => {
-  eaSessionSubscribers.forEach((listener) => {
+const emitAppReadyState = () => {
+  appReadySubscribers.forEach((listener) => {
     try {
-      listener(eaSessionStarted);
+      listener({ ready: appReady, platform: appReadyPlatform });
     } catch (err) {
-      console.error("EA session listener error:", err);
+      console.error("App ready listener error:", err);
     }
   });
 };
 
-export const subscribeEaSessionState = (listener) => {
+export const subscribeAppReadyState = (listener) => {
   if (typeof listener !== "function") {
     return () => {};
   }
 
-  eaSessionSubscribers.add(listener);
-  listener(eaSessionStarted);
+  appReadySubscribers.add(listener);
+  listener({ ready: appReady, platform: appReadyPlatform });
 
   return () => {
-    eaSessionSubscribers.delete(listener);
+    appReadySubscribers.delete(listener);
   };
 };
 
@@ -343,8 +344,9 @@ const setupGlobalWebSocket = async () => {
     socket.onclose = (event) => {
       console.log("Disconnected from WebSocket");
 
-      eaSessionStarted = false;
-      emitEaSessionState();
+      appReady = false;
+      appReadyPlatform = null;
+      emitAppReadyState();
 
       spotifyAuthenticated = false;
       emitSpotifyAuthState();
@@ -369,10 +371,11 @@ const setupGlobalWebSocket = async () => {
         if (
           data &&
           data.type === "event" &&
-          data.topic === "ea.session.started"
+          data.topic === "app.ready"
         ) {
-          eaSessionStarted = true;
-          emitEaSessionState();
+          appReady = true;
+          appReadyPlatform = data.data?.platform || null;
+          emitAppReadyState();
         }
 
         if (
