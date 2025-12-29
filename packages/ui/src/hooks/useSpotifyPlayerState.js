@@ -4,10 +4,6 @@ import { useNocturned, addGlobalWsListener } from "./useNocturned";
 
 let lastFetchTimestamp = 0;
 let pendingFetch = null;
-let podcastPollingInterval = null;
-let isPodcastPlaying = false;
-let lastPodcastFetch = 0;
-let podcastFetchDebounceTimeout = null;
 let initialPlaybackFetchDone = false;
 let phoneMediaArtworkBlobUrl = null;
 let currentArtworkTrackUri = null;
@@ -90,19 +86,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   const lastPlayedAlbumIdRef = useRef(null);
   const currentPlaybackRef = useRef(null);
 
-  const stopPodcastPolling = useCallback(() => {
-    if (podcastPollingInterval) {
-      clearInterval(podcastPollingInterval);
-      podcastPollingInterval = null;
-    }
-    if (podcastFetchDebounceTimeout) {
-      clearTimeout(podcastFetchDebounceTimeout);
-      podcastFetchDebounceTimeout = null;
-    }
-    isPodcastPlaying = false;
-    lastPodcastFetch = 0;
-  }, []);
-
   const processPlaybackState = useCallback(
     (data) => {
       if (!data) return;
@@ -124,40 +107,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           !data.item.artists);
       const hasIncompleteEpisodeData =
         data.currently_playing_type === "episode" && !data.item;
-
-      if (isEpisode && !isPodcastPlaying) {
-        isPodcastPlaying = true;
-        setTimeout(() => {
-          if (podcastPollingInterval || !isPodcastPlaying) return;
-
-          podcastPollingInterval = setInterval(async () => {
-            if (isPodcastPlaying && isSpotifyReady) {
-              try {
-                const now = Date.now();
-                if (now - lastPodcastFetch < 25000) return;
-
-                lastPodcastFetch = now;
-                const polledData = await getPlayerState();
-
-                if (polledData && Object.keys(polledData).length > 0) {
-                  const wasPolling = isPodcastPlaying;
-                  isPodcastPlaying = false;
-                  processPlaybackState(polledData);
-                  isPodcastPlaying = wasPolling;
-                }
-              } catch (err) {
-                console.error("Error polling podcast data:", err);
-              }
-            }
-          }, 30000);
-        }, 2000);
-      } else if (!isEpisode && isPodcastPlaying) {
-        setTimeout(() => {
-          if (!isEpisode) {
-            stopPodcastPolling();
-          }
-        }, 1000);
-      }
 
       if (
         hasIncompleteEpisodeData &&
@@ -354,19 +303,18 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
       initialStateLoadedRef.current = true;
     },
-    [stopPodcastPolling],
+    [],
   );
 
   const resetPlaybackState = useCallback(
     (force = false) => {
-      stopPodcastPolling();
       if (force || !initialFetchInProgress) {
         setCurrentPlayback(null);
         setCurrentlyPlayingAlbum(null);
       }
       initialStateLoadedRef.current = true;
     },
-    [stopPodcastPolling, initialFetchInProgress],
+    [initialFetchInProgress],
   );
 
   const fetchCurrentPlayback = useCallback(
@@ -537,8 +485,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                         playerState.track.metadata.album_title ||
                         "Unknown Show",
                       publisher:
-                        playerState.track.metadata.author_name ||
-                        "Unknown Publisher",
+                        playerState.track.metadata.album_title ||
+                        "Unknown Show",
                       images: playerState.track.metadata.image_url
                         ? [
                             {
