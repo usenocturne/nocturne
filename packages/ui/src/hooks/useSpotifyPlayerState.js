@@ -458,7 +458,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               playerState.is_paused === false || playerState.is_paused === 0,
             timestamp:
               parseInt(playerState.timestamp) ||
-              data.iphone_timestamp_ms ||
+              data.phone_timestamp_ms ||
               data.server_timestamp_ms ||
               Date.now(),
             progress_ms: parseInt(playerState.position_as_of_timestamp) || 0,
