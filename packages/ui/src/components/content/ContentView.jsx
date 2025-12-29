@@ -182,17 +182,22 @@ const ContentView = ({
       const offset = tracksLengthRef.current;
       const data = await getShowEpisodes(contentId, {
         offset,
-        limit: 5,
+        limit: 10,
       });
 
       if (data.items && data.items.length > 0) {
+        const totalEpisodes = data.total || 0;
+
         setTracks((prevTracks) => {
           const updatedTracks = [...prevTracks, ...data.items];
           const limitedTracks = updatedTracks.slice(0, 50);
 
           tracksLengthRef.current = limitedTracks.length;
 
-          if (limitedTracks.length < 50 && data.items.length > 0) {
+          const newOffset = offset + data.items.length;
+          const hasMore = newOffset < totalEpisodes && limitedTracks.length < 50;
+
+          if (hasMore) {
             if (showEpisodeLazyLoadRef.current) {
               clearTimeout(showEpisodeLazyLoadRef.current);
             }
@@ -204,8 +209,10 @@ const ContentView = ({
           return limitedTracks;
         });
 
-        setNextUrl(data.next);
-        setHasMoreTracks(tracksLengthRef.current < 50 && !!data.next);
+        const newOffset = offset + data.items.length;
+        const hasMore = newOffset < totalEpisodes && tracksLengthRef.current < 50;
+        setNextUrl(hasMore ? "has-more" : null);
+        setHasMoreTracks(hasMore);
       }
     } catch (error) {
       console.error("Show episode lazy loading failed:", error);
@@ -382,15 +389,18 @@ const ContentView = ({
 
           if (offset >= 50) {
             setHasMoreTracks(false);
+            setNextUrl(null);
             return;
           }
 
           const data = await getShowEpisodes(contentId, {
             offset,
-            limit: 5,
+            limit: 10,
           });
 
           const newEpisodes = data.items || [];
+          const totalEpisodes = data.total || 0;
+
           setTracks((prevTracks) => {
             const updatedTracks = [...prevTracks, ...newEpisodes];
             const limitedTracks = updatedTracks.slice(0, 50);
@@ -398,8 +408,10 @@ const ContentView = ({
             return limitedTracks;
           });
 
-          setNextUrl(data.next);
-          setHasMoreTracks(tracksLengthRef.current < 50 && !!data.next);
+          const newOffset = offset + newEpisodes.length;
+          const hasMore = newOffset < totalEpisodes && newOffset < 50;
+          setNextUrl(hasMore ? "has-more" : null);
+          setHasMoreTracks(hasMore);
           setLoadedPages((prev) => prev + 1);
         } catch (error) {
           console.error("WebSocket load more episodes failed:", error);
@@ -424,6 +436,7 @@ const ContentView = ({
     contentId,
     content,
     getPlaylistTracks,
+    getShowEpisodes,
     radioMixes,
   ]);
 
@@ -678,15 +691,14 @@ const ContentView = ({
 
               const currentOffset = episodesResponse.offset || 0;
               const currentItems = episodesResponse.items?.length || 0;
-              const totalEpisodes = showInfo.total_episodes || 0;
-              const hasMore =
-                currentItems < 50 &&
-                currentOffset + currentItems < totalEpisodes;
+              const totalEpisodes = episodesResponse.total || showInfo.total_episodes || 0;
+              const hasMore = currentOffset + currentItems < totalEpisodes && currentItems < 50;
 
-              setNextUrl(episodesResponse.next);
+              setNextUrl(hasMore ? "has-more" : null);
               setHasMoreTracks(hasMore);
               setTracksPerPage(tracksData.length);
               setLoadedPages(1);
+              tracksLengthRef.current = tracksData.length;
 
               if (tracksData.length < 50 && hasMore) {
                 showEpisodeLazyLoadRef.current = setTimeout(() => {
