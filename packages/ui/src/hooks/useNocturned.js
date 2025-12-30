@@ -24,6 +24,8 @@ let appReadyPlatform = null; // "ios" or "android"
 const appReadySubscribers = new Set();
 let spotifyAuthenticated = false;
 const spotifyAuthSubscribers = new Set();
+let spotifySkipped = false;
+const spotifySkippedSubscribers = new Set();
 
 let wsReconnectAttempts = 0;
 let wsReconnectTimer = null;
@@ -155,6 +157,31 @@ export const subscribeSpotifyAuthState = (listener) => {
 
   return () => {
     spotifyAuthSubscribers.delete(listener);
+  };
+};
+
+export const getSpotifySkippedState = () => spotifySkipped;
+
+const emitSpotifySkippedState = () => {
+  spotifySkippedSubscribers.forEach((listener) => {
+    try {
+      listener(spotifySkipped);
+    } catch (err) {
+      console.error("Spotify skipped listener error:", err);
+    }
+  });
+};
+
+export const subscribeSpotifySkippedState = (listener) => {
+  if (typeof listener !== "function") {
+    return () => {};
+  }
+
+  spotifySkippedSubscribers.add(listener);
+  listener(spotifySkipped);
+
+  return () => {
+    spotifySkippedSubscribers.delete(listener);
   };
 };
 
@@ -351,6 +378,9 @@ const setupGlobalWebSocket = async () => {
       spotifyAuthenticated = false;
       emitSpotifyAuthState();
 
+      spotifySkipped = false;
+      emitSpotifySkippedState();
+
       globalWsListeners.forEach(
         (listener) => listener.onClose && listener.onClose(),
       );
@@ -376,6 +406,11 @@ const setupGlobalWebSocket = async () => {
           appReady = true;
           appReadyPlatform = data.data?.platform || null;
           emitAppReadyState();
+
+          if (data.data?.spotifySkipped === true) {
+            spotifySkipped = true;
+            emitSpotifySkippedState();
+          }
         }
 
         if (
@@ -391,6 +426,12 @@ const setupGlobalWebSocket = async () => {
             authData.authenticated === "1";
           spotifyAuthenticated = isAuthenticated;
           emitSpotifyAuthState();
+
+          const isSkipped = authData.skipped === true;
+          if (spotifySkipped !== isSkipped) {
+            spotifySkipped = isSkipped;
+            emitSpotifySkippedState();
+          }
         }
 
         if (data && data.type === "event" && data.topic === "network.status") {
@@ -419,6 +460,12 @@ const setupGlobalWebSocket = async () => {
                 result.authenticated === "1";
               spotifyAuthenticated = isAuthenticated;
               emitSpotifyAuthState();
+
+              const isSkipped = result.skipped === true;
+              if (spotifySkipped !== isSkipped) {
+                spotifySkipped = isSkipped;
+                emitSpotifySkippedState();
+              }
             }
 
             if (result && (result.error || data.error)) {

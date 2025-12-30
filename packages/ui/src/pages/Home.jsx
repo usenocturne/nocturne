@@ -7,6 +7,7 @@ import SpotifyImage from "../components/common/SpotifyImage";
 import { useNavigation } from "../hooks/useNavigation";
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
+import { getSpotifySkippedState, subscribeSpotifySkippedState } from "../hooks/useNocturned";
 
 export default function Home({
   accessToken,
@@ -31,6 +32,18 @@ export default function Home({
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
   const { playDJMix } = useSpotifyPlayerControls(currentPlayback);
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [isSpotifySkipped, setIsSpotifySkipped] = useState(() => getSpotifySkippedState());
+
+  useEffect(() => {
+    const unsubscribe = subscribeSpotifySkippedState((skipped) => {
+      setIsSpotifySkipped(skipped);
+    });
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   const handleOpenDonationModal = () => {
     setShowDonationModal(true);
@@ -335,6 +348,14 @@ export default function Home({
   ]);
 
   const renderRecentsSection = () => {
+    if (isSpotifySkipped) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          Connect Spotify to see recently played
+        </div>
+      );
+    }
+
     return (
       <HorizontalScroll
         key="recents"
@@ -357,6 +378,14 @@ export default function Home({
   };
 
   const renderLibrarySection = () => {
+    if (isSpotifySkipped) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          Connect Spotify to see your playlists
+        </div>
+      );
+    }
+
     return (
       <HorizontalScroll
         containerRef={scrollContainerRef}
@@ -502,6 +531,14 @@ export default function Home({
   };
 
   const renderArtistsSection = () => {
+    if (isSpotifySkipped) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          Connect Spotify to see your top artists
+        </div>
+      );
+    }
+
     return (
       <HorizontalScroll
         containerRef={scrollContainerRef}
@@ -593,6 +630,14 @@ export default function Home({
   };
 
   const renderRadioSection = () => {
+    if (isSpotifySkipped) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          Connect Spotify for radio features
+        </div>
+      );
+    }
+
     return (
       <HorizontalScroll
         containerRef={scrollContainerRef}
@@ -738,6 +783,14 @@ export default function Home({
   };
 
   const renderPodcastsSection = () => {
+    if (isSpotifySkipped) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          Connect Spotify to see your shows
+        </div>
+      );
+    }
+
     return (
       <HorizontalScroll
         containerRef={scrollContainerRef}

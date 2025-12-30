@@ -8,6 +8,8 @@ import {
   subscribeAppReadyState,
   getSpotifyAuthState,
   subscribeSpotifyAuthState,
+  getSpotifySkippedState,
+  subscribeSpotifySkippedState,
 } from "./useNocturned";
 
 const SPOTIFY_IMAGE_FETCH_TIMEOUT_MS = 30000;
@@ -40,6 +42,9 @@ export function useSpotifyWebSocket() {
   });
   const [spotifyAuthenticated, setSpotifyAuthenticated] = useState(() => {
     return getSpotifyAuthState();
+  });
+  const [spotifySkipped, setSpotifySkipped] = useState(() => {
+    return getSpotifySkippedState();
   });
 
   useEffect(() => {
@@ -78,11 +83,28 @@ export function useSpotifyWebSocket() {
     };
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeSpotifySkippedState((isSkipped) => {
+      setSpotifySkipped(isSkipped);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   const sendSpotifyCommand = useCallback(
     (method, params = {}, signal = null) => {
       return new Promise((resolve, reject) => {
         if (signal?.aborted) {
           reject(new Error("Request cancelled"));
+          return;
+        }
+
+        if (getSpotifySkippedState()) {
+          reject(new Error("Spotify authorization was skipped"));
           return;
         }
 
@@ -239,7 +261,7 @@ export function useSpotifyWebSocket() {
   }, []);
 
   const isSpotifyReady =
-    wsConnected && (appReady || deviceConnected) && spotifyAuthenticated;
+    wsConnected && (appReady || deviceConnected) && spotifyAuthenticated && !spotifySkipped;
 
   useEffect(() => {
     listenerIdRef.current = addMessageListener(
@@ -261,6 +283,7 @@ export function useSpotifyWebSocket() {
       deviceConnected &&
       appReady &&
       spotifyAuthenticated &&
+      !spotifySkipped &&
       messageQueueRef.current.length > 0
     ) {
       const queue = [...messageQueueRef.current];
@@ -275,6 +298,7 @@ export function useSpotifyWebSocket() {
     deviceConnected,
     appReady,
     spotifyAuthenticated,
+    spotifySkipped,
     sendSpotifyCommand,
   ]);
 

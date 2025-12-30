@@ -17,6 +17,7 @@ import {
   useNocturned,
   sendNocturneWsRequest,
   subscribeAppReadyState,
+  subscribeSpotifySkippedState,
   AutoUpdateManager,
 } from "./hooks/useNocturned";
 import { useSpotifyData } from "./hooks/useSpotifyData";
@@ -286,6 +287,7 @@ function App() {
     useState(false);
   const [showAuthScreen, setShowAuthScreen] = useState(false);
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(null);
+  const [isSpotifySkipped, setIsSpotifySkipped] = useState(false);
   const [needsSpotifyAuthorization, setNeedsSpotifyAuthorization] =
     useState(false);
   const [authStatusMessage, setAuthStatusMessage] = useState(null);
@@ -435,13 +437,16 @@ function App() {
 
       const authenticatedValue = data.authenticated;
       const needsAuthorizationValue = data.needsAuthorization;
+      const skippedValue = data.skipped;
 
       const isAuthenticated =
         authenticatedValue === true ||
         authenticatedValue === 1 ||
         authenticatedValue === "1";
 
-      const needsAuthorization = isAuthenticated
+      const isSkipped = skippedValue === true;
+
+      const needsAuthorization = isAuthenticated || isSkipped
         ? false
         : needsAuthorizationValue === undefined
           ? true
@@ -450,9 +455,10 @@ function App() {
             needsAuthorizationValue === "1";
 
       setIsSpotifyAuthenticated(isAuthenticated);
+      setIsSpotifySkipped(isSkipped);
       setNeedsSpotifyAuthorization(needsAuthorization);
       setAuthStatusMessage(
-        hasDevices && needsAuthorization && isAuthenticated === false
+        hasDevices && needsAuthorization && isAuthenticated === false && !isSkipped
           ? "Open the Nocturne app to finish logging into Spotify."
           : null,
       );
@@ -477,6 +483,18 @@ function App() {
   useEffect(() => {
     const unsubscribe = subscribeAppReadyState((state) => {
       setAppReady(state.ready);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeSpotifySkippedState((skipped) => {
+      setIsSpotifySkipped(skipped);
     });
 
     return () => {
@@ -536,6 +554,19 @@ function App() {
   }, [wsConnected, appReady]);
 
   useEffect(() => {
+    if (isSpotifySkipped) {
+      setShowAuthScreen(false);
+      if (!hasSeenTutorialFlag && appReady) {
+        setShowTutorial(true);
+      } else {
+        setShowTutorial(false);
+      }
+      if (splashFlowWithDeviceRef.current) {
+        splashFlowWithDeviceRef.current = false;
+      }
+      return;
+    }
+
     if (needsSpotifyAuthorization || isSpotifyAuthenticated === false) {
       setShowAuthScreen(true);
       setShowTutorial(false);
@@ -577,6 +608,7 @@ function App() {
     hasSeenTutorialFlag,
     needsSpotifyAuthorization,
     isSpotifyAuthenticated,
+    isSpotifySkipped,
     appReady,
   ]);
 

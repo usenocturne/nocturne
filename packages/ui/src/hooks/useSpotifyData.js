@@ -4,6 +4,7 @@ import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useImageLoader } from "./useImageLoader";
 import { getCachedTimezone } from "./useCurrentTime";
+import { getSpotifySkippedState, subscribeSpotifySkippedState } from "./useNocturned";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
@@ -164,6 +165,33 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       loadInitialData();
     }
   }, [skipInitialFetch]);
+
+  useEffect(() => {
+    const handleSkippedChange = (isSkipped) => {
+      if (isSkipped && !initialDataLoaded) {
+        setInitialDataLoaded(true);
+        initialDataLoadComplete = true;
+        emitInitialDataLoadState();
+        setIsLoading({
+          recentAlbums: false,
+          userPlaylists: false,
+          topArtists: false,
+          likedSongs: false,
+          radioMixes: false,
+          userShows: false,
+        });
+      }
+    };
+
+    handleSkippedChange(getSpotifySkippedState());
+
+    const unsubscribe = subscribeSpotifySkippedState(handleSkippedChange);
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, [initialDataLoaded]);
 
   const extractAlbumFromPlayerState = useCallback((playerStateData) => {
     if (!playerStateData?.item) return null;
