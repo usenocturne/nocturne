@@ -299,6 +299,7 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const startSectionAppliedRef = useRef(false);
   const lastSpotifyAuthStateRef = useRef(null);
+  const lastSpotifySkippedStateRef = useRef(false);
   const splashFlowWithDeviceRef = useRef(false);
 
   useEffect(() => {
@@ -465,7 +466,12 @@ function App() {
 
       if (isAuthenticated) {
         refreshPlaybackState(true);
-        if (!initialDataLoaded) {
+
+        const wasSkipped = lastSpotifySkippedStateRef.current === true;
+        const wasNotAuthenticated = lastSpotifyAuthStateRef.current === false;
+        const shouldForceDataLoad = wasSkipped || (wasNotAuthenticated && initialDataLoaded);
+
+        if (!initialDataLoaded || shouldForceDataLoad) {
           setTimeout(() => {
             refreshData();
           }, 1000);
@@ -473,6 +479,7 @@ function App() {
       }
 
       lastSpotifyAuthStateRef.current = isAuthenticated;
+      lastSpotifySkippedStateRef.current = isSkipped;
 
       setIsAuthCheckInProgress(false);
       return true;
@@ -495,6 +502,7 @@ function App() {
   useEffect(() => {
     const unsubscribe = subscribeSpotifySkippedState((skipped) => {
       setIsSpotifySkipped(skipped);
+      lastSpotifySkippedStateRef.current = skipped;
     });
 
     return () => {

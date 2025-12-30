@@ -4,7 +4,7 @@ import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useImageLoader } from "./useImageLoader";
 import { getCachedTimezone } from "./useCurrentTime";
-import { getSpotifySkippedState, subscribeSpotifySkippedState } from "./useNocturned";
+import { getSpotifySkippedState, getSpotifyAuthState, subscribeSpotifySkippedState } from "./useNocturned";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
@@ -159,6 +159,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     getPlaylist,
   } = useSpotifyWebSocket();
 
+  const checkSpotifyReady = useCallback(() => {
+    if (isSpotifyReady) return true;
+    return getSpotifyAuthState() && !getSpotifySkippedState();
+  }, [isSpotifyReady]);
+
   useEffect(() => {
     if (skipInitialFetch) return;
     if (!initialDataLoaded) {
@@ -252,7 +257,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   }, [currentlyPlayingAlbum, activeSection]);
 
   const fetchRecentlyPlayed = useCallback(async () => {
-    if (!isSpotifyReady) return;
+    if (!checkSpotifyReady()) return;
 
     try {
       setIsLoading((prev) => ({ ...prev, recentAlbums: true }));
@@ -347,7 +352,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       setIsLoading((prev) => ({ ...prev, recentAlbums: false }));
     }
   }, [
-    isSpotifyReady,
+    checkSpotifyReady,
     getRecentlyPlayed,
     getPlayerState,
     extractAlbumFromPlayerState,
@@ -356,7 +361,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
   const fetchUserPlaylists = useCallback(
     async (isLoadMore = false) => {
-      if (!isSpotifyReady) return;
+      if (!checkSpotifyReady()) return;
 
       if (isLoadMore && sectionLoadingRefs.current.playlists) {
         return;
@@ -464,12 +469,12 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [isSpotifyReady, getUserPlaylists, getPlaylist, lastOffsets],
+    [checkSpotifyReady, getUserPlaylists, getPlaylist, lastOffsets],
   );
 
   const fetchTopArtists = useCallback(
     async (isLoadMore = false) => {
-      if (!isSpotifyReady) return;
+      if (!checkSpotifyReady()) return;
 
       if (isLoadMore && sectionLoadingRefs.current.artists) {
         return;
@@ -542,12 +547,12 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [isSpotifyReady, getUserTopArtists],
+    [checkSpotifyReady, getUserTopArtists],
   );
 
   const fetchLikedSongs = useCallback(
     async (isLoadMore = false) => {
-      if (!isSpotifyReady) return;
+      if (!checkSpotifyReady()) return;
 
       if (isLoadMore && sectionLoadingRefs.current.liked) {
         return;
@@ -637,12 +642,12 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [isSpotifyReady, getUserTracks, lastOffsets],
+    [checkSpotifyReady, getUserTracks, lastOffsets],
   );
 
   const fetchUserShows = useCallback(
     async (isLoadMore = false) => {
-      if (!isSpotifyReady) return;
+      if (!checkSpotifyReady()) return;
 
       if (isLoadMore && sectionLoadingRefs.current.shows) {
         return;
@@ -717,11 +722,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
     },
-    [isSpotifyReady, getUserShows, lastOffsets],
+    [checkSpotifyReady, getUserShows, lastOffsets],
   );
 
   const fetchRadioMixes = useCallback(async () => {
-    if (!isSpotifyReady) return [];
+    if (!checkSpotifyReady()) return [];
 
     try {
       setIsLoading((prev) => ({ ...prev, radioMixes: true }));
@@ -855,11 +860,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     } finally {
       setIsLoading((prev) => ({ ...prev, radioMixes: false }));
     }
-  }, [isSpotifyReady, sendSpotifyCommand, getPlaylist]);
+  }, [checkSpotifyReady, sendSpotifyCommand, getPlaylist]);
 
   const loadMoreForSection = useCallback(
     async (section) => {
-      if (!isSpotifyReady) return;
+      if (!checkSpotifyReady()) return;
 
       if (section === "recents") {
         return null;
@@ -1043,7 +1048,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
   const loadInitialData = useCallback(async () => {
     if (skipInitialFetch) return;
-    if (!isSpotifyReady) {
+    if (!checkSpotifyReady()) {
       console.log("Spotify not ready, skipping data load");
       return;
     }
@@ -1229,7 +1234,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   ]);
 
   const refreshData = useCallback(async () => {
-    if (!isSpotifyReady) {
+    if (!checkSpotifyReady()) {
       console.log("Spotify not ready, skipping refresh");
       return;
     }
