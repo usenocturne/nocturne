@@ -211,6 +211,18 @@ export default function Home({
 
   const handleRadioItemSelect = (index, item) => {
     if (index === 0) {
+      if (isPlayingDJ()) {
+        setActiveSection("nowPlaying");
+      } else {
+        playDJMix(currentPlayback?.device?.id).then((success) => {
+          if (success) {
+            setTimeout(() => {
+              refreshPlaybackState();
+              setActiveSection("nowPlaying");
+            }, 500);
+          }
+        });
+      }
       return;
     }
 
@@ -600,16 +612,20 @@ export default function Home({
             <div
               className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10"
               style={{ width: 280, height: 280 }}
-              onClick={() =>
-                playDJMix(currentPlayback?.device?.id).then((success) => {
-                  if (success) {
-                    setTimeout(() => {
-                      refreshPlaybackState();
-                      setActiveSection("nowPlaying");
-                    }, 500);
-                  }
-                })
-              }
+              onClick={() => {
+                if (isPlayingDJ()) {
+                  setActiveSection("nowPlaying");
+                } else {
+                  playDJMix(currentPlayback?.device?.id).then((success) => {
+                    if (success) {
+                      setTimeout(() => {
+                        refreshPlaybackState();
+                        setActiveSection("nowPlaying");
+                      }, 500);
+                    }
+                  });
+                }
+              }}
             >
               <img
                 src="/images/radio-cover/dj.webp"

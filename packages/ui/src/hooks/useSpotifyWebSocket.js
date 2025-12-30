@@ -242,16 +242,15 @@ export function useSpotifyWebSocket() {
     wsConnected && (appReady || deviceConnected) && spotifyAuthenticated;
 
   useEffect(() => {
-    if (!listenerIdRef.current) {
-      listenerIdRef.current = addMessageListener(
-        "spotify-ws",
-        handleSpotifyResponse,
-      );
-    }
+    listenerIdRef.current = addMessageListener(
+      "spotify-ws",
+      handleSpotifyResponse,
+    );
 
     return () => {
       if (listenerIdRef.current) {
         removeMessageListener(listenerIdRef.current);
+        listenerIdRef.current = null;
       }
     };
   }, [addMessageListener, removeMessageListener, handleSpotifyResponse]);
