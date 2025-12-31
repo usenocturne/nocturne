@@ -411,6 +411,12 @@ const setupGlobalWebSocket = async () => {
             spotifySkipped = true;
             emitSpotifySkippedState();
           }
+
+          sendWsRequest("device.time.get", {}, { timeoutMs: 5000 }).catch(
+            (err) => {
+              console.error("Failed to sync device time:", err);
+            },
+          );
         }
 
         if (
