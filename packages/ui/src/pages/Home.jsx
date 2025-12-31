@@ -8,6 +8,7 @@ import { useNavigation } from "../hooks/useNavigation";
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
 import { getSpotifySkippedState, subscribeSpotifySkippedState } from "../hooks/useNocturned";
+import { AlertCircleIcon } from "../components/common/icons";
 
 export default function Home({
   accessToken,
@@ -350,8 +351,11 @@ export default function Home({
   const renderRecentsSection = () => {
     if (isSpotifySkipped) {
       return (
-        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-          Connect Spotify to see recently played
+        <div className="flex flex-col items-center justify-center w-full h-full text-white/50 text-2xl text-center">
+          <AlertCircleIcon className="w-12 h-12 mb-4" />
+          Connect Spotify to see
+          <br />
+          recently played
         </div>
       );
     }
@@ -380,8 +384,11 @@ export default function Home({
   const renderLibrarySection = () => {
     if (isSpotifySkipped) {
       return (
-        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-          Connect Spotify to see your playlists
+        <div className="flex flex-col items-center justify-center w-full h-full text-white/50 text-2xl text-center">
+          <AlertCircleIcon className="w-12 h-12 mb-4" />
+          Connect Spotify to see
+          <br />
+          your playlists
         </div>
       );
     }
@@ -533,8 +540,11 @@ export default function Home({
   const renderArtistsSection = () => {
     if (isSpotifySkipped) {
       return (
-        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-          Connect Spotify to see your top artists
+        <div className="flex flex-col items-center justify-center w-full h-full text-white/50 text-2xl text-center">
+          <AlertCircleIcon className="w-12 h-12 mb-4" />
+          Connect Spotify to see
+          <br />
+          your top artists
         </div>
       );
     }
@@ -632,8 +642,11 @@ export default function Home({
   const renderRadioSection = () => {
     if (isSpotifySkipped) {
       return (
-        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-          Connect Spotify for radio features
+        <div className="flex flex-col items-center justify-center w-full h-full text-white/50 text-2xl text-center">
+          <AlertCircleIcon className="w-12 h-12 mb-4" />
+          Connect Spotify to see
+          <br />
+          radio mixes
         </div>
       );
     }
@@ -785,8 +798,11 @@ export default function Home({
   const renderPodcastsSection = () => {
     if (isSpotifySkipped) {
       return (
-        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-          Connect Spotify to see your shows
+        <div className="flex flex-col items-center justify-center w-full h-full text-white/50 text-2xl text-center">
+          <AlertCircleIcon className="w-12 h-12 mb-4" />
+          Connect Spotify to see
+          <br />
+          your shows
         </div>
       );
     }
