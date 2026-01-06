@@ -403,20 +403,30 @@ const setupGlobalWebSocket = async () => {
           data.type === "event" &&
           data.topic === "app.ready"
         ) {
-          appReady = true;
-          appReadyPlatform = data.data?.platform || null;
-          emitAppReadyState();
+          const pendingPlatform = data.data?.platform || null;
+          const pendingSpotifySkipped = data.data?.spotifySkipped === true;
 
-          if (data.data?.spotifySkipped === true) {
-            spotifySkipped = true;
-            emitSpotifySkippedState();
-          }
+          const syncDeviceTime = async () => {
+            while (true) {
+              try {
+                await sendWsRequest("device.time.get", {}, { timeoutMs: 5000 });
+                break;
+              } catch (err) {
+                console.error("Failed to sync device time, retrying...", err);
+              }
+            }
 
-          sendWsRequest("device.time.get", {}, { timeoutMs: 5000 }).catch(
-            (err) => {
-              console.error("Failed to sync device time:", err);
-            },
-          );
+            appReady = true;
+            appReadyPlatform = pendingPlatform;
+            emitAppReadyState();
+
+            if (pendingSpotifySkipped) {
+              spotifySkipped = true;
+              emitSpotifySkippedState();
+            }
+          };
+
+          syncDeviceTime();
         }
 
         if (
