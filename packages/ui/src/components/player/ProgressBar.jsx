@@ -11,6 +11,7 @@ const ProgressBar = ({
   onScrubbingChange,
   updateProgress,
   disabled = false,
+  scrubOnWheel = false,
 }) => {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubbingProgress, setScrubbingProgress] = useState(null);
@@ -105,6 +106,38 @@ const ProgressBar = ({
     window.addEventListener("wheel", handleWheel, { passive: false });
     return () => window.removeEventListener("wheel", handleWheel);
   }, [isScrubbing, effectiveProgress]);
+
+  useEffect(() => {
+    if (!scrubOnWheel || isScrubbing || disabled || isProgressUnknown) return;
+
+    const handleWheelToActivate = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      setIsScrubbing(true);
+      onScrubbingChangeRef.current(true);
+      wasPlayingRef.current = isPlaying;
+      hasScrubbedRef.current = true;
+
+      const delta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY;
+      const step = 1.5;
+      const nextValue = effectiveProgress + (delta > 0 ? step : -step);
+      const clampedValue = Math.max(0, Math.min(100, nextValue));
+      setScrubbingProgress(clampedValue);
+      scrubbingProgressRef.current = clampedValue;
+
+      clearScrubTimeout();
+      scrubTimeoutRef.current = setTimeout(() => {
+        exitScrubbing(true);
+      }, SCRUB_TIMEOUT_MS);
+    };
+
+    window.addEventListener("wheel", handleWheelToActivate, { passive: false });
+    return () => window.removeEventListener("wheel", handleWheelToActivate);
+  }, [scrubOnWheel, isScrubbing, disabled, isProgressUnknown, effectiveProgress, isPlaying]);
 
   useEffect(() => {
     return () => clearScrubTimeout();

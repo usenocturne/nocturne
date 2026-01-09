@@ -14,6 +14,7 @@ import { useLyrics } from "../../hooks/useLyrics";
 import { useGestureControls } from "../../hooks/useGestureControls";
 import { useElapsedTime } from "../../hooks/useElapsedTime";
 import { useButtonMapping } from "../../hooks/useButtonMapping";
+import { useSettings } from "../../contexts/SettingsContext";
 import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 import DeviceSwitcherModal from "./DeviceSwitcherModal";
 import ProgressBar from "./ProgressBar";
@@ -90,6 +91,7 @@ export default function NowPlaying({
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
+  const { settings } = useSettings();
 
   const { getPlaylist } = useSpotifyWebSocket();
 
@@ -418,6 +420,10 @@ export default function NowPlaying({
 
   const handleWheel = useCallback(
     (e) => {
+      if (settings.knobSeeksPlaybackEnabled && !isPhoneMedia && !isSpotifyPending) {
+        return;
+      }
+
       if (isProgressScrubbing) return;
 
       const now = Date.now();
@@ -476,6 +482,8 @@ export default function NowPlaying({
       phoneMediaVolumeUp,
       phoneMediaVolumeDown,
       showVolumeOverlay,
+      settings.knobSeeksPlaybackEnabled,
+      isSpotifyPending,
     ],
   );
 
@@ -1044,6 +1052,7 @@ export default function NowPlaying({
           onScrubbingChange={handleScrubbingChange}
           updateProgress={updateProgress}
           disabled={isPhoneMedia || isSpotifyPending}
+          scrubOnWheel={settings.knobSeeksPlaybackEnabled && !isPhoneMedia && !isSpotifyPending}
         />
       </div>
 

@@ -28,6 +28,7 @@ export function SettingsProvider({ children }) {
     showStatusBar: getDefaultSettingValue("showStatusBar", true),
     startWithNowPlaying: getDefaultSettingValue("startWithNowPlaying", true),
     autoUpdateEnabled: getDefaultSettingValue("autoUpdateEnabled", true),
+    knobSeeksPlaybackEnabled: getDefaultSettingValue("knobSeeksPlaybackEnabled", false),
   });
 
   useEffect(() => {

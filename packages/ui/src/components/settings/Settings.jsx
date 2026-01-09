@@ -140,6 +140,15 @@ const settingsStructure = {
         storageKey: "elapsedTimeEnabled",
         defaultValue: false,
       },
+      {
+        id: "knob-seeks-playback",
+        title: "Knob Seeks Playback",
+        type: "toggle",
+        description:
+          "Use the knob to seek through playback instead of controlling volume.",
+        storageKey: "knobSeeksPlaybackEnabled",
+        defaultValue: false,
+      },
     ],
   },
   credits: {
