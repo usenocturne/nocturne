@@ -743,15 +743,34 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             !currentItem?.is_spotify_pending;
 
           if (hasRealSpotifyData) {
-            const title = media.MediaItemTitle || currentItem.name;
+            const incomingTitle = media.MediaItemTitle;
+            const currentTitle = currentItem?.name;
+            const isTitleChange =
+              incomingTitle &&
+              currentTitle &&
+              incomingTitle.toLowerCase().trim() !==
+                currentTitle.toLowerCase().trim();
+
+            const title = incomingTitle || currentItem.name;
             const artist = media.MediaItemArtist;
 
             setCurrentPlayback((prevPlayback) => {
               if (!prevPlayback?.item) return prevPlayback;
               const updatedPlayback = {
                 ...prevPlayback,
+                ...(isTitleChange
+                  ? {
+                      progress_ms: 0,
+                      timestamp: Date.now(),
+                    }
+                  : {}),
                 item: {
                   ...prevPlayback.item,
+                  ...(isTitleChange
+                    ? {
+                        id: `spotify-transitional-${Date.now()}`,
+                      }
+                    : {}),
                   name: title,
                   artists: artist
                     ? [{ ...prevPlayback.item.artists?.[0], name: artist }]
