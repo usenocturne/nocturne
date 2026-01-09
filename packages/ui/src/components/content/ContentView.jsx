@@ -195,7 +195,8 @@ const ContentView = ({
           tracksLengthRef.current = limitedTracks.length;
 
           const newOffset = offset + data.items.length;
-          const hasMore = newOffset < totalEpisodes && limitedTracks.length < 50;
+          const hasMore =
+            newOffset < totalEpisodes && limitedTracks.length < 50;
 
           if (hasMore) {
             if (showEpisodeLazyLoadRef.current) {
@@ -210,7 +211,8 @@ const ContentView = ({
         });
 
         const newOffset = offset + data.items.length;
-        const hasMore = newOffset < totalEpisodes && tracksLengthRef.current < 50;
+        const hasMore =
+          newOffset < totalEpisodes && tracksLengthRef.current < 50;
         setNextUrl(hasMore ? "has-more" : null);
         setHasMoreTracks(hasMore);
       }
@@ -373,10 +375,11 @@ const ContentView = ({
           const newTracks = data.items.map((item) => item.track);
           const newOffset = (data.offset || offset) + newTracks.length;
           const totalTracks = content?.tracks?.total || 0;
-          const hasMore = data.next || (totalTracks > 0 && newOffset < totalTracks);
+          const hasMore =
+            data.next || (totalTracks > 0 && newOffset < totalTracks);
 
           setTracks((prevTracks) => [...prevTracks, ...newTracks]);
-          setNextUrl(hasMore ? (data.next || "has-more") : null);
+          setNextUrl(hasMore ? data.next || "has-more" : null);
           setHasMoreTracks(hasMore);
           setLoadedPages((prev) => prev + 1);
         } catch (error) {
@@ -444,7 +447,9 @@ const ContentView = ({
     const container = tracksContainerRef.current;
     if (
       !container ||
-      (contentType !== "playlist" && contentType !== "show" && contentType !== "mix") ||
+      (contentType !== "playlist" &&
+        contentType !== "show" &&
+        contentType !== "mix") ||
       tracksPerPage === 0
     )
       return;
@@ -510,7 +515,13 @@ const ContentView = ({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [hasMoreTracks, isLoadingMore, tracks.length, contentType, loadMoreTracks]);
+  }, [
+    hasMoreTracks,
+    isLoadingMore,
+    tracks.length,
+    contentType,
+    loadMoreTracks,
+  ]);
 
   useEffect(() => {
     if (
@@ -603,7 +614,7 @@ const ContentView = ({
               const totalTracks = playlistInfo.tracks?.total || 0;
               const hasMore = currentOffset + currentItems < totalTracks;
 
-              setNextUrl(hasMore ? (tracksResponse.next || "has-more") : null);
+              setNextUrl(hasMore ? tracksResponse.next || "has-more" : null);
               setHasMoreTracks(hasMore);
               setTracksPerPage(tracksData.length);
               setLoadedPages(1);
@@ -691,8 +702,11 @@ const ContentView = ({
 
               const currentOffset = episodesResponse.offset || 0;
               const currentItems = episodesResponse.items?.length || 0;
-              const totalEpisodes = episodesResponse.total || showInfo.total_episodes || 0;
-              const hasMore = currentOffset + currentItems < totalEpisodes && currentItems < 50;
+              const totalEpisodes =
+                episodesResponse.total || showInfo.total_episodes || 0;
+              const hasMore =
+                currentOffset + currentItems < totalEpisodes &&
+                currentItems < 50;
 
               setNextUrl(hasMore ? "has-more" : null);
               setHasMoreTracks(hasMore);
@@ -810,7 +824,7 @@ const ContentView = ({
                 tracks: { total: totalTracks },
               });
               setTracks(tracksData);
-              setNextUrl(hasMore ? (tracksResponse.next || "has-more") : null);
+              setNextUrl(hasMore ? tracksResponse.next || "has-more" : null);
               setHasMoreTracks(hasMore);
               setTracksPerPage(tracksData.length);
               setLoadedPages(1);

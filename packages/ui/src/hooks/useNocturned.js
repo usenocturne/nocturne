@@ -110,7 +110,10 @@ export const resetReconnectionExhausted = () => {
   reconnectionExhausted = false;
 };
 
-export const getAppReadyState = () => ({ ready: appReady, platform: appReadyPlatform });
+export const getAppReadyState = () => ({
+  ready: appReady,
+  platform: appReadyPlatform,
+});
 
 const emitAppReadyState = () => {
   appReadySubscribers.forEach((listener) => {
@@ -398,11 +401,7 @@ const setupGlobalWebSocket = async () => {
       try {
         const data = JSON.parse(event.data);
 
-        if (
-          data &&
-          data.type === "event" &&
-          data.topic === "app.ready"
-        ) {
+        if (data && data.type === "event" && data.topic === "app.ready") {
           const pendingPlatform = data.data?.platform || null;
           const pendingSpotifySkipped = data.data?.spotifySkipped === true;
 

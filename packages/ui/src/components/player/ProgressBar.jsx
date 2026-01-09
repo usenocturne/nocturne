@@ -137,7 +137,14 @@ const ProgressBar = ({
 
     window.addEventListener("wheel", handleWheelToActivate, { passive: false });
     return () => window.removeEventListener("wheel", handleWheelToActivate);
-  }, [scrubOnWheel, isScrubbing, disabled, isProgressUnknown, effectiveProgress, isPlaying]);
+  }, [
+    scrubOnWheel,
+    isScrubbing,
+    disabled,
+    isProgressUnknown,
+    effectiveProgress,
+    isPlaying,
+  ]);
 
   useEffect(() => {
     return () => clearScrubTimeout();

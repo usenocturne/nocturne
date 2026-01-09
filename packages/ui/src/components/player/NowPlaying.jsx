@@ -87,7 +87,8 @@ export default function NowPlaying({
   const isLocalMedia = currentPlayback?.item?.is_local === true;
   const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
   const isSpotifyPending = currentPlayback?.item?.is_spotify_pending === true;
-  const isSmartphoneDevice = currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
+  const isSmartphoneDevice =
+    currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
   const contentContainerRef = useRef(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
@@ -420,7 +421,11 @@ export default function NowPlaying({
 
   const handleWheel = useCallback(
     (e) => {
-      if (settings.knobSeeksPlaybackEnabled && !isPhoneMedia && !isSpotifyPending) {
+      if (
+        settings.knobSeeksPlaybackEnabled &&
+        !isPhoneMedia &&
+        !isSpotifyPending
+      ) {
         return;
       }
 
@@ -1052,7 +1057,11 @@ export default function NowPlaying({
           onScrubbingChange={handleScrubbingChange}
           updateProgress={updateProgress}
           disabled={isPhoneMedia || isSpotifyPending}
-          scrubOnWheel={settings.knobSeeksPlaybackEnabled && !isPhoneMedia && !isSpotifyPending}
+          scrubOnWheel={
+            settings.knobSeeksPlaybackEnabled &&
+            !isPhoneMedia &&
+            !isSpotifyPending
+          }
         />
       </div>
 
@@ -1232,7 +1241,9 @@ export default function NowPlaying({
               <div className="py-1">
                 {!isPodcast && !isLocalMedia && !isPhoneMedia && (
                   <MenuItem onClick={toggleLyrics} disabled={!currentPlayback}>
-                    <div className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/50"} font-[560] tracking-tight focus:outline-none outline-none`}>
+                    <div
+                      className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/50"} font-[560] tracking-tight focus:outline-none outline-none`}
+                    >
                       <span className="text-[28px]">
                         {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
                       </span>

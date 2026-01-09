@@ -21,7 +21,8 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
   const isLocalMedia = currentPlayback?.item?.is_local === true;
   const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
-  const isSmartphoneDevice = currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
+  const isSmartphoneDevice =
+    currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
 
   const {
     isSpotifyReady,

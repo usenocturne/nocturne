@@ -447,19 +447,23 @@ function App() {
 
       const isSkipped = skippedValue === true;
 
-      const needsAuthorization = isAuthenticated || isSkipped
-        ? false
-        : needsAuthorizationValue === undefined
-          ? true
-          : needsAuthorizationValue === true ||
-            needsAuthorizationValue === 1 ||
-            needsAuthorizationValue === "1";
+      const needsAuthorization =
+        isAuthenticated || isSkipped
+          ? false
+          : needsAuthorizationValue === undefined
+            ? true
+            : needsAuthorizationValue === true ||
+              needsAuthorizationValue === 1 ||
+              needsAuthorizationValue === "1";
 
       setIsSpotifyAuthenticated(isAuthenticated);
       setIsSpotifySkipped(isSkipped);
       setNeedsSpotifyAuthorization(needsAuthorization);
       setAuthStatusMessage(
-        hasDevices && needsAuthorization && isAuthenticated === false && !isSkipped
+        hasDevices &&
+          needsAuthorization &&
+          isAuthenticated === false &&
+          !isSkipped
           ? "Open the Nocturne app to finish logging into Spotify."
           : null,
       );
@@ -469,7 +473,8 @@ function App() {
 
         const wasSkipped = lastSpotifySkippedStateRef.current === true;
         const wasNotAuthenticated = lastSpotifyAuthStateRef.current === false;
-        const shouldForceDataLoad = wasSkipped || (wasNotAuthenticated && initialDataLoaded);
+        const shouldForceDataLoad =
+          wasSkipped || (wasNotAuthenticated && initialDataLoaded);
 
         if (!initialDataLoaded || shouldForceDataLoad) {
           setTimeout(() => {

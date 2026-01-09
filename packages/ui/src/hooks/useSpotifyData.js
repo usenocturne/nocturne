@@ -4,7 +4,11 @@ import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useImageLoader } from "./useImageLoader";
 import { getCachedTimezone } from "./useCurrentTime";
-import { getSpotifySkippedState, getSpotifyAuthState, subscribeSpotifySkippedState } from "./useNocturned";
+import {
+  getSpotifySkippedState,
+  getSpotifyAuthState,
+  subscribeSpotifySkippedState,
+} from "./useNocturned";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
@@ -418,7 +422,9 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }));
 
         const currentOffset = data.offset || 0;
-        const hasMoreFromServer = data.next || (data.total && currentOffset + itemsWithCounts.length < data.total);
+        const hasMoreFromServer =
+          data.next ||
+          (data.total && currentOffset + itemsWithCounts.length < data.total);
 
         if (isLoadMore) {
           let newLength = 0;
@@ -439,13 +445,22 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           }));
 
           if (hasMoreFromServer && newLength < 50) {
-            setNextTokens((prevTokens) => ({ ...prevTokens, userPlaylists: data.next || "has-more" }));
+            setNextTokens((prevTokens) => ({
+              ...prevTokens,
+              userPlaylists: data.next || "has-more",
+            }));
           } else {
-            setNextTokens((prevTokens) => ({ ...prevTokens, userPlaylists: null }));
+            setNextTokens((prevTokens) => ({
+              ...prevTokens,
+              userPlaylists: null,
+            }));
           }
         } else {
           setUserPlaylists(itemsWithCounts);
-          setItemCounts((prev) => ({ ...prev, userPlaylists: itemsWithCounts.length }));
+          setItemCounts((prev) => ({
+            ...prev,
+            userPlaylists: itemsWithCounts.length,
+          }));
 
           if (hasMoreFromServer && itemsWithCounts.length < 50) {
             setNextTokens((prev) => ({
@@ -518,9 +533,15 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           }));
 
           if (data.next && newLength < 50) {
-            setNextTokens((prevTokens) => ({ ...prevTokens, topArtists: data.next }));
+            setNextTokens((prevTokens) => ({
+              ...prevTokens,
+              topArtists: data.next,
+            }));
           } else {
-            setNextTokens((prevTokens) => ({ ...prevTokens, topArtists: null }));
+            setNextTokens((prevTokens) => ({
+              ...prevTokens,
+              topArtists: null,
+            }));
           }
         } else {
           setTopArtists(items);
@@ -600,10 +621,8 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
           };
 
           if (updatedLikedSongs.tracks.items) {
-            updatedLikedSongs.tracks.items = updatedLikedSongs.tracks.items.slice(
-              0,
-              50,
-            );
+            updatedLikedSongs.tracks.items =
+              updatedLikedSongs.tracks.items.slice(0, 50);
             newItemsLength = updatedLikedSongs.tracks.items.length;
           }
 
@@ -618,11 +637,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
         if (data.next && newItemsLength < 50) {
           setNextTokens((prev) => ({ ...prev, likedSongs: data.next }));
-        } else if (
-          !isLoadMore &&
-          newItemsLength === 5 &&
-          data.total > 5
-        ) {
+        } else if (!isLoadMore && newItemsLength === 5 && data.total > 5) {
           setNextTokens((prev) => ({ ...prev, likedSongs: "has-more" }));
         } else {
           setNextTokens((prev) => ({ ...prev, likedSongs: null }));

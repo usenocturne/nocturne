@@ -7,7 +7,10 @@ import SpotifyImage from "../components/common/SpotifyImage";
 import { useNavigation } from "../hooks/useNavigation";
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
-import { getSpotifySkippedState, subscribeSpotifySkippedState } from "../hooks/useNocturned";
+import {
+  getSpotifySkippedState,
+  subscribeSpotifySkippedState,
+} from "../hooks/useNocturned";
 import { AlertCircleIcon } from "../components/common/icons";
 
 export default function Home({
@@ -33,7 +36,9 @@ export default function Home({
   const [newAlbumAdded, setNewAlbumAdded] = useState(false);
   const { playDJMix } = useSpotifyPlayerControls(currentPlayback);
   const [showDonationModal, setShowDonationModal] = useState(false);
-  const [isSpotifySkipped, setIsSpotifySkipped] = useState(() => getSpotifySkippedState());
+  const [isSpotifySkipped, setIsSpotifySkipped] = useState(() =>
+    getSpotifySkippedState(),
+  );
 
   useEffect(() => {
     const unsubscribe = subscribeSpotifySkippedState((skipped) => {
@@ -115,7 +120,6 @@ export default function Home({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeSection, setActiveSection]);
-
 
   useEffect(() => {
     if (recentAlbums.length > 0 && activeSection === "recents") {
@@ -465,7 +469,8 @@ export default function Home({
             userPlaylists
               .filter(
                 (item) =>
-                  (item?.type === "playlist" || item?.uri?.includes(":playlist:")) &&
+                  (item?.type === "playlist" ||
+                    item?.uri?.includes(":playlist:")) &&
                   item.id !== "37i9dQZF1EYkqdzj48dyYq",
               )
               .map((playlist, index) => (

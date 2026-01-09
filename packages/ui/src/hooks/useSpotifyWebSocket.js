@@ -261,7 +261,10 @@ export function useSpotifyWebSocket() {
   }, []);
 
   const isSpotifyReady =
-    wsConnected && (appReady || deviceConnected) && spotifyAuthenticated && !spotifySkipped;
+    wsConnected &&
+    (appReady || deviceConnected) &&
+    spotifyAuthenticated &&
+    !spotifySkipped;
 
   useEffect(() => {
     listenerIdRef.current = addMessageListener(

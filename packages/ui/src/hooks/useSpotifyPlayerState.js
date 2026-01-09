@@ -23,7 +23,12 @@ export const getActiveDeviceType = () => cachedActiveDeviceType;
 
 const normalizeImageUrl = (url) => {
   if (!url) return url;
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("blob:") || url.startsWith("/")) {
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("blob:") ||
+    url.startsWith("/")
+  ) {
     return url;
   }
   return `https://${url}`;
@@ -86,225 +91,223 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   const lastPlayedAlbumIdRef = useRef(null);
   const currentPlaybackRef = useRef(null);
 
-  const processPlaybackState = useCallback(
-    (data) => {
-      if (!data) return;
+  const processPlaybackState = useCallback((data) => {
+    if (!data) return;
 
-      if (!data.item?.is_spotify_pending) {
-        pendingSpotifyMediaUpdate = null;
-        if (spotifyFallbackTimeout) {
-          clearTimeout(spotifyFallbackTimeout);
-          spotifyFallbackTimeout = null;
-        }
+    if (!data.item?.is_spotify_pending) {
+      pendingSpotifyMediaUpdate = null;
+      if (spotifyFallbackTimeout) {
+        clearTimeout(spotifyFallbackTimeout);
+        spotifyFallbackTimeout = null;
       }
+    }
 
-      const isEpisode =
-        data.currently_playing_type === "episode" ||
-        (data?.item && data.item.type === "episode") ||
-        (data?.item &&
-          data.item.show &&
-          !data.item.album &&
-          !data.item.artists);
-      const hasIncompleteEpisodeData =
-        data.currently_playing_type === "episode" && !data.item;
+    const isEpisode =
+      data.currently_playing_type === "episode" ||
+      (data?.item && data.item.type === "episode") ||
+      (data?.item && data.item.show && !data.item.album && !data.item.artists);
+    const hasIncompleteEpisodeData =
+      data.currently_playing_type === "episode" && !data.item;
 
-      if (
-        hasIncompleteEpisodeData &&
-        currentPlaybackRef.current?.item?.type === "episode"
-      ) {
-        setCurrentPlayback((prevPlayback) => {
-          const updatedPlayback = {
-            ...prevPlayback,
-            device: {
-              ...prevPlayback?.device,
-              ...data.device,
-              volume_percent: data.device?.volume_percent,
-            },
-            shuffle_state: data.shuffle_state,
-            repeat_state: data.repeat_state,
-            is_playing: data.is_playing,
-            progress_ms: data.progress_ms,
-            timestamp: data.timestamp,
-          };
-          currentPlaybackRef.current = updatedPlayback;
-          return updatedPlayback;
-        });
-        return;
-      }
-
-      const currentItem = currentPlaybackRef.current?.item;
-      const currentBlobUrl = currentItem?.album?.images?.[0]?.url;
-      const hasBlobArtwork = currentBlobUrl?.startsWith("blob:");
-      const incomingTrackName = data.item?.name?.toLowerCase()?.trim();
-      const currentTrackName = currentItem?.name?.toLowerCase()?.trim();
-      const isSameTrack =
-        incomingTrackName &&
-        currentTrackName &&
-        incomingTrackName === currentTrackName;
-      const preservedBlobArtwork =
-        hasBlobArtwork && isSameTrack ? currentBlobUrl : null;
-
+    if (
+      hasIncompleteEpisodeData &&
+      currentPlaybackRef.current?.item?.type === "episode"
+    ) {
       setCurrentPlayback((prevPlayback) => {
-        const trackUri = data.item?.uri;
-        const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
-
-        const prevBlobArtwork = prevPlayback?.item?.album?.images?.[0]?.url;
-        const hasPrevBlobArtwork = prevBlobArtwork?.startsWith("blob:");
-        const prevTrackName = prevPlayback?.item?.name?.toLowerCase()?.trim();
-        const shouldPreservePrevBlob =
-          hasPrevBlobArtwork &&
-          incomingTrackName &&
-          prevTrackName &&
-          incomingTrackName === prevTrackName;
-
-        let itemWithArtwork = data.item;
-        if (shouldPreservePrevBlob && data.item?.album?.images) {
-          itemWithArtwork = {
-            ...data.item,
-            album: {
-              ...data.item.album,
-              images: [{ url: prevBlobArtwork }],
-            },
-          };
-        } else if (cachedArtworkUrl && data.item?.album?.images) {
-          itemWithArtwork = {
-            ...data.item,
-            album: {
-              ...data.item.album,
-              images: [{ url: cachedArtworkUrl }],
-            },
-          };
-        } else if (data.item && isEpisode && !data.item.type) {
-          itemWithArtwork = {
-            ...data.item,
-            type: "episode",
-          };
-        }
-
-        if (itemWithArtwork?.album?.images && !shouldPreservePrevBlob && !cachedArtworkUrl) {
-          itemWithArtwork = {
-            ...itemWithArtwork,
-            album: {
-              ...itemWithArtwork.album,
-              images: normalizeImageArray(itemWithArtwork.album.images),
-            },
-          };
-        }
-
-        if (itemWithArtwork?.show?.images && !cachedArtworkUrl) {
-          itemWithArtwork = {
-            ...itemWithArtwork,
-            show: {
-              ...itemWithArtwork.show,
-              images: normalizeImageArray(itemWithArtwork.show.images),
-            },
-          };
-        }
-
-        const prevDuration = currentPlaybackRef.current?.item?.duration_ms;
-        const incomingDuration = itemWithArtwork?.duration_ms;
-        const isSameTrack =
-          itemWithArtwork?.id === currentPlaybackRef.current?.item?.id ||
-          itemWithArtwork?.uri === currentPlaybackRef.current?.item?.uri;
-
-        if (itemWithArtwork && (!incomingDuration || incomingDuration === 0)) {
-          if (prevDuration > 0 && isSameTrack) {
-            itemWithArtwork = {
-              ...itemWithArtwork,
-              duration_ms: prevDuration,
-            };
-          }
-        }
-
-        const newPlayback = {
-          ...data,
+        const updatedPlayback = {
+          ...prevPlayback,
           device: {
+            ...prevPlayback?.device,
             ...data.device,
             volume_percent: data.device?.volume_percent,
           },
           shuffle_state: data.shuffle_state,
           repeat_state: data.repeat_state,
-          item: itemWithArtwork,
+          is_playing: data.is_playing,
+          progress_ms: data.progress_ms,
+          timestamp: data.timestamp,
         };
-        currentPlaybackRef.current = newPlayback;
-        return newPlayback;
+        currentPlaybackRef.current = updatedPlayback;
+        return updatedPlayback;
       });
+      return;
+    }
 
-      if (data?.item && data.item.type === "track") {
-        const trackUri = data.item.uri;
-        let cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+    const currentItem = currentPlaybackRef.current?.item;
+    const currentBlobUrl = currentItem?.album?.images?.[0]?.url;
+    const hasBlobArtwork = currentBlobUrl?.startsWith("blob:");
+    const incomingTrackName = data.item?.name?.toLowerCase()?.trim();
+    const currentTrackName = currentItem?.name?.toLowerCase()?.trim();
+    const isSameTrack =
+      incomingTrackName &&
+      currentTrackName &&
+      incomingTrackName === currentTrackName;
+    const preservedBlobArtwork =
+      hasBlobArtwork && isSameTrack ? currentBlobUrl : null;
 
-        const artworkImages = preservedBlobArtwork
-          ? [{ url: preservedBlobArtwork }]
-          : cachedArtworkUrl
-            ? [{ url: cachedArtworkUrl }]
-            : normalizeImageArray(data.item.album?.images);
+    setCurrentPlayback((prevPlayback) => {
+      const trackUri = data.item?.uri;
+      const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
-        const currentAlbum =
-          data.item.is_local || data.item.is_phone_media
-            ? {
-                id: `local-${data.item.uri}`,
-                name: data.item.album?.name || data.item.name,
-                images: artworkImages || [{ url: "/images/not-playing.webp" }],
-                artists: data.item.artists,
-                type: "local-track",
-                uri: data.item.uri,
-                is_phone_media: data.item.is_phone_media || false,
-                is_local: data.item.is_local || false,
-              }
-            : {
-                ...data.item.album,
-                images: artworkImages,
-                artists: data.item.artists,
-              };
+      const prevBlobArtwork = prevPlayback?.item?.album?.images?.[0]?.url;
+      const hasPrevBlobArtwork = prevBlobArtwork?.startsWith("blob:");
+      const prevTrackName = prevPlayback?.item?.name?.toLowerCase()?.trim();
+      const shouldPreservePrevBlob =
+        hasPrevBlobArtwork &&
+        incomingTrackName &&
+        prevTrackName &&
+        incomingTrackName === prevTrackName;
 
-        setCurrentlyPlayingAlbum(currentAlbum);
-
-        if (
-          currentAlbum?.id &&
-          currentAlbum.id !== lastPlayedAlbumIdRef.current
-        ) {
-          lastPlayedAlbumIdRef.current = currentAlbum.id;
-          setAlbumChangeEvent({
-            album: currentAlbum,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      } else if (data?.item && data.item.type === "episode") {
-        const currentShow = data.item.show;
-        const trackUri = data.item.uri;
-        const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
-
-        const showAsAlbum = {
-          ...currentShow,
-          images: cachedArtworkUrl
-            ? [{ url: cachedArtworkUrl }]
-            : normalizeImageArray(currentShow?.images),
-          artists: currentShow.publisher
-            ? [
-                {
-                  id: `publisher-${currentShow.id}`,
-                  name: currentShow.publisher,
-                  type: "show",
-                },
-              ]
-            : [],
-          type: "show",
+      let itemWithArtwork = data.item;
+      if (shouldPreservePrevBlob && data.item?.album?.images) {
+        itemWithArtwork = {
+          ...data.item,
+          album: {
+            ...data.item.album,
+            images: [{ url: prevBlobArtwork }],
+          },
         };
-        setCurrentlyPlayingAlbum(showAsAlbum);
+      } else if (cachedArtworkUrl && data.item?.album?.images) {
+        itemWithArtwork = {
+          ...data.item,
+          album: {
+            ...data.item.album,
+            images: [{ url: cachedArtworkUrl }],
+          },
+        };
+      } else if (data.item && isEpisode && !data.item.type) {
+        itemWithArtwork = {
+          ...data.item,
+          type: "episode",
+        };
+      }
 
-        if (currentShow?.id && data.item.id) {
-          localStorage.setItem(
-            `lastPlayedEpisode_${currentShow.id}`,
-            data.item.id,
-          );
+      if (
+        itemWithArtwork?.album?.images &&
+        !shouldPreservePrevBlob &&
+        !cachedArtworkUrl
+      ) {
+        itemWithArtwork = {
+          ...itemWithArtwork,
+          album: {
+            ...itemWithArtwork.album,
+            images: normalizeImageArray(itemWithArtwork.album.images),
+          },
+        };
+      }
+
+      if (itemWithArtwork?.show?.images && !cachedArtworkUrl) {
+        itemWithArtwork = {
+          ...itemWithArtwork,
+          show: {
+            ...itemWithArtwork.show,
+            images: normalizeImageArray(itemWithArtwork.show.images),
+          },
+        };
+      }
+
+      const prevDuration = currentPlaybackRef.current?.item?.duration_ms;
+      const incomingDuration = itemWithArtwork?.duration_ms;
+      const isSameTrack =
+        itemWithArtwork?.id === currentPlaybackRef.current?.item?.id ||
+        itemWithArtwork?.uri === currentPlaybackRef.current?.item?.uri;
+
+      if (itemWithArtwork && (!incomingDuration || incomingDuration === 0)) {
+        if (prevDuration > 0 && isSameTrack) {
+          itemWithArtwork = {
+            ...itemWithArtwork,
+            duration_ms: prevDuration,
+          };
         }
       }
 
-      initialStateLoadedRef.current = true;
-    },
-    [],
-  );
+      const newPlayback = {
+        ...data,
+        device: {
+          ...data.device,
+          volume_percent: data.device?.volume_percent,
+        },
+        shuffle_state: data.shuffle_state,
+        repeat_state: data.repeat_state,
+        item: itemWithArtwork,
+      };
+      currentPlaybackRef.current = newPlayback;
+      return newPlayback;
+    });
+
+    if (data?.item && data.item.type === "track") {
+      const trackUri = data.item.uri;
+      let cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+
+      const artworkImages = preservedBlobArtwork
+        ? [{ url: preservedBlobArtwork }]
+        : cachedArtworkUrl
+          ? [{ url: cachedArtworkUrl }]
+          : normalizeImageArray(data.item.album?.images);
+
+      const currentAlbum =
+        data.item.is_local || data.item.is_phone_media
+          ? {
+              id: `local-${data.item.uri}`,
+              name: data.item.album?.name || data.item.name,
+              images: artworkImages || [{ url: "/images/not-playing.webp" }],
+              artists: data.item.artists,
+              type: "local-track",
+              uri: data.item.uri,
+              is_phone_media: data.item.is_phone_media || false,
+              is_local: data.item.is_local || false,
+            }
+          : {
+              ...data.item.album,
+              images: artworkImages,
+              artists: data.item.artists,
+            };
+
+      setCurrentlyPlayingAlbum(currentAlbum);
+
+      if (
+        currentAlbum?.id &&
+        currentAlbum.id !== lastPlayedAlbumIdRef.current
+      ) {
+        lastPlayedAlbumIdRef.current = currentAlbum.id;
+        setAlbumChangeEvent({
+          album: currentAlbum,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } else if (data?.item && data.item.type === "episode") {
+      const currentShow = data.item.show;
+      const trackUri = data.item.uri;
+      const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+
+      const showAsAlbum = {
+        ...currentShow,
+        images: cachedArtworkUrl
+          ? [{ url: cachedArtworkUrl }]
+          : normalizeImageArray(currentShow?.images),
+        artists: currentShow.publisher
+          ? [
+              {
+                id: `publisher-${currentShow.id}`,
+                name: currentShow.publisher,
+                type: "show",
+              },
+            ]
+          : [],
+        type: "show",
+      };
+      setCurrentlyPlayingAlbum(showAsAlbum);
+
+      if (currentShow?.id && data.item.id) {
+        localStorage.setItem(
+          `lastPlayedEpisode_${currentShow.id}`,
+          data.item.id,
+        );
+      }
+    }
+
+    initialStateLoadedRef.current = true;
+  }, []);
 
   const resetPlaybackState = useCallback(
     (force = false) => {
@@ -416,7 +419,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           const cluster = payloads[0].cluster;
           const activeDeviceId = cluster.active_device_id;
           if (activeDeviceId && cluster.devices?.[activeDeviceId]) {
-            cachedActiveDeviceType = cluster.devices[activeDeviceId].device_type;
+            cachedActiveDeviceType =
+              cluster.devices[activeDeviceId].device_type;
           }
         }
 

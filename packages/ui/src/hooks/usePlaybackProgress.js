@@ -166,7 +166,8 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
 
       const now = Date.now();
       const currentSpeed = actualPlaybackSpeedRef.current;
-      const elapsedSinceAnchor = Math.max(0, now - anchorTimestampRef.current) * currentSpeed;
+      const elapsedSinceAnchor =
+        Math.max(0, now - anchorTimestampRef.current) * currentSpeed;
       const truthPosition = Math.min(
         anchorPositionRef.current + elapsedSinceAnchor,
         duration,

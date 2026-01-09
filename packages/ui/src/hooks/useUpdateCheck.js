@@ -272,12 +272,7 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   };
 
   useEffect(() => {
-    if (
-      autoCheck &&
-      appReady &&
-      initialDataLoadComplete &&
-      currentVersion
-    ) {
+    if (autoCheck && appReady && initialDataLoadComplete && currentVersion) {
       checkForUpdates();
     }
   }, [
