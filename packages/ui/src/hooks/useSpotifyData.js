@@ -394,7 +394,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
             if (playlist.id === DJ_PLAYLIST_ID) {
               return playlist;
             }
-            if (playlist.id && !playlist.tracks?.total) {
+            if (playlist.id && playlist.tracks?.total == null) {
               try {
                 const playlistInfo = await getPlaylist(
                   playlist.id,
@@ -418,10 +418,10 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
         setLastOffsets((prev) => ({
           ...prev,
-          userPlaylists: data.offset || 0,
+          userPlaylists: nextOffset,
         }));
 
-        const currentOffset = data.offset || 0;
+        const currentOffset = nextOffset;
         const hasMoreFromServer =
           data.next ||
           (data.total && currentOffset + itemsWithCounts.length < data.total);
@@ -595,7 +595,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
         const data = await getUserTracks(params);
 
-        setLastOffsets((prev) => ({ ...prev, likedSongs: data.offset || 0 }));
+        setLastOffsets((prev) => ({ ...prev, likedSongs: nextOffset }));
 
         let newItemsLength = 0;
         let resultLikedSongs = null;
@@ -685,7 +685,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         const data = await getUserShows(params);
         const items = data.items || [];
 
-        setLastOffsets((prev) => ({ ...prev, userShows: data.offset || 0 }));
+        setLastOffsets((prev) => ({ ...prev, userShows: nextOffset }));
 
         if (isLoadMore) {
           let newLength = 0;
