@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { consumeProgressResetSignal } from "./useSpotifyPlayerState";
 
 export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const [progressMs, setProgressMs] = useState(0);
@@ -163,6 +164,14 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         frameSkipCounterRef.current = 0;
       }
       lastFrameTimeRef.current = timestamp;
+
+      const resetSignal = consumeProgressResetSignal();
+      if (resetSignal) {
+        anchorPositionRef.current = resetSignal.position;
+        anchorTimestampRef.current = resetSignal.timestamp;
+        serverProgressRef.current = resetSignal.position;
+        setProgressMs(resetSignal.position);
+      }
 
       const now = Date.now();
       const currentSpeed = actualPlaybackSpeedRef.current;

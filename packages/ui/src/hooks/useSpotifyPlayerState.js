@@ -18,8 +18,15 @@ let lastEaSessionStartTime = 0;
 let pendingSpotifyMediaUpdate = null;
 let spotifyFallbackTimeout = null;
 let cachedActiveDeviceType = null;
+let progressResetSignal = null;
 
 export const getActiveDeviceType = () => cachedActiveDeviceType;
+
+export const consumeProgressResetSignal = () => {
+  const signal = progressResetSignal;
+  progressResetSignal = null;
+  return signal;
+};
 
 const normalizeImageUrl = (url) => {
   if (!url) return url;
@@ -757,6 +764,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
             const title = incomingTitle || currentItem.name;
             const artist = media.MediaItemArtist;
+
+            if (isTitleChange) {
+              progressResetSignal = { position: 0, timestamp: Date.now() };
+            }
 
             setCurrentPlayback((prevPlayback) => {
               if (!prevPlayback?.item) return prevPlayback;
