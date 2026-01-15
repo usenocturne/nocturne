@@ -764,6 +764,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
             const title = incomingTitle || currentItem.name;
             const artist = media.MediaItemArtist;
+            const isPlaying = playback.PlaybackStatus === "playing";
 
             if (isTitleChange) {
               progressResetSignal = { position: 0, timestamp: Date.now() };
@@ -773,6 +774,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               if (!prevPlayback?.item) return prevPlayback;
               const updatedPlayback = {
                 ...prevPlayback,
+                is_playing: isPlaying,
                 ...(isTitleChange
                   ? {
                       progress_ms: 0,
