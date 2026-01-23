@@ -854,10 +854,12 @@ export default function Home({
                     style={{ width: 280, height: 280 }}
                     onClick={() => onOpenContent(show.id, "show")}
                   >
-                    {show.images?.[1]?.url || show.images?.[0]?.url ? (
-                      <img
-                        src={show.images[1]?.url || show.images[0]?.url}
+                    {show.images?.length > 0 ? (
+                      <SpotifyImage
+                        images={show.images}
+                        preferredSizeIndex={1}
                         alt={`${show.name} Cover`}
+                        priority={20}
                         className="w-full h-full object-cover rounded-[12px]"
                       />
                     ) : (
