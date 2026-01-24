@@ -54,6 +54,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   });
   const [radioMixes, setRadioMixes] = useState([]);
   const [userShows, setUserShows] = useState([]);
+  const [spotifyUserId, setSpotifyUserId] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
 
   const [nextTokens, setNextTokens] = useState({
@@ -161,6 +162,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     getUserShows,
     getPlayerState,
     getPlaylist,
+    getUserProfile,
   } = useSpotifyWebSocket();
 
   const checkSpotifyReady = useCallback(() => {
@@ -1106,6 +1108,16 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       const failedRequests = [];
 
       try {
+        console.log("0/6: Fetching user profile...");
+        const profile = await getUserProfile();
+        if (profile?.id) {
+          setSpotifyUserId(profile.id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+      }
+
+      try {
         console.log("1/6: Fetching recently played...");
         await fetchRecentlyPlayed();
 
@@ -1211,6 +1223,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     fetchLikedSongs,
     fetchRadioMixes,
     fetchUserShows,
+    getUserProfile,
     skipInitialFetch,
     currentlyPlayingAlbum,
   ]);
@@ -1310,6 +1323,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     likedSongs,
     radioMixes,
     userShows,
+    spotifyUserId,
     initialDataLoaded,
     isLoading: {
       data: isLoadingData,

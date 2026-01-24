@@ -48,6 +48,7 @@ function useGlobalButtonMapping({
   isTutorialActive,
   isDisabled = false,
   currentPlayback,
+  spotifyUserId,
 }) {
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
   const [activeButton, setActiveButton] = useState(null);
@@ -94,22 +95,22 @@ function useGlobalButtonMapping({
             }
           }
         } else if (mappedType === "liked-songs") {
-          const likedTracksJson = localStorage.getItem(
-            `button${buttonNumber}Tracks`,
-          );
-          if (likedTracksJson) {
-            try {
-              const likedTracks = JSON.parse(likedTracksJson);
-              uris = likedTracks;
-              localStorage.setItem("playingLikedSongs", "true");
-            } catch (e) {
-              console.error("Error parsing liked tracks:", e);
-            }
+          if (spotifyUserId) {
+            contextUri = `spotify:user:${spotifyUserId}:collection`;
           } else {
-            console.log(
-              "No cached liked tracks available, WebSocket implementation needed",
+            const likedTracksJson = localStorage.getItem(
+              `button${buttonNumber}Tracks`,
             );
+            if (likedTracksJson) {
+              try {
+                const likedTracks = JSON.parse(likedTracksJson);
+                uris = likedTracks;
+              } catch (e) {
+                console.error("Error parsing liked tracks:", e);
+              }
+            }
           }
+          localStorage.setItem("playingLikedSongs", "true");
         }
 
         let success = false;
@@ -321,6 +322,7 @@ function App() {
     likedSongs,
     radioMixes,
     userShows,
+    spotifyUserId,
     initialDataLoaded,
     isLoading,
     errors: dataErrors,
@@ -696,6 +698,7 @@ function App() {
     isTutorialActive: showTutorial,
     isDisabled: powerMenuVisible || isUpdating,
     currentPlayback,
+    spotifyUserId,
   });
 
   const handleOpenDeviceSwitcher = (
@@ -1110,6 +1113,7 @@ function App() {
         setIgnoreNextRelease={setIgnoreNextRelease}
         playbackProgress={playbackProgress}
         refreshPlaybackState={refreshPlaybackState}
+        spotifyUserId={spotifyUserId}
       />
     );
   } else {

@@ -27,6 +27,7 @@ const ContentView = ({
   setIgnoreNextRelease,
   onNavigateToNowPlaying,
   refreshPlaybackState,
+  spotifyUserId,
 }) => {
   const [content, setContent] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -963,10 +964,15 @@ const ContentView = ({
         }
         localStorage.setItem("currentPlayingMixId", contentId);
       } else if (contentType === "liked-songs") {
-        uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-        const startIndex = index || 0;
-        uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
-        success = await playTrack(track.uri, null, uris);
+        if (spotifyUserId) {
+          const likedSongsContextUri = `spotify:user:${spotifyUserId}:collection`;
+          success = await playTrack(track.uri, likedSongsContextUri, null);
+        } else {
+          uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+          const startIndex = index || 0;
+          uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
+          success = await playTrack(track.uri, null, uris);
+        }
         localStorage.setItem("playingLikedSongs", "true");
       }
     } catch (error) {
@@ -1029,6 +1035,8 @@ const ContentView = ({
       } else {
         uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
       }
+    } else if (contentType === "liked-songs" && spotifyUserId) {
+      contextUri = `spotify:user:${spotifyUserId}:collection`;
     } else {
       uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
     }
