@@ -44,47 +44,35 @@ export function useCurrentTime() {
   }, [appReady]);
 
   useEffect(() => {
+    let retryTimeout = null;
+
     const updateTime = async () => {
-      if (appReady) {
-        try {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          const data = await sendNocturneWsRequest("device.time.get", {});
-          if (data && data.time) {
-            const timeString = data.time;
-            const [hours24, minutes] = timeString.split(":");
+      if (!appReady) return;
 
-            let displayHours;
-            if (settings.use24HourTime) {
-              displayHours = hours24;
-              setIsFourDigits(true);
-            } else {
-              const hour24 = parseInt(hours24);
-              displayHours = (hour24 % 12 || 12).toString();
-              setIsFourDigits(parseInt(displayHours) >= 10);
-            }
+      try {
+        const data = await sendNocturneWsRequest("device.time.get", {});
+        if (data && data.time) {
+          const timeString = data.time;
+          const [hours24, minutes] = timeString.split(":");
 
-            setCurrentTime(`${displayHours}:${minutes}`);
-            return;
+          let displayHours;
+          if (settings.use24HourTime) {
+            displayHours = hours24;
+            setIsFourDigits(true);
+          } else {
+            const hour24 = parseInt(hours24);
+            displayHours = (hour24 % 12 || 12).toString();
+            setIsFourDigits(parseInt(displayHours) >= 10);
           }
-        } catch (error) {
-          console.error("Error fetching time from server:", error);
+
+          setCurrentTime(`${displayHours}:${minutes}`);
+        } else {
+          retryTimeout = setTimeout(updateTime, 5000);
         }
+      } catch (error) {
+        console.error("Error fetching time from server:", error);
+        retryTimeout = setTimeout(updateTime, 5000);
       }
-
-      const now = new Date();
-
-      let hours;
-      if (settings.use24HourTime) {
-        hours = now.getHours().toString().padStart(2, "0");
-        setIsFourDigits(true);
-      } else {
-        hours = now.getHours() % 12 || 12;
-        setIsFourDigits(hours >= 10);
-      }
-
-      const minutes = now.getMinutes().toString().padStart(2, "0");
-      const timeString = `${hours}:${minutes}`;
-      setCurrentTime(timeString);
     };
 
     updateTime();
@@ -98,6 +86,7 @@ export function useCurrentTime() {
 
     return () => {
       clearInterval(interval);
+      if (retryTimeout) clearTimeout(retryTimeout);
       window.removeEventListener("timeFormatChanged", handleTimeFormatChange);
     };
   }, [settings.use24HourTime, appReady]);
