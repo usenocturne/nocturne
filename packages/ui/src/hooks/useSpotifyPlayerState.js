@@ -772,26 +772,43 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
             setCurrentPlayback((prevPlayback) => {
               if (!prevPlayback?.item) return prevPlayback;
+
+              const iap2Duration = media.MediaItemDuration;
+
+              let newProgressMs;
+              if (isTitleChange) {
+                newProgressMs = 0;
+              } else {
+                let estimatedProgress = prevPlayback.progress_ms || 0;
+                if (prevPlayback.is_playing && prevPlayback.timestamp) {
+                  const elapsed = Date.now() - prevPlayback.timestamp;
+                  estimatedProgress += elapsed;
+                }
+                const duration =
+                  iap2Duration || prevPlayback.item?.duration_ms;
+                if (duration && duration > 0 && estimatedProgress > duration) {
+                  estimatedProgress = duration;
+                }
+                newProgressMs = estimatedProgress;
+              }
+
               const updatedPlayback = {
                 ...prevPlayback,
                 is_playing: isPlaying,
-                ...(isTitleChange
-                  ? {
-                      progress_ms: 0,
-                      timestamp: Date.now(),
-                    }
-                  : {}),
+                timestamp: Date.now(),
+                progress_ms: newProgressMs,
                 item: {
                   ...prevPlayback.item,
                   ...(isTitleChange
-                    ? {
-                        id: `spotify-transitional-${Date.now()}`,
-                      }
+                    ? { id: `spotify-transitional-${Date.now()}` }
                     : {}),
                   name: title,
                   artists: artist
                     ? [{ ...prevPlayback.item.artists?.[0], name: artist }]
                     : prevPlayback.item.artists,
+                  ...(iap2Duration && iap2Duration > 0
+                    ? { duration_ms: iap2Duration }
+                    : {}),
                 },
               };
               currentPlaybackRef.current = updatedPlayback;
@@ -854,7 +871,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           ? "Not Playing"
           : media.MediaItemAlbumName || title;
         const durationMs = media.MediaItemPlaybackDurationInMilliSeconds || 0;
-        const elapsedMs = playback.PlaybackElapsedTimeInMilliseconds || 0;
 
         const newTrackUri = `local:media:${title}`;
         const cachedArtworkForTrack = artworkCache.get(newTrackUri);
@@ -862,7 +878,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const transformedState = {
           is_playing: playback.PlaybackStatus === "playing",
           timestamp: data.server_timestamp_ms || Date.now(),
-          progress_ms: elapsedMs,
+          progress_ms: 0,
 
           context: null,
 
