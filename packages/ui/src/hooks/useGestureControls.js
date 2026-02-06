@@ -14,6 +14,18 @@ export function useGestureControls({
   const touchStartXRef = useRef(null);
   const touchTargetRef = useRef(null);
 
+  const onSwipeLeftRef = useRef(onSwipeLeft);
+  const onSwipeRightRef = useRef(onSwipeRight);
+  const onSwipeUpRef = useRef(onSwipeUp);
+  const onSwipeDownRef = useRef(onSwipeDown);
+
+  useEffect(() => {
+    onSwipeLeftRef.current = onSwipeLeft;
+    onSwipeRightRef.current = onSwipeRight;
+    onSwipeUpRef.current = onSwipeUp;
+    onSwipeDownRef.current = onSwipeDown;
+  });
+
   const isWithinScrollableContainer = (target) => {
     let current = target;
     while (current && current !== contentRef?.current) {
@@ -91,20 +103,20 @@ export function useGestureControls({
         : null;
 
       if (isHorizontalSwipe && settings.songChangeGestureEnabled) {
-        if (deltaX > 50 && onSwipeLeft) {
-          onSwipeLeft();
-        } else if (deltaX < -50 && onSwipeRight) {
-          onSwipeRight();
+        if (deltaX > 50 && onSwipeLeftRef.current) {
+          onSwipeLeftRef.current();
+        } else if (deltaX < -50 && onSwipeRightRef.current) {
+          onSwipeRightRef.current();
         }
       } else if (
         !isHorizontalSwipe &&
         settings.showLyricsGestureEnabled &&
         !scrollableContainer
       ) {
-        if (deltaY > 50 && onSwipeUp) {
-          onSwipeUp();
-        } else if (deltaY < -50 && onSwipeDown) {
-          onSwipeDown();
+        if (deltaY > 50 && onSwipeUpRef.current) {
+          onSwipeUpRef.current();
+        } else if (deltaY < -50 && onSwipeDownRef.current) {
+          onSwipeDownRef.current();
         }
       }
 
@@ -127,9 +139,5 @@ export function useGestureControls({
     isActive,
     settings.showLyricsGestureEnabled,
     settings.songChangeGestureEnabled,
-    onSwipeLeft,
-    onSwipeRight,
-    onSwipeUp,
-    onSwipeDown,
   ]);
 }
