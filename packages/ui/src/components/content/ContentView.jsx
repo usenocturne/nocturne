@@ -944,10 +944,8 @@ const ContentView = ({
         contextUri = `spotify:album:${contentId}`;
         success = await playTrack(track.uri, contextUri);
       } else if (contentType === "artist") {
-        uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-        const startIndex = index || 0;
-        uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
-        success = await playTrack(track.uri, null, uris);
+        contextUri = `spotify:artist:${contentId}`;
+        success = await playTrack(track.uri, contextUri);
       } else if (contentType === "show") {
         contextUri = `spotify:show:${contentId}`;
         success = await playTrack(track.uri, contextUri);
