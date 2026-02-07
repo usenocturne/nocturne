@@ -1096,6 +1096,27 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         }
       } else if (
         data.type === "event" &&
+        data.topic === "media.nowPlaying.artwork.failed"
+      ) {
+        console.log("Artwork file transfer failed, fetching from Spotify API");
+
+        pendingSpotifyMediaUpdate = null;
+        if (spotifyFallbackTimeout) {
+          clearTimeout(spotifyFallbackTimeout);
+          spotifyFallbackTimeout = null;
+        }
+
+        getPlayerState()
+          .then((playerData) => {
+            if (playerData && Object.keys(playerData).length > 0) {
+              processPlaybackState(playerData);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to fetch player state after artwork failure:", err);
+          });
+      } else if (
+        data.type === "event" &&
         data.topic === "phone.volume.update"
       ) {
         const volumePercent = data.data?.volumePercent;
@@ -1112,7 +1133,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     return () => {
       cleanup();
     };
-  }, [processPlaybackState, beginNowPlayingUpdateWindow]);
+  }, [processPlaybackState, beginNowPlayingUpdateWindow, getPlayerState]);
 
   const refreshPlaybackState = useCallback(
     async (forceRefresh = false) => {
