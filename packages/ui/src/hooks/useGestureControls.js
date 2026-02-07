@@ -68,21 +68,23 @@ export function useGestureControls({
         ? isWithinScrollableContainer(touchTargetRef.current)
         : null;
 
-      if (
-        Math.abs(deltaY) > Math.abs(deltaX) &&
-        Math.abs(deltaY) > 20 &&
-        settings.showLyricsGestureEnabled &&
-        !scrollableContainer
-      ) {
-        e.preventDefault();
-      }
+      if (e.cancelable) {
+        if (
+          Math.abs(deltaY) > Math.abs(deltaX) &&
+          Math.abs(deltaY) > 20 &&
+          settings.showLyricsGestureEnabled &&
+          !scrollableContainer
+        ) {
+          e.preventDefault();
+        }
 
-      if (
-        Math.abs(deltaX) > Math.abs(deltaY) &&
-        Math.abs(deltaX) > 20 &&
-        settings.songChangeGestureEnabled
-      ) {
-        e.preventDefault();
+        if (
+          Math.abs(deltaX) > Math.abs(deltaY) &&
+          Math.abs(deltaX) > 20 &&
+          settings.songChangeGestureEnabled
+        ) {
+          e.preventDefault();
+        }
       }
     };
 
