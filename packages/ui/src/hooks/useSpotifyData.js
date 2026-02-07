@@ -1115,6 +1115,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       } catch (error) {
         console.error("Failed to fetch user profile:", error);
+        failedRequests.push("getUserProfile");
       }
 
       try {
