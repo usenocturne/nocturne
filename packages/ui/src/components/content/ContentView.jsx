@@ -348,14 +348,38 @@ const ContentView = ({
       isLoadingMore ||
       (contentType !== "playlist" &&
         contentType !== "show" &&
-        contentType !== "mix")
+        contentType !== "mix" &&
+        contentType !== "liked-songs")
     )
       return;
 
     try {
       setIsLoadingMore(true);
 
-      if (contentType === "playlist" || contentType === "mix") {
+      if (contentType === "liked-songs") {
+        try {
+          const offset = tracksLengthRef.current;
+          const data = await getUserTracks({
+            offset,
+            limit: 20,
+          });
+
+          const newTracks = (data.items || [])
+            .map((item) => item.track)
+            .filter(Boolean);
+          const newOffset = (data.offset || offset) + newTracks.length;
+          const totalTracks = data.total || 0;
+          const hasMore = totalTracks > 0 && newOffset < totalTracks;
+
+          setTracks((prevTracks) => [...prevTracks, ...newTracks]);
+          setNextUrl(hasMore ? "has-more" : null);
+          setHasMoreTracks(hasMore);
+          setLoadedPages((prev) => prev + 1);
+        } catch (error) {
+          console.error("WebSocket load more liked songs failed:", error);
+          throw error;
+        }
+      } else if (contentType === "playlist" || contentType === "mix") {
         try {
           const offset = tracksLengthRef.current;
           let playlistId = contentId;
@@ -441,6 +465,7 @@ const ContentView = ({
     content,
     getPlaylistTracks,
     getShowEpisodes,
+    getUserTracks,
     radioMixes,
   ]);
 
@@ -450,7 +475,8 @@ const ContentView = ({
       !container ||
       (contentType !== "playlist" &&
         contentType !== "show" &&
-        contentType !== "mix") ||
+        contentType !== "mix" &&
+        contentType !== "liked-songs") ||
       tracksPerPage === 0
     )
       return;
@@ -509,7 +535,7 @@ const ContentView = ({
       hasMoreTracks &&
       !isLoadingMore &&
       tracks.length > 0 &&
-      (contentType === "playlist" || contentType === "mix")
+      (contentType === "playlist" || contentType === "mix" || contentType === "liked-songs")
     ) {
       const timer = setTimeout(() => {
         loadMoreTracks();
@@ -678,6 +704,7 @@ const ContentView = ({
               const hasMore = currentOffset + currentItems < totalTracks;
 
               setHasMoreTracks(hasMore);
+              setNextUrl(hasMore ? "has-more" : null);
               setTracksPerPage(tracksData.length);
               setLoadedPages(1);
             } catch (error) {
