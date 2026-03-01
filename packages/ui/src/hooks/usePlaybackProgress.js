@@ -6,8 +6,6 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [trackId, setTrackId] = useState(null);
-  const [actualPlaybackSpeed, setActualPlaybackSpeed] = useState(1);
-
   const lastUpdateTimeRef = useRef(performance.now());
   const animationFrameRef = useRef(null);
   const serverProgressRef = useRef(0);
@@ -21,6 +19,8 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
   const anchorPositionRef = useRef(0);
   const anchorTimestampRef = useRef(0);
   const actualPlaybackSpeedRef = useRef(1);
+  const durationRef = useRef(0);
+  const trackIdRef = useRef(null);
 
   const triggerRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) {
@@ -64,18 +64,19 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
       const updatedDuration = currentPlayback.item?.duration_ms;
       if (updatedDuration && updatedDuration > 0) {
         setDuration(updatedDuration);
+        durationRef.current = updatedDuration;
       }
 
       setIsPlaying(currentPlayback.is_playing || false);
 
       const newPlaybackSpeed = currentPlayback.playback_speed || 1;
-      if (newPlaybackSpeed !== actualPlaybackSpeed) {
-        setActualPlaybackSpeed(newPlaybackSpeed);
+      if (newPlaybackSpeed !== actualPlaybackSpeedRef.current) {
         actualPlaybackSpeedRef.current = newPlaybackSpeed;
       }
 
-      if (currentPlayback?.item?.id !== trackId) {
+      if (currentPlayback?.item?.id !== trackIdRef.current) {
         setTrackId(currentPlayback.item?.id);
+        trackIdRef.current = currentPlayback.item?.id;
 
         const spotifyPosition = currentPlayback.progress_ms || 0;
         const spotifyTimestamp = currentPlayback.timestamp || Date.now();
@@ -108,19 +109,22 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
           anchorPositionRef.current = spotifyPosition;
           anchorTimestampRef.current = spotifyTimestamp;
 
+          const curDuration = durationRef.current;
+          const curProgress = serverProgressRef.current;
+
           const now = Date.now();
           const elapsed = currentPlayback.is_playing
             ? Math.max(0, now - spotifyTimestamp) * newPlaybackSpeed
             : 0;
           const truthPosition = Math.min(
             spotifyPosition + elapsed,
-            duration || Infinity,
+            curDuration || Infinity,
           );
 
-          const wouldMoveBackwards = truthPosition < progressMs;
-          const backwardsAmount = progressMs - truthPosition;
+          const wouldMoveBackwards = truthPosition < curProgress;
+          const backwardsAmount = curProgress - truthPosition;
           const isSignificantBackwardsJump = backwardsAmount > 2000;
-          const isNearEnd = duration > 0 && progressMs > duration * 0.98;
+          const isNearEnd = curDuration > 0 && curProgress > curDuration * 0.98;
           const isVerySmallBackwardsJump = backwardsAmount < 500;
 
           if (
@@ -142,7 +146,7 @@ export const usePlaybackProgress = (currentPlayback, refreshPlaybackState) => {
         }
       }
     }
-  }, [currentPlayback, trackId, duration, progressMs, actualPlaybackSpeed]);
+  }, [currentPlayback]);
 
   useEffect(() => {
     if (animationFrameRef.current) {
