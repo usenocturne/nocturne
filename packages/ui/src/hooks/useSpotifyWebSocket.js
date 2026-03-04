@@ -622,7 +622,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getRecentlyPlayed = useCallback(
-    async (params = { limit: 30, additional_types: "track,episode" }) => {
+    async (params = {}) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -640,19 +640,6 @@ export function useSpotifyWebSocket() {
       }
     },
     [sendSpotifyCommand],
-  );
-
-  const getNextRecentlyPlayed = useCallback(
-    async (afterTimestamp, additionalParams = {}) => {
-      const params = {
-        limit: 30,
-        additional_types: "track,episode",
-        after: afterTimestamp,
-        ...additionalParams,
-      };
-      return getRecentlyPlayed(params);
-    },
-    [getRecentlyPlayed],
   );
 
   const checkIsTrackSaved = useCallback(
@@ -975,7 +962,6 @@ export function useSpotifyWebSocket() {
     getUserProfile,
     getUserTracks,
     getRecentlyPlayed,
-    getNextRecentlyPlayed,
     checkIsTrackSaved,
     saveTrack,
     removeTrack,

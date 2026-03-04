@@ -158,7 +158,6 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     getUserTopArtists,
     getUserTracks,
     getRecentlyPlayed,
-    getNextRecentlyPlayed,
     getUserShows,
     getPlayerState,
     getPlaylist,
@@ -290,8 +289,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
 
-      const params = { limit: 30, additional_types: "track,episode" };
-      const data = await getRecentlyPlayed(params);
+      const data = await getRecentlyPlayed();
       const uniqueAlbums = [];
       const albumIds = new Set();
 
