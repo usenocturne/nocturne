@@ -289,7 +289,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
         }
       }
 
-      const data = await getRecentlyPlayed();
+      const data = await getRecentlyPlayed({ limit: 10 });
       const uniqueAlbums = [];
       const albumIds = new Set();
 
