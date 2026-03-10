@@ -1243,7 +1243,7 @@ export const useBluetooth = () => {
   const retryDeviceAddressRef = useRef(null);
   const reconnectInitTriggeredRef = useRef(false);
 
-  const MAX_RECONNECT_ATTEMPTS = 5;
+  const MAX_RECONNECT_ATTEMPTS = 15;
   const RECONNECT_INTERVAL = 5000;
   const INITIAL_RECONNECT_DELAY = 1000;
 
