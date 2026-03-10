@@ -1804,8 +1804,15 @@ export const useBluetooth = () => {
             setConnectedDevices((prev) =>
               (prev || []).filter((d) => d.address !== address),
             );
-            if (lastConnectedDevice?.address === address) {
-              setLastConnectedDevice(null);
+            let wasLastConnectedDevice = false;
+            setLastConnectedDevice((prev) => {
+              if (prev?.address === address) {
+                wasLastConnectedDevice = true;
+                return null;
+              }
+              return prev;
+            });
+            if (wasLastConnectedDevice) {
               stopNetworkPolling();
               stopRetrying();
               reconnectAttemptsRef.current = 0;
@@ -1827,7 +1834,6 @@ export const useBluetooth = () => {
       }
     },
     [
-      lastConnectedDevice,
       stopNetworkPolling,
       startNetworkPolling,
       stopRetrying,
