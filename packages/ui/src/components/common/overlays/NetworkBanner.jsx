@@ -39,7 +39,7 @@ const NetworkBanner = ({ visible, onClose }) => {
         <div className="flex items-center flex-grow">
           <WifiOffIcon className="w-6 h-6 text-white mr-3" />
           <p className="text-white text-[20px] font-[560] tracking-tight">
-            Network connection lost. Ensure mobile data is enabled.
+            Network connection lost. Functionality may be limited.
           </p>
         </div>
         <button
