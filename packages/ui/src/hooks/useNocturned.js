@@ -30,8 +30,8 @@ const spotifySkippedSubscribers = new Set();
 let wsReconnectAttempts = 0;
 let wsReconnectTimer = null;
 let wsReconnectInProgress = false;
-const WS_MAX_RECONNECT_ATTEMPTS = 30;
-const WS_RECONNECT_INTERVAL = 2000; // 2 seconds
+const WS_RECONNECT_BASE_INTERVAL = 1000;
+const WS_RECONNECT_MAX_INTERVAL = 30000;
 
 let isInitializingDiscovery = false;
 let isStoppingDiscovery = false;
@@ -321,24 +321,26 @@ const processConnectQueue = async () => {
 };
 
 const attemptWsReconnection = () => {
-  if (
-    wsReconnectInProgress ||
-    wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS
-  ) {
+  if (wsReconnectInProgress) {
     return;
   }
 
   wsReconnectInProgress = true;
   wsReconnectAttempts++;
 
+  const delay = Math.min(
+    WS_RECONNECT_BASE_INTERVAL * Math.pow(2, wsReconnectAttempts - 1),
+    WS_RECONNECT_MAX_INTERVAL,
+  );
+
   console.log(
-    `WebSocket reconnection attempt ${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS}`,
+    `WebSocket reconnection attempt ${wsReconnectAttempts} (next in ${delay}ms)`,
   );
 
   wsReconnectTimer = setTimeout(() => {
     wsReconnectInProgress = false;
     setupGlobalWebSocket();
-  }, WS_RECONNECT_INTERVAL);
+  }, delay);
 };
 
 const setupGlobalWebSocket = async () => {
@@ -1243,8 +1245,8 @@ export const useBluetooth = () => {
   const retryDeviceAddressRef = useRef(null);
   const reconnectInitTriggeredRef = useRef(false);
 
-  const MAX_RECONNECT_ATTEMPTS = 15;
-  const RECONNECT_INTERVAL = 5000;
+  const RECONNECT_BASE_INTERVAL = 2000;
+  const RECONNECT_MAX_INTERVAL = 60000;
   const INITIAL_RECONNECT_DELAY = 1000;
 
   useEffect(() => {
@@ -1284,20 +1286,6 @@ export const useBluetooth = () => {
         return;
       }
 
-      if (
-        !continuous &&
-        reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS
-      ) {
-        cleanupReconnectTimer();
-        reconnectAttemptsRef.current = 0;
-        setReconnectAttempt(0);
-        isReconnecting.current = false;
-        reconnectionExhausted = true;
-        window.dispatchEvent(new Event("networkBannerHide"));
-        window.dispatchEvent(new Event("networkScreenShow"));
-        return;
-      }
-
       try {
         isReconnecting.current = true;
         window.dispatchEvent(new Event("networkBannerShow"));
@@ -1318,6 +1306,7 @@ export const useBluetooth = () => {
             isReconnecting.current = false;
             reconnectionExhausted = false;
             window.dispatchEvent(new Event("networkBannerHide"));
+            window.dispatchEvent(new Event("networkScreenHide"));
             retryIsCancelled = true;
             return;
           }
@@ -1325,6 +1314,11 @@ export const useBluetooth = () => {
 
         reconnectAttemptsRef.current++;
         setReconnectAttempt(reconnectAttemptsRef.current);
+
+        if (reconnectAttemptsRef.current >= 10) {
+          reconnectionExhausted = true;
+          window.dispatchEvent(new Event("networkScreenShow"));
+        }
 
         const response = await queueConnectRequest(lastDeviceAddress);
 
@@ -1338,61 +1332,39 @@ export const useBluetooth = () => {
             reconnectionExhausted = false;
             retryIsCancelled = true;
             window.dispatchEvent(new Event("networkBannerHide"));
+            window.dispatchEvent(new Event("networkScreenHide"));
             return;
           }
         }
 
-        if (
-          continuous ||
-          reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS
-        ) {
-          const delayTime = continuous
-            ? Math.max(RECONNECT_INTERVAL, 5000)
-            : RECONNECT_INTERVAL;
-          reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectTimeoutRef.current = null;
-            isReconnecting.current = false;
-            if (continuous) {
-              attemptReconnect(true);
-            } else {
-              attemptReconnect();
-            }
-          }, delayTime);
-        } else {
-          cleanupReconnectTimer();
+        const delayTime = Math.min(
+          RECONNECT_BASE_INTERVAL * Math.pow(2, reconnectAttemptsRef.current - 1),
+          RECONNECT_MAX_INTERVAL,
+        );
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeoutRef.current = null;
           isReconnecting.current = false;
-          reconnectionExhausted = true;
-          window.dispatchEvent(new Event("networkBannerHide"));
-          window.dispatchEvent(new Event("networkScreenShow"));
-        }
+          attemptReconnect(continuous);
+        }, delayTime);
       } catch (error) {
         console.error("Reconnect attempt failed:", error);
         reconnectAttemptsRef.current++;
         setReconnectAttempt(reconnectAttemptsRef.current);
 
-        if (
-          continuous ||
-          reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS
-        ) {
-          const delayTime = continuous
-            ? Math.max(RECONNECT_INTERVAL, 5000)
-            : RECONNECT_INTERVAL;
-          reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectTimeoutRef.current = null;
-            isReconnecting.current = false;
-            if (continuous) {
-              attemptReconnect(true);
-            } else {
-              attemptReconnect();
-            }
-          }, delayTime);
-        } else {
-          cleanupReconnectTimer();
-          isReconnecting.current = false;
+        if (reconnectAttemptsRef.current >= 10) {
           reconnectionExhausted = true;
-          window.dispatchEvent(new Event("networkBannerHide"));
           window.dispatchEvent(new Event("networkScreenShow"));
         }
+
+        const delayTime = Math.min(
+          RECONNECT_BASE_INTERVAL * Math.pow(2, reconnectAttemptsRef.current - 1),
+          RECONNECT_MAX_INTERVAL,
+        );
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeoutRef.current = null;
+          isReconnecting.current = false;
+          attemptReconnect(continuous);
+        }, delayTime);
       }
     },
     [cleanupReconnectTimer],
