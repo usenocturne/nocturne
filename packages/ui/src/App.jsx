@@ -459,7 +459,9 @@ function App() {
               needsAuthorizationValue === "1";
 
       setIsSpotifyAuthenticated(isAuthenticated);
-      setIsSpotifySkipped(isSkipped);
+      if (skippedValue !== undefined) {
+        setIsSpotifySkipped(isSkipped);
+      }
       setNeedsSpotifyAuthorization(needsAuthorization);
       setAuthStatusMessage(
         hasDevices &&
@@ -559,6 +561,20 @@ function App() {
       cancelled = true;
     };
   }, [wsConnected, appReady]);
+
+  useEffect(() => {
+    if (!showAuthScreen || !appReady || !wsConnected) return;
+
+    const interval = setInterval(() => {
+      sendNocturneWsRequest("spotify.auth.getStatus", {}, { timeoutMs: 5000 })
+        .then((authResult) => {
+          processSpotifyAuthMessage(authResult);
+        })
+        .catch(() => {});
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [showAuthScreen, appReady, wsConnected, processSpotifyAuthMessage]);
 
   useEffect(() => {
     if (isSpotifySkipped) {
