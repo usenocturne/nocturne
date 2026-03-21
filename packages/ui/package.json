@@ -11,27 +11,27 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@headlessui/react": "^2.2.0",
-    "autoprefixer": "^10.4.20",
+    "@headlessui/react": "^2.2.9",
+    "autoprefixer": "^10.4.27",
     "classnames": "^2.5.1",
-    "postcss": "^8.5.0",
+    "postcss": "^8.5.8",
     "qrcode.react": "^4.2.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^7.3.0",
-    "tailwindcss": "^3.4.17"
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
+    "tailwindcss": "^3.4.19"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.0.11",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-legacy": "^6.1.1",
-    "@vitejs/plugin-react-swc": "^3.8.0",
-    "eslint": "^9.21.0",
-    "eslint-plugin-react-hooks": "^5.1.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
+    "@vitejs/plugin-react-swc": "^3.11.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.26",
     "globals": "^15.15.0",
-    "prettier": "^3.6.2",
-    "vite": "^6.2.0"
+    "prettier": "^3.8.1",
+    "vite": "^6.4.1"
   }
 }
