@@ -145,10 +145,13 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     const hasBlobArtwork = currentBlobUrl?.startsWith("blob:");
     const incomingTrackName = data.item?.name?.toLowerCase()?.trim();
     const currentTrackName = currentItem?.name?.toLowerCase()?.trim();
+    const currentItemUri = currentItem?.uri;
+    const incomingItemUri = data.item?.uri;
     const isSameTrack =
       incomingTrackName &&
       currentTrackName &&
-      incomingTrackName === currentTrackName;
+      incomingTrackName === currentTrackName &&
+      (!incomingItemUri || !currentItemUri || incomingItemUri === currentItemUri);
     const preservedBlobArtwork =
       hasBlobArtwork && isSameTrack ? currentBlobUrl : null;
 
@@ -159,11 +162,18 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       const prevBlobArtwork = prevPlayback?.item?.album?.images?.[0]?.url;
       const hasPrevBlobArtwork = prevBlobArtwork?.startsWith("blob:");
       const prevTrackName = prevPlayback?.item?.name?.toLowerCase()?.trim();
+      const prevTrackUri = prevPlayback?.item?.uri;
+      const incomingTrackUri = data.item?.uri;
+      const urisMatch =
+        prevTrackUri &&
+        incomingTrackUri &&
+        prevTrackUri === incomingTrackUri;
       const shouldPreservePrevBlob =
         hasPrevBlobArtwork &&
         incomingTrackName &&
         prevTrackName &&
-        incomingTrackName === prevTrackName;
+        incomingTrackName === prevTrackName &&
+        (!incomingTrackUri || !prevTrackUri || urisMatch);
 
       let itemWithArtwork = data.item;
       if (shouldPreservePrevBlob && data.item?.album?.images) {
