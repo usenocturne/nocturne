@@ -442,6 +442,10 @@ function App() {
       const needsAuthorizationValue = data.needsAuthorization;
       const skippedValue = data.skipped;
 
+      if (data.loading === true && authenticatedValue === false) {
+        return true;
+      }
+
       const isAuthenticated =
         authenticatedValue === true ||
         authenticatedValue === 1 ||
@@ -536,6 +540,17 @@ function App() {
       sendNocturneWsRequest("spotify.auth.getStatus", {}, { timeoutMs: 5000 })
         .then((authResult) => {
           if (cancelled) return;
+
+          const resultData = authResult?.result ?? authResult;
+          const isLoading =
+            resultData?.loading === true || resultData?.data?.loading === true;
+
+          if (isLoading && retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(attemptRequest, 2000);
+            return;
+          }
+
           processSpotifyAuthMessage(authResult);
         })
         .catch((err) => {
