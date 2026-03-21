@@ -1109,6 +1109,13 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         getPlayerState()
           .then((playerData) => {
             if (playerData && Object.keys(playerData).length > 0) {
+              if (nowPlayingUpdateTimeout) {
+                clearTimeout(nowPlayingUpdateTimeout);
+                nowPlayingUpdateTimeout = null;
+              }
+              setIsReceivingNowPlayingUpdates(false);
+              isReceivingNowPlayingUpdatesGlobal = false;
+
               processPlaybackState(playerData);
             }
           })
