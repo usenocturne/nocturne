@@ -1338,7 +1338,8 @@ export const useBluetooth = () => {
         }
 
         const delayTime = Math.min(
-          RECONNECT_BASE_INTERVAL * Math.pow(2, reconnectAttemptsRef.current - 1),
+          RECONNECT_BASE_INTERVAL *
+            Math.pow(2, reconnectAttemptsRef.current - 1),
           RECONNECT_MAX_INTERVAL,
         );
         reconnectTimeoutRef.current = setTimeout(() => {
@@ -1357,7 +1358,8 @@ export const useBluetooth = () => {
         }
 
         const delayTime = Math.min(
-          RECONNECT_BASE_INTERVAL * Math.pow(2, reconnectAttemptsRef.current - 1),
+          RECONNECT_BASE_INTERVAL *
+            Math.pow(2, reconnectAttemptsRef.current - 1),
           RECONNECT_MAX_INTERVAL,
         );
         reconnectTimeoutRef.current = setTimeout(() => {

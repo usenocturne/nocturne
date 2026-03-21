@@ -535,7 +535,9 @@ const ContentView = ({
       hasMoreTracks &&
       !isLoadingMore &&
       tracks.length > 0 &&
-      (contentType === "playlist" || contentType === "mix" || contentType === "liked-songs")
+      (contentType === "playlist" ||
+        contentType === "mix" ||
+        contentType === "liked-songs")
     ) {
       const timer = setTimeout(() => {
         loadMoreTracks();

@@ -151,7 +151,9 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       incomingTrackName &&
       currentTrackName &&
       incomingTrackName === currentTrackName &&
-      (!incomingItemUri || !currentItemUri || incomingItemUri === currentItemUri);
+      (!incomingItemUri ||
+        !currentItemUri ||
+        incomingItemUri === currentItemUri);
     const preservedBlobArtwork =
       hasBlobArtwork && isSameTrack ? currentBlobUrl : null;
 
@@ -165,9 +167,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       const prevTrackUri = prevPlayback?.item?.uri;
       const incomingTrackUri = data.item?.uri;
       const urisMatch =
-        prevTrackUri &&
-        incomingTrackUri &&
-        prevTrackUri === incomingTrackUri;
+        prevTrackUri && incomingTrackUri && prevTrackUri === incomingTrackUri;
       const shouldPreservePrevBlob =
         hasPrevBlobArtwork &&
         incomingTrackName &&
@@ -794,8 +794,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                   const elapsed = Date.now() - prevPlayback.timestamp;
                   estimatedProgress += elapsed;
                 }
-                const duration =
-                  iap2Duration || prevPlayback.item?.duration_ms;
+                const duration = iap2Duration || prevPlayback.item?.duration_ms;
                 if (duration && duration > 0 && estimatedProgress > duration) {
                   estimatedProgress = duration;
                 }
@@ -1130,7 +1129,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             }
           })
           .catch((err) => {
-            console.error("Failed to fetch player state after artwork failure:", err);
+            console.error(
+              "Failed to fetch player state after artwork failure:",
+              err,
+            );
           });
       } else if (
         data.type === "event" &&
