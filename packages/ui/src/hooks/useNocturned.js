@@ -1270,7 +1270,7 @@ export const useBluetooth = () => {
         reconnectTimeoutRef.current = setTimeout(() => {
           reconnectTimeoutRef.current = null;
           attemptReconnect(continuous);
-        }, RECONNECT_INTERVAL);
+        }, RECONNECT_BASE_INTERVAL);
         return;
       }
 
