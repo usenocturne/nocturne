@@ -19,6 +19,8 @@ let pendingSpotifyMediaUpdate = null;
 let spotifyFallbackTimeout = null;
 let cachedActiveDeviceType = null;
 let progressResetSignal = null;
+let nowPlayingTrackLatch = null;
+const NOWPLAYING_PRECEDENCE_WINDOW_MS = 300000;
 
 export const getActiveDeviceType = () => cachedActiveDeviceType;
 
@@ -632,6 +634,31 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             playback_speed: playerState.options?.playback_speed || 1,
           };
 
+          if (nowPlayingTrackLatch) {
+            const latchAge =
+              Date.now() - nowPlayingTrackLatch.timestamp;
+            if (latchAge < NOWPLAYING_PRECEDENCE_WINDOW_MS) {
+              const incomingDeviceTitle = playerState.track?.metadata?.title
+                ?.toLowerCase()
+                ?.trim();
+              if (
+                incomingDeviceTitle &&
+                incomingDeviceTitle !== nowPlayingTrackLatch.title
+              ) {
+                nowPlayingTrackLatch.timestamp = Date.now();
+                return;
+              }
+              if (
+                incomingDeviceTitle &&
+                incomingDeviceTitle === nowPlayingTrackLatch.title
+              ) {
+                nowPlayingTrackLatch = null;
+              }
+            } else {
+              nowPlayingTrackLatch = null;
+            }
+          }
+
           processPlaybackState(transformedState);
         }
       }
@@ -778,6 +805,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
 
             if (isTitleChange) {
               progressResetSignal = { position: 0, timestamp: Date.now() };
+              nowPlayingTrackLatch = {
+                title: incomingTitle.toLowerCase().trim(),
+                timestamp: Date.now(),
+              };
             }
 
             setCurrentPlayback((prevPlayback) => {
@@ -1118,6 +1149,31 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         getPlayerState()
           .then((playerData) => {
             if (playerData && Object.keys(playerData).length > 0) {
+              if (nowPlayingTrackLatch) {
+                const latchAge =
+                  Date.now() - nowPlayingTrackLatch.timestamp;
+                if (latchAge < NOWPLAYING_PRECEDENCE_WINDOW_MS) {
+                  const fetchedTitle = playerData.item?.name
+                    ?.toLowerCase()
+                    ?.trim();
+                  if (
+                    fetchedTitle &&
+                    fetchedTitle !== nowPlayingTrackLatch.title
+                  ) {
+                    nowPlayingTrackLatch.timestamp = Date.now();
+                    return;
+                  }
+                  if (
+                    fetchedTitle &&
+                    fetchedTitle === nowPlayingTrackLatch.title
+                  ) {
+                    nowPlayingTrackLatch = null;
+                  }
+                } else {
+                  nowPlayingTrackLatch = null;
+                }
+              }
+
               if (nowPlayingUpdateTimeout) {
                 clearTimeout(nowPlayingUpdateTimeout);
                 nowPlayingUpdateTimeout = null;
@@ -1168,6 +1224,30 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         if (!data || Object.keys(data).length === 0) {
           resetPlaybackState();
         } else {
+          if (nowPlayingTrackLatch) {
+            const latchAge =
+              Date.now() - nowPlayingTrackLatch.timestamp;
+            if (latchAge < NOWPLAYING_PRECEDENCE_WINDOW_MS) {
+              const fetchedTitle = data.item?.name
+                ?.toLowerCase()
+                ?.trim();
+              if (
+                fetchedTitle &&
+                fetchedTitle !== nowPlayingTrackLatch.title
+              ) {
+                nowPlayingTrackLatch.timestamp = Date.now();
+                return;
+              }
+              if (
+                fetchedTitle &&
+                fetchedTitle === nowPlayingTrackLatch.title
+              ) {
+                nowPlayingTrackLatch = null;
+              }
+            } else {
+              nowPlayingTrackLatch = null;
+            }
+          }
           processPlaybackState(data);
         }
       } catch (err) {
