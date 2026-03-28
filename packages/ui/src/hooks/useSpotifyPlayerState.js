@@ -14,7 +14,6 @@ let isReceivingNowPlayingUpdatesGlobal = false;
 let isProcessingArtwork = false;
 let artworkCache = new Map();
 const MAX_ARTWORK_CACHE_SIZE = 10;
-let lastEaSessionStartTime = 0;
 let pendingSpotifyMediaUpdate = null;
 let spotifyFallbackTimeout = null;
 let cachedActiveDeviceType = null;
@@ -672,20 +671,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   }, [isSpotifyReady, processPlaybackState]);
 
   useEffect(() => {
-    const handleEaSessionStart = (data) => {
-      if (data.type === "event" && data.topic === "ea.session.started") {
-        lastEaSessionStartTime = Date.now();
-      }
-    };
-
-    const cleanup = addGlobalWsListener(`ea-session-tracker-${Date.now()}`, {
-      onMessage: handleEaSessionStart,
-    });
-
-    return cleanup;
-  }, []);
-
-  useEffect(() => {
     const handlePhoneMediaEvent = (data) => {
       if (data.type === "event" && data.topic === "media.nowPlaying.update") {
         const media = data.data?.MediaItemAttributes;
@@ -882,10 +867,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         const isEmpty = !hasTitle && !hasArtist && isStopped;
 
         if (isEmpty) {
-          const timeSinceConnection = Date.now() - lastEaSessionStartTime;
-          if (timeSinceConnection < 10000) {
-            return;
-          }
+          return;
         }
 
         const shuffleState =
@@ -1214,7 +1196,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     async (forceRefresh = false) => {
       if (!isSpotifyReady) return;
 
-      if (currentPlaybackRef.current?.item?.is_phone_media) {
+      if (!forceRefresh && currentPlaybackRef.current?.item?.is_phone_media) {
         return;
       }
 
