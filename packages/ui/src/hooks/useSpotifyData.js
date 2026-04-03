@@ -8,6 +8,7 @@ import {
   getSpotifySkippedState,
   getSpotifyAuthState,
   getAppSubscribedState,
+  getAppReadyState,
   subscribeSpotifySkippedState,
   subscribeAppSubscribedState,
 } from "./useNocturned";
@@ -167,7 +168,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   } = useSpotifyWebSocket();
 
   const checkSpotifyReady = useCallback(() => {
-    if (!getAppSubscribedState().subscribed) return false;
+    if (
+      !getAppSubscribedState().subscribed &&
+      getAppReadyState().platform !== "web"
+    )
+      return false;
     if (isSpotifyReady) return true;
     return getSpotifyAuthState() && !getSpotifySkippedState();
   }, [isSpotifyReady]);
@@ -208,7 +213,10 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
 
   useEffect(() => {
     const handleSubscriptionChange = (state) => {
-      if (state.subscribed && !initialDataLoaded) {
+      if (
+        (state.subscribed || getAppReadyState().platform === "web") &&
+        !initialDataLoaded
+      ) {
         initialLoadTriggeredRef.current = false;
         dataLoadingAttemptedRef.current = false;
         dataFetchingInProgressRef.current = false;

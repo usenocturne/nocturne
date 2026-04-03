@@ -121,7 +121,10 @@ export function useSpotifyWebSocket() {
           return;
         }
 
-        if (!getAppSubscribedState().subscribed) {
+        if (
+          !getAppSubscribedState().subscribed &&
+          getAppReadyState().platform !== "web"
+        ) {
           reject(new Error("Subscription required"));
           return;
         }
@@ -283,7 +286,7 @@ export function useSpotifyWebSocket() {
     (appReady || deviceConnected) &&
     spotifyAuthenticated &&
     !spotifySkipped &&
-    appSubscribed;
+    (appSubscribed || getAppReadyState().platform === "web");
 
   useEffect(() => {
     listenerIdRef.current = addMessageListener(

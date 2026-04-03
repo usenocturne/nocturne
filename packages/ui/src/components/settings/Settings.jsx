@@ -584,7 +584,11 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
   }, []);
 
   const handleToggle = (key) => {
-    if (key === "mockingbirdUiEnabled" && isSubscribed === false) return;
+    if (
+      key === "mockingbirdUiEnabled" &&
+      (appPlatform === "web" || isSubscribed === false)
+    )
+      return;
     updateSetting(key, !settings[key]);
     if (key === "mockingbirdUiEnabled") {
       setTimeout(() => window.location.reload(), 150);
@@ -800,8 +804,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
         const isMockingbirdToggle = item.storageKey === "mockingbirdUiEnabled";
         const isToggleDisabled =
           isMockingbirdToggle &&
-          appPlatform === "web" &&
-          isSubscribed === false;
+          (appPlatform === "web" || isSubscribed === false);
         return (
           <div
             key={item.id}

@@ -558,7 +558,7 @@ function App() {
 
     if (!appReady) return;
 
-    if (isSubscribed === false) return;
+    if (isSubscribed === false && appPlatform !== "web") return;
 
     let cancelled = false;
     let retryCount = 0;
@@ -605,11 +605,11 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [wsConnected, appReady, isSubscribed]);
+  }, [wsConnected, appReady, isSubscribed, appPlatform]);
 
   useEffect(() => {
     if (!showAuthScreen || !appReady || !wsConnected) return;
-    if (isSubscribed === false) return;
+    if (isSubscribed === false && appPlatform !== "web") return;
 
     const interval = setInterval(() => {
       sendNocturneWsRequest("spotify.auth.getStatus", {}, { timeoutMs: 5000 })
@@ -626,10 +626,11 @@ function App() {
     wsConnected,
     processSpotifyAuthMessage,
     isSubscribed,
+    appPlatform,
   ]);
 
   useEffect(() => {
-    if (isSubscribed === false) {
+    if (isSubscribed === false && appPlatform !== "web") {
       setShowAuthScreen(false);
       setShowTutorial(false);
       return;
@@ -692,6 +693,7 @@ function App() {
     isSpotifySkipped,
     appReady,
     isSubscribed,
+    appPlatform,
   ]);
 
   useEffect(() => {
@@ -1151,7 +1153,7 @@ function App() {
     isMockingbird && !showSplash
       ? showTutorial
         ? "tutorial"
-        : isSubscribed === false
+        : appPlatform === "web" || isSubscribed === false
           ? "subscription"
           : !hasSeenTutorialFlag &&
               (isSpotifyAuthenticated || isSpotifySkipped) &&
