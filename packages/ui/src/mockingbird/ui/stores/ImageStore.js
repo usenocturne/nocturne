@@ -1,6 +1,6 @@
-import { makeAutoObservable, ObservableMap, runInAction } from 'mobx';
-import { extractColorsFromImage } from '../utils/colorExtractor';
-import { resolveImageUrl } from '../utils/imageProxy';
+import { makeAutoObservable, ObservableMap, runInAction } from "mobx";
+import { extractColorsFromImage } from "../utils/colorExtractor";
+import { resolveImageUrl } from "../utils/imageProxy";
 
 export const ImageScale = {
   BIG: 248,
@@ -24,35 +24,35 @@ class ImageStore {
   }
 
   getImage(url, scale = ImageScale.BIG) {
-    return url || '';
+    return url || "";
   }
 
   getBackgroundColor(imageUrl) {
     const color = this.colors.get(imageUrl);
     if (color) {
-      return Array.isArray(color) ? `rgb(${color.join(',')})` : color;
+      return Array.isArray(color) ? `rgb(${color.join(",")})` : color;
     }
-    return '#1a1a1a';
+    return "#1a1a1a";
   }
 
   preloadImage(url, scale = ImageScale.BIG) {
-    if (!url) return Promise.resolve('');
+    if (!url) return Promise.resolve("");
 
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => resolve(url);
       img.onerror = () => resolve(url);
-      img.crossOrigin = 'anonymous';
+      img.crossOrigin = "anonymous";
       img.src = url;
     });
   }
 
   setColorRequested(imageUrl) {
-    this.requestedColors.set(imageUrl, 'requested');
+    this.requestedColors.set(imageUrl, "requested");
   }
 
   setColorPending(imageUrl) {
-    this.pendingColors.set(imageUrl, 'pending');
+    this.pendingColors.set(imageUrl, "pending");
   }
 
   shouldCalculateColor(imageUrl) {
@@ -74,13 +74,13 @@ class ImageStore {
       try {
         const resolvedUrl = await resolveImageUrl(imageUrl);
         if (!resolvedUrl) {
-          throw new Error('Image proxy returned null');
+          throw new Error("Image proxy returned null");
         }
         const colors = await extractColorsFromImage(resolvedUrl);
 
         let backgroundColor = colors[1];
 
-        if (backgroundColor && backgroundColor.startsWith('#')) {
+        if (backgroundColor && backgroundColor.startsWith("#")) {
           const r = parseInt(backgroundColor.slice(1, 3), 16);
           const g = parseInt(backgroundColor.slice(3, 5), 16);
           const b = parseInt(backgroundColor.slice(5, 7), 16);
@@ -94,9 +94,8 @@ class ImageStore {
           this.requestedColors.delete(imageUrl);
           this.colors.set(imageUrl, backgroundColor);
         });
-
       } catch (error) {
-        console.warn('ImageStore: Failed to extract color from image:', error);
+        console.warn("ImageStore: Failed to extract color from image:", error);
         runInAction(() => {
           this.pendingColors.delete(imageUrl);
           this.requestedColors.delete(imageUrl);
@@ -123,7 +122,7 @@ class ImageStore {
     if (str.length === 0) return hash;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }
     return hash;

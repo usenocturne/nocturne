@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { IconChevronRight48 } from '../../../Icons/CarthingUIComponents';
-import Type from '../../../CarthingUIComponents/Type/Type';
-import styles from './ShelfSwiperItem.module.scss';
-import moreStyles from './MoreItem.module.scss';
+import { useState } from "react";
+import classNames from "classnames";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { IconChevronRight48 } from "../../../Icons/CarthingUIComponents";
+import Type from "../../../CarthingUIComponents/Type/Type";
+import styles from "./ShelfSwiperItem.module.scss";
+import moreStyles from "./MoreItem.module.scss";
 
 const pointerListenersMaker = (setTouchDown) => ({
   onPointerDown: () => setTouchDown(true),
@@ -27,14 +27,17 @@ const MoreItem = ({ isActive, item }) => {
       onClick={() => uiState.moreButtonClicked(item.category)}
     >
       {isActive && <div className={styles.activeBorder} />}
-      <div className={styles.buttonArtwork} {...pointerListenersMaker(setTouchDown)} />
+      <div
+        className={styles.buttonArtwork}
+        {...pointerListenersMaker(setTouchDown)}
+      />
       <div className={`${moreStyles.moreIcon} ${styles.artworkCenter}`} />
       <div className={styles.artworkCenter}>
         <IconChevronRight48 />
       </div>
       <div className={styles.titleContainer}>
         <Type name="celloBold" className={styles.title}>
-          {title ?? 'More'}
+          {title ?? "More"}
         </Type>
       </div>
     </div>

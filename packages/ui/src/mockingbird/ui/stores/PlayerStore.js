@@ -1,5 +1,5 @@
-import { makeAutoObservable } from 'mobx';
-import { getNpvImageUrl } from '../helpers/ImageSizeHelper';
+import { makeAutoObservable } from "mobx";
+import { getNpvImageUrl } from "../helpers/ImageSizeHelper";
 
 class PlayerStore {
   constructor(rootStore, interappActions, socket) {
@@ -18,7 +18,7 @@ class PlayerStore {
 
   getInitialState() {
     return {
-      context_uri: '',
+      context_uri: "",
       is_playing: false,
       progress_ms: 0,
       track: null,
@@ -28,7 +28,7 @@ class PlayerStore {
   }
 
   get contextUri() {
-    return this.state.context_uri || '';
+    return this.state.context_uri || "";
   }
 
   get currentTrack() {
@@ -38,13 +38,15 @@ class PlayerStore {
   get currentContextItem() {
     return {
       uri: this.contextUri,
-      title: this.currentTrack?.name || '',
+      title: this.currentTrack?.name || "",
     };
   }
 
   get currentImageId() {
-    const imageId = getNpvImageUrl(this.currentTrack?.album?.images) ||
-      getNpvImageUrl(this.currentTrack?.images) || '';
+    const imageId =
+      getNpvImageUrl(this.currentTrack?.album?.images) ||
+      getNpvImageUrl(this.currentTrack?.images) ||
+      "";
     return imageId;
   }
 
@@ -93,17 +95,19 @@ class PlayerStore {
   }
 
   play() {
-    
-    console.log('PlayerStore.play() called but not connected to Spotify integration yet');
+    console.log(
+      "PlayerStore.play() called but not connected to Spotify integration yet",
+    );
   }
 
   pause() {
-    
-    console.log('PlayerStore.pause() called but not connected to Spotify integration yet');
+    console.log(
+      "PlayerStore.pause() called but not connected to Spotify integration yet",
+    );
   }
 
   onTrackChange(callback) {
-    return () => { };
+    return () => {};
   }
 
   reset() {

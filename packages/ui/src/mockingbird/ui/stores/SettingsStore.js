@@ -1,40 +1,40 @@
-import { makeAutoObservable, runInAction } from 'mobx';
-import { sendNocturneWsRequest } from '../../../hooks/useNocturned';
+import { makeAutoObservable, runInAction } from "mobx";
+import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
 
 export const MainMenuItemId = {
-  SETTINGS_ROOT: 'SETTINGS_ROOT',
-  MIC: 'MIC',
-  PHONE_CONNECTION: 'PHONE_CONNECTION',
-  OPTIONS: 'OPTIONS',
-  ABOUT: 'ABOUT',
-  TIPS: 'TIPS',
-  RESTART: 'RESTART',
-  SWITCH_UI: 'SWITCH_UI',
+  SETTINGS_ROOT: "SETTINGS_ROOT",
+  MIC: "MIC",
+  PHONE_CONNECTION: "PHONE_CONNECTION",
+  OPTIONS: "OPTIONS",
+  ABOUT: "ABOUT",
+  TIPS: "TIPS",
+  RESTART: "RESTART",
+  SWITCH_UI: "SWITCH_UI",
 };
 
 export const OptionsMenuItemId = {
-  PHONE_CALLS: 'PHONE_CALLS',
-  AIR_VENT_INTERFERENCE: 'AIR_VENT_INTERFERENCE',
-  DISPLAY_AND_BRIGHTNESS: 'DISPLAY_AND_BRIGHTNESS',
-  TIPS_TOGGLE: 'TIPS_TOGGLE',
+  PHONE_CALLS: "PHONE_CALLS",
+  AIR_VENT_INTERFERENCE: "AIR_VENT_INTERFERENCE",
+  DISPLAY_AND_BRIGHTNESS: "DISPLAY_AND_BRIGHTNESS",
+  TIPS_TOGGLE: "TIPS_TOGGLE",
 };
 
 export const AboutMenuItemId = {
-  SERIAL: 'SERIAL',
-  APP_VERSION: 'APP_VERSION',
-  OS_VERSION: 'OS_VERSION',
-  MODEL_NAME: 'MODEL_NAME',
-  COUNTRY: 'COUNTRY',
-  FCC_ID_MODEL_NAME: 'FCC_ID_MODEL_NAME',
-  IC_ID_MODEL_NAME: 'IC_ID_MODEL_NAME',
-  HVIN: 'HVIN',
-  LICENSE: 'LICENSE',
+  SERIAL: "SERIAL",
+  APP_VERSION: "APP_VERSION",
+  OS_VERSION: "OS_VERSION",
+  MODEL_NAME: "MODEL_NAME",
+  COUNTRY: "COUNTRY",
+  FCC_ID_MODEL_NAME: "FCC_ID_MODEL_NAME",
+  IC_ID_MODEL_NAME: "IC_ID_MODEL_NAME",
+  HVIN: "HVIN",
+  LICENSE: "LICENSE",
 };
 
 export const RestartMenuItemId = {
-  POWER_OFF_TUTORIAL: 'power_off_tutorial',
-  RESTART_CONFIRM: 'restart_confirm',
-  FACTORY_RESET: 'factory_reset',
+  POWER_OFF_TUTORIAL: "power_off_tutorial",
+  RESTART_CONFIRM: "restart_confirm",
+  FACTORY_RESET: "factory_reset",
 };
 
 export const AnimationType = {
@@ -45,145 +45,187 @@ export const AnimationType = {
 class SettingsStore {
   factoryResetConfirmationIsActive = true;
   aboutInfo = null;
-  tipsEnabled = localStorage.getItem('tipsEnabled') !== 'false';
+  tipsEnabled = localStorage.getItem("tipsEnabled") !== "false";
 
   constructor(rootStore) {
     this.rootStore = rootStore;
 
     this.licenseView = {
       id: AboutMenuItemId.LICENSE,
-      label: 'Third party software',
+      label: "Third party software",
       index: 0,
-      type: 'parent',
+      type: "parent",
       visible: () => true,
     };
 
     this.phoneConnectionView = {
       id: MainMenuItemId.PHONE_CONNECTION,
-      label: 'Phone connection',
+      label: "Phone connection",
       index: 0,
       visible: () => true,
-      type: 'parent',
+      type: "parent",
     };
 
     this.aboutInfoView = [
-      { id: AboutMenuItemId.SERIAL, label: 'Serial No.', index: 0, visible: () => true, type: 'key-value' },
-      { id: AboutMenuItemId.OS_VERSION, label: 'OS Version', index: 0, visible: () => true, type: 'key-value' },
-      { id: AboutMenuItemId.MODEL_NAME, label: 'Device', index: 0, visible: () => true, type: 'key-value' },
-      { id: AboutMenuItemId.COUNTRY, label: 'Country', index: 0, visible: () => true, type: 'key-value' },
-      { id: AboutMenuItemId.FCC_ID_MODEL_NAME, label: 'FCC ID', index: 0, visible: () => true, type: 'key-value' },
-      { id: AboutMenuItemId.IC_ID_MODEL_NAME, label: 'IC ID', index: 0, visible: () => true, type: 'key-value' },
-      { id: AboutMenuItemId.HVIN, label: 'HVIN', index: 0, visible: () => true, type: 'key-value' },
+      {
+        id: AboutMenuItemId.SERIAL,
+        label: "Serial No.",
+        index: 0,
+        visible: () => true,
+        type: "key-value",
+      },
+      {
+        id: AboutMenuItemId.OS_VERSION,
+        label: "OS Version",
+        index: 0,
+        visible: () => true,
+        type: "key-value",
+      },
+      {
+        id: AboutMenuItemId.MODEL_NAME,
+        label: "Device",
+        index: 0,
+        visible: () => true,
+        type: "key-value",
+      },
+      {
+        id: AboutMenuItemId.COUNTRY,
+        label: "Country",
+        index: 0,
+        visible: () => true,
+        type: "key-value",
+      },
+      {
+        id: AboutMenuItemId.FCC_ID_MODEL_NAME,
+        label: "FCC ID",
+        index: 0,
+        visible: () => true,
+        type: "key-value",
+      },
+      {
+        id: AboutMenuItemId.IC_ID_MODEL_NAME,
+        label: "IC ID",
+        index: 0,
+        visible: () => true,
+        type: "key-value",
+      },
+      {
+        id: AboutMenuItemId.HVIN,
+        label: "HVIN",
+        index: 0,
+        visible: () => true,
+        type: "key-value",
+      },
       this.licenseView,
     ];
 
     this.settings = {
       id: MainMenuItemId.SETTINGS_ROOT,
-      label: 'Main menu',
+      label: "Main menu",
       index: 0,
       visible: () => true,
-      type: 'parent',
+      type: "parent",
       rows: [
         {
           id: MainMenuItemId.MIC,
-          label: 'Microphone',
+          label: "Microphone",
           index: 0,
           disabledOffline: true,
           visible: () => true,
-          type: 'toggle',
+          type: "toggle",
         },
         this.phoneConnectionView,
         {
           id: MainMenuItemId.OPTIONS,
-          label: 'Options',
+          label: "Options",
           index: 0,
           rows: [
             {
               id: OptionsMenuItemId.PHONE_CALLS,
-              label: 'Phone calls',
+              label: "Phone calls",
               index: 0,
               visible: () => true,
-              type: 'parent',
+              type: "parent",
             },
             {
               id: OptionsMenuItemId.AIR_VENT_INTERFERENCE,
-              label: 'Air vent interference',
+              label: "Air vent interference",
               index: 0,
               visible: () => true,
-              type: 'parent',
+              type: "parent",
             },
             {
               id: OptionsMenuItemId.DISPLAY_AND_BRIGHTNESS,
-              label: 'Display and brightness',
+              label: "Display and brightness",
               index: 0,
               visible: () => true,
-              type: 'parent',
+              type: "parent",
             },
             {
               id: OptionsMenuItemId.TIPS_TOGGLE,
-              label: 'Onscreen tips',
+              label: "Onscreen tips",
               index: 0,
               visible: () => true,
-              type: 'toggle',
+              type: "toggle",
             },
           ],
           visible: () => true,
-          type: 'parent',
+          type: "parent",
         },
         {
           id: MainMenuItemId.TIPS,
-          label: 'Tips',
+          label: "Tips",
           index: 0,
           visible: () => true,
-          type: 'parent',
+          type: "parent",
         },
         {
           id: MainMenuItemId.ABOUT,
-          label: 'About',
+          label: "About",
           index: 0,
           rows: this.aboutInfoView,
           visible: () => true,
-          type: 'parent',
+          type: "parent",
         },
         {
           id: MainMenuItemId.RESTART,
-          label: 'Power and Reset',
+          label: "Power and Reset",
           index: 0,
           rows: [
             {
               id: RestartMenuItemId.POWER_OFF_TUTORIAL,
-              label: 'Power off/on',
+              label: "Power off/on",
               index: 0,
               animationType: AnimationType.FADE_IN,
               visible: () => true,
-              type: 'parent',
+              type: "parent",
             },
             {
               id: RestartMenuItemId.RESTART_CONFIRM,
-              label: 'Restart',
+              label: "Restart",
               index: 0,
               animationType: AnimationType.FADE_IN,
               visible: () => true,
-              type: 'parent',
+              type: "parent",
             },
             {
               id: RestartMenuItemId.FACTORY_RESET,
-              label: 'Factory reset',
+              label: "Factory reset",
               index: 0,
               animationType: AnimationType.FADE_IN,
               visible: () => true,
-              type: 'parent',
+              type: "parent",
             },
           ],
           visible: () => true,
-          type: 'parent',
+          type: "parent",
         },
         {
           id: MainMenuItemId.SWITCH_UI,
-          label: 'Switch to Nocturne UI',
+          label: "Switch to Nocturne UI",
           index: 0,
           visible: () => true,
-          type: 'parent',
+          type: "parent",
         },
       ],
     };
@@ -214,35 +256,42 @@ class SettingsStore {
 
       getKeyValue(item) {
         const info = store.aboutInfo;
-        if (!info) return '...';
-        
+        if (!info) return "...";
+
         switch (item.id) {
-          case AboutMenuItemId.SERIAL: return info.serialNumber || '';
-          case AboutMenuItemId.OS_VERSION: return info.version || '';
-          case AboutMenuItemId.MODEL_NAME: return info.device || '';
+          case AboutMenuItemId.SERIAL:
+            return info.serialNumber || "";
+          case AboutMenuItemId.OS_VERSION:
+            return info.version || "";
+          case AboutMenuItemId.MODEL_NAME:
+            return info.device || "";
           case AboutMenuItemId.COUNTRY: {
             try {
-              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-              const region = Intl.DateTimeFormat().resolvedOptions().locale || '';
-              
-              const regionTag = region.split('-').pop();
-              if (regionTag && regionTag.length === 2) return regionTag.toUpperCase();
-              
-              const tzParts = tz.split('/');
-              return tzParts[0] || '';
+              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+              const region =
+                Intl.DateTimeFormat().resolvedOptions().locale || "";
+
+              const regionTag = region.split("-").pop();
+              if (regionTag && regionTag.length === 2)
+                return regionTag.toUpperCase();
+
+              const tzParts = tz.split("/");
+              return tzParts[0] || "";
             } catch {
-              return '';
+              return "";
             }
           }
-          case AboutMenuItemId.FCC_ID_MODEL_NAME: return '2AYZ2-414035';
-          case AboutMenuItemId.IC_ID_MODEL_NAME: return '26274-SG001';
+          case AboutMenuItemId.FCC_ID_MODEL_NAME:
+            return "2AYZ2-414035";
+          case AboutMenuItemId.IC_ID_MODEL_NAME:
+            return "26274-SG001";
           case AboutMenuItemId.HVIN: {
-            
-            const device = info.device || '';
+            const device = info.device || "";
             const match = device.match(/\(([^)]+)\)/);
-            return match ? match[1] : '';
+            return match ? match[1] : "";
           }
-          default: return '';
+          default:
+            return "";
         }
       },
 
@@ -271,35 +320,38 @@ class SettingsStore {
   }
 
   _createBannerUiState() {
-    const uiState = makeAutoObservable({
-      shouldShowAlert: false,
-      _timeoutId: null,
+    const uiState = makeAutoObservable(
+      {
+        shouldShowAlert: false,
+        _timeoutId: null,
 
-      showUnavailableBanner() {
-        if (this._timeoutId) {
-          clearTimeout(this._timeoutId);
-        }
-        this.shouldShowAlert = true;
-        this._timeoutId = setTimeout(() => {
-          runInAction(() => {
-            this.shouldShowAlert = false;
+        showUnavailableBanner() {
+          if (this._timeoutId) {
+            clearTimeout(this._timeoutId);
+          }
+          this.shouldShowAlert = true;
+          this._timeoutId = setTimeout(() => {
+            runInAction(() => {
+              this.shouldShowAlert = false;
+              this._timeoutId = null;
+            });
+          }, 5000);
+        },
+
+        hideUnavailableBanner() {
+          if (this._timeoutId) {
+            clearTimeout(this._timeoutId);
             this._timeoutId = null;
-          });
-        }, 5000);
-      },
+          }
+          this.shouldShowAlert = false;
+        },
 
-      hideUnavailableBanner() {
-        if (this._timeoutId) {
-          clearTimeout(this._timeoutId);
-          this._timeoutId = null;
-        }
-        this.shouldShowAlert = false;
+        logImpression() {},
       },
-
-      logImpression() { },
-    }, {
-      _timeoutId: false,
-    });
+      {
+        _timeoutId: false,
+      },
+    );
     return uiState;
   }
 
@@ -355,7 +407,7 @@ class SettingsStore {
   }
 
   gotoView(view) {
-    if (view.type === 'parent') {
+    if (view.type === "parent") {
       this.viewStack.push(view);
     }
   }
@@ -368,7 +420,9 @@ class SettingsStore {
         phoneConnectionStore.dismissModal();
         return;
       }
-      if (phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing) {
+      if (
+        phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing
+      ) {
         phoneConnectionStore.phoneConnectionContextMenuUiState.dismissMenu();
         return;
       }
@@ -417,11 +471,17 @@ class SettingsStore {
         }
         break;
       case MainMenuItemId.PHONE_CONNECTION:
-        if (phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing) {
+        if (
+          phoneConnectionStore.phoneConnectionContextMenuUiState
+            .phoneMenuShowing
+        ) {
           phoneConnectionStore.phoneConnectionContextMenuUiState.handleActionMenuItemDialPress(
-            phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuItem,
+            phoneConnectionStore.phoneConnectionContextMenuUiState
+              .phoneMenuItem,
           );
-        } else if (this.currentView.index === bluetoothStore.bluetoothDeviceList.length) {
+        } else if (
+          this.currentView.index === bluetoothStore.bluetoothDeviceList.length
+        ) {
           phoneConnectionStore.handleAddNewPhoneDialPress();
         } else {
           phoneConnectionStore.handleSelectPhoneDialPress();
@@ -436,7 +496,9 @@ class SettingsStore {
         break;
       default:
         if (this.highlightedItem) {
-          this.submenuUiState.handleSubmenuItemDialPressed(this.highlightedItem);
+          this.submenuUiState.handleSubmenuItemDialPressed(
+            this.highlightedItem,
+          );
         }
     }
   }
@@ -447,12 +509,17 @@ class SettingsStore {
     if (this.currentIsFactoryReset) {
       this.setFactoryResetConfirmationIsActive(false);
     } else if (this.currentIsPhoneConnection) {
-      if (phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing) {
+      if (
+        phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing
+      ) {
         phoneConnectionStore.phoneConnectionContextMenuUiState.goToNextItem();
       } else if (nextIndex < bluetoothStore.bluetoothDeviceList.length + 1) {
         this.currentView.index = nextIndex;
       }
-    } else if (this.currentView.rows && nextIndex < this.currentView.rows.length) {
+    } else if (
+      this.currentView.rows &&
+      nextIndex < this.currentView.rows.length
+    ) {
       this.currentView.index = nextIndex;
     }
   }
@@ -462,7 +529,9 @@ class SettingsStore {
     if (this.currentIsFactoryReset) {
       this.setFactoryResetConfirmationIsActive(true);
     } else if (this.currentIsPhoneConnection) {
-      if (phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing) {
+      if (
+        phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing
+      ) {
         phoneConnectionStore.phoneConnectionContextMenuUiState.goToPreviousItem();
       } else {
         const prevIndex = this.currentView.index - 1;
@@ -497,9 +566,7 @@ class SettingsStore {
     this.currentView.index = index;
   }
 
-  handleSettingsButtonLongPress() {
-    
-  }
+  handleSettingsButtonLongPress() {}
 
   setFactoryResetConfirmationIsActive(isActive) {
     this.factoryResetConfirmationIsActive = isActive;
@@ -511,45 +578,49 @@ class SettingsStore {
 
   toggleTips() {
     this.tipsEnabled = !this.tipsEnabled;
-    localStorage.setItem('tipsEnabled', this.tipsEnabled.toString());
+    localStorage.setItem("tipsEnabled", this.tipsEnabled.toString());
   }
 
   switchToModernUI() {
-    localStorage.setItem('mockingbirdUiEnabled', 'false');
+    localStorage.setItem("mockingbirdUiEnabled", "false");
     window.location.reload();
   }
 
   async doReboot() {
     try {
-      await sendNocturneWsRequest('device.power.reboot', {});
+      await sendNocturneWsRequest("device.power.reboot", {});
     } catch (e) {
-      console.error('Reboot failed:', e);
+      console.error("Reboot failed:", e);
     }
   }
 
   async doFactoryReset() {
     try {
-      await sendNocturneWsRequest('device.factoryreset', {});
+      await sendNocturneWsRequest("device.factoryreset", {});
       setTimeout(() => {
-        sendNocturneWsRequest('device.power.reboot', {}).catch(() => { });
+        sendNocturneWsRequest("device.power.reboot", {}).catch(() => {});
       }, 2000);
     } catch (e) {
-      console.error('Factory reset failed:', e);
+      console.error("Factory reset failed:", e);
     }
   }
 
   async fetchAboutInfo() {
     try {
-      const info = await sendNocturneWsRequest('device.info', {}, { timeoutMs: 5000 });
+      const info = await sendNocturneWsRequest(
+        "device.info",
+        {},
+        { timeoutMs: 5000 },
+      );
       runInAction(() => {
         this.aboutInfo = info || {};
       });
     } catch (e) {
       runInAction(() => {
         this.aboutInfo = {
-          device: 'Unknown',
-          version: 'Unknown',
-          serialNumber: 'Unknown',
+          device: "Unknown",
+          version: "Unknown",
+          serialNumber: "Unknown",
         };
       });
     }

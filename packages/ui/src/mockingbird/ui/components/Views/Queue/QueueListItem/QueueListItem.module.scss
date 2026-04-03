@@ -1,4 +1,4 @@
-@import '../../../../styles/variables.module';
+@import "../../../../styles/variables.module";
 
 $track-info-width: 528px;
 $track-info-margin-left: 32px;
@@ -32,7 +32,7 @@ $track-info-margin-left: 32px;
   margin-bottom: 8px;
   opacity: 0.7;
   color: $white;
-  
+
   &.currentlyPlaying {
     color: $green-light;
   }
@@ -64,11 +64,11 @@ $track-info-margin-left: 32px;
 
 .selected {
   background: $opacity-white-10;
-  
+
   .title {
     opacity: 1;
   }
-  
+
   &.pressed {
     opacity: 0.5;
   }

@@ -1,7 +1,10 @@
-import { getGlobalWebSocket, addGlobalWsListener } from '../../../hooks/useNocturned';
+import {
+  getGlobalWebSocket,
+  addGlobalWsListener,
+} from "../../../hooks/useNocturned";
 
 const MAX_CACHE_SIZE = 100;
-const CACHE_TTL_MS = 5 * 60 * 1000; 
+const CACHE_TTL_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 15000;
 const FETCH_DELAY_MS = 100;
 
@@ -26,11 +29,11 @@ function generateUUID() {
 function isLocalUrl(url) {
   if (!url) return true;
   return (
-    url.startsWith('data:') ||
-    url.startsWith('blob:') ||
-    url.startsWith('/') ||
-    url.startsWith('./') ||
-    url.startsWith('../')
+    url.startsWith("data:") ||
+    url.startsWith("blob:") ||
+    url.startsWith("/") ||
+    url.startsWith("./") ||
+    url.startsWith("../")
   );
 }
 
@@ -58,7 +61,7 @@ function fetchSingleImage(url) {
   return new Promise((resolve) => {
     const ws = getGlobalWebSocket();
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn('[ImageProxy] WS not open');
+      console.warn("[ImageProxy] WS not open");
       resolve(null);
       return;
     }
@@ -79,15 +82,20 @@ function fetchSingleImage(url) {
         unsubscribe();
 
         if (data.error) {
-          console.warn('[ImageProxy] error response for', url, data.error);
+          console.warn("[ImageProxy] error response for", url, data.error);
           resolve(null);
           return;
         }
 
         const r = data.result || data;
-        const base64 = r?.data ?? (r?.result?.data);
+        const base64 = r?.data ?? r?.result?.data;
         if (!base64) {
-          console.warn('[ImageProxy] no base64 in response for', url, 'keys:', Object.keys(data));
+          console.warn(
+            "[ImageProxy] no base64 in response for",
+            url,
+            "keys:",
+            Object.keys(data),
+          );
           resolve(null);
           return;
         }
@@ -103,23 +111,25 @@ function fetchSingleImage(url) {
       if (!settled) {
         settled = true;
         unsubscribe();
-        console.warn('[ImageProxy] timeout for', url);
+        console.warn("[ImageProxy] timeout for", url);
         resolve(null);
       }
     }, FETCH_TIMEOUT_MS);
 
     try {
-      ws.send(JSON.stringify({
-        type: 'request',
-        id,
-        method: 'spotify.image.fetch',
-        params: { url },
-      }));
+      ws.send(
+        JSON.stringify({
+          type: "request",
+          id,
+          method: "spotify.image.fetch",
+          params: { url },
+        }),
+      );
     } catch (err) {
       settled = true;
       clearTimeout(timeoutId);
       unsubscribe();
-      console.warn('[ImageProxy] send error', err);
+      console.warn("[ImageProxy] send error", err);
       resolve(null);
     }
   });
@@ -152,7 +162,7 @@ async function processQueue() {
 }
 
 export function resolveImageUrl(url) {
-  if (isLocalUrl(url)) return Promise.resolve(url || '');
+  if (isLocalUrl(url)) return Promise.resolve(url || "");
 
   const cached = cache.get(url);
   if (cached && Date.now() - cached.accessedAt < CACHE_TTL_MS) {

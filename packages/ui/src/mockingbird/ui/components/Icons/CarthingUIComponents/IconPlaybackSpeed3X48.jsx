@@ -1,4 +1,4 @@
-import { IconPlaybackSpeed3x } from '../EncoreWeb/IconPlaybackSpeed3x';
+import { IconPlaybackSpeed3x } from "../EncoreWeb/IconPlaybackSpeed3x";
 
 const IconPlaybackSpeed3X48 = () => <IconPlaybackSpeed3x iconSize={48} />;
 

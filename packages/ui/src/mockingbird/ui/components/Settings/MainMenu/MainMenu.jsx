@@ -1,15 +1,17 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { runInAction } from 'mobx';
-import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
-import { MainMenuItemId } from '../../../stores/SettingsStore';
-import { Swiper as SwiperComponent, SwiperSlide } from 'swiper/react';
-import styles from './MainMenu.module.scss';
-import MainMenuItem from './MainMenuItem';
-import variables from '../../../styles/variables.module.scss';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { runInAction } from "mobx";
+import { observer } from "mobx-react-lite";
+import { useEffect, useState } from "react";
+import { MainMenuItemId } from "../../../stores/SettingsStore";
+import { Swiper as SwiperComponent, SwiperSlide } from "swiper/react";
+import styles from "./MainMenu.module.scss";
+import MainMenuItem from "./MainMenuItem";
+import variables from "../../../styles/variables.module.scss";
 
-const transitionDurationMs = parseInt(variables['transition-duration-ms'], 10) || 500;
-const easingFunction = variables['easing-function'] || 'cubic-bezier(0.16, 1, 0.3, 1)';
+const transitionDurationMs =
+  parseInt(variables["transition-duration-ms"], 10) || 500;
+const easingFunction =
+  variables["easing-function"] || "cubic-bezier(0.16, 1, 0.3, 1)";
 
 const DEVICE_HEIGHT = 480;
 const ITEM_HEIGHT = 128;

@@ -1,4 +1,4 @@
-import styles from './SubmenuHeader.module.scss';
+import styles from "./SubmenuHeader.module.scss";
 
 const SubmenuHeader = ({ icon, name }) => {
   return (

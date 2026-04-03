@@ -1,4 +1,4 @@
-import { IconMic } from '../EncoreWeb/IconMic';
+import { IconMic } from "../EncoreWeb/IconMic";
 
 const IconMicOn64 = () => <IconMic iconSize={64} />;
 

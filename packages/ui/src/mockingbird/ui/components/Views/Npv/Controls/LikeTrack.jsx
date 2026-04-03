@@ -1,8 +1,11 @@
-import { IconHeart48, IconHeartActive48 } from '../../../Icons/CarthingUIComponents';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import { NpvIcon } from './Controls';
-import ControlButton from './ControlButton';
+import {
+  IconHeart48,
+  IconHeartActive48,
+} from "../../../Icons/CarthingUIComponents";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import { NpvIcon } from "./Controls";
+import ControlButton from "./ControlButton";
 
 const LikeTrack = () => {
   const { npvStore, playerStore } = useCarThingStore();
@@ -22,11 +25,7 @@ const LikeTrack = () => {
       onClick={handleClick}
       isDisabled={!playerStore.canLike && !playerStore.canUnlike}
     >
-      {uiState.isSaved ? (
-        <IconHeartActive48 />
-      ) : (
-        <IconHeart48 />
-      )}
+      {uiState.isSaved ? <IconHeartActive48 /> : <IconHeart48 />}
     </ControlButton>
   );
 };

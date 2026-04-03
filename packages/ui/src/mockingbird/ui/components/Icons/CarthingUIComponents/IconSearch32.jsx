@@ -1,4 +1,4 @@
-import { IconSearch } from '../EncoreWeb/IconSearch';
+import { IconSearch } from "../EncoreWeb/IconSearch";
 
 const IconSearch32 = () => <IconSearch iconSize={32} />;
 

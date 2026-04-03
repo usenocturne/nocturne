@@ -1,4 +1,4 @@
-import { IconCheck } from '../EncoreWeb/IconCheck';
+import { IconCheck } from "../EncoreWeb/IconCheck";
 
 const IconCheck32 = () => <IconCheck iconSize={32} />;
 

@@ -1,4 +1,4 @@
-import { makeAutoObservable, get } from 'mobx';
+import { makeAutoObservable, get } from "mobx";
 
 export class QueueItem {
   constructor(data) {
@@ -63,7 +63,7 @@ export class QueueUiState {
   }
 
   get selectedItemFromManualQueue() {
-    return this.selectedItem?.provider === 'queue';
+    return this.selectedItem?.provider === "queue";
   }
 
   get isSelectingFirst() {
@@ -96,10 +96,10 @@ export class QueueUiState {
 
   get headerText() {
     if (this.selectedItemFromManualQueue || this.isEmptyQueue) {
-      return 'Next in Queue:';
-    } else if (this.queueStore.current.provider === 'queue') {
+      return "Next in Queue:";
+    } else if (this.queueStore.current.provider === "queue") {
       if (!this.playerStore.contextTitle) {
-        return 'Next Up:';
+        return "Next Up:";
       }
       return `Next From: ${this.playerStore.contextTitle}`;
     }
@@ -108,14 +108,15 @@ export class QueueUiState {
 
   titleBasedOnType() {
     const rootStore = window.carThingRootStore;
-    const contextTitle = rootStore?.npvStore?.playingInfoUiState?.contextHeaderTitle ||
+    const contextTitle =
+      rootStore?.npvStore?.playingInfoUiState?.contextHeaderTitle ||
       this.playerStore.contextTitle;
 
     if (contextTitle) {
       return contextTitle;
     }
 
-    return 'Queue';
+    return "Queue";
   }
 
   get leftItem() {
@@ -140,7 +141,7 @@ export class QueueUiState {
       0, 0, 0,
     ];
     return `linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.84) 100%), rgb(${colorChannels.join(
-      ',',
+      ",",
     )})`;
   }
 
@@ -243,17 +244,25 @@ export class QueueUiState {
 
 class QueueStore {
   current = {
-    image_uri: '',
-    uid: '',
-    uri: '',
-    provider: '',
+    image_uri: "",
+    uid: "",
+    uri: "",
+    provider: "",
   };
 
   next = [];
   queueUiState;
   queueUpdateCurrentCallback = null;
 
-  constructor(socket, playerStore, imageStore, viewStore, hardwareStore, ubiLogger, interappActions) {
+  constructor(
+    socket,
+    playerStore,
+    imageStore,
+    viewStore,
+    hardwareStore,
+    ubiLogger,
+    interappActions,
+  ) {
     this.playerStore = playerStore;
     this.imageStore = imageStore;
     this.viewStore = viewStore;
@@ -281,11 +290,11 @@ class QueueStore {
     });
   }
 
-  updateCurrent(imageUri, uid, uri, provider = '') {
+  updateCurrent(imageUri, uid, uri, provider = "") {
     this.current = {
-      image_uri: imageUri || '',
-      uid: uid || '',
-      uri: uri || '',
+      image_uri: imageUri || "",
+      uid: uid || "",
+      uri: uri || "",
       provider: provider,
     };
     if (this.queueUpdateCurrentCallback) {
@@ -294,7 +303,7 @@ class QueueStore {
   }
 
   updateQueue(queueData) {
-    this.next = queueData.map(item => new QueueItem(item));
+    this.next = queueData.map((item) => new QueueItem(item));
   }
 
   onQueueUpdateCurrent(callback) {
@@ -307,10 +316,10 @@ class QueueStore {
 
   reset() {
     this.current = {
-      image_uri: '',
-      uid: '',
-      uri: '',
-      provider: '',
+      image_uri: "",
+      uid: "",
+      uri: "",
+      provider: "",
     };
     this.next = [];
     this.queueUiState.selectedItem = undefined;

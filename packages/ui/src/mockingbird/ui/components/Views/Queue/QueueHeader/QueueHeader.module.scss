@@ -1,4 +1,4 @@
-@import '../../../../styles/variables.module';
+@import "../../../../styles/variables.module";
 
 .headerWrapper {
   height: 152px;
@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: space-between;
   @include transition-transform;
-  
+
   &.smallHeader {
     transform: translateY(38px);
     width: 134%;
@@ -29,7 +29,7 @@
   white-space: nowrap;
   font-weight: bold;
   color: $white;
-  
+
   &.smallHeader {
     transform: scale(calc(32 / 44));
   }

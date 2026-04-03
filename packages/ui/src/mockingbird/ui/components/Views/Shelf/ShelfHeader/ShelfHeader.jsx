@@ -1,5 +1,9 @@
-import { useEffect, useState } from 'react';
-import { HOME_IDENTIFIER, VOICE_IDENTIFIER, YOUR_LIBRARY } from '../../../../stores/ShelfStore';
+import { useEffect, useState } from "react";
+import {
+  HOME_IDENTIFIER,
+  VOICE_IDENTIFIER,
+  YOUR_LIBRARY,
+} from "../../../../stores/ShelfStore";
 import {
   IconLibrary32,
   IconHome32,
@@ -7,11 +11,11 @@ import {
   IconSearch32,
   IconSearchActive,
   IconLibraryActive,
-} from '../../../Icons/CarthingUIComponents';
-import styles from './ShelfHeader.module.scss';
-import ShelfHeaderItem from './ShelfHeaderItem';
-import { observer } from 'mobx-react-lite';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
+} from "../../../Icons/CarthingUIComponents";
+import styles from "./ShelfHeader.module.scss";
+import ShelfHeaderItem from "./ShelfHeaderItem";
+import { observer } from "mobx-react-lite";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
 
 export const CATEGORY_ICONS = {
   [HOME_IDENTIFIER]: {

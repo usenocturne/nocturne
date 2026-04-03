@@ -1,10 +1,10 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { useState } from 'react';
-import styles from './PhoneConnection.module.scss';
-import { observer } from 'mobx-react-lite';
-import classNames from 'classnames';
-import pointerListenersMaker from '../../../helpers/PointerListeners';
-import { action } from 'mobx';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { useState } from "react";
+import styles from "./PhoneConnection.module.scss";
+import { observer } from "mobx-react-lite";
+import classNames from "classnames";
+import pointerListenersMaker from "../../../helpers/PointerListeners";
+import { action } from "mobx";
 
 const IconMore = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
@@ -41,7 +41,9 @@ const PhoneConnectionItem = ({
       <div
         className={styles.titles}
         onClick={action(() =>
-          phoneConnectionStore.phoneConnectionContextMenuUiState.handleContextMenuClick(device),
+          phoneConnectionStore.phoneConnectionContextMenuUiState.handleContextMenuClick(
+            device,
+          ),
         )}
       >
         <span className={styles.title}>{phoneName}</span>

@@ -1,7 +1,7 @@
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import styles from './Scrubbing.module.scss';
-import { observer } from 'mobx-react-lite';
-import ScrubbingBar from './ScrubbingBar';
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import styles from "./Scrubbing.module.scss";
+import { observer } from "mobx-react-lite";
+import ScrubbingBar from "./ScrubbingBar";
 
 const Scrubbing = ({ playbackProgress, onSeek }) => {
   const { npvStore } = useCarThingStore();
@@ -16,7 +16,7 @@ const Scrubbing = ({ playbackProgress, onSeek }) => {
           onClick={() => {
             uiState.handleScrubberClick();
           }}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: "pointer" }}
         />
       )}
       <ScrubbingBar playbackProgress={playbackProgress} onSeek={onSeek} />

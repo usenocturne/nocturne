@@ -1,21 +1,21 @@
-import { IconPlaylist } from './icons/IconPlaylist';
-import { IconTrack } from './icons/IconTrack';
-import { IconAlbum } from './icons/IconAlbum';
-import { IconPodcasts } from './icons/IconPodcasts';
-import { IconArtist } from './icons/IconArtist';
-import { IconRadio } from './icons/IconRadio';
-import { parseURI, URITypeMap, isLikedSongsURI } from './uriHelpers';
-import classNames from 'classnames';
-import { getImageBorderRadius } from '../LazyImage';
-import { useCarThingStore } from '../../../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './Placeholder.module.scss';
+import { IconPlaylist } from "./icons/IconPlaylist";
+import { IconTrack } from "./icons/IconTrack";
+import { IconAlbum } from "./icons/IconAlbum";
+import { IconPodcasts } from "./icons/IconPodcasts";
+import { IconArtist } from "./icons/IconArtist";
+import { IconRadio } from "./icons/IconRadio";
+import { parseURI, URITypeMap, isLikedSongsURI } from "./uriHelpers";
+import classNames from "classnames";
+import { getImageBorderRadius } from "../LazyImage";
+import { useCarThingStore } from "../../../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./Placeholder.module.scss";
 
 const Placeholder = ({ uri, size, onClick, scale = 5, isActive }) => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.controlButtonsUiState;
   const iconSize = 30;
-  const typedUri = parseURI(uri.replace('podcast', 'show'));
+  const typedUri = parseURI(uri.replace("podcast", "show"));
   let icon = <IconPlaylist iconSize={iconSize} />;
 
   if (isLikedSongsURI(uri)) {
@@ -55,7 +55,7 @@ const Placeholder = ({ uri, size, onClick, scale = 5, isActive }) => {
       style={{
         width: `${size}px`,
         height: `${size}px`,
-        borderColor: isActive ? 'white' : 'rgba(255, 255, 255, 0)',
+        borderColor: isActive ? "white" : "rgba(255, 255, 255, 0)",
         borderRadius: getImageBorderRadius(uri, size),
       }}
       onClick={(e) => {

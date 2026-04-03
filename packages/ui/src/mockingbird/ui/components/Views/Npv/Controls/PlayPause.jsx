@@ -1,8 +1,8 @@
-import { IconPause48, IconPlay48 } from '../../../Icons/CarthingUIComponents';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import { NpvIcon } from './Controls';
-import ControlButton from './ControlButton';
+import { IconPause48, IconPlay48 } from "../../../Icons/CarthingUIComponents";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import { NpvIcon } from "./Controls";
+import ControlButton from "./ControlButton";
 
 const PlayPause = () => {
   const { npvStore, playerStore } = useCarThingStore();

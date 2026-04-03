@@ -1,4 +1,4 @@
-import { IconMicOff } from '../EncoreWeb/IconMicOff';
+import { IconMicOff } from "../EncoreWeb/IconMicOff";
 
 const IconMicOff32 = () => <IconMicOff iconSize={32} />;
 

@@ -1,16 +1,16 @@
-import LazyImage from './LazyImage/LazyImage';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import { cloneElement, useEffect, useRef } from 'react';
-import CSSTransition from '../../../CSSTransitionCompat';
-import { TransitionGroup } from 'react-transition-group';
-import { transitionDurationMs } from '../../../../styles/Variables';
-import styles from './Artwork.module.scss';
+import LazyImage from "./LazyImage/LazyImage";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import { cloneElement, useEffect, useRef } from "react";
+import CSSTransition from "../../../CSSTransitionCompat";
+import { TransitionGroup } from "react-transition-group";
+import { transitionDurationMs } from "../../../../styles/Variables";
+import styles from "./Artwork.module.scss";
 
 const SwipeDirection = {
-  NONE: 'NONE',
-  LEFT: 'LEFT', 
-  RIGHT: 'RIGHT',
+  NONE: "NONE",
+  LEFT: "LEFT",
+  RIGHT: "RIGHT",
 };
 
 const Artwork = ({ tracks, getAnimationClassNames }) => {

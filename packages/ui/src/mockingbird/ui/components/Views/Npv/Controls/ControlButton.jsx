@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import classNames from 'classnames';
-import styles from './Controls.module.scss';
+import { useState } from "react";
+import classNames from "classnames";
+import styles from "./Controls.module.scss";
 
 const ControlButton = ({
   id,
@@ -44,10 +44,10 @@ const ControlButton = ({
         onPointerLeave={handlePointerLeave}
         onClick={handleClick}
         style={{
-          cursor: isDisabled ? 'default' : 'pointer',
-          userSelect: 'none',
-          WebkitTouchCallout: 'none',
-          WebkitUserSelect: 'none',
+          cursor: isDisabled ? "default" : "pointer",
+          userSelect: "none",
+          WebkitTouchCallout: "none",
+          WebkitUserSelect: "none",
         }}
       >
         {children}

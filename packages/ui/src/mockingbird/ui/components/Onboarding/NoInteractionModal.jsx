@@ -1,7 +1,7 @@
-import { observer } from 'mobx-react-lite';
-import { useCarThingStore } from '../../contexts/CarThingStore';
-import { NoInteractionModalOption } from '../../stores/OnboardingStore';
-import styles from './NoInteractionModal.module.scss';
+import { observer } from "mobx-react-lite";
+import { useCarThingStore } from "../../contexts/CarThingStore";
+import { NoInteractionModalOption } from "../../stores/OnboardingStore";
+import styles from "./NoInteractionModal.module.scss";
 
 const NoInteractionModal = ({ visible }) => {
   const { onboardingStore } = useCarThingStore();
@@ -19,7 +19,7 @@ const NoInteractionModal = ({ visible }) => {
   };
 
   return (
-    <div className={`${styles.noInteraction} ${visible ? styles.visible : ''}`}>
+    <div className={`${styles.noInteraction} ${visible ? styles.visible : ""}`}>
       <div className={styles.buttonGroup}>
         <button
           className={`${styles.button} ${continueSelected ? styles.primary : styles.secondary}`}

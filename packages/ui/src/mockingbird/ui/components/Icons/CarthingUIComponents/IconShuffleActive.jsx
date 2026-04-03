@@ -1,4 +1,4 @@
-import IconShuffle from './IconShuffle';
+import IconShuffle from "./IconShuffle";
 
 const IconShuffleActive = ({ className, iconSize }) => {
   return (

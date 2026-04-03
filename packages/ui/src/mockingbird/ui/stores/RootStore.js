@@ -1,19 +1,19 @@
-import PlayerStore from './PlayerStore';
-import ImageStore from './ImageStore';
-import ViewStore from './ViewStore';
-import ShelfStore from './ShelfStore';
-import OnboardingStore from './OnboardingStore';
-import BannerStore from './BannerStore';
-import UbiLogger from './UbiLogger';
-import HardwareStore from './HardwareStore';
-import HardwareEvents from '../helpers/HardwareEvents';
-import HardwareEventHandler from '../eventhandlers/HardwareEventHandler';
-import TracklistStore from './TracklistStore';
-import QueueStore from './QueueStore';
-import PresetsController, { PresetsDataStore } from './PresetsStore';
-import SettingsStore from './SettingsStore';
-import BluetoothStore from './BluetoothStore';
-import PhoneConnectionStore from './PhoneConnectionStore';
+import PlayerStore from "./PlayerStore";
+import ImageStore from "./ImageStore";
+import ViewStore from "./ViewStore";
+import ShelfStore from "./ShelfStore";
+import OnboardingStore from "./OnboardingStore";
+import BannerStore from "./BannerStore";
+import UbiLogger from "./UbiLogger";
+import HardwareStore from "./HardwareStore";
+import HardwareEvents from "../helpers/HardwareEvents";
+import HardwareEventHandler from "../eventhandlers/HardwareEventHandler";
+import TracklistStore from "./TracklistStore";
+import QueueStore from "./QueueStore";
+import PresetsController, { PresetsDataStore } from "./PresetsStore";
+import SettingsStore from "./SettingsStore";
+import BluetoothStore from "./BluetoothStore";
+import PhoneConnectionStore from "./PhoneConnectionStore";
 import {
   NpvStore,
   RemoteControlStore,
@@ -44,8 +44,8 @@ import {
   DisconnectedLogger,
   createOverlayController,
   MockPersistentStorage,
-} from './stubs';
-import { reaction, extendObservable } from 'mobx';
+} from "./stubs";
+import { reaction, extendObservable } from "mobx";
 
 export class RootStore {
   versionStatusStore;
@@ -210,8 +210,7 @@ export class RootStore {
     try {
       this.hardwareEvents = new HardwareEvents();
       HardwareEventHandler.handleEvents(this.hardwareEvents, this);
-    } catch (error) {
-    }
+    } catch (error) {}
 
     extendObservable(this, {
       spotifyData: null,
@@ -224,7 +223,6 @@ export class RootStore {
       if (this.presetsController) {
         this.presetsController.presetsUiState.showPresets();
       } else {
-        
       }
     };
 
@@ -242,7 +240,7 @@ export class RootStore {
         const uiState = this.shelfStore.shelfController.swiperUiState;
         const selectedItem = uiState.allShelfItems[uiState.selectedItemIndex];
         return selectedItem;
-      }
+      },
     };
 
     this.fetchAppState();

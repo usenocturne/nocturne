@@ -1,8 +1,8 @@
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './PhoneConnectionContextMenu.module.scss';
-import classNames from 'classnames';
-import PhoneConnectionContextMenuItem from './PhoneConnectionContextMenuItem';
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./PhoneConnectionContextMenu.module.scss";
+import classNames from "classnames";
+import PhoneConnectionContextMenuItem from "./PhoneConnectionContextMenuItem";
 
 const PhoneConnectionContextMenu = () => {
   const uiState =

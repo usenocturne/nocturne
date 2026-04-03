@@ -1,11 +1,11 @@
-import { useEffect } from 'react';
-import styles from './Presets.module.scss';
-import { useSwipeable } from 'react-swipeable';
-import { observer } from 'mobx-react-lite';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { PRESET_NUMBERS } from '../../../stores/PresetsStore';
-import PresetNumberIndicator from './PresetIndicator/PresetNumberIndicator';
-import PresetCard from './PresetCard/PresetCard';
+import { useEffect } from "react";
+import styles from "./Presets.module.scss";
+import { useSwipeable } from "react-swipeable";
+import { observer } from "mobx-react-lite";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { PRESET_NUMBERS } from "../../../stores/PresetsStore";
+import PresetNumberIndicator from "./PresetIndicator/PresetNumberIndicator";
+import PresetCard from "./PresetCard/PresetCard";
 
 const SWIPE_TO_DISAPPEAR_LIMIT_PX = 150;
 
@@ -24,7 +24,7 @@ const Presets = () => {
   };
 
   const swipeHandlers = useSwipeable({ onSwipedUp: swipeUpHandler });
-  
+
   return (
     <div
       className={styles.presetsBackground}

@@ -1,4 +1,4 @@
-import { IconCheckAlt } from '../EncoreWeb/IconCheckAlt';
+import { IconCheckAlt } from "../EncoreWeb/IconCheckAlt";
 
 const IconCheckAlt32 = () => <IconCheckAlt iconSize={32} />;
 

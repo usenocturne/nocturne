@@ -1,12 +1,12 @@
-import { useRef } from 'react';
-import { observer } from 'mobx-react-lite';
-import classNames from 'classnames';
-import styles from './PresetCard.module.scss';
-import PresetContent from './PresetContent';
-import PresetPlaceholder from './PresetPlaceholder';
-import { CSSTransition } from 'react-transition-group';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import PresetUnavailable from './PresetUnavailable';
+import { useRef } from "react";
+import { observer } from "mobx-react-lite";
+import classNames from "classnames";
+import styles from "./PresetCard.module.scss";
+import PresetContent from "./PresetContent";
+import PresetPlaceholder from "./PresetPlaceholder";
+import { CSSTransition } from "react-transition-group";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import PresetUnavailable from "./PresetUnavailable";
 
 const transitionStyles = {
   appear: styles.appear,
@@ -41,11 +41,11 @@ const PresetCard = ({ preset }) => {
         )}
         onClick={() => uiState.handleTapOnPreset(preset.slot_index)}
       >
-        {preset.type === 'preset' && <PresetContent preset={preset} />}
-        {preset.type === 'placeholder' && (
+        {preset.type === "preset" && <PresetContent preset={preset} />}
+        {preset.type === "placeholder" && (
           <PresetPlaceholder isFocused={isFocused} />
         )}
-        {preset.type === 'unavailable' && <PresetUnavailable preset={preset} />}
+        {preset.type === "unavailable" && <PresetUnavailable preset={preset} />}
       </div>
     </CSSTransition>
   );

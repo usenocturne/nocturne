@@ -1,15 +1,21 @@
-import { IconShuffle48, IconShuffleActive48, IconDJ48 } from '../../../Icons/CarthingUIComponents';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import { NpvIcon } from './Controls';
-import ControlButton from './ControlButton';
-import styles from './Controls.module.scss';
+import {
+  IconShuffle48,
+  IconShuffleActive48,
+  IconDJ48,
+} from "../../../Icons/CarthingUIComponents";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import { NpvIcon } from "./Controls";
+import ControlButton from "./ControlButton";
+import styles from "./Controls.module.scss";
 
 const Shuffle = () => {
-  const { npvStore, playerStore, spotifyControls, currentPlayback } = useCarThingStore();
+  const { npvStore, playerStore, spotifyControls, currentPlayback } =
+    useCarThingStore();
   const uiState = npvStore.controlButtonsUiState;
 
-  const isDJPlaylist = currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
+  const isDJPlaylist =
+    currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
 
   const handleClick = () => {
     if (isDJPlaylist) {
@@ -25,7 +31,13 @@ const Shuffle = () => {
 
   return (
     <ControlButton
-      id={isDJPlaylist ? 'DJ_SIGNAL' : (uiState.isShuffled ? NpvIcon.UNSHUFFLE : NpvIcon.SHUFFLE)}
+      id={
+        isDJPlaylist
+          ? "DJ_SIGNAL"
+          : uiState.isShuffled
+            ? NpvIcon.UNSHUFFLE
+            : NpvIcon.SHUFFLE
+      }
       onClick={handleClick}
       isDisabled={isDJPlaylist ? false : !playerStore.canToggleShuffle}
     >

@@ -1,4 +1,4 @@
-import styles from './PowerTutorial.module.scss';
+import styles from "./PowerTutorial.module.scss";
 
 const PowerTutorial = () => {
   return (

@@ -1,4 +1,4 @@
-import { makeAutoObservable, get, action } from 'mobx';
+import { makeAutoObservable, get, action } from "mobx";
 
 export const PRESET_NUMBERS = [1, 2, 3, 4];
 
@@ -58,14 +58,14 @@ export class PresetsUiState {
   }
 
   get presets() {
-    return PRESET_NUMBERS.map(number => {
+    return PRESET_NUMBERS.map((number) => {
       const preset = this.presetsDataStore.getPreset(number);
 
       if (preset) {
-        return { ...preset, slot_index: number, type: 'preset' };
+        return { ...preset, slot_index: number, type: "preset" };
       }
 
-      return { slot_index: number, type: 'placeholder' };
+      return { slot_index: number, type: "placeholder" };
     });
   }
 
@@ -76,11 +76,15 @@ export class PresetsUiState {
   showNowPlaying(contextUri) {
     if (!this.isPlaying) return false;
 
-    const isLikedSongs = contextUri === 'spotify:collection:your-music';
+    const isLikedSongs = contextUri === "spotify:collection:your-music";
 
     if (this.currentlyPlayingContextUri) {
       if (this.currentlyPlayingContextUri === contextUri) return true;
-      if (isLikedSongs && this.currentlyPlayingContextUri.includes(':collection')) return true;
+      if (
+        isLikedSongs &&
+        this.currentlyPlayingContextUri.includes(":collection")
+      )
+        return true;
       return false;
     }
 
@@ -88,7 +92,7 @@ export class PresetsUiState {
     const activeContextUri = rootStore?.currentPlayback?.context?.uri;
     if (activeContextUri) {
       if (activeContextUri === contextUri) return true;
-      if (isLikedSongs && activeContextUri.includes(':collection')) return true;
+      if (isLikedSongs && activeContextUri.includes(":collection")) return true;
     }
 
     return this.playerStore.contextUri === contextUri;
@@ -137,12 +141,12 @@ export class PresetsUiState {
     const preset = this.presetsDataStore.getPreset(presetNumber);
 
     if (!preset) {
-      this.playTTS('no_presets');
+      this.playTTS("no_presets");
       return;
     }
 
     if (this.presetsDataStore.isUnavailable(presetNumber)) {
-      this.playTTS('preset_unavailable');
+      this.playTTS("preset_unavailable");
       return;
     }
 
@@ -157,7 +161,12 @@ export class PresetsUiState {
     }
 
     const contextData = await this.getContextData(currentUri);
-    await this.presetsDataStore.savePreset(currentUri, presetNumber, 'car_thing', contextData);
+    await this.presetsDataStore.savePreset(
+      currentUri,
+      presetNumber,
+      "car_thing",
+      contextData,
+    );
   }
 
   getCurrentSaveableUri() {
@@ -169,11 +178,11 @@ export class PresetsUiState {
       const trackUri = currentPlayback.item?.uri;
       const albumUri = currentPlayback.item?.album?.uri;
 
-      if (contextUri && contextUri.startsWith('spotify:search')) {
+      if (contextUri && contextUri.startsWith("spotify:search")) {
         return trackUri;
       }
 
-      if (!contextUri || contextUri.includes('queue')) {
+      if (!contextUri || contextUri.includes("queue")) {
         return albumUri || trackUri;
       }
 
@@ -184,15 +193,17 @@ export class PresetsUiState {
     const trackUri = this.playerStore.currentTrack?.uri;
     const albumUri = this.playerStore.currentTrack?.album?.uri;
 
-    if (contextUri && contextUri.startsWith('spotify:search')) {
+    if (contextUri && contextUri.startsWith("spotify:search")) {
       return trackUri;
     }
 
-    if (!contextUri || contextUri.includes('queue')) {
+    if (!contextUri || contextUri.includes("queue")) {
       return albumUri || trackUri;
     }
 
-    return contextUri && contextUri !== 'spotify:track:unknown' ? contextUri : (albumUri || trackUri);
+    return contextUri && contextUri !== "spotify:track:unknown"
+      ? contextUri
+      : albumUri || trackUri;
   }
 
   async getContextData(uri) {
@@ -200,60 +211,81 @@ export class PresetsUiState {
     const currentPlayback = rootStore?.currentPlayback;
     const npvUiState = rootStore?.npvStore?.playingInfoUiState;
 
-    let contextName = 'Unknown';
-    let contextDescription = '';
-    let contextImage = currentPlayback?.item?.album?.images?.[0]?.url || '';
+    let contextName = "Unknown";
+    let contextDescription = "";
+    let contextImage = currentPlayback?.item?.album?.images?.[0]?.url || "";
 
-    if (uri.includes('spotify:artist:')) {
-      contextName = currentPlayback?.item?.artists?.[0]?.name || 'Unknown Artist';
-      contextDescription = 'Artist';
-      
+    if (uri.includes("spotify:artist:")) {
+      contextName =
+        currentPlayback?.item?.artists?.[0]?.name || "Unknown Artist";
+      contextDescription = "Artist";
+
       try {
-        const artistId = uri.replace('spotify:artist:', '');
-        const { sendNocturneWsRequest } = await import('../../../hooks/useNocturned');
-        const result = await sendNocturneWsRequest('spotify.artist.get', { id: artistId }, { timeoutMs: 5000 });
+        const artistId = uri.replace("spotify:artist:", "");
+        const { sendNocturneWsRequest } =
+          await import("../../../hooks/useNocturned");
+        const result = await sendNocturneWsRequest(
+          "spotify.artist.get",
+          { id: artistId },
+          { timeoutMs: 5000 },
+        );
         if (result?.images?.[0]?.url) contextImage = result.images[0].url;
         if (result?.name) contextName = result.name;
-      } catch {  }
-
-    } else if (uri.includes('spotify:playlist:')) {
-      const playlistId = uri.replace('spotify:playlist:', '');
-      if (playlistId === '37i9dQZF1EYkqdzj48dyYq') {
-        contextName = 'DJ';
-        contextDescription = 'Spotify';
+      } catch {}
+    } else if (uri.includes("spotify:playlist:")) {
+      const playlistId = uri.replace("spotify:playlist:", "");
+      if (playlistId === "37i9dQZF1EYkqdzj48dyYq") {
+        contextName = "DJ";
+        contextDescription = "Spotify";
       } else {
-        contextName = npvUiState?.contextHeaderTitle || 'Unknown Playlist';
-        contextDescription = 'Playlist';
+        contextName = npvUiState?.contextHeaderTitle || "Unknown Playlist";
+        contextDescription = "Playlist";
       }
-      
+
       try {
-        const { sendNocturneWsRequest } = await import('../../../hooks/useNocturned');
-        const result = await sendNocturneWsRequest('spotify.playlist.get', { id: playlistId, fields: 'name,images' }, { timeoutMs: 5000 });
+        const { sendNocturneWsRequest } =
+          await import("../../../hooks/useNocturned");
+        const result = await sendNocturneWsRequest(
+          "spotify.playlist.get",
+          { id: playlistId, fields: "name,images" },
+          { timeoutMs: 5000 },
+        );
         if (result?.images?.[0]?.url) contextImage = result.images[0].url;
         if (result?.name) contextName = result.name;
-      } catch {  }
-
-    } else if (uri.includes('spotify:album:')) {
-      contextName = currentPlayback?.item?.album?.name ||
-        (npvUiState?.contextHeaderTitle !== 'Queue' ? npvUiState?.contextHeaderTitle : null) ||
-        'Unknown Album';
-      contextDescription = currentPlayback?.item?.artists ?
-        currentPlayback.item.artists.map(a => a.name).join(', ') : '';
-
-    } else if (uri.includes('spotify:track:')) {
-      contextName = currentPlayback?.item?.name || 'Unknown Track';
-      contextDescription = currentPlayback?.item?.artists ?
-        currentPlayback.item.artists.map(a => a.name).join(', ') : '';
-
-    } else if (uri.includes('spotify:show:') || uri.includes('spotify:episode:')) {
-      contextName = currentPlayback?.item?.show?.name || currentPlayback?.item?.name || 'Unknown';
-      contextDescription = 'Podcast';
+      } catch {}
+    } else if (uri.includes("spotify:album:")) {
+      contextName =
+        currentPlayback?.item?.album?.name ||
+        (npvUiState?.contextHeaderTitle !== "Queue"
+          ? npvUiState?.contextHeaderTitle
+          : null) ||
+        "Unknown Album";
+      contextDescription = currentPlayback?.item?.artists
+        ? currentPlayback.item.artists.map((a) => a.name).join(", ")
+        : "";
+    } else if (uri.includes("spotify:track:")) {
+      contextName = currentPlayback?.item?.name || "Unknown Track";
+      contextDescription = currentPlayback?.item?.artists
+        ? currentPlayback.item.artists.map((a) => a.name).join(", ")
+        : "";
+    } else if (
+      uri.includes("spotify:show:") ||
+      uri.includes("spotify:episode:")
+    ) {
+      contextName =
+        currentPlayback?.item?.show?.name ||
+        currentPlayback?.item?.name ||
+        "Unknown";
+      contextDescription = "Podcast";
       contextImage = currentPlayback?.item?.images?.[0]?.url || contextImage;
-
     } else {
-      contextName = npvUiState?.contextHeaderTitle || currentPlayback?.item?.name || 'Unknown';
-      contextDescription = currentPlayback?.item?.artists ?
-        currentPlayback.item.artists.map(a => a.name).join(', ') : '';
+      contextName =
+        npvUiState?.contextHeaderTitle ||
+        currentPlayback?.item?.name ||
+        "Unknown";
+      contextDescription = currentPlayback?.item?.artists
+        ? currentPlayback.item.artists.map((a) => a.name).join(", ")
+        : "";
     }
 
     return {
@@ -265,7 +297,7 @@ export class PresetsUiState {
   }
 
   showSaveError() {
-    this.overlayController?.showModal?.('saving_preset_failed');
+    this.overlayController?.showModal?.("saving_preset_failed");
   }
 
   playTTS(audioType) {
@@ -273,7 +305,6 @@ export class PresetsUiState {
   }
 
   async playPresetContext(preset) {
-    
     this.currentlyPlayingContextUri = null;
     this.currentlyPlayingContextUri = preset.context_uri;
     this.playerStore.setContextUri(preset.context_uri);
@@ -282,7 +313,7 @@ export class PresetsUiState {
     const playTrack = rootStore?.spotifyControls?.playTrack;
 
     if (!playTrack) {
-      console.error('playTrack not available on spotifyControls');
+      console.error("playTrack not available on spotifyControls");
       this.currentlyPlayingContextUri = null;
       return;
     }
@@ -290,28 +321,37 @@ export class PresetsUiState {
     try {
       const uri = preset.context_uri;
 
-      if (uri === 'spotify:collection:your-music') {
-        
-        const { sendNocturneWsRequest } = await import('../../../hooks/useNocturned');
+      if (uri === "spotify:collection:your-music") {
+        const { sendNocturneWsRequest } =
+          await import("../../../hooks/useNocturned");
         try {
-          const profile = await sendNocturneWsRequest('spotify.me.profile', {}, { timeoutMs: 5000 });
+          const profile = await sendNocturneWsRequest(
+            "spotify.me.profile",
+            {},
+            { timeoutMs: 5000 },
+          );
           const userId = profile?.id;
           if (userId) {
             await playTrack(null, `spotify:user:${userId}:collection`);
           } else {
-            
-            const result = await sendNocturneWsRequest('spotify.me.tracks', { limit: 50, mockingbird: true }, { timeoutMs: 8000 });
-            const trackUris = (result?.items || []).map(i => i.track?.uri).filter(Boolean);
+            const result = await sendNocturneWsRequest(
+              "spotify.me.tracks",
+              { limit: 50, mockingbird: true },
+              { timeoutMs: 8000 },
+            );
+            const trackUris = (result?.items || [])
+              .map((i) => i.track?.uri)
+              .filter(Boolean);
             if (trackUris.length > 0) {
               await playTrack(trackUris[0], null, trackUris);
             }
           }
         } catch (e) {
-          console.error('Error playing Liked Songs:', e);
+          console.error("Error playing Liked Songs:", e);
           this.currentlyPlayingContextUri = null;
           return;
         }
-      } else if (uri === 'spotify:playlist:37i9dQZF1EYkqdzj48dyYq') {
+      } else if (uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq") {
         const playDJMix = rootStore?.spotifyControls?.playDJMix;
         const deviceId = rootStore?.currentPlayback?.device?.id;
         if (playDJMix) {
@@ -319,7 +359,7 @@ export class PresetsUiState {
         } else {
           await playTrack(null, uri);
         }
-      } else if (uri.includes('spotify:track:')) {
+      } else if (uri.includes("spotify:track:")) {
         await playTrack(uri);
       } else {
         await playTrack(null, uri);
@@ -327,7 +367,7 @@ export class PresetsUiState {
 
       this.viewStore.showNpv();
     } catch (error) {
-      console.error('Error playing preset:', error);
+      console.error("Error playing preset:", error);
       this.currentlyPlayingContextUri = null;
     }
   }
@@ -339,18 +379,24 @@ export class PresetsUiState {
       clearTimeout(this.presetsTimeout);
     }
 
-    this.presetsTimeout = setTimeout(action(() => {
-      this.hidePresets();
-    }), 4000);
+    this.presetsTimeout = setTimeout(
+      action(() => {
+        this.hidePresets();
+      }),
+      4000,
+    );
   }
 
   hidePresets() {
     this.isAnimatingOut = true;
 
-    setTimeout(action(() => {
-      this.isShowingPresets = false;
-      this.isAnimatingOut = false;
-    }), 500);
+    setTimeout(
+      action(() => {
+        this.isShowingPresets = false;
+        this.isAnimatingOut = false;
+      }),
+      500,
+    );
   }
 
   reset() {
@@ -386,23 +432,23 @@ export class PresetsDataStore {
       const presetData = {
         context_uri: uri,
         slot_index: slotIndex,
-        name: tempPresetData?.name || 'Saved Preset',
-        description: tempPresetData?.description || '',
-        image_url: tempPresetData?.image_url || '',
+        name: tempPresetData?.name || "Saved Preset",
+        description: tempPresetData?.description || "",
+        image_url: tempPresetData?.image_url || "",
       };
 
       this.presets[slotIndex] = presetData;
       this.savePresetsToStorage();
       return true;
     } catch (error) {
-      console.error('Failed to save preset:', error);
+      console.error("Failed to save preset:", error);
       throw error;
     }
   }
 
   loadPresetsFromStorage() {
     try {
-      const stored = localStorage.getItem('nocturne_presets');
+      const stored = localStorage.getItem("nocturne_presets");
       if (stored) {
         this.presets = JSON.parse(stored);
         this.refreshPresetImages();
@@ -410,7 +456,7 @@ export class PresetsDataStore {
         this.setDefaultPresets();
       }
     } catch (error) {
-      console.error('Error loading presets from localStorage:', error);
+      console.error("Error loading presets from localStorage:", error);
       this.setDefaultPresets();
     }
   }
@@ -418,16 +464,16 @@ export class PresetsDataStore {
   setDefaultPresets() {
     this.presets = {
       1: {
-        context_uri: 'spotify:collection:your-music',
-        name: 'Liked Songs',
-        description: '',
-        image_url: '/images/liked-songs.webp'
+        context_uri: "spotify:collection:your-music",
+        name: "Liked Songs",
+        description: "",
+        image_url: "/images/liked-songs.webp",
       },
       3: {
-        context_uri: 'spotify:playlist:37i9dQZF1EfYtRPpxPqlEQ',
-        name: 'Daily Drive',
-        description: 'Spotify',
-        image_url: ''
+        context_uri: "spotify:playlist:37i9dQZF1EfYtRPpxPqlEQ",
+        name: "Daily Drive",
+        description: "Spotify",
+        image_url: "",
       },
     };
 
@@ -437,35 +483,42 @@ export class PresetsDataStore {
 
   async refreshPresetImages() {
     try {
-      const { sendNocturneWsRequest } = await import('../../../hooks/useNocturned');
+      const { sendNocturneWsRequest } =
+        await import("../../../hooks/useNocturned");
       for (const [slotIndex, preset] of Object.entries(this.presets)) {
         if (preset.image_url || !preset.context_uri) continue;
         const uri = preset.context_uri;
-        if (uri.includes('spotify:playlist:')) {
-          const playlistId = uri.replace('spotify:playlist:', '');
+        if (uri.includes("spotify:playlist:")) {
+          const playlistId = uri.replace("spotify:playlist:", "");
           try {
-            const result = await sendNocturneWsRequest('spotify.playlist.get', { id: playlistId, fields: 'name,images' }, { timeoutMs: 5000 });
+            const result = await sendNocturneWsRequest(
+              "spotify.playlist.get",
+              { id: playlistId, fields: "name,images" },
+              { timeoutMs: 5000 },
+            );
             if (result?.images?.[0]?.url) {
-              this.presets[slotIndex] = { ...preset, image_url: result.images[0].url };
+              this.presets[slotIndex] = {
+                ...preset,
+                image_url: result.images[0].url,
+              };
               if (result.name) this.presets[slotIndex].name = result.name;
             }
-          } catch {  }
+          } catch {}
         }
       }
       this.savePresetsToStorage();
-    } catch {  }
+    } catch {}
   }
 
   savePresetsToStorage() {
     try {
-      localStorage.setItem('nocturne_presets', JSON.stringify(this.presets));
+      localStorage.setItem("nocturne_presets", JSON.stringify(this.presets));
     } catch (error) {
-      console.error('Error saving presets to localStorage:', error);
+      console.error("Error saving presets to localStorage:", error);
     }
   }
 
   loadPresets() {
-    
     return Promise.resolve();
   }
 
@@ -509,7 +562,7 @@ export class PresetsController {
   get isSwipeDownPresetsEnabled() {
     return (
       this.isPresetButtonsEnabled &&
-      !this.rootStore.overlayController?.isShowing?.('voice')
+      !this.rootStore.overlayController?.isShowing?.("voice")
     );
   }
 

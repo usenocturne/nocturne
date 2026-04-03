@@ -1,6 +1,6 @@
-import { makeAutoObservable, runInAction, action } from 'mobx';
-import { getThumbnailImageUrl } from '../helpers/ImageSizeHelper';
-import { sendNocturneWsRequest } from '../../../hooks/useNocturned';
+import { makeAutoObservable, runInAction, action } from "mobx";
+import { getThumbnailImageUrl } from "../helpers/ImageSizeHelper";
+import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
 
 const INITIAL_FETCH_SIZE = 30;
 const BACKGROUND_FETCH_SIZE = 50;
@@ -10,16 +10,16 @@ export const isSupportedUriType = (uri) => {
   if (!uri) return false;
 
   return !(
-    uri.includes('track:') ||
-    uri.includes('episode:') ||
-    uri.includes('search:') ||
-    uri.includes('playlist-recommended:')
+    uri.includes("track:") ||
+    uri.includes("episode:") ||
+    uri.includes("search:") ||
+    uri.includes("playlist-recommended:")
   );
 };
 
 class TracklistUiState {
   rootStore;
-  contextItem = { uri: '', title: '' };
+  contextItem = { uri: "", title: "" };
   selectedItem = undefined;
   animateSliding = false;
   showAddToQueueSuccess = false;
@@ -57,7 +57,7 @@ class TracklistUiState {
       this._bgLoadAbort.abort = true;
       this._bgLoadAbort = null;
     }
-    this.contextItem = { uri: '', title: '' };
+    this.contextItem = { uri: "", title: "" };
     this.selectedItem = undefined;
     this.animateSliding = false;
     this.tracksData = [];
@@ -97,12 +97,16 @@ class TracklistUiState {
   }
 
   get latestPlayedEpisode() {
-    if (!this.isPodcastContext || !this.rootStore.podcastStore) return undefined;
+    if (!this.isPodcastContext || !this.rootStore.podcastStore)
+      return undefined;
 
-    const latestPlayedUri = this.rootStore.podcastStore.getLatestPlayedUri &&
+    const latestPlayedUri =
+      this.rootStore.podcastStore.getLatestPlayedUri &&
       this.rootStore.podcastStore.getLatestPlayedUri(this.contextUri);
 
-    return this.tracksList.find((trackItem) => trackItem.uri === latestPlayedUri);
+    return this.tracksList.find(
+      (trackItem) => trackItem.uri === latestPlayedUri,
+    );
   }
 
   get initiallySelectedItem() {
@@ -129,7 +133,7 @@ class TracklistUiState {
         await this.loadArtistTopTracks(uri);
       }
     } catch (error) {
-      console.error('Error loading tracklist items:', error);
+      console.error("Error loading tracklist items:", error);
     }
 
     runInAction(() => {
@@ -142,20 +146,20 @@ class TracklistUiState {
     return (Array.isArray(items) ? items : []).map((track) => ({
       uri: track.uri,
       title: track.name,
-      subtitle: track.artists?.map(artist => artist.name).join(', ') || '',
+      subtitle: track.artists?.map((artist) => artist.name).join(", ") || "",
       image_id: null,
       metadata: {
         duration_ms: track.duration_ms,
         explicit: track.explicit,
         track_number: track.track_number,
-        disc_number: track.disc_number
+        disc_number: track.disc_number,
       },
-      available_offline: false
+      available_offline: false,
     }));
   }
 
   async loadAlbumTracks(albumUri) {
-    const albumId = albumUri.replace('spotify:album:', '');
+    const albumId = albumUri.replace("spotify:album:", "");
 
     if (this._bgLoadAbort) {
       this._bgLoadAbort.abort = true;
@@ -164,11 +168,15 @@ class TracklistUiState {
     this._bgLoadAbort = abortToken;
 
     try {
-      const data = await sendNocturneWsRequest('spotify.album.tracks', {
-        id: albumId,
-        limit: INITIAL_FETCH_SIZE,
-        offset: 0,
-      }, { timeoutMs: 8000 });
+      const data = await sendNocturneWsRequest(
+        "spotify.album.tracks",
+        {
+          id: albumId,
+          limit: INITIAL_FETCH_SIZE,
+          offset: 0,
+        },
+        { timeoutMs: 8000 },
+      );
 
       if (abortToken.abort) return;
 
@@ -185,24 +193,30 @@ class TracklistUiState {
         this._backgroundLoadAlbum(albumId, parsed.length, total, abortToken);
       }
     } catch (error) {
-      console.error('Error loading album tracks:', error);
+      console.error("Error loading album tracks:", error);
     }
   }
 
   async _backgroundLoadAlbum(albumId, loadedCount, total, abortToken) {
-    runInAction(() => { this._loadingMore = true; });
+    runInAction(() => {
+      this._loadingMore = true;
+    });
     let offset = loadedCount;
 
     while (offset < total && !abortToken.abort) {
-      await new Promise(r => setTimeout(r, BACKGROUND_FETCH_DELAY));
+      await new Promise((r) => setTimeout(r, BACKGROUND_FETCH_DELAY));
       if (abortToken.abort) break;
 
       try {
-        const data = await sendNocturneWsRequest('spotify.album.tracks', {
-          id: albumId,
-          limit: BACKGROUND_FETCH_SIZE,
-          offset,
-        }, { timeoutMs: 10000 });
+        const data = await sendNocturneWsRequest(
+          "spotify.album.tracks",
+          {
+            id: albumId,
+            limit: BACKGROUND_FETCH_SIZE,
+            offset,
+          },
+          { timeoutMs: 10000 },
+        );
 
         if (abortToken.abort) break;
 
@@ -210,8 +224,8 @@ class TracklistUiState {
         if (items.length === 0) break;
 
         const parsed = this._parseAlbumItems(items);
-        const existingUris = new Set(this.tracksData.map(t => t.uri));
-        const newTracks = parsed.filter(t => !existingUris.has(t.uri));
+        const existingUris = new Set(this.tracksData.map((t) => t.uri));
+        const newTracks = parsed.filter((t) => !existingUris.has(t.uri));
 
         runInAction(() => {
           this.tracksData = [...this.tracksData, ...newTracks];
@@ -220,31 +234,37 @@ class TracklistUiState {
         offset += items.length;
         if (!data?.next && items.length < BACKGROUND_FETCH_SIZE) break;
       } catch (error) {
-        console.warn('Background album load error, stopping:', error?.message);
+        console.warn("Background album load error, stopping:", error?.message);
         break;
       }
     }
 
-    runInAction(() => { this._loadingMore = false; });
+    runInAction(() => {
+      this._loadingMore = false;
+    });
   }
 
   _parseLikedSongItems(items) {
     return (Array.isArray(items) ? items : [])
-      .filter(item => item.track || item.uri)
+      .filter((item) => item.track || item.uri)
       .map((rawItem) => {
         const track = rawItem.track || rawItem;
-        const trackImage = track.image_url || track.album?.image_url || getThumbnailImageUrl(track.album?.images);
+        const trackImage =
+          track.image_url ||
+          track.album?.image_url ||
+          getThumbnailImageUrl(track.album?.images);
         return {
           uri: track.uri,
           title: track.name,
-          subtitle: track.artists?.map(artist => artist.name).join(', ') || '',
-          image_id: trackImage || '',
+          subtitle:
+            track.artists?.map((artist) => artist.name).join(", ") || "",
+          image_id: trackImage || "",
           metadata: {
             duration_ms: track.duration_ms,
             explicit: track.explicit,
-            album: track.album?.name
+            album: track.album?.name,
           },
-          available_offline: false
+          available_offline: false,
         };
       });
   }
@@ -257,11 +277,15 @@ class TracklistUiState {
     this._bgLoadAbort = abortToken;
 
     try {
-      const data = await sendNocturneWsRequest('spotify.me.tracks', {
-        limit: INITIAL_FETCH_SIZE,
-        offset: 0,
-        mockingbird: true,
-      }, { timeoutMs: 10000 });
+      const data = await sendNocturneWsRequest(
+        "spotify.me.tracks",
+        {
+          limit: INITIAL_FETCH_SIZE,
+          offset: 0,
+          mockingbird: true,
+        },
+        { timeoutMs: 10000 },
+      );
 
       if (abortToken.abort) return;
 
@@ -278,24 +302,30 @@ class TracklistUiState {
         this._backgroundLoadLikedSongs(parsed.length, total, abortToken);
       }
     } catch (error) {
-      console.error('Error loading liked songs:', error);
+      console.error("Error loading liked songs:", error);
     }
   }
 
   async _backgroundLoadLikedSongs(loadedCount, total, abortToken) {
-    runInAction(() => { this._loadingMore = true; });
+    runInAction(() => {
+      this._loadingMore = true;
+    });
     let offset = loadedCount;
 
     while (offset < total && !abortToken.abort) {
-      await new Promise(r => setTimeout(r, BACKGROUND_FETCH_DELAY));
+      await new Promise((r) => setTimeout(r, BACKGROUND_FETCH_DELAY));
       if (abortToken.abort) break;
 
       try {
-        const data = await sendNocturneWsRequest('spotify.me.tracks', {
-          limit: BACKGROUND_FETCH_SIZE,
-          offset,
-          mockingbird: true,
-        }, { timeoutMs: 10000 });
+        const data = await sendNocturneWsRequest(
+          "spotify.me.tracks",
+          {
+            limit: BACKGROUND_FETCH_SIZE,
+            offset,
+            mockingbird: true,
+          },
+          { timeoutMs: 10000 },
+        );
 
         if (abortToken.abort) break;
 
@@ -303,8 +333,8 @@ class TracklistUiState {
         if (items.length === 0) break;
 
         const parsed = this._parseLikedSongItems(items);
-        const existingUris = new Set(this.tracksData.map(t => t.uri));
-        const newTracks = parsed.filter(t => !existingUris.has(t.uri));
+        const existingUris = new Set(this.tracksData.map((t) => t.uri));
+        const newTracks = parsed.filter((t) => !existingUris.has(t.uri));
 
         runInAction(() => {
           this.tracksData = [...this.tracksData, ...newTracks];
@@ -313,37 +343,46 @@ class TracklistUiState {
         offset += items.length;
         if (!data?.next && items.length < BACKGROUND_FETCH_SIZE) break;
       } catch (error) {
-        console.warn('Background liked songs load error, stopping:', error?.message);
+        console.warn(
+          "Background liked songs load error, stopping:",
+          error?.message,
+        );
         break;
       }
     }
 
-    runInAction(() => { this._loadingMore = false; });
+    runInAction(() => {
+      this._loadingMore = false;
+    });
   }
 
   _parsePlaylistItems(items, playlistImage) {
     return (Array.isArray(items) ? items : [])
-      .filter(item => item.track || item.uri)
+      .filter((item) => item.track || item.uri)
       .map((rawItem) => {
         const track = rawItem.track || rawItem;
-        const trackImage = track.image_url || track.album?.image_url || getThumbnailImageUrl(track.album?.images);
+        const trackImage =
+          track.image_url ||
+          track.album?.image_url ||
+          getThumbnailImageUrl(track.album?.images);
         return {
           uri: track.uri,
           title: track.name,
-          subtitle: track.artists?.map(artist => artist.name).join(', ') || '',
+          subtitle:
+            track.artists?.map((artist) => artist.name).join(", ") || "",
           image_id: trackImage || playlistImage,
           metadata: {
             duration_ms: track.duration_ms,
             explicit: track.explicit,
-            album: track.album?.name
+            album: track.album?.name,
           },
-          available_offline: false
+          available_offline: false,
         };
       });
   }
 
   async loadPlaylistTracks(playlistUri) {
-    const playlistId = playlistUri.replace('spotify:playlist:', '');
+    const playlistId = playlistUri.replace("spotify:playlist:", "");
 
     if (this._bgLoadAbort) {
       this._bgLoadAbort.abort = true;
@@ -352,24 +391,33 @@ class TracklistUiState {
     this._bgLoadAbort = abortToken;
 
     try {
-      
       const [data, playlistInfo] = await Promise.allSettled([
-        sendNocturneWsRequest('spotify.playlist.tracks', {
-          id: playlistId,
-          limit: INITIAL_FETCH_SIZE,
-          offset: 0,
-          mockingbird: true,
-        }, { timeoutMs: 8000 }),
-        sendNocturneWsRequest('spotify.playlist.get', { id: playlistId }, { timeoutMs: 5000 }),
+        sendNocturneWsRequest(
+          "spotify.playlist.tracks",
+          {
+            id: playlistId,
+            limit: INITIAL_FETCH_SIZE,
+            offset: 0,
+            mockingbird: true,
+          },
+          { timeoutMs: 8000 },
+        ),
+        sendNocturneWsRequest(
+          "spotify.playlist.get",
+          { id: playlistId },
+          { timeoutMs: 5000 },
+        ),
       ]);
 
       if (abortToken.abort) return;
 
-      const result = data.status === 'fulfilled' ? data.value : null;
-      const info = playlistInfo.status === 'fulfilled' ? playlistInfo.value : null;
+      const result = data.status === "fulfilled" ? data.value : null;
+      const info =
+        playlistInfo.status === "fulfilled" ? playlistInfo.value : null;
       const items = result?.items || result || [];
       const total = result?.total || 0;
-      const playlistImage = info?.image_url || getThumbnailImageUrl(info?.images) || null;
+      const playlistImage =
+        info?.image_url || getThumbnailImageUrl(info?.images) || null;
 
       const parsed = this._parsePlaylistItems(items, playlistImage);
 
@@ -379,28 +427,46 @@ class TracklistUiState {
       });
 
       if (total > parsed.length && !abortToken.abort) {
-        this._backgroundLoadPlaylist(playlistId, parsed.length, total, playlistImage, abortToken);
+        this._backgroundLoadPlaylist(
+          playlistId,
+          parsed.length,
+          total,
+          playlistImage,
+          abortToken,
+        );
       }
     } catch (error) {
-      console.error('Error loading playlist tracks:', error);
+      console.error("Error loading playlist tracks:", error);
     }
   }
 
-  async _backgroundLoadPlaylist(playlistId, loadedCount, total, playlistImage, abortToken) {
-    runInAction(() => { this._loadingMore = true; });
+  async _backgroundLoadPlaylist(
+    playlistId,
+    loadedCount,
+    total,
+    playlistImage,
+    abortToken,
+  ) {
+    runInAction(() => {
+      this._loadingMore = true;
+    });
     let offset = loadedCount;
 
     while (offset < total && !abortToken.abort) {
-      await new Promise(r => setTimeout(r, BACKGROUND_FETCH_DELAY));
+      await new Promise((r) => setTimeout(r, BACKGROUND_FETCH_DELAY));
       if (abortToken.abort) break;
 
       try {
-        const data = await sendNocturneWsRequest('spotify.playlist.tracks', {
-          id: playlistId,
-          limit: BACKGROUND_FETCH_SIZE,
-          offset,
-          mockingbird: true,
-        }, { timeoutMs: 10000 });
+        const data = await sendNocturneWsRequest(
+          "spotify.playlist.tracks",
+          {
+            id: playlistId,
+            limit: BACKGROUND_FETCH_SIZE,
+            offset,
+            mockingbird: true,
+          },
+          { timeoutMs: 10000 },
+        );
 
         if (abortToken.abort) break;
 
@@ -408,8 +474,8 @@ class TracklistUiState {
         if (items.length === 0) break;
 
         const parsed = this._parsePlaylistItems(items, playlistImage);
-        const existingUris = new Set(this.tracksData.map(t => t.uri));
-        const newTracks = parsed.filter(t => !existingUris.has(t.uri));
+        const existingUris = new Set(this.tracksData.map((t) => t.uri));
+        const newTracks = parsed.filter((t) => !existingUris.has(t.uri));
 
         runInAction(() => {
           this.tracksData = [...this.tracksData, ...newTracks];
@@ -418,33 +484,50 @@ class TracklistUiState {
         offset += items.length;
         if (!data?.next && items.length < BACKGROUND_FETCH_SIZE) break;
       } catch (error) {
-        console.warn('Background playlist load error, stopping:', error?.message);
+        console.warn(
+          "Background playlist load error, stopping:",
+          error?.message,
+        );
         break;
       }
     }
 
-    runInAction(() => { this._loadingMore = false; });
+    runInAction(() => {
+      this._loadingMore = false;
+    });
   }
 
   async loadArtistTopTracks(artistUri) {
-    const artistId = artistUri.replace('spotify:artist:', '');
+    const artistId = artistUri.replace("spotify:artist:", "");
 
     try {
       const [tracksResult, artistResult] = await Promise.allSettled([
-        sendNocturneWsRequest('spotify.artist.topTracks', { id: artistId, mockingbird: true }, { timeoutMs: 8000 }),
-        sendNocturneWsRequest('spotify.artist.get', { id: artistId }, { timeoutMs: 8000 }),
+        sendNocturneWsRequest(
+          "spotify.artist.topTracks",
+          { id: artistId, mockingbird: true },
+          { timeoutMs: 8000 },
+        ),
+        sendNocturneWsRequest(
+          "spotify.artist.get",
+          { id: artistId },
+          { timeoutMs: 8000 },
+        ),
       ]);
 
-      const data = tracksResult.status === 'fulfilled' ? tracksResult.value : null;
-      const artistInfo = artistResult.status === 'fulfilled' ? artistResult.value : null;
+      const data =
+        tracksResult.status === "fulfilled" ? tracksResult.value : null;
+      const artistInfo =
+        artistResult.status === "fulfilled" ? artistResult.value : null;
       const tracks = data?.tracks || data || [];
-      const artistImage = artistInfo?.image_url || getThumbnailImageUrl(artistInfo?.images);
+      const artistImage =
+        artistInfo?.image_url || getThumbnailImageUrl(artistInfo?.images);
       const tracksArr = Array.isArray(tracks) ? tracks : [];
 
       runInAction(() => {
         this.tracksData = tracksArr.map((track) => {
-          const albumImage = track.album?.image_url || getThumbnailImageUrl(track.album?.images);
-          const albumName = track.album?.name || '';
+          const albumImage =
+            track.album?.image_url || getThumbnailImageUrl(track.album?.images);
+          const albumName = track.album?.name || "";
           return {
             uri: track.uri,
             title: track.name,
@@ -453,14 +536,14 @@ class TracklistUiState {
             metadata: {
               duration_ms: track.duration_ms,
               explicit: track.explicit,
-              album: albumName
+              album: albumName,
             },
-            available_offline: false
+            available_offline: false,
           };
         });
       });
     } catch (error) {
-      console.error('Error loading artist top tracks:', error);
+      console.error("Error loading artist top tracks:", error);
     }
   }
 
@@ -468,20 +551,22 @@ class TracklistUiState {
     return (Array.isArray(items) ? items : []).map((episode) => ({
       uri: episode.uri,
       title: episode.name,
-      subtitle: episode.description ? episode.description.substring(0, 100) + '...' : episode.release_date || '',
+      subtitle: episode.description
+        ? episode.description.substring(0, 100) + "..."
+        : episode.release_date || "",
       image_id: getThumbnailImageUrl(episode.images),
       metadata: {
         duration_ms: episode.duration_ms,
         explicit: episode.explicit,
         release_date: episode.release_date,
-        description: episode.description
+        description: episode.description,
       },
-      available_offline: false
+      available_offline: false,
     }));
   }
 
   async loadPodcastEpisodes(showUri) {
-    const showId = showUri.replace('spotify:show:', '');
+    const showId = showUri.replace("spotify:show:", "");
 
     if (this._bgLoadAbort) {
       this._bgLoadAbort.abort = true;
@@ -490,11 +575,15 @@ class TracklistUiState {
     this._bgLoadAbort = abortToken;
 
     try {
-      const data = await sendNocturneWsRequest('spotify.show.episodes', {
-        content_id: showId,
-        limit: INITIAL_FETCH_SIZE,
-        offset: 0,
-      }, { timeoutMs: 8000 });
+      const data = await sendNocturneWsRequest(
+        "spotify.show.episodes",
+        {
+          content_id: showId,
+          limit: INITIAL_FETCH_SIZE,
+          offset: 0,
+        },
+        { timeoutMs: 8000 },
+      );
 
       if (abortToken.abort) return;
 
@@ -511,24 +600,30 @@ class TracklistUiState {
         this._backgroundLoadEpisodes(showId, parsed.length, total, abortToken);
       }
     } catch (error) {
-      console.error('Error loading podcast episodes:', error);
+      console.error("Error loading podcast episodes:", error);
     }
   }
 
   async _backgroundLoadEpisodes(showId, loadedCount, total, abortToken) {
-    runInAction(() => { this._loadingMore = true; });
+    runInAction(() => {
+      this._loadingMore = true;
+    });
     let offset = loadedCount;
 
     while (offset < total && !abortToken.abort) {
-      await new Promise(r => setTimeout(r, BACKGROUND_FETCH_DELAY));
+      await new Promise((r) => setTimeout(r, BACKGROUND_FETCH_DELAY));
       if (abortToken.abort) break;
 
       try {
-        const data = await sendNocturneWsRequest('spotify.show.episodes', {
-          content_id: showId,
-          limit: BACKGROUND_FETCH_SIZE,
-          offset,
-        }, { timeoutMs: 10000 });
+        const data = await sendNocturneWsRequest(
+          "spotify.show.episodes",
+          {
+            content_id: showId,
+            limit: BACKGROUND_FETCH_SIZE,
+            offset,
+          },
+          { timeoutMs: 10000 },
+        );
 
         if (abortToken.abort) break;
 
@@ -536,8 +631,8 @@ class TracklistUiState {
         if (items.length === 0) break;
 
         const parsed = this._parseEpisodeItems(items);
-        const existingUris = new Set(this.tracksData.map(t => t.uri));
-        const newEps = parsed.filter(t => !existingUris.has(t.uri));
+        const existingUris = new Set(this.tracksData.map((t) => t.uri));
+        const newEps = parsed.filter((t) => !existingUris.has(t.uri));
 
         runInAction(() => {
           this.tracksData = [...this.tracksData, ...newEps];
@@ -546,12 +641,17 @@ class TracklistUiState {
         offset += items.length;
         if (!data?.next && items.length < BACKGROUND_FETCH_SIZE) break;
       } catch (error) {
-        console.warn('Background episode load error, stopping:', error?.message);
+        console.warn(
+          "Background episode load error, stopping:",
+          error?.message,
+        );
         break;
       }
     }
 
-    runInAction(() => { this._loadingMore = false; });
+    runInAction(() => {
+      this._loadingMore = false;
+    });
   }
 
   get isLoading() {
@@ -570,34 +670,54 @@ class TracklistUiState {
       return false;
     }
     return this.isPodcastContext
-      ? this.rootStore.podcastStore && this.rootStore.podcastStore.isError && this.rootStore.podcastStore.isError(this.contextUri)
-      : this.rootStore.childItemStore && this.rootStore.childItemStore.isError && this.rootStore.childItemStore.isError(this.contextUri);
+      ? this.rootStore.podcastStore &&
+          this.rootStore.podcastStore.isError &&
+          this.rootStore.podcastStore.isError(this.contextUri)
+      : this.rootStore.childItemStore &&
+          this.rootStore.childItemStore.isError &&
+          this.rootStore.childItemStore.isError(this.contextUri);
   }
 
   get isNowPlayingContext() {
-    return this.contextUri === (this.rootStore.playerStore && this.rootStore.playerStore.contextUri);
+    return (
+      this.contextUri ===
+      (this.rootStore.playerStore && this.rootStore.playerStore.contextUri)
+    );
   }
 
   get totalInContext() {
-    if (this.isPodcastContext && this.rootStore.podcastStore && this.rootStore.podcastStore.getTotalNumberOfItems) {
+    if (
+      this.isPodcastContext &&
+      this.rootStore.podcastStore &&
+      this.rootStore.podcastStore.getTotalNumberOfItems
+    ) {
       return this.rootStore.podcastStore.getTotalNumberOfItems(this.contextUri);
     }
-    if (this.rootStore.childItemStore && this.rootStore.childItemStore.getTotal) {
+    if (
+      this.rootStore.childItemStore &&
+      this.rootStore.childItemStore.getTotal
+    ) {
       return this.rootStore.childItemStore.getTotal(this.contextUri);
     }
-    return this.totalTracksInContext > 0 ? this.totalTracksInContext : this.tracksList.length;
+    return this.totalTracksInContext > 0
+      ? this.totalTracksInContext
+      : this.tracksList.length;
   }
 
   get tracksList() {
     if (this.isStationUri(this.contextUri)) {
-      return this.rootStore.radioStore && this.rootStore.radioStore.currentRadioTracks ? this.rootStore.radioStore.currentRadioTracks : [];
+      return this.rootStore.radioStore &&
+        this.rootStore.radioStore.currentRadioTracks
+        ? this.rootStore.radioStore.currentRadioTracks
+        : [];
     }
 
     return this.tracksData || [];
   }
 
   get currentlyPlayingItemSelected() {
-    const currentTrack = this.rootStore.playerStore && this.rootStore.playerStore.currentTrack;
+    const currentTrack =
+      this.rootStore.playerStore && this.rootStore.playerStore.currentTrack;
     if (!currentTrack) return false;
 
     const currentlyPlayingTrackIndex = this.tracksList.findIndex(
@@ -610,11 +730,15 @@ class TracklistUiState {
   }
 
   get browsingCurrentContext() {
-    return this.contextUri === (this.rootStore.playerStore && this.rootStore.playerStore.contextUri);
+    return (
+      this.contextUri ===
+      (this.rootStore.playerStore && this.rootStore.playerStore.contextUri)
+    );
   }
 
   get currentTrackInTracklist() {
-    const currentTrack = this.rootStore.playerStore && this.rootStore.playerStore.currentTrack;
+    const currentTrack =
+      this.rootStore.playerStore && this.rootStore.playerStore.currentTrack;
     if (!currentTrack) return false;
 
     return !!this.tracksList.find((item) => item.uri === currentTrack.uri);
@@ -623,7 +747,8 @@ class TracklistUiState {
   isStationAndNotCurrentlyPlaying(contextUri) {
     return (
       this.isStationUri(contextUri) &&
-      contextUri !== (this.rootStore.playerStore && this.rootStore.playerStore.contextUri)
+      contextUri !==
+        (this.rootStore.playerStore && this.rootStore.playerStore.contextUri)
     );
   }
 
@@ -632,7 +757,10 @@ class TracklistUiState {
     if (!playerStore) return;
 
     let imageId = playerStore.currentImageId;
-    const items = shelfStore && shelfStore.getItemsByCategory ? shelfStore.getItemsByCategory('HOME_IDENTIFIER') : [];
+    const items =
+      shelfStore && shelfStore.getItemsByCategory
+        ? shelfStore.getItemsByCategory("HOME_IDENTIFIER")
+        : [];
 
     if (items.length > 0) {
       const firstItem = items[0];
@@ -683,15 +811,15 @@ class TracklistUiState {
   }
 
   get contextType() {
-    if (!this.contextUri) return '';
-    if (this.contextUri.includes('album:')) return 'album';
-    if (this.contextUri.includes('show:')) return 'show';
-    if (this.contextUri.includes('playlist:')) return 'playlist';
-    return '';
+    if (!this.contextUri) return "";
+    if (this.contextUri.includes("album:")) return "album";
+    if (this.contextUri.includes("show:")) return "show";
+    if (this.contextUri.includes("playlist:")) return "playlist";
+    return "";
   }
 
   get isAlbumContext() {
-    return this.contextType === 'album';
+    return this.contextType === "album";
   }
 
   get isPodcastContext() {
@@ -699,11 +827,11 @@ class TracklistUiState {
   }
 
   get isPlayListContext() {
-    return this.contextUri.includes('playlist:');
+    return this.contextUri.includes("playlist:");
   }
 
   get isPodcastOrAlbum() {
-    return this.contextType === 'album' || this.contextType === 'show';
+    return this.contextType === "album" || this.contextType === "show";
   }
 
   get rightItem() {
@@ -724,15 +852,21 @@ class TracklistUiState {
   }
 
   get currentPlayingTrackUri() {
-    return this.rootStore.playerStore && this.rootStore.playerStore.currentTrackUri;
+    return (
+      this.rootStore.playerStore && this.rootStore.playerStore.currentTrackUri
+    );
   }
 
   get currentPlayingTrackUid() {
-    return this.rootStore.playerStore && this.rootStore.playerStore.currentTrackUid;
+    return (
+      this.rootStore.playerStore && this.rootStore.playerStore.currentTrackUid
+    );
   }
 
   get currentPlayingImageId() {
-    return this.rootStore.playerStore && this.rootStore.playerStore.currentImageId;
+    return (
+      this.rootStore.playerStore && this.rootStore.playerStore.currentImageId
+    );
   }
 
   get colors() {
@@ -740,7 +874,9 @@ class TracklistUiState {
   }
 
   get isDialPressed() {
-    return this.rootStore.hardwareStore && this.rootStore.hardwareStore.dialPressed;
+    return (
+      this.rootStore.hardwareStore && this.rootStore.hardwareStore.dialPressed
+    );
   }
 
   get shouldShowQueueConfirmation() {
@@ -762,9 +898,12 @@ class TracklistUiState {
   get currentlyPlayingTrackOrFirst() {
     if (!this.tracksList.length) return undefined;
 
-    const currentTrack = this.rootStore.playerStore && this.rootStore.playerStore.currentTrack;
+    const currentTrack =
+      this.rootStore.playerStore && this.rootStore.playerStore.currentTrack;
     if (currentTrack && this.browsingCurrentContext) {
-      const currentItem = this.tracksList.find(item => item.uri === currentTrack.uri);
+      const currentItem = this.tracksList.find(
+        (item) => item.uri === currentTrack.uri,
+      );
       if (currentItem) return currentItem;
     }
 
@@ -773,7 +912,7 @@ class TracklistUiState {
 
   getIndexOfItem(item) {
     if (!item) return -1;
-    return this.tracksList.findIndex(trackItem => trackItem.uri === item.uri);
+    return this.tracksList.findIndex((trackItem) => trackItem.uri === item.uri);
   }
 
   updateSelectedItem(item, animate = true) {
@@ -807,9 +946,12 @@ class TracklistUiState {
 
   handleTrackChange() {
     if (this.browsingCurrentContext && this.currentTrackInTracklist) {
-      const currentTrack = this.rootStore.playerStore && this.rootStore.playerStore.currentTrack;
+      const currentTrack =
+        this.rootStore.playerStore && this.rootStore.playerStore.currentTrack;
       if (currentTrack) {
-        const currentItem = this.tracksList.find(item => item.uri === currentTrack.uri);
+        const currentItem = this.tracksList.find(
+          (item) => item.uri === currentTrack.uri,
+        );
         if (currentItem) {
           this.updateSelectedItem(currentItem, false);
         }
@@ -845,81 +987,88 @@ class TracklistUiState {
     }
   });
 
-  logContextImpression() {
+  logContextImpression() {}
 
-  }
-
-  logContextItemImpression(item) {
-
-  }
+  logContextItemImpression(item) {}
 
   logTrackRowClicked(item) {
-
     return Date.now();
   }
 
-  logRemoveLike() {
-
-  }
+  logRemoveLike() {}
 
   get shouldShowHeart() {
-    return !this.isCollectionUri(this.contextUri) && !this.isStationUri(this.contextUri);
+    return (
+      !this.isCollectionUri(this.contextUri) &&
+      !this.isStationUri(this.contextUri)
+    );
   }
 
   get isLiked() {
-    return this.rootStore.savedStore && this.rootStore.savedStore.isSaved && this.rootStore.savedStore.isSaved(this.contextUri);
+    return (
+      this.rootStore.savedStore &&
+      this.rootStore.savedStore.isSaved &&
+      this.rootStore.savedStore.isSaved(this.contextUri)
+    );
   }
 
   setIsSaved = action((isSaved) => {
-    if (this.contextType === 'album' || this.contextType === 'playlist') {
+    if (this.contextType === "album" || this.contextType === "playlist") {
       if (this.likeAlbumOrPlaylist) {
         this.likeAlbumOrPlaylist(this.contextUri, isSaved);
       }
-    } else if (this.rootStore.savedStore && this.rootStore.savedStore.setSaved) {
+    } else if (
+      this.rootStore.savedStore &&
+      this.rootStore.savedStore.setSaved
+    ) {
       this.rootStore.savedStore.setSaved(this.contextUri, isSaved);
     }
   });
 
   isCollectionUri(uri) {
-    return uri && uri.includes(':collection');
+    return uri && uri.includes(":collection");
   }
 
   titleBasedOnType(playerStore, queueStore) {
-    if (!playerStore) return 'Unknown';
+    if (!playerStore) return "Unknown";
 
-    return playerStore.contextTitle || playerStore.currentTrack?.album || 'Unknown Context';
+    return (
+      playerStore.contextTitle ||
+      playerStore.currentTrack?.album ||
+      "Unknown Context"
+    );
   }
 
   isTrackOrEpisode(uri) {
-    return uri && (uri.includes('track:') || uri.includes('episode:'));
+    return uri && (uri.includes("track:") || uri.includes("episode:"));
   }
 
   isShowUri(uri) {
-    return uri && uri.includes('show:');
+    return uri && uri.includes("show:");
   }
 
   isTrackUri(uri) {
-    return uri && uri.includes('track:');
+    return uri && uri.includes("track:");
   }
 
   isSearchUri(uri) {
-    return uri && uri.includes('search:');
+    return uri && uri.includes("search:");
   }
 
   isStationUri(uri) {
-    return uri && uri.includes('station:');
+    return uri && uri.includes("station:");
   }
 
   isAlbumUri(uri) {
-    return uri && uri.includes('album:');
+    return uri && uri.includes("album:");
   }
 
   isPlaylistUri(uri) {
-    return uri && uri.includes('playlist:');
+    return uri && uri.includes("playlist:");
   }
 
   isArtistUri(uri) {
-    return uri && uri.includes('artist:');
+    return uri && uri.includes("artist:");
   }
 }
 

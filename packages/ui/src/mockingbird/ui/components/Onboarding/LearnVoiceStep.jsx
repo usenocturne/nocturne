@@ -1,39 +1,39 @@
-import { useEffect, useRef, useState } from 'react';
-import { observer } from 'mobx-react-lite';
-import { useCarThingStore } from '../../contexts/CarThingStore';
-import { LearnVoiceStepId, TTS } from '../../stores/OnboardingStore';
-import { sendNocturneWsRequest } from '../../../../hooks/useNocturned';
-import SkipButton from './SkipButton';
-import styles from './LearnVoiceStep.module.scss';
+import { useEffect, useRef, useState } from "react";
+import { observer } from "mobx-react-lite";
+import { useCarThingStore } from "../../contexts/CarThingStore";
+import { LearnVoiceStepId, TTS } from "../../stores/OnboardingStore";
+import { sendNocturneWsRequest } from "../../../../hooks/useNocturned";
+import SkipButton from "./SkipButton";
+import styles from "./LearnVoiceStep.module.scss";
 
 const STEP_CONFIG = {
   [LearnVoiceStepId.FIRST_UP]: {
-    header: 'First up:',
-    title: 'Using your voice',
+    header: "First up:",
+    title: "Using your voice",
     tts1: TTS.VOICE_1_1,
     tts2: null,
   },
   [LearnVoiceStepId.VOICE_PLAY_DRIVING_MUSIC]: {
-    header: 'Try saying...',
-    title: 'Hey Spotify, play some driving music',
+    header: "Try saying...",
+    title: "Hey Spotify, play some driving music",
     tts1: TTS.VOICE_2_1,
     tts2: TTS.VOICE_2_2,
   },
   [LearnVoiceStepId.VOICE_NEXT_SONG]: {
-    header: 'Try saying...',
-    title: 'Hey Spotify, next song',
+    header: "Try saying...",
+    title: "Hey Spotify, next song",
     tts1: TTS.VOICE_3_1,
     tts2: TTS.VOICE_3_2,
   },
   [LearnVoiceStepId.LAST_STEP]: {
-    header: 'Last step:',
-    title: 'Navigating around Car Thing',
+    header: "Last step:",
+    title: "Navigating around Car Thing",
     tts1: TTS.TACTILE_NAVIGATION,
     tts2: null,
   },
 };
 
-const ON_REPEAT_URI = 'spotify:playlist:37i9dQZF1Epfk5F9npafJr';
+const ON_REPEAT_URI = "spotify:playlist:37i9dQZF1Epfk5F9npafJr";
 
 const LearnVoiceStep = ({ stepId, dataReady, exiting }) => {
   const { onboardingStore, spotifyControls, shelfStore } = useCarThingStore();
@@ -53,7 +53,9 @@ const LearnVoiceStep = ({ stepId, dataReady, exiting }) => {
     timersRef.current = [];
 
     const addTimer = (fn, delay) => {
-      const id = setTimeout(() => { if (!cancelled) fn(); }, delay);
+      const id = setTimeout(() => {
+        if (!cancelled) fn();
+      }, delay);
       timersRef.current.push(id);
     };
 
@@ -62,23 +64,24 @@ const LearnVoiceStep = ({ stepId, dataReady, exiting }) => {
 
     switch (stepId) {
       case LearnVoiceStepId.FIRST_UP: {
-        
         onboardingStore.playTts(config.tts1.fileName);
-        addTimer(() => onboardingStore.nextLearnVoiceStep(), config.tts1.fileLength + 1000);
+        addTimer(
+          () => onboardingStore.nextLearnVoiceStep(),
+          config.tts1.fileLength + 1000,
+        );
         break;
       }
 
       case LearnVoiceStepId.VOICE_PLAY_DRIVING_MUSIC: {
-        
         onboardingStore.playTts(config.tts1.fileName);
-        
+
         addTimer(() => {
-          sendNocturneWsRequest('spotify.player.play', {
+          sendNocturneWsRequest("spotify.player.play", {
             context_uri: ON_REPEAT_URI,
-          }).catch((e) => console.warn('Failed to play driving music:', e));
+          }).catch((e) => console.warn("Failed to play driving music:", e));
           onboardingStore.playTts(config.tts2.fileName);
         }, config.tts1.fileLength + 1000);
-        
+
         addTimer(
           () => onboardingStore.nextLearnVoiceStep(),
           config.tts1.fileLength + 1000 + config.tts2.fileLength + 1000,
@@ -87,14 +90,13 @@ const LearnVoiceStep = ({ stepId, dataReady, exiting }) => {
       }
 
       case LearnVoiceStepId.VOICE_NEXT_SONG: {
-        
         onboardingStore.playTts(config.tts1.fileName);
-        
+
         addTimer(() => {
           spotifyControls?.skipToNext?.();
           onboardingStore.playTts(config.tts2.fileName);
         }, config.tts1.fileLength + 1000);
-        
+
         addTimer(
           () => onboardingStore.nextLearnVoiceStep(),
           config.tts1.fileLength + 1000 + config.tts2.fileLength + 1000,
@@ -103,12 +105,11 @@ const LearnVoiceStep = ({ stepId, dataReady, exiting }) => {
       }
 
       case LearnVoiceStepId.LAST_STEP: {
-        
         onboardingStore.playTts(config.tts1.fileName);
         if (shelfStore?.getShelfData) {
           shelfStore.getShelfData();
         }
-        
+
         addTimer(
           () => onboardingStore.nextLearnVoiceStep(),
           config.tts1.fileLength + 1000,
@@ -124,7 +125,7 @@ const LearnVoiceStep = ({ stepId, dataReady, exiting }) => {
       cancelled = true;
       timersRef.current.forEach(clearTimeout);
     };
-  }, [stepId]); 
+  }, [stepId]);
 
   const config = STEP_CONFIG[stepId];
   if (!config) return null;
@@ -132,14 +133,18 @@ const LearnVoiceStep = ({ stepId, dataReady, exiting }) => {
   return (
     <div className={styles.learnVoiceStep}>
       <div className={styles.headerAndTitle}>
-        <div className={exiting ? `${styles.contentExit} ${styles.contentExitActive}` : contentClass}>
+        <div
+          className={
+            exiting
+              ? `${styles.contentExit} ${styles.contentExitActive}`
+              : contentClass
+          }
+        >
           <div className={styles.header}>{config.header}</div>
           <div className={styles.title}>{config.title}</div>
         </div>
       </div>
-      <div className={styles.skipOrJellyfish}>
-        {!exiting && <SkipButton />}
-      </div>
+      <div className={styles.skipOrJellyfish}>{!exiting && <SkipButton />}</div>
     </div>
   );
 };

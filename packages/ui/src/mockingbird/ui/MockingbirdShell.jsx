@@ -6,8 +6,10 @@ import Settings from "./components/Settings/Settings";
 import { sendNocturneWsRequest } from "../../hooks/useNocturned";
 import "./styles/MockingbirdShell.scss";
 
-const LazySetup = React.lazy(() => import('./components/Setup/Setup'));
-const LazyOnboarding = React.lazy(() => import('./components/Onboarding/Onboarding'));
+const LazySetup = React.lazy(() => import("./components/Setup/Setup"));
+const LazyOnboarding = React.lazy(
+  () => import("./components/Onboarding/Onboarding"),
+);
 
 const mockingbirdFontStyles = `
 @font-face {
@@ -37,13 +39,15 @@ function usePlaybackPolling(parentPlayback) {
 
   const poll = useCallback(async () => {
     try {
-      const data = await sendNocturneWsRequest("spotify.player.state", {}, { timeoutMs: 5000 });
+      const data = await sendNocturneWsRequest(
+        "spotify.player.state",
+        {},
+        { timeoutMs: 5000 },
+      );
       if (data && data.item && !stoppedRef.current) {
         setLocalPlayback(data);
       }
-    } catch (e) {
-      
-    }
+    } catch (e) {}
     if (!stoppedRef.current) {
       pollingRef.current = setTimeout(poll, 3000);
     }
@@ -118,57 +122,151 @@ function useSpotifyData() {
         id: "4m2880jivSbbyEGAKfITCa",
         uri: "spotify:album:4m2880jivSbbyEGAKfITCa",
         name: "Random Access Memories",
-        artists: [{ id: "4tZwfgrHOc3mvqYlEYSvVi", name: "Daft Punk", type: "artist", uri: "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi" }],
-        images: [{ url: "https://i.scdn.co/image/ab67616d00001e029b9b36b0e22870b9f542d937" }],
+        artists: [
+          {
+            id: "4tZwfgrHOc3mvqYlEYSvVi",
+            name: "Daft Punk",
+            type: "artist",
+            uri: "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi",
+          },
+        ],
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab67616d00001e029b9b36b0e22870b9f542d937",
+          },
+        ],
       },
       {
         id: "7xl50xr9NDkd3i2kBbzsNZ",
         uri: "spotify:album:7xl50xr9NDkd3i2kBbzsNZ",
         name: "Stadium Arcadium",
-        artists: [{ id: "0L8ExT028jH3ddEcZwqJJ5", name: "Red Hot Chili Peppers", type: "artist", uri: "spotify:artist:0L8ExT028jH3ddEcZwqJJ5" }],
-        images: [{ url: "https://i.scdn.co/image/ab67616d00001e0209fd83d32aee93dceba78517" }],
+        artists: [
+          {
+            id: "0L8ExT028jH3ddEcZwqJJ5",
+            name: "Red Hot Chili Peppers",
+            type: "artist",
+            uri: "spotify:artist:0L8ExT028jH3ddEcZwqJJ5",
+          },
+        ],
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab67616d00001e0209fd83d32aee93dceba78517",
+          },
+        ],
       },
       {
         id: "78bpIziExqiI9qztvNFlQu",
         uri: "spotify:album:78bpIziExqiI9qztvNFlQu",
         name: "AM",
-        artists: [{ id: "7Ln80lUS6He07XvHI8qqHH", name: "Arctic Monkeys", type: "artist", uri: "spotify:artist:7Ln80lUS6He07XvHI8qqHH" }],
-        images: [{ url: "https://i.scdn.co/image/ab67616d00001e024ae1c4c5c45aabe565499163" }],
+        artists: [
+          {
+            id: "7Ln80lUS6He07XvHI8qqHH",
+            name: "Arctic Monkeys",
+            type: "artist",
+            uri: "spotify:artist:7Ln80lUS6He07XvHI8qqHH",
+          },
+        ],
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab67616d00001e024ae1c4c5c45aabe565499163",
+          },
+        ],
       },
       {
         id: "0bQglEvsHphrS19FGODEGo",
         uri: "spotify:album:0bQglEvsHphrS19FGODEGo",
         name: "Siamese Dream (Deluxe Edition)",
-        artists: [{ id: "40Yq4vzPs9VNUrIBG5Jr2i", name: "The Smashing Pumpkins", type: "artist", uri: "spotify:artist:40Yq4vzPs9VNUrIBG5Jr2i" }],
-        images: [{ url: "https://i.scdn.co/image/ab67616d00001e025274788f34fc7656d2856dfd" }],
+        artists: [
+          {
+            id: "40Yq4vzPs9VNUrIBG5Jr2i",
+            name: "The Smashing Pumpkins",
+            type: "artist",
+            uri: "spotify:artist:40Yq4vzPs9VNUrIBG5Jr2i",
+          },
+        ],
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab67616d00001e025274788f34fc7656d2856dfd",
+          },
+        ],
       },
       {
         id: "0bCAjiUamIFqKJsekOYuRw",
         uri: "spotify:album:0bCAjiUamIFqKJsekOYuRw",
         name: "Wish You Were Here",
-        artists: [{ id: "0k17h0D3J5VfsdmQ1iZtE9", name: "Pink Floyd", type: "artist", uri: "spotify:artist:0k17h0D3J5VfsdmQ1iZtE9" }],
-        images: [{ url: "https://i.scdn.co/image/ab67616d00001e02828e52cfb7bf22869349799e" }],
+        artists: [
+          {
+            id: "0k17h0D3J5VfsdmQ1iZtE9",
+            name: "Pink Floyd",
+            type: "artist",
+            uri: "spotify:artist:0k17h0D3J5VfsdmQ1iZtE9",
+          },
+        ],
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab67616d00001e02828e52cfb7bf22869349799e",
+          },
+        ],
       },
       {
         id: "2ODvWsOgouMbaA5xf0RkJe",
         uri: "spotify:album:2ODvWsOgouMbaA5xf0RkJe",
         name: "Starboy",
-        artists: [{ id: "1Xyo4u8uXC1ZmMpatF05PJ", name: "The Weeknd", type: "artist", uri: "spotify:artist:1Xyo4u8uXC1ZmMpatF05PJ" }, { id: "4tZwfgrHOc3mvqYlEYSvVi", name: "Daft Punk", type: "artist", uri: "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi" }],
-        images: [{ url: "https://i.scdn.co/image/ab67616d00001e024718e2b124f79258be7bc452" }],
+        artists: [
+          {
+            id: "1Xyo4u8uXC1ZmMpatF05PJ",
+            name: "The Weeknd",
+            type: "artist",
+            uri: "spotify:artist:1Xyo4u8uXC1ZmMpatF05PJ",
+          },
+          {
+            id: "4tZwfgrHOc3mvqYlEYSvVi",
+            name: "Daft Punk",
+            type: "artist",
+            uri: "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi",
+          },
+        ],
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab67616d00001e024718e2b124f79258be7bc452",
+          },
+        ],
       },
       {
         id: "2IdHrETl3jsOYQRsF0nV16",
         uri: "spotify:album:2IdHrETl3jsOYQRsF0nV16",
         name: "Midnight Sun",
-        artists: [{ id: "1Xylc3o4UrD53lo9CvFvVg", name: "Zara Larsson", type: "artist", uri: "spotify:artist:1Xylc3o4UrD53lo9CvFvVg" }],
-        images: [{ url: "https://i.scdn.co/image/ab67616d00001e027657f9028ea8bb2c18dca99f" }],
+        artists: [
+          {
+            id: "1Xylc3o4UrD53lo9CvFvVg",
+            name: "Zara Larsson",
+            type: "artist",
+            uri: "spotify:artist:1Xylc3o4UrD53lo9CvFvVg",
+          },
+        ],
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab67616d00001e027657f9028ea8bb2c18dca99f",
+          },
+        ],
       },
       {
         id: "55RhFRyQFihIyGf61MgcfV",
         uri: "spotify:album:55RhFRyQFihIyGf61MgcfV",
         name: "Mellon Collie And The Infinite Sadness (Deluxe Edition)",
-        artists: [{ id: "40Yq4vzPs9VNUrIBG5Jr2i", name: "The Smashing Pumpkins", type: "artist", uri: "spotify:artist:40Yq4vzPs9VNUrIBG5Jr2i" }],
-        images: [{ url: "https://i.scdn.co/image/ab67616d00001e02431ac6e6f393acf475730ec6" }],
+        artists: [
+          {
+            id: "40Yq4vzPs9VNUrIBG5Jr2i",
+            name: "The Smashing Pumpkins",
+            type: "artist",
+            uri: "spotify:artist:40Yq4vzPs9VNUrIBG5Jr2i",
+          },
+        ],
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab67616d00001e02431ac6e6f393acf475730ec6",
+          },
+        ],
       },
     ];
 
@@ -184,12 +282,13 @@ function useSpotifyData() {
       attempts++;
 
       try {
-        const [recentRaw, playlistsRaw, artistsRaw, showsRaw] = await Promise.all([
-          fetchEndpoint("spotify.me.recentlyPlayed", { limit: 10 }),
-          fetchEndpoint("spotify.me.playlists", { limit: 50 }),
-          fetchEndpoint("spotify.me.topArtists", { limit: 20 }),
-          fetchEndpoint("spotify.me.shows", { limit: 20 }),
-        ]);
+        const [recentRaw, playlistsRaw, artistsRaw, showsRaw] =
+          await Promise.all([
+            fetchEndpoint("spotify.me.recentlyPlayed", { limit: 10 }),
+            fetchEndpoint("spotify.me.playlists", { limit: 50 }),
+            fetchEndpoint("spotify.me.topArtists", { limit: 20 }),
+            fetchEndpoint("spotify.me.shows", { limit: 20 }),
+          ]);
 
         if (cancelled) return;
 
@@ -198,9 +297,12 @@ function useSpotifyData() {
         let topArtists = artistsRaw?.items || artistsRaw || [];
         let userShows = showsRaw?.items || showsRaw || [];
 
-        const allLoaded = recentAlbums.length > 0 &&
-          Array.isArray(userPlaylists) && userPlaylists.length > 0 &&
-          Array.isArray(topArtists) && topArtists.length > 0;
+        const allLoaded =
+          recentAlbums.length > 0 &&
+          Array.isArray(userPlaylists) &&
+          userPlaylists.length > 0 &&
+          Array.isArray(topArtists) &&
+          topArtists.length > 0;
 
         if (!allLoaded && attempts < MAX_ATTEMPTS) {
           if (!cancelled) {
@@ -218,31 +320,36 @@ function useSpotifyData() {
 
         if (recentAlbums.length < 3 && !cancelled) {
           try {
-            const likedRaw = await fetchEndpoint("spotify.me.tracks", { limit: 20, mockingbird: true });
+            const likedRaw = await fetchEndpoint("spotify.me.tracks", {
+              limit: 20,
+              mockingbird: true,
+            });
             if (!cancelled && likedRaw) {
-              const likedItems = likedRaw?.items || likedRaw?.tracks || likedRaw || [];
-              const seenIds = new Set(recentAlbums.map(a => a.id));
+              const likedItems =
+                likedRaw?.items || likedRaw?.tracks || likedRaw || [];
+              const seenIds = new Set(recentAlbums.map((a) => a.id));
               for (const item of Array.isArray(likedItems) ? likedItems : []) {
                 const track = item.track || item;
                 const album = track?.album;
                 if (album && album.id && !seenIds.has(album.id)) {
                   seenIds.add(album.id);
-                  if (!album.artists && track.artists) album.artists = track.artists;
+                  if (!album.artists && track.artists)
+                    album.artists = track.artists;
                   recentAlbums.push(album);
                   if (recentAlbums.length >= 8) break;
                 }
               }
             }
-          } catch (e) {
-            
-          }
+          } catch (e) {}
         }
 
         if (cancelled) return;
 
         const rootStore = window.carThingRootStore;
         if (rootStore?.shelfStore) {
-          runInAction(() => rootStore.shelfStore.seedRecentAlbums(recentAlbums));
+          runInAction(() =>
+            rootStore.shelfStore.seedRecentAlbums(recentAlbums),
+          );
         }
 
         setData({
@@ -255,7 +362,6 @@ function useSpotifyData() {
           initialDataLoaded: true,
         });
       } catch (e) {
-        
         if (!cancelled) {
           retryTimer = setTimeout(fetchData, 1500);
         }
@@ -342,10 +448,12 @@ export default function MockingbirdShell({
 }) {
   const currentPlayback = usePlaybackPolling(parentPlayback);
   const localSpotifyData = useSpotifyData();
-  const spotifyData = parentSpotifyData?.initialDataLoaded ? parentSpotifyData : localSpotifyData;
+  const spotifyData = parentSpotifyData?.initialDataLoaded
+    ? parentSpotifyData
+    : localSpotifyData;
   const dataReady = spotifyData.initialDataLoaded;
 
-  if (systemScreen && systemScreen !== 'tutorial') {
+  if (systemScreen && systemScreen !== "tutorial") {
     return (
       <div className="mockingbird-root">
         <style>{mockingbirdFontStyles}</style>
@@ -365,7 +473,7 @@ export default function MockingbirdShell({
     );
   }
 
-  if (systemScreen === 'tutorial') {
+  if (systemScreen === "tutorial") {
     return (
       <div className="mockingbird-root">
         <style>{mockingbirdFontStyles}</style>
@@ -380,7 +488,10 @@ export default function MockingbirdShell({
             onSeek={playerControls?.seekToPosition}
           >
             <React.Suspense fallback={<SplashOverlay />}>
-              <LazyOnboarding onComplete={onTutorialComplete} dataReady={dataReady} />
+              <LazyOnboarding
+                onComplete={onTutorialComplete}
+                dataReady={dataReady}
+              />
             </React.Suspense>
           </CarThingStoreProvider>
         )}

@@ -1,4 +1,4 @@
-import { IconHomeActive } from '../EncoreWeb/IconHomeActive';
+import { IconHomeActive } from "../EncoreWeb/IconHomeActive";
 
 const IconHomeActive32 = () => <IconHomeActive iconSize={32} />;
 

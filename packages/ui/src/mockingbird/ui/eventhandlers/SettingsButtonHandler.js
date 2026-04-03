@@ -1,4 +1,4 @@
-import { action } from 'mobx';
+import { action } from "mobx";
 
 const reactToSettingsButton = (hardwareEvents, rootStore) => {
   const { overlayController, settingsStore } = rootStore;

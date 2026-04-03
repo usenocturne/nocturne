@@ -1,7 +1,7 @@
-import { observer } from 'mobx-react-lite';
-import styles from './PresetPlaceholder.module.scss';
-import Type from '../../../CarthingUIComponents/Type/Type';
-import classNames from 'classnames';
+import { observer } from "mobx-react-lite";
+import styles from "./PresetPlaceholder.module.scss";
+import Type from "../../../CarthingUIComponents/Type/Type";
+import classNames from "classnames";
 
 const PresetPlaceholder = ({ isFocused }) => {
   return (

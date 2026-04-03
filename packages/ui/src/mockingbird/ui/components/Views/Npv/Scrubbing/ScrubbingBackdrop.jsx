@@ -1,13 +1,13 @@
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import { useState, useCallback, useEffect, useRef } from 'react';
-import styles from './ScrubbingBackdrop.module.scss';
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import { useState, useCallback, useEffect, useRef } from "react";
+import styles from "./ScrubbingBackdrop.module.scss";
 
 const formatTime = (ms) => {
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
 const ScrubbingBackdrop = ({ playbackProgress, onSeek }) => {
@@ -18,20 +18,22 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }) => {
   const [shouldRender, setShouldRender] = useState(false);
   const timeoutRef = useRef(null);
 
-  const handleTouchMove = useCallback((e) => {
-    if (!playbackProgress?.duration) return;
-    window.scrubbingTimeoutShouldSeek = false;
-    uiState.resetScrubbingViewTimer();
-    const x = e.touches[0].clientX;
-    const percent = Math.max(0, Math.min(1, x / 800));
-    setScrubbingProgress(percent);
-  }, [playbackProgress?.duration, uiState]);
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (!playbackProgress?.duration) return;
+      window.scrubbingTimeoutShouldSeek = false;
+      uiState.resetScrubbingViewTimer();
+      const x = e.touches[0].clientX;
+      const percent = Math.max(0, Math.min(1, x / 800));
+      setScrubbingProgress(percent);
+    },
+    [playbackProgress?.duration, uiState],
+  );
 
   const handleTouchEnd = useCallback(() => {
     if (scrubbingProgress !== null && playbackProgress?.duration && onSeek) {
       const seekMs = Math.floor(scrubbingProgress * playbackProgress.duration);
       if (seekMs >= playbackProgress.duration - 1000) {
-        
         const rootStore = window.carThingRootStore;
         rootStore?.npvStore?.npvController?.next?.();
       } else {
@@ -77,8 +79,14 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }) => {
         clearTimeout(timeoutRef.current);
       }
       timeoutRef.current = setTimeout(() => {
-        if (scrubbingProgress !== null && playbackProgress?.duration && onSeek) {
-          const seekMs = Math.floor(scrubbingProgress * playbackProgress.duration);
+        if (
+          scrubbingProgress !== null &&
+          playbackProgress?.duration &&
+          onSeek
+        ) {
+          const seekMs = Math.floor(
+            scrubbingProgress * playbackProgress.duration,
+          );
           if (seekMs >= playbackProgress.duration - 1000) {
             const rootStore = window.carThingRootStore;
             rootStore?.npvStore?.npvController?.next?.();
@@ -91,8 +99,12 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }) => {
       }, 3000);
 
       setScrubbingProgress((prev) => {
-        const currentPercent = prev !== null ? prev : (playbackProgress?.progressPercentage || 0) / 100;
-        const nextValue = currentPercent + (delta > 0 ? step / 100 : -step / 100);
+        const currentPercent =
+          prev !== null
+            ? prev
+            : (playbackProgress?.progressPercentage || 0) / 100;
+        const nextValue =
+          currentPercent + (delta > 0 ? step / 100 : -step / 100);
         return Math.max(0, Math.min(1, nextValue));
       });
     };
@@ -106,8 +118,20 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }) => {
       const fiveSecondsPercent = 5000 / playbackProgress.duration;
 
       setScrubbingProgress((prev) => {
-        const currentPercent = prev !== null ? prev : (playbackProgress?.progressPercentage || 0) / 100;
-        const nextValue = Math.max(0, Math.min(1, currentPercent + (direction === 'right' ? fiveSecondsPercent : -fiveSecondsPercent)));
+        const currentPercent =
+          prev !== null
+            ? prev
+            : (playbackProgress?.progressPercentage || 0) / 100;
+        const nextValue = Math.max(
+          0,
+          Math.min(
+            1,
+            currentPercent +
+              (direction === "right"
+                ? fiveSecondsPercent
+                : -fiveSecondsPercent),
+          ),
+        );
         window.scrubbingProgressValue = nextValue;
         return nextValue;
       });
@@ -126,7 +150,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }) => {
       }
     };
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       window.scrubbingHardwareDialHandler = handleHardwareDial;
     }
 
@@ -137,17 +161,26 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }) => {
       window.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
 
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         window.scrubbingHardwareDialHandler = null;
       }
     };
-  }, [uiState.isScrubbing, playbackProgress?.progressPercentage, playbackProgress?.duration, handleTouchEnd, uiState]);
+  }, [
+    uiState.isScrubbing,
+    playbackProgress?.progressPercentage,
+    playbackProgress?.duration,
+    handleTouchEnd,
+    uiState,
+  ]);
 
   if (!shouldRender) {
     return null;
   }
 
-  const currentProgress = scrubbingProgress !== null ? scrubbingProgress : (playbackProgress?.progressPercentage || 0) / 100;
+  const currentProgress =
+    scrubbingProgress !== null
+      ? scrubbingProgress
+      : (playbackProgress?.progressPercentage || 0) / 100;
   const durationMs = playbackProgress?.duration || 0;
   const currentSeconds = Math.floor((currentProgress * durationMs) / 1000);
   const totalSeconds = Math.floor(durationMs / 1000);

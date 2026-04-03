@@ -1,4 +1,4 @@
-@use '../../../styles/variables.module' as vars;
+@use "../../../styles/variables.module" as vars;
 
 .buttonContainer {
   display: flex;
@@ -45,7 +45,7 @@
   .divider {
     background-color: vars.$white;
   }
-  
+
   .buttonText {
     color: vars.$white;
   }
@@ -55,7 +55,7 @@
   .divider {
     background-color: vars.$black;
   }
-  
+
   .buttonText {
     color: vars.$black;
   }
@@ -65,7 +65,7 @@
   .divider {
     background-color: vars.$white;
   }
-  
+
   .buttonText {
     color: vars.$white;
   }

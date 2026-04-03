@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { observer } from 'mobx-react-lite';
-import { useCarThingStore } from '../../contexts/CarThingStore';
-import LearnVoiceStep from './LearnVoiceStep';
+import { useState, useEffect, useRef } from "react";
+import { observer } from "mobx-react-lite";
+import { useCarThingStore } from "../../contexts/CarThingStore";
+import LearnVoiceStep from "./LearnVoiceStep";
 
 const EXIT_DURATION = 1300;
 
@@ -20,7 +20,6 @@ const LearnVoice = ({ dataReady }) => {
     setExiting(true);
 
     const timer = setTimeout(() => {
-      
       setRenderedStep(targetStep);
       setExiting(false);
     }, EXIT_DURATION);
@@ -31,11 +30,11 @@ const LearnVoice = ({ dataReady }) => {
   return (
     <div
       style={{
-        position: 'relative',
+        position: "relative",
         width: 800,
         height: 480,
-        background: '#000',
-        overflow: 'hidden',
+        background: "#000",
+        overflow: "hidden",
       }}
       data-testid="onboarding-learn-voice"
     >

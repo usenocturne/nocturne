@@ -1,17 +1,17 @@
-import classNames from 'classnames';
-import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
-import pointerListenersMaker from '../../../../helpers/PointerListeners';
-import styles from './QueueListItem.module.scss';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import LazyImage from '../../Npv/PlayingInfo/LazyImage/LazyImage';
-import Type from '../../../CarthingUIComponents/Type/Type';
+import classNames from "classnames";
+import { observer } from "mobx-react-lite";
+import { useState } from "react";
+import pointerListenersMaker from "../../../../helpers/PointerListeners";
+import styles from "./QueueListItem.module.scss";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import LazyImage from "../../Npv/PlayingInfo/LazyImage/LazyImage";
+import Type from "../../../CarthingUIComponents/Type/Type";
 
 const QueueListItem = ({ item, isActive = false }) => {
   const [pressed, setPressed] = useState(false);
   const { queueStore } = useCarThingStore();
   const uiState = queueStore.queueUiState;
-  
+
   return (
     <div
       className={classNames(styles.queueListItem, {
@@ -37,7 +37,7 @@ const QueueListItem = ({ item, isActive = false }) => {
         <Type
           className={styles.title}
           name="canonBold"
-          dataTestId={`${isActive ? 'queue-item-title' : ''}`}
+          dataTestId={`${isActive ? "queue-item-title" : ""}`}
         >
           {item.name}
         </Type>
@@ -52,7 +52,7 @@ const QueueListItem = ({ item, isActive = false }) => {
           <Type
             name="balladBook"
             className={styles.subtitle}
-            dataTestId={`${isActive ? 'queue-item-subtitle' : ''}`}
+            dataTestId={`${isActive ? "queue-item-subtitle" : ""}`}
           >
             {item.artist_name}
           </Type>

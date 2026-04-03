@@ -1,4 +1,4 @@
-import styles from './BackPressBanner.module.scss';
+import styles from "./BackPressBanner.module.scss";
 
 const BackPressBanner = () => {
   return (

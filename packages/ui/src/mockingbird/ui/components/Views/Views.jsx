@@ -1,14 +1,14 @@
-import styles from '../../styles/Views.module.scss';
-import classNames from 'classnames';
-import { View } from '../../stores/ViewStore';
-import DelayedRender from '../DelayedRender';
-import { observer } from 'mobx-react-lite';
-import { transitionDurationMs } from '../../styles/Variables';
-import { useCarThingStore } from '../../contexts/CarThingStore';
-import Npv from './Npv/Npv';
-import Shelf from './Shelf/Shelf';
-import Tracklist from './Tracklist';
-import Queue from './Queue/Queue';
+import styles from "../../styles/Views.module.scss";
+import classNames from "classnames";
+import { View } from "../../stores/ViewStore";
+import DelayedRender from "../DelayedRender";
+import { observer } from "mobx-react-lite";
+import { transitionDurationMs } from "../../styles/Variables";
+import { useCarThingStore } from "../../contexts/CarThingStore";
+import Npv from "./Npv/Npv";
+import Shelf from "./Shelf/Shelf";
+import Tracklist from "./Tracklist";
+import Queue from "./Queue/Queue";
 
 const Views = ({ playbackProgress, onSeek }) => {
   const { viewStore } = useCarThingStore();
@@ -27,7 +27,12 @@ const Views = ({ playbackProgress, onSeek }) => {
         { name: View.CONTENT_SHELF, component: <Shelf /> },
         { name: View.QUEUE, component: <Queue /> },
         { name: View.TRACKLIST, component: <Tracklist /> },
-        { name: View.NPV, component: <Npv playbackProgress={playbackProgress} onSeek={onSeek} /> },
+        {
+          name: View.NPV,
+          component: (
+            <Npv playbackProgress={playbackProgress} onSeek={onSeek} />
+          ),
+        },
       ].map((view) => (
         <div
           key={view.name}

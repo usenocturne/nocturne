@@ -1,8 +1,8 @@
-import styles from './BTPairing.module.scss';
+import styles from "./BTPairing.module.scss";
 
 const parsePincode = (pinCode) => {
   if (!pinCode) return pinCode;
-  return pinCode.split('').join(' ');
+  return pinCode.split("").join(" ");
 };
 
 const BTPairing = ({ pin }) => {

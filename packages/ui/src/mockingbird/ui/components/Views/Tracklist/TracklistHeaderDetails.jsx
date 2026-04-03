@@ -1,8 +1,8 @@
-import classNames from 'classnames';
-import LazyImage from '../Npv/PlayingInfo/LazyImage/LazyImage';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './TracklistHeaderDetails.module.scss';
+import classNames from "classnames";
+import LazyImage from "../Npv/PlayingInfo/LazyImage/LazyImage";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./TracklistHeaderDetails.module.scss";
 
 const TracklistHeaderDetails = () => {
   const {
@@ -18,7 +18,7 @@ const TracklistHeaderDetails = () => {
   } = useCarThingStore().tracklistStore.tracklistUiState;
 
   const trackListLength = tracksList.length;
-  const tracklistSuffix = trackListLength !== 1 ? 's' : '';
+  const tracklistSuffix = trackListLength !== 1 ? "s" : "";
   const showSubtitle = (isPlaylist || isPodcast) && trackListLength > 0;
   const showImage = isAlbum || isPodcast;
   const showOnlyTitle = !showSubtitle && !showImage;
@@ -66,7 +66,7 @@ const TracklistHeaderDetails = () => {
             data-testid="tracklist-header-info-count"
           >
             <span>{`${totalInContext} ${
-              isPodcast ? 'episode' : 'song'
+              isPodcast ? "episode" : "song"
             }${tracklistSuffix}`}</span>
           </div>
         )}

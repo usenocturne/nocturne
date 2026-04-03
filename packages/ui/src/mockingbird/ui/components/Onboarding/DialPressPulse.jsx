@@ -1,4 +1,4 @@
-import styles from './DialPressPulse.module.scss';
+import styles from "./DialPressPulse.module.scss";
 
 const DialPressPulse = () => {
   return (

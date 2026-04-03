@@ -1,34 +1,56 @@
-
-import React from 'react';
+import React from "react";
 import { findClosestGlyphAvailable, Icon } from "../";
 export function IconSkipForward(props) {
   var _props$autoMirror;
 
-  var iconList = [{
-    'size': 16,
-    'svgContent': '<path d=\'M12.7 1a.7.7 0 00-.7.7v5.15L2.05 1.107A.7.7 0 001 1.712v12.575a.7.7 0 001.05.607L12 9.149V14.3a.7.7 0 00.7.7h1.6a.7.7 0 00.7-.7V1.7a.7.7 0 00-.7-.7h-1.6z\'/>'
-  }, {
-    'size': 24,
-    'svgContent': '<path d=\'M17.7 3a.7.7 0 00-.7.7v6.805L5.05 3.606A.7.7 0 004 4.212v15.576a.7.7 0 001.05.606L17 13.495V20.3a.7.7 0 00.7.7h1.6a.7.7 0 00.7-.7V3.7a.7.7 0 00-.7-.7h-1.6z\'/>'
-  }];
+  var iconList = [
+    {
+      size: 16,
+      svgContent:
+        "<path d='M12.7 1a.7.7 0 00-.7.7v5.15L2.05 1.107A.7.7 0 001 1.712v12.575a.7.7 0 001.05.607L12 9.149V14.3a.7.7 0 00.7.7h1.6a.7.7 0 00.7-.7V1.7a.7.7 0 00-.7-.7h-1.6z'/>",
+    },
+    {
+      size: 24,
+      svgContent:
+        "<path d='M17.7 3a.7.7 0 00-.7.7v6.805L5.05 3.606A.7.7 0 004 4.212v15.576a.7.7 0 001.05.606L17 13.495V20.3a.7.7 0 00.7.7h1.6a.7.7 0 00.7-.7V3.7a.7.7 0 00-.7-.7h-1.6z'/>",
+    },
+  ];
   var closestSize = findClosestGlyphAvailable(iconList, props.iconSize || 24);
 
   var titleTag = function titleTag(title, titleId) {
-    return title ? "<title ".concat(titleId ? "id=\"".concat(titleId, "\"") : "", ">").concat(title, "</title>") : "";
+    return title
+      ? "<title "
+          .concat(titleId ? 'id="'.concat(titleId, '"') : "", ">")
+          .concat(title, "</title>")
+      : "";
   };
 
   var descTag = function descTag(desc, descId) {
-    return desc ? "<desc ".concat(descId ? "id=\"".concat(descId, "\"") : "", ">").concat(desc, "</desc>") : "";
+    return desc
+      ? "<desc "
+          .concat(descId ? 'id="'.concat(descId, '"') : "", ">")
+          .concat(desc, "</desc>")
+      : "";
   };
 
-  var autoMirror = (_props$autoMirror = props.autoMirror) !== null && _props$autoMirror !== void 0 ? _props$autoMirror : false;
-  return React.createElement(Icon, Object.assign({}, props, {
-    autoMirror: autoMirror,
-    viewBox: "0 0 ".concat(closestSize.size, " ").concat(closestSize.size),
-    dangerouslySetInnerHTML: {
-      __html: "".concat(titleTag(props.title, props.titleId)).concat(descTag(props.desc, props.descId)).concat(closestSize.svgContent)
-    }
-  }));
+  var autoMirror =
+    (_props$autoMirror = props.autoMirror) !== null &&
+    _props$autoMirror !== void 0
+      ? _props$autoMirror
+      : false;
+  return React.createElement(
+    Icon,
+    Object.assign({}, props, {
+      autoMirror: autoMirror,
+      viewBox: "0 0 ".concat(closestSize.size, " ").concat(closestSize.size),
+      dangerouslySetInnerHTML: {
+        __html: ""
+          .concat(titleTag(props.title, props.titleId))
+          .concat(descTag(props.desc, props.descId))
+          .concat(closestSize.svgContent),
+      },
+    }),
+  );
 }
 
 export function Experimental__IconSkipForward(props) {

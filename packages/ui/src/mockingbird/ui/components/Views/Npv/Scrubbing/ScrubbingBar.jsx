@@ -1,18 +1,19 @@
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './ScrubbingBar.module.scss';
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./ScrubbingBar.module.scss";
 
 const ScrubbingBar = ({ playbackProgress }) => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.scrubbingUiState;
   const { colorChannels } = uiState;
-  const progressPercent = playbackProgress?.progressPercentage || uiState.trackPlayedPercent * 100;
+  const progressPercent =
+    playbackProgress?.progressPercentage || uiState.trackPlayedPercent * 100;
 
   return (
     <div
       className={styles.scrubbingBar}
       style={{
-        backgroundColor: `rgb(${colorChannels.join(',')})`,
+        backgroundColor: `rgb(${colorChannels.join(",")})`,
       }}
       data-testid="scrubbing-bar"
     >

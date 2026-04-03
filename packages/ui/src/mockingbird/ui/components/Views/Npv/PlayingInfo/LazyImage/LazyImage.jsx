@@ -1,32 +1,35 @@
-import classNames from 'classnames';
-import Placeholder from './Placeholder/Placeholder';
-import { observer } from 'mobx-react-lite';
-import { useState, useEffect, useRef } from 'react';
-import styles from './LazyImage.module.scss';
-import { resolveImageUrl, getCachedImageUrl } from '../../../../../utils/imageProxy';
+import classNames from "classnames";
+import Placeholder from "./Placeholder/Placeholder";
+import { observer } from "mobx-react-lite";
+import { useState, useEffect, useRef } from "react";
+import styles from "./LazyImage.module.scss";
+import {
+  resolveImageUrl,
+  getCachedImageUrl,
+} from "../../../../../utils/imageProxy";
 
 export const getImageBorderRadius = (uri, size) => {
-  const podcastSize = size >= 240 ? '16px' : '8px';
+  const podcastSize = size >= 240 ? "16px" : "8px";
 
-  if (uri.includes('artist')) {
-    return '50%';
+  if (uri.includes("artist")) {
+    return "50%";
   }
-  if (uri.includes('show') || uri.includes('episode')) {
+  if (uri.includes("show") || uri.includes("episode")) {
     return podcastSize;
   }
-  return '';
+  return "";
 };
 
 const getOuterBorderRadius = (uri, size) => {
-  const podcastSize = size === 240 ? '24px' : '16px';
+  const podcastSize = size === 240 ? "24px" : "16px";
 
-  if (uri.includes('artist')) {
-    return '50%';
+  if (uri.includes("artist")) {
+    return "50%";
   }
-  if (uri.includes('show') || uri.includes('episode')) {
+  if (uri.includes("show") || uri.includes("episode")) {
     return podcastSize;
   }
-  return '12px';
+  return "12px";
 };
 
 const LazyImage = ({
@@ -41,7 +44,9 @@ const LazyImage = ({
   innerBorder,
   isActive: outerBorder,
 }) => {
-  const [resolvedSrc, setResolvedSrc] = useState(() => getCachedImageUrl(imageId));
+  const [resolvedSrc, setResolvedSrc] = useState(() =>
+    getCachedImageUrl(imageId),
+  );
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -70,19 +75,19 @@ const LazyImage = ({
   }, [imageId, shouldLoad]);
 
   const getClassName = () => {
-    if (uri.includes('track')) {
+    if (uri.includes("track")) {
       return styles.track;
     }
-    if (uri.includes('show')) {
+    if (uri.includes("show")) {
       return styles.show;
     }
-    if (uri.includes('episode')) {
+    if (uri.includes("episode")) {
       return styles.episode;
     }
-    if (uri.includes('artist')) {
+    if (uri.includes("artist")) {
       return styles.artist;
     }
-    return '';
+    return "";
   };
 
   const getImageTag = (image, imgSize) => {
@@ -106,8 +111,9 @@ const LazyImage = ({
   };
 
   const getImageTemplate = (image) => {
-    const showInnerBorder = innerBorder && (uri.includes('track') || uri.includes('episode'));
-    const innerBorderColor = showInnerBorder ? 'black' : undefined;
+    const showInnerBorder =
+      innerBorder && (uri.includes("track") || uri.includes("episode"));
+    const innerBorderColor = showInnerBorder ? "black" : undefined;
 
     return (
       <div

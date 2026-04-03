@@ -1,6 +1,6 @@
-import { observer } from 'mobx-react-lite';
-import SubmenuHeader from '../Submenu/SubmenuHeader';
-import styles from './PhoneCalls.module.scss';
+import { observer } from "mobx-react-lite";
+import SubmenuHeader from "../Submenu/SubmenuHeader";
+import styles from "./PhoneCalls.module.scss";
 
 const PhoneCalls = () => {
   return (
@@ -14,9 +14,9 @@ const PhoneCalls = () => {
           </div>
         </div>
         <div className={styles.text}>
-          If turned on, you'll see your incoming and outgoing phone call info
-          on your screen and will be able to answer or decline calls. Be sure
-          your phone is connected to the car's speakers and microphone.
+          If turned on, you'll see your incoming and outgoing phone call info on
+          your screen and will be able to answer or decline calls. Be sure your
+          phone is connected to the car's speakers and microphone.
           <br />
           <br />
           If your phone can't be connected to the car's microphone, place your

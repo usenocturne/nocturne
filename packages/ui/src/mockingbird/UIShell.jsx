@@ -1,8 +1,6 @@
 import React from "react";
 
-const MockingbirdShell = React.lazy(
-  () => import("./ui/MockingbirdShell"),
-);
+const MockingbirdShell = React.lazy(() => import("./ui/MockingbirdShell"));
 
 function SplashFallback() {
   return (

@@ -1,23 +1,23 @@
-import classnames from 'classnames';
-import { observer } from 'mobx-react-lite';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import DelayedRender from '../../DelayedRender';
-import CSSTransition from '../../CSSTransitionCompat';
-import { useCallback, useRef, useEffect } from 'react';
-import AmbientBackdrop from '../AmbientBackdrop/AmbientBackdrop';
-import PlayingInfoOrTip from './PlayingInfoOrTip/PlayingInfoOrTip';
-import Controls from './Controls/Controls';
-import SwipeHandler from './SwipeHandler/SwipeHandler';
-import WindAlertBanner from './WindAlertBanner/WindAlertBanner';
-import Scrubbing from './Scrubbing/Scrubbing';
-import ScrubbingBackdrop from './Scrubbing/ScrubbingBackdrop';
-import NoNetworkBanner from './NoNetworkBanner/NoNetworkBanner';
-import OtherMedia from './OtherMedia/OtherMedia';
-import Volume from './Volume/Volume';
-import styles from './Npv.module.scss';
+import classnames from "classnames";
+import { observer } from "mobx-react-lite";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import DelayedRender from "../../DelayedRender";
+import CSSTransition from "../../CSSTransitionCompat";
+import { useCallback, useRef, useEffect } from "react";
+import AmbientBackdrop from "../AmbientBackdrop/AmbientBackdrop";
+import PlayingInfoOrTip from "./PlayingInfoOrTip/PlayingInfoOrTip";
+import Controls from "./Controls/Controls";
+import SwipeHandler from "./SwipeHandler/SwipeHandler";
+import WindAlertBanner from "./WindAlertBanner/WindAlertBanner";
+import Scrubbing from "./Scrubbing/Scrubbing";
+import ScrubbingBackdrop from "./Scrubbing/ScrubbingBackdrop";
+import NoNetworkBanner from "./NoNetworkBanner/NoNetworkBanner";
+import OtherMedia from "./OtherMedia/OtherMedia";
+import Volume from "./Volume/Volume";
+import styles from "./Npv.module.scss";
 
 const getBackgroundColorFromChannels = (rgbChannels) => {
-  return `rgb(${rgbChannels.join(',')})`;
+  return `rgb(${rgbChannels.join(",")})`;
 };
 
 const Npv = ({ playbackProgress, onSeek }) => {
@@ -45,7 +45,6 @@ const Npv = ({ playbackProgress, onSeek }) => {
 
   const handleSwipeLeft = () => {
     if (!overlayController.anyOverlayIsShowing) {
-      
       npvStore.playingInfoUiState.swipeHandler.handleSwipedLeft();
       ubiLogger.npvInteractionLogger?.logSwipeToNext?.();
     }
@@ -53,7 +52,6 @@ const Npv = ({ playbackProgress, onSeek }) => {
 
   const handleSwipeRight = () => {
     if (!overlayController.anyOverlayIsShowing) {
-      
       npvStore.playingInfoUiState.swipeHandler.handleSwipedRight();
       ubiLogger.npvInteractionLogger?.logSwipeToPrevious?.();
     }
@@ -109,7 +107,12 @@ const Npv = ({ playbackProgress, onSeek }) => {
         }
       }
     },
-    [showPlayingInfo, overlayController.anyOverlayIsShowing, carThingStores, npvStore.scrubbingUiState.isScrubbing]
+    [
+      showPlayingInfo,
+      overlayController.anyOverlayIsShowing,
+      carThingStores,
+      npvStore.scrubbingUiState.isScrubbing,
+    ],
   );
 
   useEffect(() => {
@@ -157,7 +160,9 @@ const Npv = ({ playbackProgress, onSeek }) => {
             </DelayedRender>
           </div>
 
-          {showPlayingInfo && <Scrubbing playbackProgress={playbackProgress} onSeek={onSeek} />}
+          {showPlayingInfo && (
+            <Scrubbing playbackProgress={playbackProgress} onSeek={onSeek} />
+          )}
 
           <div className={styles.controlsContainer}>
             <CSSTransition
@@ -188,7 +193,10 @@ const Npv = ({ playbackProgress, onSeek }) => {
             </CSSTransition>
           </div>
         </SwipeHandler>
-        <ScrubbingBackdrop playbackProgress={playbackProgress} onSeek={onSeek} />
+        <ScrubbingBackdrop
+          playbackProgress={playbackProgress}
+          onSeek={onSeek}
+        />
       </div>
     </>
   );

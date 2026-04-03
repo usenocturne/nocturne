@@ -1,4 +1,4 @@
-@import '../../../styles/variables.module';
+@import "../../../styles/variables.module";
 
 .nextButton {
   background-color: $white-30;
@@ -25,11 +25,8 @@
 .background {
   height: $device-height;
   width: 100%;
-  background: linear-gradient(
-      0deg,
-      rgb(11 99 202 / 20%),
-      rgb(11 99 202 / 20%)
-    ),
+  background:
+    linear-gradient(0deg, rgb(11 99 202 / 20%), rgb(11 99 202 / 20%)),
     radial-gradient(
       100% 100% at 0% 0%,
       #000 27.85%,
@@ -48,7 +45,9 @@
 }
 
 .tipContent {
-  transition: opacity 300ms ease, transform 300ms ease;
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease;
   opacity: 1;
   transform: translateX(0);
 }

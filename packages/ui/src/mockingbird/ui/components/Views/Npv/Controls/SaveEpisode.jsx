@@ -1,8 +1,11 @@
-import { IconAddAlt48, IconCheckAlt48 } from '../../../Icons/CarthingUIComponents';
-import { NpvIcon } from './Controls';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import ControlButton from './ControlButton';
+import {
+  IconAddAlt48,
+  IconCheckAlt48,
+} from "../../../Icons/CarthingUIComponents";
+import { NpvIcon } from "./Controls";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import ControlButton from "./ControlButton";
 
 const SaveEpisode = () => {
   const { npvStore } = useCarThingStore();

@@ -1,4 +1,4 @@
-import { action } from 'mobx';
+import { action } from "mobx";
 
 export const isDialEnabled = (
   appView,
@@ -6,9 +6,9 @@ export const isDialEnabled = (
   onboardingButtonEnabled,
   isPhoneCall,
 ) =>
-  (appView === 'MAIN' && !isPhoneCall) ||
+  (appView === "MAIN" && !isPhoneCall) ||
   isSettings ||
-  (appView === 'ONBOARDING' && onboardingButtonEnabled);
+  (appView === "ONBOARDING" && onboardingButtonEnabled);
 
 const reactToDial = (hardwareEvents, rootStore) => {
   const {
@@ -26,33 +26,38 @@ const reactToDial = (hardwareEvents, rootStore) => {
 
   const handleDialPress = action(() => {
     if (onboardingStore.isActive) {
-      if (onboardingStore.dialPressEnabled || onboardingStore.noInteractionModal) {
+      if (
+        onboardingStore.dialPressEnabled ||
+        onboardingStore.noInteractionModal
+      ) {
         onboardingStore.handleDialPress();
       }
       if (!onboardingStore.dialPressEnabled) {
         return;
       }
-      
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialPress();
       return;
     }
     switch (viewStore.currentView) {
-      case 'shelf':
+      case "shelf":
         if (shelfStore.shelfController) {
           shelfStore.shelfController.handleDialPress();
         }
         break;
 
-      case 'tracklist':
+      case "tracklist":
         if (tracklistStore.tracklistUiState.selectedItem) {
-          const id = ubiLogger && ubiLogger.trackListUbiLogger && ubiLogger.trackListUbiLogger.logDialPressTrackRow
-            ? ubiLogger.trackListUbiLogger.logDialPressTrackRow(
-              tracklistStore.tracklistUiState.selectedItemIndex,
-              tracklistStore.tracklistUiState.selectedItem.uri,
-            )
-            : Date.now();
+          const id =
+            ubiLogger &&
+            ubiLogger.trackListUbiLogger &&
+            ubiLogger.trackListUbiLogger.logDialPressTrackRow
+              ? ubiLogger.trackListUbiLogger.logDialPressTrackRow(
+                  tracklistStore.tracklistUiState.selectedItemIndex,
+                  tracklistStore.tracklistUiState.selectedItem.uri,
+                )
+              : Date.now();
           tracklistStore.tracklistUiState.handleItemSelected(
             tracklistStore.tracklistUiState.selectedItem,
             id,
@@ -60,13 +65,13 @@ const reactToDial = (hardwareEvents, rootStore) => {
         }
         break;
 
-      case 'npv':
+      case "npv":
         if (npvStore.npvController) {
           npvStore.npvController.handleDialPress();
         }
         break;
-      
-      case 'queue':
+
+      case "queue":
         if (queueStore.queueUiState) {
           queueStore.queueUiState.handleDialPress();
         }
@@ -79,7 +84,7 @@ const reactToDial = (hardwareEvents, rootStore) => {
 
   const handleDialLongPress = action(() => {
     switch (viewStore.currentView) {
-      case 'npv':
+      case "npv":
         if (npvStore.npvController) {
           npvStore.npvController.handleDialLongPress();
         }
@@ -100,42 +105,47 @@ const reactToDial = (hardwareEvents, rootStore) => {
 
   const handleDialLeft = action(() => {
     if (onboardingStore.isActive) {
-      if (onboardingStore.dialTurnEnabled || onboardingStore.noInteractionModal) {
+      if (
+        onboardingStore.dialTurnEnabled ||
+        onboardingStore.noInteractionModal
+      ) {
         onboardingStore.handleDialTurn();
       }
       if (!onboardingStore.dialTurnEnabled) {
         return;
       }
-      
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialLeft();
       return;
     }
     switch (viewStore.currentView) {
-      case 'shelf':
+      case "shelf":
         if (shelfStore.shelfController) {
           shelfStore.shelfController.handleDialLeft();
         }
         break;
 
-      case 'tracklist':
-        if (tracklistStore.tracklistUiState.leftItem &&
-          tracklistStore.tracklistUiState.leftItem !== tracklistStore.tracklistUiState.selectedItem) {
+      case "tracklist":
+        if (
+          tracklistStore.tracklistUiState.leftItem &&
+          tracklistStore.tracklistUiState.leftItem !==
+            tracklistStore.tracklistUiState.selectedItem
+        ) {
           tracklistStore.tracklistUiState.updateSelectedItem(
             tracklistStore.tracklistUiState.leftItem,
-            true
+            true,
           );
         }
         break;
 
-      case 'npv':
+      case "npv":
         if (npvStore.npvController) {
           npvStore.npvController.handleDialLeft();
         }
         break;
-      
-      case 'queue':
+
+      case "queue":
         if (queueStore.queueUiState) {
           queueStore.queueUiState.handleDialLeft();
         }
@@ -148,42 +158,47 @@ const reactToDial = (hardwareEvents, rootStore) => {
 
   const handleDialRight = action(() => {
     if (onboardingStore.isActive) {
-      if (onboardingStore.dialTurnEnabled || onboardingStore.noInteractionModal) {
+      if (
+        onboardingStore.dialTurnEnabled ||
+        onboardingStore.noInteractionModal
+      ) {
         onboardingStore.handleDialTurn();
       }
       if (!onboardingStore.dialTurnEnabled) {
         return;
       }
-      
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialRight();
       return;
     }
     switch (viewStore.currentView) {
-      case 'shelf':
+      case "shelf":
         if (shelfStore.shelfController) {
           shelfStore.shelfController.handleDialRight();
         }
         break;
 
-      case 'tracklist':
-        if (tracklistStore.tracklistUiState.rightItem &&
-          tracklistStore.tracklistUiState.rightItem !== tracklistStore.tracklistUiState.selectedItem) {
+      case "tracklist":
+        if (
+          tracklistStore.tracklistUiState.rightItem &&
+          tracklistStore.tracklistUiState.rightItem !==
+            tracklistStore.tracklistUiState.selectedItem
+        ) {
           tracklistStore.tracklistUiState.updateSelectedItem(
             tracklistStore.tracklistUiState.rightItem,
-            true
+            true,
           );
         }
         break;
 
-      case 'npv':
+      case "npv":
         if (npvStore.npvController) {
           npvStore.npvController.handleDialRight();
         }
         break;
-      
-      case 'queue':
+
+      case "queue":
         if (queueStore.queueUiState) {
           queueStore.queueUiState.handleDialRight();
         }

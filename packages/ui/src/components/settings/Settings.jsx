@@ -21,7 +21,10 @@ import SoftwareUpdate from "./SoftwareUpdate";
 import BluetoothDevices from "./network/BluetoothDevices";
 import About from "./About";
 import { useSettings } from "../../contexts/SettingsContext";
-import { sendNocturneWsRequest, getAppReadyState } from "../../hooks/useNocturned";
+import {
+  sendNocturneWsRequest,
+  getAppReadyState,
+} from "../../hooks/useNocturned";
 import { useSubscription } from "../../hooks/useSubscription";
 
 const settingsStructure = {
@@ -800,11 +803,16 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
           appPlatform === "web" &&
           isSubscribed === false;
         return (
-          <div key={item.id} className={`mb-8 ${isToggleDisabled ? "opacity-50" : ""}`}>
+          <div
+            key={item.id}
+            className={`mb-8 ${isToggleDisabled ? "opacity-50" : ""}`}
+          >
             <div className="flex items-center">
               <Switch
                 checked={settings[item.storageKey]}
-                onChange={() => !isToggleDisabled && handleToggle(item.storageKey)}
+                onChange={() =>
+                  !isToggleDisabled && handleToggle(item.storageKey)
+                }
                 className={`relative inline-flex h-11 w-20 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
                 }`}

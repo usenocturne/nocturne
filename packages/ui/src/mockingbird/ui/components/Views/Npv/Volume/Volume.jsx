@@ -1,9 +1,12 @@
-import { IconVolume48, IconVolumeOff48 } from '../../../Icons/CarthingUIComponents';
-import Type from '../../../CarthingUIComponents/Type/Type';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './Volume.module.scss';
-import VolumeBar from './VolumeBar';
+import {
+  IconVolume48,
+  IconVolumeOff48,
+} from "../../../Icons/CarthingUIComponents";
+import Type from "../../../CarthingUIComponents/Type/Type";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./Volume.module.scss";
+import VolumeBar from "./VolumeBar";
 
 const Volume = () => {
   const { npvStore } = useCarThingStore();

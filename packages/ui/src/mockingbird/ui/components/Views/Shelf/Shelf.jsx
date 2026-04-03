@@ -1,15 +1,15 @@
-import { useEffect } from 'react';
-import { observer } from 'mobx-react-lite';
-import AmbientBackdrop from '../AmbientBackdrop/AmbientBackdrop';
-import ShelfHeader from './ShelfHeader/ShelfHeader';
-import './Shelf.scss';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import ShelfSwiper from './ShelfSwiper/ShelfSwiper';
-import VoiceMutedBanner from './VoiceMutedBanner/VoiceMutedBanner';
+import { useEffect } from "react";
+import { observer } from "mobx-react-lite";
+import AmbientBackdrop from "../AmbientBackdrop/AmbientBackdrop";
+import ShelfHeader from "./ShelfHeader/ShelfHeader";
+import "./Shelf.scss";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import ShelfSwiper from "./ShelfSwiper/ShelfSwiper";
+import VoiceMutedBanner from "./VoiceMutedBanner/VoiceMutedBanner";
 
 const getGradientBackground = (rgbChannels) => {
   return `radial-gradient(ellipse at 100px -200px, rgb(${rgbChannels.join(
-    ',',
+    ",",
   )}) 5%, black 60%)`;
 };
 
@@ -24,8 +24,13 @@ const Shelf = () => {
 
   const uiState = shelfStore.shelfController.shelfSwiperItemUiState;
   const allShelfItems = shelfStore.shelfController.swiperUiState.allShelfItems;
-  const nowPlayingItem = allShelfItems.find(item => uiState.showNowPlaying(item.uri));
-  const gradientImageId = nowPlayingItem?.image_uri || nowPlayingItem?.image_id || playerStore.currentImageId;
+  const nowPlayingItem = allShelfItems.find((item) =>
+    uiState.showNowPlaying(item.uri),
+  );
+  const gradientImageId =
+    nowPlayingItem?.image_uri ||
+    nowPlayingItem?.image_id ||
+    playerStore.currentImageId;
 
   return (
     <>

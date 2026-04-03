@@ -18,7 +18,8 @@ const LoginRequired = () => {
       <div className={styles.title}>Not logged in</div>
       <div className={styles.description}>
         <p>
-          To use Car Thing, you need to log in to the Nocturne app on your phone.
+          To use Car Thing, you need to log in to the Nocturne app on your
+          phone.
         </p>
       </div>
     </div>

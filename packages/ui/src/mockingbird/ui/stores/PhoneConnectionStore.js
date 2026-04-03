@@ -1,15 +1,15 @@
-import { makeAutoObservable, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction } from "mobx";
 
 export const PhoneConnectionModalView = {
-  ADD_NEW_PHONE: 'ADD_NEW_PHONE',
-  ADD_NEW_PAIRING: 'ADD_NEW_PAIRING',
-  FORGET_PHONE_CONFIRM: 'FORGET_PHONE_CONFIRM',
-  FORGET_PHONE_PROGRESS: 'FORGET_PHONE_PROGRESS',
-  FORGET_PHONE_FAILURE: 'FORGET_PHONE_FAILURE',
-  FORGET_PHONE_SUCCESS: 'FORGET_PHONE_SUCCESS',
-  SELECT_PHONE_PROGRESS: 'SELECT_PHONE_PROGRESS',
-  PHONE_SWITCH_SUCCESS: 'PHONE_SWITCH_SUCCESS',
-  SELECT_PHONE_FAILURE: 'SELECT_PHONE_FAILURE',
+  ADD_NEW_PHONE: "ADD_NEW_PHONE",
+  ADD_NEW_PAIRING: "ADD_NEW_PAIRING",
+  FORGET_PHONE_CONFIRM: "FORGET_PHONE_CONFIRM",
+  FORGET_PHONE_PROGRESS: "FORGET_PHONE_PROGRESS",
+  FORGET_PHONE_FAILURE: "FORGET_PHONE_FAILURE",
+  FORGET_PHONE_SUCCESS: "FORGET_PHONE_SUCCESS",
+  SELECT_PHONE_PROGRESS: "SELECT_PHONE_PROGRESS",
+  PHONE_SWITCH_SUCCESS: "PHONE_SWITCH_SUCCESS",
+  SELECT_PHONE_FAILURE: "SELECT_PHONE_FAILURE",
 };
 
 class PhoneConnectionStore {
@@ -21,7 +21,8 @@ class PhoneConnectionStore {
 
   constructor(rootStore) {
     this.rootStore = rootStore;
-    this.phoneConnectionContextMenuUiState = new PhoneConnectionContextMenuUiState(this);
+    this.phoneConnectionContextMenuUiState =
+      new PhoneConnectionContextMenuUiState(this);
     makeAutoObservable(this, {
       rootStore: false,
       _dismissTimeout: false,
@@ -31,11 +32,14 @@ class PhoneConnectionStore {
   getPhoneConnectionDisplayStatus(device) {
     const { bluetoothStore } = this.rootStore;
     const isConnected = bluetoothStore.isDeviceConnected(device.address);
-    if (isConnected) return 'Connected';
-    if (bluetoothStore.currentDevice?.address === device.address && !isConnected) {
-      return 'Connecting...';
+    if (isConnected) return "Connected";
+    if (
+      bluetoothStore.currentDevice?.address === device.address &&
+      !isConnected
+    ) {
+      return "Connecting...";
     }
-    return 'Not connected';
+    return "Not connected";
   }
 
   handleSelectPhoneClick(device) {
@@ -65,10 +69,12 @@ class PhoneConnectionStore {
     const success = await bluetoothStore.connectDevice(address);
     runInAction(() => {
       if (success) {
-        this.phoneConnectionModal = PhoneConnectionModalView.PHONE_SWITCH_SUCCESS;
+        this.phoneConnectionModal =
+          PhoneConnectionModalView.PHONE_SWITCH_SUCCESS;
         this._autoDismiss(2000);
       } else {
-        this.phoneConnectionModal = PhoneConnectionModalView.SELECT_PHONE_FAILURE;
+        this.phoneConnectionModal =
+          PhoneConnectionModalView.SELECT_PHONE_FAILURE;
         this._autoDismiss(3000);
       }
     });
@@ -95,10 +101,12 @@ class PhoneConnectionStore {
     const success = await bluetoothStore.forgetDevice(address);
     runInAction(() => {
       if (success) {
-        this.phoneConnectionModal = PhoneConnectionModalView.FORGET_PHONE_SUCCESS;
+        this.phoneConnectionModal =
+          PhoneConnectionModalView.FORGET_PHONE_SUCCESS;
         this._autoDismiss(2000);
       } else {
-        this.phoneConnectionModal = PhoneConnectionModalView.FORGET_PHONE_FAILURE;
+        this.phoneConnectionModal =
+          PhoneConnectionModalView.FORGET_PHONE_FAILURE;
         this._autoDismiss(3000);
       }
     });
@@ -140,10 +148,10 @@ class PhoneConnectionStore {
 class PhoneConnectionContextMenuUiState {
   phoneMenuShowing = false;
   selectedItemIndex = 0;
-  phoneName = '';
-  phoneAddress = '';
+  phoneName = "";
+  phoneAddress = "";
   isConnected = false;
-  displayConnectionStatus = '';
+  displayConnectionStatus = "";
   isDialPressed = false;
 
   constructor(phoneConnectionStore) {
@@ -155,9 +163,9 @@ class PhoneConnectionContextMenuUiState {
 
   get menuItems() {
     if (this.isConnected) {
-      return ['Forget'];
+      return ["Forget"];
     }
-    return ['Connect', 'Forget'];
+    return ["Connect", "Forget"];
   }
 
   get phoneMenuItem() {
@@ -175,7 +183,7 @@ class PhoneConnectionContextMenuUiState {
     this.phoneName = device.name || bluetoothStore.getDeviceName(device);
     this.phoneAddress = device.address;
     this.isConnected = connected;
-    this.displayConnectionStatus = connected ? 'Connected' : 'Not connected';
+    this.displayConnectionStatus = connected ? "Connected" : "Not connected";
     this.selectedItemIndex = 0;
     this.phoneMenuShowing = true;
   }
@@ -192,16 +200,18 @@ class PhoneConnectionContextMenuUiState {
     const store = this.phoneConnectionStore;
     const device = { name: this.phoneName, address: this.phoneAddress };
 
-    if (item === 'Connect') {
+    if (item === "Connect") {
       this.dismissMenu();
       store.phoneToConnectOrForget = device;
-      store.phoneConnectionModal = PhoneConnectionModalView.SELECT_PHONE_PROGRESS;
+      store.phoneConnectionModal =
+        PhoneConnectionModalView.SELECT_PHONE_PROGRESS;
       store._connectToDevice(this.phoneAddress);
-    } else if (item === 'Forget') {
+    } else if (item === "Forget") {
       this.dismissMenu();
       store.phoneToConnectOrForget = device;
       store.forgetConfirmationIsActive = true;
-      store.phoneConnectionModal = PhoneConnectionModalView.FORGET_PHONE_CONFIRM;
+      store.phoneConnectionModal =
+        PhoneConnectionModalView.FORGET_PHONE_CONFIRM;
     }
   }
 

@@ -1,10 +1,10 @@
-import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
-import { useCarThingStore } from '../../contexts/CarThingStore';
-import { OnboardingStepId } from '../../stores/OnboardingStore';
-import Start from './Start';
-import LearnVoice from './LearnVoice';
-import LearnTactile from './LearnTactile';
+import { observer } from "mobx-react-lite";
+import { useEffect } from "react";
+import { useCarThingStore } from "../../contexts/CarThingStore";
+import { OnboardingStepId } from "../../stores/OnboardingStore";
+import Start from "./Start";
+import LearnVoice from "./LearnVoice";
+import LearnTactile from "./LearnTactile";
 
 const Onboarding = ({ onComplete, dataReady }) => {
   const { onboardingStore } = useCarThingStore();

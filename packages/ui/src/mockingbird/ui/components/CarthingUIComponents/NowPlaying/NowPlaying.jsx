@@ -1,9 +1,9 @@
-import { observer } from 'mobx-react-lite';
-import styles from './NowPlaying.module.scss';
-import classNames from 'classnames';
-import Type from '../Type/Type';
+import { observer } from "mobx-react-lite";
+import styles from "./NowPlaying.module.scss";
+import classNames from "classnames";
+import Type from "../Type/Type";
 
-const NowPlaying = ({ playing = true, textName = 'mestroBook' }) => {
+const NowPlaying = ({ playing = true, textName = "mestroBook" }) => {
   return (
     <div className={styles.nowPlayingWrapper}>
       <div className={styles.bars} data-testid="equaliser">

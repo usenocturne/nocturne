@@ -1,4 +1,4 @@
-@use '../../../styles/variables.module' as vars;
+@use "../../../styles/variables.module" as vars;
 
 .bannerContainer {
   position: absolute;
@@ -29,7 +29,7 @@
 
 .informationalText {
   width: 100%;
-  
+
   &.information {
     color: vars.$white;
   }
@@ -38,11 +38,11 @@
 .information {
   &.bannerContainer {
     background-color: vars.$blue-100;
-    
+
     .informationalText {
       color: vars.$white;
     }
-    
+
     .icon {
       color: vars.$white;
     }
@@ -52,11 +52,11 @@
 .confirmation {
   &.bannerContainer {
     background-color: vars.$white;
-    
+
     .informationalText {
       color: vars.$black;
     }
-    
+
     .icon {
       color: vars.$black;
     }
@@ -66,11 +66,11 @@
 .unavailable {
   &.bannerContainer {
     background-color: vars.$gray-20;
-    
+
     .informationalText {
       color: vars.$white;
     }
-    
+
     .icon {
       color: vars.$white;
     }

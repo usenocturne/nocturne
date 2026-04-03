@@ -1,7 +1,7 @@
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import Type from '../../../CarthingUIComponents/Type/Type';
-import styles from './ShelfSwiperItem.module.scss';
+import classNames from "classnames";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import Type from "../../../CarthingUIComponents/Type/Type";
+import styles from "./ShelfSwiperItem.module.scss";
 
 export const TITLES = {
   playlists: "You don't have any playlists",
@@ -12,10 +12,10 @@ export const TITLES = {
 };
 
 const VOICE_TIPS = {
-  playlists: "\"Hey Spotify, like this playlist\" or tap the heart icon.",
-  podcasts: "\"Hey Spotify, follow this podcast\" or tap the heart icon.",
-  artists: "\"Hey Spotify, follow this artist\" or tap the heart icon.",
-  albums: "\"Hey Spotify, like this album\" or tap the heart icon.",
+  playlists: '"Hey Spotify, like this playlist" or tap the heart icon.',
+  podcasts: '"Hey Spotify, follow this podcast" or tap the heart icon.',
+  artists: '"Hey Spotify, follow this artist" or tap the heart icon.',
+  albums: '"Hey Spotify, like this album" or tap the heart icon.',
   voice: "or tap the mic button to make a request.",
 };
 
@@ -28,12 +28,12 @@ const InlineTipItem = ({ item, isActive }) => {
   const isLeft = uiState.isLeftItem(item);
   const isVoiceTip = uiState.isVoiceTextPlaceholder(item);
   const title = TITLES[categoryTitle];
-  const trySaying = isVoiceTip ? 'Say "Hey Spotify" ' : 'Try saying: ';
+  const trySaying = isVoiceTip ? 'Say "Hey Spotify" ' : "Try saying: ";
   const subtitle = VOICE_TIPS[categoryTitle];
 
   return (
     <div
-      data-testid={isActive ? 'selected-item-title' : ''}
+      data-testid={isActive ? "selected-item-title" : ""}
       className={classNames(styles.inlineTipItem, {
         [styles.toTheLeft]: isLeft,
         [styles.hidden]: isHidden,

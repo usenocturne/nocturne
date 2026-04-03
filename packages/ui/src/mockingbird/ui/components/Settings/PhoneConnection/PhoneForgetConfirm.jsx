@@ -1,7 +1,7 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './PhoneConnectionModal.module.scss';
-import classNames from 'classnames';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./PhoneConnectionModal.module.scss";
+import classNames from "classnames";
 
 const PhoneForgetConfirm = () => {
   const { phoneConnectionStore, bluetoothStore } = useCarThingStore();
@@ -12,19 +12,17 @@ const PhoneForgetConfirm = () => {
 
   return (
     <div>
-      <div className={styles.title}>
-        Forget phone?
-      </div>
+      <div className={styles.title}>Forget phone?</div>
       <div className={styles.description}>
         {isConnected ? (
           <p>
-            You're connected to{' '}
+            You're connected to{" "}
             {phoneConnectionStore.phoneToConnectOrForget?.name}. Are you sure
             you want to forget it?
           </p>
         ) : (
           <p>
-            Are you sure you want to forget{' '}
+            Are you sure you want to forget{" "}
             {phoneConnectionStore.phoneToConnectOrForget?.name}?
           </p>
         )}
@@ -33,7 +31,8 @@ const PhoneForgetConfirm = () => {
         <button
           className={classNames(styles.button, {
             [styles.primary]: phoneConnectionStore.forgetConfirmationIsActive,
-            [styles.secondary]: !phoneConnectionStore.forgetConfirmationIsActive,
+            [styles.secondary]:
+              !phoneConnectionStore.forgetConfirmationIsActive,
           })}
           onClick={() => phoneConnectionStore.handlePhoneForgetConfirmClick()}
         >

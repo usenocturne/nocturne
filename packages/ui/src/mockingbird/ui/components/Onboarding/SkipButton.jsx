@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { observer } from 'mobx-react-lite';
-import { useCarThingStore } from '../../contexts/CarThingStore';
-import { LearnVoiceStepId, TTS } from '../../stores/OnboardingStore';
-import styles from './SkipButton.module.scss';
+import { useState, useRef, useEffect } from "react";
+import { observer } from "mobx-react-lite";
+import { useCarThingStore } from "../../contexts/CarThingStore";
+import { LearnVoiceStepId, TTS } from "../../stores/OnboardingStore";
+import styles from "./SkipButton.module.scss";
 
 const SkipButton = () => {
   const { onboardingStore } = useCarThingStore();
@@ -11,7 +11,6 @@ const SkipButton = () => {
   const mounted = useRef(false);
 
   useEffect(() => {
-    
     requestAnimationFrame(() => {
       mounted.current = true;
       setAnimClass(`${styles.animationEnter} ${styles.animationEnterActive}`);
@@ -29,7 +28,7 @@ const SkipButton = () => {
 
   return (
     <div
-      className={`${styles.skipButtonWrapper} ${pressedSkip ? styles.pressed : ''} ${animClass}`}
+      className={`${styles.skipButtonWrapper} ${pressedSkip ? styles.pressed : ""} ${animClass}`}
       onClick={() => skip()}
       onPointerDown={() => setPressedSkip(true)}
       onPointerUp={() => setPressedSkip(false)}

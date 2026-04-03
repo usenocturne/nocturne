@@ -1,7 +1,14 @@
-import { action } from 'mobx';
+import { action } from "mobx";
 
 const reactToBackButton = (hardwareEvents, rootStore) => {
-  const { viewStore, npvStore, shelfStore, overlayController, settingsStore, onboardingStore } = rootStore;
+  const {
+    viewStore,
+    npvStore,
+    shelfStore,
+    overlayController,
+    settingsStore,
+    onboardingStore,
+  } = rootStore;
 
   const handleBackButton = action(() => {
     if (onboardingStore.isActive) {
@@ -11,7 +18,6 @@ const reactToBackButton = (hardwareEvents, rootStore) => {
       if (!onboardingStore.backEnabled) {
         return;
       }
-      
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleBack();
@@ -19,13 +25,13 @@ const reactToBackButton = (hardwareEvents, rootStore) => {
     }
 
     switch (viewStore.currentView) {
-      case 'CONTENT_SHELF':
+      case "CONTENT_SHELF":
         if (shelfStore.shelfController) {
           shelfStore.shelfController.handleBackButton();
         }
         break;
 
-      case 'NPV':
+      case "NPV":
         if (npvStore.npvController) {
           npvStore.npvController.handleBackButton();
         } else {

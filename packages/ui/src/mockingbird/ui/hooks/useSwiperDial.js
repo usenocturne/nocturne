@@ -1,6 +1,6 @@
-import { autorun, runInAction } from 'mobx';
-import { useEffect, useRef } from 'react';
-import { easingFunction, transitionDurationMs } from '../styles/Variables';
+import { autorun, runInAction } from "mobx";
+import { useEffect, useRef } from "react";
+import { easingFunction, transitionDurationMs } from "../styles/Variables";
 
 let dragging = false;
 

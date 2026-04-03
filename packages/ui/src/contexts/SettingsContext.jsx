@@ -32,10 +32,7 @@ export function SettingsProvider({ children }) {
       "knobSeeksPlaybackEnabled",
       false,
     ),
-    mockingbirdUiEnabled: getDefaultSettingValue(
-      "mockingbirdUiEnabled",
-      false,
-    ),
+    mockingbirdUiEnabled: getDefaultSettingValue("mockingbirdUiEnabled", false),
   });
 
   useEffect(() => {

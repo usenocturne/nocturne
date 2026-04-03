@@ -1,6 +1,6 @@
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './VolumeBar.module.scss';
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./VolumeBar.module.scss";
 
 const VolumeBar = () => {
   const { npvStore } = useCarThingStore();
@@ -13,7 +13,7 @@ const VolumeBar = () => {
       style={
         isPlayingSpotify
           ? {
-              background: `rgb(${colorChannels.join(',')})`,
+              background: `rgb(${colorChannels.join(",")})`,
             }
           : undefined
       }

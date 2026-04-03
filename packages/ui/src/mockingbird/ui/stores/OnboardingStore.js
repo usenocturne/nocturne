@@ -1,5 +1,5 @@
-import { makeAutoObservable } from 'mobx';
-import { sendNocturneWsRequest } from '../../../hooks/useNocturned';
+import { makeAutoObservable } from "mobx";
+import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
 
 export const OnboardingStepId = {
   START: 0,
@@ -15,8 +15,8 @@ export const LearnVoiceStepId = {
 };
 
 export const NoInteractionModalOption = {
-  CONTINUE: 'CONTINUE',
-  END: 'END',
+  CONTINUE: "CONTINUE",
+  END: "END",
 };
 
 export const delayedAction = (actionToRun, timeout) => {
@@ -29,24 +29,57 @@ export const delayedAction = (actionToRun, timeout) => {
 };
 
 const TTS = {
-  START: { fileName: 'onboarding_start', fileLength: 3000 },
-  VOICE_1_1: { fileName: 'onboarding_learn_voice_1_1', fileLength: 5000 },
-  VOICE_2_1: { fileName: 'onboarding_learn_voice_2_1', fileLength: 3600 },
-  VOICE_2_2: { fileName: 'onboarding_learn_voice_2_2', fileLength: 6000 },
-  VOICE_3_1: { fileName: 'onboarding_learn_voice_3_1', fileLength: 6000 },
-  VOICE_3_2: { fileName: 'onboarding_learn_voice_3_2', fileLength: 5000 },
-  TACTILE_NAVIGATION: { fileName: 'onboarding_learn_tactile_navigation', fileLength: 8000 },
-  SHELF_EXPLAIN: { fileName: 'onboarding_learn_tactile_shelf_explain', fileLength: 7000 },
-  SHELF_DIAL_TURN: { fileName: 'onboarding_learn_tactile_shelf_dial_turn', fileLength: 2000 },
-  SHELF_DIAL_PRESS: { fileName: 'onboarding_learn_tactile_shelf_dial_press', fileLength: 4000 },
-  TRACKLIST_DIAL_PRESS: { fileName: 'onboarding_learn_tactile_tracklist_dial_press', fileLength: 2000 },
-  NPV_EXPLAIN: { fileName: 'onboarding_learn_tactile_npv_explain', fileLength: 4000 },
-  NPV_DIAL_PRESS: { fileName: 'onboarding_learn_tactile_npv_dial_press', fileLength: 4000 },
-  NPV_BACK_PRESS: { fileName: 'onboarding_learn_tactile_npv_back_press', fileLength: 6000 },
-  TRACKLIST_BACK_PRESS: { fileName: 'onboarding_learn_tactile_tracklist_back_press', fileLength: 3000 },
-  SHELF_BACK_PRESS: { fileName: 'onboarding_learn_tactile_shelf_back_press', fileLength: 6000 },
-  END_TOUR: { fileName: 'onboarding_learn_tactile_end_tour', fileLength: 5000 },
-  END_TOUR_VIA_SKIP: { fileName: 'onboarding_learn_tactile_end_tour_via_skip', fileLength: 5000 },
+  START: { fileName: "onboarding_start", fileLength: 3000 },
+  VOICE_1_1: { fileName: "onboarding_learn_voice_1_1", fileLength: 5000 },
+  VOICE_2_1: { fileName: "onboarding_learn_voice_2_1", fileLength: 3600 },
+  VOICE_2_2: { fileName: "onboarding_learn_voice_2_2", fileLength: 6000 },
+  VOICE_3_1: { fileName: "onboarding_learn_voice_3_1", fileLength: 6000 },
+  VOICE_3_2: { fileName: "onboarding_learn_voice_3_2", fileLength: 5000 },
+  TACTILE_NAVIGATION: {
+    fileName: "onboarding_learn_tactile_navigation",
+    fileLength: 8000,
+  },
+  SHELF_EXPLAIN: {
+    fileName: "onboarding_learn_tactile_shelf_explain",
+    fileLength: 7000,
+  },
+  SHELF_DIAL_TURN: {
+    fileName: "onboarding_learn_tactile_shelf_dial_turn",
+    fileLength: 2000,
+  },
+  SHELF_DIAL_PRESS: {
+    fileName: "onboarding_learn_tactile_shelf_dial_press",
+    fileLength: 4000,
+  },
+  TRACKLIST_DIAL_PRESS: {
+    fileName: "onboarding_learn_tactile_tracklist_dial_press",
+    fileLength: 2000,
+  },
+  NPV_EXPLAIN: {
+    fileName: "onboarding_learn_tactile_npv_explain",
+    fileLength: 4000,
+  },
+  NPV_DIAL_PRESS: {
+    fileName: "onboarding_learn_tactile_npv_dial_press",
+    fileLength: 4000,
+  },
+  NPV_BACK_PRESS: {
+    fileName: "onboarding_learn_tactile_npv_back_press",
+    fileLength: 6000,
+  },
+  TRACKLIST_BACK_PRESS: {
+    fileName: "onboarding_learn_tactile_tracklist_back_press",
+    fileLength: 3000,
+  },
+  SHELF_BACK_PRESS: {
+    fileName: "onboarding_learn_tactile_shelf_back_press",
+    fileLength: 6000,
+  },
+  END_TOUR: { fileName: "onboarding_learn_tactile_end_tour", fileLength: 5000 },
+  END_TOUR_VIA_SKIP: {
+    fileName: "onboarding_learn_tactile_end_tour_via_skip",
+    fileLength: 5000,
+  },
 };
 
 class OnboardingStore {
@@ -83,12 +116,12 @@ class OnboardingStore {
 
   onMiddlewareEvent(msg) {
     if (
-      msg.type === 'settings_response' &&
-      msg.payload.key === 'onboarding_status'
+      msg.type === "settings_response" &&
+      msg.payload.key === "onboarding_status"
     ) {
       this.onboardingMsgReceived = true;
       if (msg.payload.value) {
-        this.onboardingFinished = msg.payload.value === 'finished';
+        this.onboardingFinished = msg.payload.value === "finished";
       }
     }
   }
@@ -117,8 +150,8 @@ class OnboardingStore {
   }
 
   playTts(fileName) {
-    sendNocturneWsRequest('tts.speak', { file: fileName }).catch((e) => {
-      console.warn('[OnboardingStore] TTS failed:', fileName, e);
+    sendNocturneWsRequest("tts.speak", { file: fileName }).catch((e) => {
+      console.warn("[OnboardingStore] TTS failed:", fileName, e);
     });
   }
 
@@ -130,10 +163,10 @@ class OnboardingStore {
   }
 
   launchApp() {
-    sendNocturneWsRequest('device.launchApp', {
-      bundleId: 'com.usenocturne.nocturne',
+    sendNocturneWsRequest("device.launchApp", {
+      bundleId: "com.usenocturne.nocturne",
     }).catch((e) => {
-      console.warn('[OnboardingStore] launchApp failed:', e);
+      console.warn("[OnboardingStore] launchApp failed:", e);
     });
   }
 
@@ -203,7 +236,7 @@ class OnboardingStore {
     if (this.noInteractionModal) {
       this.noInteractionModal.currentOption =
         this.noInteractionModal.currentOption ===
-          NoInteractionModalOption.CONTINUE
+        NoInteractionModalOption.CONTINUE
           ? NoInteractionModalOption.END
           : NoInteractionModalOption.CONTINUE;
     } else if (this.dialTurnEnabled) {

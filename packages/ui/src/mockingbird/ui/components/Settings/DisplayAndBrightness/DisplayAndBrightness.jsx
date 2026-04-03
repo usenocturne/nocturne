@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import styles from './DisplayAndBrightness.module.scss';
-import { observer } from 'mobx-react-lite';
-import classNames from 'classnames';
-import pointerListenersMaker from '../../../helpers/PointerListeners';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
+import { useState } from "react";
+import styles from "./DisplayAndBrightness.module.scss";
+import { observer } from "mobx-react-lite";
+import classNames from "classnames";
+import pointerListenersMaker from "../../../helpers/PointerListeners";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
 
 const DisplayAndBrightness = () => {
   const [pressed, setPressed] = useState(false);
@@ -28,7 +28,7 @@ const DisplayAndBrightness = () => {
               [styles.greenOn]: nightModeController.isNightMode,
             })}
           >
-            {nightModeController.isNightMode ? 'On' : 'Off'}
+            {nightModeController.isNightMode ? "On" : "Off"}
           </span>
         </div>
         <div className={styles.text}>

@@ -9,10 +9,10 @@ import {
   IconPlaybackSpeed2Point5X48,
   IconPlaybackSpeed3X48,
   IconPlaybackSpeed3Point5X48,
-} from '../../../Icons/CarthingUIComponents';
-import ControlButton from './ControlButton';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
+} from "../../../Icons/CarthingUIComponents";
+import ControlButton from "./ControlButton";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
 
 const getSpeedIcon = (podcastSpeed) => {
   switch (podcastSpeed) {
@@ -46,10 +46,7 @@ const PodcastSpeed = () => {
   const uiState = npvStore.controlButtonsUiState;
 
   return (
-    <ControlButton
-      id="PODCAST_SPEED"
-      onClick={uiState.handlePodcastSpeedClick}
-    >
+    <ControlButton id="PODCAST_SPEED" onClick={uiState.handlePodcastSpeedClick}>
       <div data-testid={`speed-icon-${uiState.podcastSpeed}`}>
         {getSpeedIcon(uiState.podcastSpeed)}
       </div>

@@ -1,4 +1,4 @@
-@import '../../../styles/variables.module';
+@import "../../../styles/variables.module";
 
 $off: 0.2;
 $low: 0.6;
@@ -61,57 +61,129 @@ $play-ms: 1500ms;
 }
 
 @-webkit-keyframes play1 {
-  0% { transform: scaleY($mid); }
-  20% { transform: scaleY($off); }
-  40% { transform: scaleY($mid); }
-  60% { transform: scaleY($low); }
-  80% { transform: scaleY($high); }
-  100% { transform: scaleY($mid); }
+  0% {
+    transform: scaleY($mid);
+  }
+  20% {
+    transform: scaleY($off);
+  }
+  40% {
+    transform: scaleY($mid);
+  }
+  60% {
+    transform: scaleY($low);
+  }
+  80% {
+    transform: scaleY($high);
+  }
+  100% {
+    transform: scaleY($mid);
+  }
 }
 
 @keyframes play1 {
-  0% { transform: scaleY($mid); }
-  20% { transform: scaleY($off); }
-  40% { transform: scaleY($mid); }
-  60% { transform: scaleY($low); }
-  80% { transform: scaleY($high); }
-  100% { transform: scaleY($mid); }
+  0% {
+    transform: scaleY($mid);
+  }
+  20% {
+    transform: scaleY($off);
+  }
+  40% {
+    transform: scaleY($mid);
+  }
+  60% {
+    transform: scaleY($low);
+  }
+  80% {
+    transform: scaleY($high);
+  }
+  100% {
+    transform: scaleY($mid);
+  }
 }
 
 @-webkit-keyframes play2 {
-  0% { transform: scaleY($high); }
-  20% { transform: scaleY($mid); }
-  40% { transform: scaleY($low); }
-  60% { transform: scaleY($mid); }
-  80% { transform: scaleY($off); }
-  100% { transform: scaleY($high); }
+  0% {
+    transform: scaleY($high);
+  }
+  20% {
+    transform: scaleY($mid);
+  }
+  40% {
+    transform: scaleY($low);
+  }
+  60% {
+    transform: scaleY($mid);
+  }
+  80% {
+    transform: scaleY($off);
+  }
+  100% {
+    transform: scaleY($high);
+  }
 }
 
 @keyframes play2 {
-  0% { transform: scaleY($high); }
-  20% { transform: scaleY($mid); }
-  40% { transform: scaleY($low); }
-  60% { transform: scaleY($mid); }
-  80% { transform: scaleY($off); }
-  100% { transform: scaleY($high); }
+  0% {
+    transform: scaleY($high);
+  }
+  20% {
+    transform: scaleY($mid);
+  }
+  40% {
+    transform: scaleY($low);
+  }
+  60% {
+    transform: scaleY($mid);
+  }
+  80% {
+    transform: scaleY($off);
+  }
+  100% {
+    transform: scaleY($high);
+  }
 }
 
 @-webkit-keyframes play3 {
-  0% { transform: scaleY($low); }
-  20% { transform: scaleY($mid); }
-  40% { transform: scaleY($off); }
-  60% { transform: scaleY($high); }
-  80% { transform: scaleY($mid); }
-  100% { transform: scaleY($low); }
+  0% {
+    transform: scaleY($low);
+  }
+  20% {
+    transform: scaleY($mid);
+  }
+  40% {
+    transform: scaleY($off);
+  }
+  60% {
+    transform: scaleY($high);
+  }
+  80% {
+    transform: scaleY($mid);
+  }
+  100% {
+    transform: scaleY($low);
+  }
 }
 
 @keyframes play3 {
-  0% { transform: scaleY($low); }
-  20% { transform: scaleY($mid); }
-  40% { transform: scaleY($off); }
-  60% { transform: scaleY($high); }
-  80% { transform: scaleY($mid); }
-  100% { transform: scaleY($low); }
+  0% {
+    transform: scaleY($low);
+  }
+  20% {
+    transform: scaleY($mid);
+  }
+  40% {
+    transform: scaleY($off);
+  }
+  60% {
+    transform: scaleY($high);
+  }
+  80% {
+    transform: scaleY($mid);
+  }
+  100% {
+    transform: scaleY($low);
+  }
 }
 
 .nowPlayingText {

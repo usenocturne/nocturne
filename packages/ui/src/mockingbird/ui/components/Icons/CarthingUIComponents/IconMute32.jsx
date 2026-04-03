@@ -1,5 +1,11 @@
 const IconMute32 = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    width="32"
+    height="32"
+    viewBox="0 0 32 32"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <path
       d="M8 11.25V20.75C8 21.3023 8.44772 21.75 9 21.75H12.5L18.5 26.5C19.3284 27.1667 20.5 26.5708 20.5 25.5V6.5C20.5 5.42924 19.3284 4.83333 18.5 5.5L12.5 10.25H9C8.44772 10.25 8 10.6977 8 11.25Z"
       fill="currentColor"

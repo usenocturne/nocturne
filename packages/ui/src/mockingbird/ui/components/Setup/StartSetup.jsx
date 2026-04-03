@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import styles from './StartSetup.module.scss';
-import SetupHelp from './SetupHelp';
+import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import styles from "./StartSetup.module.scss";
+import SetupHelp from "./SetupHelp";
 
-const QR_URL = 'https://usenocturne.com/app';
+const QR_URL = "https://usenocturne.com/app";
 
 const StartSetup = () => {
   const [showHelp, setShowHelp] = useState(false);
@@ -21,10 +21,7 @@ const StartSetup = () => {
             Point your phone's camera at this QR code and tap the link that
             appears.
           </div>
-          <div
-            className={styles.needHelp}
-            onClick={() => setShowHelp(true)}
-          >
+          <div className={styles.needHelp} onClick={() => setShowHelp(true)}>
             Need some help?
           </div>
         </div>

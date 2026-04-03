@@ -1,15 +1,16 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
-import { runInAction } from 'mobx';
-import { Swiper as SwiperComponent, SwiperSlide } from 'swiper/react';
-import styles from './Submenu.module.scss';
-import SubmenuHeader from './SubmenuHeader';
-import SubmenuItem from './SubmenuItem';
-import { iconMapping } from '../MainMenu/MainMenuItem';
-import variables from '../../../styles/variables.module.scss';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import { useEffect, useState } from "react";
+import { runInAction } from "mobx";
+import { Swiper as SwiperComponent, SwiperSlide } from "swiper/react";
+import styles from "./Submenu.module.scss";
+import SubmenuHeader from "./SubmenuHeader";
+import SubmenuItem from "./SubmenuItem";
+import { iconMapping } from "../MainMenu/MainMenuItem";
+import variables from "../../../styles/variables.module.scss";
 
-const easingFunction = variables['easing-function'] || 'cubic-bezier(0.16, 1, 0.3, 1)';
+const easingFunction =
+  variables["easing-function"] || "cubic-bezier(0.16, 1, 0.3, 1)";
 
 const DEVICE_HEIGHT = 480;
 const HEADER_HEIGHT = 144;

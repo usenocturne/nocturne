@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable } from "mobx";
 
 class BannerStore {
   _showNoNetwork = false;
@@ -7,10 +7,14 @@ class BannerStore {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
 
-    this._handleNetworkShow = () => { this._showNoNetwork = true; };
-    this._handleNetworkHide = () => { this._showNoNetwork = false; };
-    window.addEventListener('networkBannerShow', this._handleNetworkShow);
-    window.addEventListener('networkBannerHide', this._handleNetworkHide);
+    this._handleNetworkShow = () => {
+      this._showNoNetwork = true;
+    };
+    this._handleNetworkHide = () => {
+      this._showNoNetwork = false;
+    };
+    window.addEventListener("networkBannerShow", this._handleNetworkShow);
+    window.addEventListener("networkBannerHide", this._handleNetworkHide);
   }
 
   get shouldShowWindAlertBanner() {

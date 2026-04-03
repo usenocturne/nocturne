@@ -1,4 +1,3 @@
-
 export function extractColorsFromImage(imageUrl) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -40,12 +39,12 @@ export function extractColorsFromImage(imageUrl) {
           .sort((a, b) => b[1] - a[1])
           .slice(0, 10)
           .map(([color, count]) => {
-            const [r, g, b] = color.split(',').map(Number);
+            const [r, g, b] = color.split(",").map(Number);
             const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
             const saturation = Math.max(r, g, b) - Math.min(r, g, b);
             return { r, g, b, brightness, saturation, count };
           })
-          .filter(color => {
+          .filter((color) => {
             return color.brightness > 50 && color.brightness < 200;
           });
 
@@ -55,8 +54,10 @@ export function extractColorsFromImage(imageUrl) {
         }
 
         sortedColors.sort((a, b) => {
-          const aScore = a.saturation * 0.6 + a.brightness * 0.2 + a.count * 0.2;
-          const bScore = b.saturation * 0.6 + b.brightness * 0.2 + b.count * 0.2;
+          const aScore =
+            a.saturation * 0.6 + a.brightness * 0.2 + a.count * 0.2;
+          const bScore =
+            b.saturation * 0.6 + b.brightness * 0.2 + b.count * 0.2;
           return bScore - aScore;
         });
 
@@ -72,10 +73,11 @@ export function extractColorsFromImage(imageUrl) {
           darkened,
           sortedColors[1] || dominantColor,
           sortedColors[2] || dominantColor,
-        ].map(color =>
-          `#${color.r.toString(16).padStart(2, "0")}${color.g
-            .toString(16)
-            .padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`
+        ].map(
+          (color) =>
+            `#${color.r.toString(16).padStart(2, "0")}${color.g
+              .toString(16)
+              .padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`,
         );
 
         resolve(selectedColors);
@@ -86,7 +88,12 @@ export function extractColorsFromImage(imageUrl) {
     };
 
     img.onerror = (error) => {
-      console.warn('ColorExtractor: Image load error:', error, 'for URL:', imageUrl);
+      console.warn(
+        "ColorExtractor: Image load error:",
+        error,
+        "for URL:",
+        imageUrl,
+      );
       resolve(["#191414", "#1E1B1B", "#222222", "#1A1A1A"]);
     };
 
@@ -96,9 +103,9 @@ export function extractColorsFromImage(imageUrl) {
 
 export function getBackgroundColor(imageBase64) {
   return extractColorsFromImage(`data:image/jpeg;base64,${imageBase64}`)
-    .then(colors => {
+    .then((colors) => {
       const darkColor = colors[1];
-      if (darkColor.startsWith('#')) {
+      if (darkColor.startsWith("#")) {
         const r = parseInt(darkColor.slice(1, 3), 16);
         const g = parseInt(darkColor.slice(3, 5), 16);
         const b = parseInt(darkColor.slice(5, 7), 16);

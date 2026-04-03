@@ -1,15 +1,15 @@
-import { observer } from 'mobx-react-lite';
-import { useEffect, useState, useRef } from 'react';
-import { runInAction } from 'mobx';
-import { useCarThingStore } from '../../contexts/CarThingStore';
-import { delayedAction, TTS } from '../../stores/OnboardingStore';
-import { transitionDurationMs } from '../../styles/Variables';
-import Main from '../Main';
-import DialTurnDots from './DialTurnDots';
-import DialPressPulse from './DialPressPulse';
-import BackPressBanner from './BackPressBanner';
-import NoInteractionModal from './NoInteractionModal';
-import styles from './LearnTactile.module.scss';
+import { observer } from "mobx-react-lite";
+import { useEffect, useState, useRef } from "react";
+import { runInAction } from "mobx";
+import { useCarThingStore } from "../../contexts/CarThingStore";
+import { delayedAction, TTS } from "../../stores/OnboardingStore";
+import { transitionDurationMs } from "../../styles/Variables";
+import Main from "../Main";
+import DialTurnDots from "./DialTurnDots";
+import DialPressPulse from "./DialPressPulse";
+import BackPressBanner from "./BackPressBanner";
+import NoInteractionModal from "./NoInteractionModal";
+import styles from "./LearnTactile.module.scss";
 
 const TIME_TO_NO_INTERACTION_MODAL = 10000;
 const OVERLAY_TRANSITION_MS = 300;
@@ -37,7 +37,10 @@ const LearnTactile = () => {
       });
     } else {
       setModalVisible(false);
-      modalTimerRef.current = setTimeout(() => setModalMounted(false), OVERLAY_TRANSITION_MS);
+      modalTimerRef.current = setTimeout(
+        () => setModalMounted(false),
+        OVERLAY_TRANSITION_MS,
+      );
     }
     return () => clearTimeout(modalTimerRef.current);
   }, [isModalActive]);
@@ -53,7 +56,6 @@ const LearnTactile = () => {
     let mounted = true;
 
     const setup = async () => {
-      
       viewStore.backToContentShelf();
 
       onboardingStore.setDialPressEnabled(false);
@@ -63,7 +65,6 @@ const LearnTactile = () => {
       await onboardingStore.waitForTts(TTS.SHELF_EXPLAIN);
 
       if (mounted) {
-        
         onboardingStore.playTts(TTS.SHELF_DIAL_TURN.fileName);
 
         runInAction(() => {
@@ -80,7 +81,7 @@ const LearnTactile = () => {
       mounted = false;
       window.clearTimeout(noInteractionTimeoutId.current);
     };
-  }, []); 
+  }, []);
 
   useEffect(() => {
     switch (onboardingStore.dialTurnCounter) {
@@ -105,13 +106,12 @@ const LearnTactile = () => {
       default:
         break;
     }
-  }, [onboardingStore.dialTurnCounter]); 
+  }, [onboardingStore.dialTurnCounter]);
 
   useEffect(() => {
     const handleDialPress = async () => {
       switch (onboardingStore.dialPressCounter) {
         case 1: {
-          
           window.clearTimeout(noInteractionTimeoutId.current);
 
           onboardingStore.playTts(TTS.TRACKLIST_DIAL_PRESS.fileName);
@@ -126,7 +126,6 @@ const LearnTactile = () => {
           break;
         }
         case 2: {
-          
           window.clearTimeout(noInteractionTimeoutId.current);
           runInAction(() => {
             onboardingStore.setDialTurnEnabled(false);
@@ -146,7 +145,6 @@ const LearnTactile = () => {
           break;
         }
         case 3: {
-          
           window.clearTimeout(noInteractionTimeoutId.current);
           setShowDialPressPulse(false);
           runInAction(() => {
@@ -168,19 +166,17 @@ const LearnTactile = () => {
     };
 
     handleDialPress();
-  }, [onboardingStore.dialPressCounter]); 
+  }, [onboardingStore.dialPressCounter]);
 
   useEffect(() => {
     const handleBack = async () => {
       switch (onboardingStore.backCounter) {
         case 1: {
-          
           onboardingStore.playTts(TTS.TRACKLIST_BACK_PRESS.fileName);
           startNoInteractionTimer();
           break;
         }
         case 2: {
-          
           window.clearTimeout(noInteractionTimeoutId.current);
 
           await onboardingStore.waitForTts(TTS.SHELF_BACK_PRESS);
@@ -189,7 +185,6 @@ const LearnTactile = () => {
           break;
         }
         case 3: {
-          
           window.clearTimeout(noInteractionTimeoutId.current);
           setShowBackPressBanner(false);
 
@@ -204,7 +199,7 @@ const LearnTactile = () => {
     };
 
     handleBack();
-  }, [onboardingStore.backCounter]); 
+  }, [onboardingStore.backCounter]);
 
   return (
     <div className={styles.learnTactile} data-testid="onboarding-learn-tactile">
@@ -212,9 +207,7 @@ const LearnTactile = () => {
       {showDialTurnDots && <DialTurnDots />}
       {showDialPressPulse && <DialPressPulse />}
       {showBackPressBanner && <BackPressBanner />}
-      {!isModalActive && (
-        <div className={styles.blockTouch} />
-      )}
+      {!isModalActive && <div className={styles.blockTouch} />}
       {modalMounted && <NoInteractionModal visible={modalVisible} />}
     </div>
   );

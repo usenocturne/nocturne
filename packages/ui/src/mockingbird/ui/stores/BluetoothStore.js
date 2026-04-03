@@ -1,11 +1,11 @@
-import { makeAutoObservable, runInAction } from 'mobx';
-import { sendNocturneWsRequest } from '../../../hooks/useNocturned';
+import { makeAutoObservable, runInAction } from "mobx";
+import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
 
 class BluetoothStore {
   bluetoothDeviceList = [];
   currentDevice = null;
   localDevice = null;
-  pin = '';
+  pin = "";
 
   constructor(rootStore) {
     this.rootStore = rootStore;
@@ -14,8 +14,15 @@ class BluetoothStore {
 
   async triggerBTDeviceList() {
     try {
-      const resp = await sendNocturneWsRequest('bluetooth.devices.list', {}, { timeoutMs: 5000 });
-      const list = (resp && resp.payload) || (resp && resp.result && resp.result.payload) || [];
+      const resp = await sendNocturneWsRequest(
+        "bluetooth.devices.list",
+        {},
+        { timeoutMs: 5000 },
+      );
+      const list =
+        (resp && resp.payload) ||
+        (resp && resp.result && resp.result.payload) ||
+        [];
       runInAction(() => {
         this.bluetoothDeviceList = list;
         const connected = list.find((d) => d.connected);
@@ -24,7 +31,7 @@ class BluetoothStore {
         }
       });
     } catch (e) {
-      console.error('Failed to fetch bluetooth devices:', e);
+      console.error("Failed to fetch bluetooth devices:", e);
       runInAction(() => {
         this.bluetoothDeviceList = [];
       });
@@ -34,14 +41,20 @@ class BluetoothStore {
   async connectDevice(address) {
     try {
       runInAction(() => {
-        this.currentDevice = this.bluetoothDeviceList.find((d) => d.address === address) || { address };
+        this.currentDevice = this.bluetoothDeviceList.find(
+          (d) => d.address === address,
+        ) || { address };
       });
-      await sendNocturneWsRequest('bluetooth.device.connect', { address }, { timeoutMs: 15000 });
-      localStorage.setItem('lastConnectedBluetoothDevice', address);
+      await sendNocturneWsRequest(
+        "bluetooth.device.connect",
+        { address },
+        { timeoutMs: 15000 },
+      );
+      localStorage.setItem("lastConnectedBluetoothDevice", address);
       await this.triggerBTDeviceList();
       return true;
     } catch (e) {
-      console.error('Failed to connect device:', e);
+      console.error("Failed to connect device:", e);
       runInAction(() => {
         this.currentDevice = null;
       });
@@ -51,47 +64,63 @@ class BluetoothStore {
 
   async disconnectDevice(address) {
     try {
-      await sendNocturneWsRequest('bluetooth.device.disconnect', { address }, { timeoutMs: 10000 });
-      if (localStorage.getItem('lastConnectedBluetoothDevice') === address) {
-        localStorage.removeItem('lastConnectedBluetoothDevice');
+      await sendNocturneWsRequest(
+        "bluetooth.device.disconnect",
+        { address },
+        { timeoutMs: 10000 },
+      );
+      if (localStorage.getItem("lastConnectedBluetoothDevice") === address) {
+        localStorage.removeItem("lastConnectedBluetoothDevice");
       }
       await this.triggerBTDeviceList();
       return true;
     } catch (e) {
-      console.error('Failed to disconnect device:', e);
+      console.error("Failed to disconnect device:", e);
       return false;
     }
   }
 
   async forgetDevice(address) {
     try {
-      await sendNocturneWsRequest('bluetooth.device.unpair', { address }, { timeoutMs: 10000 });
-      if (localStorage.getItem('lastConnectedBluetoothDevice') === address) {
-        localStorage.removeItem('lastConnectedBluetoothDevice');
+      await sendNocturneWsRequest(
+        "bluetooth.device.unpair",
+        { address },
+        { timeoutMs: 10000 },
+      );
+      if (localStorage.getItem("lastConnectedBluetoothDevice") === address) {
+        localStorage.removeItem("lastConnectedBluetoothDevice");
       }
       await this.triggerBTDeviceList();
       return true;
     } catch (e) {
-      console.error('Failed to forget device:', e);
+      console.error("Failed to forget device:", e);
       return false;
     }
   }
 
   async startDiscovery() {
     try {
-      await sendNocturneWsRequest('bluetooth.discoverable', { discoverable: true }, { timeoutMs: 5000 });
+      await sendNocturneWsRequest(
+        "bluetooth.discoverable",
+        { discoverable: true },
+        { timeoutMs: 5000 },
+      );
       return true;
     } catch (e) {
-      console.error('Failed to start discovery:', e);
+      console.error("Failed to start discovery:", e);
       return false;
     }
   }
 
   async stopDiscovery() {
     try {
-      await sendNocturneWsRequest('bluetooth.discoverable', { discoverable: false }, { timeoutMs: 5000 });
+      await sendNocturneWsRequest(
+        "bluetooth.discoverable",
+        { discoverable: false },
+        { timeoutMs: 5000 },
+      );
     } catch (e) {
-      console.error('Failed to stop discovery:', e);
+      console.error("Failed to stop discovery:", e);
     }
   }
 
@@ -101,7 +130,13 @@ class BluetoothStore {
   }
 
   getDeviceName(device) {
-    return device?.device_info?.name || device?.name || device?.alias || device?.address || '';
+    return (
+      device?.device_info?.name ||
+      device?.name ||
+      device?.alias ||
+      device?.address ||
+      ""
+    );
   }
 }
 

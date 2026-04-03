@@ -1,6 +1,5 @@
-
-$aubergine: #503750; 
-$pink: #ffcdd2; 
+$aubergine: #503750;
+$pink: #ffcdd2;
 $black: #000000;
 $white: #ffffff;
 $aquamarine: #9bf0e1;
@@ -353,13 +352,18 @@ $overlay-z-index: 30;
 $onboarding-tactile-z-index: 25;
 $navigation-views: 10;
 
-$easing-function: cubic-bezier(0.16, 1, 0.3, 1); 
+$easing-function: cubic-bezier(0.16, 1, 0.3, 1);
 $easing-function-ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
 $duration-ms: 500;
 $duration-default: $duration-ms + 0ms;
 
 @mixin text-style($fs, $lh, $ls) {
-  font-family: 'spotify-circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    "spotify-circular",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   font-size: $fs;
   line-height: $lh;
   letter-spacing: $ls;
@@ -373,56 +377,77 @@ $duration-default: $duration-ms + 0ms;
   transition: background-color $duration-default $easing-function;
 }
 
-@mixin transition-transform($duration: $duration-default,
+@mixin transition-transform(
+  $duration: $duration-default,
   $easingFunction: $easing-function,
-  $delay: 0ms) {
+  $delay: 0ms
+) {
   transition: transform $duration $easingFunction $delay;
 }
 
-@mixin transition-background-opacity($duration: $duration-default,
+@mixin transition-background-opacity(
+  $duration: $duration-default,
   $easingFunction: $easing-function,
-  $delay: 0ms) {
-  transition: background $duration $easingFunction $delay,
+  $delay: 0ms
+) {
+  transition:
+    background $duration $easingFunction $delay,
     opacity $duration $easingFunction $delay;
 }
 
-@mixin transition-opacity($duration: $duration-default,
+@mixin transition-opacity(
+  $duration: $duration-default,
   $easingFunction: $easing-function,
-  $delay: 0ms) {
+  $delay: 0ms
+) {
   transition: opacity $duration $easingFunction $delay;
 }
 
-@mixin transition-opacity-transform($duration: $duration-default,
+@mixin transition-opacity-transform(
+  $duration: $duration-default,
   $easingFunction: $easing-function,
-  $delay: 0ms) {
-  transition: opacity $duration $easingFunction $delay,
+  $delay: 0ms
+) {
+  transition:
+    opacity $duration $easingFunction $delay,
     transform $duration $easingFunction $delay;
 }
 
-@mixin transition-background-border($duration: $duration-default,
+@mixin transition-background-border(
+  $duration: $duration-default,
   $easingFunction: $easing-function,
-  $delay: 0ms) {
-  transition: background $duration $easingFunction $delay,
+  $delay: 0ms
+) {
+  transition:
+    background $duration $easingFunction $delay,
     border $duration $easingFunction $delay;
 }
 
-@mixin transition-margin-right($duration: $duration-default,
+@mixin transition-margin-right(
+  $duration: $duration-default,
   $easingFunction: $easing-function,
-  $delay: 0ms) {
+  $delay: 0ms
+) {
   transition: margin-right $duration $easingFunction $delay;
 }
 
-@mixin transition-margin-right-opacity($duration: $duration-default,
+@mixin transition-margin-right-opacity(
+  $duration: $duration-default,
   $easingFunction: $easing-function,
-  $delay: 0ms) {
-  transition: margin-right $duration $easingFunction $delay,
+  $delay: 0ms
+) {
+  transition:
+    margin-right $duration $easingFunction $delay,
     opacity $duration $easingFunction $delay;
 }
 
-@mixin transition-filter-transform($duration: $duration-default,
+@mixin transition-filter-transform(
+  $duration: $duration-default,
   $easingFunction: $easing-function,
-  $delay: 0ms) {
-  transition: filter $duration $easingFunction $delay,
+  $delay: 0ms
+) {
+  transition:
+    filter $duration $easingFunction $delay,
     transform $duration $easingFunction $delay;
 }
 

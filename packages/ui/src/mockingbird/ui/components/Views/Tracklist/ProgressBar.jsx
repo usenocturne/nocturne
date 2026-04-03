@@ -1,9 +1,9 @@
-import { observer } from 'mobx-react-lite';
-import styles from './ProgressBar.module.scss';
+import { observer } from "mobx-react-lite";
+import styles from "./ProgressBar.module.scss";
 
 const ProgressBar = ({ item, isCurrent }) => {
   const { uri, metadata } = item;
-  
+
   if (isCurrent && metadata && metadata.progress_percentage !== undefined) {
     return (
       <div data-testid={`progress-bar-${uri}`} className={styles.progressBar}>
@@ -14,7 +14,7 @@ const ProgressBar = ({ item, isCurrent }) => {
       </div>
     );
   }
-  
+
   if (metadata && metadata.progress_percentage !== undefined) {
     return (
       <div data-testid={`progress-bar-${uri}`} className={styles.progressBar}>
@@ -25,7 +25,7 @@ const ProgressBar = ({ item, isCurrent }) => {
       </div>
     );
   }
-  
+
   return null;
 };
 

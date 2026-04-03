@@ -1,5 +1,5 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import styles from './RestartConfirm.module.scss';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import styles from "./RestartConfirm.module.scss";
 
 const RestartConfirm = () => {
   const { hardwareStore } = useCarThingStore();

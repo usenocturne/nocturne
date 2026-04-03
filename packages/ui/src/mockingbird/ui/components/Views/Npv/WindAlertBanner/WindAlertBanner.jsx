@@ -1,4 +1,3 @@
-
 const WindAlertBanner = () => {
   return <div>WindAlertBanner</div>;
 };

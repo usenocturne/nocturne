@@ -1,25 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
-import styles from './Licenses.module.scss';
+import { useEffect, useRef, useState } from "react";
+import styles from "./Licenses.module.scss";
 
-const UI_LICENSE_FILEPATH = 'license/ui-license.txt';
-const MW_LICENSE_FILEPATH = 'license/mw-license.txt';
-const OS_LICENSE_FILEPATH = 'license/os-license.txt';
+const UI_LICENSE_FILEPATH = "license/ui-license.txt";
+const MW_LICENSE_FILEPATH = "license/mw-license.txt";
+const OS_LICENSE_FILEPATH = "license/os-license.txt";
 
 async function fetchTextFile(path) {
   try {
     const resp = await fetch(path);
-    if (!resp.ok) return '';
-    const contentType = resp.headers.get('content-type') || '';
-    
-    if (contentType.includes('text/html')) return '';
+    if (!resp.ok) return "";
+    const contentType = resp.headers.get("content-type") || "";
+
+    if (contentType.includes("text/html")) return "";
     return await resp.text();
   } catch {
-    return '';
+    return "";
   }
 }
 
 const Licenses = () => {
-  const [licenseText, setLicenseText] = useState('');
+  const [licenseText, setLicenseText] = useState("");
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(false);
 
@@ -33,8 +33,8 @@ const Licenses = () => {
         fetchTextFile(OS_LICENSE_FILEPATH),
       ]);
       if (mountedRef.current) {
-        const combined = texts.filter(Boolean).join('\n\n');
-        setLicenseText(combined || 'No license files found.');
+        const combined = texts.filter(Boolean).join("\n\n");
+        setLicenseText(combined || "No license files found.");
         setLoading(false);
       }
     }

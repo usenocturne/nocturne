@@ -1,30 +1,32 @@
-import { makeAutoObservable, runInAction } from 'mobx';
-import { SwipeHandlerClass } from '../components/Views/Npv/SwipeHandler/SwipeHandler';
+import { makeAutoObservable, runInAction } from "mobx";
+import { SwipeHandlerClass } from "../components/Views/Npv/SwipeHandler/SwipeHandler";
 
 export class NpvStore {
-
   tipsUiState = {
-    dismissVisibleTip: () => { },
+    dismissVisibleTip: () => {},
     tipToShow: null,
   };
 
   playingInfoUiState = {
     currentItem: {
-      uid: '',
-      uri: '',
-      image_uri: '',
+      uid: "",
+      uri: "",
+      image_uri: "",
     },
-    title: '',
-    subtitle: '',
-    contextHeaderTitle: '',
+    title: "",
+    subtitle: "",
+    contextHeaderTitle: "",
     handlePlayingInfoHeaderClick: () => {
       const rootStore = window.carThingRootStore;
-      if (rootStore?.queueStore?.queueUiState && rootStore.queueStore.next.length > 0) {
+      if (
+        rootStore?.queueStore?.queueUiState &&
+        rootStore.queueStore.next.length > 0
+      ) {
         rootStore.queueStore.queueUiState.displayQueue();
       }
     },
     swipeHandler: {
-      swipeDirection: 'NONE',
+      swipeDirection: "NONE",
       handleSwipedLeft: () => {
         const rootStore = window.carThingRootStore;
         if (rootStore?.npvStore?.npvController?.next) {
@@ -41,9 +43,9 @@ export class NpvStore {
         this.playingInfoUiState.swipeHandler.swipeDirection = direction;
       },
     },
-    handleArtistClick: () => { },
-    handleArtworkClick: () => { },
-    loadPrevAndNextImage: () => { },
+    handleArtistClick: () => {},
+    handleArtworkClick: () => {},
+    loadPrevAndNextImage: () => {},
     previousItem: null,
     nextItem: null,
     showWindLevelIcon: false,
@@ -51,7 +53,7 @@ export class NpvStore {
     onRepeat: false,
     onRepeatOnce: false,
     isMicMuted: false,
-    showSettings: () => { },
+    showSettings: () => {},
   };
 
   volumeUiState = {
@@ -62,7 +64,11 @@ export class NpvStore {
     volume: 0.5,
     isVolumeAbove0: true,
     get colorChannels() {
-      return this.parentStore?.carThingStores?.imageStore?.colors?.get(this.parentStore?.playingInfoUiState?.currentItem?.image_uri) || [0, 0, 0];
+      return (
+        this.parentStore?.carThingStores?.imageStore?.colors?.get(
+          this.parentStore?.playingInfoUiState?.currentItem?.image_uri,
+        ) || [0, 0, 0]
+      );
     },
     shouldShowVolume: false,
 
@@ -81,7 +87,7 @@ export class NpvStore {
   };
 
   controlButtonsUiState = {
-    controlButtonSet: 'music',
+    controlButtonSet: "music",
     showOtherMediaControls: false,
     showPodcastControls: false,
     isPlaying: false,
@@ -90,31 +96,35 @@ export class NpvStore {
     canSeek: true,
     isPlayingAd: false,
     podcastSpeed: 1.0,
-    handlePlayClick: () => { },
-    handlePauseClick: () => { },
-    handleSkipNextClick: () => { },
-    handleSkipPrevClick: () => { },
-    handleLikeClick: () => { },
-    handleUnlikeClick: () => { },
-    handleShuffleClick: () => { },
-    handleUnshuffleClick: () => { },
-    handleSeekBackClick: () => { },
-    handleSeekForwardClick: () => { },
-    handleAddToSavedEpisodesClick: () => { },
-    handleRemoveFromSavedEpisodesClick: () => { },
-    handleBlockClick: () => { },
-    handlePodcastSpeedClick: () => { },
+    handlePlayClick: () => {},
+    handlePauseClick: () => {},
+    handleSkipNextClick: () => {},
+    handleSkipPrevClick: () => {},
+    handleLikeClick: () => {},
+    handleUnlikeClick: () => {},
+    handleShuffleClick: () => {},
+    handleUnshuffleClick: () => {},
+    handleSeekBackClick: () => {},
+    handleSeekForwardClick: () => {},
+    handleAddToSavedEpisodesClick: () => {},
+    handleRemoveFromSavedEpisodesClick: () => {},
+    handleBlockClick: () => {},
+    handlePodcastSpeedClick: () => {},
   };
 
   scrubbingUiState = {
     isScrubbing: false,
     isScrubbingEnabled: true,
     get colorChannels() {
-      return this.parentStore?.carThingStores?.imageStore?.colors?.get(this.parentStore?.playingInfoUiState?.currentItem?.image_uri) || [0, 0, 0];
+      return (
+        this.parentStore?.carThingStores?.imageStore?.colors?.get(
+          this.parentStore?.playingInfoUiState?.currentItem?.image_uri,
+        ) || [0, 0, 0]
+      );
     },
     trackPlayedPercent: 0,
-    trackPlayedTime: '0:00',
-    trackLeftTime: '0:00',
+    trackPlayedTime: "0:00",
+    trackLeftTime: "0:00",
     scrubbingTimeoutId: null,
 
     startScrubbing() {
@@ -135,13 +145,22 @@ export class NpvStore {
         window.clearTimeout(this.scrubbingTimeoutId);
       }
       this.scrubbingTimeoutId = window.setTimeout(() => {
-        if (window.scrubbingHardwareDialHandler && window.scrubbingTimeoutShouldSeek) {
+        if (
+          window.scrubbingHardwareDialHandler &&
+          window.scrubbingTimeoutShouldSeek
+        ) {
           const scrubbingProgress = window.scrubbingProgressValue;
           const playbackProgress = window.scrubbingPlaybackProgress;
           const onSeek = window.scrubbingOnSeek;
 
-          if (scrubbingProgress !== null && playbackProgress?.duration && onSeek) {
-            const seekMs = Math.floor(scrubbingProgress * playbackProgress.duration);
+          if (
+            scrubbingProgress !== null &&
+            playbackProgress?.duration &&
+            onSeek
+          ) {
+            const seekMs = Math.floor(
+              scrubbingProgress * playbackProgress.duration,
+            );
             if (seekMs >= playbackProgress.duration - 1000) {
               const rootStore = window.carThingRootStore;
               rootStore?.npvStore?.npvController?.next?.();
@@ -167,8 +186,8 @@ export class NpvStore {
   };
 
   npvController = {
-    next: () => { },
-    previous: () => { },
+    next: () => {},
+    previous: () => {},
     goToContentShelf: () => {
       const viewStore = this.rootStore?.viewStore;
       if (viewStore) {
@@ -212,7 +231,7 @@ export class NpvStore {
 
       if (npvStore?.scrubbingUiState?.isScrubbing) {
         if (window.scrubbingHardwareDialHandler) {
-          window.scrubbingHardwareDialHandler('left');
+          window.scrubbingHardwareDialHandler("left");
         }
       } else {
         const volumeStore = rootStore?.volumeStore;
@@ -226,7 +245,7 @@ export class NpvStore {
 
       if (npvStore?.scrubbingUiState?.isScrubbing) {
         if (window.scrubbingHardwareDialHandler) {
-          window.scrubbingHardwareDialHandler('right');
+          window.scrubbingHardwareDialHandler("right");
         }
       } else {
         const volumeStore = rootStore?.volumeStore;
@@ -275,7 +294,7 @@ export class NpvStore {
         if (window.carThingSkipPrev) {
           window.carThingSkipPrev();
         }
-      }
+      },
     };
 
     playerStoreInterface.rootStore = this.rootStore;
@@ -323,9 +342,9 @@ export class SettingsStore {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  reset() { }
-  resetSubCategoryIndexes() { }
-  handleSettingsButtonLongPress() { }
+  reset() {}
+  resetSubCategoryIndexes() {}
+  handleSettingsButtonLongPress() {}
 }
 
 export class VoiceStore {
@@ -336,7 +355,7 @@ export class VoiceStore {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  resetVoiceSessionState() { }
+  resetVoiceSessionState() {}
 }
 
 export class SessionStateStore {
@@ -347,7 +366,7 @@ export class SessionStateStore {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  reset() { }
+  reset() {}
 }
 
 export class TracklistStore {
@@ -368,9 +387,9 @@ export class TracklistUiState {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  loadCurrentContext() { }
-  initializeTracklist() { }
-  reset() { }
+  loadCurrentContext() {}
+  initializeTracklist() {}
+  reset() {}
 }
 
 export class TimerStore {
@@ -423,7 +442,7 @@ export class RemoteConfigStore {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  reset() { }
+  reset() {}
 }
 
 export class VolumeStore {
@@ -449,7 +468,7 @@ export class ChildItemStore {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  reset() { }
+  reset() {}
 }
 
 export class HomeItemsStore {
@@ -459,8 +478,7 @@ export class HomeItemsStore {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  async loadHomeItems() {
-  }
+  async loadHomeItems() {}
 
   reset() {
     this.items = [];
@@ -479,7 +497,7 @@ export class PodcastStore {
     makeAutoObservable(this);
   }
 
-  reset() { }
+  reset() {}
 }
 
 export class SavedStore {
@@ -489,12 +507,18 @@ export class SavedStore {
 }
 
 export class PresetsDataStore {
-  constructor(interappActions, errorHandler, imageStore, remoteConfigStore, versionStatusStore) {
+  constructor(
+    interappActions,
+    errorHandler,
+    imageStore,
+    remoteConfigStore,
+    versionStatusStore,
+  ) {
     makeAutoObservable(this);
   }
 
-  loadPresets() { }
-  reset() { }
+  loadPresets() {}
+  reset() {}
 }
 
 export class TipsStore {
@@ -502,12 +526,12 @@ export class TipsStore {
     makeAutoObservable(this);
   }
 
-  clearTip() { }
+  clearTip() {}
 }
 
 export class VersionStatusStore {
   constructor(socket, middlewareActions) {
-    this.serial = 'STUB-SERIAL-123';
+    this.serial = "STUB-SERIAL-123";
     makeAutoObservable(this);
   }
 }
@@ -526,25 +550,25 @@ export class UbiLogger {
     this.presetsUbiLogger = new PresetsUbiLogger();
   }
 
-  clearQueue() { }
+  clearQueue() {}
 }
 
 export class OnboardingUbiLogger {
-  logStartClicked() { }
-  logNoInteractionContinueButtonDialPress() { }
-  logNoInteractionEndButtonDialPress() { }
-  logNoInteractionBackButtonPress() { }
+  logStartClicked() {}
+  logNoInteractionContinueButtonDialPress() {}
+  logNoInteractionEndButtonDialPress() {}
+  logNoInteractionBackButtonPress() {}
 }
 
 export class SettingsUbiLogger {
-  logSettingsButtonHide() { }
-  logSettingsButtonShow() { }
-  logMainMenuBackButton() { }
-  logPowerOffTutorialSettingsLongPress() { }
+  logSettingsButtonHide() {}
+  logSettingsButtonShow() {}
+  logMainMenuBackButton() {}
+  logPowerOffTutorialSettingsLongPress() {}
 }
 
-export class QueueUbiLogger { }
-export class PresetsUbiLogger { }
+export class QueueUbiLogger {}
+export class PresetsUbiLogger {}
 
 export class SwipeDownHandleUiState {
   constructor(overlayController, presetsController, presetsUbiLogger) {
@@ -558,14 +582,14 @@ export class PhoneCallController {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  reset() { }
+  reset() {}
 }
 
 export class NightModeController {
-  isNightMode = localStorage.getItem('night_mode_user_enabled') === 'true';
+  isNightMode = localStorage.getItem("night_mode_user_enabled") === "true";
 
   nightModeStrength = 30;
-  nightModeSlope = 1.4; 
+  nightModeSlope = 1.4;
 
   constructor(rootStore) {
     this.rootStore = rootStore;
@@ -574,15 +598,20 @@ export class NightModeController {
 
   toggleNightMode() {
     this.isNightMode = !this.isNightMode;
-    localStorage.setItem('night_mode_user_enabled', this.isNightMode.toString());
+    localStorage.setItem(
+      "night_mode_user_enabled",
+      this.isNightMode.toString(),
+    );
   }
 
   get appOpacity() {
     if (!this.isNightMode) return 1;
 
     const ambientLight = this.rootStore.hardwareStore?.ambientLightValue ?? 0;
-    const raw = 1 - ((this.nightModeSlope * ambientLight + this.nightModeStrength - 100) / 100);
-    
+    const raw =
+      1 -
+      (this.nightModeSlope * ambientLight + this.nightModeStrength - 100) / 100;
+
     return Math.round(Math.max(0.1, Math.min(1, raw)) * 100) / 100;
   }
 }
@@ -607,12 +636,12 @@ export class PresetsController {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  reset() { }
+  reset() {}
 }
 
 export class PresetsUiState {
-  reset() { }
-  highlightPreset() { }
+  reset() {}
+  highlightPreset() {}
 }
 
 export class PromoController {
@@ -638,16 +667,16 @@ export function createOverlayController(rootStore, ubiLogger) {
       return this.isSettingsShowing;
     },
 
-    maybeShowAModal() { },
+    maybeShowAModal() {},
     resetAndMaybeShowAModal() {
       this.hideSettings();
     },
 
-    showPresets() { },
+    showPresets() {},
 
     showSettings() {
       this.isSettingsShowing = true;
-      this.currentOverlay = 'settings';
+      this.currentOverlay = "settings";
     },
 
     hideSettings() {
@@ -666,7 +695,7 @@ export function createOverlayController(rootStore, ubiLogger) {
       }
     },
 
-    showStandby() { },
+    showStandby() {},
 
     handleBackButton() {
       if (this.isSettingsShowing && rootStore?.settingsStore) {

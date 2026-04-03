@@ -1,7 +1,7 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import { useRef } from 'react';
-import styles from './AmbientBackdrop.module.scss';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import { useRef } from "react";
+import styles from "./AmbientBackdrop.module.scss";
 
 const AmbientBackdrop = ({ imageId, getBackgroundStyleAttribute }) => {
   const backdropRef = useRef(null);
@@ -12,7 +12,7 @@ const AmbientBackdrop = ({ imageId, getBackgroundStyleAttribute }) => {
   }
 
   const currentColor = imageStore.colors.get(imageId);
-  let background = 'rgb(26, 26, 26)';
+  let background = "rgb(26, 26, 26)";
 
   if (currentColor) {
     background = getBackgroundStyleAttribute(currentColor);

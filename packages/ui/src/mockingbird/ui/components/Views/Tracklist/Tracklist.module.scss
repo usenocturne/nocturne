@@ -1,4 +1,4 @@
-@import '../../../styles/variables.module';
+@import "../../../styles/variables.module";
 
 $dial-center-diff: 68px;
 $small-header-diff: 40px;
@@ -80,8 +80,14 @@ $small-header-diff: 40px;
 }
 
 @keyframes pulse {
-  0%, 80%, 100% { opacity: 0.15; }
-  40% { opacity: 0.8; }
+  0%,
+  80%,
+  100% {
+    opacity: 0.15;
+  }
+  40% {
+    opacity: 0.8;
+  }
 }
 
 .trackSlideScrolled {

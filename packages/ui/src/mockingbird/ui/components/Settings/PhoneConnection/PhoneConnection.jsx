@@ -1,19 +1,21 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { useEffect, useState, useRef } from 'react';
-import styles from './PhoneConnection.module.scss';
-import { observer } from 'mobx-react-lite';
-import SubmenuHeader from '../Submenu/SubmenuHeader';
-import { Swiper as SwiperComponent, SwiperSlide } from 'swiper/react';
-import classNames from 'classnames';
-import pointerListenersMaker from '../../../helpers/PointerListeners';
-import PhoneConnectionItem from './PhoneConnectionItem';
-import PhoneConnectionModal from './PhoneConnectionModal';
-import PhoneConnectionContextMenu from './contextmenu/PhoneConnectionContextMenu';
-import { runInAction } from 'mobx';
-import variables from '../../../styles/variables.module.scss';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { useEffect, useState, useRef } from "react";
+import styles from "./PhoneConnection.module.scss";
+import { observer } from "mobx-react-lite";
+import SubmenuHeader from "../Submenu/SubmenuHeader";
+import { Swiper as SwiperComponent, SwiperSlide } from "swiper/react";
+import classNames from "classnames";
+import pointerListenersMaker from "../../../helpers/PointerListeners";
+import PhoneConnectionItem from "./PhoneConnectionItem";
+import PhoneConnectionModal from "./PhoneConnectionModal";
+import PhoneConnectionContextMenu from "./contextmenu/PhoneConnectionContextMenu";
+import { runInAction } from "mobx";
+import variables from "../../../styles/variables.module.scss";
 
-const easingFunction = variables['easing-function'] || 'cubic-bezier(0.16, 1, 0.3, 1)';
-const transitionDurationMs = parseInt(variables['transition-duration-ms'], 10) || 500;
+const easingFunction =
+  variables["easing-function"] || "cubic-bezier(0.16, 1, 0.3, 1)";
+const transitionDurationMs =
+  parseInt(variables["transition-duration-ms"], 10) || 500;
 
 const DEVICE_HEIGHT = 480;
 const HEADER_HEIGHT = 144;
@@ -29,17 +31,14 @@ const IconMobile64 = () => (
 );
 
 const PhoneConnection = () => {
-  const {
-    settingsStore,
-    bluetoothStore,
-    hardwareStore,
-    phoneConnectionStore,
-  } = useCarThingStore();
+  const { settingsStore, bluetoothStore, hardwareStore, phoneConnectionStore } =
+    useCarThingStore();
 
   const [swiper, setSwiper] = useState(null);
   const [pressedAddMoreItem, setPressedAddMoreItem] = useState(false);
 
-  const menuShowing = phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing;
+  const menuShowing =
+    phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing;
   const [menuRendered, setMenuRendered] = useState(false);
   const [menuClosing, setMenuClosing] = useState(false);
   const prevMenuRef = useRef(menuShowing);
@@ -114,7 +113,8 @@ const PhoneConnection = () => {
         {bluetoothStore.bluetoothDeviceList?.map((phone, index) => {
           const isConnected = phone.connected || false;
           const isConnecting =
-            bluetoothStore.currentDevice?.address === phone.address && !isConnected;
+            bluetoothStore.currentDevice?.address === phone.address &&
+            !isConnected;
           const isActive = settingsStore.currentView.index === index;
 
           return (
@@ -147,9 +147,11 @@ const PhoneConnection = () => {
         </SwiperSlide>
       </SwiperComponent>
       {menuRendered && (
-        <div className={classNames(styles.contextMenuOverlay, {
-          [styles.contextMenuClosing]: menuClosing,
-        })}>
+        <div
+          className={classNames(styles.contextMenuOverlay, {
+            [styles.contextMenuClosing]: menuClosing,
+          })}
+        >
           <PhoneConnectionContextMenu />
         </div>
       )}

@@ -1,9 +1,9 @@
-import classNames from 'classnames';
-import { useState } from 'react';
-import pointerListenersMaker from '../../../../helpers/PointerListeners';
-import styles from './PhoneConnectionContextMenu.module.scss';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { action } from 'mobx';
+import classNames from "classnames";
+import { useState } from "react";
+import pointerListenersMaker from "../../../../helpers/PointerListeners";
+import styles from "./PhoneConnectionContextMenu.module.scss";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { action } from "mobx";
 
 const IconBluetooth = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">

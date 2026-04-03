@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { IconMicOn64, IconMicOff64 } from '../../../Icons/CarthingUIComponents';
-import Type from '../../../CarthingUIComponents/Type/Type';
-import styles from './ShelfSwiperItem.module.scss';
+import { useState } from "react";
+import classNames from "classnames";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { IconMicOn64, IconMicOff64 } from "../../../Icons/CarthingUIComponents";
+import Type from "../../../CarthingUIComponents/Type/Type";
+import styles from "./ShelfSwiperItem.module.scss";
 
 const pointerListenersMaker = (setTouchDown) => ({
   onPointerDown: () => setTouchDown(true),
@@ -29,8 +29,13 @@ const DefaultVoiceItem = ({ item, isActive }) => {
         uiState.pushToTalkClicked(item);
       }}
     >
-      {isActive && <div className={`${styles.activeBorder} ${styles.circle}`} />}
-      <div className={`${styles.buttonArtwork} ${styles.circle}`} {...pointerListenersMaker(setTouchDown)} />
+      {isActive && (
+        <div className={`${styles.activeBorder} ${styles.circle}`} />
+      )}
+      <div
+        className={`${styles.buttonArtwork} ${styles.circle}`}
+        {...pointerListenersMaker(setTouchDown)}
+      />
       <div className={`${styles.buttonIcon} ${styles.artworkCenter}`}>
         {uiState.isMicEnabled ? <IconMicOn64 /> : <IconMicOff64 />}
       </div>

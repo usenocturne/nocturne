@@ -1,4 +1,4 @@
-import styles from './DialTurnDots.module.scss';
+import styles from "./DialTurnDots.module.scss";
 
 const DialTurnDots = () => {
   return (

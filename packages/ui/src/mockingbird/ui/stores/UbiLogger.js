@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable } from "mobx";
 
 class UbiLogger {
   npvInteractionLogger = {
@@ -9,9 +9,9 @@ class UbiLogger {
   };
 
   queueUbiLogger = {};
-  
+
   contentShelfUbiLogger = {
-    logImpression: () => console.log('Content shelf impression logged'),
+    logImpression: () => console.log("Content shelf impression logged"),
   };
 
   constructor(rootStore) {

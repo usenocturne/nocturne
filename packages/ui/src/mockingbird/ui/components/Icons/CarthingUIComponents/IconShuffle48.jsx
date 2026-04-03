@@ -1,4 +1,4 @@
-import IconShuffle from './IconShuffle';
+import IconShuffle from "./IconShuffle";
 
 const IconShuffle48 = (props) => <IconShuffle {...props} iconSize={48} />;
 

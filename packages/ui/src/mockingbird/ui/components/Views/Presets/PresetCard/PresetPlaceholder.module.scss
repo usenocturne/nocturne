@@ -1,4 +1,4 @@
-@import '../../../../styles/variables.module';
+@import "../../../../styles/variables.module";
 
 $preset-card-width: 168px;
 
@@ -15,7 +15,7 @@ $preset-card-width: 168px;
   width: $preset-card-width;
   color: $opacity-white-70;
   font-weight: bold;
-  
+
   &.active {
     color: $white;
   }

@@ -1,15 +1,15 @@
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { useSwiperDial } from '../../../hooks/useSwiperDial';
-import { action } from 'mobx';
-import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Virtual } from 'swiper/modules';
-import styles from './Tracklist.module.scss';
-import TracklistItem from './TracklistItem';
+import classNames from "classnames";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { useSwiperDial } from "../../../hooks/useSwiperDial";
+import { action } from "mobx";
+import { observer } from "mobx-react-lite";
+import { useEffect, useState } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Virtual } from "swiper/modules";
+import styles from "./Tracklist.module.scss";
+import TracklistItem from "./TracklistItem";
 
-import 'swiper/scss';
+import "swiper/scss";
 
 const SCREEN_SIZE = 480;
 const ITEM_HEIGHT = 128;
@@ -41,7 +41,7 @@ const TracklistSwiper = () => {
     } else if (uiState.tracksList.length === 3) {
       return SWIPER_HEIGHT - HEADER_HEIGHT - ITEM_HEIGHT;
     }
-    return SWIPER_HEIGHT - ITEM_HEIGHT + 2; 
+    return SWIPER_HEIGHT - ITEM_HEIGHT + 2;
   };
 
   return (

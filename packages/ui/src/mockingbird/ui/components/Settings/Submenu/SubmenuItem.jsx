@@ -1,9 +1,9 @@
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { useState } from 'react';
-import pointerListenersMaker from '../../../helpers/PointerListeners';
-import styles from './SubmenuItem.module.scss';
-import { observer } from 'mobx-react-lite';
+import classNames from "classnames";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { useState } from "react";
+import pointerListenersMaker from "../../../helpers/PointerListeners";
+import styles from "./SubmenuItem.module.scss";
+import { observer } from "mobx-react-lite";
 
 const OnOrOff = ({ id, isToggleOn, active }) => (
   <div
@@ -13,7 +13,7 @@ const OnOrOff = ({ id, isToggleOn, active }) => (
       { [styles.movedForDial]: active },
     )}
   >
-    <span className={styles.toggleText}>{isToggleOn ? 'On' : 'Off'}</span>
+    <span className={styles.toggleText}>{isToggleOn ? "On" : "Off"}</span>
   </div>
 );
 
@@ -42,7 +42,7 @@ const SubmenuItem = ({ item, active }) => {
       <span className={styles.labelText}>{label}</span>
       {(() => {
         switch (type) {
-          case 'toggle':
+          case "toggle":
             return (
               <OnOrOff
                 active={active}
@@ -50,7 +50,7 @@ const SubmenuItem = ({ item, active }) => {
                 isToggleOn={uiState.isToggleOn(item)}
               />
             );
-          case 'key-value':
+          case "key-value":
             return (
               <span
                 className={classNames(styles.keyValueValue, {

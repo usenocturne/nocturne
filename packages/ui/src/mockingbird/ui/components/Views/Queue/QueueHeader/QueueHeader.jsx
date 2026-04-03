@@ -1,13 +1,13 @@
-import { observer } from 'mobx-react-lite';
-import styles from './QueueHeader.module.scss';
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import Type from '../../../CarthingUIComponents/Type/Type';
+import { observer } from "mobx-react-lite";
+import styles from "./QueueHeader.module.scss";
+import classNames from "classnames";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import Type from "../../../CarthingUIComponents/Type/Type";
 
 const QueueHeader = () => {
   const { queueStore } = useCarThingStore();
   const uiState = queueStore.queueUiState;
-  
+
   return (
     <div
       className={styles.headerWrapper}

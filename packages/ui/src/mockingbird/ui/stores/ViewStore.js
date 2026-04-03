@@ -1,30 +1,27 @@
-import { makeAutoObservable } from 'mobx';
-import { transitionDurationMs } from '../styles/Variables';
+import { makeAutoObservable } from "mobx";
+import { transitionDurationMs } from "../styles/Variables";
 
 const isSupportedUriType = (uri) => {
-  return uri && typeof uri === 'string' && uri.startsWith('spotify:');
+  return uri && typeof uri === "string" && uri.startsWith("spotify:");
 };
 
 export const AppView = {
-  LOGO: 'LOGO',
-  SETUP: 'SETUP',
-  OTA: 'OTA',
-  MAIN: 'MAIN',
-  ONBOARDING: 'ONBOARDING',
-  NOTHING: 'NOTHING',
+  LOGO: "LOGO",
+  SETUP: "SETUP",
+  OTA: "OTA",
+  MAIN: "MAIN",
+  ONBOARDING: "ONBOARDING",
+  NOTHING: "NOTHING",
 };
 
 export const View = {
-  CONTENT_SHELF: 'shelf',
-  TRACKLIST: 'tracklist',
-  QUEUE: 'queue',
-  NPV: 'npv',
+  CONTENT_SHELF: "shelf",
+  TRACKLIST: "tracklist",
+  QUEUE: "queue",
+  NPV: "npv",
 };
 
-const INITIAL_VIEW_STACK = [
-  { view: View.CONTENT_SHELF },
-  { view: View.NPV },
-];
+const INITIAL_VIEW_STACK = [{ view: View.CONTENT_SHELF }, { view: View.NPV }];
 
 export const DEFAULT_TIMEOUT_TO_NPV = 30000;
 
@@ -46,7 +43,7 @@ class ViewStore {
   get currentViewStackItem() {
     const viewEntry = this.viewStack.slice(-1).pop();
     if (!viewEntry) {
-      throw new Error('viewstack was empty. should never happen');
+      throw new Error("viewstack was empty. should never happen");
     }
     return viewEntry;
   }
@@ -154,8 +151,8 @@ class ViewStore {
     if (
       this.isTracklist &&
       this.viewUnderCurrentView === View.NPV &&
-      this.currentViewStackItem.state?.type === 'origin' &&
-      this.currentViewStackItem.state?.value === 'current_context'
+      this.currentViewStackItem.state?.type === "origin" &&
+      this.currentViewStackItem.state?.value === "current_context"
     ) {
       this.back();
     } else {
@@ -194,7 +191,7 @@ class ViewStore {
           );
           break;
         case View.NPV:
-          this.showTracklist({ type: 'origin', value: 'current_context' });
+          this.showTracklist({ type: "origin", value: "current_context" });
           break;
         default:
           break;
@@ -203,7 +200,10 @@ class ViewStore {
   }
 
   resetNpvTimeout(time = DEFAULT_TIMEOUT_TO_NPV) {
-    if (this.appView === AppView.ONBOARDING || this.rootStore.onboardingStore?.isActive) {
+    if (
+      this.appView === AppView.ONBOARDING ||
+      this.rootStore.onboardingStore?.isActive
+    ) {
       window.clearTimeout(this.timeoutId);
     } else {
       window.clearTimeout(this.timeoutId);
@@ -218,8 +218,8 @@ class ViewStore {
     if (
       popedViewStackItem?.view === View.NPV &&
       this.currentView === View.TRACKLIST &&
-      popedViewStackItem?.state?.type === 'origin' &&
-      popedViewStackItem?.state?.value === 'preset'
+      popedViewStackItem?.state?.type === "origin" &&
+      popedViewStackItem?.state?.value === "preset"
     ) {
       this.rootStore.tracklistStore.tracklistUiState.initializeTracklist(
         this.rootStore.playerStore.currentContextItem,
@@ -227,8 +227,8 @@ class ViewStore {
     } else if (
       popedViewStackItem?.view === View.TRACKLIST &&
       this.currentView === View.CONTENT_SHELF &&
-      popedViewStackItem?.state?.type === 'origin' &&
-      popedViewStackItem?.state?.value === 'current_context'
+      popedViewStackItem?.state?.type === "origin" &&
+      popedViewStackItem?.state?.value === "current_context"
     ) {
       this.rootStore.shelfStore.shelfController.goBackToHome();
     }

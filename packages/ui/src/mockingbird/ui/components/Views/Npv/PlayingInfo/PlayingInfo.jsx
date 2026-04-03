@@ -1,12 +1,12 @@
-import Artwork from './Artwork';
-import PlayingInfoHeader from './PlayingInfoHeader';
-import PlayingInfoTitles from './PlayingInfoTitles/PlayingInfoTitles';
-import StatusIcons from './StatusIcons';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import { useSwipeable } from 'react-swipeable';
-import { SwipeDirection } from '../SwipeHandler/SwipeHandler';
-import styles from './PlayingInfo.module.scss';
+import Artwork from "./Artwork";
+import PlayingInfoHeader from "./PlayingInfoHeader";
+import PlayingInfoTitles from "./PlayingInfoTitles/PlayingInfoTitles";
+import StatusIcons from "./StatusIcons";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import { useSwipeable } from "react-swipeable";
+import { SwipeDirection } from "../SwipeHandler/SwipeHandler";
+import styles from "./PlayingInfo.module.scss";
 
 const PlayingInfo = () => {
   const { npvStore } = useCarThingStore();
@@ -46,10 +46,7 @@ const PlayingInfo = () => {
   const tracks = [uiState.currentItem];
 
   return (
-    <div
-      className={styles.playingInfo}
-      data-testid="npv-playing-info"
-    >
+    <div className={styles.playingInfo} data-testid="npv-playing-info">
       <Artwork
         tracks={tracks}
         getAnimationClassNames={getAnimationClassNames}

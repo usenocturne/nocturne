@@ -1,14 +1,14 @@
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { useSwiperDial } from '../../../../hooks/useSwiperDial';
-import { action } from 'mobx';
-import { observer } from 'mobx-react-lite';
-import { Virtual } from 'swiper/modules';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/scss';
-import styles from './QueueSwiper.module.scss';
-import QueueListItem from '../QueueListItem/QueueListItem';
-import { transitionDurationMs } from '../../../../styles/Variables';
+import classNames from "classnames";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { useSwiperDial } from "../../../../hooks/useSwiperDial";
+import { action } from "mobx";
+import { observer } from "mobx-react-lite";
+import { Virtual } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/scss";
+import styles from "./QueueSwiper.module.scss";
+import QueueListItem from "../QueueListItem/QueueListItem";
+import { transitionDurationMs } from "../../../../styles/Variables";
 
 const DEVICE_HEIGHT = 480;
 const ITEM_HEIGHT = 128;
@@ -21,7 +21,7 @@ const QueueSwiper = () => {
   const { queueStore } = useCarThingStore();
   const uiState = queueStore.queueUiState;
   const { setDragging, swiperRef } = useSwiperDial(uiState);
-  
+
   const getSlideOffsetAfter = () => {
     if (uiState.queue.length === 1) {
       return SWIPER_HEIGHT - HEADER_HEIGHT - ITEM_HEIGHT * 3;
@@ -30,9 +30,9 @@ const QueueSwiper = () => {
     } else if (uiState.queue.length === 3) {
       return SWIPER_HEIGHT - HEADER_HEIGHT - ITEM_HEIGHT;
     }
-    return SWIPER_HEIGHT - ITEM_HEIGHT + 2; 
+    return SWIPER_HEIGHT - ITEM_HEIGHT + 2;
   };
-  
+
   return (
     <Swiper
       allowTouchMove

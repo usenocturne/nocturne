@@ -1,12 +1,18 @@
-import PhoneForgetConfirm from './PhoneForgetConfirm';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { PhoneConnectionModalView } from '../../../stores/PhoneConnectionStore';
-import { observer } from 'mobx-react-lite';
-import styles from './PhoneConnectionModal.module.scss';
-import { useEffect, useState, useRef } from 'react';
+import PhoneForgetConfirm from "./PhoneForgetConfirm";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { PhoneConnectionModalView } from "../../../stores/PhoneConnectionStore";
+import { observer } from "mobx-react-lite";
+import styles from "./PhoneConnectionModal.module.scss";
+import { useEffect, useState, useRef } from "react";
 
 const IconCheck = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={styles.iconCheck}>
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={styles.iconCheck}
+  >
     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
   </svg>
 );
@@ -20,7 +26,8 @@ const ModalContent = observer(({ modalView, phoneConnectionStore }) => {
         <>
           <div className={styles.title}>Pairing mode</div>
           <div className={styles.description}>
-            Go to Bluetooth in your phone's settings and connect to your Car Thing.
+            Go to Bluetooth in your phone's settings and connect to your Car
+            Thing.
           </div>
         </>
       );
@@ -133,9 +140,14 @@ const PhoneConnectionModal = () => {
   const modalView = closing ? lastModalRef.current : currentModal;
 
   return (
-    <div className={`${styles.overlay} ${closing ? styles.overlayClosing : ''}`}>
+    <div
+      className={`${styles.overlay} ${closing ? styles.overlayClosing : ""}`}
+    >
       <div className={styles.dialog}>
-        <ModalContent modalView={modalView} phoneConnectionStore={phoneConnectionStore} />
+        <ModalContent
+          modalView={modalView}
+          phoneConnectionStore={phoneConnectionStore}
+        />
       </div>
     </div>
   );

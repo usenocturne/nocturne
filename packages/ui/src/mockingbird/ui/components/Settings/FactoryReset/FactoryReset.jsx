@@ -1,8 +1,8 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { useEffect } from 'react';
-import styles from './FactoryReset.module.scss';
-import { observer } from 'mobx-react-lite';
-import classNames from 'classnames';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { useEffect } from "react";
+import styles from "./FactoryReset.module.scss";
+import { observer } from "mobx-react-lite";
+import classNames from "classnames";
 
 const FactoryReset = () => {
   const { hardwareStore, settingsStore } = useCarThingStore();

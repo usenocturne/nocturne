@@ -1,4 +1,4 @@
-import { action } from 'mobx';
+import { action } from "mobx";
 
 const reactToPresetButtons = (hardwareEvents, rootStore) => {
   const { presetsController, settingsStore } = rootStore;

@@ -1001,9 +1001,7 @@ function App() {
         return;
       }
 
-      if (
-        localStorage.getItem("mockingbirdUiEnabled") === "true"
-      ) {
+      if (localStorage.getItem("mockingbirdUiEnabled") === "true") {
         window.carThingRootStore?.uiState?.toggleSettings();
         return;
       }

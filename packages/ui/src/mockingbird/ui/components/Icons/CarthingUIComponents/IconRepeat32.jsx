@@ -1,4 +1,4 @@
-import IconRepeat from './IconRepeat';
+import IconRepeat from "./IconRepeat";
 
 const IconRepeat32 = (props) => <IconRepeat {...props} iconSize={32} />;
 

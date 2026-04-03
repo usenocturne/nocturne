@@ -1,24 +1,24 @@
-import { useState } from 'react';
-import styles from './BannerButton.module.scss';
-import classNames from 'classnames';
-import Type from '../Type/Type';
+import { useState } from "react";
+import styles from "./BannerButton.module.scss";
+import classNames from "classnames";
+import Type from "../Type/Type";
 
 const BannerButton = ({
   withDivider = false,
   text,
-  colors = 'information',
+  colors = "information",
   onClick,
 }) => {
   const [buttonPressed, setButtonPressed] = useState(false);
-  
+
   return (
     <div
       key={text}
       data-testid={`${text}-button`}
       className={classNames(styles.buttonContainer, {
-        [styles.confirmation]: colors === 'confirmation',
-        [styles.information]: colors === 'information',
-        [styles.unavailable]: colors === 'unavailable',
+        [styles.confirmation]: colors === "confirmation",
+        [styles.information]: colors === "information",
+        [styles.unavailable]: colors === "unavailable",
       })}
       onClick={() => {
         onClick();

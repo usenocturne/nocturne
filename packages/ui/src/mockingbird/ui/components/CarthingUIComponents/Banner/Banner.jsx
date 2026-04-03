@@ -1,8 +1,8 @@
-import styles from './Banner.module.scss';
-import Type from '../Type/Type';
-import { transitionDurationMs } from '../../../styles/Variables';
-import CSSTransition from '../../CSSTransitionCompat';
-import classNames from 'classnames';
+import styles from "./Banner.module.scss";
+import Type from "../Type/Type";
+import { transitionDurationMs } from "../../../styles/Variables";
+import CSSTransition from "../../CSSTransitionCompat";
+import classNames from "classnames";
 
 const transitionStyles = {
   enter: styles.enter,
@@ -15,7 +15,7 @@ const Banner = ({
   show,
   icon,
   infoText,
-  colorStyle = 'information',
+  colorStyle = "information",
   children,
 }) => {
   return (
@@ -28,9 +28,9 @@ const Banner = ({
     >
       <div
         className={classNames(styles.bannerContainer, {
-          [styles.confirmation]: colorStyle === 'confirmation',
-          [styles.information]: colorStyle === 'information',
-          [styles.unavailable]: colorStyle === 'unavailable',
+          [styles.confirmation]: colorStyle === "confirmation",
+          [styles.information]: colorStyle === "information",
+          [styles.unavailable]: colorStyle === "unavailable",
         })}
       >
         <div className={styles.info}>

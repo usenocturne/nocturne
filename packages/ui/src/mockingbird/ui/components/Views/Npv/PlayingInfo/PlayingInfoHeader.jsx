@@ -1,6 +1,6 @@
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './PlayingInfoHeader.module.scss';
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./PlayingInfoHeader.module.scss";
 
 const PlayingInfoHeader = () => {
   const { npvStore } = useCarThingStore();

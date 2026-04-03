@@ -1,4 +1,4 @@
-import { IconPlusAlt } from '../EncoreWeb/IconPlusAlt';
+import { IconPlusAlt } from "../EncoreWeb/IconPlusAlt";
 
 const IconAddAlt48 = () => <IconPlusAlt iconSize={48} />;
 

@@ -1,7 +1,7 @@
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import styles from './UnavailableSettingBanner.module.scss';
-import classNames from 'classnames';
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import styles from "./UnavailableSettingBanner.module.scss";
+import classNames from "classnames";
 
 const IconInfo32 = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
@@ -10,7 +10,8 @@ const IconInfo32 = () => (
 );
 
 const UnavailableSettingBanner = () => {
-  const uiState = useCarThingStore().settingsStore.unavailableSettingsBannerUiState;
+  const uiState =
+    useCarThingStore().settingsStore.unavailableSettingsBannerUiState;
 
   return (
     <div

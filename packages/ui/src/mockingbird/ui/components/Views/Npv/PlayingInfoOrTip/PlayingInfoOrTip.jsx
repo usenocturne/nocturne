@@ -1,10 +1,10 @@
-import PlayingInfo from '../PlayingInfo/PlayingInfo';
-import Tips from '../Tips/Tips';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { observer } from 'mobx-react-lite';
-import CSSTransition from '../../../CSSTransitionCompat';
-import { SwitchTransition } from 'react-transition-group';
-import styles from './PlayingInfoOrTip.module.scss';
+import PlayingInfo from "../PlayingInfo/PlayingInfo";
+import Tips from "../Tips/Tips";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { observer } from "mobx-react-lite";
+import CSSTransition from "../../../CSSTransitionCompat";
+import { SwitchTransition } from "react-transition-group";
+import styles from "./PlayingInfoOrTip.module.scss";
 
 const playingInfoAnim = {
   enter: styles.playingInfoEnter,

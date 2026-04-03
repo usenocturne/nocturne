@@ -1,11 +1,13 @@
-@use 'sass:math';
-@use '../../../../styles/variables.module' as vars;
+@use "sass:math";
+@use "../../../../styles/variables.module" as vars;
 
 $slide-width: 240px;
 
 .item {
   opacity: 0.8;
-  transition: opacity 500ms ease, transform 500ms ease;
+  transition:
+    opacity 500ms ease,
+    transform 500ms ease;
 }
 
 .pressed {
@@ -18,7 +20,9 @@ $slide-width: 240px;
   display: flex;
   align-items: center;
   flex-direction: column;
-  transition: opacity 500ms ease, transform 500ms ease;
+  transition:
+    opacity 500ms ease,
+    transform 500ms ease;
 }
 
 .buttonArtwork {
@@ -123,7 +127,9 @@ $slide-width: 240px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: opacity 500ms ease, transform 500ms ease;
+  transition:
+    opacity 500ms ease,
+    transform 500ms ease;
 
   &.toTheLeft {
     transform: translateX(-18px);

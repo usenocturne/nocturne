@@ -1,32 +1,33 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { observer } from 'mobx-react-lite';
-import { Transition } from 'react-transition-group';
-import { reaction } from 'mobx';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { observer } from "mobx-react-lite";
+import { Transition } from "react-transition-group";
+import { reaction } from "mobx";
 import {
   MainMenuItemId,
   OptionsMenuItemId,
   AboutMenuItemId,
   RestartMenuItemId,
   AnimationType,
-} from '../../stores/SettingsStore';
-import styles from './Settings.module.scss';
-import { useCarThingStore } from '../../contexts/CarThingStore';
-import MainMenu from './MainMenu/MainMenu';
-import Submenu from './Submenu/Submenu';
-import FactoryReset from './FactoryReset/FactoryReset';
-import RestartConfirm from './RestartConfirm/RestartConfirm';
-import PowerTutorial from './PowerTutorial/PowerTutorial';
-import Licenses from './Licenses/Licenses';
-import TipsOnDemand from './TipsOnDemand/TipsOnDemand';
-import DisplayAndBrightness from './DisplayAndBrightness/DisplayAndBrightness';
-import PhoneCalls from './PhoneCalls/PhoneCalls';
-import AirVentInterference from './AirVentInterference/AirVentInterference';
-import PhoneConnection from './PhoneConnection/PhoneConnection';
-import UnavailableSettingBanner from './UnavailableSettingBanner/UnavailableSettingBanner';
-import classNames from 'classnames';
-import variables from '../../styles/variables.module.scss';
+} from "../../stores/SettingsStore";
+import styles from "./Settings.module.scss";
+import { useCarThingStore } from "../../contexts/CarThingStore";
+import MainMenu from "./MainMenu/MainMenu";
+import Submenu from "./Submenu/Submenu";
+import FactoryReset from "./FactoryReset/FactoryReset";
+import RestartConfirm from "./RestartConfirm/RestartConfirm";
+import PowerTutorial from "./PowerTutorial/PowerTutorial";
+import Licenses from "./Licenses/Licenses";
+import TipsOnDemand from "./TipsOnDemand/TipsOnDemand";
+import DisplayAndBrightness from "./DisplayAndBrightness/DisplayAndBrightness";
+import PhoneCalls from "./PhoneCalls/PhoneCalls";
+import AirVentInterference from "./AirVentInterference/AirVentInterference";
+import PhoneConnection from "./PhoneConnection/PhoneConnection";
+import UnavailableSettingBanner from "./UnavailableSettingBanner/UnavailableSettingBanner";
+import classNames from "classnames";
+import variables from "../../styles/variables.module.scss";
 
-const transitionDurationMs = parseInt(variables['transition-duration-ms'], 10) || 500;
+const transitionDurationMs =
+  parseInt(variables["transition-duration-ms"], 10) || 500;
 
 const viewToComp = {
   [MainMenuItemId.SETTINGS_ROOT]: () => <MainMenu />,
@@ -68,17 +69,15 @@ const Settings = () => {
       (newLen) => {
         const prevLen = prevLenRef.current;
         if (newLen > prevLen) {
-          
           const newView = settingsStore.viewStack[newLen - 1];
           setEnteringViewId(newView.id);
           setTimeout(() => setEnteringViewId(null), transitionDurationMs);
         } else if (newLen < prevLen && topLayerRef.current) {
-          
           const el = topLayerRef.current;
           const clone = el.cloneNode(true);
-          
+
           const animType = el.dataset.animtype;
-          setExitAnimType(animType === 'fade' ? 'fade' : 'slide');
+          setExitAnimType(animType === "fade" ? "fade" : "slide");
           setExitingSnapshot(clone.innerHTML);
           setTimeout(() => {
             setExitingSnapshot(null);
@@ -103,9 +102,11 @@ const Settings = () => {
       {(overlayState) => (
         <div
           ref={overlayRef}
-          className={classNames(styles.settingsOverlay, styles[`overlay_${overlayState}`])}
+          className={classNames(
+            styles.settingsOverlay,
+            styles[`overlay_${overlayState}`],
+          )}
         >
-          
           {viewStack.map((view, index) => {
             const isTop = index === viewStack.length - 1;
             const isRoot = index === 0;
@@ -116,7 +117,7 @@ const Settings = () => {
               <div
                 key={view.id}
                 ref={isTop ? topLayerRef : undefined}
-                data-animtype={isFade ? 'fade' : 'slide'}
+                data-animtype={isFade ? "fade" : "slide"}
                 className={classNames(styles.settingsLayer, {
                   [styles.transparent]: isFade,
                   [styles.slideUpIn]: shouldAnimateIn && !isFade,
@@ -132,8 +133,8 @@ const Settings = () => {
           {exitingSnapshot && (
             <div
               className={classNames(styles.settingsLayer, {
-                [styles.slideDownOut]: exitAnimType === 'slide',
-                [styles.fadeOutAnim]: exitAnimType === 'fade',
+                [styles.slideDownOut]: exitAnimType === "slide",
+                [styles.fadeOutAnim]: exitAnimType === "fade",
               })}
               style={{ zIndex: viewStack.length + 10 }}
               dangerouslySetInnerHTML={{ __html: exitingSnapshot }}

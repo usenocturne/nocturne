@@ -1,5 +1,5 @@
-import styles from './EmptyQueueState.module.scss';
-import Type from '../../../CarthingUIComponents/Type/Type';
+import styles from "./EmptyQueueState.module.scss";
+import Type from "../../../CarthingUIComponents/Type/Type";
 
 const EmptyQueueState = () => {
   return (

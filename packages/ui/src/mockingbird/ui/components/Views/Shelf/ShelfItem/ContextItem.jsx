@@ -1,11 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
-import { runInAction } from 'mobx';
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import LazyImage from '../../Npv/PlayingInfo/LazyImage/LazyImage';
-import { ARTWORK_WIDTH } from './ShelfSwiperItem';
-import styles from './ShelfSwiperItem.module.scss';
-import shelfSwiperItemStyles from './ShelfSwiperItem.module.scss';
+import { useEffect, useState, useRef } from "react";
+import { runInAction } from "mobx";
+import classNames from "classnames";
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import LazyImage from "../../Npv/PlayingInfo/LazyImage/LazyImage";
+import { ARTWORK_WIDTH } from "./ShelfSwiperItem";
+import styles from "./ShelfSwiperItem.module.scss";
+import shelfSwiperItemStyles from "./ShelfSwiperItem.module.scss";
 
 const pointerListenersMaker = (setTouchDown) => ({
   onPointerDown: () => setTouchDown(true),
@@ -14,20 +14,18 @@ const pointerListenersMaker = (setTouchDown) => ({
 });
 
 const getShelfItemTitle = (title, uri) => {
-  
   return title;
 };
 
 const useInView = () => {
-  
   return { ref: null, inView: true };
 };
 
 const EqAnimation = {
-  PAUSED: 'PAUSED',
-  PAUSE_TO_PLAY: 'PAUSE_TO_PLAY',
-  PLAYING: 'PLAYING',
-  PLAY_TO_PAUSE: 'PLAY_TO_PAUSE',
+  PAUSED: "PAUSED",
+  PAUSE_TO_PLAY: "PAUSE_TO_PLAY",
+  PLAYING: "PLAYING",
+  PLAY_TO_PAUSE: "PLAY_TO_PAUSE",
 };
 
 const PAUSE_PLAY_TRANSITION_MS = 250;
@@ -134,7 +132,8 @@ const ContextItem = ({ item, isActive }) => {
       ref={ref}
       className={classNames(styles.item, {
         [shelfSwiperItemStyles.activeSlide]: isActive,
-        [shelfSwiperItemStyles.pressed]: touchDown || (isActive && uiState.isDialPressed),
+        [shelfSwiperItemStyles.pressed]:
+          touchDown || (isActive && uiState.isDialPressed),
       })}
       {...pointerListenersMaker(setTouchDown)}
       onClick={() => uiState.artworkClicked(item)}
@@ -142,7 +141,7 @@ const ContextItem = ({ item, isActive }) => {
       <LazyImage
         size={ARTWORK_WIDTH}
         imageId={imageId}
-        uri={uri || ''}
+        uri={uri || ""}
         innerBorder
         isActive={isActive}
       />

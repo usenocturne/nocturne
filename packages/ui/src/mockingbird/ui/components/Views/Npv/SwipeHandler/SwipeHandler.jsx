@@ -1,10 +1,10 @@
-import { runInAction } from 'mobx';
-import { useSwipeable } from 'react-swipeable';
+import { runInAction } from "mobx";
+import { useSwipeable } from "react-swipeable";
 
 export const SwipeDirection = {
-  NONE: 'NONE',
-  LEFT: 'LEFT',
-  RIGHT: 'RIGHT',
+  NONE: "NONE",
+  LEFT: "LEFT",
+  RIGHT: "RIGHT",
 };
 
 export class SwipeHandlerClass {
@@ -58,7 +58,14 @@ export class SwipeHandlerClass {
   };
 }
 
-const SwipeHandler = ({ children, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, disabled }) => {
+const SwipeHandler = ({
+  children,
+  onSwipeLeft,
+  onSwipeRight,
+  onSwipeUp,
+  onSwipeDown,
+  disabled,
+}) => {
   const swipeHandlers = useSwipeable({
     onSwipedLeft: !disabled ? onSwipeLeft : undefined,
     onSwipedRight: !disabled ? onSwipeRight : undefined,
@@ -66,11 +73,7 @@ const SwipeHandler = ({ children, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeD
     onSwipedDown: !disabled ? onSwipeDown : undefined,
   });
 
-  return (
-    <div {...swipeHandlers}>
-      {children}
-    </div>
-  );
+  return <div {...swipeHandlers}>{children}</div>;
 };
 
 export default SwipeHandler;

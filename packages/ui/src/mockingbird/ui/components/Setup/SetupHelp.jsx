@@ -1,4 +1,4 @@
-import styles from './SetupHelp.module.scss';
+import styles from "./SetupHelp.module.scss";
 
 const SetupHelp = ({ onBackToStart }) => {
   return (
@@ -11,23 +11,18 @@ const SetupHelp = ({ onBackToStart }) => {
           <div className={styles.subtitle}>
             <ul className={styles.subtitle}>
               <li>
-                Open <span className={styles.white}>usenocturne.com/app</span> on
-                your phone
-              </li>
-              <li>
-                Follow the instructions to pair your phone
-              </li>
-              <li>
-                Make sure <span className={styles.white}>Bluetooth</span> is enabled
+                Open <span className={styles.white}>usenocturne.com/app</span>{" "}
                 on your phone
+              </li>
+              <li>Follow the instructions to pair your phone</li>
+              <li>
+                Make sure <span className={styles.white}>Bluetooth</span> is
+                enabled on your phone
               </li>
             </ul>
           </div>
         </div>
-        <div
-          className={styles.backToSetup}
-          onClick={() => onBackToStart()}
-        >
+        <div className={styles.backToSetup} onClick={() => onBackToStart()}>
           Back to Start setup
         </div>
       </div>

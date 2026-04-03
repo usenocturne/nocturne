@@ -1,7 +1,7 @@
-import reactToDial from './DialHandler';
-import reactToBackButton from './BackButtonHandler';
-import reactToPresetButtons from './PresetButtonHandler';
-import reactToSettingsButton from './SettingsButtonHandler';
+import reactToDial from "./DialHandler";
+import reactToBackButton from "./BackButtonHandler";
+import reactToPresetButtons from "./PresetButtonHandler";
+import reactToSettingsButton from "./SettingsButtonHandler";
 
 const HardwareEventHandler = {
   handleEvents: (hardwareEvents, rootStore) => {

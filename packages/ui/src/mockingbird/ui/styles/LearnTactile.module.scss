@@ -1,4 +1,4 @@
-@use './variables.module' as vars;
+@use "./variables.module" as vars;
 
 .learnTactile {
   height: vars.$device-height;
@@ -149,7 +149,6 @@
 }
 
 @keyframes dialPulse {
-
   0%,
   100% {
     transform: translateX(-50%) scale(1);
@@ -201,7 +200,6 @@
 }
 
 @keyframes pressPulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -238,7 +236,6 @@
 }
 
 @keyframes backIndicatorPulse {
-
   0%,
   100% {
     transform: scale(1);

@@ -1,25 +1,25 @@
-import classNames from 'classnames';
-import { useCarThingStore } from '../../../../../contexts/CarThingStore';
-import { runInAction } from 'mobx';
-import { observer } from 'mobx-react-lite';
-import { cloneElement, createRef, useEffect, useState } from 'react';
-import CSSTransition from '../../../../CSSTransitionCompat';
-import { TransitionGroup } from 'react-transition-group';
-import { transitionDurationMs } from '../../../../../styles/Variables';
-import styles from './PlayingInfoTitles.module.scss';
+import classNames from "classnames";
+import { useCarThingStore } from "../../../../../contexts/CarThingStore";
+import { runInAction } from "mobx";
+import { observer } from "mobx-react-lite";
+import { cloneElement, createRef, useEffect, useState } from "react";
+import CSSTransition from "../../../../CSSTransitionCompat";
+import { TransitionGroup } from "react-transition-group";
+import { transitionDurationMs } from "../../../../../styles/Variables";
+import styles from "./PlayingInfoTitles.module.scss";
 
 const NPV_TITLE_MAX_HEIGHT = 146;
 
 const TitleSize = {
-  BIG: 'big',
-  MIDDLE: 'middle',
-  SMALL: 'small',
+  BIG: "big",
+  MIDDLE: "middle",
+  SMALL: "small",
 };
 
 const SwipeDirection = {
-  NONE: 'NONE',
-  LEFT: 'LEFT',
-  RIGHT: 'RIGHT',
+  NONE: "NONE",
+  LEFT: "LEFT",
+  RIGHT: "RIGHT",
 };
 
 const PlayingInfoTitles = ({ tracks, getAnimationClassNames }) => {
@@ -28,7 +28,7 @@ const PlayingInfoTitles = ({ tracks, getAnimationClassNames }) => {
 
   const [showTitle, setShowTitle] = useState(true);
   const [titleSize, setTitleSize] = useState(TitleSize.BIG);
-  const [refTitle, setRefTitle] = useState('');
+  const [refTitle, setRefTitle] = useState("");
   const npvTitleRef = createRef();
 
   useEffect(() => {

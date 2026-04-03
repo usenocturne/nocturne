@@ -1,13 +1,16 @@
-import { useCarThingStore } from '../../../../contexts/CarThingStore';
-import { action, autorun, runInAction } from 'mobx';
-import { observer } from 'mobx-react-lite';
-import { transitionDurationMs, easingFunction } from '../../../../styles/Variables';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Virtual } from 'swiper/modules';
-import ShelfSwiperItem, { ARTWORK_WIDTH } from '../ShelfItem/ShelfSwiperItem';
-import 'swiper/scss';
-import styles from './ShelfSwiper.module.scss';
-import { useState, useRef, useEffect } from 'react';
+import { useCarThingStore } from "../../../../contexts/CarThingStore";
+import { action, autorun, runInAction } from "mobx";
+import { observer } from "mobx-react-lite";
+import {
+  transitionDurationMs,
+  easingFunction,
+} from "../../../../styles/Variables";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Virtual } from "swiper/modules";
+import ShelfSwiperItem, { ARTWORK_WIDTH } from "../ShelfItem/ShelfSwiperItem";
+import "swiper/scss";
+import styles from "./ShelfSwiper.module.scss";
+import { useState, useRef, useEffect } from "react";
 
 const SWIPER_WIDTH = 800;
 const SWIPER_OFFSET_BEFORE = 50;
@@ -24,7 +27,9 @@ const getKey = (item) => {
 };
 
 let dragging = false;
-const setDraggingFlag = (value) => { dragging = value; };
+const setDraggingFlag = (value) => {
+  dragging = value;
+};
 
 const ShelfSwiper = () => {
   const { shelfStore } = useCarThingStore();
@@ -34,7 +39,9 @@ const ShelfSwiper = () => {
 
   useEffect(() => {
     const setAnimate = (isAnimated) => {
-      runInAction(() => { uiState.animateSliding = isAnimated; });
+      runInAction(() => {
+        uiState.animateSliding = isAnimated;
+      });
     };
     runInAction(() => setAnimate(false));
 
@@ -45,7 +52,8 @@ const ShelfSwiper = () => {
       if (index !== undefined && index > -1 && !dragging) {
         if (swiperRef.current) {
           swiperRef.current.slideTo(index, animate ? transitionDurationMs : 0);
-          swiperRef.current.wrapperEl.style.transitionTimingFunction = easingFunction;
+          swiperRef.current.wrapperEl.style.transitionTimingFunction =
+            easingFunction;
         }
         setAnimate(true);
       }
@@ -80,7 +88,10 @@ const ShelfSwiper = () => {
         setLocalDragging(false);
       }}
       onTransitionEnd={() => {
-        if (!dragging && swiperRef.current?.activeIndex !== uiState.selectedItemIndex) {
+        if (
+          !dragging &&
+          swiperRef.current?.activeIndex !== uiState.selectedItemIndex
+        ) {
           swiperRef.current?.slideTo(uiState.selectedItemIndex);
         }
       }}

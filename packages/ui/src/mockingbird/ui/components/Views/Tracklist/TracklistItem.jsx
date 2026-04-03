@@ -1,18 +1,18 @@
-import IconDownloadAltActive from '../../Icons/EncoreWeb/IconDownloadAltActive';
-import IconCheckAltActive from '../../Icons/EncoreWeb/IconCheckAltActive';
-import IconAddToQueue from '../../Icons/EncoreWeb/IconAddToQueue';
-import classNames from 'classnames';
-import LazyImage from '../Npv/PlayingInfo/LazyImage/LazyImage';
-import ProgressBar from './ProgressBar';
-import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
-import pointerListenersMaker from '../../../helpers/PointerListeners';
-import styles from './TracklistItem.module.scss';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { action } from 'mobx';
-import { useInView } from 'react-intersection-observer';
-import Trailer from '../../CarthingUIComponents/Trailer/Trailer';
-import { Type } from '../../CarthingUIComponents';
+import IconDownloadAltActive from "../../Icons/EncoreWeb/IconDownloadAltActive";
+import IconCheckAltActive from "../../Icons/EncoreWeb/IconCheckAltActive";
+import IconAddToQueue from "../../Icons/EncoreWeb/IconAddToQueue";
+import classNames from "classnames";
+import LazyImage from "../Npv/PlayingInfo/LazyImage/LazyImage";
+import ProgressBar from "./ProgressBar";
+import { observer } from "mobx-react-lite";
+import { useEffect, useState } from "react";
+import pointerListenersMaker from "../../../helpers/PointerListeners";
+import styles from "./TracklistItem.module.scss";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { action } from "mobx";
+import { useInView } from "react-intersection-observer";
+import Trailer from "../../CarthingUIComponents/Trailer/Trailer";
+import { Type } from "../../CarthingUIComponents";
 
 const TracklistItem = ({ item, isActive = false }) => {
   const [pressed, setPressed] = useState(false);
@@ -75,7 +75,7 @@ const TracklistItem = ({ item, isActive = false }) => {
           className={classNames(styles.title, {
             [styles.currentlyPlaying]: isCurrent,
           })}
-          dataTestId={`${isActive ? 'track-title' : ''}`}
+          dataTestId={`${isActive ? "track-title" : ""}`}
         >
           {item.title}
         </Type>
@@ -94,7 +94,7 @@ const TracklistItem = ({ item, isActive = false }) => {
           <Type
             name="balladBook"
             className={styles.subtitle}
-            dataTestId={`${isActive ? 'track-subtitle' : ''}`}
+            dataTestId={`${isActive ? "track-subtitle" : ""}`}
           >
             {item.subtitle}
           </Type>

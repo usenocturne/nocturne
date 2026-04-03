@@ -1,9 +1,12 @@
-import classNames from 'classnames';
-import { IconHeart48, IconHeartActive48 } from '../../Icons/CarthingUIComponents';
-import { useCarThingStore } from '../../../contexts/CarThingStore';
-import { action } from 'mobx';
-import { observer } from 'mobx-react-lite';
-import styles from './TracklistHeaderActions.module.scss';
+import classNames from "classnames";
+import {
+  IconHeart48,
+  IconHeartActive48,
+} from "../../Icons/CarthingUIComponents";
+import { useCarThingStore } from "../../../contexts/CarThingStore";
+import { action } from "mobx";
+import { observer } from "mobx-react-lite";
+import styles from "./TracklistHeaderActions.module.scss";
 
 const TracklistHeaderActions = () => {
   const { tracklistStore } = useCarThingStore();
