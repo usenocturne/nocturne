@@ -22,6 +22,9 @@ const pendingWsRequests = new Map();
 let appReady = false;
 let appReadyPlatform = null; // "ios" or "android"
 const appReadySubscribers = new Set();
+let appSubscribed = true;
+let appSubscriptionStatus = null;
+const appSubscribedSubscribers = new Set();
 let spotifyAuthenticated = false;
 const spotifyAuthSubscribers = new Set();
 let spotifySkipped = false;
@@ -135,6 +138,34 @@ export const subscribeAppReadyState = (listener) => {
 
   return () => {
     appReadySubscribers.delete(listener);
+  };
+};
+
+export const getAppSubscribedState = () => ({
+  subscribed: appSubscribed,
+  status: appSubscriptionStatus,
+});
+
+const emitAppSubscribedState = () => {
+  appSubscribedSubscribers.forEach((listener) => {
+    try {
+      listener({ subscribed: appSubscribed, status: appSubscriptionStatus });
+    } catch (err) {
+      console.error("App subscribed listener error:", err);
+    }
+  });
+};
+
+export const subscribeAppSubscribedState = (listener) => {
+  if (typeof listener !== "function") {
+    return () => {};
+  }
+
+  appSubscribedSubscribers.add(listener);
+  listener({ subscribed: appSubscribed, status: appSubscriptionStatus });
+
+  return () => {
+    appSubscribedSubscribers.delete(listener);
   };
 };
 
@@ -380,6 +411,10 @@ const setupGlobalWebSocket = async () => {
       appReadyPlatform = null;
       emitAppReadyState();
 
+      appSubscribed = true;
+      appSubscriptionStatus = null;
+      emitAppSubscribedState();
+
       spotifyAuthenticated = false;
       emitSpotifyAuthState();
 
@@ -406,6 +441,9 @@ const setupGlobalWebSocket = async () => {
         if (data && data.type === "event" && data.topic === "app.ready") {
           const pendingPlatform = data.data?.platform || null;
           const pendingSpotifySkipped = data.data?.spotifySkipped === true;
+          const pendingSubscribed = data.data?.subscribed === true;
+          const pendingSubscriptionStatus =
+            data.data?.subscriptionStatus || null;
 
           const syncDeviceTime = async () => {
             while (true) {
@@ -421,6 +459,10 @@ const setupGlobalWebSocket = async () => {
             appReadyPlatform = pendingPlatform;
             emitAppReadyState();
 
+            appSubscribed = pendingSubscribed;
+            appSubscriptionStatus = pendingSubscriptionStatus;
+            emitAppSubscribedState();
+
             if (pendingSpotifySkipped) {
               spotifySkipped = true;
               emitSpotifySkippedState();
@@ -428,6 +470,16 @@ const setupGlobalWebSocket = async () => {
           };
 
           syncDeviceTime();
+        }
+
+        if (
+          data &&
+          data.type === "event" &&
+          data.topic === "subscription.updated"
+        ) {
+          appSubscribed = data.data?.subscribed === true;
+          appSubscriptionStatus = data.data?.subscriptionStatus || null;
+          emitAppSubscribedState();
         }
 
         if (

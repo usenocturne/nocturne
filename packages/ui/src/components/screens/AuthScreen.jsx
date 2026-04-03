@@ -10,6 +10,7 @@ const AuthScreen = ({
   isLoading = false,
   error = null,
   statusMessage = null,
+  subscriptionRequired = false,
 }) => {
   const [gradientState, updateGradientColors] = useGradientState();
 
@@ -132,12 +133,16 @@ const AuthScreen = ({
 
                 <div className="space-y-4">
                   <h2 className="text-4xl text-white tracking-tight font-[580] w-[24rem]">
-                    Scan the QR code with your phone's camera.
+                    {subscriptionRequired
+                      ? "A Nocturne subscription is required to continue."
+                      : "Scan the QR code with your phone's camera."}
                   </h2>
                   <p className="text-[28px] text-white/60 tracking-tight w-[22rem]">
-                    {statusMessage
-                      ? statusMessage
-                      : "You'll be redirected to download the Nocturne app."}
+                    {subscriptionRequired
+                      ? "Open the Nocturne app to subscribe, or visit usenocturne.com/subscribe."
+                      : statusMessage
+                        ? statusMessage
+                        : "You'll be redirected to download the Nocturne app."}
                   </p>
                 </div>
               </div>

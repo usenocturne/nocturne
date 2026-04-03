@@ -634,8 +634,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           };
 
           if (nowPlayingTrackLatch) {
-            const latchAge =
-              Date.now() - nowPlayingTrackLatch.timestamp;
+            const latchAge = Date.now() - nowPlayingTrackLatch.timestamp;
             if (latchAge < NOWPLAYING_PRECEDENCE_WINDOW_MS) {
               const incomingDeviceTitle = playerState.track?.metadata?.title
                 ?.toLowerCase()
@@ -1132,8 +1131,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           .then((playerData) => {
             if (playerData && Object.keys(playerData).length > 0) {
               if (nowPlayingTrackLatch) {
-                const latchAge =
-                  Date.now() - nowPlayingTrackLatch.timestamp;
+                const latchAge = Date.now() - nowPlayingTrackLatch.timestamp;
                 if (latchAge < NOWPLAYING_PRECEDENCE_WINDOW_MS) {
                   const fetchedTitle = playerData.item?.name
                     ?.toLowerCase()
@@ -1207,23 +1205,14 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           resetPlaybackState();
         } else {
           if (nowPlayingTrackLatch) {
-            const latchAge =
-              Date.now() - nowPlayingTrackLatch.timestamp;
+            const latchAge = Date.now() - nowPlayingTrackLatch.timestamp;
             if (latchAge < NOWPLAYING_PRECEDENCE_WINDOW_MS) {
-              const fetchedTitle = data.item?.name
-                ?.toLowerCase()
-                ?.trim();
-              if (
-                fetchedTitle &&
-                fetchedTitle !== nowPlayingTrackLatch.title
-              ) {
+              const fetchedTitle = data.item?.name?.toLowerCase()?.trim();
+              if (fetchedTitle && fetchedTitle !== nowPlayingTrackLatch.title) {
                 nowPlayingTrackLatch.timestamp = Date.now();
                 return;
               }
-              if (
-                fetchedTitle &&
-                fetchedTitle === nowPlayingTrackLatch.title
-              ) {
+              if (fetchedTitle && fetchedTitle === nowPlayingTrackLatch.title) {
                 nowPlayingTrackLatch = null;
               }
             } else {

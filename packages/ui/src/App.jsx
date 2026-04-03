@@ -40,6 +40,7 @@ import NetworkScreen from "./components/screens/NetworkScreen";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import AuthScreen from "./components/screens/AuthScreen";
 import SplashScreen from "./components/screens/SplashScreen";
+import { useSubscription } from "./hooks/useSubscription";
 function useGlobalButtonMapping({
   playTrack,
   playDJMix,
@@ -263,6 +264,8 @@ function NotificationEffects({
 }
 
 function App() {
+  const { isSubscribed } = useSubscription();
+  const [appPlatform, setAppPlatform] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [currentTutorialStep, setCurrentTutorialStep] = useState(0);
   const [activeSection, setActiveSection] = useState("recents");
@@ -503,6 +506,7 @@ function App() {
   useEffect(() => {
     const unsubscribe = subscribeAppReadyState((state) => {
       setAppReady(state.ready);
+      setAppPlatform(state.platform);
     });
 
     return () => {
@@ -529,6 +533,8 @@ function App() {
     if (!wsConnected) return;
 
     if (!appReady) return;
+
+    if (isSubscribed === false) return;
 
     let cancelled = false;
     let retryCount = 0;
@@ -575,10 +581,11 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [wsConnected, appReady]);
+  }, [wsConnected, appReady, isSubscribed]);
 
   useEffect(() => {
     if (!showAuthScreen || !appReady || !wsConnected) return;
+    if (isSubscribed === false) return;
 
     const interval = setInterval(() => {
       sendNocturneWsRequest("spotify.auth.getStatus", {}, { timeoutMs: 5000 })
@@ -589,9 +596,21 @@ function App() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [showAuthScreen, appReady, wsConnected, processSpotifyAuthMessage]);
+  }, [
+    showAuthScreen,
+    appReady,
+    wsConnected,
+    processSpotifyAuthMessage,
+    isSubscribed,
+  ]);
 
   useEffect(() => {
+    if (isSubscribed === false) {
+      setShowAuthScreen(false);
+      setShowTutorial(false);
+      return;
+    }
+
     if (isSpotifySkipped) {
       setShowAuthScreen(false);
       if (!hasSeenTutorialFlag && appReady) {
@@ -648,6 +667,7 @@ function App() {
     isSpotifyAuthenticated,
     isSpotifySkipped,
     appReady,
+    isSubscribed,
   ]);
 
   useEffect(() => {
@@ -1081,9 +1101,14 @@ function App() {
     !showSplash &&
     reconnectAttempt === 0;
 
+  const showSubscriptionScreen =
+    appReady && appPlatform !== null && isSubscribed === false;
+
   let content;
   if (showSplash) {
     content = <SplashScreen />;
+  } else if (showSubscriptionScreen) {
+    content = <AuthScreen subscriptionRequired={true} />;
   } else if (showAuthScreen) {
     content = (
       <AuthScreen

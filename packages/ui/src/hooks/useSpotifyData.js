@@ -7,7 +7,9 @@ import { getCachedTimezone } from "./useCurrentTime";
 import {
   getSpotifySkippedState,
   getSpotifyAuthState,
+  getAppSubscribedState,
   subscribeSpotifySkippedState,
+  subscribeAppSubscribedState,
 } from "./useNocturned";
 
 const MAX_RETRIES = 3;
@@ -165,6 +167,7 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   } = useSpotifyWebSocket();
 
   const checkSpotifyReady = useCallback(() => {
+    if (!getAppSubscribedState().subscribed) return false;
     if (isSpotifyReady) return true;
     return getSpotifyAuthState() && !getSpotifySkippedState();
   }, [isSpotifyReady]);
@@ -200,6 +203,21 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
       if (typeof unsubscribe === "function") {
         unsubscribe();
       }
+    };
+  }, [initialDataLoaded]);
+
+  useEffect(() => {
+    const handleSubscriptionChange = (state) => {
+      if (state.subscribed && !initialDataLoaded) {
+        initialLoadTriggeredRef.current = false;
+        dataLoadingAttemptedRef.current = false;
+        dataFetchingInProgressRef.current = false;
+      }
+    };
+
+    const unsubscribe = subscribeAppSubscribedState(handleSubscriptionChange);
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
     };
   }, [initialDataLoaded]);
 

@@ -6,6 +6,8 @@ import {
   subscribeBluetoothConnectionState,
   getAppReadyState,
   subscribeAppReadyState,
+  getAppSubscribedState,
+  subscribeAppSubscribedState,
   getSpotifyAuthState,
   subscribeSpotifyAuthState,
   getSpotifySkippedState,
@@ -46,6 +48,7 @@ export function useSpotifyWebSocket() {
   const [spotifySkipped, setSpotifySkipped] = useState(() => {
     return getSpotifySkippedState();
   });
+  const [appSubscribed, setAppSubscribed] = useState(true);
 
   useEffect(() => {
     const unsubscribe = subscribeBluetoothConnectionState((state) => {
@@ -95,6 +98,16 @@ export function useSpotifyWebSocket() {
     };
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeAppSubscribedState((state) => {
+      setAppSubscribed(state.subscribed);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, []);
+
   const sendSpotifyCommand = useCallback(
     (method, params = {}, signal = null) => {
       return new Promise((resolve, reject) => {
@@ -105,6 +118,11 @@ export function useSpotifyWebSocket() {
 
         if (getSpotifySkippedState()) {
           reject(new Error("Spotify authorization was skipped"));
+          return;
+        }
+
+        if (!getAppSubscribedState().subscribed) {
+          reject(new Error("Subscription required"));
           return;
         }
 
@@ -264,7 +282,8 @@ export function useSpotifyWebSocket() {
     wsConnected &&
     (appReady || deviceConnected) &&
     spotifyAuthenticated &&
-    !spotifySkipped;
+    !spotifySkipped &&
+    appSubscribed;
 
   useEffect(() => {
     listenerIdRef.current = addMessageListener(
