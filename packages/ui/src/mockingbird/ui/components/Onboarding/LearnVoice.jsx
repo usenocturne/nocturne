@@ -9,7 +9,6 @@ const LearnVoice = ({ dataReady }) => {
   const { onboardingStore } = useCarThingStore();
   const targetStep = onboardingStore.learnVoiceStep;
 
-  // renderedStep is what's actually shown — it lags behind targetStep during exit
   const [renderedStep, setRenderedStep] = useState(targetStep);
   const [exiting, setExiting] = useState(false);
   const prevTargetRef = useRef(targetStep);
@@ -18,11 +17,10 @@ const LearnVoice = ({ dataReady }) => {
     if (targetStep === prevTargetRef.current) return;
     prevTargetRef.current = targetStep;
 
-    // Start exit animation on the current rendered step
     setExiting(true);
 
     const timer = setTimeout(() => {
-      // After exit completes, swap to the new step and clear exiting
+      
       setRenderedStep(targetStep);
       setExiting(false);
     }, EXIT_DURATION);

@@ -11,7 +11,7 @@ const reactToBackButton = (hardwareEvents, rootStore) => {
       if (!onboardingStore.backEnabled) {
         return;
       }
-      // Fall through to normal handling so the actual back navigation occurs
+      
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleBack();

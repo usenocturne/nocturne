@@ -345,7 +345,6 @@ class TracklistUiState {
   async loadPlaylistTracks(playlistUri) {
     const playlistId = playlistUri.replace('spotify:playlist:', '');
 
-    // Cancel any previous background load
     if (this._bgLoadAbort) {
       this._bgLoadAbort.abort = true;
     }
@@ -353,7 +352,7 @@ class TracklistUiState {
     this._bgLoadAbort = abortToken;
 
     try {
-      // Fetch initial batch + playlist image in parallel
+      
       const [data, playlistInfo] = await Promise.allSettled([
         sendNocturneWsRequest('spotify.playlist.tracks', {
           id: playlistId,
@@ -379,7 +378,6 @@ class TracklistUiState {
         this.totalTracksInContext = total;
       });
 
-      // Background-load remaining tracks
       if (total > parsed.length && !abortToken.abort) {
         this._backgroundLoadPlaylist(playlistId, parsed.length, total, playlistImage, abortToken);
       }

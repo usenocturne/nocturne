@@ -22,7 +22,6 @@ const LearnTactile = () => {
   const [showBackPressBanner, setShowBackPressBanner] = useState(false);
   const noInteractionTimeoutId = useRef();
 
-  // Overlay fade transition state
   const [modalMounted, setModalMounted] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const modalTimerRef = useRef();
@@ -50,23 +49,21 @@ const LearnTactile = () => {
     }, TIME_TO_NO_INTERACTION_MODAL);
   };
 
-  // Initial setup: play shelf explain TTS, then show dial turn dots
   useEffect(() => {
     let mounted = true;
 
     const setup = async () => {
-      // Ensure we start on the shelf view
+      
       viewStore.backToContentShelf();
 
       onboardingStore.setDialPressEnabled(false);
       onboardingStore.setDialTurnEnabled(false);
       onboardingStore.setBackEnabled(false);
 
-      // Play shelf explanation TTS and wait for it
       await onboardingStore.waitForTts(TTS.SHELF_EXPLAIN);
 
       if (mounted) {
-        // Play dial turn instruction
+        
         onboardingStore.playTts(TTS.SHELF_DIAL_TURN.fileName);
 
         runInAction(() => {
@@ -83,9 +80,8 @@ const LearnTactile = () => {
       mounted = false;
       window.clearTimeout(noInteractionTimeoutId.current);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
-  // React to dial turn counter changes
   useEffect(() => {
     switch (onboardingStore.dialTurnCounter) {
       case 1:
@@ -98,7 +94,6 @@ const LearnTactile = () => {
         });
         setShowDialTurnDots(false);
 
-        // Play dial press instruction TTS
         onboardingStore.playTts(TTS.SHELF_DIAL_PRESS.fileName);
 
         setShowDialPressPulse(true);
@@ -110,17 +105,15 @@ const LearnTactile = () => {
       default:
         break;
     }
-  }, [onboardingStore.dialTurnCounter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onboardingStore.dialTurnCounter]); 
 
-  // React to dial press counter changes
   useEffect(() => {
     const handleDialPress = async () => {
       switch (onboardingStore.dialPressCounter) {
         case 1: {
-          // Shelf item pressed → enters tracklist
+          
           window.clearTimeout(noInteractionTimeoutId.current);
 
-          // Play tracklist dial press TTS
           onboardingStore.playTts(TTS.TRACKLIST_DIAL_PRESS.fileName);
 
           await delayedAction(() => {}, transitionDurationMs);
@@ -133,7 +126,7 @@ const LearnTactile = () => {
           break;
         }
         case 2: {
-          // Tracklist item pressed → enters NPV
+          
           window.clearTimeout(noInteractionTimeoutId.current);
           runInAction(() => {
             onboardingStore.setDialTurnEnabled(false);
@@ -141,10 +134,8 @@ const LearnTactile = () => {
           });
           setShowDialPressPulse(false);
 
-          // Play NPV explanation TTS and wait for it
           await onboardingStore.waitForTts(TTS.NPV_EXPLAIN);
 
-          // Play NPV dial press instruction
           onboardingStore.playTts(TTS.NPV_DIAL_PRESS.fileName);
 
           setShowDialPressPulse(true);
@@ -155,14 +146,13 @@ const LearnTactile = () => {
           break;
         }
         case 3: {
-          // NPV dial press (pause/play)
+          
           window.clearTimeout(noInteractionTimeoutId.current);
           setShowDialPressPulse(false);
           runInAction(() => {
             onboardingStore.setDialPressEnabled(false);
           });
 
-          // Play NPV back press instruction TTS and wait
           await onboardingStore.waitForTts(TTS.NPV_BACK_PRESS);
 
           setShowBackPressBanner(true);
@@ -178,35 +168,31 @@ const LearnTactile = () => {
     };
 
     handleDialPress();
-  }, [onboardingStore.dialPressCounter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onboardingStore.dialPressCounter]); 
 
-  // React to back counter changes
   useEffect(() => {
     const handleBack = async () => {
       switch (onboardingStore.backCounter) {
         case 1: {
-          // NPV → tracklist
-          // Play tracklist back press TTS
+          
           onboardingStore.playTts(TTS.TRACKLIST_BACK_PRESS.fileName);
           startNoInteractionTimer();
           break;
         }
         case 2: {
-          // Tracklist → shelf
+          
           window.clearTimeout(noInteractionTimeoutId.current);
 
-          // Play shelf back press TTS and wait
           await onboardingStore.waitForTts(TTS.SHELF_BACK_PRESS);
 
           startNoInteractionTimer();
           break;
         }
         case 3: {
-          // Shelf → done
+          
           window.clearTimeout(noInteractionTimeoutId.current);
           setShowBackPressBanner(false);
 
-          // Play end tour TTS and wait
           await onboardingStore.waitForTts(TTS.END_TOUR);
 
           onboardingStore.setOnboardingFinished();
@@ -218,7 +204,7 @@ const LearnTactile = () => {
     };
 
     handleBack();
-  }, [onboardingStore.backCounter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onboardingStore.backCounter]); 
 
   return (
     <div className={styles.learnTactile} data-testid="onboarding-learn-tactile">

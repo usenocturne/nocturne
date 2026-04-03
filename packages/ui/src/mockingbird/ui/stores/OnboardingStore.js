@@ -28,7 +28,6 @@ export const delayedAction = (actionToRun, timeout) => {
   });
 };
 
-// TTS file definitions with durations (matching original superbird-webapp)
 const TTS = {
   START: { fileName: 'onboarding_start', fileLength: 3000 },
   VOICE_1_1: { fileName: 'onboarding_learn_voice_1_1', fileLength: 5000 },
@@ -117,8 +116,6 @@ class OnboardingStore {
     this.onboardingStep = onboardingStep;
   }
 
-  // --- TTS methods ---
-
   playTts(fileName) {
     sendNocturneWsRequest('tts.speak', { file: fileName }).catch((e) => {
       console.warn('[OnboardingStore] TTS failed:', fileName, e);
@@ -139,8 +136,6 @@ class OnboardingStore {
       console.warn('[OnboardingStore] launchApp failed:', e);
     });
   }
-
-  // --- No interaction modal ---
 
   showNoInteractionModal() {
     this.noInteractionModal = {

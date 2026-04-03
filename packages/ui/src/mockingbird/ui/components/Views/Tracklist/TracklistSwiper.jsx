@@ -41,7 +41,7 @@ const TracklistSwiper = () => {
     } else if (uiState.tracksList.length === 3) {
       return SWIPER_HEIGHT - HEADER_HEIGHT - ITEM_HEIGHT;
     }
-    return SWIPER_HEIGHT - ITEM_HEIGHT + 2; // 2px for swiperRef end not to break
+    return SWIPER_HEIGHT - ITEM_HEIGHT + 2; 
   };
 
   return (

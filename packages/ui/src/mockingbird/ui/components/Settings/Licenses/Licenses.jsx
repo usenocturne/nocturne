@@ -10,7 +10,7 @@ async function fetchTextFile(path) {
     const resp = await fetch(path);
     if (!resp.ok) return '';
     const contentType = resp.headers.get('content-type') || '';
-    // Reject HTML responses (SPA fallback for missing files)
+    
     if (contentType.includes('text/html')) return '';
     return await resp.text();
   } catch {

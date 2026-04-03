@@ -78,15 +78,12 @@ export class PresetsUiState {
 
     const isLikedSongs = contextUri === 'spotify:collection:your-music';
 
-    // If we have a locally tracked URI (set immediately on preset play),
-    // use it exclusively to avoid stale currentPlayback showing two presets
     if (this.currentlyPlayingContextUri) {
       if (this.currentlyPlayingContextUri === contextUri) return true;
       if (isLikedSongs && this.currentlyPlayingContextUri.includes(':collection')) return true;
       return false;
     }
 
-    // No local tracking — fall back to what Spotify reports
     const rootStore = window.carThingRootStore;
     const activeContextUri = rootStore?.currentPlayback?.context?.uri;
     if (activeContextUri) {
@@ -210,14 +207,14 @@ export class PresetsUiState {
     if (uri.includes('spotify:artist:')) {
       contextName = currentPlayback?.item?.artists?.[0]?.name || 'Unknown Artist';
       contextDescription = 'Artist';
-      // Try to get artist image via nocturned
+      
       try {
         const artistId = uri.replace('spotify:artist:', '');
         const { sendNocturneWsRequest } = await import('../../../hooks/useNocturned');
         const result = await sendNocturneWsRequest('spotify.artist.get', { id: artistId }, { timeoutMs: 5000 });
         if (result?.images?.[0]?.url) contextImage = result.images[0].url;
         if (result?.name) contextName = result.name;
-      } catch { /* use fallback */ }
+      } catch {  }
 
     } else if (uri.includes('spotify:playlist:')) {
       const playlistId = uri.replace('spotify:playlist:', '');
@@ -228,13 +225,13 @@ export class PresetsUiState {
         contextName = npvUiState?.contextHeaderTitle || 'Unknown Playlist';
         contextDescription = 'Playlist';
       }
-      // Try to get playlist image via nocturned
+      
       try {
         const { sendNocturneWsRequest } = await import('../../../hooks/useNocturned');
         const result = await sendNocturneWsRequest('spotify.playlist.get', { id: playlistId, fields: 'name,images' }, { timeoutMs: 5000 });
         if (result?.images?.[0]?.url) contextImage = result.images[0].url;
         if (result?.name) contextName = result.name;
-      } catch { /* use fallback */ }
+      } catch {  }
 
     } else if (uri.includes('spotify:album:')) {
       contextName = currentPlayback?.item?.album?.name ||
@@ -276,7 +273,7 @@ export class PresetsUiState {
   }
 
   async playPresetContext(preset) {
-    // Clear previous before setting new so only one preset shows "Now Playing"
+    
     this.currentlyPlayingContextUri = null;
     this.currentlyPlayingContextUri = preset.context_uri;
     this.playerStore.setContextUri(preset.context_uri);
@@ -294,7 +291,7 @@ export class PresetsUiState {
       const uri = preset.context_uri;
 
       if (uri === 'spotify:collection:your-music') {
-        // Liked Songs isn't a valid context_uri — use the Spotify user collection URI
+        
         const { sendNocturneWsRequest } = await import('../../../hooks/useNocturned');
         try {
           const profile = await sendNocturneWsRequest('spotify.me.profile', {}, { timeoutMs: 5000 });
@@ -302,7 +299,7 @@ export class PresetsUiState {
           if (userId) {
             await playTrack(null, `spotify:user:${userId}:collection`);
           } else {
-            // Fallback: fetch liked tracks and play as uris
+            
             const result = await sendNocturneWsRequest('spotify.me.tracks', { limit: 50, mockingbird: true }, { timeoutMs: 8000 });
             const trackUris = (result?.items || []).map(i => i.track?.uri).filter(Boolean);
             if (trackUris.length > 0) {
@@ -452,11 +449,11 @@ export class PresetsDataStore {
               this.presets[slotIndex] = { ...preset, image_url: result.images[0].url };
               if (result.name) this.presets[slotIndex].name = result.name;
             }
-          } catch { /* skip */ }
+          } catch {  }
         }
       }
       this.savePresetsToStorage();
-    } catch { /* skip */ }
+    } catch {  }
   }
 
   savePresetsToStorage() {
@@ -468,10 +465,9 @@ export class PresetsDataStore {
   }
 
   loadPresets() {
-    // In real implementation this would call InterappActions
+    
     return Promise.resolve();
   }
-
 
   reset() {
     this.presets = {};

@@ -1,6 +1,6 @@
-/* stylelint-disable */
+
 .container {
-  overflow: visible !important; // Override swiper default behaviour
+  overflow: visible !important; 
 
   :global {
     .swiper-wrapper {
@@ -10,5 +10,3 @@
     }
   }
 }
-
-/* stylelint-enable */

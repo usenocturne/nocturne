@@ -1,4 +1,4 @@
-// Placeholder - will be replaced with exact original component
+
 const Spacer = () => {
   return (
     <div style={{ 
@@ -8,7 +8,7 @@ const Spacer = () => {
       alignItems: 'center', 
       justifyContent: 'center'
     }}>
-      {/* Empty spacer */}
+      
     </div>
   );
 };

@@ -224,7 +224,7 @@ export class RootStore {
       if (this.presetsController) {
         this.presetsController.presetsUiState.showPresets();
       } else {
-        // nothing
+        
       }
     };
 

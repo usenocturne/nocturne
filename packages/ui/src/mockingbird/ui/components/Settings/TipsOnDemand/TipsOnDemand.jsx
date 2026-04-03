@@ -71,7 +71,7 @@ const TipsOnDemand = () => {
   const [pressed, setPressed] = useState(false);
   const [isError, setIsError] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
-  const [tipState, setTipState] = useState('visible'); // 'visible' | 'exiting' | 'entering'
+  const [tipState, setTipState] = useState('visible');
   const tipRef = useRef(null);
 
   const tip = TIPS[currentIndex];

@@ -14,13 +14,12 @@ const pointerListenersMaker = (setTouchDown) => ({
 });
 
 const getShelfItemTitle = (title, uri) => {
-  // TODO: Implement based on Nocturne's URI handling
+  
   return title;
 };
 
 const useInView = () => {
-  // TODO: Implement intersection observer for analytics
-  // For now, return simple ref and always in view
+  
   return { ref: null, inView: true };
 };
 

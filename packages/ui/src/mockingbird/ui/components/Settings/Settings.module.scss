@@ -40,7 +40,6 @@
   background-color: $opacity-black-90;
 }
 
-// Enter: slide up from bottom
 @keyframes slideUpIn {
   from {
     transform: translateY(480px);
@@ -50,7 +49,6 @@
   }
 }
 
-// Exit: slide down to bottom
 @keyframes slideDownOut {
   from {
     transform: translateY(0);
@@ -60,7 +58,6 @@
   }
 }
 
-// Enter: fade in
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -70,7 +67,6 @@
   }
 }
 
-// Exit: fade out
 @keyframes fadeOut {
   from {
     opacity: 1;

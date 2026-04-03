@@ -56,7 +56,6 @@ const Settings = () => {
   const { viewStack } = settingsStore;
   const overlayRef = useRef(null);
 
-  // Capture a DOM snapshot of the top view for exit animation
   const [exitingSnapshot, setExitingSnapshot] = useState(null);
   const [exitAnimType, setExitAnimType] = useState(null);
   const [enteringViewId, setEnteringViewId] = useState(null);
@@ -69,16 +68,15 @@ const Settings = () => {
       (newLen) => {
         const prevLen = prevLenRef.current;
         if (newLen > prevLen) {
-          // Stack grew — animate the new top view in
+          
           const newView = settingsStore.viewStack[newLen - 1];
           setEnteringViewId(newView.id);
           setTimeout(() => setEnteringViewId(null), transitionDurationMs);
         } else if (newLen < prevLen && topLayerRef.current) {
-          // Stack shrank — capture the current top layer's DOM as a snapshot
+          
           const el = topLayerRef.current;
           const clone = el.cloneNode(true);
-          // Get the animation type of the view being popped
-          // We stored it as a data attribute on the element
+          
           const animType = el.dataset.animtype;
           setExitAnimType(animType === 'fade' ? 'fade' : 'slide');
           setExitingSnapshot(clone.innerHTML);
@@ -107,7 +105,7 @@ const Settings = () => {
           ref={overlayRef}
           className={classNames(styles.settingsOverlay, styles[`overlay_${overlayState}`])}
         >
-          {/* Render each view in the stack as a layer */}
+          
           {viewStack.map((view, index) => {
             const isTop = index === viewStack.length - 1;
             const isRoot = index === 0;
@@ -131,7 +129,6 @@ const Settings = () => {
             );
           })}
 
-          {/* Exiting snapshot — a DOM clone that animates out */}
           {exitingSnapshot && (
             <div
               className={classNames(styles.settingsLayer, {

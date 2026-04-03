@@ -42,7 +42,7 @@ function usePlaybackPolling(parentPlayback) {
         setLocalPlayback(data);
       }
     } catch (e) {
-      // Will retry
+      
     }
     if (!stoppedRef.current) {
       pollingRef.current = setTimeout(poll, 3000);
@@ -79,7 +79,6 @@ function parseRecentAlbums(recentRaw) {
   const recentAlbums = [];
   const seenAlbumIds = new Set();
 
-  // Format 1 - nocturned: { albums: [{ id, name, uri, images, artists }] }
   if (recentRaw?.albums && Array.isArray(recentRaw.albums)) {
     for (const album of recentRaw.albums) {
       if (album && album.id && !seenAlbumIds.has(album.id)) {
@@ -90,7 +89,6 @@ function parseRecentAlbums(recentRaw) {
     return recentAlbums;
   }
 
-  // Format 2 - Spotify API: { items: [{ track: { album: {...} } }] }
   const recentItems = recentRaw?.items || recentRaw || [];
   for (const item of Array.isArray(recentItems) ? recentItems : []) {
     const track = item.track || item;
@@ -107,7 +105,6 @@ function useSpotifyData() {
   const [data, setData] = useState(null);
   const loaded = data?.initialDataLoaded;
 
-  // Fetch data via nocturned, retry until we get results
   useEffect(() => {
     if (loaded) return;
 
@@ -201,12 +198,10 @@ function useSpotifyData() {
         let topArtists = artistsRaw?.items || artistsRaw || [];
         let userShows = showsRaw?.items || showsRaw || [];
 
-        // Check if core endpoints returned data
         const allLoaded = recentAlbums.length > 0 &&
           Array.isArray(userPlaylists) && userPlaylists.length > 0 &&
           Array.isArray(topArtists) && topArtists.length > 0;
 
-        // If not all loaded and we haven't exhausted retries, try again
         if (!allLoaded && attempts < MAX_ATTEMPTS) {
           if (!cancelled) {
             retryTimer = setTimeout(fetchData, 1500);
@@ -214,7 +209,6 @@ function useSpotifyData() {
           return;
         }
 
-        // After max attempts, accept what we have — use fallbacks for recents if empty
         if (recentAlbums.length === 0) {
           recentAlbums = FALLBACK_RECENTS;
         }
@@ -222,7 +216,6 @@ function useSpotifyData() {
         if (!Array.isArray(topArtists)) topArtists = [];
         if (!Array.isArray(userShows)) userShows = [];
 
-        // If few recent albums, pad with albums from liked songs
         if (recentAlbums.length < 3 && !cancelled) {
           try {
             const likedRaw = await fetchEndpoint("spotify.me.tracks", { limit: 20, mockingbird: true });
@@ -241,13 +234,12 @@ function useSpotifyData() {
               }
             }
           } catch (e) {
-            // Non-critical
+            
           }
         }
 
         if (cancelled) return;
 
-        // Seed shelf recents
         const rootStore = window.carThingRootStore;
         if (rootStore?.shelfStore) {
           runInAction(() => rootStore.shelfStore.seedRecentAlbums(recentAlbums));
@@ -263,7 +255,7 @@ function useSpotifyData() {
           initialDataLoaded: true,
         });
       } catch (e) {
-        // Fetch failed (WebSocket not connected, etc.) — retry
+        
         if (!cancelled) {
           retryTimer = setTimeout(fetchData, 1500);
         }
@@ -353,7 +345,6 @@ export default function MockingbirdShell({
   const spotifyData = parentSpotifyData?.initialDataLoaded ? parentSpotifyData : localSpotifyData;
   const dataReady = spotifyData.initialDataLoaded;
 
-  // If a non-tutorial system screen is needed, render it in superbird style
   if (systemScreen && systemScreen !== 'tutorial') {
     return (
       <div className="mockingbird-root">
@@ -374,7 +365,6 @@ export default function MockingbirdShell({
     );
   }
 
-  // Tutorial renders inside CarThingStoreProvider so it can access the store and render Main
   if (systemScreen === 'tutorial') {
     return (
       <div className="mockingbird-root">

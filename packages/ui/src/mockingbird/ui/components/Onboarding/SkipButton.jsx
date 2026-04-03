@@ -11,7 +11,7 @@ const SkipButton = () => {
   const mounted = useRef(false);
 
   useEffect(() => {
-    // Trigger enter animation on mount
+    
     requestAnimationFrame(() => {
       mounted.current = true;
       setAnimClass(`${styles.animationEnter} ${styles.animationEnterActive}`);

@@ -11,7 +11,6 @@ const Icon = ({ viewBox, dangerouslySetInnerHTML, iconSize, autoMirror, title, t
 export function IconRadio(props) {
   var _props$autoMirror;
 
-  /* prettier-ignore */
   var iconList = [{
     'size': 16,
     'svgContent': '<path d=\'M5.624 3.886A4.748 4.748 0 003.25 8c0 1.758.955 3.293 2.375 4.114l.75-1.3a3.249 3.249 0 010-5.63l-.75-1.298zm4.001 1.299l.75-1.3A4.748 4.748 0 0112.75 8a4.748 4.748 0 01-2.375 4.114l-.75-1.3a3.249 3.249 0 000-5.63zM8 6.545a1.455 1.455 0 100 2.91 1.455 1.455 0 000-2.91z\'/><path d=\'M4 1.07A7.997 7.997 0 000 8a7.997 7.997 0 004 6.93l.75-1.3A6.497 6.497 0 011.5 8a6.497 6.497 0 013.25-5.63L4 1.07zm7.25 1.3l.75-1.3A7.997 7.997 0 0116 8a7.997 7.997 0 01-3.999 6.93l-.75-1.3A6.497 6.497 0 0014.5 8a6.497 6.497 0 00-3.25-5.63z\'/>'
@@ -30,7 +29,7 @@ export function IconRadio(props) {
   };
 
   var autoMirror = (_props$autoMirror = props.autoMirror) !== null && _props$autoMirror !== void 0 ? _props$autoMirror : false;
-  return /*#__PURE__*/React.createElement(Icon, Object.assign({}, props, {
+  return React.createElement(Icon, Object.assign({}, props, {
     autoMirror: autoMirror,
     viewBox: "0 0 ".concat(closestSize.size, " ").concat(closestSize.size),
     dangerouslySetInnerHTML: {

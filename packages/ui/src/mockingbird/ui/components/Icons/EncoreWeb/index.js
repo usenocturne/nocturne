@@ -17,7 +17,7 @@ export function Icon(props) {
   var className = props.className;
   var style = props.style;
 
-  return /*#__PURE__*/React.createElement("svg", Object.assign({}, props, {
+  return React.createElement("svg", Object.assign({}, props, {
     width: iconSize,
     height: iconSize,
     viewBox: viewBox,

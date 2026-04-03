@@ -17,7 +17,7 @@ const mockMiddlewareActions = {
 
 const mockSocket = {
   addSocketEventListener: (callback) => {
-    // Mock socket - could trigger test events here
+    
   },
 };
 
@@ -41,7 +41,7 @@ export const CarThingStoreProvider = ({ children, playbackProgress, onSeek, spot
     runInAction(() => {
       rootStore.spotifyData = spotifyData;
     });
-    // Seed shelf recents from parent data if available
+    
     if (spotifyData?.recentAlbums?.length > 0 && rootStore.shelfStore) {
       rootStore.shelfStore.seedRecentAlbums(spotifyData.recentAlbums);
     }

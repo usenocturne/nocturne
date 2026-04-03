@@ -39,7 +39,6 @@ const PhoneConnection = () => {
   const [swiper, setSwiper] = useState(null);
   const [pressedAddMoreItem, setPressedAddMoreItem] = useState(false);
 
-  // Context menu animation state
   const menuShowing = phoneConnectionStore.phoneConnectionContextMenuUiState.phoneMenuShowing;
   const [menuRendered, setMenuRendered] = useState(false);
   const [menuClosing, setMenuClosing] = useState(false);

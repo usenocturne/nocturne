@@ -1,7 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { sendNocturneWsRequest } from '../../../hooks/useNocturned';
 
-// Menu Item IDs
 export const MainMenuItemId = {
   SETTINGS_ROOT: 'SETTINGS_ROOT',
   MIC: 'MIC',
@@ -216,7 +215,7 @@ class SettingsStore {
       getKeyValue(item) {
         const info = store.aboutInfo;
         if (!info) return '...';
-        // nocturned device.info returns { device, version, serialNumber }
+        
         switch (item.id) {
           case AboutMenuItemId.SERIAL: return info.serialNumber || '';
           case AboutMenuItemId.OS_VERSION: return info.version || '';
@@ -225,10 +224,10 @@ class SettingsStore {
             try {
               const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
               const region = Intl.DateTimeFormat().resolvedOptions().locale || '';
-              // Try to get a readable region from the timezone (e.g. "America/New_York" → "US")
+              
               const regionTag = region.split('-').pop();
               if (regionTag && regionTag.length === 2) return regionTag.toUpperCase();
-              // Fallback: derive from timezone string
+              
               const tzParts = tz.split('/');
               return tzParts[0] || '';
             } catch {
@@ -238,7 +237,7 @@ class SettingsStore {
           case AboutMenuItemId.FCC_ID_MODEL_NAME: return '2AYZ2-414035';
           case AboutMenuItemId.IC_ID_MODEL_NAME: return '26274-SG001';
           case AboutMenuItemId.HVIN: {
-            // Extract model from device name, e.g. "Nocturne (Q5134)" → "Q5134"
+            
             const device = info.device || '';
             const match = device.match(/\(([^)]+)\)/);
             return match ? match[1] : '';
@@ -364,7 +363,6 @@ class SettingsStore {
   handleBack() {
     const { phoneConnectionStore } = this.rootStore;
 
-    // If phone connection context menu or modal is open, dismiss those first
     if (this.currentIsPhoneConnection) {
       if (phoneConnectionStore.phoneConnectionModal !== undefined) {
         phoneConnectionStore.dismissModal();
@@ -500,7 +498,7 @@ class SettingsStore {
   }
 
   handleSettingsButtonLongPress() {
-    // Power off via long press on settings button
+    
   }
 
   setFactoryResetConfirmationIsActive(isActive) {

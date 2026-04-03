@@ -13,9 +13,6 @@ const Main = () => {
     setTimeout(() => overlayController.maybeShowAModal(), 2000);
   }, [overlayController]);
 
-  // Key handling is done via HardwareEvents → event handlers
-  // (SettingsButtonHandler, BackButtonHandler, DialHandler, PresetButtonHandler)
-
   const handlePointerDown = () => {
     if (viewStore.isNpv && !overlayController.anyOverlayIsShowing) {
       npvStore.tipsUiState?.dismissVisibleTip?.();
@@ -46,7 +43,7 @@ const Main = () => {
           </div>
         )}
         <Settings />
-        {/* TODO: Port SwipeDownHandle component */}
+        
       </div>
     </div>
   );

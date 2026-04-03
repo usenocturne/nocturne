@@ -32,7 +32,7 @@ const reactToDial = (hardwareEvents, rootStore) => {
       if (!onboardingStore.dialPressEnabled) {
         return;
       }
-      // Fall through to normal handling so the actual navigation occurs
+      
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialPress();
@@ -106,7 +106,7 @@ const reactToDial = (hardwareEvents, rootStore) => {
       if (!onboardingStore.dialTurnEnabled) {
         return;
       }
-      // Fall through to normal handling so the shelf scrolls
+      
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialLeft();
@@ -154,7 +154,7 @@ const reactToDial = (hardwareEvents, rootStore) => {
       if (!onboardingStore.dialTurnEnabled) {
         return;
       }
-      // Fall through to normal handling so the shelf scrolls
+      
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialRight();

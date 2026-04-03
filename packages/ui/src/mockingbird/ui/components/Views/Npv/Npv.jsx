@@ -45,7 +45,7 @@ const Npv = ({ playbackProgress, onSeek }) => {
 
   const handleSwipeLeft = () => {
     if (!overlayController.anyOverlayIsShowing) {
-      // LEFT = NEXT - Let SwipeHandler handle the actual skip logic to avoid double-skipping
+      
       npvStore.playingInfoUiState.swipeHandler.handleSwipedLeft();
       ubiLogger.npvInteractionLogger?.logSwipeToNext?.();
     }
@@ -53,7 +53,7 @@ const Npv = ({ playbackProgress, onSeek }) => {
 
   const handleSwipeRight = () => {
     if (!overlayController.anyOverlayIsShowing) {
-      // RIGHT = PREVIOUS - Let SwipeHandler handle the actual skip logic to avoid double-skipping  
+      
       npvStore.playingInfoUiState.swipeHandler.handleSwipedRight();
       ubiLogger.npvInteractionLogger?.logSwipeToPrevious?.();
     }

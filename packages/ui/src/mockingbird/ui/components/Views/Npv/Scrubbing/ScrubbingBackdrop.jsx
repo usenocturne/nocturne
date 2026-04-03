@@ -31,7 +31,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }) => {
     if (scrubbingProgress !== null && playbackProgress?.duration && onSeek) {
       const seekMs = Math.floor(scrubbingProgress * playbackProgress.duration);
       if (seekMs >= playbackProgress.duration - 1000) {
-        // Near the end — skip to next track instead of seeking to an unplayable position
+        
         const rootStore = window.carThingRootStore;
         rootStore?.npvStore?.npvController?.next?.();
       } else {

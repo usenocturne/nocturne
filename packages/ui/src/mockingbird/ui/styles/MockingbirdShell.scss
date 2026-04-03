@@ -8,7 +8,6 @@
     box-sizing: border-box;
   }
 
-  /* Override Tailwind Preflight image resets that break fixed-size layouts */
   img,
   video {
     max-width: none;

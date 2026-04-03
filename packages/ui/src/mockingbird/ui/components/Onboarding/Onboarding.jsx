@@ -14,7 +14,6 @@ const Onboarding = ({ onComplete, dataReady }) => {
     onboardingStore.setOnCompleteCallback(onComplete);
     onboardingStore.setOnboardingStarted(true);
 
-    // Launch the nocturne app so TTS audio can play
     onboardingStore.launchApp();
 
     return () => {

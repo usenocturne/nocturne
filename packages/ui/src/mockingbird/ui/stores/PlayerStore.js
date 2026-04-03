@@ -93,12 +93,12 @@ class PlayerStore {
   }
 
   play() {
-    // This method will be overridden by useCarThingSpotifyIntegration
+    
     console.log('PlayerStore.play() called but not connected to Spotify integration yet');
   }
 
   pause() {
-    // This method will be overridden by useCarThingSpotifyIntegration
+    
     console.log('PlayerStore.pause() called but not connected to Spotify integration yet');
   }
 

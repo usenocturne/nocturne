@@ -114,12 +114,10 @@ const PhoneConnectionModal = () => {
 
   useEffect(() => {
     if (currentModal !== undefined) {
-      // Opening or changing modal
       setRendered(true);
       setClosing(false);
       lastModalRef.current = currentModal;
     } else if (lastModalRef.current !== undefined) {
-      // Modal was just dismissed — play exit animation
       setClosing(true);
       const timer = setTimeout(() => {
         setRendered(false);

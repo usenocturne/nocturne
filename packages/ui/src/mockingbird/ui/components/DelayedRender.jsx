@@ -1,4 +1,4 @@
-/* eslint @typescript-eslint/no-explicit-any: 0 */
+
 import { Component } from 'react';
 
 class DelayedRender extends Component {

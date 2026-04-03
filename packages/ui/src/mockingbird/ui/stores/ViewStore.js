@@ -120,10 +120,6 @@ class ViewStore {
     return this.appView === AppView.ONBOARDING;
   }
 
-  /*
-   *   if calling showView when currently on that view, nothing will be added.
-   *   if calling showView when currently on that view with a state, that state will be added to the current view.
-   * */
   showView(view, state) {
     if (this.currentView === view) {
       if (state) {

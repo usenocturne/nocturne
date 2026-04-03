@@ -387,7 +387,6 @@ export class DevOptionsStore {
   }
 }
 
-
 export class HardwareStore {
   constructor(socket, middlewareActions) {
     this.rebooting = false;
@@ -433,7 +432,6 @@ export class VolumeStore {
     makeAutoObservable(this, { rootStore: false });
   }
 
-  // These get overwritten by useCarThingSpotifyIntegration
   increaseVolume() {}
   decreaseVolume() {}
 }
@@ -566,9 +564,8 @@ export class PhoneCallController {
 export class NightModeController {
   isNightMode = localStorage.getItem('night_mode_user_enabled') === 'true';
 
-  // Match original superbird-webapp defaults from RemoteConfigStore
   nightModeStrength = 30;
-  nightModeSlope = 1.4; // original: 14 / 10
+  nightModeSlope = 1.4; 
 
   constructor(rootStore) {
     this.rootStore = rootStore;
@@ -580,18 +577,12 @@ export class NightModeController {
     localStorage.setItem('night_mode_user_enabled', this.isNightMode.toString());
   }
 
-  /**
-   * Calculates app opacity based on ambient light sensor.
-   * Original formula from superbird-webapp NightModeUiState:
-   * appOpacity = 1 - ((nightModeSlope * ambientLightValue + nightModeStrength - 100) / 100)
-   * Returns 1 when night mode is off.
-   */
   get appOpacity() {
     if (!this.isNightMode) return 1;
 
     const ambientLight = this.rootStore.hardwareStore?.ambientLightValue ?? 0;
     const raw = 1 - ((this.nightModeSlope * ambientLight + this.nightModeStrength - 100) / 100);
-    // Clamp between 0.1 (never fully invisible) and 1
+    
     return Math.round(Math.max(0.1, Math.min(1, raw)) * 100) / 100;
   }
 }

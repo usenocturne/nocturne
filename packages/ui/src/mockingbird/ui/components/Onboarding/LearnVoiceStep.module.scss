@@ -38,7 +38,6 @@ $transition-delay: 1000ms;
   align-items: center;
 }
 
-// Content appear/enter: fade + slide up from 24px, 800ms with 1000ms delay
 .contentEnter {
   opacity: 0;
   transform: translateY(24px);
@@ -55,7 +54,6 @@ $transition-delay: 1000ms;
   transform: translateY(0);
 }
 
-// Content exit: fade out 500ms
 .contentExit {
   opacity: 1;
 }
@@ -66,7 +64,6 @@ $transition-delay: 1000ms;
   opacity: 0;
 }
 
-// Step-level exit: fade out 1300ms (used by LearnVoice between-step transition)
 .stepExit {
   opacity: 1;
 }

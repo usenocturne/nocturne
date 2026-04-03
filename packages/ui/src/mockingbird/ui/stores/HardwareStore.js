@@ -11,7 +11,6 @@ class HardwareStore {
       rootStore: false,
     });
 
-    // Listen for ambient light sensor updates from nocturned
     this._handleAmbientLight = (e) => {
       this.ambientLightValue = e.detail.value;
     };

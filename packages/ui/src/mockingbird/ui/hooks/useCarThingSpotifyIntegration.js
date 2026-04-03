@@ -63,7 +63,7 @@ export function useCarThingSpotifyIntegration(carThingStores, currentPlayback, p
       const result = await sendNocturneWsRequest('spotify.player.queue', {}, { timeoutMs: 5000 });
       return result;
     } catch (error) {
-      // Queue endpoint may not be supported - silently fail
+      
       return null;
     }
   }, []);
@@ -189,7 +189,7 @@ export function useCarThingSpotifyIntegration(carThingStores, currentPlayback, p
                 uid: item.uid || '',
                 uri: item.uri,
                 name: item.name,
-                // Support both nocturned format (album_name, image_url) and Spotify Web API format (artists[], album.images[])
+                
                 artist_name: item.artist_name || (item.artists ? item.artists.map(artist => artist.name).join(', ') : (item.album_name || '')),
                 image_uri: item.image_url || item.album?.images?.[0]?.url || '',
                 provider: 'spotify',
@@ -242,7 +242,6 @@ export function useCarThingSpotifyIntegration(carThingStores, currentPlayback, p
 
         npvStore.volumeUiState.isPlayingSpotify = true;
 
-        // Sync volume from device — only when not actively adjusting (no debounce active)
         const deviceVolume = currentPlayback.device?.volume_percent;
         if (deviceVolume !== undefined && !volumeDebounceRef.current) {
           volumeRef.current = deviceVolume;
@@ -335,12 +334,12 @@ export function useCarThingSpotifyIntegration(carThingStores, currentPlayback, p
       npvStore.controlButtonsUiState.handleSkipPrevClick = () => {
         const progressMs = currentPlayback?.progress_ms || 0;
         if (progressMs > 3000) {
-          // Past 3 seconds — restart current track
+          
           seekToPosition?.(0);
           lastSeekPositionRef.current = 0;
           lastSeekTimeRef.current = Date.now();
         } else {
-          // Under 3 seconds — go to previous track
+          
           npvStore.playingInfoUiState.swipeHandler.setSwipeDirection('RIGHT');
           skipToPrevious?.();
         }
@@ -354,11 +353,11 @@ export function useCarThingSpotifyIntegration(carThingStores, currentPlayback, p
 
         let nextMode;
         if (!onRepeat && !onRepeatOnce) {
-          nextMode = 'context'; // off → repeat all
+          nextMode = 'context'; 
         } else if (onRepeat) {
-          nextMode = 'track'; // repeat all → repeat one
+          nextMode = 'track'; 
         } else {
-          nextMode = 'off'; // repeat one → off
+          nextMode = 'off'; 
         }
 
         setRepeatMode?.(nextMode);
@@ -449,12 +448,11 @@ export function useCarThingSpotifyIntegration(carThingStores, currentPlayback, p
 
     if (carThingStores.volumeStore) {
       const adjustVolume = (delta) => {
-        // Read and update the ref synchronously — no stale closure
+        
         const current = volumeRef.current;
         const newVolume = Math.max(0, Math.min(100, current + delta));
         volumeRef.current = newVolume;
 
-        // Update UI immediately
         runInAction(() => {
           const pct = newVolume / 100;
           npvStore.volumeUiState.displayVolume = pct;
@@ -463,13 +461,11 @@ export function useCarThingSpotifyIntegration(carThingStores, currentPlayback, p
           npvStore.volumeUiState.resetShowVolumeTimer();
         });
 
-        // Block server sync while adjusting, re-enable after 1.5s idle
         if (volumeDebounceRef.current) clearTimeout(volumeDebounceRef.current);
         volumeDebounceRef.current = setTimeout(() => {
           volumeDebounceRef.current = null;
         }, 1500);
 
-        // Send to Spotify
         sendNocturneWsRequest('spotify.player.volume', { volume_percent: Math.round(newVolume) }, { timeoutMs: 3000 }).catch(() => {});
       };
 

@@ -18,7 +18,6 @@ const Icon = ({ viewBox, dangerouslySetInnerHTML, iconSize, autoMirror, title, t
 export function IconTrack(props) {
   var _props$autoMirror;
 
-  /* prettier-ignore */
   var iconList = [{
     'size': 16,
     'svgContent': '<path d=\'M10 2v9.5a2.75 2.75 0 11-2.75-2.75H8.5V2H10zm-1.5 8.25H7.25A1.25 1.25 0 108.5 11.5v-1.25z\'/>'
@@ -37,7 +36,7 @@ export function IconTrack(props) {
   };
 
   var autoMirror = (_props$autoMirror = props.autoMirror) !== null && _props$autoMirror !== void 0 ? _props$autoMirror : false;
-  return /*#__PURE__*/React.createElement(Icon, Object.assign({}, props, {
+  return React.createElement(Icon, Object.assign({}, props, {
     autoMirror: autoMirror,
     viewBox: "0 0 ".concat(closestSize.size, " ").concat(closestSize.size),
     dangerouslySetInnerHTML: {

@@ -1,13 +1,12 @@
 import { getGlobalWebSocket, addGlobalWsListener } from '../../../hooks/useNocturned';
 
 const MAX_CACHE_SIZE = 100;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000; 
 const FETCH_TIMEOUT_MS = 15000;
 const FETCH_DELAY_MS = 100;
 
-// { url -> { dataUri, accessedAt } }
 const cache = new Map();
-// { url -> Promise<string|null> }
+
 const pending = new Map();
 
 const queue = [];
@@ -55,8 +54,6 @@ function evictStale() {
   }
 }
 
-// Send directly on the WebSocket and listen for the response via globalWsListeners.
-// This bypasses pendingWsRequests so image responses don't compete with state polling.
 function fetchSingleImage(url) {
   return new Promise((resolve) => {
     const ws = getGlobalWebSocket();

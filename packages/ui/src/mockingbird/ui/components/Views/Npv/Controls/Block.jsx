@@ -1,4 +1,4 @@
-// Placeholder - will be replaced with exact original component
+
 const Block = () => {
   return (
     <div style={{ 

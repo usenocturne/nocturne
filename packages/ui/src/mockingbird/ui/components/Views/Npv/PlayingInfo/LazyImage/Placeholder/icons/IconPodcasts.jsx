@@ -11,7 +11,6 @@ const Icon = ({ viewBox, dangerouslySetInnerHTML, iconSize, autoMirror, title, t
 export function IconPodcasts(props) {
   var _props$autoMirror;
 
-  /* prettier-ignore */
   var iconList = [{
     'size': 16,
     'svgContent': '<path d=\'M3.404 3.404a6.5 6.5 0 019.192 9.192l1.06 1.06a8 8 0 10-11.313 0l1.06-1.06a6.5 6.5 0 010-9.192z\'/><path d=\'M11 9.25a3.001 3.001 0 01-2.25 2.905v1.474l1.773 1.488a.5.5 0 01-.321.883H5.799a.5.5 0 01-.322-.883l1.773-1.488v-1.474A3.001 3.001 0 015 9.25V7a3 3 0 016 0v2.25zM8 5.5A1.5 1.5 0 006.5 7v2.25a1.5 1.5 0 003 0V7A1.5 1.5 0 008 5.5z\'/>'
@@ -30,7 +29,7 @@ export function IconPodcasts(props) {
   };
 
   var autoMirror = (_props$autoMirror = props.autoMirror) !== null && _props$autoMirror !== void 0 ? _props$autoMirror : false;
-  return /*#__PURE__*/React.createElement(Icon, Object.assign({}, props, {
+  return React.createElement(Icon, Object.assign({}, props, {
     autoMirror: autoMirror,
     viewBox: "0 0 ".concat(closestSize.size, " ").concat(closestSize.size),
     dangerouslySetInnerHTML: {

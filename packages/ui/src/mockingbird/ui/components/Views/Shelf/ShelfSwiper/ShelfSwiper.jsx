@@ -23,7 +23,6 @@ const getKey = (item) => {
   return `${item.identifier}-${item.category}`;
 };
 
-// Module-level dragging flag (matches original useSwiperDial)
 let dragging = false;
 const setDraggingFlag = (value) => { dragging = value; };
 
@@ -33,7 +32,6 @@ const ShelfSwiper = () => {
   const swiperRef = useRef(null);
   const [localDragging, setLocalDragging] = useState(false);
 
-  // useSwiperDial equivalent — MobX autorun for immediate reaction to index changes
   useEffect(() => {
     const setAnimate = (isAnimated) => {
       runInAction(() => { uiState.animateSliding = isAnimated; });

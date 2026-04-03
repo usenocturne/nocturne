@@ -27,16 +27,10 @@ class ShelfStore {
     this.shelfController = new ShelfController(this);
   }
 
-  /**
-   * Seeds the recentAlbums list from the initial API fetch.
-   * Only runs once — subsequent updates come from pushCurrentAlbum.
-   */
   seedRecentAlbums(albums) {
     if (this._recentAlbumsInitialized || !albums || albums.length === 0) return;
     this._recentAlbumsInitialized = true;
 
-    // Merge: keep any already-pushed albums (e.g. currently playing) at front,
-    // then append seeded albums that aren't already present
     const existingIds = new Set(this.recentAlbums.map(a => a.id));
     const merged = [...this.recentAlbums];
     for (const album of albums) {
@@ -48,10 +42,6 @@ class ShelfStore {
     this.recentAlbums = merged.slice(0, MAX_RECENT_ALBUMS);
   }
 
-  /**
-   * Called when the currently playing album changes.
-   * Moves/inserts the album to the front of the list.
-   */
   pushCurrentAlbum(album) {
     if (!album?.id) return;
 
@@ -60,7 +50,6 @@ class ShelfStore {
     const updated = this.recentAlbums.filter(a => a.id !== album.id);
     updated.unshift(entry);
 
-    // Cap at max
     this.recentAlbums = updated.slice(0, MAX_RECENT_ALBUMS);
   }
 
@@ -73,7 +62,7 @@ class ShelfStore {
     try {
       const spotifyData = this.rootStore.spotifyData;
       if (spotifyData && !spotifyData.initialDataLoaded) {
-        // hi
+        
       }
     } catch (error) {
       console.error('Error loading shelf data:', error);
@@ -166,10 +155,10 @@ class ShelfHeaderUiState {
       if (itemIndex >= 0) {
         swiperUiState.selectedItemIndex = itemIndex;
       } else {
-        // nothing
+        
       }
     } else {
-      // nothing again
+      
     }
   }
 }
@@ -187,7 +176,7 @@ class ShelfSwiperUiState {
   }
 
   get allShelfItems() {
-    // Access recentAlbums to establish MobX tracking
+    
     const recentAlbums = this.shelfStore.recentAlbums;
 
     const rootStore = this.shelfStore.rootStore;
@@ -214,7 +203,6 @@ class ShelfSwiperUiState {
     const effectiveCurrentTrack = currentTrack || this.shelfStore.rootStore.playerStore?.state?.track;
     const currentAlbumId = effectiveCurrentTrack?.album?.id;
 
-    // Render recentAlbums in order — first item is "Now Playing" if playing
     const homeVisible = this.getCategoryVisibleCount(HOME_IDENTIFIER, 5);
     const visibleAlbums = recentAlbums.slice(0, homeVisible);
 
@@ -263,7 +251,6 @@ class ShelfSwiperUiState {
 
     const playlistsVisible = this.getCategoryVisibleCount('playlists', 5);
 
-    // Liked Songs as first playlist item
     if (spotifyData.likedSongs) {
       const count = spotifyData.likedSongs.tracks?.total;
       const userId = spotifyData.spotifyUserId;
@@ -279,7 +266,6 @@ class ShelfSwiperUiState {
       });
     }
 
-    // Split DJ out of userPlaylists and pin it as second item
     const DJ_ID = '37i9dQZF1EYkqdzj48dyYq';
     const allPlaylists = spotifyData.userPlaylists || [];
     const djPlaylist = allPlaylists.find(p => p.id === DJ_ID);
@@ -656,7 +642,7 @@ class ShelfController {
         }
       }
     } else {
-      // nothing
+      
     }
   }
 
@@ -674,7 +660,7 @@ class ShelfController {
 
       this.shelfStore.rootStore.viewStore.showContentShelf();
     } else {
-      // return
+      
     }
   }
 
@@ -693,7 +679,7 @@ class ShelfController {
 
       this.shelfStore.rootStore.viewStore.showContentShelf();
     } else {
-      // nothing
+      
     }
   }
 
