@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { runInAction } from "mobx";
 import { CarThingStoreProvider } from "./contexts/CarThingStore";
 import Main from "./components/Main";
+import Settings from "./components/Settings/Settings";
 import { sendNocturneWsRequest } from "../../hooks/useNocturned";
 import "./styles/MockingbirdShell.scss";
 
@@ -357,9 +358,18 @@ export default function MockingbirdShell({
     return (
       <div className="mockingbird-root">
         <style>{mockingbirdFontStyles}</style>
-        <React.Suspense fallback={<SplashOverlay />}>
-          <LazySetup systemScreen={systemScreen} />
-        </React.Suspense>
+        <CarThingStoreProvider
+          currentPlayback={currentPlayback}
+          playerControls={playerControls}
+          spotifyData={spotifyData}
+          playbackProgress={playbackProgress}
+          onSeek={playerControls?.seekToPosition}
+        >
+          <React.Suspense fallback={<SplashOverlay />}>
+            <LazySetup systemScreen={systemScreen} />
+          </React.Suspense>
+          <Settings />
+        </CarThingStoreProvider>
       </div>
     );
   }

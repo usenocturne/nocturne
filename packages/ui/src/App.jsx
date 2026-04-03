@@ -1001,6 +1001,13 @@ function App() {
         return;
       }
 
+      if (
+        localStorage.getItem("mockingbirdUiEnabled") === "true"
+      ) {
+        window.carThingRootStore?.uiState?.toggleSettings();
+        return;
+      }
+
       if (activeSectionRef.current === "lock") {
         const target = previousSectionRef.current || "recents";
         setActiveSection(target);
@@ -1129,7 +1136,7 @@ function App() {
     appPlatform !== "web" &&
     isSubscribed === false;
 
-  const isMockingbird = isMockingbirdSetting && isSubscribed !== false;
+  const isMockingbird = isMockingbirdSetting;
 
   const displayNetworkBanner =
     showNetworkBanner &&
@@ -1141,17 +1148,23 @@ function App() {
     reconnectAttempt === 0;
 
   const isSystemScreen =
-    showSplash ||
-    showAuthScreen ||
-    showConnectionLostScreen ||
-    showTutorial;
-  const mockingbirdSystemScreen = isMockingbird && !showSplash
-    ? (showTutorial ? 'tutorial'
-      : (!hasSeenTutorialFlag && (isSpotifyAuthenticated || isSpotifySkipped) && hasDevices) ? 'tutorial'
-      : showAuthScreen ? 'auth'
-      : showConnectionLostScreen ? 'connectionLost'
-      : null)
-    : null;
+    showSplash || showAuthScreen || showConnectionLostScreen || showTutorial;
+  const mockingbirdSystemScreen =
+    isMockingbird && !showSplash
+      ? showTutorial
+        ? "tutorial"
+        : isSubscribed === false
+          ? "subscription"
+          : !hasSeenTutorialFlag &&
+              (isSpotifyAuthenticated || isSpotifySkipped) &&
+              hasDevices
+            ? "tutorial"
+            : showAuthScreen
+              ? "auth"
+              : showConnectionLostScreen
+                ? "connectionLost"
+                : null
+      : null;
 
   let content;
   if (showSplash) {
@@ -1308,7 +1321,9 @@ function App() {
                       <>
                         {pairingRequest ? (
                           isMockingbird ? (
-                            <MockingbirdPairingOverlay pin={pairingRequest.pairingKey} />
+                            <MockingbirdPairingOverlay
+                              pin={pairingRequest.pairingKey}
+                            />
                           ) : (
                             <PairingScreen
                               pin={pairingRequest.pairingKey}

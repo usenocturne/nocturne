@@ -1,0 +1,34 @@
+@import "../../styles/variables.module";
+
+.title {
+  @include text-style(52px, 56px, -0.03em);
+
+  margin-top: 24px;
+  margin-bottom: 32px;
+  font-weight: bold;
+  color: $white;
+}
+
+.description {
+  @include text-style(32px, 40px, -0.01em);
+
+  margin-bottom: 40px;
+  width: 540px;
+  color: $white;
+}
+
+.dialog {
+  padding: 0 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  height: $device-height;
+  background-color: $opacity-black-90;
+}
+
+.logo {
+  width: 64px;
+  height: 64px;
+}

@@ -1,17 +1,22 @@
-import { useState } from 'react';
-import StartSetup from './StartSetup';
-import ConnectionLost from './ConnectionLost';
+import StartSetup from "./StartSetup";
+import ConnectionLost from "./ConnectionLost";
+import LoginRequired from "../Modals/LoginRequired";
+import SubscriptionRequired from "../Modals/SubscriptionRequired";
 
 const Setup = ({ systemScreen }) => {
-  if (systemScreen === 'auth') {
-    return <StartSetup />;
+  if (systemScreen === "auth") {
+    return <LoginRequired />;
   }
 
-  if (systemScreen === 'connectionLost') {
+  if (systemScreen === "subscription") {
+    return <SubscriptionRequired />;
+  }
+
+  if (systemScreen === "connectionLost") {
     return <ConnectionLost />;
   }
 
-  return <StartSetup />;
+  return <LoginRequired />;
 };
 
 export default Setup;
