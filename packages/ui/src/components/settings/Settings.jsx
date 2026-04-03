@@ -834,7 +834,9 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
             </div>
             <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
               {isToggleDisabled
-                ? "Subscribe to Nocturne to use the classic Spotify Car Thing interface."
+                ? appPlatform === "web"
+                  ? "Mockingbird is only available when using the Nocturne mobile app."
+                  : "Subscribe to Nocturne to use the classic Spotify Car Thing interface."
                 : item.description}
             </p>
           </div>
