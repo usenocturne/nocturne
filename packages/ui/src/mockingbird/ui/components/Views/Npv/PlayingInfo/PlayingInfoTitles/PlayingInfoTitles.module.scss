@@ -1,0 +1,86 @@
+@use '../../../../../styles/variables.module' as vars;
+
+$info-container-width: 432px;
+
+.transitionContainer {
+  position: absolute;
+}
+
+.texts {
+  margin-top: 16px;
+}
+
+.songTitle {
+  color: vars.$white;
+  font-weight: bold;
+  width: $info-container-width;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: -webkit-box;
+  word-break: break-word;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  padding-bottom: 5px;
+}
+
+.songTitleBig {
+  @include vars.text-style(72px, 72px, -0.03em);
+}
+
+.songTitleMiddle {
+  @include vars.text-style(52px, 56px, -0.03em);
+}
+
+.songTitleSmall {
+  @include vars.text-style(44px, 47px, -0.02em);
+  max-height: 144px;
+}
+
+.artistTitle {
+  @include vars.text-style(36px, 40px, -0.01em);
+  max-height: 80px;
+  margin-top: 16px;
+  width: $info-container-width;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  color: vars.$white;
+  padding-bottom: 3px;
+}
+
+.animationEnterLeft {
+  opacity: 0;
+  transform: translateX(-24px);
+}
+
+.animationEnterRight {
+  opacity: 0;
+  transform: translateX(24px);
+}
+
+.animationEnterActive {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animationExit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.animationExitLeft {
+  opacity: 0;
+  transform: translateX(-24px);
+  transition: opacity 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animationExitRight {
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}

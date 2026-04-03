@@ -40,7 +40,31 @@ import NetworkScreen from "./components/screens/NetworkScreen";
 import NetworkBanner from "./components/common/overlays/NetworkBanner";
 import AuthScreen from "./components/screens/AuthScreen";
 import SplashScreen from "./components/screens/SplashScreen";
+import UIShell from "./mockingbird/UIShell";
 import { useSubscription } from "./hooks/useSubscription";
+
+const LazyBTPairing = React.lazy(
+  () => import("./mockingbird/ui/components/Setup/BTPairing"),
+);
+
+function MockingbirdPairingOverlay({ pin }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 100,
+        fontFamily:
+          "spotify-circular, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      <React.Suspense fallback={null}>
+        <LazyBTPairing pin={pin} />
+      </React.Suspense>
+    </div>
+  );
+}
+
 function useGlobalButtonMapping({
   playTrack,
   playDJMix,
@@ -747,7 +771,10 @@ function App() {
     refreshPlaybackState,
     setActiveSection,
     isTutorialActive: showTutorial,
-    isDisabled: powerMenuVisible || isUpdating,
+    isDisabled:
+      powerMenuVisible ||
+      isUpdating ||
+      localStorage.getItem("mockingbirdUiEnabled") === "true",
     currentPlayback,
     spotifyUserId,
   });
@@ -1093,16 +1120,35 @@ function App() {
       showExhaustedReconnectScreen);
   // const showConnectionLostScreen = false;
 
+  const isMockingbirdSetting =
+    localStorage.getItem("mockingbirdUiEnabled") === "true";
+
+  const showSubscriptionScreen =
+    appReady && appPlatform !== null && isSubscribed === false;
+
+  const isMockingbird = isMockingbirdSetting && !showSubscriptionScreen;
+
   const displayNetworkBanner =
     showNetworkBanner &&
+    !isMockingbird &&
     !showConnectionLostScreen &&
     !showTutorial &&
     !showAuthScreen &&
     !showSplash &&
     reconnectAttempt === 0;
 
-  const showSubscriptionScreen =
-    appReady && appPlatform !== null && isSubscribed === false;
+  const isSystemScreen =
+    showSplash ||
+    showAuthScreen ||
+    showConnectionLostScreen ||
+    showTutorial;
+  const mockingbirdSystemScreen = isMockingbird && !showSplash
+    ? (showTutorial ? 'tutorial'
+      : (!hasSeenTutorialFlag && (isSpotifyAuthenticated || isSpotifySkipped) && hasDevices) ? 'tutorial'
+      : showAuthScreen ? 'auth'
+      : showConnectionLostScreen ? 'connectionLost'
+      : null)
+    : null;
 
   let content;
   if (showSplash) {
@@ -1231,18 +1277,43 @@ function App() {
                 />
 
                 <div className="relative z-10">
-                  {content}
+                  <UIShell
+                    isMockingbird={isMockingbird}
+                    mockingbirdProps={{
+                      currentPlayback,
+                      playerControls,
+                      spotifyData: {
+                        recentAlbums,
+                        userPlaylists,
+                        topArtists,
+                        likedSongs,
+                        radioMixes,
+                        userShows,
+                        spotifyUserId,
+                        initialDataLoaded,
+                      },
+                      playbackProgress,
+                      systemScreen: mockingbirdSystemScreen,
+                      onTutorialComplete: handleTutorialComplete,
+                    }}
+                  >
+                    {content}
+                  </UIShell>
                   {!showTetheringScreen &&
                     !showConnectionLostScreen &&
                     !showTutorial && (
                       <>
                         {pairingRequest ? (
-                          <PairingScreen
-                            pin={pairingRequest.pairingKey}
-                            isConnecting={isConnecting}
-                            onAccept={acceptPairing}
-                            onReject={denyPairing}
-                          />
+                          isMockingbird ? (
+                            <MockingbirdPairingOverlay pin={pairingRequest.pairingKey} />
+                          ) : (
+                            <PairingScreen
+                              pin={pairingRequest.pairingKey}
+                              isConnecting={isConnecting}
+                              onAccept={acceptPairing}
+                              onReject={denyPairing}
+                            />
+                          )
                         ) : null}
                       </>
                     )}

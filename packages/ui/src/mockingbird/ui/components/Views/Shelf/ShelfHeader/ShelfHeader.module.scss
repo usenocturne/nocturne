@@ -1,0 +1,22 @@
+@use '../../../../styles/variables.module' as vars;
+
+.shelfTitles {
+  display: flex;
+  align-items: center;
+  margin-top: 28px;
+  margin-left: 44px;
+}
+
+.titleUnderlineContainer {
+  margin-top: 4px;
+  margin-bottom: 40px;
+}
+
+.titleUnderline {
+  @include vars.transition-transform;
+
+  transform-origin: left;
+  background-color: vars.$green-light;
+  height: 4px;
+  width: 1px;
+}

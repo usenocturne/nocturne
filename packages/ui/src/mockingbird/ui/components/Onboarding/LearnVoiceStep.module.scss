@@ -1,0 +1,77 @@
+@import '../../styles/variables.module';
+
+$transition-duration: 800ms;
+$transition-delay: 1000ms;
+
+.learnVoiceStep {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 400px;
+  margin: 40px 128px 40px 40px;
+}
+
+.headerAndTitle {
+  position: relative;
+}
+
+.header {
+  color: $green;
+  font-weight: bold;
+  margin-bottom: 24px;
+
+  @include text-style(36px, 48px, -0.02em);
+}
+
+.title {
+  @include text-style(72px, 72px, -0.03em);
+
+  font-weight: bold;
+  color: $white;
+}
+
+.skipOrJellyfish {
+  width: 128px;
+  height: 128px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+// Content appear/enter: fade + slide up from 24px, 800ms with 1000ms delay
+.contentEnter {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.contentEnterActive {
+  @include transition-opacity-transform(
+    $transition-duration,
+    $easing-function-ease-out-cubic,
+    $transition-delay
+  );
+
+  opacity: 1;
+  transform: translateY(0);
+}
+
+// Content exit: fade out 500ms
+.contentExit {
+  opacity: 1;
+}
+
+.contentExitActive {
+  @include transition-opacity(500ms, $easing-function-ease-out-cubic);
+
+  opacity: 0;
+}
+
+// Step-level exit: fade out 1300ms (used by LearnVoice between-step transition)
+.stepExit {
+  opacity: 1;
+}
+
+.stepExitActive {
+  opacity: 0;
+  transition: opacity 1300ms $easing-function-ease-out-cubic;
+}

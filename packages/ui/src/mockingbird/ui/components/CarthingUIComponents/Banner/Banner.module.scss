@@ -1,0 +1,96 @@
+@use '../../../styles/variables.module' as vars;
+
+.bannerContainer {
+  position: absolute;
+  top: 0;
+  width: 800px;
+  height: 72px;
+  display: flex;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+
+.icon {
+  height: 32px;
+  width: 32px;
+  margin-left: 24px;
+  margin-right: 16px;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+.informationalText {
+  width: 100%;
+  
+  &.information {
+    color: vars.$white;
+  }
+}
+
+.information {
+  &.bannerContainer {
+    background-color: vars.$blue-100;
+    
+    .informationalText {
+      color: vars.$white;
+    }
+    
+    .icon {
+      color: vars.$white;
+    }
+  }
+}
+
+.confirmation {
+  &.bannerContainer {
+    background-color: vars.$white;
+    
+    .informationalText {
+      color: vars.$black;
+    }
+    
+    .icon {
+      color: vars.$black;
+    }
+  }
+}
+
+.unavailable {
+  &.bannerContainer {
+    background-color: vars.$gray-20;
+    
+    .informationalText {
+      color: vars.$white;
+    }
+    
+    .icon {
+      color: vars.$white;
+    }
+  }
+}
+
+.enter {
+  opacity: 0;
+}
+
+.enterActive {
+  opacity: 1;
+  transition: opacity 500ms ease;
+}
+
+.exit {
+  opacity: 1;
+}
+
+.exitActive {
+  opacity: 0;
+  transition: opacity 500ms ease;
+}

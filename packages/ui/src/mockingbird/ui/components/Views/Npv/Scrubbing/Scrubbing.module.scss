@@ -1,0 +1,9 @@
+@import '../../../../styles/variables.module';
+
+.scrubbingClickArea {
+  z-index: 15;
+  position: absolute;
+  bottom: 144px;
+  height: 72px;
+  width: $device-width;
+}

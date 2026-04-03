@@ -1,0 +1,40 @@
+@import '../../../styles/variables.module';
+
+.restartConfirm {
+  width: $device-width;
+  height: $device-height;
+  padding: 116px 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.title {
+  @include text-style(44px, 48px, -0.02em);
+  color: $white;
+  margin-bottom: 32px;
+  font-weight: bold;
+}
+
+.description {
+  @include text-style(32px, 40px, 0);
+  color: $white;
+  margin-bottom: 40px;
+}
+
+.button {
+  @include text-style(32px, 40px, -0.02em);
+  font-weight: bold;
+  background-color: $white;
+  color: $black;
+  border: none;
+  border-radius: 500px;
+  padding: 16px 32px;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+
+  &:active {
+    opacity: 0.7;
+  }
+}

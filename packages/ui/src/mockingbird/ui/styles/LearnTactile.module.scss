@@ -1,0 +1,252 @@
+@use './variables.module' as vars;
+
+.learnTactile {
+  height: vars.$device-height;
+  width: vars.$device-width;
+  background-color: transparent;
+  position: relative;
+}
+
+.backgroundContent {
+  height: 100%;
+  width: 100%;
+  background: vars.$black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.mockInterface {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 80%;
+}
+
+.mockHeader {
+  color: vars.$white;
+  @include vars.text-style(36px, 40px, -0.02em);
+  margin-bottom: 40px;
+  opacity: 0.9;
+}
+
+.mockItems {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.mockItem {
+  color: vars.$white;
+  @include vars.text-style(28px, 32px, -0.01em);
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  opacity: 0.7;
+}
+
+.tutorialOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(80, 55, 80, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 10;
+  animation: overlayFadeIn 0.5s ease-in-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.instructionBox {
+  text-align: center;
+  max-width: 600px;
+  padding: 40px;
+  margin-bottom: 60px;
+}
+
+.title {
+  color: vars.$pink;
+  @include vars.text-style(56px, 60px, -0.02em);
+  font-weight: bold;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.instruction {
+  color: vars.$pink;
+  @include vars.text-style(28px, 36px, -0.01em);
+  opacity: 0.8;
+  text-align: center;
+}
+
+.skipButton {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  color: vars.$pink;
+  @include vars.text-style(24px, 28px, -0.01em);
+  cursor: pointer;
+  opacity: 0.8;
+  z-index: 20;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.dialIndicator {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dialIcon {
+  width: 80px;
+  height: 80px;
+  border: 3px solid vars.$pink;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  animation: dialPulse 2s ease-in-out infinite;
+}
+
+.dialArrows {
+  display: flex;
+  gap: 20px;
+  color: vars.$pink;
+  @include vars.text-style(24px, 24px, 0);
+}
+
+.dialArrowLeft,
+.dialArrowRight {
+  animation: dialArrowBounce 1.5s ease-in-out infinite alternate;
+}
+
+.dialArrowRight {
+  animation-delay: 0.75s;
+}
+
+@keyframes dialPulse {
+
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: translateX(-50%) scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes dialArrowBounce {
+  0% {
+    transform: translateX(0);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translateX(5px);
+    opacity: 1;
+  }
+}
+
+.pressIndicator {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pressIcon {
+  width: 80px;
+  height: 80px;
+  border: 3px solid vars.$pink;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pressPulse {
+  width: 40px;
+  height: 40px;
+  background: vars.$pink;
+  border-radius: 50%;
+  animation: pressPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pressPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+}
+
+.backIndicator {
+  position: absolute;
+  bottom: 120px;
+  left: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: backIndicatorPulse 2s ease-in-out infinite;
+}
+
+.backIcon {
+  color: vars.$pink;
+  @include vars.text-style(36px, 36px, 0);
+  font-weight: bold;
+}
+
+.backLabel {
+  color: vars.$pink;
+  @include vars.text-style(16px, 16px, 0);
+  opacity: 0.8;
+}
+
+@keyframes backIndicatorPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}

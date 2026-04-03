@@ -1,0 +1,48 @@
+@use './variables.module' as vars;
+
+.screen {
+  height: vars.$device-height;
+  width: vars.$device-width;
+  background-color: vars.$pink;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: column;
+}
+
+.title {
+  color: vars.$aubergine;
+  margin-top: 32px;
+  margin-left: 40px;
+  @include vars.text-style(120px, 120px, -0.04em);
+}
+
+.subtitle {
+  color: vars.$aubergine;
+  @include vars.text-style(72px, 72px, -0.03em);
+}
+
+.buttonBackground {
+  background: vars.$aubergine;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+}
+
+.button {
+  transform: scale(3);
+  color: vars.$pink;
+}
+
+.subtitleAndButton {
+  width: 720px;
+  margin-left: 40px;
+  margin-right: 48px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

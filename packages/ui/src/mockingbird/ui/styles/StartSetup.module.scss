@@ -1,0 +1,49 @@
+@use './variables.module' as vars;
+
+.screen {
+  background: vars.$aubergine;
+  height: vars.$device-height;
+  width: vars.$device-width;
+  padding: 32px 48px 40px;
+}
+
+.title {
+  color: vars.$pink;
+  @include vars.text-style(120px, 120px, -0.04em);
+  width: 704px;
+}
+
+.subtitle {
+  color: vars.$pink;
+  @include vars.text-style(36px, 48px, -0.02em);
+  max-width: 408px;
+}
+
+.content {
+  margin-top: 32px;
+  width: 704px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.texts {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.qrContainer {
+  height: 256px;
+  width: 256px;
+  background-color: white;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.needHelp {
+  color: vars.$pink;
+  @include vars.text-style(36px, 40px, -0.02em);
+  font-weight: bold;
+}

@@ -1,0 +1,12 @@
+@use '../../../styles/variables.module' as vars;
+
+#shelf {
+  width: vars.$device-width;
+  height: vars.$device-height;
+  overflow: hidden;
+  border-radius: 0;
+  color: vars.$white;
+  font-family: spotify-circular, Helvetica, Arial, sans-serif;
+  position: relative;
+  z-index: 1;
+}

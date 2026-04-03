@@ -1,0 +1,28 @@
+@import '../../../styles/variables.module';
+
+.header {
+  position: sticky;
+  height: 144px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.headerDetails {
+  margin-left: 40px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  color: $white;
+
+  svg {
+    margin-right: 16px;
+  }
+}
+
+.title {
+  font-weight: bold;
+  color: $white;
+  @include text-style(44px, 48px, -0.02em);
+}

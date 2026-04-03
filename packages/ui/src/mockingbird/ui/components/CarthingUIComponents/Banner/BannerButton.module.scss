@@ -1,0 +1,72 @@
+@use '../../../styles/variables.module' as vars;
+
+.buttonContainer {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  transition: background-color 500ms ease;
+}
+
+.touchArea {
+  height: 64px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.bannerButton {
+  padding-left: 34px;
+  padding-right: 38px;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+.pressed {
+  background-color: rgb(0 0 0 / 10%);
+}
+
+.buttonText {
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.divider {
+  margin-left: 2px;
+  margin-right: 4px;
+  width: 2px;
+  height: 40px;
+  opacity: 0.3;
+}
+
+.information {
+  .divider {
+    background-color: vars.$white;
+  }
+  
+  .buttonText {
+    color: vars.$white;
+  }
+}
+
+.confirmation {
+  .divider {
+    background-color: vars.$black;
+  }
+  
+  .buttonText {
+    color: vars.$black;
+  }
+}
+
+.unavailable {
+  .divider {
+    background-color: vars.$white;
+  }
+  
+  .buttonText {
+    color: vars.$white;
+  }
+}

@@ -1,0 +1,34 @@
+@import '../../../../styles/variables.module';
+
+.presetTitle {
+  text-align: center;
+  width: 168px;
+  margin-top: 16px;
+}
+
+.title {
+  color: $white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 8px;
+  
+  &.active {
+    color: $green-light;
+  }
+}
+
+.subtitle {
+  color: $opacity-white-70;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nowPlayingContainer {
+  margin-top: 4px;
+}
+
+.nowPlaying {
+  color: $green-light;
+}

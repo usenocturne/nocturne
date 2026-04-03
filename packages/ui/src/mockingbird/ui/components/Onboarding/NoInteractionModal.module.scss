@@ -1,0 +1,53 @@
+@import '../../styles/variables.module';
+
+.noInteraction {
+  height: $device-height;
+  width: $device-width;
+  position: absolute;
+  top: 0;
+  z-index: $onboarding-tactile-z-index + 2;
+
+  @include rounded-corners;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  background-color: $opacity-black-90;
+  opacity: 0;
+  transition: opacity 300ms $easing-function-ease-out-cubic;
+
+  &.visible {
+    opacity: 1;
+  }
+}
+
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 335px;
+}
+
+.button {
+  width: 100%;
+  height: 80px;
+  border-radius: 40px;
+  border: none;
+  cursor: pointer;
+
+  @include text-style(28px, 36px, -0.01em);
+
+  font-weight: 700;
+}
+
+.primary {
+  background: $white;
+  color: $black;
+}
+
+.secondary {
+  background: $gray-30;
+  color: $white;
+}

@@ -1,0 +1,20 @@
+@import '../../../../styles/variables.module';
+
+$progress-bar-height: 4px;
+
+.scrubbingBar {
+  @include transition-background-color;
+
+  width: $device-width;
+  height: $progress-bar-height;
+  background-image: linear-gradient(0deg, rgb(0 0 0 / 50%), rgb(0 0 0 / 50%));
+  position: relative;
+  z-index: 10;
+}
+
+.progressPlayed {
+  z-index: 6;
+  background-color: $white;
+  width: 100%;
+  height: 100%;
+}

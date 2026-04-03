@@ -1,0 +1,9 @@
+@use '../../../../styles/variables.module' as vars;
+
+.moreIcon {
+  width: 94px;
+  height: 94px;
+  background-color: vars.$white;
+  border-radius: 50%;
+  opacity: 0.3;
+}

@@ -14,11 +14,18 @@
     "@headlessui/react": "^2.2.9",
     "autoprefixer": "^10.4.27",
     "classnames": "^2.5.1",
+    "mobx": "^6.15.0",
+    "mobx-react-lite": "^4.1.1",
     "postcss": "^8.5.8",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-intersection-observer": "^10.0.3",
     "react-router-dom": "^7.13.1",
+    "react-swipeable": "^7.0.2",
+    "react-transition-group": "4.4.5",
+    "sass": "^1.97.3",
+    "swiper": "11.2.10",
     "tailwindcss": "^3.4.19"
   },
   "devDependencies": {

@@ -1,0 +1,38 @@
+@import '../../../styles/variables.module';
+
+.scrollContainer {
+  height: 352px;
+  overflow: scroll;
+}
+
+.submenuItemWrapper {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.toggleRow {
+  height: 96px;
+  padding: 0 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: $white-10;
+  @include transition-background-opacity;
+}
+
+.label {
+  font-weight: bold;
+  color: $white;
+  @include text-style(36px, 40px, -0.02em);
+}
+
+.value {
+  color: $white-70;
+  @include text-style(36px, 40px, -0.02em);
+}
+
+.text {
+  padding: 40px;
+  color: $gray-80;
+  @include text-style(32px, 40px, -0.02em);
+}

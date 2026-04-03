@@ -1,0 +1,18 @@
+@import '../../../styles/variables.module';
+
+$small-header-diff: 48px;
+
+.queue {
+  @include transition-transform;
+  width: $device-width;
+  height: $device-height + $small-header-diff;
+  position: relative;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  background: transparent;
+  
+  &.smallHeader {
+    transform: translateY(-$small-header-diff);
+  }
+}

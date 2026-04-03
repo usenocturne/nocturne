@@ -1,0 +1,788 @@
+@alloc/quick-lru@5.2.0
+licenses: MIT
+repository: https://github.com/sindresorhus/quick-lru
+publisher: Sindre Sorhus
+email: sindresorhus@gmail.com
+url: https://sindresorhus.com
+@babel/code-frame@7.29.0
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/compat-data@7.29.0
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/core@7.29.0
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/generator@7.29.1
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helper-compilation-targets@7.28.6
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helper-globals@7.28.0
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helper-module-imports@7.28.6
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helper-module-transforms@7.28.6
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helper-plugin-utils@7.28.6
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helper-string-parser@7.27.1
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helper-validator-identifier@7.28.5
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helper-validator-option@7.27.1
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/helpers@7.28.6
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/parser@7.29.0
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/plugin-transform-react-jsx-self@7.27.1
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/plugin-transform-react-jsx-source@7.27.1
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/runtime@7.28.6
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/template@7.28.6
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/traverse@7.29.0
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@babel/types@7.29.0
+licenses: MIT
+repository: https://github.com/babel/babel
+publisher: The Babel Team
+url: https://babel.dev/team
+@esbuild/darwin-arm64@0.27.3
+licenses: MIT
+repository: https://github.com/evanw/esbuild
+@floating-ui/core@1.7.4
+licenses: MIT
+repository: https://github.com/floating-ui/floating-ui
+publisher: atomiks
+@floating-ui/dom@1.7.5
+licenses: MIT
+repository: https://github.com/floating-ui/floating-ui
+publisher: atomiks
+@floating-ui/react-dom@2.1.7
+licenses: MIT
+repository: https://github.com/floating-ui/floating-ui
+publisher: atomiks
+@floating-ui/react@0.26.28
+licenses: MIT
+repository: https://github.com/floating-ui/floating-ui
+publisher: atomiks
+@floating-ui/utils@0.2.10
+licenses: MIT
+repository: https://github.com/floating-ui/floating-ui
+publisher: atomiks
+@headlessui/react@2.2.9
+licenses: MIT
+repository: https://github.com/tailwindlabs/headlessui
+@jridgewell/gen-mapping@0.3.13
+licenses: MIT
+repository: https://github.com/jridgewell/sourcemaps
+publisher: Justin Ridgewell
+email: justin@ridgewell.name
+@jridgewell/remapping@2.3.5
+licenses: MIT
+repository: https://github.com/jridgewell/sourcemaps
+publisher: Justin Ridgewell
+email: justin@ridgewell.name
+@jridgewell/resolve-uri@3.1.2
+licenses: MIT
+repository: https://github.com/jridgewell/resolve-uri
+publisher: Justin Ridgewell
+email: justin@ridgewell.name
+@jridgewell/source-map@0.3.11
+licenses: MIT
+repository: https://github.com/jridgewell/sourcemaps
+publisher: Justin Ridgewell
+email: justin@ridgewell.name
+@jridgewell/sourcemap-codec@1.5.5
+licenses: MIT
+repository: https://github.com/jridgewell/sourcemaps
+publisher: Justin Ridgewell
+email: justin@ridgewell.name
+@jridgewell/trace-mapping@0.3.31
+licenses: MIT
+repository: https://github.com/jridgewell/sourcemaps
+publisher: Justin Ridgewell
+email: justin@ridgewell.name
+@nodelib/fs.scandir@2.1.5
+licenses: MIT
+repository: https://github.com/nodelib/nodelib/tree/master/packages/fs/fs.scandir
+@nodelib/fs.stat@2.0.5
+licenses: MIT
+repository: https://github.com/nodelib/nodelib/tree/master/packages/fs/fs.stat
+@nodelib/fs.walk@1.2.8
+licenses: MIT
+repository: https://github.com/nodelib/nodelib/tree/master/packages/fs/fs.walk
+@parcel/watcher-darwin-arm64@2.5.6
+licenses: MIT
+repository: https://github.com/parcel-bundler/watcher
+@parcel/watcher@2.5.6
+licenses: MIT
+repository: https://github.com/parcel-bundler/watcher
+@react-aria/focus@3.21.4
+licenses: Apache-2.0
+repository: https://github.com/adobe/react-spectrum
+@react-aria/interactions@3.27.0
+licenses: Apache-2.0
+repository: https://github.com/adobe/react-spectrum
+@react-aria/ssr@3.9.10
+licenses: Apache-2.0
+repository: https://github.com/adobe/react-spectrum
+@react-aria/utils@3.33.0
+licenses: Apache-2.0
+repository: https://github.com/adobe/react-spectrum
+@react-stately/flags@3.1.2
+licenses: Apache-2.0
+repository: https://github.com/adobe/react-spectrum
+@react-stately/utils@3.11.0
+licenses: Apache-2.0
+repository: https://github.com/adobe/react-spectrum
+@react-types/shared@3.33.0
+licenses: Apache-2.0
+repository: https://github.com/adobe/react-spectrum
+@rolldown/pluginutils@1.0.0-beta.27
+licenses: MIT
+repository: https://github.com/rolldown/rolldown
+@rollup/rollup-darwin-arm64@4.59.0
+licenses: MIT
+repository: https://github.com/rollup/rollup
+publisher: Lukas Taegert-Atkinson
+@swc/helpers@0.5.19
+licenses: Apache-2.0
+repository: https://github.com/swc-project/swc
+publisher: 강동윤
+email: kdy1997.dev@gmail.com
+@tanstack/react-virtual@3.13.19
+licenses: MIT
+repository: https://github.com/TanStack/virtual
+publisher: Tanner Linsley
+@tanstack/virtual-core@3.13.19
+licenses: MIT
+repository: https://github.com/TanStack/virtual
+publisher: Tanner Linsley
+@types/babel__core@7.20.5
+licenses: MIT
+repository: https://github.com/DefinitelyTyped/DefinitelyTyped
+@types/babel__generator@7.27.0
+licenses: MIT
+repository: https://github.com/DefinitelyTyped/DefinitelyTyped
+@types/babel__template@7.4.4
+licenses: MIT
+repository: https://github.com/DefinitelyTyped/DefinitelyTyped
+@types/babel__traverse@7.28.0
+licenses: MIT
+repository: https://github.com/DefinitelyTyped/DefinitelyTyped
+@types/estree@1.0.8
+licenses: MIT
+repository: https://github.com/DefinitelyTyped/DefinitelyTyped
+@vitejs/plugin-react@5.1.4
+licenses: MIT
+repository: https://github.com/vitejs/vite-plugin-react
+publisher: Evan You
+acorn@8.16.0
+licenses: MIT
+repository: https://github.com/acornjs/acorn
+any-promise@1.3.0
+licenses: MIT
+repository: https://github.com/kevinbeaty/any-promise
+publisher: Kevin Beaty
+arg@5.0.2
+licenses: MIT
+repository: https://github.com/vercel/arg
+publisher: Josh Junon
+email: junon@wavetilt.com
+autoprefixer@10.4.27
+licenses: MIT
+repository: https://github.com/postcss/autoprefixer
+publisher: Andrey Sitnik
+email: andrey@sitnik.ru
+baseline-browser-mapping@2.10.0
+licenses: Apache-2.0
+repository: https://github.com/web-platform-dx/baseline-browser-mapping
+braces@3.0.3
+licenses: MIT
+repository: https://github.com/micromatch/braces
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+browserslist@4.28.1
+licenses: MIT
+repository: https://github.com/browserslist/browserslist
+publisher: Andrey Sitnik
+email: andrey@sitnik.ru
+buffer-from@1.1.2
+licenses: MIT
+repository: https://github.com/LinusU/buffer-from
+camelcase-css@2.0.1
+licenses: MIT
+repository: https://github.com/stevenvachon/camelcase-css
+publisher: Steven Vachon
+email: contact@svachon.com
+url: https://www.svachon.com/
+caniuse-lite@1.0.30001775
+licenses: CC-BY-4.0
+repository: https://github.com/browserslist/caniuse-lite
+publisher: Ben Briggs
+email: beneb.info@gmail.com
+url: http://beneb.info
+chokidar@4.0.3
+licenses: MIT
+repository: https://github.com/paulmillr/chokidar
+publisher: Paul Miller
+url: https://paulmillr.com
+classnames@2.5.1
+licenses: MIT
+repository: https://github.com/JedWatson/classnames
+publisher: Jed Watson
+clsx@2.1.1
+licenses: MIT
+repository: https://github.com/lukeed/clsx
+publisher: Luke Edwards
+email: luke.edwards05@gmail.com
+url: https://lukeed.com
+commander@2.20.3
+licenses: MIT
+repository: https://github.com/tj/commander.js
+publisher: TJ Holowaychuk
+email: tj@vision-media.ca
+convert-source-map@2.0.0
+licenses: MIT
+repository: https://github.com/thlorenz/convert-source-map
+publisher: Thorsten Lorenz
+email: thlorenz@gmx.de
+url: http://thlorenz.com
+cookie@1.1.1
+licenses: MIT
+repository: https://github.com/jshttp/cookie
+publisher: Roman Shtylman
+email: shtylman@gmail.com
+cssesc@3.0.0
+licenses: MIT
+repository: https://github.com/mathiasbynens/cssesc
+publisher: Mathias Bynens
+url: https://mathiasbynens.be/
+csstype@3.2.3
+licenses: MIT
+repository: https://github.com/frenic/csstype
+publisher: Fredrik Nicol
+email: fredrik.nicol@gmail.com
+debug@4.4.3
+licenses: MIT
+repository: https://github.com/debug-js/debug
+publisher: Josh Junon
+url: https://github.com/qix-
+detect-libc@2.1.2
+licenses: Apache-2.0
+repository: https://github.com/lovell/detect-libc
+publisher: Lovell Fuller
+email: npm@lovell.info
+didyoumean@1.2.2
+licenses: Apache-2.0
+repository: https://github.com/dcporter/didyoumean.js
+publisher: Dave Porter
+email: dcporter@gmail.com
+url: http://dcporter.net/
+dlv@1.1.3
+licenses: MIT
+repository: https://github.com/developit/dlv
+publisher: Jason Miller
+email: jason@developit.ca
+url: http://jasonformat.com
+dom-helpers@5.2.1
+licenses: MIT
+repository: https://github.com/react-bootstrap/dom-helpers
+publisher: Jason Quense
+email: monastic.panic@gmail.com
+electron-to-chromium@1.5.302
+licenses: ISC
+repository: https://github.com/kilian/electron-to-chromium
+publisher: Kilian Valkhof
+esbuild@0.27.3
+licenses: MIT
+repository: https://github.com/evanw/esbuild
+escalade@3.2.0
+licenses: MIT
+repository: https://github.com/lukeed/escalade
+publisher: Luke Edwards
+email: luke.edwards05@gmail.com
+url: https://lukeed.com
+fast-glob@3.3.3
+licenses: MIT
+repository: https://github.com/mrmlnc/fast-glob
+publisher: Denis Malinochkin
+url: https://mrmlnc.com
+fastq@1.20.1
+licenses: ISC
+repository: https://github.com/mcollina/fastq
+publisher: Matteo Collina
+email: hello@matteocollina.com
+fdir@6.5.0
+licenses: MIT
+repository: https://github.com/thecodrr/fdir
+publisher: thecodrr
+email: thecodrr@protonmail.com
+fill-range@7.1.1
+licenses: MIT
+repository: https://github.com/jonschlinkert/fill-range
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+fraction.js@5.3.4
+licenses: MIT
+repository: https://github.com/rawify/Fraction.js
+publisher: Robert Eisele
+email: robert@raw.org
+url: https://raw.org/
+fsevents@2.3.3
+licenses: MIT
+repository: https://github.com/fsevents/fsevents
+function-bind@1.1.2
+licenses: MIT
+repository: https://github.com/Raynos/function-bind
+publisher: Raynos
+email: raynos2@gmail.com
+gensync@1.0.0-beta.2
+licenses: MIT
+repository: https://github.com/loganfsmyth/gensync
+publisher: Logan Smyth
+email: loganfsmyth@gmail.com
+glob-parent@6.0.2
+licenses: ISC
+repository: https://github.com/gulpjs/glob-parent
+publisher: Gulp Team
+email: team@gulpjs.com
+url: https://gulpjs.com/
+hasown@2.0.2
+licenses: MIT
+repository: https://github.com/inspect-js/hasOwn
+publisher: Jordan Harband
+email: ljharb@gmail.com
+immutable@5.1.4
+licenses: MIT
+repository: https://github.com/immutable-js/immutable-js
+publisher: Lee Byron
+url: https://github.com/leebyron
+is-core-module@2.16.1
+licenses: MIT
+repository: https://github.com/inspect-js/is-core-module
+publisher: Jordan Harband
+email: ljharb@gmail.com
+is-extglob@2.1.1
+licenses: MIT
+repository: https://github.com/jonschlinkert/is-extglob
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+is-glob@4.0.3
+licenses: MIT
+repository: https://github.com/micromatch/is-glob
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+is-number@7.0.0
+licenses: MIT
+repository: https://github.com/jonschlinkert/is-number
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+jiti@1.21.7
+licenses: MIT
+repository: https://github.com/unjs/jiti
+js-tokens@4.0.0
+licenses: MIT
+repository: https://github.com/lydell/js-tokens
+publisher: Simon Lydell
+jsesc@3.1.0
+licenses: MIT
+repository: https://github.com/mathiasbynens/jsesc
+publisher: Mathias Bynens
+url: https://mathiasbynens.be/
+json5@2.2.3
+licenses: MIT
+repository: https://github.com/json5/json5
+publisher: Aseem Kishore
+email: aseem.kishore@gmail.com
+lightningcss-darwin-arm64@1.31.1
+licenses: MPL-2.0
+repository: https://github.com/parcel-bundler/lightningcss
+lightningcss@1.31.1
+licenses: MPL-2.0
+repository: https://github.com/parcel-bundler/lightningcss
+lilconfig@3.1.3
+licenses: MIT
+repository: https://github.com/antonk52/lilconfig
+publisher: antonk52
+lines-and-columns@1.2.4
+licenses: MIT
+repository: https://github.com/eventualbuddha/lines-and-columns
+publisher: Brian Donovan
+email: brian@donovans.cc
+loose-envify@1.4.0
+licenses: MIT
+repository: https://github.com/zertosh/loose-envify
+publisher: Andres Suarez
+email: zertosh@gmail.com
+lru-cache@5.1.1
+licenses: ISC
+repository: https://github.com/isaacs/node-lru-cache
+publisher: Isaac Z. Schlueter
+email: i@izs.me
+merge2@1.4.1
+licenses: MIT
+repository: https://github.com/teambition/merge2
+micromatch@4.0.8
+licenses: MIT
+repository: https://github.com/micromatch/micromatch
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+mobx-react-lite@4.1.1
+licenses: MIT
+repository: https://github.com/mobxjs/mobx
+publisher: Daniel K.
+mobx@6.15.0
+licenses: MIT
+repository: https://github.com/mobxjs/mobx
+publisher: Michel Weststrate
+ms@2.1.3
+licenses: MIT
+repository: https://github.com/vercel/ms
+mz@2.7.0
+licenses: MIT
+repository: https://github.com/normalize/mz
+publisher: Jonathan Ong
+email: me@jongleberry.com
+url: http://jongleberry.com
+nanoid@3.3.11
+licenses: MIT
+repository: https://github.com/ai/nanoid
+publisher: Andrey Sitnik
+email: andrey@sitnik.ru
+nocturne-vite@0.0.0
+licenses: UNLICENSED
+private: true
+node-addon-api@7.1.1
+licenses: MIT
+repository: https://github.com/nodejs/node-addon-api
+node-releases@2.0.27
+licenses: MIT
+repository: https://github.com/chicoxyzzy/node-releases
+publisher: Sergey Rubanov
+email: chi187@gmail.com
+normalize-path@3.0.0
+licenses: MIT
+repository: https://github.com/jonschlinkert/normalize-path
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+object-assign@4.1.1
+licenses: MIT
+repository: https://github.com/sindresorhus/object-assign
+publisher: Sindre Sorhus
+email: sindresorhus@gmail.com
+url: sindresorhus.com
+object-hash@3.0.0
+licenses: MIT
+repository: https://github.com/puleos/object-hash
+publisher: Scott Puleo
+email: puleos@gmail.com
+path-parse@1.0.7
+licenses: MIT
+repository: https://github.com/jbgutierrez/path-parse
+publisher: Javier Blanco
+email: http://jbgutierrez.info
+picocolors@1.1.1
+licenses: ISC
+repository: https://github.com/alexeyraspopov/picocolors
+publisher: Alexey Raspopov
+picomatch@4.0.3
+licenses: MIT
+repository: https://github.com/micromatch/picomatch
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+pify@2.3.0
+licenses: MIT
+repository: https://github.com/sindresorhus/pify
+publisher: Sindre Sorhus
+email: sindresorhus@gmail.com
+url: sindresorhus.com
+pirates@4.0.7
+licenses: MIT
+repository: https://github.com/danez/pirates
+publisher: Ari Porad
+email: ari@ariporad.com
+url: http://ariporad.com
+postcss-import@15.1.0
+licenses: MIT
+repository: https://github.com/postcss/postcss-import
+publisher: Maxime Thirouin
+postcss-js@4.1.0
+licenses: MIT
+repository: https://github.com/postcss/postcss-js
+publisher: Andrey Sitnik
+email: andrey@sitnik.ru
+postcss-load-config@6.0.1
+licenses: MIT
+repository: https://github.com/postcss/postcss-load-config
+publisher: Michael Ciniawky
+email: michael.ciniawsky@gmail.com
+postcss-nested@6.2.0
+licenses: MIT
+repository: https://github.com/postcss/postcss-nested
+publisher: Andrey Sitnik
+email: andrey@sitnik.ru
+postcss-selector-parser@6.1.2
+licenses: MIT
+repository: https://github.com/postcss/postcss-selector-parser
+postcss-value-parser@4.2.0
+licenses: MIT
+repository: https://github.com/TrySound/postcss-value-parser
+publisher: Bogdan Chadkin
+email: trysound@yandex.ru
+postcss@8.5.6
+licenses: MIT
+repository: https://github.com/postcss/postcss
+publisher: Andrey Sitnik
+email: andrey@sitnik.ru
+prop-types@15.8.1
+licenses: MIT
+repository: https://github.com/facebook/prop-types
+qrcode.react@4.2.0
+licenses: ISC
+repository: https://github.com/zpao/qrcode.react
+publisher: Paul O’Shannessy
+email: paul@oshannessy.com
+queue-microtask@1.2.3
+licenses: MIT
+repository: https://github.com/feross/queue-microtask
+publisher: Feross Aboukhadijeh
+email: feross@feross.org
+url: https://feross.org
+react-dom@19.2.4
+licenses: MIT
+repository: https://github.com/facebook/react
+react-intersection-observer@10.0.3
+licenses: MIT
+repository: https://github.com/thebuilder/react-intersection-observer
+publisher: Daniel Schmidt
+react-is@16.13.1
+licenses: MIT
+repository: https://github.com/facebook/react
+react-refresh@0.18.0
+licenses: MIT
+repository: https://github.com/facebook/react
+react-router-dom@7.13.1
+licenses: MIT
+repository: https://github.com/remix-run/react-router
+publisher: Remix Software
+email: hello@remix.run
+react-router@7.13.1
+licenses: MIT
+repository: https://github.com/remix-run/react-router
+publisher: Remix Software
+email: hello@remix.run
+react-swipeable@7.0.2
+licenses: MIT
+repository: https://github.com/FormidableLabs/react-swipeable
+react-transition-group@4.4.5
+licenses: BSD-3-Clause
+repository: https://github.com/reactjs/react-transition-group
+react@19.2.4
+licenses: MIT
+repository: https://github.com/facebook/react
+read-cache@1.0.0
+licenses: MIT
+repository: https://github.com/TrySound/read-cache
+publisher: Bogdan Chadkin
+email: trysound@yandex.ru
+readdirp@4.1.2
+licenses: MIT
+repository: https://github.com/paulmillr/readdirp
+publisher: Thorsten Lorenz
+email: thlorenz@gmx.de
+url: thlorenz.com
+resolve@1.22.11
+licenses: MIT
+repository: https://github.com/browserify/resolve
+publisher: James Halliday
+email: mail@substack.net
+url: http://substack.net
+reusify@1.1.0
+licenses: MIT
+repository: https://github.com/mcollina/reusify
+publisher: Matteo Collina
+email: hello@matteocollina.com
+rollup@4.59.0
+licenses: MIT
+repository: https://github.com/rollup/rollup
+publisher: Rich Harris
+run-parallel@1.2.0
+licenses: MIT
+repository: https://github.com/feross/run-parallel
+publisher: Feross Aboukhadijeh
+email: feross@feross.org
+url: https://feross.org
+sass@1.97.3
+licenses: MIT
+repository: https://github.com/sass/dart-sass
+publisher: Natalie Weizenbaum
+email: nweiz@google.com
+url: https://github.com/nex3
+scheduler@0.27.0
+licenses: MIT
+repository: https://github.com/facebook/react
+semver@6.3.1
+licenses: ISC
+repository: https://github.com/npm/node-semver
+publisher: GitHub Inc.
+set-cookie-parser@2.7.2
+licenses: MIT
+repository: https://github.com/nfriedly/set-cookie-parser
+publisher: Nathan Friedly
+url: http://nfriedly.com/
+source-map-js@1.2.1
+licenses: BSD-3-Clause
+repository: https://github.com/7rulnik/source-map-js
+publisher: Valentin 7rulnik Semirulnik
+email: v7rulnik@gmail.com
+source-map-support@0.5.21
+licenses: MIT
+repository: https://github.com/evanw/node-source-map-support
+source-map@0.6.1
+licenses: BSD-3-Clause
+repository: https://github.com/mozilla/source-map
+publisher: Nick Fitzgerald
+email: nfitzgerald@mozilla.com
+sucrase@3.35.1
+licenses: MIT
+repository: https://github.com/alangpierce/sucrase
+publisher: Alan Pierce
+email: alangpierce@gmail.com
+supports-preserve-symlinks-flag@1.0.0
+licenses: MIT
+repository: https://github.com/inspect-js/node-supports-preserve-symlinks-flag
+publisher: Jordan Harband
+email: ljharb@gmail.com
+swiper@11.2.10
+licenses: MIT
+repository: https://github.com/nolimits4web/Swiper
+publisher: Vladimir Kharlampidi
+tabbable@6.4.0
+licenses: MIT
+repository: https://github.com/focus-trap/tabbable
+publisher: David Clark
+url: http://davidtheclark.com/
+tailwindcss@3.4.19
+licenses: MIT
+repository: https://github.com/tailwindlabs/tailwindcss.git#v3
+terser@5.46.0
+licenses: BSD-2-Clause
+repository: https://github.com/terser/terser
+publisher: Mihai Bazon
+email: mihai.bazon@gmail.com
+url: http://lisperator.net/
+thenify-all@1.6.0
+licenses: MIT
+repository: https://github.com/thenables/thenify-all
+publisher: Jonathan Ong
+email: me@jongleberry.com
+url: http://jongleberry.com
+thenify@3.3.1
+licenses: MIT
+repository: https://github.com/thenables/thenify
+publisher: Jonathan Ong
+email: me@jongleberry.com
+url: http://jongleberry.com
+tinyglobby@0.2.15
+licenses: MIT
+repository: https://github.com/SuperchupuDev/tinyglobby
+publisher: Superchupu
+to-regex-range@5.0.1
+licenses: MIT
+repository: https://github.com/micromatch/to-regex-range
+publisher: Jon Schlinkert
+url: https://github.com/jonschlinkert
+ts-interface-checker@0.1.13
+licenses: Apache-2.0
+repository: https://github.com/gristlabs/ts-interface-checker
+publisher: Dmitry S, Grist Labs
+tslib@2.8.1
+licenses: 0BSD
+repository: https://github.com/Microsoft/tslib
+publisher: Microsoft Corp.
+update-browserslist-db@1.2.3
+licenses: MIT
+repository: https://github.com/browserslist/update-db
+publisher: Andrey Sitnik
+email: andrey@sitnik.ru
+use-sync-external-store@1.6.0
+licenses: MIT
+repository: https://github.com/facebook/react
+util-deprecate@1.0.2
+licenses: MIT
+repository: https://github.com/TooTallNate/util-deprecate
+publisher: Nathan Rajlich
+email: nathan@tootallnate.net
+url: http://n8.io/
+vite@6.4.1
+licenses: MIT
+repository: https://github.com/vitejs/vite
+publisher: Evan You
+yallist@3.1.1
+   licenses: ISC
+   repository: https://github.com/isaacs/yallist
+   publisher: Isaac Z. Schlueter
+   email: i@izs.me
+   url: http://blog.izs.me/
+   path: /Users/brandon/Documents/GitHub/mockingbird/node_modules/yallist
+   licenseFile: /Users/brandon/Documents/GitHub/mockingbird/node_modules/yallist/LICENSE
+

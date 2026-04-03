@@ -33,6 +33,15 @@ const settingsStructure = {
     icon: SettingsGeneralIcon,
     items: [
       {
+        id: "classic-ui",
+        title: "Mockingbird UI",
+        type: "toggle",
+        description:
+          "Switch to the classic Spotify Car Thing interface. The page will reload to apply.",
+        storageKey: "mockingbirdUiEnabled",
+        defaultValue: false,
+      },
+      {
         id: "start-with-now-playing",
         title: "Start with Now Playing",
         type: "toggle",
@@ -570,6 +579,9 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
 
   const handleToggle = (key) => {
     updateSetting(key, !settings[key]);
+    if (key === "mockingbirdUiEnabled") {
+      setTimeout(() => window.location.reload(), 150);
+    }
   };
 
   const handleFactoryReset = async () => {

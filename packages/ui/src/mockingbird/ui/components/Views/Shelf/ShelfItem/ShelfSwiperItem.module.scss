@@ -1,0 +1,343 @@
+@use 'sass:math';
+@use '../../../../styles/variables.module' as vars;
+
+$slide-width: 240px;
+
+.item {
+  opacity: 0.8;
+  transition: opacity 500ms ease, transform 500ms ease;
+}
+
+.pressed {
+  opacity: 0.7;
+}
+
+.buttonItem {
+  width: $slide-width;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  transition: opacity 500ms ease, transform 500ms ease;
+}
+
+.buttonArtwork {
+  height: 240px;
+  width: $slide-width;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: vars.$white;
+  opacity: 0.1;
+}
+
+.artwork {
+  height: 240px;
+  width: $slide-width;
+}
+
+.titleContainer {
+  font-size: 32px;
+  line-height: 40px;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 24px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: spotify-circular, Helvetica, Arial, sans-serif;
+}
+
+.title {
+  flex: 1;
+  opacity: 0.7;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: vars.$white;
+}
+
+.subtitle {
+  font-size: 28px;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+  opacity: 0.7;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: vars.$white;
+  font-family: spotify-circular, Helvetica, Arial, sans-serif;
+}
+
+.activeBorder {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  top: -8px;
+  border: 4px solid white;
+  border-radius: 8px;
+}
+
+.artworkCenter {
+  position: absolute;
+  transform: translateY(math.div($slide-width, 2)) translateY(-50%);
+}
+
+.circle {
+  border-radius: 50%;
+}
+
+.activeSlide {
+  opacity: 1;
+
+  &.pressed {
+    opacity: 0.8;
+  }
+
+  &.notEnabled {
+    opacity: 0.8;
+  }
+
+  .title {
+    opacity: 1;
+  }
+
+  .subtitle {
+    opacity: 1;
+  }
+
+  .buttonIcon {
+    opacity: 1;
+  }
+}
+
+.inlineTipItem {
+  width: 508px;
+  height: 324px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: opacity 500ms ease, transform 500ms ease;
+
+  &.toTheLeft {
+    transform: translateX(-18px);
+  }
+
+  &.hidden {
+    opacity: 0;
+  }
+
+  &.voiceTip {
+    width: 448px;
+    height: 304px;
+  }
+
+  .subtitle {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow: visible;
+    text-overflow: unset;
+  }
+}
+
+.subtitle {
+  display: flex;
+}
+
+.tryThis {
+  color: vars.$green-light;
+}
+
+.nowPlaying {
+  display: flex;
+  align-items: center;
+}
+
+.nowPlayingText {
+  color: vars.$green-light;
+  font-size: 28px;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+  font-family: spotify-circular, Helvetica, Arial, sans-serif;
+}
+
+$off: 0.2;
+$low: 0.6;
+$mid: 0.8;
+$high: 1;
+$play-to-pause-ms: 250ms;
+$play-ms: 1500ms;
+
+.bars {
+  width: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-right: 12px;
+}
+
+.bar {
+  background-color: vars.$green-light;
+  width: 4px;
+  height: 20px;
+  transform: scaleY($off);
+  transition-duration: $play-to-pause-ms;
+  transition-timing-function: linear;
+  transform-origin: bottom;
+}
+
+.bar1 {
+  &.pauseToPlay {
+    transform: scaleY($mid);
+  }
+
+  &.play {
+    animation: play1 linear infinite normal $play-ms;
+  }
+
+  &.playToPause {
+    animation: play-to-pause-1 linear 1 $play-to-pause-ms forwards;
+  }
+}
+
+.bar2 {
+  &.pauseToPlay {
+    transform: scaleY($high);
+  }
+
+  &.play {
+    animation: play2 linear infinite normal $play-ms;
+  }
+
+  &.playToPause {
+    animation: play-to-pause-2 linear 1 $play-to-pause-ms forwards;
+  }
+}
+
+.bar3 {
+  &.pauseToPlay {
+    transform: scaleY($low);
+  }
+
+  &.play {
+    animation: play3 linear infinite normal $play-ms;
+  }
+
+  &.playToPause {
+    animation: play-to-pause-3 linear 1 $play-to-pause-ms forwards;
+  }
+}
+
+@keyframes play1 {
+  0% {
+    transform: scaleY($mid);
+  }
+
+  20% {
+    transform: scaleY($off);
+  }
+
+  40% {
+    transform: scaleY($mid);
+  }
+
+  60% {
+    transform: scaleY($low);
+  }
+
+  80% {
+    transform: scaleY($high);
+  }
+
+  100% {
+    transform: scaleY($mid);
+  }
+}
+
+@keyframes play2 {
+  0% {
+    transform: scaleY($high);
+  }
+
+  20% {
+    transform: scaleY($mid);
+  }
+
+  40% {
+    transform: scaleY($low);
+  }
+
+  60% {
+    transform: scaleY($mid);
+  }
+
+  80% {
+    transform: scaleY($off);
+  }
+
+  100% {
+    transform: scaleY($high);
+  }
+}
+
+@keyframes play3 {
+  0% {
+    transform: scaleY($low);
+  }
+
+  20% {
+    transform: scaleY($mid);
+  }
+
+  40% {
+    transform: scaleY($off);
+  }
+
+  60% {
+    transform: scaleY($high);
+  }
+
+  80% {
+    transform: scaleY($mid);
+  }
+
+  100% {
+    transform: scaleY($low);
+  }
+}
+
+@keyframes play-to-pause-1 {
+  0% {
+    transform: scaleY($mid);
+  }
+
+  100% {
+    transform: scaleY($off);
+  }
+}
+
+@keyframes play-to-pause-2 {
+  0% {
+    transform: scaleY($high);
+  }
+
+  100% {
+    transform: scaleY($off);
+  }
+}
+
+@keyframes play-to-pause-3 {
+  0% {
+    transform: scaleY($low);
+  }
+
+  100% {
+    transform: scaleY($off);
+  }
+}

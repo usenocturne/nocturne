@@ -1,0 +1,50 @@
+@import '../../../styles/variables.module';
+
+.factoryReset {
+  width: $device-width;
+  height: $device-height;
+  padding: 68px 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.description {
+  @include text-style(32px, 40px, 0);
+  color: $white;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.button {
+  @include text-style(32px, 40px, -0.02em);
+  font-weight: bold;
+  border: none;
+  border-radius: 500px;
+  padding: 16px 32px;
+  min-width: 200px;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.primary {
+  background-color: $white;
+  color: $black;
+}
+
+.secondary {
+  background-color: $white-10;
+  color: $white;
+}

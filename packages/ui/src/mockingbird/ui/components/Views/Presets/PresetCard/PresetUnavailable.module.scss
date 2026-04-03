@@ -1,0 +1,23 @@
+@import '../../../../styles/variables.module';
+
+.presetUnavailableTitles {
+  text-align: center;
+  width: 168px;
+  margin-top: 16px;
+}
+
+.title {
+  color: $white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 8px;
+  
+  &.active {
+    color: $green-light;
+  }
+}
+
+.unavailable {
+  color: $opacity-white-70;
+}
