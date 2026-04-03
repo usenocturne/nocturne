@@ -1124,9 +1124,12 @@ function App() {
     localStorage.getItem("mockingbirdUiEnabled") === "true";
 
   const showSubscriptionScreen =
-    appReady && appPlatform !== null && isSubscribed === false;
+    appReady &&
+    appPlatform !== null &&
+    appPlatform !== "web" &&
+    isSubscribed === false;
 
-  const isMockingbird = isMockingbirdSetting && !showSubscriptionScreen;
+  const isMockingbird = isMockingbirdSetting && isSubscribed !== false;
 
   const displayNetworkBanner =
     showNetworkBanner &&

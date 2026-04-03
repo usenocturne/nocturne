@@ -21,7 +21,8 @@ import SoftwareUpdate from "./SoftwareUpdate";
 import BluetoothDevices from "./network/BluetoothDevices";
 import About from "./About";
 import { useSettings } from "../../contexts/SettingsContext";
-import { sendNocturneWsRequest } from "../../hooks/useNocturned";
+import { sendNocturneWsRequest, getAppReadyState } from "../../hooks/useNocturned";
+import { useSubscription } from "../../hooks/useSubscription";
 
 const settingsStructure = {
   support: {
@@ -549,6 +550,8 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
   const shouldExitToRecents = useRef(false);
   const scrollContainerRef = useRef(null);
   const { settings, updateSetting } = useSettings();
+  const { isSubscribed } = useSubscription();
+  const appPlatform = getAppReadyState().platform;
   const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false);
 
   const [showMain, setShowMain] = useState(true);
@@ -578,6 +581,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
   }, []);
 
   const handleToggle = (key) => {
+    if (key === "mockingbirdUiEnabled" && isSubscribed === false) return;
     updateSetting(key, !settings[key]);
     if (key === "mockingbirdUiEnabled") {
       setTimeout(() => window.location.reload(), 150);
@@ -789,13 +793,18 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
             <ChevronRightIcon className="w-8 h-8 text-white/60" />
           </button>
         );
-      case "toggle":
+      case "toggle": {
+        const isMockingbirdToggle = item.storageKey === "mockingbirdUiEnabled";
+        const isToggleDisabled =
+          isMockingbirdToggle &&
+          appPlatform === "web" &&
+          isSubscribed === false;
         return (
-          <div key={item.id} className="mb-8">
+          <div key={item.id} className={`mb-8 ${isToggleDisabled ? "opacity-50" : ""}`}>
             <div className="flex items-center">
               <Switch
                 checked={settings[item.storageKey]}
-                onChange={() => handleToggle(item.storageKey)}
+                onChange={() => !isToggleDisabled && handleToggle(item.storageKey)}
                 className={`relative inline-flex h-11 w-20 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
                 }`}
@@ -813,10 +822,13 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
               </span>
             </div>
             <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
-              {item.description}
+              {isToggleDisabled
+                ? "Subscribe to Nocturne to use the classic Spotify Car Thing interface."
+                : item.description}
             </p>
           </div>
         );
+      }
       case "action":
         return (
           <div key={item.id} className="mb-8">
