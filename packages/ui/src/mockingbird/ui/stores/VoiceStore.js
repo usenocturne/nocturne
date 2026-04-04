@@ -34,7 +34,7 @@ const getInitialVoiceSessionState = () => ({
 class VoiceStore {
   state = getInitialVoiceSessionState();
   micLevelMovingAverage = 0;
-  isMicMuted = false;
+  isMicMuted = localStorage.getItem("mockingbird_mic_muted") === "true";
   microphoneLevelsSlidingWindow = [];
   _wsCleanup = null;
   _responseTimeoutId = null;
@@ -66,6 +66,10 @@ class VoiceStore {
         else if (topic === "audio.level") this._onMicLevel(data);
       }),
     });
+
+    if (this.isMicMuted) {
+      sendNocturneWsRequest("wakeword.pause", {});
+    }
   }
 
   get listening() {
@@ -180,6 +184,7 @@ class VoiceStore {
 
   toggleMic = action(() => {
     this.isMicMuted = !this.isMicMuted;
+    localStorage.setItem("mockingbird_mic_muted", String(this.isMicMuted));
     if (this.isMicMuted) {
       sendNocturneWsRequest("wakeword.pause", {});
     } else {
