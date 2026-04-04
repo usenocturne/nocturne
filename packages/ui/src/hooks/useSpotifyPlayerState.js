@@ -102,6 +102,18 @@ export function useSpotifyPlayerState(immediateLoad = false) {
   const processPlaybackState = useCallback((data) => {
     if (!data) return;
 
+    const currentIsPhoneMedia =
+      currentPlaybackRef.current?.item?.is_phone_media;
+    const incomingIsPhoneMedia = data.item?.is_phone_media;
+    if (currentIsPhoneMedia && !incomingIsPhoneMedia) {
+      const incomingIsSpotifyPending = data.item?.is_spotify_pending;
+      const incomingIsRealSpotifyPlaying =
+        data.item?.uri?.startsWith("spotify:") && data.is_playing;
+      if (!incomingIsSpotifyPending && !incomingIsRealSpotifyPlaying) {
+        return;
+      }
+    }
+
     if (!data.item?.is_spotify_pending) {
       pendingSpotifyMediaUpdate = null;
       if (spotifyFallbackTimeout) {
@@ -938,6 +950,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           currently_playing_type: "track",
 
           playback_speed: playback.PlaybackRate || 1,
+
+          currently_active_application: playback.PlaybackAppName || null,
         };
 
         processPlaybackState(transformedState);

@@ -37,7 +37,7 @@ const Npv = ({ playbackProgress, onSeek }) => {
 
   const showWindAlert = bannerStore.shouldShowWindAlertBanner;
   const showNoNetwork = bannerStore.shouldShowNoNetworkBanner;
-  const showOtherMedia = playerStore.isOtherMediaPlaying;
+  const showOtherMedia = npvStore.controlButtonsUiState.showOtherMediaControls;
 
   const handleClick = () => {
     npvStore.tipsUiState?.dismissVisibleTip?.();
@@ -134,13 +134,20 @@ const Npv = ({ playbackProgress, onSeek }) => {
           getBackgroundStyleAttribute={getBackgroundColorFromChannels}
         />
       )}
-      <div className={styles.npv} onClick={handleClick} ref={npvContainerRef}>
+      <div
+        className={classnames(
+          styles.npv,
+          showOtherMedia && styles.npvOtherMedia,
+        )}
+        onClick={handleClick}
+        ref={npvContainerRef}
+      >
         <SwipeHandler
           onSwipeLeft={handleSwipeLeft}
           onSwipeRight={handleSwipeRight}
           onSwipeUp={handleSwipeUp}
           onSwipeDown={handleSwipeDown}
-          disabled={overlayController.anyOverlayIsShowing}
+          disabled={overlayController.anyOverlayIsShowing || showOtherMedia}
         >
           <div className={styles.content}>
             <DelayedRender showing={showWindAlert} hideDelay={300}>
@@ -166,7 +173,10 @@ const Npv = ({ playbackProgress, onSeek }) => {
 
           <div className={styles.controlsContainer}>
             <CSSTransition
-              in={showPlayingInfo && !npvStore.volumeUiState.shouldShowVolume}
+              in={
+                (showPlayingInfo || showOtherMedia) &&
+                !npvStore.volumeUiState.shouldShowVolume
+              }
               timeout={500}
               classNames={{
                 enter: styles.enter,
@@ -179,7 +189,10 @@ const Npv = ({ playbackProgress, onSeek }) => {
               <Controls />
             </CSSTransition>
             <CSSTransition
-              in={showPlayingInfo && npvStore.volumeUiState.shouldShowVolume}
+              in={
+                (showPlayingInfo || showOtherMedia) &&
+                npvStore.volumeUiState.shouldShowVolume
+              }
               timeout={500}
               classNames={{
                 enter: styles.enter,

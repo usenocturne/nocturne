@@ -51,11 +51,14 @@ class PlayerStore {
   }
 
   get isPlayingSpotify() {
-    return !this.state.currently_active_application;
+    return !this.isOtherMediaPlaying;
   }
 
   get isOtherMediaPlaying() {
-    return !!this.state.currently_active_application;
+    return (
+      !!this.state.currently_active_application ||
+      !!this.state.track?.is_phone_media
+    );
   }
 
   get otherActiveApp() {

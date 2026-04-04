@@ -4,6 +4,7 @@ import {
   sendNocturneWsRequest,
   addGlobalWsListener,
 } from "../../../hooks/useNocturned";
+import { subscribeToPhoneVolume } from "../../../hooks/useSpotifyPlayerState";
 import { getNpvImageUrl } from "../helpers/ImageSizeHelper";
 import { injectArtwork, retryImage } from "../utils/imageProxy";
 
@@ -73,6 +74,12 @@ export function useCarThingSpotifyIntegration(
   const setRepeatMode = playerControls?.setRepeatMode;
   const setVolume = playerControls?.setVolume;
   const volume = playerControls?.volume ?? 50;
+  const phoneMediaPlay = playerControls?.phoneMediaPlay;
+  const phoneMediaPause = playerControls?.phoneMediaPause;
+  const phoneMediaNext = playerControls?.phoneMediaNext;
+  const phoneMediaPrevious = playerControls?.phoneMediaPrevious;
+  const phoneMediaVolumeUp = playerControls?.phoneMediaVolumeUp;
+  const phoneMediaVolumeDown = playerControls?.phoneMediaVolumeDown;
 
   const getQueue = useCallback(async () => {
     try {
@@ -268,7 +275,9 @@ export function useCarThingSpotifyIntegration(
         npvStore.controlButtonsUiState.isPlaying = isPlaying || false;
         npvStore.controlButtonsUiState.isShuffled = isShuffled || false;
 
-        const isOtherMedia = !!currentPlayback.currently_active_application;
+        const isOtherMedia =
+          !!currentPlayback.currently_active_application ||
+          !!currentPlayback?.item?.is_phone_media;
         const isEpisode = currentPlayback.item.type === "episode";
         const isPodcastContext = currentPlayback.context?.type === "show";
         const isPodcast = isEpisode || isPodcastContext;
@@ -293,13 +302,13 @@ export function useCarThingSpotifyIntegration(
 
         npvStore.playingInfoUiState.onRepeat = newOnRepeat;
         npvStore.playingInfoUiState.onRepeatOnce = newOnRepeatOnce;
-        npvStore.playingInfoUiState.isPlayingSpotify = true;
+        npvStore.playingInfoUiState.isPlayingSpotify = !isOtherMedia;
 
         if (carThingStores.imageStore && imageUri) {
           carThingStores.imageStore.loadColor(imageUri);
         }
 
-        npvStore.volumeUiState.isPlayingSpotify = true;
+        npvStore.volumeUiState.isPlayingSpotify = !isOtherMedia;
 
         const deviceVolume = currentPlayback.device?.volume_percent;
         if (deviceVolume !== undefined && !volumeDebounceRef.current) {
@@ -410,24 +419,40 @@ export function useCarThingSpotifyIntegration(
 
     runInAction(() => {
       npvStore.controlButtonsUiState.handlePlayClick = () => {
-        playTrack?.();
+        if (carThingStores.playerStore.isOtherMediaPlaying) {
+          phoneMediaPlay?.();
+        } else {
+          playTrack?.();
+        }
       };
       npvStore.controlButtonsUiState.handlePauseClick = () => {
-        pausePlayback?.();
+        if (carThingStores.playerStore.isOtherMediaPlaying) {
+          phoneMediaPause?.();
+        } else {
+          pausePlayback?.();
+        }
       };
       npvStore.controlButtonsUiState.handleSkipNextClick = () => {
         npvStore.playingInfoUiState.swipeHandler.setSwipeDirection("LEFT");
-        skipToNext?.();
+        if (carThingStores.playerStore.isOtherMediaPlaying) {
+          phoneMediaNext?.();
+        } else {
+          skipToNext?.();
+        }
       };
       npvStore.controlButtonsUiState.handleSkipPrevClick = () => {
-        const progressMs = currentPlayback?.progress_ms || 0;
-        if (progressMs > 3000) {
-          seekToPosition?.(0);
-          lastSeekPositionRef.current = 0;
-          lastSeekTimeRef.current = Date.now();
+        if (carThingStores.playerStore.isOtherMediaPlaying) {
+          phoneMediaPrevious?.();
         } else {
-          npvStore.playingInfoUiState.swipeHandler.setSwipeDirection("RIGHT");
-          skipToPrevious?.();
+          const progressMs = currentPlayback?.progress_ms || 0;
+          if (progressMs > 3000) {
+            seekToPosition?.(0);
+            lastSeekPositionRef.current = 0;
+            lastSeekTimeRef.current = Date.now();
+          } else {
+            npvStore.playingInfoUiState.swipeHandler.setSwipeDirection("RIGHT");
+            skipToPrevious?.();
+          }
         }
       };
       npvStore.controlButtonsUiState.handleShuffleClick = () =>
@@ -546,6 +571,18 @@ export function useCarThingSpotifyIntegration(
 
     if (carThingStores.volumeStore) {
       const adjustVolume = (delta) => {
+        if (carThingStores.playerStore.isOtherMediaPlaying) {
+          if (delta > 0) {
+            phoneMediaVolumeUp?.();
+          } else {
+            phoneMediaVolumeDown?.();
+          }
+          runInAction(() => {
+            npvStore.volumeUiState.resetShowVolumeTimer();
+          });
+          return;
+        }
+
         const current = volumeRef.current;
         const newVolume = Math.max(0, Math.min(100, current + delta));
         volumeRef.current = newVolume;
@@ -584,12 +621,20 @@ export function useCarThingSpotifyIntegration(
 
     npvStore.npvController.next = () => {
       npvStore.playingInfoUiState.swipeHandler.setSwipeDirection("LEFT");
-      skipToNext?.();
+      if (carThingStores.playerStore.isOtherMediaPlaying) {
+        phoneMediaNext?.();
+      } else {
+        skipToNext?.();
+      }
     };
 
     npvStore.npvController.previous = () => {
       npvStore.playingInfoUiState.swipeHandler.setSwipeDirection("RIGHT");
-      skipToPrevious?.();
+      if (carThingStores.playerStore.isOtherMediaPlaying) {
+        phoneMediaPrevious?.();
+      } else {
+        skipToPrevious?.();
+      }
     };
 
     window.carThingSkipNext = () => npvStore.npvController.next();
@@ -615,19 +660,29 @@ export function useCarThingSpotifyIntegration(
         });
       };
       carThingStores.playerStore.setPlaying = (playing) => {
-        if (playing) {
-          playTrack?.();
+        if (carThingStores.playerStore.isOtherMediaPlaying) {
+          if (playing) phoneMediaPlay?.();
+          else phoneMediaPause?.();
         } else {
-          pausePlayback?.();
+          if (playing) playTrack?.();
+          else pausePlayback?.();
         }
       };
 
       carThingStores.playerStore.play = () => {
-        playTrack?.();
+        if (carThingStores.playerStore.isOtherMediaPlaying) {
+          phoneMediaPlay?.();
+        } else {
+          playTrack?.();
+        }
       };
 
       carThingStores.playerStore.pause = () => {
-        pausePlayback?.();
+        if (carThingStores.playerStore.isOtherMediaPlaying) {
+          phoneMediaPause?.();
+        } else {
+          pausePlayback?.();
+        }
       };
     }
   }, [
@@ -675,6 +730,22 @@ export function useCarThingSpotifyIntegration(
 
     return cleanup;
   }, []);
+
+  useEffect(() => {
+    if (!carThingStores?.npvStore) return;
+    const { npvStore } = carThingStores;
+
+    return subscribeToPhoneVolume((volumePercent) => {
+      const pct = volumePercent / 100;
+      volumeRef.current = volumePercent;
+      runInAction(() => {
+        npvStore.volumeUiState.displayVolume = pct;
+        npvStore.volumeUiState.volume = pct;
+        npvStore.volumeUiState.isVolumeAbove0 = volumePercent > 0;
+        npvStore.volumeUiState.resetShowVolumeTimer();
+      });
+    });
+  }, [carThingStores]);
 
   return {
     currentPlayback,
