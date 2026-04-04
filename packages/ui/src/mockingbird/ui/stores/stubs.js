@@ -52,8 +52,6 @@ export class NpvStore {
     isPlayingSpotify: true,
     onRepeat: false,
     onRepeatOnce: false,
-    isMicMuted: false,
-    showSettings: () => {},
   };
 
   volumeUiState = {
@@ -273,6 +271,15 @@ export class NpvStore {
     if (this.volumeUiState) {
       this.volumeUiState.parentStore = this;
     }
+
+    Object.defineProperty(this.playingInfoUiState, 'isMicMuted', {
+      get: () => rootStore?.voiceStore?.isMicMuted ?? false,
+      configurable: true,
+    });
+
+    this.playingInfoUiState.showSettings = () => {
+      rootStore?.overlayController?.toggleSettings();
+    };
 
     this.initializeSwipeHandler();
   }

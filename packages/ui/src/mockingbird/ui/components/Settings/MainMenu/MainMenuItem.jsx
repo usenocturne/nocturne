@@ -77,13 +77,20 @@ export const iconMapping = {
 };
 
 const DynamicMicIcon = observer(() => {
-  return <IconMicOn />;
+  const { voiceStore } = useCarThingStore();
+  return voiceStore.isMicMuted ? <IconMicOff /> : <IconMicOn />;
 });
 
 const DynamicMicContent = observer(() => {
+  const { voiceStore } = useCarThingStore();
   return (
-    <div className={classNames(styles.micStatus, styles.white)}>
-      Unavailable
+    <div
+      className={classNames(
+        styles.micStatus,
+        voiceStore.isMicMuted ? styles.white : styles.green,
+      )}
+    >
+      {voiceStore.isMicMuted ? "Off" : "On"}
     </div>
   );
 });

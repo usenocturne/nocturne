@@ -34,6 +34,7 @@ const getInitialVoiceSessionState = () => ({
 class VoiceStore {
   state = getInitialVoiceSessionState();
   micLevelMovingAverage = 0;
+  isMicMuted = false;
   microphoneLevelsSlidingWindow = [];
   _wsCleanup = null;
   _responseTimeoutId = null;
@@ -102,6 +103,7 @@ class VoiceStore {
   onWakeWord = action(() => {
     const { viewStore, overlayController } = this.rootStore;
     if (viewStore.appView !== "MAIN") return;
+    if (this.isMicMuted) return;
     this.resetVoiceSessionState();
     overlayController.showVoice();
     this._startResponseTimeout();
@@ -174,6 +176,15 @@ class VoiceStore {
       }),
       OVERLAY_TRANSITION_DURATION_MS,
     );
+  });
+
+  toggleMic = action(() => {
+    this.isMicMuted = !this.isMicMuted;
+    if (this.isMicMuted) {
+      sendNocturneWsRequest("wakeword.pause", {});
+    } else {
+      sendNocturneWsRequest("wakeword.resume", {});
+    }
   });
 
   resetVoiceSessionState = action(() => {

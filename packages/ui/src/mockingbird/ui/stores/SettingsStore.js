@@ -130,7 +130,7 @@ class SettingsStore {
           id: MainMenuItemId.MIC,
           label: "Microphone",
           index: 0,
-          disabledOffline: true,
+          disabledOffline: false,
           visible: () => true,
           type: "toggle",
         },
@@ -489,7 +489,7 @@ class SettingsStore {
         break;
       case MainMenuItemId.SETTINGS_ROOT:
         if (this.highlightedItem?.id === MainMenuItemId.MIC) {
-          this.unavailableSettingsBannerUiState.showUnavailableBanner();
+          this.rootStore.voiceStore.toggleMic();
         } else if (this.highlightedItem) {
           this.handleMainMenuItemSelected(this.highlightedItem);
         }
@@ -550,11 +550,9 @@ class SettingsStore {
   handleMainMenuItemSelected(row) {
     const disabled = this.isMainMenuItemDisabled(row.disabledOffline);
     if (disabled) {
-      if (row.id === MainMenuItemId.MIC) {
-        this.unavailableSettingsBannerUiState.showUnavailableBanner();
-      } else {
-        this.unavailableSettingsBannerUiState.showUnavailableBanner();
-      }
+      this.unavailableSettingsBannerUiState.showUnavailableBanner();
+    } else if (row.id === MainMenuItemId.MIC) {
+      this.rootStore.voiceStore.toggleMic();
     } else if (row.id === MainMenuItemId.SWITCH_UI) {
       this.switchToModernUI();
     } else {
