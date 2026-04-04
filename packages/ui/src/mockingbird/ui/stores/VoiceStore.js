@@ -62,6 +62,7 @@ class VoiceStore {
         else if (topic === "ai.state") this.onAIState(data);
         else if (topic === "ai.response") this.onAIResponse(data);
         else if (topic === "ai.tool_executed") this.onToolExecuted(data);
+        else if (topic === "audio.level") this._onMicLevel(data);
       }),
     });
   }
@@ -104,14 +105,13 @@ class VoiceStore {
     this.resetVoiceSessionState();
     overlayController.showVoice();
     this._startResponseTimeout();
-    this._startSyntheticMicLevel();
   });
 
   onTranscription = action((data) => {
     this.state.asr.transcript = data.transcript || "";
     this.state.asr.isFinal = !!data.is_final;
     if (data.is_final) {
-      this._stopSyntheticMicLevel();
+      this.micLevelMovingAverage = 0;
     }
   });
 
@@ -126,7 +126,7 @@ class VoiceStore {
   onAIResponse = action((data) => {
     this.state.aiResponse = data.text || "";
     this._clearResponseTimeout();
-    this._stopSyntheticMicLevel();
+    this.micLevelMovingAverage = 0;
   });
 
   onToolExecuted = action((data) => {
@@ -147,6 +147,10 @@ class VoiceStore {
     }
   });
 
+  _onMicLevel = action((data) => {
+    this.micLevelMovingAverage = data.level || 0;
+  });
+
   retry = action(() => {
     this.state.error = null;
     this.state.friendlyError = "";
@@ -155,7 +159,6 @@ class VoiceStore {
     this._clearResponseTimeout();
     this._clearCloseTimeout();
     this._startResponseTimeout();
-    this._startSyntheticMicLevel();
     sendNocturneWsRequest("audio.record.start", {});
   });
 
