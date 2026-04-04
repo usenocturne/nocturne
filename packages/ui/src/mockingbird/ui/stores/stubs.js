@@ -347,17 +347,6 @@ export class SettingsStore {
   handleSettingsButtonLongPress() {}
 }
 
-export class VoiceStore {
-  constructor(rootStore, socket, middlewareActions) {
-    this.rootStore = rootStore;
-    this.error = null;
-    this.intent = null;
-    makeAutoObservable(this, { rootStore: false });
-  }
-
-  resetVoiceSessionState() {}
-}
-
 export class SessionStateStore {
   constructor(rootStore, socket) {
     this.rootStore = rootStore;
@@ -664,7 +653,7 @@ export function createOverlayController(rootStore, ubiLogger) {
     currentOverlay: undefined,
 
     get anyOverlayIsShowing() {
-      return this.isSettingsShowing;
+      return this.currentOverlay !== undefined;
     },
 
     maybeShowAModal() {},
@@ -680,7 +669,18 @@ export function createOverlayController(rootStore, ubiLogger) {
     },
 
     hideSettings() {
+      if (this.currentOverlay !== "settings") return;
       this.isSettingsShowing = false;
+      this.currentOverlay = undefined;
+    },
+
+    showVoice() {
+      this.isSettingsShowing = false;
+      this.currentOverlay = "voice";
+    },
+
+    hideVoice() {
+      if (this.currentOverlay !== "voice") return;
       this.currentOverlay = undefined;
     },
 
@@ -698,7 +698,9 @@ export function createOverlayController(rootStore, ubiLogger) {
     showStandby() {},
 
     handleBackButton() {
-      if (this.isSettingsShowing && rootStore?.settingsStore) {
+      if (this.currentOverlay === "voice") {
+        rootStore?.voiceStore?.cancel();
+      } else if (this.isSettingsShowing && rootStore?.settingsStore) {
         rootStore.settingsStore.handleBack();
       }
     },

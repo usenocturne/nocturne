@@ -8,6 +8,7 @@ const reactToBackButton = (hardwareEvents, rootStore) => {
     overlayController,
     settingsStore,
     onboardingStore,
+    voiceStore,
   } = rootStore;
 
   const handleBackButton = action(() => {
@@ -18,6 +19,10 @@ const reactToBackButton = (hardwareEvents, rootStore) => {
       if (!onboardingStore.backEnabled) {
         return;
       }
+    }
+    if (overlayController.isShowing("voice")) {
+      voiceStore.cancel();
+      return;
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleBack();

@@ -100,8 +100,8 @@ class OnboardingStore {
     }
   }
 
-  onboardingMsgReceived = false;
-  onboardingFinished = false;
+  onboardingMsgReceived = true;
+  onboardingFinished = true;
   onboardingStarted = false;
   onboardingStep = OnboardingStepId.START;
   dialPressEnabled = false;

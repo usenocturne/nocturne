@@ -1,6 +1,8 @@
 import Views from "./Views/Views";
 import Presets from "./Views/Presets/Presets";
 import Settings from "./Settings/Settings";
+import Overlay, { FROM } from "./Overlays/Overlay";
+import Listening from "./Listening/Listening";
 import { useCarThingStore } from "../contexts/CarThingStore";
 import { useEffect } from "react";
 import { observer } from "mobx-react-lite";
@@ -16,6 +18,7 @@ const Main = () => {
     nightModeController,
     playbackProgress,
     onSeek,
+    voiceStore,
   } = useCarThingStore();
 
   useEffect(() => {
@@ -58,6 +61,12 @@ const Main = () => {
           </div>
         )}
         <Settings />
+        <Overlay
+          appear={FROM.FADE_IN}
+          show={overlayController.isShowing("voice")}
+        >
+          <Listening />
+        </Overlay>
       </div>
     </div>
   );

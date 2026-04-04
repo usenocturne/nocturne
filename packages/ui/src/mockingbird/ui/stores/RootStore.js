@@ -14,12 +14,12 @@ import PresetsController, { PresetsDataStore } from "./PresetsStore";
 import SettingsStore from "./SettingsStore";
 import BluetoothStore from "./BluetoothStore";
 import PhoneConnectionStore from "./PhoneConnectionStore";
+import VoiceStore from "./VoiceStore";
 import {
   NpvStore,
   RemoteControlStore,
   WindLevelStore,
   OtaStore,
-  VoiceStore,
   SessionStateStore,
   TimerStore,
   DevOptionsStore,
@@ -35,7 +35,6 @@ import {
   SavedStore,
   TipsStore,
   VersionStatusStore,
-  ErrorHandler,
   SwipeDownHandleUiState,
   PhoneCallController,
   NightModeController,
@@ -43,7 +42,6 @@ import {
   PromoController,
   DisconnectedLogger,
   createOverlayController,
-  MockPersistentStorage,
 } from "./stubs";
 import { reaction, extendObservable } from "mobx";
 

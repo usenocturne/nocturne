@@ -22,6 +22,7 @@ const reactToDial = (hardwareEvents, rootStore) => {
     overlayController,
     settingsStore,
     onboardingStore,
+    voiceStore,
   } = rootStore;
 
   const handleDialPress = action(() => {
@@ -35,6 +36,12 @@ const reactToDial = (hardwareEvents, rootStore) => {
       if (!onboardingStore.dialPressEnabled) {
         return;
       }
+    }
+    if (overlayController.isShowing("voice")) {
+      if (voiceStore.error || voiceStore.friendlyError) {
+        voiceStore.retry();
+      }
+      return;
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialPress();
@@ -115,6 +122,9 @@ const reactToDial = (hardwareEvents, rootStore) => {
         return;
       }
     }
+    if (overlayController.isShowing("voice")) {
+      return;
+    }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialLeft();
       return;
@@ -167,6 +177,9 @@ const reactToDial = (hardwareEvents, rootStore) => {
       if (!onboardingStore.dialTurnEnabled) {
         return;
       }
+    }
+    if (overlayController.isShowing("voice")) {
+      return;
     }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleDialRight();

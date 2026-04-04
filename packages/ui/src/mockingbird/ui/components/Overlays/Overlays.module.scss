@@ -1,0 +1,12 @@
+@use "../../styles/variables.module" as vars;
+
+.overlay {
+  height: vars.$device-height;
+  width: vars.$device-width;
+  position: absolute;
+  top: 0;
+  z-index: vars.$overlay-z-index;
+
+  @include vars.transition-opacity-transform;
+  @include vars.rounded-corners;
+}
