@@ -440,6 +440,15 @@ const setupGlobalWebSocket = async () => {
 
         if (data && data.type === "event" && data.topic === "app.ready") {
           const pendingPlatform = data.data?.platform || null;
+
+          if (pendingPlatform === "ios" || pendingPlatform === "android") {
+            sendWsRequest("device.launchApp", {
+              bundleId: "com.usenocturne.nocturne",
+            }).catch((err) => {
+              console.warn("Failed to send device.launchApp:", err);
+            });
+          }
+
           const pendingSpotifySkipped = data.data?.spotifySkipped === true;
           const pendingSubscribed = data.data?.subscribed === true;
           const pendingSubscriptionStatus =
