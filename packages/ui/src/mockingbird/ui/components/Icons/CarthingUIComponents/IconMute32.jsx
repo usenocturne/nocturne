@@ -1,7 +1,5 @@
-const IconMute32 = () => (
-  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 0a5 5 0 00-5 5v6c0 .91.244 1.766.67 2.502l-2.167 2.167A7.96 7.96 0 014 11V8a1 1 0 00-2 0v3a9.96 9.96 0 002.074 6.098l-2.281 2.28a1 1 0 001.357 1.468L20.477 3.518l.064-.06 1.666-1.665A1 1 0 0020.793.379L16.94 4.23A5.001 5.001 0 0012 0zm5 10.531l-5.449 5.45A5 5 0 0017 11v-.47zm-7.92 7.92l-1.514 1.514a9.937 9.937 0 003.434.986V24h2v-3.05c5.053-.501 9-4.765 9-9.95V8a1 1 0 10-2 0v3a8 8 0 01-10.92 7.45zM9.17 12A3.004 3.004 0 019 11V5a3 3 0 116 0v1.172L9.17 12z" />
-  </svg>
-);
+import { IconMicOff } from "../EncoreWeb/IconMicOff";
+
+const IconMute32 = () => <IconMicOff iconSize={32} />;
 
 export default IconMute32;

@@ -272,7 +272,7 @@ export class NpvStore {
       this.volumeUiState.parentStore = this;
     }
 
-    Object.defineProperty(this.playingInfoUiState, 'isMicMuted', {
+    Object.defineProperty(this.playingInfoUiState, "isMicMuted", {
       get: () => rootStore?.voiceStore?.isMicMuted ?? false,
       configurable: true,
     });

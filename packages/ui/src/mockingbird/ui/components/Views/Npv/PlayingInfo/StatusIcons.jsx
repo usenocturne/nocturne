@@ -1,5 +1,5 @@
 import {
-  IconMute32,
+  IconMicOff32,
   IconRepeat32,
   IconRepeatOne32,
   IconWind32,
@@ -37,7 +37,7 @@ const StatusIcons = () => {
       )}
       {uiState.isMicMuted && (
         <div data-testid="muted-icon" onClick={uiState.showSettings}>
-          <IconMute32 />
+          <IconMicOff32 />
         </div>
       )}
     </div>
