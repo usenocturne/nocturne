@@ -449,8 +449,8 @@ const setupGlobalWebSocket = async () => {
             });
           }
 
-          const pendingSpotifySkipped = data.data?.spotifySkipped === true;
-          const pendingSubscribed = data.data?.subscribed === true;
+          const pendingSpotifySkipped = !!data.data?.spotifySkipped;
+          const pendingSubscribed = !!data.data?.subscribed;
           const pendingSubscriptionStatus =
             data.data?.subscriptionStatus || null;
 
@@ -486,7 +486,7 @@ const setupGlobalWebSocket = async () => {
           data.type === "event" &&
           data.topic === "subscription.updated"
         ) {
-          appSubscribed = data.data?.subscribed === true;
+          appSubscribed = !!data.data?.subscribed;
           appSubscriptionStatus = data.data?.subscriptionStatus || null;
           emitAppSubscribedState();
         }
