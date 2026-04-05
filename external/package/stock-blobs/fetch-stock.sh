@@ -52,7 +52,7 @@ cp -a "$MNT_PATH"/lib/modules "$BUILD_PATH"/lib/
 
 cp -a "$MNT_PATH"/lib/firmware/brcm "$BUILD_PATH"/lib/firmware
 
-cp "$MNT_PATH"/usr/bin/{phb,uenv,sp-als-backlight} "$BUILD_PATH"/usr/bin/
+cp "$MNT_PATH"/usr/bin/{phb,uenv} "$BUILD_PATH"/usr/bin/
 cp -a "$MNT_PATH"/usr/bin/chromium-browser "$BUILD_PATH"/usr/bin/
 cp "$MNT_PATH"/usr/bin/swupdate* "$BUILD_PATH"/usr/bin/
 cp "$MNT_PATH"/usr/bin/weston* "$BUILD_PATH"/usr/bin/
