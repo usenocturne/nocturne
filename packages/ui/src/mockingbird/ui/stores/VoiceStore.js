@@ -12,7 +12,8 @@ import {
   PLAY_INTENT,
 } from "../components/Listening/VoiceConfirmationIntents";
 
-const RESPONSE_TIMEOUT = 15000;
+const CAPTURE_TIMEOUT = 10000;
+const AI_TIMEOUT = 30000;
 const TIMEOUT_BEFORE_CLOSING_LISTENING_MS = 7500;
 const OVERLAY_TRANSITION_DURATION_MS = 300;
 
@@ -37,7 +38,8 @@ class VoiceStore {
   isMicMuted = localStorage.getItem("mockingbird_mic_muted") === "true";
   microphoneLevelsSlidingWindow = [];
   _wsCleanup = null;
-  _responseTimeoutId = null;
+  _captureTimeoutId = null;
+  _aiTimeoutId = null;
   _closeTimeoutId = null;
   _micLevelIntervalId = null;
 
@@ -46,7 +48,8 @@ class VoiceStore {
     makeAutoObservable(this, {
       rootStore: false,
       _wsCleanup: false,
-      _responseTimeoutId: false,
+      _captureTimeoutId: false,
+      _aiTimeoutId: false,
       _closeTimeoutId: false,
       _micLevelIntervalId: false,
     });
@@ -110,7 +113,7 @@ class VoiceStore {
     if (this.isMicMuted) return;
     this.resetVoiceSessionState();
     overlayController.showVoice();
-    this._startResponseTimeout();
+    this._startCaptureTimeout();
   });
 
   onTranscription = action((data) => {
@@ -118,12 +121,20 @@ class VoiceStore {
     this.state.asr.isFinal = !!data.is_final;
     if (data.is_final) {
       this.micLevelMovingAverage = 0;
+      this._clearCaptureTimeout();
+      this._startAITimeout();
+    } else {
+      this._startCaptureTimeout();
     }
   });
 
   onAIState = action((data) => {
     const prevState = this.state.aiState;
     this.state.aiState = data.state || "idle";
+    if (data.state === "thinking" || data.state === "executing_tool") {
+      this._clearCaptureTimeout();
+      this._startAITimeout();
+    }
     if (data.state === "idle" && prevState === "speaking") {
       this._scheduleClose();
     }
@@ -131,7 +142,7 @@ class VoiceStore {
 
   onAIResponse = action((data) => {
     this.state.aiResponse = data.text || "";
-    this._clearResponseTimeout();
+    this._clearAITimeout();
     this.micLevelMovingAverage = 0;
   });
 
@@ -151,6 +162,7 @@ class VoiceStore {
       this.state.showingVoiceConfirmation = true;
       this.state.aiResponse = "";
     }
+    this._clearAITimeout();
   });
 
   _onMicLevel = action((data) => {
@@ -162,16 +174,18 @@ class VoiceStore {
     this.state.friendlyError = "";
     this.state.asr.transcript = "";
     this.state.asr.isFinal = false;
-    this._clearResponseTimeout();
+    this._clearCaptureTimeout();
+    this._clearAITimeout();
     this._clearCloseTimeout();
-    this._startResponseTimeout();
+    this._startCaptureTimeout();
     sendNocturneWsRequest("audio.record.start", {});
   });
 
   cancel = action(() => {
     sendNocturneWsRequest("audio.record.stop", {});
     this.rootStore.overlayController.hideVoice();
-    this._clearResponseTimeout();
+    this._clearCaptureTimeout();
+    this._clearAITimeout();
     this._clearCloseTimeout();
     this._stopSyntheticMicLevel();
     setTimeout(
@@ -194,29 +208,50 @@ class VoiceStore {
 
   resetVoiceSessionState = action(() => {
     this.state = getInitialVoiceSessionState();
-    this._clearResponseTimeout();
+    this._clearCaptureTimeout();
+    this._clearAITimeout();
     this._clearCloseTimeout();
     this._stopSyntheticMicLevel();
     this.micLevelMovingAverage = 0;
   });
 
-  _startResponseTimeout() {
-    this._clearResponseTimeout();
-    this._responseTimeoutId = setTimeout(
+  _startCaptureTimeout() {
+    this._clearCaptureTimeout();
+    this._captureTimeoutId = setTimeout(
       action(() => {
         this.state.error = "error";
         this.state.friendlyError = "Something went wrong. Tap to try again.";
         this._stopSyntheticMicLevel();
         this._scheduleClose();
       }),
-      RESPONSE_TIMEOUT,
+      CAPTURE_TIMEOUT,
     );
   }
 
-  _clearResponseTimeout() {
-    if (this._responseTimeoutId) {
-      clearTimeout(this._responseTimeoutId);
-      this._responseTimeoutId = null;
+  _clearCaptureTimeout() {
+    if (this._captureTimeoutId) {
+      clearTimeout(this._captureTimeoutId);
+      this._captureTimeoutId = null;
+    }
+  }
+
+  _startAITimeout() {
+    this._clearAITimeout();
+    this._aiTimeoutId = setTimeout(
+      action(() => {
+        this.state.error = "error";
+        this.state.friendlyError = "Something went wrong. Tap to try again.";
+        this._stopSyntheticMicLevel();
+        this._scheduleClose();
+      }),
+      AI_TIMEOUT,
+    );
+  }
+
+  _clearAITimeout() {
+    if (this._aiTimeoutId) {
+      clearTimeout(this._aiTimeoutId);
+      this._aiTimeoutId = null;
     }
   }
 
@@ -266,7 +301,8 @@ class VoiceStore {
       this._wsCleanup();
       this._wsCleanup = null;
     }
-    this._clearResponseTimeout();
+    this._clearCaptureTimeout();
+    this._clearAITimeout();
     this._clearCloseTimeout();
     this._stopSyntheticMicLevel();
   }
