@@ -133,9 +133,15 @@ class VoiceStore {
     this.state.aiState = data.state || "idle";
     if (data.state === "thinking" || data.state === "executing_tool") {
       this._clearCaptureTimeout();
+      this._clearCloseTimeout();
       this._startAITimeout();
     }
-    if (data.state === "idle" && prevState === "speaking") {
+    if (
+      data.state === "idle" &&
+      (prevState === "speaking" ||
+        prevState === "thinking" ||
+        prevState === "executing_tool")
+    ) {
       this._scheduleClose();
     }
   });
@@ -144,6 +150,14 @@ class VoiceStore {
     this.state.aiResponse = data.text || "";
     this._clearAITimeout();
     this.micLevelMovingAverage = 0;
+    if (data.text) {
+      this.state.showingVoiceConfirmation = false;
+      this.state.error = null;
+      this.state.friendlyError = "";
+      if (this.state.aiState !== "idle") {
+        this._clearCloseTimeout();
+      }
+    }
   });
 
   onToolExecuted = action((data) => {
