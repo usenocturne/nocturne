@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../components/common/navigation/Sidebar";
-import HorizontalScroll from "../components/common/navigation/HorizontalScroll";
+import SwiperCarousel from "../components/common/navigation/SwiperCarousel";
 import Settings from "../components/settings/Settings";
 import SpotifyImage from "../components/common/SpotifyImage";
 
-import { useNavigation } from "../hooks/useNavigation";
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
 import DonationQRModal from "../components/common/modals/DonationQRModal";
 import {
@@ -31,9 +30,6 @@ export default function Home({
   onOpenContent,
   updateGradientColors,
 }) {
-  const scrollContainerRef = useRef(null);
-  const itemWidth = 290;
-  const [newAlbumAdded, setNewAlbumAdded] = useState(false);
   const { playDJMix } = useSpotifyPlayerControls(currentPlayback);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [isSpotifySkipped, setIsSpotifySkipped] = useState(() =>
@@ -54,18 +50,6 @@ export default function Home({
   const handleOpenDonationModal = () => {
     setShowDonationModal(true);
   };
-
-  const { scrollByAmount } = useNavigation({
-    containerRef: scrollContainerRef,
-    activeSection,
-    enableScrollTracking: true,
-    enableWheelNavigation: true,
-    enableKeyboardNavigation: false,
-    enableItemSelection: false,
-    itemWidth: itemWidth,
-    itemGap: 40,
-    currentlyPlayingId: currentlyPlayingAlbum?.id,
-  });
 
   useEffect(() => {
     if (activeSection === "recents" && recentAlbums.length > 0) {
@@ -120,25 +104,6 @@ export default function Home({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeSection, setActiveSection]);
-
-  useEffect(() => {
-    if (recentAlbums.length > 0 && activeSection === "recents") {
-      setNewAlbumAdded(true);
-    }
-  }, [recentAlbums, activeSection]);
-
-  useEffect(() => {
-    if (newAlbumAdded && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        left: 0,
-        behavior: "smooth",
-      });
-
-      setTimeout(() => {
-        setNewAlbumAdded(false);
-      }, 300);
-    }
-  }, [newAlbumAdded]);
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.is_phone_media) return;
@@ -258,100 +223,6 @@ export default function Home({
     }
   };
 
-  const memoizedAlbumItems = useMemo(() => {
-    if (isLoading.recentAlbums) {
-      return Array(5)
-        .fill()
-        .map((_, index) => (
-          <div
-            key={`loading-${index}`}
-            className="min-w-[280px] pl-2 mr-10 snap-start"
-          >
-            <div
-              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
-              style={{ width: 280, height: 280 }}
-            ></div>
-            <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
-            <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
-          </div>
-        ));
-    }
-
-    if (recentAlbums.length === 0) {
-      return (
-        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-          No recent albums found
-        </div>
-      );
-    }
-
-    return recentAlbums.map((album) => (
-      <div
-        key={album.id}
-        className="min-w-[280px] pl-2 mr-10 snap-start"
-        data-id={album.id}
-        data-playing={album.id === currentlyPlayingAlbum?.id ? "true" : "false"}
-      >
-        <div
-          className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-          style={{ width: 280, height: 280 }}
-          onClick={() =>
-            album.type !== "local-track" &&
-            onOpenContent(album.id, album.type === "show" ? "show" : "album")
-          }
-        >
-          {album.type !== "local-track" ? (
-            <SpotifyImage
-              images={album.images}
-              preferredSizeIndex={1}
-              alt="Album Cover"
-              priority={50}
-              className="w-full h-full object-cover rounded-[12px]"
-            />
-          ) : album.type === "local-track" ? (
-            <img
-              src={album.images?.[0]?.url || "/images/not-playing.webp"}
-              alt="Local File"
-              className="w-full h-full object-cover rounded-[12px]"
-            />
-          ) : (
-            <div className="w-full h-full rounded-[12px] bg-white/10"></div>
-          )}
-        </div>
-
-        <h4
-          className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-          onClick={() =>
-            album.type !== "local-track" &&
-            onOpenContent(album.id, album.type === "show" ? "show" : "album")
-          }
-        >
-          {album.name}
-        </h4>
-
-        {album.type === "show"
-          ? album.publisher && (
-              <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                {album.publisher}
-              </h4>
-            )
-          : album.artists?.[0] && (
-              <h4
-                className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
-                onClick={() => onOpenContent(album.artists[0].id, "artist")}
-              >
-                {album.artists.map((artist) => artist.name).join(", ")}
-              </h4>
-            )}
-      </div>
-    ));
-  }, [
-    recentAlbums,
-    isLoading.recentAlbums,
-    currentlyPlayingAlbum?.id,
-    onOpenContent,
-  ]);
-
   const renderRecentsSection = () => {
     if (isSpotifySkipped) {
       return (
@@ -364,24 +235,102 @@ export default function Home({
       );
     }
 
-    return (
-      <HorizontalScroll
-        key="recents"
-        containerRef={scrollContainerRef}
-        currentlyPlayingId={currentlyPlayingAlbum?.id}
-        accessToken={accessToken}
-        activeSection={activeSection}
-        onItemSelect={handleRecentsItemSelect}
-      >
-        <div
-          ref={scrollContainerRef}
-          className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
-          style={{ willChange: "transform" }}
-        >
-          {memoizedAlbumItems}
-          <div className="min-w-4 flex-shrink-0"></div>
+    if (isLoading.recentAlbums) {
+      return (
+        <div className="flex gap-10 p-2">
+          {Array(5)
+            .fill()
+            .map((_, index) => (
+              <div key={`loading-${index}`} className="flex-shrink-0">
+                <div className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse w-[280px] h-[280px]"></div>
+                <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
+                <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
+              </div>
+            ))}
         </div>
-      </HorizontalScroll>
+      );
+    }
+
+    if (recentAlbums.length === 0) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          No recent albums found
+        </div>
+      );
+    }
+
+    return (
+      <SwiperCarousel
+        items={recentAlbums}
+        renderItem={(album, index, isActive) => (
+          <div
+            data-id={album.id}
+            className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
+          >
+            <div
+              className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+              onClick={() =>
+                album.type !== "local-track" &&
+                onOpenContent(
+                  album.id,
+                  album.type === "show" ? "show" : "album",
+                )
+              }
+            >
+              {album.type !== "local-track" ? (
+                <SpotifyImage
+                  images={album.images}
+                  preferredSizeIndex={1}
+                  alt="Album Cover"
+                  priority={50}
+                  className="w-full h-full object-cover rounded-[12px]"
+                />
+              ) : album.type === "local-track" ? (
+                <img
+                  src={album.images?.[0]?.url || "/images/not-playing.webp"}
+                  alt="Local File"
+                  className="w-full h-full object-cover rounded-[12px]"
+                />
+              ) : (
+                <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+              )}
+            </div>
+
+            <h4
+              className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+              onClick={() =>
+                album.type !== "local-track" &&
+                onOpenContent(
+                  album.id,
+                  album.type === "show" ? "show" : "album",
+                )
+              }
+            >
+              {album.name}
+            </h4>
+
+            {album.type === "show"
+              ? album.publisher && (
+                  <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                    {album.publisher}
+                  </h4>
+                )
+              : album.artists?.[0] && (
+                  <h4
+                    className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
+                    onClick={() => onOpenContent(album.artists[0].id, "artist")}
+                  >
+                    {album.artists.map((artist) => artist.name).join(", ")}
+                  </h4>
+                )}
+          </div>
+        )}
+        keyExtractor={(album) => album.id}
+        getItemId={(album) => album.id}
+        activeSection={activeSection}
+        currentlyPlayingId={currentlyPlayingAlbum?.id}
+        onItemSelect={handleRecentsItemSelect}
+      />
     );
   };
 
@@ -397,138 +346,118 @@ export default function Home({
       );
     }
 
+    const filteredPlaylists = isLoading.userPlaylists
+      ? []
+      : userPlaylists.filter(
+          (item) =>
+            (item?.type === "playlist" || item?.uri?.includes(":playlist:")) &&
+            item.id !== "37i9dQZF1EYkqdzj48dyYq",
+        );
+
+    const libraryItems = [
+      { ...likedSongs, id: "liked-songs" },
+      ...filteredPlaylists,
+    ];
+
     return (
-      <HorizontalScroll
-        containerRef={scrollContainerRef}
-        accessToken={accessToken}
+      <SwiperCarousel
+        items={libraryItems}
+        renderItem={(item, index, isActive) => {
+          if (item.id === "liked-songs") {
+            return (
+              <div
+                className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
+              >
+                <div
+                  className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                  onClick={() => onOpenContent("liked", "liked-songs")}
+                >
+                  <img
+                    src={item.images[0].url}
+                    alt="Liked Songs"
+                    className="w-full h-full object-cover rounded-[12px]"
+                  />
+                </div>
+                <h4
+                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                  onClick={() => onOpenContent("liked", "liked-songs")}
+                >
+                  {item.name}
+                </h4>
+                <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
+                  {isPlayingLikedSongs() ? (
+                    <>
+                      <div className="w-5 ml-0.5 mr-3 mb-2">
+                        <section>
+                          <div className="wave0"></div>
+                          <div className="wave1"></div>
+                          <div className="wave2"></div>
+                          <div className="wave3"></div>
+                        </section>
+                      </div>
+                      Now Playing
+                    </>
+                  ) : (
+                    `${item.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
+                  )}
+                </h4>
+              </div>
+            );
+          }
+
+          const playlist = item;
+          return (
+            <div
+              className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
+            >
+              <div
+                className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                onClick={() => onOpenContent(playlist.id, "playlist")}
+              >
+                {playlist?.images?.length > 0 ? (
+                  <SpotifyImage
+                    images={playlist.images}
+                    preferredSizeIndex={1}
+                    alt={`${playlist.name} Cover`}
+                    priority={30}
+                    className="w-full h-full object-cover rounded-[12px]"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+                )}
+              </div>
+              <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                {playlist.name}
+              </h4>
+              <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
+                {isPlayingFromPlaylist(playlist.id) ? (
+                  <>
+                    <div className="w-5 ml-0.5 mr-3 mb-2">
+                      <section>
+                        <div className="wave0"></div>
+                        <div className="wave1"></div>
+                        <div className="wave2"></div>
+                        <div className="wave3"></div>
+                      </section>
+                    </div>
+                    Now Playing
+                  </>
+                ) : playlist.tracks?.total != null ? (
+                  `${playlist.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
+                ) : playlist.owner?.display_name ? (
+                  `by ${playlist.owner.display_name}`
+                ) : (
+                  "Playlist"
+                )}
+              </h4>
+            </div>
+          );
+        }}
+        keyExtractor={(item) => item.id}
+        getItemId={(item) => item.id}
         activeSection={activeSection}
         onItemSelect={handleLibraryItemSelect}
-      >
-        <div
-          ref={scrollContainerRef}
-          className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
-          style={{ willChange: "transform" }}
-        >
-          <div
-            key="liked-songs"
-            className="min-w-[280px] pl-2 mr-10 snap-start"
-          >
-            <div
-              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-              style={{ width: 280, height: 280 }}
-              onClick={() => onOpenContent("liked", "liked-songs")}
-            >
-              <img
-                src={likedSongs.images[0].url}
-                alt="Liked Songs"
-                className="w-full h-full object-cover rounded-[12px]"
-              />
-            </div>
-            <h4
-              className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-              onClick={() => onOpenContent("liked", "liked-songs")}
-            >
-              {likedSongs.name}
-            </h4>
-            <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
-              {isPlayingLikedSongs() ? (
-                <>
-                  <div className="w-5 ml-0.5 mr-3 mb-2">
-                    <section>
-                      <div className="wave0"></div>
-                      <div className="wave1"></div>
-                      <div className="wave2"></div>
-                      <div className="wave3"></div>
-                    </section>
-                  </div>
-                  Now Playing
-                </>
-              ) : (
-                `${likedSongs.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
-              )}
-            </h4>
-          </div>
-
-          {isLoading.userPlaylists ? (
-            Array(3)
-              .fill()
-              .map((_, index) => (
-                <div
-                  key={`loading-playlist-${index}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                >
-                  <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
-                    style={{ width: 280, height: 280 }}
-                  ></div>
-                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
-                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
-                </div>
-              ))
-          ) : userPlaylists.length > 0 ? (
-            userPlaylists
-              .filter(
-                (item) =>
-                  (item?.type === "playlist" ||
-                    item?.uri?.includes(":playlist:")) &&
-                  item.id !== "37i9dQZF1EYkqdzj48dyYq",
-              )
-              .map((playlist, index) => (
-                <div
-                  key={`playlist-${playlist.id}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                >
-                  <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-                    style={{ width: 280, height: 280 }}
-                    onClick={() => onOpenContent(playlist.id, "playlist")}
-                  >
-                    {playlist?.images?.length > 0 ? (
-                      <SpotifyImage
-                        images={playlist.images}
-                        preferredSizeIndex={1}
-                        alt={`${playlist.name} Cover`}
-                        priority={30}
-                        className="w-full h-full object-cover rounded-[12px]"
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-[12px] bg-white/10"></div>
-                    )}
-                  </div>
-                  <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-                    {playlist.name}
-                  </h4>
-                  <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
-                    {isPlayingFromPlaylist(playlist.id) ? (
-                      <>
-                        <div className="w-5 ml-0.5 mr-3 mb-2">
-                          <section>
-                            <div className="wave0"></div>
-                            <div className="wave1"></div>
-                            <div className="wave2"></div>
-                            <div className="wave3"></div>
-                          </section>
-                        </div>
-                        Now Playing
-                      </>
-                    ) : playlist.tracks?.total != null ? (
-                      `${playlist.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
-                    ) : playlist.owner?.display_name ? (
-                      `by ${playlist.owner.display_name}`
-                    ) : (
-                      "Playlist"
-                    )}
-                  </h4>
-                </div>
-              ))
-          ) : (
-            <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-              No playlists found
-            </div>
-          )}
-          <div className="min-w-4 flex-shrink-0"></div>
-        </div>
-      </HorizontalScroll>
+      />
     );
   };
 
@@ -554,93 +483,86 @@ export default function Home({
       );
     }
 
+    if (isLoading.topArtists) {
+      return (
+        <div className="flex gap-10 p-2">
+          {Array(5)
+            .fill()
+            .map((_, index) => (
+              <div key={`loading-artist-${index}`} className="flex-shrink-0">
+                <div className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse w-[280px] h-[280px]"></div>
+                <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
+                <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
+              </div>
+            ))}
+        </div>
+      );
+    }
+
+    if (topArtists.length === 0) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          No artists found
+        </div>
+      );
+    }
+
     return (
-      <HorizontalScroll
-        containerRef={scrollContainerRef}
-        accessToken={accessToken}
+      <SwiperCarousel
+        items={topArtists}
+        renderItem={(artist, index, isActive) => (
+          <div
+            data-id={artist.id}
+            className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
+          >
+            <div
+              className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+              onClick={() => onOpenContent(artist.id, "artist")}
+            >
+              {artist.images?.length > 0 ? (
+                <SpotifyImage
+                  images={artist.images}
+                  preferredSizeIndex={1}
+                  alt={`${artist.name} Profile`}
+                  priority={20}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-white/10"></div>
+              )}
+            </div>
+            <h4
+              className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+              onClick={() => onOpenContent(artist.id, "artist")}
+            >
+              {artist.name}
+            </h4>
+            <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
+              {isFromCurrentlyPlayingArtist(artist.id) ? (
+                <>
+                  <div className="w-5 ml-0.5 mr-3 mb-2">
+                    <section>
+                      <div className="wave0"></div>
+                      <div className="wave1"></div>
+                      <div className="wave2"></div>
+                      <div className="wave3"></div>
+                    </section>
+                  </div>
+                  Now Playing
+                </>
+              ) : artist.followers?.total != null ? (
+                `${formatFollowerCount(artist.followers.total)} Followers`
+              ) : (
+                "Top Artist"
+              )}
+            </h4>
+          </div>
+        )}
+        keyExtractor={(artist) => artist.id}
+        getItemId={(artist) => artist.id}
         activeSection={activeSection}
         onItemSelect={handleArtistsItemSelect}
-      >
-        <div
-          ref={scrollContainerRef}
-          className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
-          style={{ willChange: "transform" }}
-        >
-          {isLoading.topArtists ? (
-            Array(5)
-              .fill()
-              .map((_, index) => (
-                <div
-                  key={`loading-artist-${index}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                >
-                  <div
-                    className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
-                    style={{ width: 280, height: 280 }}
-                  ></div>
-                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
-                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
-                </div>
-              ))
-          ) : topArtists.length > 0 ? (
-            topArtists.map((artist, index) => (
-              <div
-                key={artist.id}
-                className="min-w-[280px] pl-2 mr-10 snap-start"
-                data-id={artist.id}
-              >
-                <div
-                  className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-                  style={{ width: 280, height: 280 }}
-                  onClick={() => onOpenContent(artist.id, "artist")}
-                >
-                  {artist.images?.length > 0 ? (
-                    <SpotifyImage
-                      images={artist.images}
-                      preferredSizeIndex={1}
-                      alt={`${artist.name} Profile`}
-                      priority={20}
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                  ) : (
-                    <div className="w-full h-full rounded-full bg-white/10"></div>
-                  )}
-                </div>
-                <h4
-                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-                  onClick={() => onOpenContent(artist.id, "artist")}
-                >
-                  {artist.name}
-                </h4>
-                <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
-                  {isFromCurrentlyPlayingArtist(artist.id) ? (
-                    <>
-                      <div className="w-5 ml-0.5 mr-3 mb-2">
-                        <section>
-                          <div className="wave0"></div>
-                          <div className="wave1"></div>
-                          <div className="wave2"></div>
-                          <div className="wave3"></div>
-                        </section>
-                      </div>
-                      Now Playing
-                    </>
-                  ) : artist.followers?.total != null ? (
-                    `${formatFollowerCount(artist.followers.total)} Followers`
-                  ) : (
-                    "Top Artist"
-                  )}
-                </h4>
-              </div>
-            ))
-          ) : (
-            <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-              No artists found
-            </div>
-          )}
-          <div className="min-w-4 flex-shrink-0"></div>
-        </div>
-      </HorizontalScroll>
+      />
     );
   };
 
@@ -656,122 +578,49 @@ export default function Home({
       );
     }
 
-    return (
-      <HorizontalScroll
-        containerRef={scrollContainerRef}
-        accessToken={accessToken}
-        activeSection={activeSection}
-        onItemSelect={handleRadioItemSelect}
-      >
-        <div
-          ref={scrollContainerRef}
-          className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
-          style={{ willChange: "transform" }}
-        >
-          <div
-            key="dj-playlist"
-            className="min-w-[280px] pl-2 mr-10 snap-start"
-          >
-            <div
-              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10"
-              style={{ width: 280, height: 280 }}
-              onClick={() => {
-                if (isPlayingDJ()) {
-                  setActiveSection("nowPlaying");
-                } else {
-                  playDJMix(currentPlayback?.device?.id).then((success) => {
-                    if (success) {
-                      setTimeout(() => {
-                        refreshPlaybackState();
-                        setActiveSection("nowPlaying");
-                      }, 500);
-                    }
-                  });
-                }
-              }}
-            >
-              <img
-                src="/images/radio-cover/dj.webp"
-                alt="DJ Playlist"
-                className="w-full h-full object-cover rounded-[12px]"
-              />
-            </div>
-            <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
-              DJ
-            </h4>
-            <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
-              {isPlayingDJ() ? (
-                <>
-                  <div className="w-5 ml-0.5 mr-3 mb-2">
-                    <section>
-                      <div className="wave0"></div>
-                      <div className="wave1"></div>
-                      <div className="wave2"></div>
-                      <div className="wave3"></div>
-                    </section>
-                  </div>
-                  Now Playing
-                </>
-              ) : (
-                "Made for You"
-              )}
-            </h4>
-          </div>
+    const availableMixes = isLoading.radioMixes ? [] : radioMixes;
+    const radioItems = [
+      { id: "dj-playlist", type: "dj", name: "DJ" },
+      ...availableMixes,
+    ];
 
-          {isLoading.radioMixes ? (
-            Array(5)
-              .fill()
-              .map((_, index) => (
-                <div
-                  key={`loading-${index}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                >
-                  <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
-                    style={{ width: 280, height: 280 }}
-                  ></div>
-                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
-                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
-                </div>
-              ))
-          ) : radioMixes.length > 0 ? (
-            radioMixes.map((mix, index) => (
+    return (
+      <SwiperCarousel
+        items={radioItems}
+        renderItem={(item, index, isActive) => {
+          if (item.type === "dj") {
+            return (
               <div
-                key={`${mix.id}-${index}`}
-                className="min-w-[280px] pl-2 mr-10 snap-start"
-                data-id={mix.id}
+                className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
               >
                 <div
-                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-                  style={{ width: 280, height: 280 }}
-                  onClick={() => onOpenContent(mix.id, "mix")}
+                  className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10"
+                  onClick={() => {
+                    if (isPlayingDJ()) {
+                      setActiveSection("nowPlaying");
+                    } else {
+                      playDJMix(currentPlayback?.device?.id).then((success) => {
+                        if (success) {
+                          setTimeout(() => {
+                            refreshPlaybackState();
+                            setActiveSection("nowPlaying");
+                          }, 500);
+                        }
+                      });
+                    }
+                  }}
                 >
-                  {mix.type === "static" && mix.images?.[0]?.url ? (
-                    <img
-                      src={mix.images[0].url}
-                      alt={`${mix.name} Cover`}
-                      className="w-full h-full object-cover rounded-[12px]"
-                    />
-                  ) : mix.images?.length > 0 ? (
-                    <SpotifyImage
-                      images={mix.images}
-                      preferredSizeIndex={0}
-                      alt={`${mix.name} Cover`}
-                      priority={10}
-                      className="w-full h-full object-cover rounded-[12px]"
-                    />
-                  ) : (
-                    <div className="w-full h-full rounded-[12px] bg-white/10"></div>
-                  )}
+                  <img
+                    src="/images/radio-cover/dj.webp"
+                    alt="DJ Playlist"
+                    className="w-full h-full object-cover rounded-[12px]"
+                  />
                 </div>
-                <h4
-                  className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-                  onClick={() => onOpenContent(mix.id, "mix")}
-                >
-                  {mix.name}
+                <h4 className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]">
+                  DJ
                 </h4>
                 <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
-                  {isPlayingFromMix(mix.id) ? (
+                  {isPlayingDJ() ? (
                     <>
                       <div className="w-5 ml-0.5 mr-3 mb-2">
                         <section>
@@ -784,19 +633,72 @@ export default function Home({
                       Now Playing
                     </>
                   ) : (
-                    `${mix.tracks?.total || mix.trackCount || (mix.tracks ? mix.tracks.length : 0)} Tracks`
+                    "Made for You"
                   )}
                 </h4>
               </div>
-            ))
-          ) : (
-            <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-              No mixes found
+            );
+          }
+
+          const mix = item;
+          return (
+            <div
+              data-id={mix.id}
+              className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
+            >
+              <div
+                className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                onClick={() => onOpenContent(mix.id, "mix")}
+              >
+                {mix.type === "static" && mix.images?.[0]?.url ? (
+                  <img
+                    src={mix.images[0].url}
+                    alt={`${mix.name} Cover`}
+                    className="w-full h-full object-cover rounded-[12px]"
+                  />
+                ) : mix.images?.length > 0 ? (
+                  <SpotifyImage
+                    images={mix.images}
+                    preferredSizeIndex={0}
+                    alt={`${mix.name} Cover`}
+                    priority={10}
+                    className="w-full h-full object-cover rounded-[12px]"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+                )}
+              </div>
+              <h4
+                className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                onClick={() => onOpenContent(mix.id, "mix")}
+              >
+                {mix.name}
+              </h4>
+              <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px] flex items-center">
+                {isPlayingFromMix(mix.id) ? (
+                  <>
+                    <div className="w-5 ml-0.5 mr-3 mb-2">
+                      <section>
+                        <div className="wave0"></div>
+                        <div className="wave1"></div>
+                        <div className="wave2"></div>
+                        <div className="wave3"></div>
+                      </section>
+                    </div>
+                    Now Playing
+                  </>
+                ) : (
+                  `${mix.tracks?.total || mix.trackCount || (mix.tracks ? mix.tracks.length : 0)} Tracks`
+                )}
+              </h4>
             </div>
-          )}
-          <div className="min-w-4 flex-shrink-0"></div>
-        </div>
-      </HorizontalScroll>
+          );
+        }}
+        keyExtractor={(item) => item.id}
+        getItemId={(item) => item.id}
+        activeSection={activeSection}
+        onItemSelect={handleRadioItemSelect}
+      />
     );
   };
 
@@ -812,80 +714,73 @@ export default function Home({
       );
     }
 
+    if (isLoading.userShows) {
+      return (
+        <div className="flex gap-10 p-2">
+          {Array(5)
+            .fill()
+            .map((_, index) => (
+              <div key={`loading-${index}`} className="flex-shrink-0">
+                <div className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse w-[280px] h-[280px]"></div>
+                <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
+                <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
+              </div>
+            ))}
+        </div>
+      );
+    }
+
+    if (userShows.length === 0) {
+      return (
+        <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
+          No podcasts found
+        </div>
+      );
+    }
+
     return (
-      <HorizontalScroll
-        containerRef={scrollContainerRef}
-        accessToken={accessToken}
+      <SwiperCarousel
+        items={userShows}
+        renderItem={(item, index, isActive) => {
+          const show = item.show;
+          return (
+            <div
+              data-id={show.id}
+              className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
+            >
+              <div
+                className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                onClick={() => onOpenContent(show.id, "show")}
+              >
+                {show.images?.length > 0 ? (
+                  <SpotifyImage
+                    images={show.images}
+                    preferredSizeIndex={1}
+                    alt={`${show.name} Cover`}
+                    priority={20}
+                    className="w-full h-full object-cover rounded-[12px]"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-[12px] bg-white/10"></div>
+                )}
+              </div>
+              <h4
+                className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
+                onClick={() => onOpenContent(show.id, "show")}
+              >
+                {show.name}
+              </h4>
+              <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
+                {show.publisher}
+              </h4>
+            </div>
+          );
+        }}
+        keyExtractor={(item) => item.show.id}
+        getItemId={(item) => item.show.id}
         activeSection={activeSection}
         onItemSelect={handlePodcastsItemSelect}
-      >
-        <div
-          ref={scrollContainerRef}
-          className="flex overflow-x-auto scroll-container p-2 snap-x snap-mandatory"
-          style={{ willChange: "transform" }}
-        >
-          {isLoading.userShows ? (
-            Array(5)
-              .fill()
-              .map((_, index) => (
-                <div
-                  key={`loading-${index}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                >
-                  <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse"
-                    style={{ width: 280, height: 280 }}
-                  ></div>
-                  <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
-                  <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
-                </div>
-              ))
-          ) : userShows.length > 0 ? (
-            userShows.map((item, i) => {
-              const show = item.show;
-              return (
-                <div
-                  key={`${show.id}-${i}`}
-                  className="min-w-[280px] pl-2 mr-10 snap-start"
-                  data-id={show.id}
-                >
-                  <div
-                    className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-                    style={{ width: 280, height: 280 }}
-                    onClick={() => onOpenContent(show.id, "show")}
-                  >
-                    {show.images?.length > 0 ? (
-                      <SpotifyImage
-                        images={show.images}
-                        preferredSizeIndex={1}
-                        alt={`${show.name} Cover`}
-                        priority={20}
-                        className="w-full h-full object-cover rounded-[12px]"
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-[12px] bg-white/10"></div>
-                    )}
-                  </div>
-                  <h4
-                    className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-                    onClick={() => onOpenContent(show.id, "show")}
-                  >
-                    {show.name}
-                  </h4>
-                  <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
-                    {show.publisher}
-                  </h4>
-                </div>
-              );
-            })
-          ) : (
-            <div className="flex items-center justify-center w-full h-64 text-white/50 text-2xl">
-              No podcasts found
-            </div>
-          )}
-          <div className="min-w-4 flex-shrink-0"></div>
-        </div>
-      </HorizontalScroll>
+      />
     );
   };
 
@@ -930,7 +825,9 @@ export default function Home({
           />
         </div>
 
-        <div className="h-screen overflow-y-auto">{renderContent()}</div>
+        <div className="h-screen overflow-y-auto overflow-x-hidden">
+          {renderContent()}
+        </div>
       </div>
 
       {showDonationModal && (
