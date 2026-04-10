@@ -242,7 +242,10 @@ export default function Home({
             .fill()
             .map((_, index) => (
               <div key={`loading-${index}`} className="flex-shrink-0">
-                <div className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse w-[280px] h-[280px]"></div>
+                <div
+                  style={{ width: 280, height: 280 }}
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse w-[280px] h-[280px]"
+                ></div>
                 <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
                 <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
               </div>
@@ -268,7 +271,8 @@ export default function Home({
             className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
           >
             <div
-              className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+              style={{ width: 280, height: 280 }}
+              className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
               onClick={() =>
                 album.type !== "local-track" &&
                 onOpenContent(
@@ -369,7 +373,8 @@ export default function Home({
                 className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
               >
                 <div
-                  className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                  style={{ width: 280, height: 280 }}
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                   onClick={() => onOpenContent("liked", "liked-songs")}
                 >
                   <img
@@ -411,7 +416,8 @@ export default function Home({
               className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
             >
               <div
-                className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                style={{ width: 280, height: 280 }}
+                className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                 onClick={() => onOpenContent(playlist.id, "playlist")}
               >
                 {playlist?.images?.length > 0 ? (
@@ -516,6 +522,7 @@ export default function Home({
             className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
           >
             <div
+              style={{ width: 280, height: 280 }}
               className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
               onClick={() => onOpenContent(artist.id, "artist")}
             >
@@ -594,7 +601,8 @@ export default function Home({
                 className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
               >
                 <div
-                  className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10"
+                  style={{ width: 280, height: 280 }}
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10"
                   onClick={() => {
                     if (isPlayingDJ()) {
                       setActiveSection("nowPlaying");
@@ -647,7 +655,8 @@ export default function Home({
               className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
             >
               <div
-                className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                style={{ width: 280, height: 280 }}
+                className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                 onClick={() => onOpenContent(mix.id, "mix")}
               >
                 {mix.type === "static" && mix.images?.[0]?.url ? (
@@ -721,7 +730,10 @@ export default function Home({
             .fill()
             .map((_, index) => (
               <div key={`loading-${index}`} className="flex-shrink-0">
-                <div className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse w-[280px] h-[280px]"></div>
+                <div
+                  style={{ width: 280, height: 280 }}
+                  className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse w-[280px] h-[280px]"
+                ></div>
                 <div className="mt-2 h-9 w-48 bg-white/10 rounded animate-pulse"></div>
                 <div className="mt-2 h-8 w-40 bg-white/10 rounded animate-pulse"></div>
               </div>
@@ -749,7 +761,8 @@ export default function Home({
               className={`pl-2 transition-transform duration-200 ease-out ${isActive ? "scale-105" : ""}`}
             >
               <div
-                className="mt-10 w-[280px] aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+                style={{ width: 280, height: 280 }}
+                className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
                 onClick={() => onOpenContent(show.id, "show")}
               >
                 {show.images?.length > 0 ? (

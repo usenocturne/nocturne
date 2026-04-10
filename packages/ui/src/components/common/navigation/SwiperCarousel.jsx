@@ -1,8 +1,6 @@
 import { useRef } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Virtual } from "swiper/modules";
 import "swiper/css";
-import "swiper/css/virtual";
 import {
   useSwiperNavigation,
   setDragging,
@@ -39,17 +37,12 @@ export default function SwiperCarousel({
 
   return (
     <Swiper
-      modules={[Virtual]}
       allowTouchMove
       slidesPerView={1.5}
       spaceBetween={40}
       slidesOffsetBefore={8}
       slidesOffsetAfter={8}
       speed={TRANSITION_DURATION_MS}
-      virtual={{
-        addSlidesBefore: 2,
-        addSlidesAfter: 1,
-      }}
       touchStartPreventDefault={false}
       onSwiper={(swiper) => (swiperRef.current = swiper)}
       onTouchStart={() => {
@@ -73,12 +66,11 @@ export default function SwiperCarousel({
         }
       }}
       className="pt-2"
-      className="pt-2"
       style={{ overflow: "visible" }}
     >
       {items.map((item, index) => (
-        <SwiperSlide key={keyExtractor(item)} virtualIndex={index}>
-          {() => renderItem(item, index, index === selectedIndex)}
+        <SwiperSlide key={keyExtractor(item)}>
+          {renderItem(item, index, index === selectedIndex)}
         </SwiperSlide>
       ))}
     </Swiper>
