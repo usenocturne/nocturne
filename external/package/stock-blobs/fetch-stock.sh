@@ -59,7 +59,7 @@ cp "$MNT_PATH"/usr/bin/weston* "$BUILD_PATH"/usr/bin/
 
 cp -a "$MNT_PATH"/usr/lib/{libweston-3,weston} "$BUILD_PATH"/usr/lib/
 
-cp "$MNT_PATH"/usr/lib/libasound.so.2.0.0 "$BUILD_PATH"/usr/lib/
+
 cp "$MNT_PATH"/usr/lib/libatomic.so.1.2.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libcairo.so.2.11512.0 "$BUILD_PATH"/usr/lib/
 cp "$MNT_PATH"/usr/lib/libconfig.so.11.0.2 "$BUILD_PATH"/usr/lib/
