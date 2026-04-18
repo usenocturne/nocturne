@@ -10,12 +10,26 @@ import {
   REPEAT_OFF_INTENT,
   ADD_TO_COLLECTION_INTENT,
   PLAY_INTENT,
+  STOP_INTENT,
+  NEXT_INTENT,
+  PREVIOUS_INTENT,
 } from "../components/Listening/VoiceConfirmationIntents";
 
 const CAPTURE_TIMEOUT = 10000;
 const AI_TIMEOUT = 30000;
 const TIMEOUT_BEFORE_CLOSING_LISTENING_MS = 7500;
+const TERMINAL_CONFIRMATION_CLOSE_MS = 1500;
 const OVERLAY_TRANSITION_DURATION_MS = 300;
+
+const TERMINAL_TOOLS = new Set([
+  "spotify_next",
+  "spotify_previous",
+  "spotify_pause",
+  "spotify_volume",
+  "spotify_save_track",
+  "spotify_shuffle",
+  "spotify_repeat",
+]);
 
 const getInitialVoiceSessionState = () => ({
   asr: {
@@ -42,6 +56,7 @@ class VoiceStore {
   _aiTimeoutId = null;
   _closeTimeoutId = null;
   _micLevelIntervalId = null;
+  _terminalAutoCloseActive = false;
 
   constructor(rootStore, socket, middlewareActions) {
     this.rootStore = rootStore;
@@ -52,6 +67,7 @@ class VoiceStore {
       _aiTimeoutId: false,
       _closeTimeoutId: false,
       _micLevelIntervalId: false,
+      _terminalAutoCloseActive: false,
     });
 
     void socket;
@@ -131,6 +147,7 @@ class VoiceStore {
   onAIState = action((data) => {
     const prevState = this.state.aiState;
     this.state.aiState = data.state || "idle";
+    if (this._terminalAutoCloseActive) return;
     if (data.state === "thinking" || data.state === "executing_tool") {
       this._clearCaptureTimeout();
       this._clearCloseTimeout();
@@ -147,6 +164,7 @@ class VoiceStore {
   });
 
   onAIResponse = action((data) => {
+    if (this._terminalAutoCloseActive) return;
     this.state.aiResponse = data.text || "";
     this._clearAITimeout();
     this.micLevelMovingAverage = 0;
@@ -169,6 +187,9 @@ class VoiceStore {
       spotify_repeat_off: REPEAT_OFF_INTENT,
       spotify_save_track: ADD_TO_COLLECTION_INTENT,
       spotify_play: PLAY_INTENT,
+      spotify_pause: STOP_INTENT,
+      spotify_next: NEXT_INTENT,
+      spotify_previous: PREVIOUS_INTENT,
     };
     const intent = intentMap[tool];
     if (intent) {
@@ -177,6 +198,11 @@ class VoiceStore {
       this.state.aiResponse = "";
     }
     this._clearAITimeout();
+
+    if (TERMINAL_TOOLS.has(tool)) {
+      this._terminalAutoCloseActive = true;
+      this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
+    }
   });
 
   _onMicLevel = action((data) => {
@@ -184,6 +210,7 @@ class VoiceStore {
   });
 
   retry = action(() => {
+    this._terminalAutoCloseActive = false;
     this.state.error = null;
     this.state.friendlyError = "";
     this.state.asr.transcript = "";
@@ -222,6 +249,7 @@ class VoiceStore {
 
   resetVoiceSessionState = action(() => {
     this.state = getInitialVoiceSessionState();
+    this._terminalAutoCloseActive = false;
     this._clearCaptureTimeout();
     this._clearAITimeout();
     this._clearCloseTimeout();
@@ -269,7 +297,7 @@ class VoiceStore {
     }
   }
 
-  _scheduleClose() {
+  _scheduleClose(delayMs = TIMEOUT_BEFORE_CLOSING_LISTENING_MS) {
     this._clearCloseTimeout();
     this._closeTimeoutId = setTimeout(
       action(() => {
@@ -281,7 +309,7 @@ class VoiceStore {
           OVERLAY_TRANSITION_DURATION_MS,
         );
       }),
-      TIMEOUT_BEFORE_CLOSING_LISTENING_MS,
+      delayMs,
     );
   }
 

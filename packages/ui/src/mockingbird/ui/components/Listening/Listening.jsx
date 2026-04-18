@@ -22,6 +22,10 @@ const INTENT_TO_CONFIRMATION_TEXT = {
   SET_PLAYBACK_SPEED_1POINT2X: "Playback speed set",
   SET_PLAYBACK_SPEED_1X: "Playback speed set",
   MUTE_MIC: "Microphone off",
+  PLAY: "Playing",
+  STOP: "Paused",
+  NEXT: "Skipped",
+  PREVIOUS: "Previous",
 };
 
 const ACTION_TO_CONFIRMATION_TEXT = {
