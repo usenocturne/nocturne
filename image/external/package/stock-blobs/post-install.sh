@@ -29,7 +29,7 @@ ln -sf libcairo.so.2.11512.0 "$ROOTFS_PATH"/usr/lib/libcairo.so.2
 ln -sf libatomic.so.1.2.0 "$ROOTFS_PATH"/usr/lib/libatomic.so.1
 ln -sf libwebp.so.7.0.3 "$ROOTFS_PATH"/usr/lib/libwebp.so.7
 ln -sf libjpeg.so.9.3.0 "$ROOTFS_PATH"/usr/lib/libjpeg.so.9
-ln -sf libasound.so.2.0.0 "$ROOTFS_PATH"/usr/lib/libasound.so.2
+
 ln -sf libfontconfig.so.1.12.0 "$ROOTFS_PATH"/usr/lib/libfontconfig.so.1
 ln -sf libfreetype.so.6.16.1 "$ROOTFS_PATH"/usr/lib/libfreetype.so.6
 ln -sf libpng16.so.16.36.0 "$ROOTFS_PATH"/usr/lib/libpng16.so.16
