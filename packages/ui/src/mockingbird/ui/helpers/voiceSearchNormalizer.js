@@ -85,3 +85,43 @@ export function isEmptyVoiceResult(result) {
     (!result.playlists || result.playlists.length === 0)
   );
 }
+
+/**
+ * Normalizes spotify_get_recently_played result into VoiceItem[].
+ * Input: { albums: [{ uri, id, name, images:[{url,height,width}], artists:[{name,uri,id}] }] }
+ */
+export function normalizeRecentlyPlayedResult(result) {
+  if (!result || typeof result !== "object") return [];
+  const items = [];
+  const seenUris = new Set();
+  for (const a of result.albums ?? []) {
+    if (items.length >= MAX_VOICE_ITEMS) break;
+    const uri = a.uri ?? "";
+    if (!uri || seenUris.has(uri)) continue;
+    seenUris.add(uri);
+    const firstArtist =
+      Array.isArray(a.artists) && a.artists.length > 0
+        ? (a.artists[0]?.name ?? "")
+        : "";
+    const firstImage =
+      Array.isArray(a.images) && a.images.length > 0
+        ? (a.images[0]?.url ?? "")
+        : "";
+    items.push({
+      uri,
+      title: a.name ?? "",
+      subtitle: firstArtist || "Album",
+      image_url: firstImage,
+      kind: "album",
+    });
+  }
+  return items;
+}
+
+/**
+ * Returns true when the albums array is absent or empty.
+ */
+export function isEmptyRecentlyPlayedResult(result) {
+  if (!result || typeof result !== "object") return true;
+  return !result.albums || result.albums.length === 0;
+}

@@ -16,14 +16,13 @@ import {
   NEXT_INTENT,
   PREVIOUS_INTENT,
   SHOW_INTENT,
-  SEARCH_INTENT,
   ADD_TO_QUEUE_INTENT,
-  NO_INTENT,
-  SEARCH_RESULT_INTENTS,
 } from "../components/Listening/VoiceConfirmationIntents";
 import {
   normalizeSpotifySearchResult,
   isEmptyVoiceResult,
+  normalizeRecentlyPlayedResult,
+  isEmptyRecentlyPlayedResult,
 } from "../helpers/voiceSearchNormalizer";
 
 const CAPTURE_TIMEOUT = 10000;
@@ -51,15 +50,18 @@ const NO_ICON_INTENTS = new Set([
   PREVIOUS_INTENT,
 ]);
 
-export const SEARCH_TOOL_NAMES = new Set(["spotify_search"]);
+export const VOICE_RESULT_TOOL_HANDLERS = {
+  spotify_search: {
+    normalize: normalizeSpotifySearchResult,
+    isEmpty: isEmptyVoiceResult,
+  },
+  spotify_get_recently_played: {
+    normalize: normalizeRecentlyPlayedResult,
+    isEmpty: isEmptyRecentlyPlayedResult,
+  },
+};
 export const MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT = 2000;
 export const PLAY_TIMEOUT_TO_NPV = 10000;
-
-const DEFAULT_SEARCH_RESULT_INTENT = SEARCH_RESULT_INTENTS.includes(
-  SEARCH_INTENT,
-)
-  ? SEARCH_INTENT
-  : NO_INTENT;
 
 function coerceBool(v) {
   if (v === true) return true;
@@ -106,26 +108,10 @@ function deriveSimpleIntent(tool, args) {
 }
 
 function deriveVoiceResultIntent(toolArguments, toolsExecutedThisSession) {
-  const types = toolArguments?.types;
-
-  if (
-    Array.isArray(types) &&
-    types.length === 1 &&
-    types[0] === "artist" &&
-    SEARCH_RESULT_INTENTS.includes(SHOW_INTENT)
-  ) {
-    return SHOW_INTENT;
-  }
-
   if (toolsExecutedThisSession.has("spotify_play")) {
     return PLAY_INTENT;
   }
-
-  if (DEFAULT_SEARCH_RESULT_INTENT === NO_INTENT) {
-    return PLAY_INTENT;
-  }
-
-  return DEFAULT_SEARCH_RESULT_INTENT;
+  return SHOW_INTENT;
 }
 
 const getInitialVoiceSessionState = () => ({
@@ -352,8 +338,9 @@ class VoiceStore {
     this._toolsExecutedThisSession.add(tool);
     this._clearAITimeout();
 
-    if (SEARCH_TOOL_NAMES.has(tool)) {
-      this._handleSearchToolResult(data);
+    const handler = VOICE_RESULT_TOOL_HANDLERS[tool];
+    if (handler) {
+      this._handleVoiceResultTool(data, handler);
       return;
     }
 
@@ -371,18 +358,18 @@ class VoiceStore {
     }
   });
 
-  _handleSearchToolResult = action((data) => {
+  _handleVoiceResultTool = action((data, handler) => {
     const result = data.result;
     const toolArguments = data.tool_arguments;
 
-    if (isEmptyVoiceResult(result)) {
+    if (handler.isEmpty(result)) {
       this._discardPendingVoicePopulation();
       this.state.friendlyError = "Sorry, I couldn't find anything.";
       this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
       return;
     }
 
-    const voiceItems = normalizeSpotifySearchResult(result);
+    const voiceItems = handler.normalize(result);
     this._pendingVoicePopulation = { voiceItems, toolArguments };
   });
 
@@ -460,7 +447,8 @@ class VoiceStore {
     this._voiceResultNavigateTimeoutId = setTimeout(
       action(() => {
         this.rootStore.overlayController.hideVoice();
-        if (!isOnNpv) {
+        const shouldNavigateToShelf = !isOnNpv || intent === SHOW_INTENT;
+        if (shouldNavigateToShelf) {
           this.rootStore.viewStore.backToContentShelf(
             timeToNpv + MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT,
           );
