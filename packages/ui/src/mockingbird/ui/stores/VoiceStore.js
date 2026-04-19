@@ -450,6 +450,7 @@ class VoiceStore {
 
   goToVoiceResult = action((intent) => {
     if (this.rootStore.shelfStore.voiceItems.length === 0) return;
+    const isOnNpv = this.rootStore.viewStore.isNpv;
 
     const timeToNpv =
       intent === SHOW_INTENT ? DEFAULT_TIMEOUT_TO_NPV : PLAY_TIMEOUT_TO_NPV;
@@ -459,39 +460,49 @@ class VoiceStore {
     this._voiceResultNavigateTimeoutId = setTimeout(
       action(() => {
         this.rootStore.overlayController.hideVoice();
-        this.rootStore.viewStore.backToContentShelf(
-          timeToNpv + MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT,
-        );
-        setTimeout(
-          action(() => {
-            this.rootStore.shelfStore.shelfController.headerUiState.selectedCategoryId =
-              "voice";
-            const items =
-              this.rootStore.shelfStore.shelfController.swiperUiState
-                .allShelfItems;
-            const firstVoiceIdx = items.findIndex(
-              (it) => it.category === "voice" && it.type === "CONTEXT_ITEM",
-            );
-            if (firstVoiceIdx >= 0) {
-              this.rootStore.shelfStore.shelfController.swiperUiState.selectedItemIndex =
-                firstVoiceIdx;
-            }
-            this._voiceResultNavigateTimeoutId = null;
-          }),
-          150,
-        );
+        if (!isOnNpv) {
+          this.rootStore.viewStore.backToContentShelf(
+            timeToNpv + MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT,
+          );
+          setTimeout(
+            action(() => {
+              this.rootStore.shelfStore.shelfController.headerUiState.selectedCategoryId =
+                "voice";
+              const items =
+                this.rootStore.shelfStore.shelfController.swiperUiState
+                  .allShelfItems;
+              const firstVoiceIdx = items.findIndex(
+                (it) => it.category === "voice" && it.type === "CONTEXT_ITEM",
+              );
+              if (firstVoiceIdx >= 0) {
+                this.rootStore.shelfStore.shelfController.swiperUiState.selectedItemIndex =
+                  firstVoiceIdx;
+              }
+              this._voiceResultNavigateTimeoutId = null;
+            }),
+            150,
+          );
+        } else {
+          this._voiceResultNavigateTimeoutId = null;
+        }
       }),
       MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT,
     );
+
+    const resetDelay = isOnNpv
+      ? MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT +
+        OVERLAY_TRANSITION_DURATION_MS +
+        500
+      : MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT +
+        timeToNpv +
+        MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT;
 
     this._voiceResultResetTimeoutId = setTimeout(
       action(() => {
         this.resetVoiceSessionState();
         this._voiceResultResetTimeoutId = null;
       }),
-      MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT +
-        timeToNpv +
-        MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT,
+      resetDelay,
     );
   });
 
