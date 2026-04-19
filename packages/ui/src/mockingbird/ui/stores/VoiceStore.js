@@ -3,17 +3,28 @@ import {
   addGlobalWsListener,
   sendNocturneWsRequest,
 } from "../../../hooks/useNocturned";
+import { DEFAULT_TIMEOUT_TO_NPV } from "./ViewStore";
 import {
   SHUFFLE_ON_INTENT,
   SHUFFLE_OFF_INTENT,
   REPEAT_ON_INTENT,
   REPEAT_OFF_INTENT,
+  REPEAT_ONE_INTENT,
   ADD_TO_COLLECTION_INTENT,
   PLAY_INTENT,
   STOP_INTENT,
   NEXT_INTENT,
   PREVIOUS_INTENT,
+  SHOW_INTENT,
+  SEARCH_INTENT,
+  ADD_TO_QUEUE_INTENT,
+  NO_INTENT,
+  SEARCH_RESULT_INTENTS,
 } from "../components/Listening/VoiceConfirmationIntents";
+import {
+  normalizeSpotifySearchResult,
+  isEmptyVoiceResult,
+} from "../helpers/voiceSearchNormalizer";
 
 const CAPTURE_TIMEOUT = 10000;
 const AI_TIMEOUT = 30000;
@@ -29,7 +40,93 @@ const TERMINAL_TOOLS = new Set([
   "spotify_save_track",
   "spotify_shuffle",
   "spotify_repeat",
+  "spotify_add_to_queue",
+  "spotify_remove_track",
 ]);
+
+const NO_ICON_INTENTS = new Set([
+  PLAY_INTENT,
+  STOP_INTENT,
+  NEXT_INTENT,
+  PREVIOUS_INTENT,
+]);
+
+export const SEARCH_TOOL_NAMES = new Set(["spotify_search"]);
+export const MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT = 2000;
+export const PLAY_TIMEOUT_TO_NPV = 10000;
+
+const DEFAULT_SEARCH_RESULT_INTENT = SEARCH_RESULT_INTENTS.includes(
+  SEARCH_INTENT,
+)
+  ? SEARCH_INTENT
+  : NO_INTENT;
+
+function coerceBool(v) {
+  if (v === true) return true;
+  if (v === false) return false;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (s === "true" || s === "on" || s === "1") return true;
+    if (s === "false" || s === "off" || s === "0") return false;
+  }
+  if (typeof v === "number") return v !== 0;
+  return null;
+}
+
+function deriveSimpleIntent(tool, args) {
+  if (tool === "spotify_shuffle") {
+    const b = coerceBool(args?.state);
+    if (b === true) return SHUFFLE_ON_INTENT;
+    if (b === false) return SHUFFLE_OFF_INTENT;
+    return SHUFFLE_ON_INTENT;
+  }
+  if (tool === "spotify_shuffle_off") {
+    return SHUFFLE_OFF_INTENT;
+  }
+  if (tool === "spotify_repeat") {
+    const s =
+      typeof args?.state === "string" ? args.state.trim().toLowerCase() : "";
+    if (s === "off") return REPEAT_OFF_INTENT;
+    if (s === "track" || s === "one") return REPEAT_ONE_INTENT;
+    if (s === "context" || s === "all" || s === "on") return REPEAT_ON_INTENT;
+    return REPEAT_ON_INTENT;
+  }
+  if (tool === "spotify_repeat_off") {
+    return REPEAT_OFF_INTENT;
+  }
+  const directMap = {
+    spotify_save_track: ADD_TO_COLLECTION_INTENT,
+    spotify_play: PLAY_INTENT,
+    spotify_pause: STOP_INTENT,
+    spotify_next: NEXT_INTENT,
+    spotify_previous: PREVIOUS_INTENT,
+    spotify_add_to_queue: ADD_TO_QUEUE_INTENT,
+  };
+  return directMap[tool] || null;
+}
+
+function deriveVoiceResultIntent(toolArguments, toolsExecutedThisSession) {
+  const types = toolArguments?.types;
+
+  if (
+    Array.isArray(types) &&
+    types.length === 1 &&
+    types[0] === "artist" &&
+    SEARCH_RESULT_INTENTS.includes(SHOW_INTENT)
+  ) {
+    return SHOW_INTENT;
+  }
+
+  if (toolsExecutedThisSession.has("spotify_play")) {
+    return PLAY_INTENT;
+  }
+
+  if (DEFAULT_SEARCH_RESULT_INTENT === NO_INTENT) {
+    return PLAY_INTENT;
+  }
+
+  return DEFAULT_SEARCH_RESULT_INTENT;
+}
 
 const getInitialVoiceSessionState = () => ({
   asr: {
@@ -51,12 +148,19 @@ class VoiceStore {
   micLevelMovingAverage = 0;
   isMicMuted = localStorage.getItem("mockingbird_mic_muted") === "true";
   microphoneLevelsSlidingWindow = [];
+  currentSessionId = null;
   _wsCleanup = null;
   _captureTimeoutId = null;
   _aiTimeoutId = null;
   _closeTimeoutId = null;
   _micLevelIntervalId = null;
   _terminalAutoCloseActive = false;
+  _rejectedSessionIds = new Set();
+  _toolsExecutedThisSession = new Set();
+  _pendingVoicePopulation = null;
+  _aiSawExecutingTool = false;
+  _voiceResultNavigateTimeoutId = null;
+  _voiceResultResetTimeoutId = null;
 
   constructor(rootStore, socket, middlewareActions) {
     this.rootStore = rootStore;
@@ -68,6 +172,17 @@ class VoiceStore {
       _closeTimeoutId: false,
       _micLevelIntervalId: false,
       _terminalAutoCloseActive: false,
+      _rejectedSessionIds: false,
+      _toolsExecutedThisSession: false,
+      _pendingVoicePopulation: false,
+      _aiSawExecutingTool: false,
+      _voiceResultNavigateTimeoutId: false,
+      _voiceResultResetTimeoutId: false,
+      _isStaleEvent: false,
+      _rejectCurrentSession: false,
+      _discardPendingVoicePopulation: false,
+      _resetVoiceTurnTracking: false,
+      _clearVoiceResultTimers: false,
     });
 
     void socket;
@@ -127,12 +242,25 @@ class VoiceStore {
     const { viewStore, overlayController } = this.rootStore;
     if (viewStore.appView !== "MAIN") return;
     if (this.isMicMuted) return;
+    this._rejectCurrentSession();
+    this.rootStore.shelfStore.clearVoiceItems();
+    this._resetVoiceTurnTracking();
+    this._clearVoiceResultTimers();
     this.resetVoiceSessionState();
     overlayController.showVoice();
     this._startCaptureTimeout();
   });
 
   onTranscription = action((data) => {
+    if (this._isStaleEvent(data, "transcription")) return;
+    if (
+      this.currentSessionId === null &&
+      data.session_id &&
+      !this._rejectedSessionIds.has(data.session_id)
+    ) {
+      this.currentSessionId = data.session_id;
+    }
+
     this.state.asr.transcript = data.transcript || "";
     this.state.asr.isFinal = !!data.is_final;
     if (data.is_final) {
@@ -145,16 +273,54 @@ class VoiceStore {
   });
 
   onAIState = action((data) => {
+    if (this._isStaleEvent(data, "ai")) return;
+
     const prevState = this.state.aiState;
     this.state.aiState = data.state || "idle";
+
+    if (data.state === "executing_tool") {
+      this._aiSawExecutingTool = true;
+    }
+
     if (this._terminalAutoCloseActive) return;
+
     if (data.state === "thinking" || data.state === "executing_tool") {
       this._clearCaptureTimeout();
       this._clearCloseTimeout();
       this._startAITimeout();
     }
+
+    const isSpeaking = data.state === "speaking";
+    const isCleanIdle = data.state === "idle" && this._aiSawExecutingTool;
+
+    if ((isSpeaking || isCleanIdle) && this._pendingVoicePopulation != null) {
+      const pending = this._pendingVoicePopulation;
+      const hasQueueMutation =
+        this._toolsExecutedThisSession.has("spotify_add_to_queue") ||
+        this._toolsExecutedThisSession.has("spotify_remove_track");
+
+      if (!hasQueueMutation) {
+        const intent = deriveVoiceResultIntent(
+          pending.toolArguments,
+          this._toolsExecutedThisSession,
+        );
+
+        this.rootStore.shelfStore.populateVoice({
+          items: pending.voiceItems,
+          id: "voice",
+        });
+        this.state.intent = intent;
+        this.state.showingVoiceConfirmation = !NO_ICON_INTENTS.has(intent);
+        this.state.aiResponse = "";
+        this.goToVoiceResult(intent);
+      }
+
+      this._resetVoiceTurnTracking();
+    }
+
     if (
       data.state === "idle" &&
+      !this._pendingVoicePopulation &&
       (prevState === "speaking" ||
         prevState === "thinking" ||
         prevState === "executing_tool")
@@ -164,6 +330,7 @@ class VoiceStore {
   });
 
   onAIResponse = action((data) => {
+    if (this._isStaleEvent(data, "ai")) return;
     if (this._terminalAutoCloseActive) return;
     this.state.aiResponse = data.text || "";
     this._clearAITimeout();
@@ -179,30 +346,44 @@ class VoiceStore {
   });
 
   onToolExecuted = action((data) => {
+    if (this._isStaleEvent(data, "ai")) return;
+
     const tool = data.tool;
-    const intentMap = {
-      spotify_shuffle: SHUFFLE_ON_INTENT,
-      spotify_shuffle_off: SHUFFLE_OFF_INTENT,
-      spotify_repeat: REPEAT_ON_INTENT,
-      spotify_repeat_off: REPEAT_OFF_INTENT,
-      spotify_save_track: ADD_TO_COLLECTION_INTENT,
-      spotify_play: PLAY_INTENT,
-      spotify_pause: STOP_INTENT,
-      spotify_next: NEXT_INTENT,
-      spotify_previous: PREVIOUS_INTENT,
-    };
-    const intent = intentMap[tool];
-    if (intent) {
-      this.state.intent = intent;
-      this.state.showingVoiceConfirmation = true;
-      this.state.aiResponse = "";
-    }
+    this._toolsExecutedThisSession.add(tool);
     this._clearAITimeout();
 
+    if (SEARCH_TOOL_NAMES.has(tool)) {
+      this._handleSearchToolResult(data);
+      return;
+    }
+
+    const intent = deriveSimpleIntent(tool, data.tool_arguments);
+    if (intent) {
+      this.state.intent = intent;
+      this.state.showingVoiceConfirmation = !NO_ICON_INTENTS.has(intent);
+      this.state.aiResponse = "";
+    }
+
     if (TERMINAL_TOOLS.has(tool)) {
+      this._discardPendingVoicePopulation();
       this._terminalAutoCloseActive = true;
       this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
     }
+  });
+
+  _handleSearchToolResult = action((data) => {
+    const result = data.result;
+    const toolArguments = data.tool_arguments;
+
+    if (isEmptyVoiceResult(result)) {
+      this._discardPendingVoicePopulation();
+      this.state.friendlyError = "Sorry, I couldn't find anything.";
+      this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
+      return;
+    }
+
+    const voiceItems = normalizeSpotifySearchResult(result);
+    this._pendingVoicePopulation = { voiceItems, toolArguments };
   });
 
   _onMicLevel = action((data) => {
@@ -210,6 +391,10 @@ class VoiceStore {
   });
 
   retry = action(() => {
+    this._rejectCurrentSession();
+    this.rootStore.shelfStore.clearVoiceItems();
+    this._resetVoiceTurnTracking();
+    this._clearVoiceResultTimers();
     this._terminalAutoCloseActive = false;
     this.state.error = null;
     this.state.friendlyError = "";
@@ -223,6 +408,10 @@ class VoiceStore {
   });
 
   cancel = action(() => {
+    this._rejectCurrentSession();
+    this.rootStore.shelfStore.clearVoiceItems();
+    this._resetVoiceTurnTracking();
+    this._clearVoiceResultTimers();
     sendNocturneWsRequest("audio.record.stop", {});
     this.rootStore.overlayController.hideVoice();
     this._clearCaptureTimeout();
@@ -249,13 +438,110 @@ class VoiceStore {
 
   resetVoiceSessionState = action(() => {
     this.state = getInitialVoiceSessionState();
+    this.currentSessionId = null;
     this._terminalAutoCloseActive = false;
     this._clearCaptureTimeout();
     this._clearAITimeout();
     this._clearCloseTimeout();
+    this._clearVoiceResultTimers();
     this._stopSyntheticMicLevel();
     this.micLevelMovingAverage = 0;
   });
+
+  goToVoiceResult = action((intent) => {
+    if (this.rootStore.shelfStore.voiceItems.length === 0) return;
+
+    const timeToNpv =
+      intent === SHOW_INTENT ? DEFAULT_TIMEOUT_TO_NPV : PLAY_TIMEOUT_TO_NPV;
+
+    this._clearVoiceResultTimers();
+
+    this._voiceResultNavigateTimeoutId = setTimeout(
+      action(() => {
+        this.rootStore.overlayController.hideVoice();
+        this.rootStore.viewStore.backToContentShelf(
+          timeToNpv + MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT,
+        );
+        setTimeout(
+          action(() => {
+            this.rootStore.shelfStore.shelfController.headerUiState.selectedCategoryId =
+              "voice";
+            const items =
+              this.rootStore.shelfStore.shelfController.swiperUiState
+                .allShelfItems;
+            const firstVoiceIdx = items.findIndex(
+              (it) => it.category === "voice" && it.type === "CONTEXT_ITEM",
+            );
+            if (firstVoiceIdx >= 0) {
+              this.rootStore.shelfStore.shelfController.swiperUiState.selectedItemIndex =
+                firstVoiceIdx;
+            }
+            this._voiceResultNavigateTimeoutId = null;
+          }),
+          150,
+        );
+      }),
+      MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT,
+    );
+
+    this._voiceResultResetTimeoutId = setTimeout(
+      action(() => {
+        this.resetVoiceSessionState();
+        this._voiceResultResetTimeoutId = null;
+      }),
+      MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT +
+        timeToNpv +
+        MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT,
+    );
+  });
+
+  _isStaleEvent(data, channel) {
+    if (!data.session_id) return false;
+    if (this._rejectedSessionIds.has(data.session_id)) return true;
+    if (
+      this.currentSessionId !== null &&
+      data.session_id !== this.currentSessionId
+    ) {
+      return true;
+    }
+    if (this.currentSessionId === null && channel === "ai") return true;
+    return false;
+  }
+
+  _rejectCurrentSession() {
+    if (this.currentSessionId == null) {
+      return;
+    }
+
+    this._rejectedSessionIds.add(this.currentSessionId);
+    if (this._rejectedSessionIds.size > 20) {
+      const first = this._rejectedSessionIds.values().next().value;
+      this._rejectedSessionIds.delete(first);
+    }
+    this.currentSessionId = null;
+  }
+
+  _discardPendingVoicePopulation() {
+    this._pendingVoicePopulation = null;
+    this._aiSawExecutingTool = false;
+  }
+
+  _resetVoiceTurnTracking() {
+    this._pendingVoicePopulation = null;
+    this._aiSawExecutingTool = false;
+    this._toolsExecutedThisSession.clear();
+  }
+
+  _clearVoiceResultTimers() {
+    if (this._voiceResultNavigateTimeoutId) {
+      clearTimeout(this._voiceResultNavigateTimeoutId);
+      this._voiceResultNavigateTimeoutId = null;
+    }
+    if (this._voiceResultResetTimeoutId) {
+      clearTimeout(this._voiceResultResetTimeoutId);
+      this._voiceResultResetTimeoutId = null;
+    }
+  }
 
   _startCaptureTimeout() {
     this._clearCaptureTimeout();
@@ -346,6 +632,7 @@ class VoiceStore {
     this._clearCaptureTimeout();
     this._clearAITimeout();
     this._clearCloseTimeout();
+    this._clearVoiceResultTimers();
     this._stopSyntheticMicLevel();
   }
 }

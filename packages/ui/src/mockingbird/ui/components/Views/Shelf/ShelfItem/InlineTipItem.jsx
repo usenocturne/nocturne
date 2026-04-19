@@ -8,7 +8,7 @@ export const TITLES = {
   podcasts: "You haven't followed any podcasts",
   artists: "You haven't followed any artists",
   albums: "You haven't saved any albums",
-  voice: "Voice results will appear here",
+  voice: "No voice results",
 };
 
 const VOICE_TIPS = {
@@ -16,7 +16,7 @@ const VOICE_TIPS = {
   podcasts: '"Hey Spotify, follow this podcast" or tap the heart icon.',
   artists: '"Hey Spotify, follow this artist" or tap the heart icon.',
   albums: '"Hey Spotify, like this album" or tap the heart icon.',
-  voice: "or tap the mic button to make a request.",
+  voice: 'Tap the mic button or say "Hey Spotify".',
 };
 
 const InlineTipItem = ({ item, isActive }) => {

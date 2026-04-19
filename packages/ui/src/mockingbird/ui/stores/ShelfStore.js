@@ -8,10 +8,45 @@ export const HOME_IDENTIFIER = "featured";
 export const VOICE_IDENTIFIER = "voice";
 export const YOUR_LIBRARY = "your-library";
 
+export function getVoiceShelfItemType(voiceItem, index) {
+  return {
+    type: "CONTEXT_ITEM",
+    identifier: `voice-${voiceItem.kind}-${voiceItem.uri}`,
+    uri: voiceItem.uri,
+    title: voiceItem.title,
+    subtitle: voiceItem.subtitle,
+    image_id: voiceItem.image_url || "",
+    category: VOICE_IDENTIFIER,
+    playable: true,
+    voiceKind: voiceItem.kind,
+  };
+}
+
+function routeVoiceItem(rootStore, item) {
+  const uri = item.uri || "";
+  if (uri.startsWith("spotify:track:")) {
+    rootStore.spotifyControls?.playTrack?.(uri);
+    setTimeout(() => rootStore.viewStore.showNpv(), 100);
+    return;
+  }
+  if (
+    uri.startsWith("spotify:artist:") ||
+    uri.startsWith("spotify:album:") ||
+    uri.startsWith("spotify:playlist:")
+  ) {
+    const contextItem = { uri, title: item.title, image_id: item.image_id };
+    rootStore.tracklistStore.tracklistUiState.initializeTracklist(contextItem);
+    rootStore.viewStore.showTracklist();
+    return;
+  }
+  setTimeout(() => rootStore.viewStore.showNpv(), 100);
+}
+
 const MAX_RECENT_ALBUMS = 10;
 
 class ShelfStore {
   recentAlbums = [];
+  voiceItems = [];
   _recentAlbumsInitialized = false;
 
   constructor(rootStore, interappActions) {
@@ -73,8 +108,20 @@ class ShelfStore {
     }
   }
 
+  populateVoice = action(({ items, id }) => {
+    this.voiceItems = items.slice(0, 12);
+    this.voiceCategoryId = id ?? VOICE_IDENTIFIER;
+    this.shelfController.swiperUiState.refreshTrigger++;
+  });
+
+  clearVoiceItems = action(() => {
+    this.voiceItems = [];
+    this.shelfController.swiperUiState.refreshTrigger++;
+  });
+
   reset() {
     this.categories = [];
+    this.voiceItems = [];
     this.voiceCategoryId = undefined;
     this.shelfController.reset();
   }
@@ -273,18 +320,27 @@ class ShelfSwiperUiState {
       });
     }
 
-    items.push({
-      type: "INLINE_TIP_ITEM",
-      identifier: "voice-tip",
-      category: VOICE_IDENTIFIER,
-      title: "Voice results will appear here",
-      subtitle: "or tap the mic button to make a request.",
-    });
-    items.push({
-      type: "SPACER_ITEM",
-      identifier: "voice-tip-spacer",
-      category: VOICE_IDENTIFIER,
-    });
+    if (this.shelfStore.voiceItems.length > 0) {
+      this.shelfStore.voiceItems.forEach((voiceItem, idx) => {
+        items.push(getVoiceShelfItemType(voiceItem, idx));
+      });
+      items.push({
+        type: "SPACER_ITEM",
+        identifier: "voice-spacer",
+        category: VOICE_IDENTIFIER,
+      });
+    } else {
+      items.push({
+        type: "VOICE_TEXT_PLACEHOLDER",
+        identifier: "voice-empty",
+        category: VOICE_IDENTIFIER,
+      });
+      items.push({
+        type: "SPACER_ITEM",
+        identifier: "voice-tip-spacer",
+        category: VOICE_IDENTIFIER,
+      });
+    }
 
     const playlistsVisible = this.getCategoryVisibleCount("playlists", 5);
 
@@ -600,7 +656,11 @@ class ShelfSwiperItemUiState {
     return item.type === "SPACER_ITEM";
   }
   isTextPlaceholder(item) {
-    return item.type === "TEXT_PLACEHOLDER" || item.type === "INLINE_TIP_ITEM";
+    return (
+      item.type === "TEXT_PLACEHOLDER" ||
+      item.type === "INLINE_TIP_ITEM" ||
+      item.type === "VOICE_TEXT_PLACEHOLDER"
+    );
   }
   isVoiceDefaultItem(item) {
     return item.type === "VOICE_DEFAULT";
@@ -617,6 +677,10 @@ class ShelfSwiperItemUiState {
 
   artworkClicked(item) {
     if (item.type === "CONTEXT_ITEM" && item.playable) {
+      if (item.category === VOICE_IDENTIFIER && item.type === "CONTEXT_ITEM") {
+        routeVoiceItem(this.shelfStore.rootStore, item);
+        return;
+      }
       if (item.isDJ) {
         const controls = this.shelfStore.rootStore.spotifyControls;
         const playback = this.shelfStore.rootStore.currentPlayback;
@@ -723,7 +787,9 @@ class ShelfController {
         selectedItem.type === "CONTEXT_ITEM" &&
         selectedItem.playable
       ) {
-        if (selectedItem.isDJ) {
+        if (selectedItem.category === VOICE_IDENTIFIER) {
+          routeVoiceItem(this.shelfStore.rootStore, selectedItem);
+        } else if (selectedItem.isDJ) {
           const controls = this.shelfStore.rootStore.spotifyControls;
           const playback = this.shelfStore.rootStore.currentPlayback;
           controls?.playDJMix?.(playback?.device?.id);
