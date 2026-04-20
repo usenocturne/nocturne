@@ -10,11 +10,21 @@ import IconMicOff64 from "../Icons/CarthingUIComponents/IconMicOff64";
 import IconPlaybackSpeed1X48 from "../Icons/CarthingUIComponents/IconPlaybackSpeed1X48";
 import IconPlaybackSpeed1Point2X48 from "../Icons/CarthingUIComponents/IconPlaybackSpeed1Point2X48";
 import IconPlaybackSpeed1Point5X48 from "../Icons/CarthingUIComponents/IconPlaybackSpeed1Point5X48";
+import IconPlay48 from "../Icons/CarthingUIComponents/IconPlay48";
+import IconPause48 from "../Icons/CarthingUIComponents/IconPause48";
+import IconSkipForward48 from "../Icons/CarthingUIComponents/IconSkipForward48";
+import IconSkipBack48 from "../Icons/CarthingUIComponents/IconSkipBack48";
+import IconHeart48 from "../Icons/CarthingUIComponents/IconHeart48";
 import {
   ADD_TO_COLLECTION_INTENT,
+  ADD_TO_QUEUE_INTENT,
+  BAN_TRACK_INTENT,
   FOLLOW_INTENT,
   MUTE_INTENT,
   MUTE_MIC_INTENT,
+  NEXT_INTENT,
+  PLAY_INTENT,
+  PREVIOUS_INTENT,
   REPEAT_OFF_INTENT,
   REPEAT_ON_INTENT,
   REPEAT_ONE_INTENT,
@@ -23,6 +33,7 @@ import {
   SET_PLAYBACK_SPEED_1X_INTENT,
   SHUFFLE_OFF_INTENT,
   SHUFFLE_ON_INTENT,
+  STOP_INTENT,
   THUMBS_UP_INTENT,
 } from "./VoiceConfirmationIntents";
 import {
@@ -75,6 +86,26 @@ const VoiceConfirmation = ({ intent, action }) => {
       return (
         <div data-testid="mute-confirmation">
           <IconMicOff64 className={styles.confirmationIcon} />
+        </div>
+      );
+    case PLAY_INTENT:
+      return <IconPlay48 className={styles.confirmationIcon} />;
+    case STOP_INTENT:
+      return <IconPause48 className={styles.confirmationIcon} />;
+    case NEXT_INTENT:
+      return <IconSkipForward48 className={styles.confirmationIcon} />;
+    case PREVIOUS_INTENT:
+      return <IconSkipBack48 className={styles.confirmationIcon} />;
+    case ADD_TO_QUEUE_INTENT:
+      return (
+        <div data-testid="queue-confirmation">
+          <IconCheckAlt48 className={styles.confirmationIcon} />
+        </div>
+      );
+    case BAN_TRACK_INTENT:
+      return (
+        <div data-testid="remove-confirmation">
+          <IconHeart48 className={styles.confirmationIcon} />
         </div>
       );
     default:

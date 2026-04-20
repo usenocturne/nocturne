@@ -2,10 +2,12 @@ import classnames from "classnames";
 import { observer } from "mobx-react-lite";
 import styles from "./Listening.module.scss";
 import VoiceConfirmation from "./VoiceConfirmation";
+import VolumeConfirmation from "./VolumeConfirmation";
 import Jellyfish from "./Jellyfish";
 import { useCarThingStore } from "../../contexts/CarThingStore";
 import Type from "../CarthingUIComponents/Type/Type";
 import AutoSizingText from "./AutoSizingText";
+import { VOLUME_INTENT } from "./VoiceConfirmationIntents";
 
 const firstLetterUpperCase = (s) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
@@ -13,6 +15,7 @@ const firstLetterUpperCase = (s) =>
 const INTENT_TO_CONFIRMATION_TEXT = {
   ADD_TO_COLLECTION: "Saved",
   THUMBS_UP: "Saved",
+  BAN_TRACK: "Removed",
   SHUFFLE_ON: "Shuffle on",
   SHUFFLE_OFF: "Shuffle off",
   REPEAT_ON: "Repeat on",
@@ -22,6 +25,11 @@ const INTENT_TO_CONFIRMATION_TEXT = {
   SET_PLAYBACK_SPEED_1POINT2X: "Playback speed set",
   SET_PLAYBACK_SPEED_1X: "Playback speed set",
   MUTE_MIC: "Microphone off",
+  PLAY: "Playing",
+  STOP: "Paused",
+  NEXT: "Next",
+  PREVIOUS: "Previous",
+  ADD_TO_QUEUE: "Added to queue",
 };
 
 const ACTION_TO_CONFIRMATION_TEXT = {
@@ -82,6 +90,13 @@ export function Listening({
         <br />
         {confirmationText.subtitle}
       </Type>
+    );
+  } else if (showingVoiceConfirmation && intent === VOLUME_INTENT) {
+    showJellyfish = false;
+    content = (
+      <div className={classnames(styles.voiceConfirmation, styles.centered)}>
+        <VolumeConfirmation volumeTarget={voiceStore.state.volumeTarget} />
+      </div>
     );
   } else if (showingVoiceConfirmation) {
     showJellyfish = false;

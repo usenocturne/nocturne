@@ -17,6 +17,8 @@ import {
   PREVIOUS_INTENT,
   SHOW_INTENT,
   ADD_TO_QUEUE_INTENT,
+  BAN_TRACK_INTENT,
+  VOLUME_INTENT,
 } from "../components/Listening/VoiceConfirmationIntents";
 import {
   normalizeSpotifySearchResult,
@@ -27,8 +29,8 @@ import {
 
 const CAPTURE_TIMEOUT = 10000;
 const AI_TIMEOUT = 30000;
-const TIMEOUT_BEFORE_CLOSING_LISTENING_MS = 7500;
-const TERMINAL_CONFIRMATION_CLOSE_MS = 1500;
+const TIMEOUT_BEFORE_CLOSING_LISTENING_MS = 8000;
+const TERMINAL_CONFIRMATION_CLOSE_MS = 8000;
 const OVERLAY_TRANSITION_DURATION_MS = 300;
 
 const TERMINAL_TOOLS = new Set([
@@ -43,12 +45,7 @@ const TERMINAL_TOOLS = new Set([
   "spotify_remove_track",
 ]);
 
-const NO_ICON_INTENTS = new Set([
-  PLAY_INTENT,
-  STOP_INTENT,
-  NEXT_INTENT,
-  PREVIOUS_INTENT,
-]);
+const NO_ICON_INTENTS = new Set([PLAY_INTENT]);
 
 export const VOICE_RESULT_TOOL_HANDLERS = {
   spotify_search: {
@@ -103,6 +100,8 @@ function deriveSimpleIntent(tool, args) {
     spotify_next: NEXT_INTENT,
     spotify_previous: PREVIOUS_INTENT,
     spotify_add_to_queue: ADD_TO_QUEUE_INTENT,
+    spotify_remove_track: BAN_TRACK_INTENT,
+    spotify_volume: VOLUME_INTENT,
   };
   return directMap[tool] || null;
 }
@@ -127,6 +126,7 @@ const getInitialVoiceSessionState = () => ({
   intent: "",
   action: undefined,
   showingVoiceConfirmation: false,
+  volumeTarget: null,
 });
 
 class VoiceStore {
@@ -268,8 +268,6 @@ class VoiceStore {
       this._aiSawExecutingTool = true;
     }
 
-    if (this._terminalAutoCloseActive) return;
-
     if (data.state === "thinking" || data.state === "executing_tool") {
       this._clearCaptureTimeout();
       this._clearCloseTimeout();
@@ -317,11 +315,10 @@ class VoiceStore {
 
   onAIResponse = action((data) => {
     if (this._isStaleEvent(data, "ai")) return;
-    if (this._terminalAutoCloseActive) return;
-    this.state.aiResponse = data.text || "";
-    this._clearAITimeout();
-    this.micLevelMovingAverage = 0;
     if (data.text) {
+      this.state.aiResponse = data.text;
+      this._clearAITimeout();
+      this.micLevelMovingAverage = 0;
       this.state.showingVoiceConfirmation = false;
       this.state.error = null;
       this.state.friendlyError = "";
@@ -349,12 +346,16 @@ class VoiceStore {
       this.state.intent = intent;
       this.state.showingVoiceConfirmation = !NO_ICON_INTENTS.has(intent);
       this.state.aiResponse = "";
+      if (intent === VOLUME_INTENT) {
+        const raw = Number(data?.tool_arguments?.volume_percent);
+        this.state.volumeTarget = Number.isFinite(raw)
+          ? Math.max(0, Math.min(100, Math.round(raw)))
+          : null;
+      }
     }
 
     if (TERMINAL_TOOLS.has(tool)) {
       this._discardPendingVoicePopulation();
-      this._terminalAutoCloseActive = true;
-      this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
     }
   });
 
