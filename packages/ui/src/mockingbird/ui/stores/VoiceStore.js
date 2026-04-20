@@ -295,7 +295,6 @@ class VoiceStore {
         });
         this.state.intent = intent;
         this.state.showingVoiceConfirmation = !NO_ICON_INTENTS.has(intent);
-        this.state.aiResponse = "";
         this.goToVoiceResult(intent);
       }
 
