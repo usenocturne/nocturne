@@ -1,8 +1,8 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .powerTutorial {
-  width: $device-width;
-  height: $device-height;
+  width: vars.$device-width;
+  height: vars.$device-height;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -10,15 +10,15 @@
 }
 
 .title {
-  @include text-style(44px, 48px, -0.02em);
-  color: $white;
+  @include vars.text-style(44px, 48px, -0.02em);
+  color: vars.$white;
   font-weight: bold;
   margin-bottom: 32px;
 }
 
 .description {
-  @include text-style(32px, 40px, 0);
-  color: $white;
+  @include vars.text-style(32px, 40px, 0);
+  color: vars.$white;
   text-align: center;
   max-width: 560px;
 }

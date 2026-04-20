@@ -1,7 +1,7 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .actions {
-  @include transition-transform;
+  @include vars.transition-transform;
   height: 80px;
   width: 100px;
   display: flex;

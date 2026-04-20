@@ -1,4 +1,4 @@
-@import "../../../../styles/variables.module";
+@use "../../../../styles/variables.module" as vars;
 
 $preset-card-width: 168px;
 
@@ -13,10 +13,10 @@ $preset-card-width: 168px;
 
 .title {
   width: $preset-card-width;
-  color: $opacity-white-70;
+  color: vars.$opacity-white-70;
   font-weight: bold;
 
   &.active {
-    color: $white;
+    color: vars.$white;
   }
 }

@@ -1,9 +1,9 @@
-@import "../../../../styles/variables.module";
+@use "../../../../styles/variables.module" as vars;
 
 .phoneConnectionContextMenu {
-  background: $black;
-  width: $device-width;
-  height: $device-height;
+  background: vars.$black;
+  width: vars.$device-width;
+  height: vars.$device-height;
 }
 
 .menuList {
@@ -12,7 +12,7 @@
 }
 
 .item {
-  @include transition-background;
+  @include vars.transition-background;
 
   width: 100%;
   height: 128px;
@@ -22,17 +22,17 @@
 
 .label {
   margin-left: 54px;
-  color: $opacity-white-50;
+  color: vars.$opacity-white-50;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: bold;
-  @include text-style(36px, 40px, -0.02em);
+  @include vars.text-style(36px, 40px, -0.02em);
 }
 
 .icon {
   margin-left: 54px;
-  color: $opacity-white-50;
+  color: vars.$opacity-white-50;
   display: flex;
   align-items: center;
 }
@@ -56,35 +56,35 @@
 
 .headerName {
   font-weight: bold;
-  color: $white;
-  @include text-style(44px, 48px, -0.02em);
+  color: vars.$white;
+  @include vars.text-style(44px, 48px, -0.02em);
 }
 
 .subtitle {
   display: flex;
   vertical-align: center;
-  color: $opacity-white-50;
+  color: vars.$opacity-white-50;
   margin-top: 10px;
-  @include text-style(28px, 32px, -0.02em);
+  @include vars.text-style(28px, 32px, -0.02em);
 }
 
 .connected {
-  color: $green-light;
+  color: vars.$green-light;
 }
 
 .pressed {
-  background: $opacity-white-10;
+  background: vars.$opacity-white-10;
   opacity: 0.5;
 }
 
 .active {
-  background: $opacity-white-10;
+  background: vars.$opacity-white-10;
 
   .label {
-    color: $white;
+    color: vars.$white;
   }
 
   .icon {
-    color: $white;
+    color: vars.$white;
   }
 }

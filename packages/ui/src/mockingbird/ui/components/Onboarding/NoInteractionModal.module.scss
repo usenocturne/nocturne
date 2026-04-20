@@ -1,22 +1,22 @@
-@import "../../styles/variables.module";
+@use "../../styles/variables.module" as vars;
 
 .noInteraction {
-  height: $device-height;
-  width: $device-width;
+  height: vars.$device-height;
+  width: vars.$device-width;
   position: absolute;
   top: 0;
-  z-index: $onboarding-tactile-z-index + 2;
+  z-index: vars.$onboarding-tactile-z-index + 2;
 
-  @include rounded-corners;
+  @include vars.rounded-corners;
 
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   justify-content: center;
-  background-color: $opacity-black-90;
+  background-color: vars.$opacity-black-90;
   opacity: 0;
-  transition: opacity 300ms $easing-function-ease-out-cubic;
+  transition: opacity 300ms vars.$easing-function-ease-out-cubic;
 
   &.visible {
     opacity: 1;
@@ -37,17 +37,17 @@
   border: none;
   cursor: pointer;
 
-  @include text-style(28px, 36px, -0.01em);
+  @include vars.text-style(28px, 36px, -0.01em);
 
   font-weight: 700;
 }
 
 .primary {
-  background: $white;
-  color: $black;
+  background: vars.$white;
+  color: vars.$black;
 }
 
 .secondary {
-  background: $gray-30;
-  color: $white;
+  background: vars.$gray-30;
+  color: vars.$white;
 }

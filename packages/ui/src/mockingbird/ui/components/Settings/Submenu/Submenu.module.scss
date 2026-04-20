@@ -1,6 +1,6 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .submenu {
-  width: $device-width;
-  height: $device-height;
+  width: vars.$device-width;
+  height: vars.$device-height;
 }

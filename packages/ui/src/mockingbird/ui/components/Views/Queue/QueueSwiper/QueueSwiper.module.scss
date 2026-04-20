@@ -1,4 +1,4 @@
-@import "../../../../styles/variables.module";
+@use "../../../../styles/variables.module" as vars;
 
 $dial-center-diff: 68px;
 
@@ -7,9 +7,9 @@ $dial-center-diff: 68px;
   left: 0;
   right: 0;
   width: 100%;
-  height: $device-height + $dial-center-diff;
+  height: vars.$device-height + $dial-center-diff;
   overflow: hidden;
-  z-index: $overlay-z-index;
+  z-index: vars.$overlay-z-index;
   background: transparent;
 
   .swiper {

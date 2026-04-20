@@ -1,4 +1,4 @@
-@import "../../../../styles/variables.module";
+@use "../../../../styles/variables.module" as vars;
 
 .volumeBar {
   height: 8px;
@@ -6,13 +6,13 @@
   position: relative;
   border-radius: 4px;
   transform: translateY(2px);
-  background: $gray-20;
+  background: vars.$gray-20;
 }
 
 .volumeLevelFill {
   display: block;
   height: 100%;
   border-radius: 4px;
-  background-color: $white;
+  background-color: vars.$white;
   overflow: hidden;
 }

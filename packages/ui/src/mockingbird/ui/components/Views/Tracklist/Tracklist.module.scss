@@ -1,12 +1,12 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 $dial-center-diff: 68px;
 $small-header-diff: 40px;
 
 .tracklist {
-  @include transition-transform;
-  width: $device-width;
-  height: $device-height + $small-header-diff;
+  @include vars.transition-transform;
+  width: vars.$device-width;
+  height: vars.$device-height + $small-header-diff;
   position: relative;
   top: 0;
   left: 0;
@@ -23,9 +23,9 @@ $small-header-diff: 40px;
   left: 0;
   right: 0;
   width: 100%;
-  height: $device-height + $dial-center-diff;
+  height: vars.$device-height + $dial-center-diff;
   overflow: hidden;
-  z-index: $overlay-z-index;
+  z-index: vars.$overlay-z-index;
   background: transparent;
 
   .swiper {
@@ -52,8 +52,8 @@ $small-header-diff: 40px;
     width: 560px;
     text-align: center;
     transform: translateY(-48px);
-    @include text-style(28px, 32px, -0.01em);
-    color: $gray-70;
+    @include vars.text-style(28px, 32px, -0.01em);
+    color: vars.$gray-70;
   }
 }
 
@@ -67,7 +67,7 @@ $small-header-diff: 40px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: $white;
+  background: vars.$white;
   animation: pulse 1.4s ease-in-out infinite;
 
   &:nth-child(2) {

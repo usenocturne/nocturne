@@ -1,9 +1,9 @@
-@import "../../../../styles/variables.module";
+@use "../../../../styles/variables.module" as vars;
 
 .scrubbingBackdrop {
   position: absolute;
-  width: $device-width;
-  height: $device-height;
+  width: vars.$device-width;
+  height: vars.$device-height;
   background: rgb(0 0 0 / 85%);
   top: 0;
   left: 0;
@@ -25,16 +25,16 @@
 }
 
 .time {
-  width: $device-width - 80px;
-  height: $device-height - 180px;
+  width: vars.$device-width - 80px;
+  height: vars.$device-height - 180px;
   display: flex;
   justify-content: space-between;
 
   span {
-    @include text-style(72px, 72px, -0.03em);
+    @include vars.text-style(72px, 72px, -0.03em);
 
     height: 72px;
-    color: $white;
+    color: vars.$white;
     align-self: flex-end;
   }
 }

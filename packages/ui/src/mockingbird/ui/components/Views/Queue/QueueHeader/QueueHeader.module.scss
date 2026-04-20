@@ -1,11 +1,11 @@
-@import "../../../../styles/variables.module";
+@use "../../../../styles/variables.module" as vars;
 
 .headerWrapper {
   height: 152px;
   display: flex;
   padding-left: 40px;
   padding-right: 104px;
-  @include transition-background;
+  @include vars.transition-background;
 }
 
 .header {
@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  @include transition-transform;
+  @include vars.transition-transform;
 
   &.smallHeader {
     transform: translateY(38px);
@@ -22,13 +22,13 @@
 }
 
 .queueTitle {
-  @include transition-transform;
+  @include vars.transition-transform;
   transform-origin: top left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: bold;
-  color: $white;
+  color: vars.$white;
 
   &.smallHeader {
     transform: scale(calc(32 / 44));

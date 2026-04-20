@@ -1,15 +1,15 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .nextButton {
-  background-color: $white-30;
-  color: $white;
+  background-color: vars.$white-30;
+  color: vars.$white;
   height: 128px;
   width: 128px;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  @include text-style(32px, 40px, -0.02em);
+  @include vars.text-style(32px, 40px, -0.02em);
   cursor: pointer;
 }
 
@@ -23,7 +23,7 @@
 }
 
 .background {
-  height: $device-height;
+  height: vars.$device-height;
   width: 100%;
   background:
     linear-gradient(0deg, rgb(11 99 202 / 20%), rgb(11 99 202 / 20%)),
@@ -53,9 +53,9 @@
 }
 
 .tipTitle {
-  @include text-style(36px, 48px, -0.02em);
+  @include vars.text-style(36px, 48px, -0.02em);
   font-weight: 700;
-  color: $green-light;
+  color: vars.$green-light;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -63,9 +63,9 @@
 
 .tipDescription {
   margin-top: 16px;
-  @include text-style(44px, 48px, -0.02em);
+  @include vars.text-style(44px, 48px, -0.02em);
   font-weight: 700;
-  color: $white;
+  color: vars.$white;
   display: -webkit-box;
   overflow: hidden;
   -webkit-line-clamp: 3;
@@ -84,21 +84,21 @@
 }
 
 .errorTitle {
-  @include text-style(44px, 48px, -0.02em);
+  @include vars.text-style(44px, 48px, -0.02em);
   font-weight: 700;
-  color: $white;
+  color: vars.$white;
 }
 
 .errorDescription {
-  @include text-style(32px, 40px, -0.02em);
-  color: $white;
+  @include vars.text-style(32px, 40px, -0.02em);
+  color: vars.$white;
 }
 
 .okButton {
-  @include text-style(32px, 40px, -0.02em);
+  @include vars.text-style(32px, 40px, -0.02em);
   font-weight: 700;
-  background-color: $white;
-  color: $black;
+  background-color: vars.$white;
+  color: vars.$black;
   border-radius: 48px;
   padding: 16px 64px;
   cursor: pointer;

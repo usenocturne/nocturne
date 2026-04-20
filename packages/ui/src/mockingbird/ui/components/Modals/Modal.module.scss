@@ -1,20 +1,20 @@
-@import "../../styles/variables.module";
+@use "../../styles/variables.module" as vars;
 
 .title {
-  @include text-style(52px, 56px, -0.03em);
+  @include vars.text-style(52px, 56px, -0.03em);
 
   margin-top: 24px;
   margin-bottom: 32px;
   font-weight: bold;
-  color: $white;
+  color: vars.$white;
 }
 
 .description {
-  @include text-style(32px, 40px, -0.01em);
+  @include vars.text-style(32px, 40px, -0.01em);
 
   margin-bottom: 40px;
   width: 540px;
-  color: $white;
+  color: vars.$white;
 }
 
 .dialog {
@@ -24,8 +24,8 @@
   align-items: center;
   text-align: center;
   justify-content: center;
-  height: $device-height;
-  background-color: $opacity-black-90;
+  height: vars.$device-height;
+  background-color: vars.$opacity-black-90;
 }
 
 .logo {

@@ -1,27 +1,27 @@
-@import "../../styles/variables.module";
+@use "../../styles/variables.module" as vars;
 
 .banner {
-  z-index: $onboarding-tactile-z-index;
+  z-index: vars.$onboarding-tactile-z-index;
   position: absolute;
   width: 351px;
   height: 96px;
   right: -45px;
   bottom: 24px;
-  background: $white;
+  background: vars.$white;
   border-radius: 48px;
   display: flex;
   align-items: center;
   padding: 0 40px;
 
   span {
-    color: $black;
+    color: vars.$black;
     font-weight: 700;
 
-    @include text-style(36px, 40px, -0.02em);
+    @include vars.text-style(36px, 40px, -0.02em);
   }
 
   svg {
-    color: $green;
+    color: vars.$green;
     margin-left: 30px;
     animation: ani 1.7s infinite;
   }

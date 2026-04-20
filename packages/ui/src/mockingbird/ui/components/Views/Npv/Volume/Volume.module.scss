@@ -1,4 +1,4 @@
-@import "../../../../styles/variables.module";
+@use "../../../../styles/variables.module" as vars;
 
 .volume {
   height: 144px;
@@ -11,7 +11,7 @@
   align-items: center;
 
   svg {
-    color: $white;
+    color: vars.$white;
   }
 
   .volumeInfo {

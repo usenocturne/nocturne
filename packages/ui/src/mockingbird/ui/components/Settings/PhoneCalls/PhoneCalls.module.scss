@@ -1,4 +1,4 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .scrollContainer {
   height: 352px;
@@ -16,23 +16,23 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: $white-10;
-  @include transition-background-opacity;
+  background: vars.$white-10;
+  @include vars.transition-background-opacity;
 }
 
 .label {
   font-weight: bold;
-  color: $white;
-  @include text-style(36px, 40px, -0.02em);
+  color: vars.$white;
+  @include vars.text-style(36px, 40px, -0.02em);
 }
 
 .value {
-  color: $white-70;
-  @include text-style(36px, 40px, -0.02em);
+  color: vars.$white-70;
+  @include vars.text-style(36px, 40px, -0.02em);
 }
 
 .text {
   padding: 40px;
-  color: $gray-80;
-  @include text-style(32px, 40px, -0.02em);
+  color: vars.$gray-80;
+  @include vars.text-style(32px, 40px, -0.02em);
 }

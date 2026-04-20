@@ -1,4 +1,4 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .header {
   position: sticky;
@@ -14,7 +14,7 @@
   width: 100%;
   display: flex;
   align-items: center;
-  color: $white;
+  color: vars.$white;
 
   svg {
     margin-right: 16px;
@@ -23,6 +23,6 @@
 
 .title {
   font-weight: bold;
-  color: $white;
-  @include text-style(44px, 48px, -0.02em);
+  color: vars.$white;
+  @include vars.text-style(44px, 48px, -0.02em);
 }

@@ -1,13 +1,13 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .headerWrapper {
   height: 152px;
   width: 100%;
   padding-right: 72px;
-  z-index: $overlay-z-index + 10;
+  z-index: vars.$overlay-z-index + 10;
   display: flex;
 
-  @include transition-background;
+  @include vars.transition-background;
 }
 
 .header {
@@ -15,7 +15,7 @@
   align-items: center;
   justify-content: space-between;
 
-  @include transition-transform;
+  @include vars.transition-transform;
 
   &.smallHeader {
     transform: translateY(40px);

@@ -1,4 +1,4 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 $off: 0.2;
 $low: 0.6;
@@ -30,7 +30,7 @@ $play-ms: 1500ms;
 }
 
 .bar {
-  background-color: $green-light;
+  background-color: vars.$green-light;
   width: 4px;
   height: 20px;
   transform: scaleY($off);
@@ -188,7 +188,7 @@ $play-ms: 1500ms;
 
 .nowPlayingText {
   margin-left: 12px;
-  color: $green-light !important;
+  color: vars.$green-light !important;
   white-space: nowrap;
   display: inline-block;
 }

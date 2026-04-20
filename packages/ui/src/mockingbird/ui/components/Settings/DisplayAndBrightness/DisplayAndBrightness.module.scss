@@ -1,9 +1,9 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .header {
   position: sticky;
-  background-color: $black;
-  z-index: $overlay-z-index + 20;
+  background-color: vars.$black;
+  z-index: vars.$overlay-z-index + 20;
   height: 128px;
   width: 100%;
   display: flex;
@@ -11,16 +11,16 @@
 
   span {
     margin-left: 40px;
-    color: $white;
+    color: vars.$white;
     font-weight: bold;
-    @include text-style(44px, 48px, -0.02em);
+    @include vars.text-style(44px, 48px, -0.02em);
   }
 }
 
 .container {
   height: 352px;
   overflow: scroll;
-  background: $black;
+  background: vars.$black;
 
   .notification {
     height: 96px;
@@ -30,11 +30,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    @include transition-background-border;
-    background: $white-10;
+    @include vars.transition-background-border;
+    background: vars.$white-10;
 
     &.pressed {
-      color: $white-70;
+      color: vars.$white-70;
       background: rgb(255 255 255 / 5%);
       border: none;
     }
@@ -42,25 +42,25 @@
 
   .label {
     font-weight: 700;
-    color: $white;
-    @include text-style(36px, 48px, -0.02em);
+    color: vars.$white;
+    @include vars.text-style(36px, 48px, -0.02em);
   }
 
   .value {
     font-weight: 700;
-    color: $white-70;
-    @include text-style(36px, 48px, -0.02em);
+    color: vars.$white-70;
+    @include vars.text-style(36px, 48px, -0.02em);
 
     &.greenOn {
-      color: $positive;
+      color: vars.$positive;
     }
   }
 
   .text {
-    color: $gray-80;
+    color: vars.$gray-80;
     padding-left: 40px;
     padding-right: 40px;
-    @include text-style(32px, 40px, -0.02em);
+    @include vars.text-style(32px, 40px, -0.02em);
   }
 }
 

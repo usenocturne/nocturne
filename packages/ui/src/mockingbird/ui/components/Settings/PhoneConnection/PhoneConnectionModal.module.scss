@@ -1,11 +1,11 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: $device-width;
-  height: $device-height;
+  width: vars.$device-width;
+  height: vars.$device-height;
   z-index: 20;
   animation: fadeIn 300ms ease both;
 }
@@ -39,14 +39,14 @@
   align-items: center;
   text-align: center;
   justify-content: center;
-  height: $device-height;
-  background-color: $opacity-black-90;
+  height: vars.$device-height;
+  background-color: vars.$opacity-black-90;
   box-sizing: border-box;
 }
 
 .title {
-  @include text-style(52px, 56px, -0.03em);
-  color: $white;
+  @include vars.text-style(52px, 56px, -0.03em);
+  color: vars.$white;
   margin-top: 24px;
   margin-bottom: 32px;
   font-weight: bold;
@@ -56,8 +56,8 @@
   margin-top: 32px;
   flex-direction: column;
   align-items: center;
-  color: $white;
-  @include text-style(44px, 48px, -0.02em);
+  color: vars.$white;
+  @include vars.text-style(44px, 48px, -0.02em);
   font-weight: bold;
 
   p {
@@ -68,29 +68,29 @@
 }
 
 .description {
-  @include text-style(32px, 40px, -0.01em);
-  color: $white;
+  @include vars.text-style(32px, 40px, -0.01em);
+  color: vars.$white;
   margin-bottom: 40px;
   width: 540px;
 }
 
 .pairingCode {
-  @include text-style(52px, 56px, -0.03em);
-  color: $green-light;
+  @include vars.text-style(52px, 56px, -0.03em);
+  color: vars.$green-light;
 }
 
 .iconCheck {
   margin-top: 42px;
   margin-bottom: 42px;
   transform: scale(4);
-  color: $green-light;
+  color: vars.$green-light;
 }
 
 .spinnerBig {
   width: 64px;
   height: 64px;
-  border: 4px solid $opacity-white-30;
-  border-top: 4px solid $white;
+  border: 4px solid vars.$opacity-white-30;
+  border-top: 4px solid vars.$white;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -112,7 +112,7 @@
 }
 
 .button {
-  @include text-style(32px, 40px, -0.02em);
+  @include vars.text-style(32px, 40px, -0.02em);
   font-weight: bold;
   border: none;
   border-radius: 500px;
@@ -127,11 +127,11 @@
 }
 
 .primary {
-  background-color: $white;
-  color: $black;
+  background-color: vars.$white;
+  color: vars.$black;
 }
 
 .secondary {
-  background-color: $white-10;
-  color: $white;
+  background-color: vars.$white-10;
+  color: vars.$white;
 }

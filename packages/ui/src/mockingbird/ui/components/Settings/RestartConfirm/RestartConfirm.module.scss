@@ -1,8 +1,8 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .restartConfirm {
-  width: $device-width;
-  height: $device-height;
+  width: vars.$device-width;
+  height: vars.$device-height;
   padding: 116px 120px;
   display: flex;
   flex-direction: column;
@@ -11,23 +11,23 @@
 }
 
 .title {
-  @include text-style(44px, 48px, -0.02em);
-  color: $white;
+  @include vars.text-style(44px, 48px, -0.02em);
+  color: vars.$white;
   margin-bottom: 32px;
   font-weight: bold;
 }
 
 .description {
-  @include text-style(32px, 40px, 0);
-  color: $white;
+  @include vars.text-style(32px, 40px, 0);
+  color: vars.$white;
   margin-bottom: 40px;
 }
 
 .button {
-  @include text-style(32px, 40px, -0.02em);
+  @include vars.text-style(32px, 40px, -0.02em);
   font-weight: bold;
-  background-color: $white;
-  color: $black;
+  background-color: vars.$white;
+  color: vars.$black;
   border: none;
   border-radius: 500px;
   padding: 16px 32px;

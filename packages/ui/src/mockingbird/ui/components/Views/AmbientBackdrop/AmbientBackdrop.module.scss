@@ -1,11 +1,11 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .ambientBackdrop {
-  @include transition-background;
-  height: $device-height;
+  @include vars.transition-background;
+  height: vars.$device-height;
   overflow: hidden;
   position: absolute;
-  width: $device-width;
+  width: vars.$device-width;
   will-change: transform;
   z-index: -1;
   border-radius: 10px;

@@ -1,4 +1,4 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 $artwork-small-scale: 0.65;
 
@@ -10,7 +10,7 @@ $artwork-small-scale: 0.65;
 }
 
 .imageWrapper {
-  @include transition-transform;
+  @include vars.transition-transform;
   transform-origin: top left;
   margin-right: 24px;
 
@@ -20,7 +20,7 @@ $artwork-small-scale: 0.65;
 }
 
 .titles {
-  @include transition-transform;
+  @include vars.transition-transform;
   height: 88px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -47,12 +47,12 @@ $artwork-small-scale: 0.65;
 }
 
 .tracklistTitle {
-  @include transition-transform;
+  @include vars.transition-transform;
   transform-origin: top left;
   width: 100%;
   height: 50px;
-  @include text-style(44px, 48px, -0.03em);
-  color: $white;
+  @include vars.text-style(44px, 48px, -0.03em);
+  color: vars.$white;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -64,11 +64,11 @@ $artwork-small-scale: 0.65;
 }
 
 .trackCount {
-  @include transition-opacity-transform;
+  @include vars.transition-opacity-transform;
   width: 100%;
   height: 32px;
-  @include text-style(28px, 32px, -0.01em);
-  color: $opacity-white-70;
+  @include vars.text-style(28px, 32px, -0.01em);
+  color: vars.$opacity-white-70;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

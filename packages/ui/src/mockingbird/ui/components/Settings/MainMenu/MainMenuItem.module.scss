@@ -1,7 +1,7 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .setting {
-  @include transition-background-opacity;
+  @include vars.transition-background-opacity;
 
   display: flex;
   align-items: center;
@@ -19,22 +19,22 @@
   justify-content: center;
   margin-right: 48px;
   opacity: 0.7;
-  color: $white;
+  color: vars.$white;
 }
 
 .label {
-  @include transition-opacity;
+  @include vars.transition-opacity;
 
-  color: $white;
+  color: vars.$white;
   opacity: 0.7;
   width: 514px;
   font-weight: bold;
 
-  @include text-style(36px, 40px, -0.02em);
+  @include vars.text-style(36px, 40px, -0.02em);
 }
 
 .active:not(.disabled) {
-  background: $opacity-white-10;
+  background: vars.$opacity-white-10;
 
   .label {
     opacity: 1;
@@ -50,7 +50,7 @@
 }
 
 .pressed {
-  background: $opacity-white-10;
+  background: vars.$opacity-white-10;
   opacity: 0.5;
 }
 
@@ -63,19 +63,19 @@
 .micStatus {
   text-align: center;
 
-  @include text-style(36px, 40px, -0.02em);
+  @include vars.text-style(36px, 40px, -0.02em);
 
   margin-right: 72px;
-  color: $white;
+  color: vars.$white;
   opacity: 0.5;
 }
 
 .green {
-  color: $green-light;
+  color: vars.$green-light;
   opacity: 1;
 }
 
 .white {
-  color: $white;
+  color: vars.$white;
   opacity: 1;
 }

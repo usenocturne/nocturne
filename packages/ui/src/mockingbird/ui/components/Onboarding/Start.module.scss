@@ -1,9 +1,9 @@
-@import "../../styles/variables.module";
+@use "../../styles/variables.module" as vars;
 
 .start {
-  height: $device-height;
-  width: $device-width;
-  background-color: $pink;
+  height: vars.$device-height;
+  width: vars.$device-width;
+  background-color: vars.$pink;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -12,9 +12,9 @@
 }
 
 .title {
-  @include text-style(120px, 120px, -0.04em);
+  @include vars.text-style(120px, 120px, -0.04em);
 
-  color: $aubergine;
+  color: vars.$aubergine;
 }
 
 .tourAction {
@@ -24,9 +24,9 @@
   justify-content: space-between;
 
   .subtitle {
-    @include text-style(72px, 72px, -0.03em);
+    @include vars.text-style(72px, 72px, -0.03em);
 
-    color: $aubergine;
+    color: vars.$aubergine;
   }
 
   .arrowWrapper {
@@ -36,11 +36,11 @@
     width: 88px;
     height: 88px;
     border-radius: 50%;
-    background: $aubergine;
+    background: vars.$aubergine;
 
     svg {
       transform: scale(3);
-      color: $pink;
+      color: vars.$pink;
     }
   }
 }

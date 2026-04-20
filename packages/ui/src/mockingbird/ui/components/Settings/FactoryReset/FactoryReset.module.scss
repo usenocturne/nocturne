@@ -1,8 +1,8 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .factoryReset {
-  width: $device-width;
-  height: $device-height;
+  width: vars.$device-width;
+  height: vars.$device-height;
   padding: 68px 112px;
   display: flex;
   flex-direction: column;
@@ -11,8 +11,8 @@
 }
 
 .description {
-  @include text-style(32px, 40px, 0);
-  color: $white;
+  @include vars.text-style(32px, 40px, 0);
+  color: vars.$white;
   margin-bottom: 32px;
   text-align: center;
 }
@@ -25,7 +25,7 @@
 }
 
 .button {
-  @include text-style(32px, 40px, -0.02em);
+  @include vars.text-style(32px, 40px, -0.02em);
   font-weight: bold;
   border: none;
   border-radius: 500px;
@@ -40,11 +40,11 @@
 }
 
 .primary {
-  background-color: $white;
-  color: $black;
+  background-color: vars.$white;
+  color: vars.$black;
 }
 
 .secondary {
-  background-color: $white-10;
-  color: $white;
+  background-color: vars.$white-10;
+  color: vars.$white;
 }

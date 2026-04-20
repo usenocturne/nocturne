@@ -1,22 +1,22 @@
-@import "../../styles/variables.module";
+@use "../../styles/variables.module" as vars;
 
 .screen {
-  background: $aubergine;
-  height: $device-height;
-  width: $device-width;
+  background: vars.$aubergine;
+  height: vars.$device-height;
+  width: vars.$device-width;
   padding: 32px 48px 40px;
   box-sizing: border-box;
 }
 
 .title {
-  color: $pink;
-  @include text-style(120px, 120px, -0.04em);
+  color: vars.$pink;
+  @include vars.text-style(120px, 120px, -0.04em);
   width: 704px;
   margin-bottom: 32px;
 }
 
 .subtitle {
-  color: $pink;
-  @include text-style(36px, 48px, -0.02em);
+  color: vars.$pink;
+  @include vars.text-style(36px, 48px, -0.02em);
   max-width: 700px;
 }

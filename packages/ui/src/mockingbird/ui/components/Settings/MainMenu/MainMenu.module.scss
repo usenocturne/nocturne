@@ -1,12 +1,12 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .mainMenu {
-  background-color: $black;
-  height: $device-height;
+  background-color: vars.$black;
+  height: vars.$device-height;
 }
 
 .header {
-  background: $black;
+  background: vars.$black;
   display: flex;
   align-items: center;
   width: 100%;
@@ -15,9 +15,9 @@
   p {
     margin-left: 40px;
     padding: 0;
-    color: $white;
+    color: vars.$white;
     font-weight: bold;
 
-    @include text-style(44px, 49px, -0.02em);
+    @include vars.text-style(44px, 49px, -0.02em);
   }
 }

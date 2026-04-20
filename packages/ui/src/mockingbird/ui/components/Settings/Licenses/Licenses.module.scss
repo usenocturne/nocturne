@@ -1,17 +1,17 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .licenses {
-  width: $device-width;
-  height: $device-height;
-  background-color: $white;
-  color: $black;
+  width: vars.$device-width;
+  height: vars.$device-height;
+  background-color: vars.$white;
+  color: vars.$black;
   padding: 42px;
   box-sizing: border-box;
 }
 
 .header {
   font-weight: bold;
-  @include text-style(44px, 48px, -0.02em);
+  @include vars.text-style(44px, 48px, -0.02em);
   margin-bottom: 42px;
 }
 
@@ -34,7 +34,7 @@
   align-items: center;
   justify-content: center;
   height: 300px;
-  @include text-style(32px, 40px, 0);
+  @include vars.text-style(32px, 40px, 0);
 }
 
 ::-webkit-scrollbar {

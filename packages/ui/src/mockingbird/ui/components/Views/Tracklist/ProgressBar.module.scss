@@ -1,4 +1,4 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 $progress-backgroud-color: rgb(93 93 93);
 
@@ -12,7 +12,7 @@ $progress-backgroud-color: rgb(93 93 93);
 }
 
 .progress {
-  background-color: $green-light;
+  background-color: vars.$green-light;
   clip-path: inset(0 0 0 0 round 4px);
   height: 100%;
 }

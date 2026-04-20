@@ -1,4 +1,4 @@
-@import "../../../../styles/variables.module";
+@use "../../../../styles/variables.module" as vars;
 
 .presetTopWrapper {
   width: 200px;
@@ -6,13 +6,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: $overlay-z-index + 1;
+  z-index: vars.$overlay-z-index + 1;
 }
 
 .presetIndicator {
   width: 80px;
   height: 4px;
-  background: $opacity-white-30;
+  background: vars.$opacity-white-30;
   clip-path: inset(0 0 0 0 round 0 0 4px 4px);
 }
 
@@ -20,19 +20,19 @@
   margin: 16px 0 32px;
 
   .number {
-    color: $opacity-white-70;
+    color: vars.$opacity-white-70;
   }
 }
 
 .active {
-  z-index: $overlay-z-index + 1;
+  z-index: vars.$overlay-z-index + 1;
 
   .presetNumber .number {
-    color: $white;
+    color: vars.$white;
   }
 
   .presetIndicator {
-    background-color: $green-light;
-    @include transition-background-color;
+    background-color: vars.$green-light;
+    @include vars.transition-background-color;
   }
 }

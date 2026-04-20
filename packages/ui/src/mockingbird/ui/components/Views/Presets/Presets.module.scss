@@ -1,10 +1,10 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .presetsBackground {
-  height: $device-height;
+  height: vars.$device-height;
   position: relative;
-  width: $device-width;
-  background: $black;
+  width: vars.$device-width;
+  background: vars.$black;
 }
 
 .presetIndicatorsWrapper {

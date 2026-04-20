@@ -1,11 +1,11 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 $support-text-gray: #7f7f7f;
 
 .aviHeader {
   position: sticky;
-  background-color: $black;
-  z-index: $overlay-z-index + 20;
+  background-color: vars.$black;
+  z-index: vars.$overlay-z-index + 20;
   height: 128px;
   width: 100%;
   display: flex;
@@ -13,36 +13,36 @@ $support-text-gray: #7f7f7f;
 
   span {
     margin-left: 40px;
-    color: $white;
+    color: vars.$white;
     font-weight: bold;
-    @include text-style(44px, 48px, -0.02em);
+    @include vars.text-style(44px, 48px, -0.02em);
   }
 }
 
 .aviContainer {
   height: 352px;
   overflow: scroll;
-  background: $black;
+  background: vars.$black;
 
   .notification {
-    color: $white;
+    color: vars.$white;
     box-sizing: border-box;
     height: 96px;
     margin-bottom: 40px;
     padding-left: 40px;
     padding-right: 72px;
-    width: $device-width;
+    width: vars.$device-width;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-top: 1px solid rgb(255 255 255 / 20%);
     border-bottom: 1px solid rgb(255 255 255 / 20%);
     font-weight: 700;
-    @include text-style(36px, 48px, -0.02em);
-    @include transition-background-border;
+    @include vars.text-style(36px, 48px, -0.02em);
+    @include vars.transition-background-border;
 
     &.pressed {
-      color: $white-70;
+      color: vars.$white-70;
       background: rgb(255 255 255 / 5%);
     }
 
@@ -58,14 +58,14 @@ $support-text-gray: #7f7f7f;
   }
 
   .onOff {
-    color: $positive;
+    color: vars.$positive;
   }
 
   .texts {
     box-sizing: border-box;
     width: 100%;
     padding: 16px 40px 48px;
-    color: $gray-85;
+    color: vars.$gray-85;
 
     p,
     ul,
@@ -74,11 +74,11 @@ $support-text-gray: #7f7f7f;
     }
 
     p {
-      @include text-style(32px, 48px, -0.03em);
+      @include vars.text-style(32px, 48px, -0.03em);
     }
 
     .intro {
-      color: $gray-80;
+      color: vars.$gray-80;
       margin-bottom: 36px;
     }
 
@@ -86,7 +86,7 @@ $support-text-gray: #7f7f7f;
       margin-bottom: 32px;
 
       li {
-        @include text-style(32px, 40px, -0.02em);
+        @include vars.text-style(32px, 40px, -0.02em);
         font-weight: 700;
         margin-bottom: 14px;
       }

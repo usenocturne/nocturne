@@ -1,9 +1,9 @@
-@import "../../styles/variables.module";
+@use "../../styles/variables.module" as vars;
 
 .screen {
-  background: $aubergine;
-  height: $device-height;
-  width: $device-width;
+  background: vars.$aubergine;
+  height: vars.$device-height;
+  width: vars.$device-width;
   padding: 32px 48px 40px;
 }
 
@@ -16,20 +16,20 @@
 
 .title {
   margin-bottom: 32px;
-  color: $pink;
+  color: vars.$pink;
 
-  @include text-style(120px, 120px, -0.04em);
+  @include vars.text-style(120px, 120px, -0.04em);
 }
 
 .texts {
-  color: $pink;
+  color: vars.$pink;
   width: 650px;
 
-  @include text-style(36px, 48px, -0.02em);
+  @include vars.text-style(36px, 48px, -0.02em);
 }
 
 .pinCode {
-  color: $pink;
+  color: vars.$pink;
 
-  @include text-style(72px, 72px, -0.03em);
+  @include vars.text-style(72px, 72px, -0.03em);
 }

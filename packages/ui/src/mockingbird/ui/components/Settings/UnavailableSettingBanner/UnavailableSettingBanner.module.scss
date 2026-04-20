@@ -1,4 +1,4 @@
-@import "../../../styles/variables.module";
+@use "../../../styles/variables.module" as vars;
 
 .banner {
   position: absolute;
@@ -12,7 +12,7 @@
   padding: 0 24px;
   box-sizing: border-box;
   transform: translateY(64px);
-  transition: transform 300ms $easing-function;
+  transition: transform 300ms vars.$easing-function;
   z-index: 100;
 }
 
@@ -21,13 +21,13 @@
 }
 
 .icon {
-  color: $white;
+  color: vars.$white;
   margin-right: 12px;
   display: flex;
   align-items: center;
 }
 
 .text {
-  @include text-style(24px, 32px, 0);
-  color: $white;
+  @include vars.text-style(24px, 32px, 0);
+  color: vars.$white;
 }

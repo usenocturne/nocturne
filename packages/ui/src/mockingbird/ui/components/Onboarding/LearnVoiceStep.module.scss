@@ -1,4 +1,4 @@
-@import "../../styles/variables.module";
+@use "../../styles/variables.module" as vars;
 
 $transition-duration: 800ms;
 $transition-delay: 1000ms;
@@ -16,18 +16,18 @@ $transition-delay: 1000ms;
 }
 
 .header {
-  color: $green;
+  color: vars.$green;
   font-weight: bold;
   margin-bottom: 24px;
 
-  @include text-style(36px, 48px, -0.02em);
+  @include vars.text-style(36px, 48px, -0.02em);
 }
 
 .title {
-  @include text-style(72px, 72px, -0.03em);
+  @include vars.text-style(72px, 72px, -0.03em);
 
   font-weight: bold;
-  color: $white;
+  color: vars.$white;
 }
 
 .skipOrJellyfish {
@@ -44,9 +44,9 @@ $transition-delay: 1000ms;
 }
 
 .contentEnterActive {
-  @include transition-opacity-transform(
+  @include vars.transition-opacity-transform(
     $transition-duration,
-    $easing-function-ease-out-cubic,
+    vars.$easing-function-ease-out-cubic,
     $transition-delay
   );
 
@@ -59,7 +59,7 @@ $transition-delay: 1000ms;
 }
 
 .contentExitActive {
-  @include transition-opacity(500ms, $easing-function-ease-out-cubic);
+  @include vars.transition-opacity(500ms, vars.$easing-function-ease-out-cubic);
 
   opacity: 0;
 }
@@ -70,5 +70,5 @@ $transition-delay: 1000ms;
 
 .stepExitActive {
   opacity: 0;
-  transition: opacity 1300ms $easing-function-ease-out-cubic;
+  transition: opacity 1300ms vars.$easing-function-ease-out-cubic;
 }
