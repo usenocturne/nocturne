@@ -45,16 +45,28 @@ export function extractColorsFromImageData(imageData) {
   return new Promise((resolve, reject) => {
     try {
       const img = new Image();
+      let objectUrl = null;
+
       img.onload = () => {
         try {
-          resolve(extractColorsFromCanvasImage(img));
+          const colors = extractColorsFromCanvasImage(img);
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+          }
+          resolve(colors);
         } catch (err) {
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+          }
           resolve(["#191414", "#1E1B1B", "#222222", "#1A1A1A"]);
           console.error("Error extracting colors from image data:", err);
         }
       };
 
       img.onerror = () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
         resolve(["#191414", "#1E1B1B", "#222222", "#1A1A1A"]);
       };
 
@@ -70,10 +82,12 @@ export function extractColorsFromImageData(imageData) {
         }
       } else if (imageData instanceof ArrayBuffer) {
         const blob = new Blob([imageData], { type: "image/jpeg" });
-        img.src = URL.createObjectURL(blob);
+        objectUrl = URL.createObjectURL(blob);
+        img.src = objectUrl;
       } else if (imageData instanceof Uint8Array) {
         const blob = new Blob([imageData], { type: "image/jpeg" });
-        img.src = URL.createObjectURL(blob);
+        objectUrl = URL.createObjectURL(blob);
+        img.src = objectUrl;
       } else {
         img.src = String(imageData);
       }
@@ -84,9 +98,16 @@ export function extractColorsFromImageData(imageData) {
   });
 }
 
+let _canvas = null;
+let _ctx = null;
+
 function extractColorsFromCanvasImage(img) {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!_canvas) {
+    _canvas = document.createElement("canvas");
+    _ctx = _canvas.getContext("2d", { willReadFrequently: true });
+  }
+  const canvas = _canvas;
+  const ctx = _ctx;
 
   const size = 100;
   canvas.width = size;
@@ -94,21 +115,25 @@ function extractColorsFromCanvasImage(img) {
 
   ctx.drawImage(img, 0, 0, size, size);
 
+  const imageData = ctx.getImageData(0, 0, size, size);
+  const d = imageData.data;
+
+  const pixel = (col, row) => {
+    const idx = (row * size + col) * 4;
+    return [d[idx], d[idx + 1], d[idx + 2]];
+  };
+
   const colorSamples = [];
   for (let x = 0; x < 5; x++) {
     for (let y = 0; y < 5; y++) {
-      const pixelData = ctx.getImageData(
-        Math.floor((x * size) / 5),
-        Math.floor((y * size) / 5),
-        1,
-        1,
-      ).data;
+      const col = Math.floor((x * size) / 5);
+      const row = Math.floor((y * size) / 5);
+      const [r, g, b] = pixel(col, row);
       colorSamples.push({
-        r: pixelData[0],
-        g: pixelData[1],
-        b: pixelData[2],
-        brightness:
-          0.299 * pixelData[0] + 0.587 * pixelData[1] + 0.114 * pixelData[2],
+        r,
+        g,
+        b,
+        brightness: 0.299 * r + 0.587 * g + 0.114 * b,
       });
     }
   }

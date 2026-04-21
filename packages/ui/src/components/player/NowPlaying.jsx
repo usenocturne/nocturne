@@ -1,6 +1,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   useCallback,
   useMemo,
@@ -17,6 +18,9 @@ import { useButtonMapping } from "../../hooks/useButtonMapping";
 import { useSettings } from "../../contexts/SettingsContext";
 import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 import DeviceSwitcherModal from "./DeviceSwitcherModal";
+import VolumeOverlay from "./VolumeOverlay";
+import PlaybackTimeLabel from "./PlaybackTimeLabel";
+import { getProgressSnapshot } from "../../hooks/usePlaybackProgress";
 import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
 import SpotifyImage from "../common/SpotifyImage";
@@ -41,7 +45,7 @@ import {
 } from "../common/icons";
 import { generateRandomString } from "../../utils/helpers";
 
-export default function NowPlaying({
+function NowPlaying({
   currentPlayback,
   playbackProgress,
   onClose,
@@ -59,6 +63,7 @@ export default function NowPlaying({
     visible: false,
     animation: "hidden",
   });
+  const [suppressFillTransition, setSuppressFillTransition] = useState(false);
   const [phoneVolume, setPhoneVolume] = useState(null);
   const [phoneMediaVolumeDirection, setPhoneMediaVolumeDirection] =
     useState(null);
@@ -107,6 +112,7 @@ export default function NowPlaying({
     unlikeTrack,
     sendDJSignal,
     setVolume,
+    adjustVolumeByDelta,
     volume,
     updateVolumeFromDevice,
     toggleShuffle,
@@ -124,14 +130,8 @@ export default function NowPlaying({
     phoneMediaVolumeDown,
   } = useSpotifyPlayerControls(currentPlayback);
 
-  const {
-    progressMs,
-    isPlaying,
-    duration,
-    progressPercentage,
-    updateProgress,
-    triggerRefresh,
-  } = playbackProgress;
+  const { isPlaying, duration, updateProgress, triggerRefresh } =
+    playbackProgress;
 
   const convertTimeToLength = (ms, elapsed) => {
     let totalSeconds = Math.floor(ms / 1000);
@@ -189,6 +189,17 @@ export default function NowPlaying({
       }, 300);
     }, 1500);
   }, []);
+
+  useLayoutEffect(() => {
+    if (volumeOverlayState.visible) {
+      setSuppressFillTransition(true);
+      const raf = requestAnimationFrame(() => {
+        setSuppressFillTransition(false);
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+    setSuppressFillTransition(false);
+  }, [volumeOverlayState.visible]);
 
   useEffect(() => {
     const unsubscribe = subscribeToPhoneVolume((volumePercent) => {
@@ -431,13 +442,6 @@ export default function NowPlaying({
 
       if (isProgressScrubbing) return;
 
-      const now = Date.now();
-      if (now - lastWheelEventRef.current < 50) {
-        e.preventDefault();
-        return;
-      }
-      lastWheelEventRef.current = now;
-
       e.preventDefault();
       e.stopPropagation();
 
@@ -445,9 +449,14 @@ export default function NowPlaying({
         Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       wheelDeltaAccumulatorRef.current += delta;
 
+      const now = Date.now();
+      if (now - lastWheelEventRef.current < 50) {
+        return;
+      }
+      lastWheelEventRef.current = now;
+
       if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
         const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
-
         wheelDeltaAccumulatorRef.current = 0;
 
         if (isPhoneMedia || isSmartphoneDevice) {
@@ -460,28 +469,15 @@ export default function NowPlaying({
           } else {
             phoneMediaVolumeDown();
           }
-
-          if (phoneVolumeTimeoutRef.current) {
-            clearTimeout(phoneVolumeTimeoutRef.current);
-          }
-
-          phoneVolumeTimeoutRef.current = setTimeout(() => {
-            setPhoneVolume(null);
-            phoneVolumeTimeoutRef.current = null;
-          }, 500);
         } else {
-          const newVolume = Math.max(0, Math.min(100, volume + direction * 5));
-          if (newVolume !== volume) {
-            manualVolumeChangeRef.current = true;
-            setVolume(newVolume);
-          }
+          manualVolumeChangeRef.current = true;
+          adjustVolumeByDelta(direction * 5);
         }
       }
     },
     [
       isProgressScrubbing,
-      volume,
-      setVolume,
+      adjustVolumeByDelta,
       isPhoneMedia,
       isSmartphoneDevice,
       phoneMediaVolumeUp,
@@ -534,7 +530,7 @@ export default function NowPlaying({
     resumeAutoScrollOnNextLyric,
     scrollToTop,
     isTimeSynced,
-  } = useLyrics(currentPlayback, progressMs);
+  } = useLyrics(currentPlayback);
 
   const handleColorsExtracted = useCallback(
     (colors) => {
@@ -551,16 +547,7 @@ export default function NowPlaying({
     } else {
       await skipToNext();
     }
-  }, [
-    isPhoneMedia,
-    phoneMediaNext,
-    currentPlayback?.item?.type,
-    progressMs,
-    duration,
-    seekToPosition,
-    updateProgress,
-    skipToNext,
-  ]);
+  }, [isPhoneMedia, phoneMediaNext, skipToNext]);
 
   const handleSkipPrevious = useCallback(async () => {
     if (isPhoneMedia) {
@@ -569,7 +556,8 @@ export default function NowPlaying({
     }
 
     const RESTART_THRESHOLD_MS = 3000;
-    if (progressMs > RESTART_THRESHOLD_MS) {
+    const currentProgressMs = getProgressSnapshot().progressMs ?? 0;
+    if (currentProgressMs > RESTART_THRESHOLD_MS) {
       await seekToPosition(0);
       updateProgress(0);
       if (showLyrics) scrollToTop();
@@ -580,7 +568,6 @@ export default function NowPlaying({
     isPhoneMedia,
     phoneMediaPrevious,
     currentPlayback?.item?.type,
-    progressMs,
     seekToPosition,
     updateProgress,
     skipToPrevious,
@@ -1047,7 +1034,7 @@ export default function NowPlaying({
             isSpotifyPending
               ? null
               : currentPlayback?.item && !isStartingPlayback
-                ? progressPercentage
+                ? 1
                 : 0
           }
           isPlaying={isPlaying && !isStartingPlayback}
@@ -1082,9 +1069,10 @@ export default function NowPlaying({
             {currentPlayback && currentPlayback.item ? (
               <>
                 <span className="text-white/60 text-[20px]">
-                  {isSpotifyPending
-                    ? "--:--"
-                    : convertTimeToLength(progressMs, true)}
+                  <PlaybackTimeLabel
+                    isSpotifyPending={isSpotifyPending}
+                    isElapsed={true}
+                  />
                 </span>
                 <span className="text-white/60 text-[20px]">
                   {convertTimeToLength(currentPlayback.item.duration_ms, true)}
@@ -1317,32 +1305,13 @@ export default function NowPlaying({
           </Menu>
         </div>
       </div>
-      <div
-        className={`fixed top-[4.5rem] transform transition-opacity duration-300 ${
-          !volumeOverlayState.visible
-            ? "hidden"
-            : volumeOverlayState.animation === "showing"
-              ? "opacity-100 volumeInScale"
-              : volumeOverlayState.animation === "hiding"
-                ? "opacity-0 volumeOutScale"
-                : "hidden"
-        }`}
-        style={{
-          right: "-6px",
-          zIndex: 50,
-        }}
-      >
-        <div className="w-14 h-44 bg-slate-700/60 rounded-[17px] flex flex-col-reverse drop-shadow-xl overflow-hidden">
-          <div
-            className="bg-white w-full transition-height duration-300 rounded-b-[13px]"
-            style={{ height: `${displayVolume}%` }}
-          >
-            <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-6 pb-7">
-              {VolumeIcon}
-            </div>
-          </div>
-        </div>
-      </div>
+      <VolumeOverlay
+        visible={volumeOverlayState.visible}
+        animation={volumeOverlayState.animation}
+        displayVolume={displayVolume}
+        suppressFillTransition={suppressFillTransition}
+        volumeIcon={VolumeIcon}
+      />
 
       <ButtonMappingOverlay
         show={showMappingOverlay}
@@ -1357,3 +1326,22 @@ export default function NowPlaying({
     </div>
   );
 }
+
+const areNowPlayingPropsEqual = (prev, next) => {
+  const keys = Object.keys(next);
+  for (const key of keys) {
+    if (key === "playbackProgress") continue;
+    if (!Object.is(prev[key], next[key])) return false;
+  }
+  const pp = prev.playbackProgress || {};
+  const np = next.playbackProgress || {};
+  return (
+    pp.isPlaying === np.isPlaying &&
+    pp.duration === np.duration &&
+    pp.trackId === np.trackId &&
+    pp.updateProgress === np.updateProgress &&
+    pp.triggerRefresh === np.triggerRefresh
+  );
+};
+
+export default React.memo(NowPlaying, areNowPlayingPropsEqual);

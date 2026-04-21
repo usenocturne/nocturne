@@ -1,5 +1,6 @@
 import { useCallback, useState, useContext, useRef, useEffect } from "react";
 import React from "react";
+import { flushSync } from "react-dom";
 import { generateRandomString } from "../utils/helpers";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { sendNocturneWsRequest } from "./useNocturned";
@@ -17,6 +18,8 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
   const isVolumeProcessingRef = useRef(false);
   const lastVolumeUpdateTimeRef = useRef(0);
   const lastManualVolumeChangeRef = useRef(0);
+  const lastSentVolumeRef = useRef(null);
+  const volumeRef = useRef(50);
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
 
   const isLocalMedia = currentPlayback?.item?.is_local === true;
@@ -53,20 +56,43 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     };
   }, []);
 
+  const prevDeviceIdRef = useRef(null);
+  useEffect(() => {
+    const currentDeviceId = currentPlayback?.device?.id;
+    if (currentDeviceId !== prevDeviceIdRef.current) {
+      lastSentVolumeRef.current = null;
+      prevDeviceIdRef.current = currentDeviceId;
+    }
+  }, [currentPlayback?.device?.id]);
+
   const updateVolumeFromDevice = useCallback(
     (deviceVolume) => {
       if (isPhoneMedia || isSmartphoneDevice) {
         return;
       }
 
-      const now = Date.now();
-      const timeSinceManualChange = now - lastManualVolumeChangeRef.current;
+      if (isAdjustingVolume || deviceVolume === undefined) {
+        return;
+      }
 
-      if (
-        !isAdjustingVolume &&
-        deviceVolume !== undefined &&
-        timeSinceManualChange > 1000
-      ) {
+      const expectedVolume = lastSentVolumeRef.current;
+
+      if (expectedVolume === null) {
+        volumeRef.current = deviceVolume;
+        setVolumeState(deviceVolume);
+        return;
+      }
+
+      if (deviceVolume === expectedVolume) {
+        volumeRef.current = deviceVolume;
+        setVolumeState(deviceVolume);
+        return;
+      }
+
+      const timeSinceManualChange =
+        Date.now() - lastManualVolumeChangeRef.current;
+      if (timeSinceManualChange > 10000) {
+        volumeRef.current = deviceVolume;
         setVolumeState(deviceVolume);
       }
     },
@@ -289,7 +315,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
       const activeDeviceType = getActiveDeviceType();
       if (activeDeviceType === "SMARTPHONE") {
-        const direction = volumePercent > volume ? "up" : "down";
+        const direction = volumePercent > volumeRef.current ? "up" : "down";
         try {
           if (direction === "up") {
             await sendNocturneWsRequest("media.control.volumeUp", {});
@@ -308,9 +334,11 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
         Math.min(100, Math.round(volumePercent)),
       );
 
-      if (boundedVolume !== volume) {
-        const direction = boundedVolume > volume ? "up" : "down";
+      if (boundedVolume !== volumeRef.current) {
+        const direction = boundedVolume > volumeRef.current ? "up" : "down";
+        volumeRef.current = boundedVolume;
         lastManualVolumeChangeRef.current = Date.now();
+        lastSentVolumeRef.current = boundedVolume;
         setVolumeState(boundedVolume);
         setIsAdjustingVolume(true);
 
@@ -323,7 +351,55 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
 
       return true;
     },
-    [isSpotifyReady, processVolumeQueue, volume, isPhoneMedia],
+    [isSpotifyReady, processVolumeQueue, isPhoneMedia],
+  );
+
+  const adjustVolumeByDelta = useCallback(
+    async (delta) => {
+      if (!isSpotifyReady) return false;
+      if (isPhoneMedia) return false;
+
+      const activeDeviceType = getActiveDeviceType();
+      if (activeDeviceType === "SMARTPHONE") {
+        const direction = delta > 0 ? "up" : "down";
+        try {
+          if (direction === "up") {
+            await sendNocturneWsRequest("media.control.volumeUp", {});
+          } else {
+            await sendNocturneWsRequest("media.control.volumeDown", {});
+          }
+          return true;
+        } catch (err) {
+          console.error("Error adjusting phone volume:", err);
+          return false;
+        }
+      }
+
+      const current = volumeRef.current;
+      const newVolume = Math.max(0, Math.min(100, Math.round(current + delta)));
+
+      if (newVolume === current) {
+        return true;
+      }
+
+      const direction = newVolume > current ? "up" : "down";
+      volumeRef.current = newVolume;
+      lastManualVolumeChangeRef.current = Date.now();
+      lastSentVolumeRef.current = newVolume;
+      flushSync(() => {
+        setVolumeState(newVolume);
+      });
+      setIsAdjustingVolume(true);
+
+      volumeQueueRef.current.push({ volume: newVolume, direction });
+
+      if (!isVolumeProcessingRef.current) {
+        processVolumeQueue();
+      }
+
+      return true;
+    },
+    [isSpotifyReady, processVolumeQueue, isPhoneMedia],
   );
 
   const checkIsTrackLiked = useCallback(
@@ -537,6 +613,7 @@ export function useSpotifyPlayerControls(currentPlayback = null) {
     skipToPrevious,
     seekToPosition,
     setVolume,
+    adjustVolumeByDelta,
     volume,
     isAdjustingVolume,
     updateVolumeFromDevice,

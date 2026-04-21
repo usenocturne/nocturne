@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
+import { useProgressValue } from "./usePlaybackProgress";
 
-export function useLyrics(currentPlayback, progressMs) {
+export function useLyrics(currentPlayback) {
+  const { progressMs } = useProgressValue();
   const [showLyrics, setShowLyrics] = useState(false);
   const [lyrics, setLyrics] = useState([]);
   const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);

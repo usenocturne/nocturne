@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
@@ -15,6 +9,43 @@ import ButtonMappingOverlay from "../common/overlays/ButtonMappingOverlay";
 import ScrollingText from "../common/ScrollingText";
 import SpotifyImage from "../common/SpotifyImage";
 import { extractColorsFromImage } from "../../utils/colorExtractor";
+
+const LOAD_MORE_CONTENT_TYPES = new Set([
+  "playlist",
+  "show",
+  "mix",
+  "liked-songs",
+]);
+
+const FORMATTED_DATE_OPTIONS = {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+};
+
+const formattedDates = new Map();
+
+const ROW_TRANSITION_STYLE = { transition: "transform 0.2s ease-out" };
+const TRACK_INDEX_STYLE = {
+  minWidth: "3rem",
+  fontSize: "32px",
+  fontWeight: "580",
+};
+
+const getFormattedReleaseDate = (releaseDate) => {
+  if (!releaseDate) {
+    return "No release date available";
+  }
+
+  if (!formattedDates.has(releaseDate)) {
+    formattedDates.set(
+      releaseDate,
+      new Date(releaseDate).toLocaleDateString("en-US", FORMATTED_DATE_OPTIONS),
+    );
+  }
+
+  return formattedDates.get(releaseDate);
+};
 
 const ContentView = ({
   contentId,
@@ -37,16 +68,11 @@ const ContentView = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [nextUrl, setNextUrl] = useState(null);
   const [hasMoreTracks, setHasMoreTracks] = useState(false);
-  const [tracksPerPage, setTracksPerPage] = useState(0);
-  const [loadedPages, setLoadedPages] = useState(0);
   const tracksContainerRef = useRef(null);
   const navigate = useNavigate();
 
-  const {
-    playTrack,
-    isLoading: isPlaybackLoading,
-    error: playbackError,
-  } = useSpotifyPlayerControls(currentPlayback);
+  const { playTrack, error: playbackError } =
+    useSpotifyPlayerControls(currentPlayback);
 
   const {
     getPlaylist,
@@ -66,13 +92,16 @@ const ContentView = ({
     getShowEpisodes,
   } = useSpotifyWebSocket();
 
-  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
   const [isLazyLoading, setIsLazyLoading] = useState(false);
-  const lazyLoadTimeoutRef = useRef(null);
-  const showEpisodeLazyLoadRef = useRef(null);
+  const autoLoadTimerRef = useRef(null);
+  const loadMoreSentinelRef = useRef(null);
+  const initialAutoLoadTriggeredRef = useRef(false);
+  const loadMoreInFlightRef = useRef(false);
+  const scrollTrackingRef = useRef({ scrollTop: 0, frameId: null });
 
   const tracksLengthRef = useRef(0);
   const isFetchingRef = useRef(false);
+  const supportsLoadMore = LOAD_MORE_CONTENT_TYPES.has(contentType);
 
   const imageStyle = useMemo(() => {
     return contentType === "artist"
@@ -130,7 +159,7 @@ const ContentView = ({
   }, [onClose, navigate]);
 
   const handleTrackSelect = useCallback(
-    (index, trackElement) => {
+    (index) => {
       if (index >= 0 && index < tracks.length) {
         const track = tracks[index];
         if (track) {
@@ -153,7 +182,7 @@ const ContentView = ({
       setIgnoreNextRelease,
     });
 
-  const { selectedIndex } = useNavigation({
+  useNavigation({
     containerRef: tracksContainerRef,
     enableScrollTracking: true,
     enableWheelNavigation: true,
@@ -167,193 +196,21 @@ const ContentView = ({
     vertical: true,
   });
 
-  const lazyLoadShowEpisodes = useCallback(async () => {
-    if (
-      contentType !== "show" ||
-      isLazyLoading ||
-      !content ||
-      tracksLengthRef.current >= 50
-    ) {
-      return;
-    }
-
-    try {
-      setIsLazyLoading(true);
-
-      const offset = tracksLengthRef.current;
-      const data = await getShowEpisodes(contentId, {
-        offset,
-        limit: 10,
-      });
-
-      if (data.items && data.items.length > 0) {
-        const totalEpisodes = data.total || 0;
-
-        setTracks((prevTracks) => {
-          const updatedTracks = [...prevTracks, ...data.items];
-          const limitedTracks = updatedTracks.slice(0, 50);
-
-          tracksLengthRef.current = limitedTracks.length;
-
-          const newOffset = offset + data.items.length;
-          const hasMore =
-            newOffset < totalEpisodes && limitedTracks.length < 50;
-
-          if (hasMore) {
-            if (showEpisodeLazyLoadRef.current) {
-              clearTimeout(showEpisodeLazyLoadRef.current);
-            }
-            showEpisodeLazyLoadRef.current = setTimeout(() => {
-              lazyLoadShowEpisodes();
-            }, 2000);
-          }
-
-          return limitedTracks;
-        });
-
-        const newOffset = offset + data.items.length;
-        const hasMore =
-          newOffset < totalEpisodes && tracksLengthRef.current < 50;
-        setNextUrl(hasMore ? "has-more" : null);
-        setHasMoreTracks(hasMore);
-      }
-    } catch (error) {
-      console.error("Show episode lazy loading failed:", error);
-    } finally {
-      setIsLazyLoading(false);
-    }
-  }, [contentType, isLazyLoading, content, contentId, getShowEpisodes]);
-
-  const lazyLoadNextBatch = useCallback(async () => {
-    if (
-      (contentType !== "playlist" && contentType !== "mix") ||
-      isLazyLoading ||
-      !content
-    ) {
-      return;
-    }
-
-    try {
-      setIsLazyLoading(true);
-
-      let playlistId = contentId;
-
-      if (contentType === "mix") {
-        const foundMix = radioMixes.find((m) => m.id === contentId);
-        if (foundMix && foundMix.uri) {
-          playlistId = foundMix.uri.split(":").pop();
-        }
-      }
-
-      const data = await getPlaylistTracks(playlistId, {
-        offset: tracksLengthRef.current,
-        limit: 50,
-        fields: "offset,items(track(name,id,uri,artists(name,id)))",
-      });
-
-      if (data.items && data.items.length > 0) {
-        const newTracks = data.items.map((item) => item.track);
-
-        setTracks((prevTracks) => {
-          const updatedTracks = [...prevTracks, ...newTracks];
-
-          const currentTotal = updatedTracks.length;
-          const playlistTotal = content?.tracks?.total || 0;
-          const hasMore = currentTotal < playlistTotal;
-
-          setHasMoreTracks(hasMore);
-          return updatedTracks;
-        });
-
-        setNextUrl(data.next);
-      }
-    } catch (error) {
-      console.error("Lazy loading failed:", error);
-    } finally {
-      setIsLazyLoading(false);
-    }
-  }, [
-    contentType,
-    isLazyLoading,
-    content,
-    contentId,
-    getPlaylistTracks,
-    radioMixes,
-  ]);
-
   useEffect(() => {
     tracksLengthRef.current = tracks.length;
-
-    if (
-      content &&
-      tracks.length > 0 &&
-      contentType === "playlist" &&
-      !isLazyLoading &&
-      hasMoreTracks
-    ) {
-      if (lazyLoadTimeoutRef.current) {
-        clearTimeout(lazyLoadTimeoutRef.current);
-      }
-
-      lazyLoadTimeoutRef.current = setTimeout(() => {
-        lazyLoadNextBatch();
-      }, 3000);
-    }
-  }, [
-    tracks.length,
-    content,
-    contentType,
-    isLazyLoading,
-    hasMoreTracks,
-    lazyLoadNextBatch,
-  ]);
-
-  useEffect(() => {
-    if (
-      contentType === "show" &&
-      content &&
-      tracks.length > 0 &&
-      tracks.length < 50 &&
-      hasMoreTracks &&
-      !isLazyLoading
-    ) {
-      if (showEpisodeLazyLoadRef.current) {
-        clearTimeout(showEpisodeLazyLoadRef.current);
-      }
-
-      if (tracksLengthRef.current < 50) {
-        showEpisodeLazyLoadRef.current = setTimeout(() => {
-          lazyLoadShowEpisodes();
-        }, 2000);
-      }
-    }
-
-    return () => {
-      if (showEpisodeLazyLoadRef.current) {
-        clearTimeout(showEpisodeLazyLoadRef.current);
-      }
-    };
-  }, [
-    contentType,
-    content,
-    tracks.length,
-    hasMoreTracks,
-    isLazyLoading,
-    lazyLoadShowEpisodes,
-  ]);
+  }, [tracks.length]);
 
   const loadMoreTracks = useCallback(async () => {
     if (
       !nextUrl ||
       isLoadingMore ||
-      (contentType !== "playlist" &&
-        contentType !== "show" &&
-        contentType !== "mix" &&
-        contentType !== "liked-songs")
+      loadMoreInFlightRef.current ||
+      !LOAD_MORE_CONTENT_TYPES.has(contentType)
     )
       return;
 
     try {
+      loadMoreInFlightRef.current = true;
       setIsLoadingMore(true);
 
       if (contentType === "liked-songs") {
@@ -374,7 +231,6 @@ const ContentView = ({
           setTracks((prevTracks) => [...prevTracks, ...newTracks]);
           setNextUrl(hasMore ? "has-more" : null);
           setHasMoreTracks(hasMore);
-          setLoadedPages((prev) => prev + 1);
         } catch (error) {
           console.error("WebSocket load more liked songs failed:", error);
           throw error;
@@ -406,7 +262,6 @@ const ContentView = ({
           setTracks((prevTracks) => [...prevTracks, ...newTracks]);
           setNextUrl(hasMore ? data.next || "has-more" : null);
           setHasMoreTracks(hasMore);
-          setLoadedPages((prev) => prev + 1);
         } catch (error) {
           console.error("WebSocket load more tracks failed:", error);
           throw error;
@@ -440,7 +295,6 @@ const ContentView = ({
           const hasMore = newOffset < totalEpisodes && newOffset < 50;
           setNextUrl(hasMore ? "has-more" : null);
           setHasMoreTracks(hasMore);
-          setLoadedPages((prev) => prev + 1);
         } catch (error) {
           console.error("WebSocket load more episodes failed:", error);
           throw error;
@@ -455,6 +309,7 @@ const ContentView = ({
     } catch (err) {
       console.error("Error loading more tracks:", err);
     } finally {
+      loadMoreInFlightRef.current = false;
       setIsLoadingMore(false);
     }
   }, [
@@ -470,86 +325,135 @@ const ContentView = ({
   ]);
 
   useEffect(() => {
+    const clearAutoLoadTimer = () => {
+      if (autoLoadTimerRef.current) {
+        clearTimeout(autoLoadTimerRef.current);
+        autoLoadTimerRef.current = null;
+      }
+    };
+
+    clearAutoLoadTimer();
+    initialAutoLoadTriggeredRef.current = false;
+    setIsLazyLoading(false);
+
+    return clearAutoLoadTimer;
+  }, [contentId, contentType]);
+
+  useEffect(() => {
     const container = tracksContainerRef.current;
-    if (
-      !container ||
-      (contentType !== "playlist" &&
-        contentType !== "show" &&
-        contentType !== "mix" &&
-        contentType !== "liked-songs") ||
-      tracksPerPage === 0
-    )
+    if (!container) {
       return;
+    }
 
     const handleScroll = () => {
-      const trackElements = container.querySelectorAll("[data-track-index]");
-      if (trackElements.length === 0) return;
-
-      const containerRect = container.getBoundingClientRect();
-      let currentVisibleTrackIndex = -1;
-
-      for (let i = 0; i < trackElements.length; i++) {
-        const trackRect = trackElements[i].getBoundingClientRect();
-        const trackCenter = trackRect.top + trackRect.height / 2;
-        const containerCenter = containerRect.top + containerRect.height / 2;
-
-        if (trackCenter <= containerCenter) {
-          currentVisibleTrackIndex = i;
-        } else {
-          break;
-        }
+      if (scrollTrackingRef.current.frameId !== null) {
+        return;
       }
 
-      if (currentVisibleTrackIndex >= 0) {
-        const currentPage = Math.floor(
-          currentVisibleTrackIndex / tracksPerPage,
-        );
-        const currentPageStart = currentPage * tracksPerPage;
-        const currentPageMidpoint =
-          currentPageStart + Math.floor(tracksPerPage / 2);
+      scrollTrackingRef.current.frameId = requestAnimationFrame(() => {
+        scrollTrackingRef.current.frameId = null;
+        scrollTrackingRef.current.scrollTop = container.scrollTop;
+      });
+    };
 
-        const loadThreshold = Math.floor(tracksLengthRef.current * 0.8);
+    container.addEventListener("scroll", handleScroll);
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+
+      if (scrollTrackingRef.current.frameId !== null) {
+        cancelAnimationFrame(scrollTrackingRef.current.frameId);
+        scrollTrackingRef.current.frameId = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !supportsLoadMore ||
+      !hasMoreTracks ||
+      isLoadingMore ||
+      isLazyLoading ||
+      tracks.length === 0 ||
+      initialAutoLoadTriggeredRef.current
+    ) {
+      return;
+    }
+
+    if (autoLoadTimerRef.current) {
+      clearTimeout(autoLoadTimerRef.current);
+    }
+
+    initialAutoLoadTriggeredRef.current = true;
+    setIsLazyLoading(true);
+
+    autoLoadTimerRef.current = setTimeout(async () => {
+      autoLoadTimerRef.current = null;
+
+      try {
+        if (!loadMoreInFlightRef.current) {
+          await loadMoreTracks();
+        }
+      } finally {
+        setIsLazyLoading(false);
+      }
+    }, 100);
+
+    return () => {
+      if (autoLoadTimerRef.current) {
+        clearTimeout(autoLoadTimerRef.current);
+        autoLoadTimerRef.current = null;
+      }
+    };
+  }, [
+    hasMoreTracks,
+    isLoadingMore,
+    isLazyLoading,
+    tracks.length,
+    supportsLoadMore,
+    loadMoreTracks,
+  ]);
+
+  useEffect(() => {
+    const container = tracksContainerRef.current;
+    const sentinel = loadMoreSentinelRef.current;
+
+    if (
+      !container ||
+      !sentinel ||
+      !supportsLoadMore ||
+      !hasMoreTracks ||
+      isLoadingMore ||
+      isLazyLoading
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
         if (
-          currentVisibleTrackIndex >= loadThreshold &&
+          entry?.isIntersecting &&
           hasMoreTracks &&
           !isLoadingMore &&
           !isLazyLoading
         ) {
           loadMoreTracks();
         }
-      }
-    };
+      },
+      {
+        root: container,
+        threshold: 0,
+      },
+    );
 
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
   }, [
     hasMoreTracks,
     isLoadingMore,
     isLazyLoading,
     loadMoreTracks,
-    contentType,
-  ]);
-
-  useEffect(() => {
-    if (
-      hasMoreTracks &&
-      !isLoadingMore &&
-      tracks.length > 0 &&
-      (contentType === "playlist" ||
-        contentType === "mix" ||
-        contentType === "liked-songs")
-    ) {
-      const timer = setTimeout(() => {
-        loadMoreTracks();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [
-    hasMoreTracks,
-    isLoadingMore,
-    tracks.length,
-    contentType,
-    loadMoreTracks,
+    supportsLoadMore,
   ]);
 
   useEffect(() => {
@@ -564,12 +468,6 @@ const ContentView = ({
       setTrackUris(trackUris);
     }
   }, [tracks, contentType, setTrackUris]);
-
-  useEffect(() => {
-    if (currentPlayback?.shuffle_state !== undefined) {
-      setIsShuffleEnabled(currentPlayback.shuffle_state);
-    }
-  }, [currentPlayback?.shuffle_state]);
 
   useEffect(() => {
     if (contentType === "mix") return;
@@ -590,11 +488,16 @@ const ContentView = ({
       try {
         isFetchingRef.current = true;
         setIsLoading(true);
+        setIsLazyLoading(false);
         setNextUrl(null);
         setHasMoreTracks(false);
         setIsLoadingMore(false);
-        setTracksPerPage(0);
-        setLoadedPages(0);
+        loadMoreInFlightRef.current = false;
+        if (autoLoadTimerRef.current) {
+          clearTimeout(autoLoadTimerRef.current);
+          autoLoadTimerRef.current = null;
+        }
+        initialAutoLoadTriggeredRef.current = false;
 
         let contentData;
         let tracksData = [];
@@ -611,8 +514,6 @@ const ContentView = ({
               tracksData = tracksResponse.items || [];
 
               setHasMoreTracks(false);
-              setTracksPerPage(tracksData.length);
-              setLoadedPages(1);
             } catch (error) {
               console.error("WebSocket album fetch failed:", error);
               throw new Error(
@@ -645,8 +546,6 @@ const ContentView = ({
 
               setNextUrl(hasMore ? tracksResponse.next || "has-more" : null);
               setHasMoreTracks(hasMore);
-              setTracksPerPage(tracksData.length);
-              setLoadedPages(1);
             } catch (error) {
               console.error("WebSocket playlist fetch failed:", error);
               throw new Error(
@@ -671,8 +570,6 @@ const ContentView = ({
                   : [];
 
               setHasMoreTracks(false);
-              setTracksPerPage(tracksData.length);
-              setLoadedPages(1);
             } catch (error) {
               console.error("WebSocket artist fetch failed:", error);
               throw new Error(
@@ -707,8 +604,6 @@ const ContentView = ({
 
               setHasMoreTracks(hasMore);
               setNextUrl(hasMore ? "has-more" : null);
-              setTracksPerPage(tracksData.length);
-              setLoadedPages(1);
             } catch (error) {
               console.error("WebSocket liked songs fetch failed:", error);
               throw new Error(
@@ -740,15 +635,7 @@ const ContentView = ({
 
               setNextUrl(hasMore ? "has-more" : null);
               setHasMoreTracks(hasMore);
-              setTracksPerPage(tracksData.length);
-              setLoadedPages(1);
               tracksLengthRef.current = tracksData.length;
-
-              if (tracksData.length < 50 && hasMore) {
-                showEpisodeLazyLoadRef.current = setTimeout(() => {
-                  lazyLoadShowEpisodes();
-                }, 2000);
-              }
             } catch (error) {
               console.error("WebSocket show fetch failed:", error);
               throw new Error(
@@ -777,11 +664,9 @@ const ContentView = ({
 
     return () => {
       isFetchingRef.current = false;
-      if (lazyLoadTimeoutRef.current) {
-        clearTimeout(lazyLoadTimeoutRef.current);
-      }
-      if (showEpisodeLazyLoadRef.current) {
-        clearTimeout(showEpisodeLazyLoadRef.current);
+      if (autoLoadTimerRef.current) {
+        clearTimeout(autoLoadTimerRef.current);
+        autoLoadTimerRef.current = null;
       }
     };
   }, [contentId, contentType, isSpotifyReady]);
@@ -794,11 +679,16 @@ const ContentView = ({
 
       try {
         setIsLoading(true);
+        setIsLazyLoading(false);
         setNextUrl(null);
         setHasMoreTracks(false);
         setIsLoadingMore(false);
-        setTracksPerPage(0);
-        setLoadedPages(0);
+        loadMoreInFlightRef.current = false;
+        if (autoLoadTimerRef.current) {
+          clearTimeout(autoLoadTimerRef.current);
+          autoLoadTimerRef.current = null;
+        }
+        initialAutoLoadTriggeredRef.current = false;
 
         const foundMix = radioMixes.find((m) => m.id === contentId);
 
@@ -856,8 +746,6 @@ const ContentView = ({
               setTracks(tracksData);
               setNextUrl(hasMore ? tracksResponse.next || "has-more" : null);
               setHasMoreTracks(hasMore);
-              setTracksPerPage(tracksData.length);
-              setLoadedPages(1);
             } catch (error) {
               console.error("Failed to fetch mix tracks:", error);
               setContent(contentData);
@@ -885,8 +773,6 @@ const ContentView = ({
                   });
                   setTracks(tracksData);
                   setHasMoreTracks(false);
-                  setTracksPerPage(tracksData.length);
-                  setLoadedPages(1);
                 } else {
                   setContent(contentData);
                   setTracks([]);
@@ -1033,61 +919,6 @@ const ContentView = ({
       if (onNavigateToNowPlaying) {
         onNavigateToNowPlaying();
       }
-    }
-  };
-
-  const handleShufflePlay = async () => {
-    if (tracks.length === 0) {
-      console.warn("No tracks available to shuffle play");
-      return;
-    }
-
-    let contextUri = null;
-    let uris = null;
-    let originalPlayerState = null;
-
-    try {
-      originalPlayerState = await getPlayerState();
-    } catch (error) {
-      console.warn(
-        "Could not get player state, proceeding without preserving settings:",
-        error,
-      );
-    }
-
-    if (contentType === "mix") {
-      const currentMix = radioMixes.find((m) => m.id === contentId);
-      if (currentMix && currentMix.uri) {
-        contextUri = currentMix.uri;
-      } else {
-        uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-      }
-    } else if (contentType === "liked-songs" && spotifyUserId) {
-      contextUri = `spotify:user:${spotifyUserId}:collection`;
-    } else {
-      uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
-    }
-
-    if (contentType === "liked-songs") {
-      localStorage.setItem("playingLikedSongs", "true");
-    }
-
-    const success = await playTrack(null, contextUri, uris);
-
-    if (success && originalPlayerState) {
-      setTimeout(async () => {
-        try {
-          if (originalPlayerState.shuffle_state !== undefined) {
-            await toggleShuffle(originalPlayerState.shuffle_state);
-          }
-
-          if (originalPlayerState.repeat_state !== undefined) {
-            await setRepeatMode(originalPlayerState.repeat_state);
-          }
-        } catch (error) {
-          console.warn("Could not restore player settings:", error);
-        }
-      }, 500);
     }
   };
 
@@ -1270,16 +1101,12 @@ const ContentView = ({
                 selectedTrackIndex === index ? "scale-105" : ""
               }`}
               onClick={() => (track.uri ? handleTrackPlay(track, index) : null)}
-              style={{ transition: "transform 0.2s ease-out" }}
+              style={ROW_TRANSITION_STYLE}
               data-track-index={index}
             >
               <div
                 className="text-3xl font-semibold text-center text-white/60 mr-6 mt-3 flex justify-center"
-                style={{
-                  minWidth: "3rem",
-                  fontSize: "32px",
-                  fontWeight: "580",
-                }}
+                style={TRACK_INDEX_STYLE}
               >
                 {track.uri && track.uri === currentlyPlayingTrackUri ? (
                   <div className="w-5">
@@ -1332,16 +1159,7 @@ const ContentView = ({
                       className="text-white/60 truncate tracking-tight"
                       style={{ fontSize: "28px", fontWeight: "560" }}
                     >
-                      {track.release_date
-                        ? new Date(track.release_date).toLocaleDateString(
-                            "en-US",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            },
-                          )
-                        : "No release date available"}
+                      {getFormattedReleaseDate(track.release_date)}
                     </p>
                   ) : (
                     track.artists &&
@@ -1365,6 +1183,10 @@ const ContentView = ({
             </div>
           );
         })}
+
+        {supportsLoadMore && (
+          <div ref={loadMoreSentinelRef} style={{ height: 1 }} />
+        )}
 
         {isLoadingMore &&
           (contentType === "playlist" || contentType === "show") && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import FontLoader from "./components/common/FontLoader";
 import Tutorial from "./components/tutorial/Tutorial";
@@ -781,78 +781,82 @@ function App() {
     spotifyUserId,
   });
 
-  const handleOpenDeviceSwitcher = (
-    playbackIntentOrDevices = null,
-    devicesArg = null,
-  ) => {
-    let playbackIntent = null;
-    let devicesList = null;
+  const handleOpenDeviceSwitcher = useCallback(
+    (playbackIntentOrDevices = null, devicesArg = null) => {
+      let playbackIntent = null;
+      let devicesList = null;
 
-    if (Array.isArray(playbackIntentOrDevices)) {
-      devicesList = playbackIntentOrDevices;
-    } else {
-      playbackIntent = playbackIntentOrDevices;
-      devicesList = devicesArg;
-    }
+      if (Array.isArray(playbackIntentOrDevices)) {
+        devicesList = playbackIntentOrDevices;
+      } else {
+        playbackIntent = playbackIntentOrDevices;
+        devicesList = devicesArg;
+      }
 
-    if (playbackIntent) {
-      setPlaybackIntentOnDeviceSwitch(playbackIntent);
-    }
+      if (playbackIntent) {
+        setPlaybackIntentOnDeviceSwitch(playbackIntent);
+      }
 
-    if (devicesList && devicesList.length > 0) {
-      setPrefetchedDevices(devicesList);
-    }
+      if (devicesList && devicesList.length > 0) {
+        setPrefetchedDevices(devicesList);
+      }
 
-    setIsDeviceSwitcherOpen(true);
-  };
+      setIsDeviceSwitcherOpen(true);
+    },
+    [],
+  );
 
-  const handleCloseDeviceSwitcher = (selectedDeviceId = null) => {
-    setIsDeviceSwitcherOpen(false);
-    setPrefetchedDevices(null);
-    if (selectedDeviceId && playbackIntentOnDeviceSwitch) {
-      const { trackUriToPlay, contextUriToPlay, urisToPlay } =
-        playbackIntentOnDeviceSwitch;
-      (async () => {
-        let success = false;
-        if (contextUriToPlay) {
-          success = await playerControls.playTrack(
-            trackUriToPlay,
-            contextUriToPlay,
-            null,
-            selectedDeviceId,
-          );
-        } else if (urisToPlay && urisToPlay.length > 0) {
-          success = await playerControls.playTrack(
-            null,
-            null,
-            urisToPlay,
-            selectedDeviceId,
-          );
-        } else if (trackUriToPlay) {
-          success = await playerControls.playTrack(
-            trackUriToPlay,
-            null,
-            null,
-            selectedDeviceId,
-          );
-        }
+  const handleCloseDeviceSwitcher = useCallback(
+    (selectedDeviceId = null) => {
+      setIsDeviceSwitcherOpen(false);
+      setPrefetchedDevices(null);
+      if (selectedDeviceId && playbackIntentOnDeviceSwitch) {
+        const { trackUriToPlay, contextUriToPlay, urisToPlay } =
+          playbackIntentOnDeviceSwitch;
+        (async () => {
+          let success = false;
+          if (contextUriToPlay) {
+            success = await playerControls.playTrack(
+              trackUriToPlay,
+              contextUriToPlay,
+              null,
+              selectedDeviceId,
+            );
+          } else if (urisToPlay && urisToPlay.length > 0) {
+            success = await playerControls.playTrack(
+              null,
+              null,
+              urisToPlay,
+              selectedDeviceId,
+            );
+          } else if (trackUriToPlay) {
+            success = await playerControls.playTrack(
+              trackUriToPlay,
+              null,
+              null,
+              selectedDeviceId,
+            );
+          }
 
-        if (success) {
-          setTimeout(() => {
-            refreshPlaybackState();
-            setActiveSection("nowPlaying");
-          }, 1500);
-        }
+          if (success) {
+            setTimeout(() => {
+              refreshPlaybackState();
+              setActiveSection("nowPlaying");
+            }, 1500);
+          }
+          setPlaybackIntentOnDeviceSwitch(null);
+        })();
+      } else {
         setPlaybackIntentOnDeviceSwitch(null);
-      })();
-    } else {
-      setPlaybackIntentOnDeviceSwitch(null);
-    }
-  };
+      }
+    },
+    [playbackIntentOnDeviceSwitch, playerControls, refreshPlaybackState],
+  );
 
-  const deviceSwitcherContextValue = {
-    openDeviceSwitcher: handleOpenDeviceSwitcher,
-  };
+  const deviceSwitcherContextValue = useMemo(
+    () => ({ openDeviceSwitcher: handleOpenDeviceSwitcher }),
+    [handleOpenDeviceSwitcher],
+  );
 
   useEffect(() => {
     const handleNetworkRestored = () => {
@@ -873,36 +877,80 @@ function App() {
     initialDataLoaded,
   ]);
 
+  /**
+   * App owns all section palette sources so section switches only trigger one
+   * gradient update: auth/settings use built-in palettes; recents/library/
+   * artists/radio/podcasts use the first visible tile art; nowPlaying/lock use
+   * the active album art.
+   */
   useEffect(() => {
     if (viewingContent) return;
+
     if (showTutorial || showAuthScreen) {
       updateGradientColors(null, "auth");
-    } else if (activeSection === "recents" && recentAlbums.length > 0) {
-      const firstAlbumImage = recentAlbums[0]?.images?.[1]?.url;
-      if (firstAlbumImage) {
-        updateGradientColors(firstAlbumImage, "recents");
+      return;
+    }
+
+    switch (activeSection) {
+      case "recents": {
+        const firstAlbumImage =
+          recentAlbums[0]?.images?.[1]?.url ||
+          recentAlbums[0]?.images?.[0]?.url;
+        if (firstAlbumImage) {
+          updateGradientColors(firstAlbumImage, "recents");
+        }
+        break;
       }
-    } else if (activeSection === "library" && userPlaylists.length > 0) {
-      updateGradientColors(null, "library");
-    } else if (activeSection === "artists" && topArtists.length > 0) {
-      const firstArtistImage = topArtists[0]?.images?.[1]?.url;
-      if (firstArtistImage) {
-        updateGradientColors(firstArtistImage, "artists");
+      case "library": {
+        const firstPlaylistImage =
+          userPlaylists[0]?.images?.[1]?.url ||
+          userPlaylists[0]?.images?.[0]?.url;
+        updateGradientColors(firstPlaylistImage || null, "library");
+        break;
       }
-    } else if (activeSection === "radio") {
-      updateGradientColors(null, "radio");
-    } else if (activeSection === "settings") {
-      updateGradientColors(null, "settings");
-    } else if (activeSection === "nowPlaying" && currentlyPlayingAlbum) {
-      const albumImage = currentlyPlayingAlbum?.images?.[1]?.url;
-      if (albumImage) {
-        updateGradientColors(albumImage, "nowPlaying");
+      case "artists": {
+        const firstArtistImage =
+          topArtists[0]?.images?.[1]?.url || topArtists[0]?.images?.[0]?.url;
+        if (firstArtistImage) {
+          updateGradientColors(firstArtistImage, "artists");
+        }
+        break;
       }
-    } else if (activeSection === "lock") {
-      const albumImage = currentlyPlayingAlbum?.images?.[1]?.url;
-      if (albumImage) {
-        updateGradientColors(albumImage, "lock");
+      case "radio": {
+        const firstMixImage = radioMixes[0]?.images?.[0]?.url || null;
+        updateGradientColors(firstMixImage, "radio");
+        break;
       }
+      case "podcasts": {
+        const firstShowImage =
+          userShows[0]?.show?.images?.[1]?.url ||
+          userShows[0]?.show?.images?.[0]?.url;
+        updateGradientColors(firstShowImage || null, "podcasts");
+        break;
+      }
+      case "settings":
+        updateGradientColors(null, "settings");
+        break;
+      case "nowPlaying": {
+        const albumImage =
+          currentlyPlayingAlbum?.images?.[1]?.url ||
+          currentlyPlayingAlbum?.images?.[0]?.url;
+        if (albumImage) {
+          updateGradientColors(albumImage, "nowPlaying");
+        }
+        break;
+      }
+      case "lock": {
+        const albumImage =
+          currentlyPlayingAlbum?.images?.[1]?.url ||
+          currentlyPlayingAlbum?.images?.[0]?.url;
+        if (albumImage) {
+          updateGradientColors(albumImage, "lock");
+        }
+        break;
+      }
+      default:
+        break;
     }
   }, [
     activeSection,
@@ -911,6 +959,8 @@ function App() {
     recentAlbums,
     userPlaylists,
     topArtists,
+    radioMixes,
+    userShows,
     currentlyPlayingAlbum,
     showTutorial,
     showAuthScreen,
@@ -937,20 +987,27 @@ function App() {
 
     if (currentlyPlayingAlbum?.is_phone_media) return;
 
-    if (currentlyPlayingAlbum?.images?.[1]?.url) {
-      if (activeSection === "nowPlaying") {
-        updateGradientColors(currentlyPlayingAlbum.images[1].url, "nowPlaying");
-      } else if (activeSection === "recents") {
-        updateGradientColors(currentlyPlayingAlbum.images[1].url, "recents");
+    const activeGradientSection = activeSectionRef.current;
+    const albumImage =
+      currentlyPlayingAlbum?.images?.[1]?.url ||
+      currentlyPlayingAlbum?.images?.[0]?.url;
+
+    if (albumImage) {
+      if (activeGradientSection === "nowPlaying") {
+        updateGradientColors(albumImage, "nowPlaying");
+      } else if (activeGradientSection === "recents") {
+        updateGradientColors(albumImage, "recents");
       }
     } else if (currentlyPlayingAlbum?.type === "local-track") {
-      if (activeSection === "recents" || activeSection === "nowPlaying") {
-        updateGradientColors("/images/not-playing.webp", activeSection);
+      if (
+        activeGradientSection === "recents" ||
+        activeGradientSection === "nowPlaying"
+      ) {
+        updateGradientColors("/images/not-playing.webp", activeGradientSection);
       }
     }
   }, [
     currentlyPlayingAlbum,
-    activeSection,
     updateGradientColors,
     showTutorial,
     viewingContent,
@@ -1252,7 +1309,6 @@ function App() {
         refreshData={refreshData}
         refreshPlaybackState={refreshPlaybackState}
         onOpenContent={handleOpenContent}
-        updateGradientColors={updateGradientColors}
         onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
       />
     );
@@ -1280,13 +1336,7 @@ function App() {
           <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
             <Router>
               <FontLoader />
-              <main
-                className="overflow-hidden relative min-h-screen rounded-2xl"
-                style={{
-                  fontFamily: `var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc), var(--font-noto-serif-jp), var(--font-noto-sans-kr), var(--font-noto-naskh-ar), var(--font-noto-sans-bn), var(--font-noto-sans-dv), var(--font-noto-sans-he), var(--font-noto-sans-ta), var(--font-noto-sans-th), var(--font-noto-sans-gk), system-ui, sans-serif`,
-                  fontOpticalSizing: "auto",
-                }}
-              >
+              <main className="overflow-hidden relative min-h-screen rounded-2xl nocturne-font-stack">
                 <GradientBackground
                   gradientState={gradientState}
                   className="bg-black"

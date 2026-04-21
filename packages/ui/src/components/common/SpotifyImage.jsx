@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useImageLoader } from "../../hooks/useImageLoader";
 
 export default function SpotifyImage({
@@ -29,12 +23,14 @@ export default function SpotifyImage({
     loadImage,
     getImageSize,
     cancelRequest,
+    addUrlListener,
     hasImageFailed,
     isSpotifyReady,
-  } = useImageLoader();
+  } = useImageLoader({ subscribe: false });
   const [currentSrc, setCurrentSrc] = useState(fallbackSrc);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [, forceUpdate] = useState({});
   const isMountedRef = useRef(true);
   const currentImageUrlRef = useRef(null);
   const blobUrlRef = useRef(null);
@@ -42,10 +38,17 @@ export default function SpotifyImage({
 
   const imageUrl = getImageSize(images, preferredSizeIndex);
 
-  const delayMs = useMemo(() => {
-    const maxPriority = 100;
-    return Math.max(0, maxPriority - priority) * 100;
-  }, [priority]);
+  useEffect(() => {
+    if (!imageUrl) {
+      return undefined;
+    }
+
+    return addUrlListener(imageUrl, () => {
+      if (isMountedRef.current) {
+        forceUpdate({});
+      }
+    });
+  }, [imageUrl, addUrlListener]);
 
   const cleanupBlobUrl = useCallback(() => {
     if (blobUrlRef.current && blobUrlRef.current.startsWith("blob:")) {
@@ -229,33 +232,14 @@ export default function SpotifyImage({
     currentImageUrlRef.current = imageUrl;
 
     if (imageUrl) {
-      if (delayMs > 0) {
-        const timeoutId = setTimeout(() => {
-          if (isMountedRef.current) {
-            loadImageData();
-          }
-        }, delayMs);
-
-        return () => {
-          clearTimeout(timeoutId);
-        };
-      } else {
-        loadImageData();
-      }
+      loadImageData();
     } else {
       cleanupBlobUrl();
       setCurrentSrc(fallbackSrc);
       setHasError(false);
       setIsLoading(false);
     }
-  }, [
-    imageUrl,
-    loadImageData,
-    fallbackSrc,
-    delayMs,
-    cancelRequest,
-    cleanupBlobUrl,
-  ]);
+  }, [imageUrl, loadImageData, fallbackSrc, cancelRequest, cleanupBlobUrl]);
 
   useEffect(() => {
     if (failedImageUrlRef.current && failedImageUrlRef.current !== imageUrl) {
@@ -286,23 +270,20 @@ export default function SpotifyImage({
     isReceivingNowPlayingUpdates,
   ]);
 
-  const handleImageError = useCallback(
-    (e) => {
-      if (!isMountedRef.current) return;
-      if (imageUrl) {
-        failedImageUrlRef.current = imageUrl;
-      }
-      if (currentSrc !== fallbackSrc) {
-        setCurrentSrc(fallbackSrc);
-        setHasError(true);
+  const handleImageError = useCallback(() => {
+    if (!isMountedRef.current) return;
+    if (imageUrl) {
+      failedImageUrlRef.current = imageUrl;
+    }
+    if (currentSrc !== fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+      setHasError(true);
 
-        if (onError) {
-          onError(new Error("Image failed to load"));
-        }
+      if (onError) {
+        onError(new Error("Image failed to load"));
       }
-    },
-    [currentSrc, fallbackSrc, onError, imageUrl],
-  );
+    }
+  }, [currentSrc, fallbackSrc, onError, imageUrl]);
 
   const handleImageLoad = useCallback(() => {
     if (!isMountedRef.current) return;

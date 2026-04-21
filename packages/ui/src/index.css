@@ -27,6 +27,17 @@ body {
     sans-serif;
 }
 
+.nocturne-font-stack {
+  font-family:
+    var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc),
+    var(--font-noto-serif-jp), var(--font-noto-sans-kr),
+    var(--font-noto-naskh-ar), var(--font-noto-sans-bn),
+    var(--font-noto-sans-dv), var(--font-noto-sans-he),
+    var(--font-noto-sans-ta), var(--font-noto-sans-th),
+    var(--font-noto-sans-gk), system-ui, sans-serif;
+  font-optical-sizing: auto;
+}
+
 * {
   user-select: none;
   cursor: none !important;
@@ -245,44 +256,52 @@ section {
 
 @keyframes volumeInScale {
   from {
-    transform: scale(0) translateX(100%);
-    margin-right: 0;
+    transform: translateX(calc(100% + 60px)) scale(0);
+    opacity: 0;
   }
 
   to {
-    transform: scale(1) translateX(0);
-    margin-right: 60px;
+    transform: translateX(0) scale(1);
+    opacity: 1;
   }
 }
 
 .volumeInScale {
-  animation-name: volumeInScale;
-  animation-duration: 0.3s;
-  animation-fill-mode: forwards;
+  animation: volumeInScale 300ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes volumeOutScale {
   from {
-    transform: scale(1) translateX(0);
-    margin-right: 60px;
+    transform: translateX(0) scale(1);
+    opacity: 1;
   }
 
   to {
-    transform: scale(0) translateX(100%);
-    margin-right: 0;
+    transform: translateX(calc(100% + 60px)) scale(0);
+    opacity: 0;
   }
 }
 
 .volumeOutScale {
-  animation-name: volumeOutScale;
-  animation-duration: 0.3s;
-  animation-fill-mode: forwards;
+  animation: volumeOutScale 300ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
-.transition-height {
-  transition-property: height;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+.volume-fill {
+  position: absolute;
+  inset: 0;
+  background: white;
+  border-radius: 0 0 13px 13px;
+  transform-origin: bottom center;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.volume-shell {
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.35),
+    0 6px 10px -3px rgba(0, 0, 0, 0.25);
+  contain: layout paint;
 }
 
 @keyframes mappingOverlayEnter {
@@ -321,6 +340,7 @@ section {
 
 .volumeInScale,
 .volumeOutScale {
+  will-change: transform, opacity;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform-origin: center;

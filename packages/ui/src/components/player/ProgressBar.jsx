@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useProgressValue } from "../../hooks/usePlaybackProgress";
 
 const SCRUB_TIMEOUT_MS = 3000;
 
@@ -7,12 +8,12 @@ const ProgressBar = ({
   isPlaying,
   durationMs,
   onSeek,
-  onPlayPause,
   onScrubbingChange,
   updateProgress,
   disabled = false,
   scrubOnWheel = false,
 }) => {
+  const { progressMs, progressPercentage } = useProgressValue();
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubbingProgress, setScrubbingProgress] = useState(null);
   const wasPlayingRef = useRef(false);
@@ -32,8 +33,13 @@ const ProgressBar = ({
     updateProgressRef.current = updateProgress;
   }, [durationMs, onSeek, onScrubbingChange, updateProgress]);
 
-  const effectiveProgress = progress ?? 0;
-  const isProgressUnknown = progress === null;
+  const liveProgress =
+    durationMs > 0
+      ? Math.min((progressMs / durationMs) * 100, 100)
+      : progressPercentage;
+  const resolvedProgress = progress === null ? null : liveProgress;
+  const effectiveProgress = resolvedProgress ?? 0;
+  const isProgressUnknown = resolvedProgress === null;
 
   const clearScrubTimeout = () => {
     if (scrubTimeoutRef.current) {

@@ -33,6 +33,7 @@ class ImageLoadQueue {
   constructor() {
     this.queue = [];
     this.isProcessing = false;
+    this.isSpotifyReady = false;
     this.failedImages = new Map();
     this.failureTtlMs = 5 * 60 * 1000;
     this.loadingImages = new Set();
@@ -42,9 +43,13 @@ class ImageLoadQueue {
     this.maxExtendedRetries = 10;
     this.retryDelay = 0;
     this.listeners = new Set();
+    this.urlListeners = new Map();
     this.cache = new Map();
     this.cacheTtlMs = 5 * 60 * 1000;
     this.imageFetchDelayMs = 150;
+    this.maxConcurrent = 2;
+    this.interLaunchDelayMs = 60;
+    this.activeWorkers = 0;
   }
 
   addListener(callback) {
@@ -52,12 +57,44 @@ class ImageLoadQueue {
     return () => this.listeners.delete(callback);
   }
 
-  notifyListeners() {
+  addUrlListener(url, callback) {
+    if (!url) {
+      return () => {};
+    }
+
+    if (!this.urlListeners.has(url)) {
+      this.urlListeners.set(url, new Set());
+    }
+
+    const listeners = this.urlListeners.get(url);
+    listeners.add(callback);
+
+    return () => {
+      listeners.delete(callback);
+      if (listeners.size === 0) {
+        this.urlListeners.delete(url);
+      }
+    };
+  }
+
+  notifyListeners(url = null) {
     const failedImages = new Set(this.getActiveFailedImages());
     const loadingImages = new Set(this.loadingImages);
-    this.listeners.forEach((callback) =>
-      callback({ loadingImages, failedImages }),
-    );
+    const state = { loadingImages, failedImages };
+
+    this.listeners.forEach((callback) => callback(state));
+
+    if (url === null) {
+      this.urlListeners.forEach((callbacks) => {
+        callbacks.forEach((callback) => callback(state));
+      });
+      return;
+    }
+
+    const urlCallbacks = this.urlListeners.get(url);
+    if (urlCallbacks) {
+      urlCallbacks.forEach((callback) => callback(state));
+    }
   }
 
   getActiveFailedImages() {
@@ -131,18 +168,14 @@ class ImageLoadQueue {
   }
 
   handleCacheHit(url, entry, listener, requireColors) {
-    const deliver = (colors) => {
-      listener.resolve({ data: entry.data, colors: colors ?? null });
-    };
-
     if (!requireColors) {
-      deliver(entry.colors ?? null);
-      return;
+      listener.resolve({ data: entry.data, colors: entry.colors ?? null });
+      return true;
     }
 
     if (entry.colors) {
-      deliver(entry.colors);
-      return;
+      listener.resolve({ data: entry.data, colors: entry.colors });
+      return true;
     }
 
     if (!entry.colorPromise) {
@@ -165,11 +198,13 @@ class ImageLoadQueue {
 
     entry.colorPromise
       .then((colors) => {
-        deliver(colors);
+        listener.resolve({ data: entry.data, colors: colors ?? null });
       })
       .catch(() => {
-        deliver(null);
+        listener.resolve({ data: entry.data, colors: null });
       });
+
+    return false;
   }
 
   async loadImage(
@@ -184,6 +219,8 @@ class ImageLoadQueue {
         reject(new Error("No URL provided"));
         return;
       }
+
+      this.isSpotifyReady = isSpotifyReady;
 
       const abortController = new AbortController();
       const listener = {
@@ -248,9 +285,7 @@ class ImageLoadQueue {
         this.queue.push(queueItem);
       }
 
-      if (!this.isProcessing) {
-        this.processQueue();
-      }
+      this.processQueue();
     });
   }
 
@@ -267,7 +302,7 @@ class ImageLoadQueue {
       });
       this.activeRequests.delete(url);
       this.loadingImages.delete(url);
-      this.notifyListeners();
+      this.notifyListeners(url);
     }
 
     const queueIndex = this.queue.findIndex((item) => item.url === url);
@@ -279,170 +314,189 @@ class ImageLoadQueue {
         }
       });
       this.queue.splice(queueIndex, 1);
+      this.notifyListeners(url);
     }
   }
 
   async processQueue() {
-    if (this.isProcessing || this.queue.length === 0) {
+    if (
+      this.activeWorkers >= this.maxConcurrent ||
+      !this.isSpotifyReady ||
+      this.queue.length === 0
+    ) {
       return;
     }
 
+    const queueItem = this.queue.shift();
+    if (!queueItem) {
+      return;
+    }
+
+    this.activeWorkers++;
     this.isProcessing = true;
 
-    while (this.queue.length > 0) {
-      const queueItem = this.queue.shift();
-      if (!queueItem) break;
+    if (this.queue.length > 0 && this.activeWorkers < this.maxConcurrent) {
+      setTimeout(() => this.processQueue(), this.interLaunchDelayMs);
+    }
 
-      const { url, extractColors, fetchImageFn, isSpotifyReady, listeners } =
-        queueItem;
+    try {
+      await this._processItem(queueItem);
+    } finally {
+      this.activeWorkers = Math.max(0, this.activeWorkers - 1);
+      this.isProcessing = this.activeWorkers > 0;
+      if (this.queue.length > 0) {
+        this.processQueue();
+      }
+    }
+  }
 
-      if (!isSpotifyReady) {
-        this.queue.unshift(queueItem);
-        this.isProcessing = false;
-        await new Promise((r) => setTimeout(r, 150));
+  async _processItem(queueItem) {
+    const { url, extractColors, fetchImageFn, isSpotifyReady, listeners } =
+      queueItem;
+
+    if (!isSpotifyReady || !this.isSpotifyReady) {
+      this.queue.unshift({
+        ...queueItem,
+        isSpotifyReady: this.isSpotifyReady,
+      });
+      return;
+    }
+
+    const failure = this.getFailure(url);
+    if (failure) {
+      const failureMessage =
+        failure?.error instanceof Error
+          ? failure.error.message
+          : failure?.error || `Image failed to load: ${url}`;
+      listeners.forEach(({ reject }) => reject(new Error(failureMessage)));
+      return;
+    }
+
+    const abortController = new AbortController();
+
+    this.loadingImages.add(url);
+    this.activeRequests.set(url, {
+      listeners: [...listeners],
+      extractColors:
+        listeners.some((listener) => listener.extractColors) ||
+        Boolean(extractColors),
+      fetchImageFn,
+      abortController,
+    });
+    this.notifyListeners(url);
+
+    await new Promise((resolve) => setTimeout(resolve, this.imageFetchDelayMs));
+
+    try {
+      const result = await fetchImageFn(url, abortController.signal);
+      const activeRequest = this.activeRequests.get(url);
+      const requestListeners = activeRequest?.listeners || listeners;
+      const shouldExtractColors =
+        activeRequest?.extractColors || Boolean(extractColors);
+
+      if (result && result.data) {
+        let extractedColors = null;
+        if (shouldExtractColors) {
+          try {
+            extractedColors = await extractColorsFromImageData(result.data);
+          } catch (colorError) {
+            console.error(`Error extracting colors for ${url}:`, colorError);
+          }
+        }
+
+        this.loadingImages.delete(url);
+        this.retryCount.delete(url);
+        this.activeRequests.delete(url);
+        this.failedImages.delete(url);
+        const colorsForCache = shouldExtractColors
+          ? (extractedColors ?? null)
+          : undefined;
+        this.setCache(url, result.data, colorsForCache);
+        const cachedResult = this.getCachedEntry(url) || {
+          data: result.data,
+          colors: extractedColors ?? null,
+        };
+
+        this.notifyListeners(url);
+
+        requestListeners.forEach(({ resolve }) =>
+          resolve({
+            data: cachedResult.data,
+            colors: cachedResult.colors ?? extractedColors ?? null,
+          }),
+        );
+      } else {
+        throw new Error("No image data received");
+      }
+    } catch (error) {
+      if (error.message === "Request cancelled") {
+        this.loadingImages.delete(url);
+        this.activeRequests.delete(url);
+        this.notifyListeners(url);
         return;
       }
 
-      const failure = this.getFailure(url);
-      if (failure) {
-        const failureMessage =
-          failure?.error instanceof Error
-            ? failure.error.message
-            : failure?.error || `Image failed to load: ${url}`;
-        listeners.forEach(({ reject }) => reject(new Error(failureMessage)));
-        continue;
-      }
+      console.error(`Error fetching image ${url}:`, error);
 
-      const abortController = new AbortController();
+      const retryCount = this.retryCount.get(url) || 0;
+      const activeRequest = this.activeRequests.get(url);
+      const requestListeners = activeRequest?.listeners || listeners;
 
-      this.loadingImages.add(url);
-      this.activeRequests.set(url, {
-        listeners: [...listeners],
-        extractColors:
-          listeners.some((listener) => listener.extractColors) ||
-          Boolean(extractColors),
-        fetchImageFn,
-        abortController,
-      });
-      this.notifyListeners();
+      if (retryCount < this.maxRetries) {
+        this.retryCount.set(url, retryCount + 1);
+        this.loadingImages.delete(url);
+        this.activeRequests.delete(url);
+        this.notifyListeners(url);
+        this.queue.unshift({
+          url,
+          priority: 100,
+          extractColors:
+            requestListeners.some((listener) => listener.extractColors) ||
+            Boolean(extractColors),
+          fetchImageFn,
+          isSpotifyReady,
+          listeners: requestListeners,
+        });
+      } else if (retryCount < this.maxRetries + this.maxExtendedRetries) {
+        const extendedAttempt = retryCount - this.maxRetries + 1;
+        const retryDelay = Math.min(
+          2000,
+          150 * 2 ** Math.min(extendedAttempt, 4),
+        );
 
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.imageFetchDelayMs),
-      );
+        this.retryCount.set(url, retryCount + 1);
+        this.loadingImages.delete(url);
+        this.activeRequests.delete(url);
+        this.notifyListeners(url);
 
-      try {
-        const result = await fetchImageFn(url, abortController.signal);
-        const activeRequest = this.activeRequests.get(url);
-        const requestListeners = activeRequest?.listeners || listeners;
-        const shouldExtractColors =
-          activeRequest?.extractColors || Boolean(extractColors);
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
 
-        if (result && result.data) {
-          let extractedColors = null;
-          if (shouldExtractColors) {
-            try {
-              extractedColors = await extractColorsFromImageData(result.data);
-            } catch (colorError) {
-              console.error(`Error extracting colors for ${url}:`, colorError);
-            }
-          }
-
-          this.loadingImages.delete(url);
-          this.retryCount.delete(url);
-          this.activeRequests.delete(url);
-          this.failedImages.delete(url);
-          const colorsForCache = shouldExtractColors
-            ? (extractedColors ?? null)
-            : undefined;
-          this.setCache(url, result.data, colorsForCache);
-          const cachedResult = this.getCachedEntry(url) || {
-            data: result.data,
-            colors: extractedColors ?? null,
-          };
-
-          this.notifyListeners();
-
-          requestListeners.forEach(({ resolve }) =>
-            resolve({
-              data: cachedResult.data,
-              colors: cachedResult.colors ?? extractedColors ?? null,
-            }),
-          );
-        } else {
-          throw new Error("No image data received");
+        this.queue.unshift({
+          url,
+          priority: 90,
+          extractColors:
+            requestListeners.some((listener) => listener.extractColors) ||
+            Boolean(extractColors),
+          fetchImageFn,
+          isSpotifyReady,
+          listeners: requestListeners,
+        });
+      } else {
+        if (isPermanentError(error)) {
+          this.markImageFailed(url, error);
         }
-      } catch (error) {
-        if (error.message === "Request cancelled") {
-          this.loadingImages.delete(url);
-          this.activeRequests.delete(url);
-          this.notifyListeners();
-          continue;
-        }
-
-        console.error(`Error fetching image ${url}:`, error);
-
-        const retryCount = this.retryCount.get(url) || 0;
-        const activeRequest = this.activeRequests.get(url);
-        const requestListeners = activeRequest?.listeners || listeners;
-
-        if (retryCount < this.maxRetries) {
-          this.retryCount.set(url, retryCount + 1);
-          this.loadingImages.delete(url);
-          this.activeRequests.delete(url);
-          this.notifyListeners();
-          this.queue.unshift({
-            url,
-            priority: 100,
-            extractColors:
-              requestListeners.some((listener) => listener.extractColors) ||
-              Boolean(extractColors),
-            fetchImageFn,
-            isSpotifyReady,
-            listeners: requestListeners,
-          });
-        } else if (retryCount < this.maxRetries + this.maxExtendedRetries) {
-          const extendedAttempt = retryCount - this.maxRetries + 1;
-          const retryDelay = Math.min(
-            2000,
-            150 * 2 ** Math.min(extendedAttempt, 4),
-          );
-
-          this.retryCount.set(url, retryCount + 1);
-          this.loadingImages.delete(url);
-          this.activeRequests.delete(url);
-          this.notifyListeners();
-
-          await new Promise((resolve) => setTimeout(resolve, retryDelay));
-
-          this.queue.unshift({
-            url,
-            priority: 90,
-            extractColors:
-              requestListeners.some((listener) => listener.extractColors) ||
-              Boolean(extractColors),
-            fetchImageFn,
-            isSpotifyReady,
-            listeners: requestListeners,
-          });
-
-          continue;
-        } else {
-          if (isPermanentError(error)) {
-            this.markImageFailed(url, error);
-          }
-          this.retryCount.delete(url);
-          this.loadingImages.delete(url);
-          this.activeRequests.delete(url);
-          this.notifyListeners();
-          requestListeners.forEach(({ reject }) => reject(error));
-        }
+        this.retryCount.delete(url);
+        this.loadingImages.delete(url);
+        this.activeRequests.delete(url);
+        this.notifyListeners(url);
+        requestListeners.forEach(({ reject }) => reject(error));
       }
     }
-
-    this.isProcessing = false;
   }
 
   updateQueueReadyState(isSpotifyReady) {
+    this.isSpotifyReady = isSpotifyReady;
+
     this.queue.forEach((item) => {
       item.isSpotifyReady = isSpotifyReady;
     });
@@ -466,9 +520,11 @@ class ImageLoadQueue {
       });
     }
 
-    if (isSpotifyReady && this.queue.length > 0 && !this.isProcessing) {
+    if (isSpotifyReady && this.queue.length > 0) {
       this.processQueue();
     }
+
+    this.notifyListeners(null);
   }
 
   clearCache() {
@@ -495,10 +551,10 @@ class ImageLoadQueue {
     this.loadingImages.clear();
     this.retryCount.clear();
     this.queue = [];
-    this.isProcessing = false;
+    this.isProcessing = this.activeWorkers > 0;
     this.activeRequests.clear();
     this.cache.clear();
-    this.notifyListeners();
+    this.notifyListeners(null);
   }
 
   getQueueLength() {
@@ -516,16 +572,29 @@ class ImageLoadQueue {
 
 const globalImageQueue = new ImageLoadQueue();
 
-export function useImageLoader() {
+export function getImageLoaderState() {
+  return {
+    activeWorkers: globalImageQueue.activeWorkers ?? 0,
+    queueLength: globalImageQueue.queue?.length ?? 0,
+    cacheSize: globalImageQueue.cache?.size ?? 0,
+  };
+}
+
+export function useImageLoader(options = {}) {
+  const { subscribe = true } = options;
   const { fetchImage, isSpotifyReady } = useSpotifyWebSocket();
   const [, forceUpdate] = useState({});
 
   useEffect(() => {
+    if (!subscribe) {
+      return undefined;
+    }
+
     const unsubscribe = globalImageQueue.addListener(() => {
       forceUpdate({});
     });
     return unsubscribe;
-  }, []);
+  }, [subscribe]);
 
   const loadImage = useCallback(
     (url, priority = 0, extractColors = false) => {
@@ -574,6 +643,10 @@ export function useImageLoader() {
     globalImageQueue.clearCache();
   }, []);
 
+  const addUrlListener = useCallback((url, callback) => {
+    return globalImageQueue.addUrlListener(url, callback);
+  }, []);
+
   useEffect(() => {
     globalImageQueue.updateQueueReadyState(isSpotifyReady);
   }, [isSpotifyReady]);
@@ -585,6 +658,7 @@ export function useImageLoader() {
     getImageSize,
     clearCache,
     cancelRequest,
+    addUrlListener,
     queueLength: globalImageQueue.getQueueLength(),
     isSpotifyReady,
   };
