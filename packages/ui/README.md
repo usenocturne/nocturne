@@ -150,7 +150,7 @@ This software contains calls to the Nocturne API. Any use, distribution, or modi
 
 ---
 
-> © 2025 Vanta Labs.
+> © 2026 Vanta Labs.
 
 > "Spotify" and "Car Thing" are trademarks of Spotify AB. This software is not affiliated with or endorsed by Spotify AB.
 
