@@ -562,7 +562,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
   const [isAnimating, setIsAnimating] = useState(false);
   const shouldExitToRecents = useRef(false);
   const scrollContainerRef = useRef(null);
-  const { settings, updateSetting } = useSettings();
+  const { settings, updateSetting, isMicLockedByPlatform } = useSettings();
   const { isSubscribed } = useSubscription();
   const appPlatform = getAppReadyState().platform;
   const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false);
@@ -599,6 +599,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
       (appPlatform === "web" || isSubscribed === false)
     )
       return;
+    if (key === "micMuted" && isMicLockedByPlatform) return;
     updateSetting(key, !settings[key]);
     if (key === "mockingbirdUiEnabled") {
       setTimeout(() => window.location.reload(), 150);
@@ -812,12 +813,18 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
         );
       case "toggle": {
         const isMockingbirdToggle = item.storageKey === "mockingbirdUiEnabled";
+        const isMicToggle = item.storageKey === "micMuted";
+        const isMicWebLocked = isMicToggle && isMicLockedByPlatform;
         const isToggleDisabled =
-          isMockingbirdToggle &&
-          (appPlatform === "web" || isSubscribed === false);
-        const displayedValue = item.invert
-          ? !settings[item.storageKey]
+          (isMockingbirdToggle &&
+            (appPlatform === "web" || isSubscribed === false)) ||
+          isMicWebLocked;
+        const effectiveRawValue = isMicWebLocked
+          ? true
           : settings[item.storageKey];
+        const displayedValue = item.invert
+          ? !effectiveRawValue
+          : effectiveRawValue;
         return (
           <div
             key={item.id}
@@ -845,9 +852,11 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
             </div>
             <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
               {isToggleDisabled
-                ? appPlatform === "web"
-                  ? "Mockingbird is only available when using the Nocturne mobile app."
-                  : "Subscribe to Nocturne to use the classic Spotify Car Thing interface."
+                ? isMicWebLocked
+                  ? "The microphone is only available when using the Nocturne mobile app."
+                  : appPlatform === "web"
+                    ? "Mockingbird is only available when using the Nocturne mobile app."
+                    : "Subscribe to Nocturne to use the classic Spotify Car Thing interface."
                 : item.description}
             </p>
           </div>

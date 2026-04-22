@@ -1,5 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { sendNocturneWsRequest } from "../hooks/useNocturned";
+import {
+  sendNocturneWsRequest,
+  subscribeAppReadyState,
+  getAppReadyState,
+} from "../hooks/useNocturned";
 
 const SETTING_STORAGE_KEYS = {
   micMuted: "mockingbird_mic_muted",
@@ -16,6 +20,11 @@ const getDefaultSettingValue = (key, defaultValue) => {
 const SettingsContext = createContext();
 
 export function SettingsProvider({ children }) {
+  const [appPlatform, setAppPlatform] = useState(
+    () => getAppReadyState().platform,
+  );
+  const isMicLockedByPlatform = appPlatform === "web";
+
   const [settings, setSettings] = useState({
     use24HourTime: getDefaultSettingValue("use24HourTime", false),
     trackNameScrollingEnabled: getDefaultSettingValue(
@@ -54,12 +63,18 @@ export function SettingsProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (settings.micMuted) {
-      sendNocturneWsRequest("wakeword.pause", {}).catch((err) => {
-        console.error("Failed to sync wakeword pause on init:", err);
-      });
-    }
+    return subscribeAppReadyState(({ platform }) => {
+      setAppPlatform(platform);
+    });
   }, []);
+
+  useEffect(() => {
+    const effectiveMuted = isMicLockedByPlatform || settings.micMuted;
+    const method = effectiveMuted ? "wakeword.pause" : "wakeword.resume";
+    sendNocturneWsRequest(method, {}).catch((err) => {
+      console.error(`Failed to sync microphone state (${method}):`, err);
+    });
+  }, [isMicLockedByPlatform, settings.micMuted]);
 
   const updateSetting = (key, value) => {
     const newSettings = { ...settings };
@@ -109,17 +124,12 @@ export function SettingsProvider({ children }) {
     if (key === "use24HourTime") {
       window.dispatchEvent(new Event("timeFormatChanged"));
     }
-
-    if (key === "micMuted") {
-      const method = value ? "wakeword.pause" : "wakeword.resume";
-      sendNocturneWsRequest(method, {}).catch((err) => {
-        console.error(`Failed to send ${method}:`, err);
-      });
-    }
   };
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSetting }}>
+    <SettingsContext.Provider
+      value={{ settings, updateSetting, isMicLockedByPlatform }}
+    >
       {children}
     </SettingsContext.Provider>
   );

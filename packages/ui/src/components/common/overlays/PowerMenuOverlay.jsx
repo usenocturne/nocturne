@@ -154,8 +154,9 @@ function PowerMenuOverlay({
   const [isVisible, setIsVisible] = useState(false);
   const [brightnessToggled, setBrightnessToggled] = useState(false);
   const [brightnessValue, setBrightnessValue] = useState(180);
-  const { settings, updateSetting } = useSettings();
-  const micMuted = settings?.micMuted ?? false;
+  const { settings, updateSetting, isMicLockedByPlatform } = useSettings();
+  const effectiveMicMuted =
+    !!isMicLockedByPlatform || (settings?.micMuted ?? false);
 
   useEffect(() => {
     if (show) {
@@ -280,17 +281,17 @@ function PowerMenuOverlay({
           </button>
           <button
             onClick={() => {
-              updateSetting("micMuted", !micMuted);
+              if (isMicLockedByPlatform) return;
+              updateSetting("micMuted", !(settings?.micMuted ?? false));
             }}
+            disabled={isMicLockedByPlatform}
             className={`w-24 h-24 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-0 ${
-              micMuted
+              effectiveMicMuted
                 ? "bg-white hover:bg-gray-100"
                 : "bg-neutral-700 hover:bg-neutral-600"
-            }`}
-            aria-pressed={micMuted}
-            aria-label={micMuted ? "Unmute microphone" : "Mute microphone"}
+            } ${isMicLockedByPlatform ? "opacity-50" : ""}`}
           >
-            {micMuted ? (
+            {effectiveMicMuted ? (
               <MicrophoneOffIcon className="w-10 h-10 text-black" />
             ) : (
               <MicrophoneIcon className="w-10 h-10 text-white" />

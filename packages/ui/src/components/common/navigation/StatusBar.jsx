@@ -13,8 +13,9 @@ export default function StatusBar() {
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const { lastConnectedDevice, connectedDevices, devices } = useBluetooth();
   const { currentTime, isFourDigits } = useCurrentTime();
-  const { settings } = useSettings();
-  const micMuted = settings?.micMuted ?? false;
+  const { settings, isMicLockedByPlatform } = useSettings();
+  const effectiveMicMuted =
+    !!isMicLockedByPlatform || (settings?.micMuted ?? false);
 
   const lastDeviceAddressLS =
     typeof localStorage !== "undefined"
@@ -51,7 +52,7 @@ export default function StatusBar() {
         {currentTime}
       </div>
       <div className="flex gap-2.5 h-10" style={{ marginTop: "-10px" }}>
-        {micMuted && (
+        {effectiveMicMuted && (
           <MicrophoneOffIcon
             className="w-7 h-10 text-white"
             style={{
