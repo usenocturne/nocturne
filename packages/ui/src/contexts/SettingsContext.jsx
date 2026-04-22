@@ -69,12 +69,21 @@ export function SettingsProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (appPlatform === null) return;
     const effectiveMuted = isMicLockedByPlatform || settings.micMuted;
     const method = effectiveMuted ? "wakeword.pause" : "wakeword.resume";
-    sendNocturneWsRequest(method, {}).catch((err) => {
-      console.error(`Failed to sync microphone state (${method}):`, err);
+    sendNocturneWsRequest(method, { persist: false }).catch((err) => {
+      console.error(`Failed to sync microphone runtime state (${method}):`, err);
     });
-  }, [isMicLockedByPlatform, settings.micMuted]);
+  }, [appPlatform, isMicLockedByPlatform, settings.micMuted]);
+
+  useEffect(() => {
+    sendNocturneWsRequest("wakeword.set_preference", {
+      muted: settings.micMuted,
+    }).catch((err) => {
+      console.error("Failed to persist microphone preference:", err);
+    });
+  }, [settings.micMuted]);
 
   const updateSetting = (key, value) => {
     const newSettings = { ...settings };
