@@ -1,6 +1,14 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { sendNocturneWsRequest } from "../hooks/useNocturned";
 
-const getDefaultSettingValue = (storageKey, defaultValue) => {
+const SETTING_STORAGE_KEYS = {
+  micMuted: "mockingbird_mic_muted",
+};
+
+const getStorageKey = (key) => SETTING_STORAGE_KEYS[key] || key;
+
+const getDefaultSettingValue = (key, defaultValue) => {
+  const storageKey = getStorageKey(key);
   const storedValue = localStorage.getItem(storageKey);
   return storedValue !== null ? storedValue === "true" : defaultValue;
 };
@@ -33,14 +41,24 @@ export function SettingsProvider({ children }) {
       false,
     ),
     mockingbirdUiEnabled: getDefaultSettingValue("mockingbirdUiEnabled", false),
+    micMuted: getDefaultSettingValue("micMuted", false),
   });
 
   useEffect(() => {
     Object.entries(settings).forEach(([key, value]) => {
-      if (localStorage.getItem(key) === null) {
-        localStorage.setItem(key, value.toString());
+      const storageKey = getStorageKey(key);
+      if (localStorage.getItem(storageKey) === null) {
+        localStorage.setItem(storageKey, value.toString());
       }
     });
+  }, []);
+
+  useEffect(() => {
+    if (settings.micMuted) {
+      sendNocturneWsRequest("wakeword.pause", {}).catch((err) => {
+        console.error("Failed to sync wakeword pause on init:", err);
+      });
+    }
   }, []);
 
   const updateSetting = (key, value) => {
@@ -49,7 +67,8 @@ export function SettingsProvider({ children }) {
     const updateLocalStorage = (updates) => {
       Object.entries(updates).forEach(([settingKey, settingValue]) => {
         newSettings[settingKey] = settingValue;
-        localStorage.setItem(settingKey, settingValue.toString());
+        const storageKey = getStorageKey(settingKey);
+        localStorage.setItem(storageKey, settingValue.toString());
       });
     };
 
@@ -89,6 +108,13 @@ export function SettingsProvider({ children }) {
 
     if (key === "use24HourTime") {
       window.dispatchEvent(new Event("timeFormatChanged"));
+    }
+
+    if (key === "micMuted") {
+      const method = value ? "wakeword.pause" : "wakeword.resume";
+      sendNocturneWsRequest(method, {}).catch((err) => {
+        console.error(`Failed to send ${method}:`, err);
+      });
     }
   };
 

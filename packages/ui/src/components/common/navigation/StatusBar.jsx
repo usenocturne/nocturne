@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
-import { BatteryIcon, BluetoothIcon, USBIcon } from "../../common/icons";
+import {
+  BatteryIcon,
+  BluetoothIcon,
+  MicrophoneOffIcon,
+  USBIcon,
+} from "../../common/icons";
 import { useBluetooth } from "../../../hooks/useNocturned";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
+import { useSettings } from "../../../contexts/SettingsContext";
 
 export default function StatusBar() {
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const { lastConnectedDevice, connectedDevices, devices } = useBluetooth();
   const { currentTime, isFourDigits } = useCurrentTime();
+  const { settings } = useSettings();
+  const micMuted = settings?.micMuted ?? false;
 
   const lastDeviceAddressLS =
     typeof localStorage !== "undefined"
@@ -43,6 +51,17 @@ export default function StatusBar() {
         {currentTime}
       </div>
       <div className="flex gap-2.5 h-10" style={{ marginTop: "-10px" }}>
+        {micMuted && (
+          <MicrophoneOffIcon
+            className="w-7 h-10 text-white"
+            style={{
+              margin: 0,
+              padding: 0,
+              display: "block",
+              transform: "translateY(-10px)",
+            }}
+          />
+        )}
         {isBluetoothConnected ? (
           <BluetoothIcon
             className="w-8 h-10 text-white"

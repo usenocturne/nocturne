@@ -10,7 +10,10 @@ import RefreshIcon from "../icons/RefreshIcon";
 import BrightnessMidIcon from "../icons/BrightnessMidIcon";
 import BrightnessLowIcon from "../icons/BrightnessLowIcon";
 import BrightnessHighIcon from "../icons/BrightnessHighIcon";
+import MicrophoneIcon from "../icons/MicrophoneIcon";
+import MicrophoneOffIcon from "../icons/MicrophoneOffIcon";
 import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
+import { useSettings } from "../../../contexts/SettingsContext";
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -151,6 +154,8 @@ function PowerMenuOverlay({
   const [isVisible, setIsVisible] = useState(false);
   const [brightnessToggled, setBrightnessToggled] = useState(false);
   const [brightnessValue, setBrightnessValue] = useState(180);
+  const { settings, updateSetting } = useSettings();
+  const micMuted = settings?.micMuted ?? false;
 
   useEffect(() => {
     if (show) {
@@ -272,6 +277,24 @@ function PowerMenuOverlay({
             <BrightnessMidIcon
               className={`w-10 h-10 ${brightnessToggled ? "text-black" : "text-white"}`}
             />
+          </button>
+          <button
+            onClick={() => {
+              updateSetting("micMuted", !micMuted);
+            }}
+            className={`w-24 h-24 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-0 ${
+              micMuted
+                ? "bg-white hover:bg-gray-100"
+                : "bg-neutral-700 hover:bg-neutral-600"
+            }`}
+            aria-pressed={micMuted}
+            aria-label={micMuted ? "Unmute microphone" : "Mute microphone"}
+          >
+            {micMuted ? (
+              <MicrophoneOffIcon className="w-10 h-10 text-black" />
+            ) : (
+              <MicrophoneIcon className="w-10 h-10 text-white" />
+            )}
           </button>
         </div>
 

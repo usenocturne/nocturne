@@ -71,6 +71,16 @@ const settingsStructure = {
         defaultValue: false,
       },
       {
+        id: "microphone",
+        title: "Microphone",
+        type: "toggle",
+        description:
+          "Enable the microphone for wake word detection and voice commands.",
+        storageKey: "micMuted",
+        defaultValue: false,
+        invert: true,
+      },
+      {
         id: "factory-reset",
         title: "Factory Reset",
         type: "action",
@@ -805,6 +815,9 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
         const isToggleDisabled =
           isMockingbirdToggle &&
           (appPlatform === "web" || isSubscribed === false);
+        const displayedValue = item.invert
+          ? !settings[item.storageKey]
+          : settings[item.storageKey];
         return (
           <div
             key={item.id}
@@ -812,19 +825,17 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
           >
             <div className="flex items-center">
               <Switch
-                checked={settings[item.storageKey]}
+                checked={displayedValue}
                 onChange={() =>
                   !isToggleDisabled && handleToggle(item.storageKey)
                 }
                 className={`relative inline-flex h-11 w-20 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  settings[item.storageKey] ? "bg-white/40" : "bg-white/10"
+                  displayedValue ? "bg-white/40" : "bg-white/10"
                 }`}
               >
                 <span
                   className={`pointer-events-none inline-block h-10 w-10 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    settings[item.storageKey]
-                      ? "translate-x-9"
-                      : "translate-x-0"
+                    displayedValue ? "translate-x-9" : "translate-x-0"
                   }`}
                 />
               </Switch>

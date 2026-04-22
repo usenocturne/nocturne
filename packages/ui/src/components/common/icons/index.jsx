@@ -69,3 +69,5 @@ export { default as BrightnessMidIcon } from "./BrightnessMidIcon";
 export { default as BrightnessHighIcon } from "./BrightnessHighIcon";
 export { default as USBIcon } from "./USBIcon";
 export { default as AlertCircleIcon } from "./AlertCircleIcon";
+export { default as MicrophoneIcon } from "./MicrophoneIcon";
+export { default as MicrophoneOffIcon } from "./MicrophoneOffIcon";
