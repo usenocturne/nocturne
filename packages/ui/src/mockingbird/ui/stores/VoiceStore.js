@@ -179,6 +179,7 @@ class VoiceStore {
         if (event.type !== "event") return;
         const { topic, data } = event;
         if (topic === "voice.wakeword") this.onWakeWord();
+        else if (topic === "voice.wakeword.state") this._onWakeWordState(data);
         else if (topic === "voice.transcription") this.onTranscription(data);
         else if (topic === "ai.state") this.onAIState(data);
         else if (topic === "ai.response") this.onAIResponse(data);
@@ -186,10 +187,6 @@ class VoiceStore {
         else if (topic === "audio.level") this._onMicLevel(data);
       }),
     });
-
-    if (this.isMicMuted) {
-      sendNocturneWsRequest("wakeword.pause", {});
-    }
   }
 
   get listening() {
@@ -235,6 +232,13 @@ class VoiceStore {
     this.resetVoiceSessionState();
     overlayController.showVoice();
     this._startCaptureTimeout();
+  });
+
+  _onWakeWordState = action((data) => {
+    const muted = !!data?.muted;
+    if (this.isMicMuted === muted) return;
+    this.isMicMuted = muted;
+    localStorage.setItem("mockingbird_mic_muted", String(muted));
   });
 
   onTranscription = action((data) => {

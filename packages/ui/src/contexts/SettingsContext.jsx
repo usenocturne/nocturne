@@ -3,6 +3,7 @@ import {
   sendNocturneWsRequest,
   subscribeAppReadyState,
   getAppReadyState,
+  addGlobalWsListener,
 } from "../hooks/useNocturned";
 
 const SETTING_STORAGE_KEYS = {
@@ -69,21 +70,31 @@ export function SettingsProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (appPlatform === null) return;
-    const effectiveMuted = isMicLockedByPlatform || settings.micMuted;
-    const method = effectiveMuted ? "wakeword.pause" : "wakeword.resume";
-    sendNocturneWsRequest(method, { persist: false }).catch((err) => {
-      console.error(`Failed to sync microphone runtime state (${method}):`, err);
+    return addGlobalWsListener("settings-wakeword-state", {
+      onMessage: (data) => {
+        if (data?.type !== "event" || data?.topic !== "voice.wakeword.state") {
+          return;
+        }
+        const muted = !!data.data?.muted;
+        setSettings((prev) => {
+          if (prev.micMuted === muted) return prev;
+          localStorage.setItem(getStorageKey("micMuted"), String(muted));
+          return { ...prev, micMuted: muted };
+        });
+      },
     });
-  }, [appPlatform, isMicLockedByPlatform, settings.micMuted]);
+  }, []);
 
   useEffect(() => {
-    sendNocturneWsRequest("wakeword.set_preference", {
-      muted: settings.micMuted,
-    }).catch((err) => {
-      console.error("Failed to persist microphone preference:", err);
+    if (appPlatform === null) return;
+    if (!isMicLockedByPlatform) return;
+    sendNocturneWsRequest("wakeword.pause", {}).catch((err) => {
+      console.error(
+        "Failed to sync microphone runtime state (platform lock):",
+        err,
+      );
     });
-  }, [settings.micMuted]);
+  }, [appPlatform, isMicLockedByPlatform]);
 
   const updateSetting = (key, value) => {
     const newSettings = { ...settings };
@@ -132,6 +143,16 @@ export function SettingsProvider({ children }) {
 
     if (key === "use24HourTime") {
       window.dispatchEvent(new Event("timeFormatChanged"));
+    }
+
+    if (key === "micMuted" && !isMicLockedByPlatform) {
+      const method = value ? "wakeword.pause" : "wakeword.resume";
+      sendNocturneWsRequest(method, {}).catch((err) => {
+        console.error(
+          `Failed to sync microphone runtime state (${method}):`,
+          err,
+        );
+      });
     }
   };
 
