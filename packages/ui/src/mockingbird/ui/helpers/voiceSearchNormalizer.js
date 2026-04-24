@@ -73,9 +73,6 @@ export function normalizeSpotifySearchResult(result) {
   return items;
 }
 
-/**
- * Returns true when all four type arrays are absent or empty.
- */
 export function isEmptyVoiceResult(result) {
   if (!result || typeof result !== "object") return true;
   return (
@@ -118,9 +115,6 @@ export function normalizeRecentlyPlayedResult(result) {
   return items;
 }
 
-/**
- * Returns true when the albums array is absent or empty.
- */
 export function isEmptyRecentlyPlayedResult(result) {
   if (!result || typeof result !== "object") return true;
   return !result.albums || result.albums.length === 0;

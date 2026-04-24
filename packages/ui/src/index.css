@@ -345,3 +345,87 @@ section {
   -webkit-backface-visibility: hidden;
   transform-origin: center;
 }
+
+@keyframes voicePillDotPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.voice-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  display: inline-block;
+  animation: voicePillDotPulse 1400ms ease-in-out infinite both;
+  transform-origin: center;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.voice-pill-dot:not(:last-child) {
+  margin-right: 8px;
+}
+
+.voice-pill-dot-2 {
+  animation-delay: 200ms;
+}
+
+.voice-pill-dot-3 {
+  animation-delay: 400ms;
+}
+
+@keyframes voicePillContentIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes voicePillContentOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.voice-pill-content-in {
+  animation: voicePillContentIn 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.voice-pill-content-out {
+  animation: voicePillContentOut 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.voice-confirmation-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.voice-confirmation-icon--STOP svg {
+  width: 24px;
+  height: 24px;
+}

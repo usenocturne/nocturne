@@ -29,10 +29,12 @@ import {
   NotificationProvider,
   useNotifications,
 } from "./contexts/NotificationContext";
+import { VoiceProvider } from "./contexts/VoiceContext";
 import NotificationsContainer from "./components/common/notifications/NotificationsContainer";
 import PairingScreen from "./components/screens/PairingScreen";
 import LockView from "./components/common/LockView";
 import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
+import VoiceOverlay from "./components/common/overlays/voice/VoiceOverlay";
 import { CheckIcon } from "./components/common/icons";
 import { SettingsUpdateIcon } from "./components/common/icons";
 import UpdateCheckNotification from "./components/common/notifications/UpdateCheckNotification";
@@ -877,12 +879,6 @@ function App() {
     initialDataLoaded,
   ]);
 
-  /**
-   * App owns all section palette sources so section switches only trigger one
-   * gradient update: auth/settings use built-in palettes; recents/library/
-   * artists/radio/podcasts use the first visible tile art; nowPlaying/lock use
-   * the active album art.
-   */
   useEffect(() => {
     if (viewingContent) return;
 
@@ -1223,6 +1219,13 @@ function App() {
                 : null
       : null;
 
+  const voiceSuppressed =
+    isSystemScreen ||
+    showSubscriptionScreen ||
+    showTetheringScreen ||
+    !!pairingRequest ||
+    isMockingbird;
+
   let content;
   if (showSplash) {
     content = <SplashScreen />;
@@ -1333,84 +1336,87 @@ function App() {
               currentVersion={nocturneVersion}
             />
           )}
-          <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
-            <Router>
-              <FontLoader />
-              <main className="overflow-hidden relative min-h-screen rounded-2xl nocturne-font-stack">
-                <GradientBackground
-                  gradientState={gradientState}
-                  className="bg-black"
-                />
+          <VoiceProvider suppressed={voiceSuppressed}>
+            <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
+              <Router>
+                <FontLoader />
+                <main className="overflow-hidden relative min-h-screen rounded-2xl nocturne-font-stack">
+                  <GradientBackground
+                    gradientState={gradientState}
+                    className="bg-black"
+                  />
 
-                <div className="relative z-10">
-                  <UIShell
-                    isMockingbird={isMockingbird}
-                    mockingbirdProps={{
-                      currentPlayback,
-                      playerControls,
-                      spotifyData: {
-                        recentAlbums,
-                        userPlaylists,
-                        topArtists,
-                        likedSongs,
-                        radioMixes,
-                        userShows,
-                        spotifyUserId,
-                        initialDataLoaded,
-                      },
-                      playbackProgress,
-                      systemScreen: mockingbirdSystemScreen,
-                      onTutorialComplete: handleTutorialComplete,
-                    }}
-                  >
-                    {content}
-                  </UIShell>
-                  {!showTetheringScreen &&
-                    !showConnectionLostScreen &&
-                    !showTutorial && (
-                      <>
-                        {pairingRequest ? (
-                          isMockingbird ? (
-                            <MockingbirdPairingOverlay
-                              pin={pairingRequest.pairingKey}
-                            />
-                          ) : (
-                            <PairingScreen
-                              pin={pairingRequest.pairingKey}
-                              isConnecting={isConnecting}
-                              onAccept={acceptPairing}
-                              onReject={denyPairing}
-                            />
-                          )
-                        ) : null}
-                      </>
-                    )}
-                  <NetworkBanner
-                    visible={displayNetworkBanner}
-                    onClose={() => setShowNetworkBanner(false)}
-                  />
-                  <DeviceSwitcherModal
-                    isOpen={isDeviceSwitcherOpen}
-                    onClose={handleCloseDeviceSwitcher}
-                    initialDevices={prefetchedDevices}
-                  />
-                  {!showTutorial && (
-                    <ButtonMappingOverlay
-                      show={showGlobalMappingOverlay}
-                      activeButton={globalActiveButton}
+                  <div className="relative z-10">
+                    <UIShell
+                      isMockingbird={isMockingbird}
+                      mockingbirdProps={{
+                        currentPlayback,
+                        playerControls,
+                        spotifyData: {
+                          recentAlbums,
+                          userPlaylists,
+                          topArtists,
+                          likedSongs,
+                          radioMixes,
+                          userShows,
+                          spotifyUserId,
+                          initialDataLoaded,
+                        },
+                        playbackProgress,
+                        systemScreen: mockingbirdSystemScreen,
+                        onTutorialComplete: handleTutorialComplete,
+                      }}
+                    >
+                      {content}
+                    </UIShell>
+                    {!showTetheringScreen &&
+                      !showConnectionLostScreen &&
+                      !showTutorial && (
+                        <>
+                          {pairingRequest ? (
+                            isMockingbird ? (
+                              <MockingbirdPairingOverlay
+                                pin={pairingRequest.pairingKey}
+                              />
+                            ) : (
+                              <PairingScreen
+                                pin={pairingRequest.pairingKey}
+                                isConnecting={isConnecting}
+                                onAccept={acceptPairing}
+                                onReject={denyPairing}
+                              />
+                            )
+                          ) : null}
+                        </>
+                      )}
+                    <NetworkBanner
+                      visible={displayNetworkBanner}
+                      onClose={() => setShowNetworkBanner(false)}
                     />
-                  )}
-                  <PowerMenuOverlay
-                    show={powerMenuVisible}
-                    onShutdown={handleShutdown}
-                    onReboot={handleReboot}
-                    onClose={() => setPowerMenuVisible(false)}
-                  />
-                </div>
-              </main>
-              <NotificationsContainer />
-            </Router>
-          </DeviceSwitcherContext.Provider>
+                    <DeviceSwitcherModal
+                      isOpen={isDeviceSwitcherOpen}
+                      onClose={handleCloseDeviceSwitcher}
+                      initialDevices={prefetchedDevices}
+                    />
+                    {!showTutorial && (
+                      <ButtonMappingOverlay
+                        show={showGlobalMappingOverlay}
+                        activeButton={globalActiveButton}
+                      />
+                    )}
+                    <PowerMenuOverlay
+                      show={powerMenuVisible}
+                      onShutdown={handleShutdown}
+                      onReboot={handleReboot}
+                      onClose={() => setPowerMenuVisible(false)}
+                    />
+                  </div>
+                </main>
+                <VoiceOverlay />
+                <NotificationsContainer />
+              </Router>
+            </DeviceSwitcherContext.Provider>
+          </VoiceProvider>
         </NotificationProvider>
       </OTAProvider>
     </SettingsProvider>

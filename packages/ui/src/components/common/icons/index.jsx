@@ -23,6 +23,7 @@ export { default as DeviceSwitcherIcon } from "./DeviceSwitcherIcon";
 export { default as RepeatIcon } from "./RepeatIcon";
 export { default as RepeatOneIcon } from "./RepeatOneIcon";
 export { default as ShuffleIcon } from "./ShuffleIcon";
+export { default as ShuffleActiveIcon } from "./ShuffleActiveIcon";
 export { default as LyricsIcon } from "./LyricsIcon";
 export { default as CarIcon } from "./CarIcon";
 export { default as CastIcon } from "./CastIcon";
