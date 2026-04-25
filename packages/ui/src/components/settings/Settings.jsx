@@ -37,6 +37,16 @@ const settingsStructure = {
     icon: SettingsGeneralIcon,
     items: [
       {
+        id: "microphone",
+        title: "Microphone",
+        type: "toggle",
+        description:
+          "Enable the microphone for wake word detection and voice commands.",
+        storageKey: "micMuted",
+        defaultValue: false,
+        invert: true,
+      },
+      {
         id: "classic-ui",
         title: "Mockingbird UI",
         type: "toggle",
@@ -69,16 +79,6 @@ const settingsStructure = {
           "Display the clock inside of the status bar in 24-hour format instead of 12-hour format.",
         storageKey: "use24HourTime",
         defaultValue: false,
-      },
-      {
-        id: "microphone",
-        title: "Microphone",
-        type: "toggle",
-        description:
-          "Enable the microphone for wake word detection and voice commands.",
-        storageKey: "micMuted",
-        defaultValue: false,
-        invert: true,
       },
       {
         id: "factory-reset",
