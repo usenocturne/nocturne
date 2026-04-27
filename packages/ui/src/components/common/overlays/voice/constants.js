@@ -27,7 +27,7 @@ export const SAVE_TO_COLLECTION_EPISODE = "SAVE_TO_COLLECTION_EPISODE";
 export const CAPTURE_TIMEOUT_MS = 10000;
 export const AI_TIMEOUT_MS = 30000;
 export const SPEAKING_TIMEOUT_MS = 15000;
-export const IDLE_CLOSE_TIMEOUT_MS = 8000;
+export const IDLE_CLOSE_TIMEOUT_MS = 2500;
 export const TERMINAL_CLOSE_MS = 8000;
 export const PLAY_CLOSE_MS = 10000;
 export const OVERLAY_FADE_MS = 300;
@@ -37,7 +37,7 @@ export const PILL_CROSS_FADE_MS = 200;
 export const DOT_PULSE_MS = 1400;
 export const STREAM_WORD_MS = 60;
 export const THINKING_DIM_OPACITY = 0.4;
-export const POST_STREAM_CLOSE_MS = 3000;
+export const POST_STREAM_CLOSE_MS = 1500;
 
 function coerceBool(v) {
   if (v === true) return true;
