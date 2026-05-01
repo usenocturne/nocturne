@@ -202,6 +202,7 @@ export function VoiceProvider({ children, suppressed = false }) {
   const closeTimerRef = useRef(null);
   const streamCompleteAtRef = useRef(null);
   const micSmoothedRef = useRef(0);
+  const pendingSessionRejectionRef = useRef(false);
 
   useEffect(() => {
     stateRef.current = state;
@@ -267,6 +268,7 @@ export function VoiceProvider({ children, suppressed = false }) {
   const startCaptureTimeout = () => {
     clearCaptureTimeout();
     captureTimerRef.current = setTimeout(() => {
+      pendingSessionRejectionRef.current = true;
       dispatch({
         type: "SET_ERROR",
         payload: {
@@ -281,6 +283,7 @@ export function VoiceProvider({ children, suppressed = false }) {
   const startAiTimeout = () => {
     clearAiTimeout();
     aiTimerRef.current = setTimeout(() => {
+      pendingSessionRejectionRef.current = true;
       dispatch({
         type: "SET_ERROR",
         payload: {
@@ -323,6 +326,17 @@ export function VoiceProvider({ children, suppressed = false }) {
     return false;
   };
 
+  const handleLateArrivalAfterDismissal = (payload) => {
+    if (!pendingSessionRejectionRef.current) return false;
+    const sid = payload?.session_id;
+    if (!sid) return false;
+    if (!stateRef.current.rejectedSessionIds.includes(sid)) {
+      dispatch({ type: "REJECT_SESSION", payload: sid });
+    }
+    pendingSessionRejectionRef.current = false;
+    return true;
+  };
+
   const sendVoiceCommand = (method, params = {}) => {
     return sendNocturneWsRequest(method, params);
   };
@@ -339,6 +353,7 @@ export function VoiceProvider({ children, suppressed = false }) {
         rejectCurrentSession();
         micSmoothedRef.current = 0;
         streamCompleteAtRef.current = null;
+        pendingSessionRejectionRef.current = false;
         clearSpeakingTimeout();
         dispatch({ type: "WAKEWORD_DETECTED" });
         startCaptureTimeout();
@@ -346,6 +361,7 @@ export function VoiceProvider({ children, suppressed = false }) {
       }
 
       if (topic === "voice.transcription") {
+        if (handleLateArrivalAfterDismissal(payload)) return;
         if (isStaleEvent(payload)) return;
         dispatch({ type: "TRANSCRIPT_UPDATE", payload });
         clearCaptureTimeout();
@@ -358,6 +374,7 @@ export function VoiceProvider({ children, suppressed = false }) {
       }
 
       if (topic === "ai.state") {
+        if (handleLateArrivalAfterDismissal(payload)) return;
         if (isStaleEvent(payload)) return;
         dispatch({ type: "AI_STATE_CHANGE", payload });
 
@@ -380,6 +397,7 @@ export function VoiceProvider({ children, suppressed = false }) {
       }
 
       if (topic === "ai.response") {
+        if (handleLateArrivalAfterDismissal(payload)) return;
         if (isStaleEvent(payload)) return;
         clearAiTimeout();
         dispatch({ type: "AI_RESPONSE", payload });
@@ -395,6 +413,7 @@ export function VoiceProvider({ children, suppressed = false }) {
       }
 
       if (topic === "ai.tool_executed") {
+        if (handleLateArrivalAfterDismissal(payload)) return;
         if (isStaleEvent(payload)) return;
 
         const tool = payload.tool || payload.tool_name || "";
@@ -488,6 +507,7 @@ export function VoiceProvider({ children, suppressed = false }) {
       open: () => dispatch({ type: "OPEN" }),
       close: () => {
         rejectCurrentSession();
+        pendingSessionRejectionRef.current = true;
         clearCaptureTimeout();
         clearAiTimeout();
         clearSpeakingTimeout();
@@ -501,6 +521,7 @@ export function VoiceProvider({ children, suppressed = false }) {
       },
       cancel: () => {
         rejectCurrentSession();
+        pendingSessionRejectionRef.current = true;
         sendVoiceCommand("audio.record.stop", {});
         clearCaptureTimeout();
         clearAiTimeout();

@@ -27,7 +27,7 @@ import {
   isEmptyRecentlyPlayedResult,
 } from "../helpers/voiceSearchNormalizer";
 
-const CAPTURE_TIMEOUT = 10000;
+const CAPTURE_TIMEOUT = 18000;
 const AI_TIMEOUT = 30000;
 const TIMEOUT_BEFORE_CLOSING_LISTENING_MS = 2500;
 const TERMINAL_CONFIRMATION_CLOSE_MS = 8000;
@@ -147,6 +147,7 @@ class VoiceStore {
   _aiSawExecutingTool = false;
   _voiceResultNavigateTimeoutId = null;
   _voiceResultResetTimeoutId = null;
+  _pendingSessionRejection = false;
 
   constructor(rootStore, socket, middlewareActions) {
     this.rootStore = rootStore;
@@ -164,8 +165,10 @@ class VoiceStore {
       _aiSawExecutingTool: false,
       _voiceResultNavigateTimeoutId: false,
       _voiceResultResetTimeoutId: false,
+      _pendingSessionRejection: false,
       _isStaleEvent: false,
       _rejectCurrentSession: false,
+      _handleLateArrivalAfterDismissal: false,
       _discardPendingVoicePopulation: false,
       _resetVoiceTurnTracking: false,
       _clearVoiceResultTimers: false,
@@ -226,6 +229,7 @@ class VoiceStore {
     if (viewStore.appView !== "MAIN") return;
     if (this.isMicMuted) return;
     this._rejectCurrentSession();
+    this._pendingSessionRejection = false;
     this.rootStore.shelfStore.clearVoiceItems();
     this._resetVoiceTurnTracking();
     this._clearVoiceResultTimers();
@@ -242,6 +246,7 @@ class VoiceStore {
   });
 
   onTranscription = action((data) => {
+    if (this._handleLateArrivalAfterDismissal(data)) return;
     if (this._isStaleEvent(data, "transcription")) return;
     if (
       this.currentSessionId === null &&
@@ -263,6 +268,7 @@ class VoiceStore {
   });
 
   onAIState = action((data) => {
+    if (this._handleLateArrivalAfterDismissal(data)) return;
     if (this._isStaleEvent(data, "ai")) return;
 
     const prevState = this.state.aiState;
@@ -317,6 +323,7 @@ class VoiceStore {
   });
 
   onAIResponse = action((data) => {
+    if (this._handleLateArrivalAfterDismissal(data)) return;
     if (this._isStaleEvent(data, "ai")) return;
     if (data.text) {
       this.state.aiResponse = data.text;
@@ -332,6 +339,7 @@ class VoiceStore {
   });
 
   onToolExecuted = action((data) => {
+    if (this._handleLateArrivalAfterDismissal(data)) return;
     if (this._isStaleEvent(data, "ai")) return;
 
     const tool = data.tool;
@@ -400,6 +408,7 @@ class VoiceStore {
 
   cancel = action(() => {
     this._rejectCurrentSession();
+    this._pendingSessionRejection = true;
     this.rootStore.shelfStore.clearVoiceItems();
     this._resetVoiceTurnTracking();
     this._clearVoiceResultTimers();
@@ -524,6 +533,21 @@ class VoiceStore {
     this.currentSessionId = null;
   }
 
+  _handleLateArrivalAfterDismissal(data) {
+    if (!this._pendingSessionRejection) return false;
+    const sid = data?.session_id;
+    if (!sid) return false;
+    if (!this._rejectedSessionIds.has(sid)) {
+      this._rejectedSessionIds.add(sid);
+      if (this._rejectedSessionIds.size > 20) {
+        const first = this._rejectedSessionIds.values().next().value;
+        this._rejectedSessionIds.delete(first);
+      }
+    }
+    this._pendingSessionRejection = false;
+    return true;
+  }
+
   _discardPendingVoicePopulation() {
     this._pendingVoicePopulation = null;
     this._aiSawExecutingTool = false;
@@ -550,6 +574,7 @@ class VoiceStore {
     this._clearCaptureTimeout();
     this._captureTimeoutId = setTimeout(
       action(() => {
+        this._pendingSessionRejection = true;
         this.state.error = "error";
         this.state.friendlyError = "Something went wrong. Tap to try again.";
         this._stopSyntheticMicLevel();
@@ -570,6 +595,7 @@ class VoiceStore {
     this._clearAITimeout();
     this._aiTimeoutId = setTimeout(
       action(() => {
+        this._pendingSessionRejection = true;
         this.state.error = "error";
         this.state.friendlyError = "Something went wrong. Tap to try again.";
         this._stopSyntheticMicLevel();
