@@ -93,12 +93,11 @@ class Jellyfish extends Component {
     },
   ];
 
-  micLevel = 0;
+  recordingLevel = 0;
   thinking = false;
   error = undefined;
   micPan = 0;
 
-  micLevelDisposer = undefined;
   thinkingDisposer = undefined;
   errorDisposer = undefined;
   micPanDisposer = undefined;
@@ -113,11 +112,6 @@ class Jellyfish extends Component {
   }
 
   componentDidMount() {
-    this.micLevelDisposer = reaction(
-      () => this.props.voiceStore.micLevelMovingAverage,
-      (value) => (this.micLevel = value),
-    );
-
     this.thinkingDisposer = reaction(
       () => this.props.voiceStore.thinking,
       (value) => (this.thinking = value),
@@ -143,7 +137,6 @@ class Jellyfish extends Component {
     this.renderCanvasRequestId = undefined;
     window.clearTimeout(this.transitionTimeoutId);
 
-    if (this.micLevelDisposer) this.micLevelDisposer();
     if (this.thinkingDisposer) this.thinkingDisposer();
     if (this.errorDisposer) this.errorDisposer();
     if (this.micPanDisposer) this.micPanDisposer();
@@ -217,11 +210,10 @@ class Jellyfish extends Component {
   }
 
   getListeningRadius({ wave, degree }) {
-    const { voiceStore } = this.props;
     const adjustedPhase = this.phase * wave.listening.phaseMultiplier;
 
     const adjustedAmplitude =
-      wave.listening.amplitude * (1 + voiceStore.micLevelMovingAverage * 2);
+      wave.listening.amplitude * (1 + this.recordingLevel * 2);
 
     return this.warpedRadius(
       degree,
@@ -369,8 +361,6 @@ class Jellyfish extends Component {
     ctx.globalCompositeOperation = "destination-over";
 
     const renderCanvas = (timestamp) => {
-      const { voiceStore } = this.props;
-
       if (!current) {
         return;
       }
@@ -379,10 +369,12 @@ class Jellyfish extends Component {
 
       ctx.clearRect(0, 0, this.W, this.H);
 
+      this.recordingLevel = 0.15 + Math.sin(timestamp / 1500) * 0.1;
+
       this.phase =
         (this.phase +
           Math.PI * this.listeningRotationSpeed +
-          voiceStore.micLevelMovingAverage * 0.5) %
+          this.recordingLevel * 0.1) %
         (2 * Math.PI);
 
       this.waves.forEach((wave) => {
