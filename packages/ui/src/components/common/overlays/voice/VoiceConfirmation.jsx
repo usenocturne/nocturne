@@ -34,6 +34,7 @@ import {
   MUTE_INTENT,
   ADD_TO_QUEUE_INTENT,
   VOLUME_INTENT,
+  UNFOLLOW_INTENT,
   SAVE_TO_COLLECTION_PODCAST_ACTION,
   SAVE_TO_COLLECTION_EPISODE,
 } from "./constants";
@@ -157,6 +158,14 @@ const VoiceConfirmation = ({ intent, action }) => {
         </div>
       );
     case BAN_TRACK_INTENT:
+      return (
+        <div
+          className={`voice-confirmation-icon voice-confirmation-icon--${intent}`}
+        >
+          <HeartIcon width={32} height={32} />
+        </div>
+      );
+    case UNFOLLOW_INTENT:
       return (
         <div
           className={`voice-confirmation-icon voice-confirmation-icon--${intent}`}

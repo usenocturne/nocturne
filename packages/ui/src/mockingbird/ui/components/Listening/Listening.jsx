@@ -15,6 +15,8 @@ const firstLetterUpperCase = (s) =>
 const INTENT_TO_CONFIRMATION_TEXT = {
   ADD_TO_COLLECTION: "Saved",
   THUMBS_UP: "Saved",
+  FOLLOW: "Following",
+  UNFOLLOW: "Unfollowed",
   BAN_TRACK: "Removed",
   SHUFFLE_ON: "Shuffle on",
   SHUFFLE_OFF: "Shuffle off",

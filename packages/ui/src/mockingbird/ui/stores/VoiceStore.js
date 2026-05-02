@@ -19,6 +19,8 @@ import {
   ADD_TO_QUEUE_INTENT,
   BAN_TRACK_INTENT,
   VOLUME_INTENT,
+  FOLLOW_INTENT,
+  UNFOLLOW_INTENT,
 } from "../components/Listening/VoiceConfirmationIntents";
 import {
   normalizeSpotifySearchResult,
@@ -43,6 +45,8 @@ const TERMINAL_TOOLS = new Set([
   "spotify_repeat",
   "spotify_add_to_queue",
   "spotify_remove_track",
+  "spotify_follow",
+  "spotify_unfollow",
 ]);
 
 const NO_ICON_INTENTS = new Set([PLAY_INTENT]);
@@ -92,6 +96,21 @@ function deriveSimpleIntent(tool, args) {
   }
   if (tool === "spotify_repeat_off") {
     return REPEAT_OFF_INTENT;
+  }
+  if (tool === "spotify_follow" || tool === "spotify_unfollow") {
+    const uris = Array.isArray(args?.uris)
+      ? args.uris
+      : typeof args?.uri === "string"
+        ? [args.uri]
+        : [];
+    if (uris.length === 0) return null;
+    const allFollowable = uris.every(
+      (u) =>
+        typeof u === "string" &&
+        (u.startsWith("spotify:artist:") || u.startsWith("spotify:show:")),
+    );
+    if (!allFollowable) return null;
+    return tool === "spotify_follow" ? FOLLOW_INTENT : UNFOLLOW_INTENT;
   }
   const directMap = {
     spotify_save_track: ADD_TO_COLLECTION_INTENT,

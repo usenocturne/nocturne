@@ -35,6 +35,7 @@ import {
   SHUFFLE_ON_INTENT,
   STOP_INTENT,
   THUMBS_UP_INTENT,
+  UNFOLLOW_INTENT,
 } from "./VoiceConfirmationIntents";
 import {
   SAVE_TO_COLLECTION_EPISODE,
@@ -105,6 +106,12 @@ const VoiceConfirmation = ({ intent, action }) => {
     case BAN_TRACK_INTENT:
       return (
         <div data-testid="remove-confirmation">
+          <IconHeart48 className={styles.confirmationIcon} />
+        </div>
+      );
+    case UNFOLLOW_INTENT:
+      return (
+        <div data-testid="unfollow-confirmation">
           <IconHeart48 className={styles.confirmationIcon} />
         </div>
       );

@@ -6,6 +6,7 @@ export const REPEAT_ON_INTENT = "REPEAT_ON";
 export const REPEAT_OFF_INTENT = "REPEAT_OFF";
 export const REPEAT_ONE_INTENT = "REPEAT_ONE";
 export const FOLLOW_INTENT = "FOLLOW";
+export const UNFOLLOW_INTENT = "UNFOLLOW";
 export const ADD_TO_COLLECTION_INTENT = "ADD_TO_COLLECTION";
 export const THUMBS_UP_INTENT = "THUMBS_UP";
 export const BAN_TRACK_INTENT = "BAN_TRACK";
@@ -72,6 +73,21 @@ export function deriveSimpleIntent(tool, args) {
   if (tool === "spotify_repeat_off") {
     return REPEAT_OFF_INTENT;
   }
+  if (tool === "spotify_follow" || tool === "spotify_unfollow") {
+    const uris = Array.isArray(args?.uris)
+      ? args.uris
+      : typeof args?.uri === "string"
+        ? [args.uri]
+        : [];
+    if (uris.length === 0) return null;
+    const allFollowable = uris.every(
+      (u) =>
+        typeof u === "string" &&
+        (u.startsWith("spotify:artist:") || u.startsWith("spotify:show:")),
+    );
+    if (!allFollowable) return null;
+    return tool === "spotify_follow" ? FOLLOW_INTENT : UNFOLLOW_INTENT;
+  }
   const directMap = {
     spotify_save_track: ADD_TO_COLLECTION_INTENT,
     spotify_play: PLAY_INTENT,
@@ -88,6 +104,8 @@ export function deriveSimpleIntent(tool, args) {
 export const INTENT_TO_CONFIRMATION_TEXT = {
   ADD_TO_COLLECTION: "Saved",
   THUMBS_UP: "Saved",
+  FOLLOW: "Following",
+  UNFOLLOW: "Unfollowed",
   BAN_TRACK: "Removed",
   SHUFFLE_ON: "Shuffle on",
   SHUFFLE_OFF: "Shuffle off",
@@ -119,6 +137,8 @@ export const TERMINAL_TOOLS = new Set([
   "spotify_repeat",
   "spotify_add_to_queue",
   "spotify_remove_track",
+  "spotify_follow",
+  "spotify_unfollow",
 ]);
 
 export const FAST_PLAY_TOOLS = new Set(["spotify_play"]);
