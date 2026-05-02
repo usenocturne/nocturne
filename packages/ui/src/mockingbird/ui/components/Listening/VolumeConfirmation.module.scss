@@ -4,43 +4,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: vars.$white;
-
-  svg {
-    color: vars.$white;
-  }
 }
 
-.volumeBar {
-  height: 8px;
-  width: 480px;
-  position: relative;
-  border-radius: 4px;
-  background: vars.$gray-20;
-  overflow: hidden;
-}
-
-.volumeLevelFill {
+.confirmationIcon {
   display: block;
-  height: 100%;
-  border-radius: 4px;
-  background-color: vars.$white;
-  transition: width 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  width: 96px;
+  height: 96px;
+  color: vars.$white;
 }
 
-.volumeInfo {
-  margin-top: 24px;
-  width: 342px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.volumeIcon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-right: 15px;
+.confirmationText {
+  margin-top: 40px;
 }

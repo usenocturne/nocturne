@@ -15,17 +15,14 @@ const VolumeConfirmation = ({ volumeTarget }) => {
 
   return (
     <div className={styles.volume} data-testid="volume-confirmation">
-      <div className={styles.volumeBar}>
-        <span className={styles.volumeLevelFill} style={{ width: `${pct}%` }} />
-      </div>
-      <div className={styles.volumeInfo}>
-        <div className={styles.volumeIcon}>
-          <Icon />
-        </div>
-        <Type name="altoBold" textColor="white">
-          {`Volume ${pct}`}
-        </Type>
-      </div>
+      <Icon className={styles.confirmationIcon} />
+      <Type
+        name="altoBold"
+        textColor="white"
+        className={styles.confirmationText}
+      >
+        {`Volume ${pct}`}
+      </Type>
     </div>
   );
 };
