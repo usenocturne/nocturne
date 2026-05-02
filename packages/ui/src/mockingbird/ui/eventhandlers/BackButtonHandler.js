@@ -24,6 +24,10 @@ const reactToBackButton = (hardwareEvents, rootStore) => {
       voiceStore.cancel();
       return;
     }
+    if (overlayController.isShowing("lets_drive")) {
+      overlayController.hideLetsDrive();
+      return;
+    }
     if (overlayController.isSettingsShowing) {
       settingsStore.handleBack();
       return;

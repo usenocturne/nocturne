@@ -1,4 +1,8 @@
+@use "../../styles/variables.module" as vars;
+
 .confirmationIcon {
+  display: block;
   width: 96px;
   height: 96px;
+  color: vars.$white;
 }

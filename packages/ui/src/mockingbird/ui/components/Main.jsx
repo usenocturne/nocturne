@@ -3,6 +3,7 @@ import Presets from "./Views/Presets/Presets";
 import Settings from "./Settings/Settings";
 import Overlay, { FROM } from "./Overlays/Overlay";
 import Listening from "./Listening/Listening";
+import LetsDrive from "./Modals/LetsDrive";
 import { useCarThingStore } from "../contexts/CarThingStore";
 import { useEffect } from "react";
 import { observer } from "mobx-react-lite";
@@ -66,6 +67,12 @@ const Main = () => {
           show={overlayController.isShowing("voice")}
         >
           <Listening />
+        </Overlay>
+        <Overlay
+          appear={FROM.FADE_IN}
+          show={overlayController.isShowing("lets_drive")}
+        >
+          <LetsDrive />
         </Overlay>
       </div>
     </div>

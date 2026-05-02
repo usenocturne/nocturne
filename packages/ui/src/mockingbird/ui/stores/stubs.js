@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable, reaction, runInAction } from "mobx";
 import { SwipeHandlerClass } from "../components/Views/Npv/SwipeHandler/SwipeHandler";
 
 export class NpvStore {
@@ -663,9 +663,20 @@ export function createOverlayController(rootStore, ubiLogger) {
       return this.currentOverlay !== undefined;
     },
 
-    maybeShowAModal() {},
+    get shouldShowNoContext() {
+      const playerStore = rootStore?.playerStore;
+      const viewStore = rootStore?.viewStore;
+      const hasContext = Boolean(playerStore?.contextUri);
+      const isOnboarding = Boolean(viewStore?.isOnboarding);
+      return !hasContext && !isOnboarding && !this.isShowing("settings");
+    },
+
+    maybeShowAModal() {
+      return false;
+    },
     resetAndMaybeShowAModal() {
       this.hideSettings();
+      this.hideLetsDrive();
     },
 
     showPresets() {},
@@ -691,6 +702,28 @@ export function createOverlayController(rootStore, ubiLogger) {
       this.currentOverlay = undefined;
     },
 
+    showLetsDrive() {
+      if (this.shouldShowNoContext) {
+        this.currentOverlay = "lets_drive";
+      }
+    },
+
+    hideLetsDrive() {
+      if (this.currentOverlay !== "lets_drive") return;
+      this.currentOverlay = undefined;
+    },
+
+    maybeShowLetsDrive() {
+      if (this.shouldShowNoContext) {
+        this.showLetsDrive();
+        return true;
+      }
+      if (!this.shouldShowNoContext && this.isShowing("lets_drive")) {
+        this.hideLetsDrive();
+      }
+      return false;
+    },
+
     toggleSettings() {
       if (this.isSettingsShowing) {
         this.hideSettings();
@@ -707,6 +740,8 @@ export function createOverlayController(rootStore, ubiLogger) {
     handleBackButton() {
       if (this.currentOverlay === "voice") {
         rootStore?.voiceStore?.cancel();
+      } else if (this.currentOverlay === "lets_drive") {
+        this.hideLetsDrive();
       } else if (this.isSettingsShowing && rootStore?.settingsStore) {
         rootStore.settingsStore.handleBack();
       }
@@ -717,7 +752,31 @@ export function createOverlayController(rootStore, ubiLogger) {
     },
 
     get overlayUiState() {
-      return { currentOverlay: this.currentOverlay };
+      const self = this;
+      const isDismissibleFor = (overlay) => {
+        switch (overlay) {
+          case "non_supported_type":
+          case "standby":
+          case "save_preset_error":
+            return true;
+          default:
+            return false;
+        }
+      };
+      return {
+        get currentOverlay() {
+          return self.currentOverlay;
+        },
+        get isDismissible() {
+          return isDismissibleFor(self.currentOverlay);
+        },
+        maybeShowAModal: () => self.maybeShowAModal(),
+        handleBackdropOnClick: () => {
+          if (isDismissibleFor(self.currentOverlay)) {
+            self.maybeShowAModal();
+          }
+        },
+      };
     },
 
     reset() {
@@ -725,6 +784,16 @@ export function createOverlayController(rootStore, ubiLogger) {
       this.currentOverlay = undefined;
     },
   });
+
+  reaction(
+    () => controller.shouldShowNoContext,
+    (shouldShow) => {
+      if (!shouldShow && controller.isShowing("lets_drive")) {
+        controller.hideLetsDrive();
+      }
+    },
+  );
+
   return controller;
 }
 

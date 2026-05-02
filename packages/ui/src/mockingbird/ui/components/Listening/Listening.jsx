@@ -158,12 +158,19 @@ const ListeningContainer = () => {
   const { voiceStore } = useCarThingStore();
 
   const maybeTryAgain = () => {
-    if (voiceStore.error || voiceStore.friendlyError) {
+    if (voiceStore.error) {
       voiceStore.retry();
     }
   };
 
-  const { showingVoiceConfirmation, intent, isError, listening } = voiceStore;
+  const {
+    showingVoiceConfirmation,
+    intent,
+    errorUiTitle,
+    errorUiSubtitle,
+    isError,
+    listening,
+  } = voiceStore;
   const { transcript, isFinal } = voiceStore.state.asr;
   const error = voiceStore.state.error;
   const friendlyError = voiceStore.state.friendlyError;
@@ -174,8 +181,8 @@ const ListeningContainer = () => {
   return (
     <Listening
       maybeTryAgain={maybeTryAgain}
-      errorUiTitle={null}
-      errorUiSubtitle={null}
+      errorUiTitle={errorUiTitle}
+      errorUiSubtitle={errorUiSubtitle}
       error={error}
       confirmationText={confirmationText}
       friendlyError={friendlyError}
