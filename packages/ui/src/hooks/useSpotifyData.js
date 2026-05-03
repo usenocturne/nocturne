@@ -215,11 +215,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
     const handleSubscriptionChange = (state) => {
       if (
         (state.subscribed || getAppReadyState().platform === "web") &&
-        !initialDataLoaded
+        !initialDataLoaded &&
+        !dataFetchingInProgressRef.current
       ) {
         initialLoadTriggeredRef.current = false;
         dataLoadingAttemptedRef.current = false;
-        dataFetchingInProgressRef.current = false;
       }
     };
 

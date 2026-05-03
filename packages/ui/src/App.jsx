@@ -513,7 +513,7 @@ function App() {
         const shouldForceDataLoad =
           wasSkipped || (wasNotAuthenticated && initialDataLoaded);
 
-        if (!initialDataLoaded || shouldForceDataLoad) {
+        if (shouldForceDataLoad) {
           setTimeout(() => {
             refreshData();
           }, 1000);
