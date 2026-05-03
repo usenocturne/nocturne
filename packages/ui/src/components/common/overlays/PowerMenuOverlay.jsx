@@ -287,14 +287,14 @@ function PowerMenuOverlay({
             disabled={isMicLockedByPlatform}
             className={`w-24 h-24 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-0 ${
               effectiveMicMuted
-                ? "bg-white hover:bg-gray-100"
-                : "bg-neutral-700 hover:bg-neutral-600"
+                ? "bg-neutral-700 hover:bg-neutral-600"
+                : "bg-white hover:bg-gray-100"
             } ${isMicLockedByPlatform ? "opacity-50" : ""}`}
           >
             {effectiveMicMuted ? (
-              <MicrophoneOffIcon className="w-10 h-10 text-black" />
+              <MicrophoneOffIcon className="w-10 h-10 text-white" />
             ) : (
-              <MicrophoneIcon className="w-10 h-10 text-white" />
+              <MicrophoneIcon className="w-10 h-10 text-black" />
             )}
           </button>
         </div>
