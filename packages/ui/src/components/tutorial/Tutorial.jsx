@@ -77,7 +77,7 @@ const Tutorial = ({ onComplete, onStepChange }) => {
     {
       header: "Controls",
       subtext:
-        "Hold the rightmost button to access the power and brightness menu. Try it now.",
+        "Hold the rightmost button to access quick settings. Try it now.",
       continueType: "holdPower",
     },
     {
@@ -94,6 +94,11 @@ const Tutorial = ({ onComplete, onStepChange }) => {
     {
       header: "Gestures",
       subtext: "Swipe left/right in the Now Playing tab to skip tracks.",
+      continueType: "button",
+    },
+    {
+      header: "Voice",
+      subtext: "Say \"Hey Nocturne\", then speak your request to control your music. ",
       continueType: "button",
     },
     {
