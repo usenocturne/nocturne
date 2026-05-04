@@ -661,10 +661,6 @@ function App() {
       return;
     }
 
-    if (splashFlowWithDeviceRef.current) {
-      return;
-    }
-
     if (!hasSeenTutorialFlag) {
       if (isSpotifyAuthenticated && appReady) {
         setShowAuthScreen(false);
@@ -676,6 +672,13 @@ function App() {
         setShowAuthScreen(false);
         setShowTutorial(false);
       }
+      if (splashFlowWithDeviceRef.current) {
+        splashFlowWithDeviceRef.current = false;
+      }
+      return;
+    }
+
+    if (splashFlowWithDeviceRef.current) {
       return;
     }
 
