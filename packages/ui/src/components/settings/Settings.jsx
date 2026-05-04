@@ -183,7 +183,7 @@ const settingsStructure = {
         id: "developers",
         title: "Developers",
         type: "sponsors",
-        names: ["Brandon Saldan", "bbaovanc", "Dominic Frye", "shadow"],
+        names: ["Brandon Saldan", "bbaovanc", "Dominic Frye", "Neel Patel"],
       },
       {
         id: "contributors",
