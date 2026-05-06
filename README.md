@@ -41,7 +41,7 @@
 2. Plug in your Car Thing's USB while holding 1+4 (buttons at the top)
 3. Follow the instructions on [Terbium](https://terbium.app) to flash your Car Thing using the downloaded zip file
 
-Flashing will likely take about 5-10 minutes, depending on your USB ports and some other factors. Please try multiple ports if one isn’t working (Rear IO USB 3/2, BIOS flash port if on AMD, etc).
+Flashing will likely take about 5-10 minutes, depending on your USB ports and some other factors. Please try multiple ports if one isn’t working (Rear IO USB 3/2, BIOS flash port if on AMD, etc). Additionally, if Terbium is stuck on extracting, try extracting the zip, then using the local folder option.
 
 ### Uninstall
 
@@ -77,7 +77,6 @@ Available recipes:
     lint
     menuconfig
     pre-commit-install
-    wslpath
 ```
 
 ## Subprojects
@@ -92,7 +91,7 @@ Nocturne consists of several Git repos, all of which are public and open-source.
 This software was made possible only through the following individuals and open source programs:
 
 - [Brandon Saldan](https://github.com/brandonsaldan)
-- [shadow](https://github.com/68p)
+- [Neel Patel](https://github.com/68p)
 - [Dominic Frye](https://github.com/itsnebulalol)
 - [bbaovanc](https://github.com/bbaovanc)
 
@@ -114,7 +113,7 @@ This software contains calls to the Nocturne API. Any use, distribution, or modi
 
 ---
 
-> © 2025 Vanta Labs.
+> © 2026 Vanta Labs.
 
 > "Spotify" and "Car Thing" are trademarks of Spotify AB. This software is not affiliated with or endorsed by Spotify AB.
 

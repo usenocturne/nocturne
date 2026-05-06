@@ -23,9 +23,6 @@ flashconnector slot:
     dd if=output/images/rootfs.ext2 bs=1M status=progress | ssh -p 2022 -o StrictHostKeyChecking=no root@nocturne-connector dd of=/dev/system_{{slot}} bs=1M
     ssh -p 2022 -o StrictHostKeyChecking=no root@nocturne-connector phb -s $([ "{{slot}}" = "a" ] && echo 0 || echo 1)
 
-wslpath:
-    @echo "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib\""
-
 pre-commit-install:
     pre-commit install
 
