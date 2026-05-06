@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useCarThingStore } from "../../contexts/CarThingStore";
 import { OnboardingStepId } from "../../stores/OnboardingStore";
 import Start from "./Start";
@@ -8,10 +8,17 @@ import LearnTactile from "./LearnTactile";
 
 const Onboarding = ({ onComplete, dataReady }) => {
   const { onboardingStore } = useCarThingStore();
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     onboardingStore.resetForNewOnboarding();
-    onboardingStore.setOnCompleteCallback(onComplete);
+    onboardingStore.setOnCompleteCallback(() => {
+      onCompleteRef.current?.();
+    });
     onboardingStore.setOnboardingStarted(true);
 
     onboardingStore.launchApp();
@@ -19,7 +26,7 @@ const Onboarding = ({ onComplete, dataReady }) => {
     return () => {
       onboardingStore.setOnCompleteCallback(null);
     };
-  }, [onboardingStore, onComplete]);
+  }, [onboardingStore]);
 
   if (onboardingStore.onboardingStep === OnboardingStepId.START) {
     return <Start dataReady={dataReady} />;

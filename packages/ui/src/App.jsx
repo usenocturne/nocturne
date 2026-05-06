@@ -324,6 +324,12 @@ function App() {
   const [hasSeenTutorialFlag, setHasSeenTutorialFlag] = useState(
     () => localStorage.getItem("hasSeenTutorial") === "true",
   );
+  const [
+    hasSeenMockingbirdOnboardingFlag,
+    setHasSeenMockingbirdOnboardingFlag,
+  ] = useState(
+    () => localStorage.getItem("hasSeenMockingbirdOnboarding") === "true",
+  );
   const [isAuthCheckInProgress, setIsAuthCheckInProgress] = useState(false);
   const [appReady, setAppReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
@@ -369,6 +375,9 @@ function App() {
     const syncFromStorage = () => {
       setHasSeenTutorialFlag(
         localStorage.getItem("hasSeenTutorial") === "true",
+      );
+      setHasSeenMockingbirdOnboardingFlag(
+        localStorage.getItem("hasSeenMockingbirdOnboarding") === "true",
       );
     };
 
@@ -1102,8 +1111,15 @@ function App() {
   const handleTutorialComplete = () => {
     setShowTutorial(false);
     setCurrentTutorialStep(0);
-    localStorage.setItem("hasSeenTutorial", "true");
-    setHasSeenTutorialFlag(true);
+    const isMockingbirdActive =
+      localStorage.getItem("mockingbirdUiEnabled") === "true";
+    if (isMockingbirdActive) {
+      localStorage.setItem("hasSeenMockingbirdOnboarding", "true");
+      setHasSeenMockingbirdOnboardingFlag(true);
+    } else {
+      localStorage.setItem("hasSeenTutorial", "true");
+      setHasSeenTutorialFlag(true);
+    }
     startSectionAppliedRef.current = true;
     const shouldStartWithNowPlaying =
       localStorage.getItem("startWithNowPlaying") === "true";
@@ -1207,11 +1223,11 @@ function App() {
     showSplash || showAuthScreen || showConnectionLostScreen || showTutorial;
   const mockingbirdSystemScreen =
     isMockingbird && !showSplash
-      ? showTutorial
+      ? showTutorial && !hasSeenMockingbirdOnboardingFlag
         ? "tutorial"
         : appPlatform === "web" || isSubscribed === false
           ? "subscription"
-          : !hasSeenTutorialFlag &&
+          : !hasSeenMockingbirdOnboardingFlag &&
               (isSpotifyAuthenticated || isSpotifySkipped) &&
               hasDevices
             ? "tutorial"
