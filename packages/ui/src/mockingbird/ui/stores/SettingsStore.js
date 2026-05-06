@@ -265,31 +265,14 @@ class SettingsStore {
             return info.version || "";
           case AboutMenuItemId.MODEL_NAME:
             return info.device || "";
-          case AboutMenuItemId.COUNTRY: {
-            try {
-              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-              const region =
-                Intl.DateTimeFormat().resolvedOptions().locale || "";
-
-              const regionTag = region.split("-").pop();
-              if (regionTag && regionTag.length === 2)
-                return regionTag.toUpperCase();
-
-              const tzParts = tz.split("/");
-              return tzParts[0] || "";
-            } catch {
-              return "";
-            }
-          }
+          case AboutMenuItemId.COUNTRY:
+            return "United States";
           case AboutMenuItemId.FCC_ID_MODEL_NAME:
-            return "2AYZ2-414035";
+            return "2AP3D-YX5H6679";
           case AboutMenuItemId.IC_ID_MODEL_NAME:
-            return "26274-SG001";
-          case AboutMenuItemId.HVIN: {
-            const device = info.device || "";
-            const match = device.match(/\(([^)]+)\)/);
-            return match ? match[1] : "";
-          }
+            return "24262-YX5H6679";
+          case AboutMenuItemId.HVIN:
+            return "YX5H6679"
           default:
             return "";
         }
