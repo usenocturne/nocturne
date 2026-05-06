@@ -45,7 +45,7 @@ Flashing will likely take about 5-10 minutes, depending on your USB ports and so
 
 ### Connecting to Nocturne
 <details>
-<summary><img src="https://github.com/user-attachments/assets/ae4fcc48-5f86-4ea6-90b2-29bf938a2de0" height="14" style="vertical-align: middle;"> Mobile Device (iOS 16.1+/Android 13+, recommended) </summary>
+<summary><img src="https://camo.githubusercontent.com/b9c79d36777ba11fe5423f498b522f7b786898772a1ddbb44074fb6bc59adf06/68747470733a2f2f7573656e6f637475726e652e636f6d2f696d616765732f6c6f676f2e706e67" height="14" style="vertical-align: middle;"> Mobile Device (iOS 16.1+/Android 13+, recommended) </summary>
 
 Nocturne 4.0.0+ now supports Bluetooth without tethering! An internet connection is still required to access the Spotify API. A Nocturne+ subscription is also required to use Nocturne Companion.
 
