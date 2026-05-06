@@ -35,19 +35,31 @@ The guide to flash Nocturne to your Car Thing is on the [main Nocturne GitHub pa
 
 ### Login
 
-1. Follow the steps for your operating system in <a href="https://github.com/usenocturne/nocturne#setting-up-network">the image's repo</a>.
-2. Once running on your Car Thing, scan the QR Code using your phone's camera.
-3. Authorize with Spotify and start using Nocturne!
+1. Download the mobile app for your platform [here](https://usenocturne.com/app) (paid), or use [Nocturne Connector](https://github.com/usenocturne/nocturne-connector).
+2. Follow the steps in the setup wizard, and start using Nocturne!
 
 > [!NOTE]  
 > When connecting to Spotify, you may notice the app appears as 'Spotify for Desktop' - this is expected behavior and won't affect functionality.
 
-### Button Mapping and Button Usage
+### Presets
 
-- Hold one of the top hardware preset buttons while on a playlist page to map it to the button
-- Press the mapped buttons to quickly play playlists
-- Press the right-most top hardware button to go to the lock screen
-- Press the hardware button underneath the knob to go back in the application
+- Hold one of the top hardware preset buttons while viewing a playlist to map it to that button
+- Press a mapped preset button anytime to instantly start playback
+
+### Controls
+
+- Turn the dial in the Now Playing tab to adjust volume
+- Press the right-most top hardware button to lock the screen
+- Hold the right-most top hardware button to open the quick settings menu
+
+### Playback
+
+- Tap the progress bar to scrub tracks, then turn the dial to seek and press the dial to confirm
+- Swipe left or right in the Now Playing tab to skip between tracks
+
+### Voice
+
+- Say "Hey Nocturne", then speak to control your music hands-free (requires mobile app)
 
 ## Development
 
@@ -84,12 +96,12 @@ After setting up your local server, you may follow these steps to see your chang
    ```
    mount -o remount,rw /
    ```
-4. Edit `/etc/sv/chromium/run`.
+4. Edit `/etc/supervisord.conf`.
    ```
-   vi /etc/sv/chromium/run
+   vi /etc/supervisord.conf
    ```
-5. Jump to the end of the `exec` line by using arrow keys to go over it, and type `$`.
-6. Enter insert mode with `i` and replace the URL to point to your local server's IP address.
+5. Find the `[program:chromium]` section and move to the `command=` line. Jump to the end of that line by using arrow keys to go over it, and type `$`.
+6. Enter insert mode with `i` and replace the URL at the end of the `command=` line to point to your local server's IP address.
    ```bash
    --app=http://localhost:80
    # turns into
@@ -99,7 +111,8 @@ After setting up your local server, you may follow these steps to see your chang
    ```
    mount -o remount,ro /
    sync
-   sv restart chromium
+   supervisorctl reread
+   supervisorctl restart chromium
    ```
 
 ## Contributing
@@ -125,7 +138,7 @@ All donations are split between the three members of the Nocturne team and go to
 This software was made possible only through the following individuals and open source programs:
 
 - [Brandon Saldan](https://github.com/brandonsaldan)
-- [shadow](https://github.com/68p)
+- [Neel Patel](https://github.com/68p)
 - [Dominic Frye](https://github.com/itsnebulalol)
 - [bbaovanc](https://github.com/bbaovanc)
 
