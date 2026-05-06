@@ -43,6 +43,26 @@
 
 Flashing will likely take about 5-10 minutes, depending on your USB ports and some other factors. Please try multiple ports if one isn’t working (Rear IO USB 3/2, BIOS flash port if on AMD, etc). Additionally, if Terbium is stuck on extracting, try extracting the zip, then using the local folder option.
 
+### Connecting to Nocturne
+<details>
+<summary><img src="https://github.com/user-attachments/assets/ae4fcc48-5f86-4ea6-90b2-29bf938a2de0" height="14" style="vertical-align: middle;"> Mobile Device (iOS 16.1+/Android 13+, recommended) </summary>
+
+Nocturne 4.0.0+ now supports Bluetooth without tethering! An internet connection is still required to access the Spotify API. A Nocturne+ subscription is also required to use Nocturne Companion.
+
+1. Download [Nocturne Companion](https://usenocturne.com/app).
+2. Follow the steps inside of the app to pair your Car Thing.
+
+**Tip:** Make sure your Car Thing is not connected to a computer, as this may conflict with Bluetooth.
+</details>
+
+<details>
+<summary><img src="https://usenocturne.com/favicon.ico" height="14" style="vertical-align: middle;"> Standalone (WiFi, Raspberry Pi) </summary>
+
+Nocturne Connector requires a Raspberry Pi, but allows you to use Nocturne without being connected to your phone. 
+
+See more on the [Nocturne Connector GitHub](https://github.com/usenocturne/nocturne-connector).
+</details>
+
 ### Uninstall
 
 Use a tool of your choice (likely Terbium) to flash stock or a different firmware.
