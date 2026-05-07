@@ -1,5 +1,4 @@
 <h1 align="center">
-  <br>
   <img src="https://usenocturne.com/images/logo.png" alt="Nocturne" width="200">
   <br>
   Nocturne
@@ -104,7 +103,7 @@ Available recipes:
 Nocturne consists of several Git repos, all of which are public and open-source.
 
 - [nocturne-ui](https://github.com/usenocturne/nocturne-ui) - Nocturne's standalone web application written with Vite + React
-- nocturned (private for legal reasons) - Local daemon for real-time web/host communication
+- [nocturned](https://github.com/usenocturne/nocturned) - Local daemon for real-time web/host communication
 
 ## Credits
 
@@ -138,5 +137,5 @@ This software contains calls to the Nocturne API. Any use, distribution, or modi
 > "Spotify" and "Car Thing" are trademarks of Spotify AB. This software is not affiliated with or endorsed by Spotify AB.
 
 > [usenocturne.com](https://usenocturne.com) &nbsp;&middot;&nbsp;
-> GitHub [@usenocturne](https://github.com/usenocturne) &nbsp;&middot;&nbsp;
+> [GitHub](https://github.com/usenocturne) &nbsp;&middot;&nbsp;
 > [Discord](https://discord.gg/mnURjt3M6m)

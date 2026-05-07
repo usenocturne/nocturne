@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-NOCTURNED_VERSION = 088b931
+NOCTURNED_VERSION = v2.0.0
 NOCTURNED_SITE_METHOD = git
-NOCTURNED_SITE = ssh://git@github.com/usenocturne/nocturned-private.git
+NOCTURNED_SITE = https://github.com/usenocturne/nocturned.git
 
 $(eval $(cargo-package))
