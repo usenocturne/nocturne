@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.41", features = ["full"] }
 bluer = { version = "0.17", features = ["rfcomm", "bluetoothd"] }
-iap2-rs = { git = "ssh://git@github.com/usenocturne/iap2-rs.git" }
+iap2-rs = { git = "https://github.com/usenocturne/iap2-rs.git" }
 bytes = "1.8"
 thiserror = "2.0"
 anyhow = "1.0"

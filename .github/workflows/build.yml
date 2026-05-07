@@ -18,11 +18,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Add iap2-rs deploy key to ssh-agent
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.IAP2_RS_DEPLOY_KEY }}
-
       - name: Build nocturned
         uses: houseabsolute/actions-rust-cross@v1
         with:
@@ -37,3 +32,4 @@ jobs:
           path: target/armv7-unknown-linux-gnueabihf/release/nocturned
           compression-level: 9
           if-no-files-found: error
+
