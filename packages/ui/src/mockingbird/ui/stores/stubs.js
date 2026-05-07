@@ -582,13 +582,18 @@ export class PhoneCallController {
 }
 
 export class NightModeController {
-  isNightMode = localStorage.getItem("night_mode_user_enabled") === "true";
+  isNightMode = false;
 
   nightModeStrength = 30;
   nightModeSlope = 1.4;
 
   constructor(rootStore) {
     this.rootStore = rootStore;
+    try {
+      localStorage.removeItem("night_mode_user_enabled");
+    } catch {
+      // localStorage unavailable — ignore.
+    }
     makeAutoObservable(this, { rootStore: false });
   }
 

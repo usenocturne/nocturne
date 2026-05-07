@@ -1,4 +1,3 @@
-import { observer } from "mobx-react-lite";
 import SubmenuHeader from "../Submenu/SubmenuHeader";
 import styles from "./PhoneCalls.module.scss";
 
@@ -10,7 +9,7 @@ const PhoneCalls = () => {
         <div className={styles.submenuItemWrapper}>
           <div className={styles.toggleRow}>
             <span className={styles.label}>Phone calls onscreen</span>
-            <span className={styles.value}>Off</span>
+            <span className={styles.comingSoon}>Coming in a future update</span>
           </div>
         </div>
         <div className={styles.text}>
@@ -27,4 +26,4 @@ const PhoneCalls = () => {
   );
 };
 
-export default observer(PhoneCalls);
+export default PhoneCalls;

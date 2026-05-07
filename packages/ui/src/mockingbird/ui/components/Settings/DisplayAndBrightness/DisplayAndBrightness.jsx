@@ -1,35 +1,15 @@
-import { useState } from "react";
 import styles from "./DisplayAndBrightness.module.scss";
-import { observer } from "mobx-react-lite";
-import classNames from "classnames";
-import pointerListenersMaker from "../../../helpers/PointerListeners";
-import { useCarThingStore } from "../../../contexts/CarThingStore";
 
 const DisplayAndBrightness = () => {
-  const [pressed, setPressed] = useState(false);
-  const { nightModeController } = useCarThingStore();
-
   return (
     <>
       <div className={styles.header}>
         <span>Display and brightness</span>
       </div>
       <div className={styles.container}>
-        <div
-          className={classNames(styles.notification, {
-            [styles.pressed]: pressed,
-          })}
-          {...pointerListenersMaker(setPressed)}
-          onClick={() => nightModeController.toggleNightMode()}
-        >
+        <div className={styles.notification}>
           <span className={styles.label}>Night mode</span>
-          <span
-            className={classNames(styles.value, {
-              [styles.greenOn]: nightModeController.isNightMode,
-            })}
-          >
-            {nightModeController.isNightMode ? "On" : "Off"}
-          </span>
+          <span className={styles.comingSoon}>Coming in a future update</span>
         </div>
         <div className={styles.text}>
           With night mode on, your screen should be easier to view in low-light
@@ -40,4 +20,4 @@ const DisplayAndBrightness = () => {
   );
 };
 
-export default observer(DisplayAndBrightness);
+export default DisplayAndBrightness;

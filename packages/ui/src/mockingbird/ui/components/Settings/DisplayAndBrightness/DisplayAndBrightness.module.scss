@@ -56,6 +56,14 @@
     }
   }
 
+  .comingSoon {
+    color: vars.$white-70;
+    text-align: right;
+    max-width: 360px;
+    font-weight: 400;
+    @include vars.text-style(28px, 32px, -0.02em);
+  }
+
   .text {
     color: vars.$gray-80;
     padding-left: 40px;

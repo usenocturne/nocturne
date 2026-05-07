@@ -272,7 +272,7 @@ class SettingsStore {
           case AboutMenuItemId.IC_ID_MODEL_NAME:
             return "24262-YX5H6679";
           case AboutMenuItemId.HVIN:
-            return "YX5H6679"
+            return "YX5H6679";
           default:
             return "";
         }
@@ -439,10 +439,10 @@ class SettingsStore {
         }
         break;
       case OptionsMenuItemId.DISPLAY_AND_BRIGHTNESS:
-        this.rootStore.nightModeController.toggleNightMode();
+        // Night mode is "Coming in a future update" - dial press is inert.
         break;
       case OptionsMenuItemId.AIR_VENT_INTERFERENCE:
-        this.rootStore.airVentInterferenceController.toggleAlertDisabled();
+        // Air vent alerts are "Coming in a future update" - dial press is inert.
         break;
       case OptionsMenuItemId.PHONE_CALLS:
         break;

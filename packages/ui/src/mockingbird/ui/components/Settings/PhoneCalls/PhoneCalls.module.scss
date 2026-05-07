@@ -31,6 +31,13 @@
   @include vars.text-style(36px, 40px, -0.02em);
 }
 
+.comingSoon {
+  color: vars.$white-70;
+  text-align: right;
+  max-width: 360px;
+  @include vars.text-style(28px, 32px, -0.02em);
+}
+
 .text {
   padding: 40px;
   color: vars.$gray-80;
