@@ -8,6 +8,8 @@ on:
   push:
     paths-ignore:
       - '**/README.md'
+  release:
+    types: [created]
 
 jobs:
   build:
@@ -32,4 +34,10 @@ jobs:
           path: target/armv7-unknown-linux-gnueabihf/release/nocturned
           compression-level: 9
           if-no-files-found: error
+
+      - name: Upload build artifact to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/armv7-unknown-linux-gnueabihf/release/nocturned
 
