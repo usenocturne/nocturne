@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { sendNocturneWsRequest, subscribeAppReadyState } from "./useNocturned";
 import { subscribeInitialDataLoadState } from "./useSpotifyData";
+import { useSettings } from "../contexts/SettingsContext";
 
 const compareVersions = (v1, v2) => {
   const parseVersion = (version) => {
@@ -79,6 +80,7 @@ const isCompatible = (currentVersion, minimumVersion) => {
 };
 
 export const useUpdateCheck = (currentVersion, autoCheck = true) => {
+  const { settings } = useSettings();
   const [updateInfo, setUpdateInfo] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState(null);
@@ -88,10 +90,15 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
   const [initialDataLoadComplete, setInitialDataLoadComplete] = useState(false);
   const checkInProgress = useRef(false);
   const currentVersionRef = useRef(currentVersion);
+  const betaUpdatesEnabledRef = useRef(!!settings?.betaUpdatesEnabled);
 
   useEffect(() => {
     currentVersionRef.current = currentVersion;
   }, [currentVersion]);
+
+  useEffect(() => {
+    betaUpdatesEnabledRef.current = !!settings?.betaUpdatesEnabled;
+  }, [settings?.betaUpdatesEnabled]);
 
   useEffect(() => {
     const unsubscribe = subscribeAppReadyState((state) => {
@@ -147,8 +154,11 @@ export const useUpdateCheck = (currentVersion, autoCheck = true) => {
           ? currentVersionRef.current
           : `v${currentVersionRef.current}`;
 
+        const channel = betaUpdatesEnabledRef.current ? "beta" : "stable";
+
         const otaCheckResult = await sendNocturneWsRequest("device.ota.check", {
           currentVersion: versionToCheck,
+          channel,
         });
 
         if (!otaCheckResult.updateAvailable) {

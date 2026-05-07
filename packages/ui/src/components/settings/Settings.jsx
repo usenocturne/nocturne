@@ -109,6 +109,15 @@ const settingsStructure = {
             storageKey: "autoUpdateEnabled",
             defaultValue: true,
           },
+          {
+            id: "beta-updates",
+            title: "Beta Releases",
+            type: "toggle",
+            description:
+              "Receive beta updates before they are released to everyone. Beta builds may be unstable. You will not be able to return to the previous stable version.",
+            storageKey: "betaUpdatesEnabled",
+            defaultValue: false,
+          },
         ],
       },
       {
