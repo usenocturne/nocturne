@@ -1,0 +1,5 @@
+[target.armv7-unknown-linux-gnueabihf]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get --assume-yes install libdbus-1-dev:$CROSS_DEB_ARCH libopus-dev:$CROSS_DEB_ARCH"
+]

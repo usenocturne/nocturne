@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - '**/README.md'
+  push:
+    paths-ignore:
+      - '**/README.md'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Add iap2-rs deploy key to ssh-agent
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.IAP2_RS_DEPLOY_KEY }}
+
+      - name: Build nocturned
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: build
+          target: armv7-unknown-linux-gnueabihf
+          args: "--release"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nocturned
+          path: target/armv7-unknown-linux-gnueabihf/release/nocturned
+          compression-level: 9
+          if-no-files-found: error
