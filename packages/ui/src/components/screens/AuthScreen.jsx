@@ -149,7 +149,11 @@ const AuthScreen = ({
 
               <div className="flex justify-center">
                 <QRCodeDisplay
-                  verificationUri="https://usenocturne.com/app"
+                  verificationUri={
+                    !subscriptionRequired && statusMessage
+                      ? "nocturne://connect-spotify"
+                      : "https://usenocturne.com/app"
+                  }
                   isLoading={isLoading}
                   error={error}
                 />
