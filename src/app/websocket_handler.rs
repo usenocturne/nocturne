@@ -156,7 +156,8 @@ impl WebSocketProtocolHandler {
                 | "device.timezone.get"
                 | "device.time.get"
                 | "tts.speak"
-                | "tts.stop" => {
+                | "tts.stop"
+                | "onboarding.set_state" => {
                     let spotify_request = serde_json::json!({
                         "method": method,
                         "params": data.get("params").unwrap_or(&serde_json::Value::Null)
