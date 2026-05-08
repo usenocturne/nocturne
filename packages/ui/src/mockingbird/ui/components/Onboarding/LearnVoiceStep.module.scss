@@ -2,6 +2,7 @@
 
 $transition-duration: 800ms;
 $transition-delay: 1000ms;
+$jellyfish-wrapper-padding: 40px;
 
 .learnVoiceStep {
   display: flex;
@@ -30,12 +31,40 @@ $transition-delay: 1000ms;
   color: vars.$white;
 }
 
+.errorContent {
+  @include vars.text-style(52px, 60px, -0.03em);
+
+  font-weight: bold;
+  color: vars.$white;
+  margin-bottom: 32px;
+}
+
+.transition {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.voiceActive {
+  transition: opacity 200ms;
+  opacity: 0.1;
+}
+
 .skipOrJellyfish {
   width: 128px;
   height: 128px;
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.jellyfishContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 128px;
+  height: 128px;
 }
 
 .contentEnter {

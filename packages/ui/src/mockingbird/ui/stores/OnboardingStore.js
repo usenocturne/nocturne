@@ -112,6 +112,7 @@ class OnboardingStore {
   backCounter = 0;
   noInteractionModal = undefined;
   learnVoiceStep = LearnVoiceStepId.FIRST_UP;
+  wakewordTriggered = false;
   _onCompleteCallback = null;
 
   onMiddlewareEvent(msg) {
@@ -143,6 +144,9 @@ class OnboardingStore {
 
   setOnboardingStarted(started) {
     this.onboardingStarted = started;
+    if (started) {
+      this._notifyPhoneOnboarding(true);
+    }
   }
 
   setOnboardingView(onboardingStep) {
@@ -159,6 +163,20 @@ class OnboardingStore {
     this.playTts(tts.fileName);
     return new Promise((resolve) => {
       setTimeout(resolve, tts.fileLength + 1000);
+    });
+  }
+
+  setWakewordTriggered(triggered) {
+    this.wakewordTriggered = triggered;
+  }
+
+  pause() {
+    sendNocturneWsRequest("spotify.player.pause", {}).catch(() => {});
+  }
+
+  _notifyPhoneOnboarding(active) {
+    sendNocturneWsRequest("onboarding.set_state", { active }).catch((e) => {
+      console.warn("[OnboardingStore] onboarding.set_state failed:", active, e);
     });
   }
 
@@ -208,7 +226,9 @@ class OnboardingStore {
 
   setOnboardingFinished() {
     this.onboardingFinished = true;
-    this.setOnboardingStarted(false);
+    this.onboardingStarted = false;
+    this.wakewordTriggered = false;
+    this._notifyPhoneOnboarding(false);
     if (this._onCompleteCallback) {
       this._onCompleteCallback();
     }
@@ -301,6 +321,7 @@ class OnboardingStore {
     this.backCounter = 0;
     this.noInteractionModal = undefined;
     this.learnVoiceStep = LearnVoiceStepId.FIRST_UP;
+    this.wakewordTriggered = false;
   }
 }
 

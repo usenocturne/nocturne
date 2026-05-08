@@ -58,6 +58,7 @@ const LearnTactile = () => {
     const setup = async () => {
       viewStore.backToContentShelf();
 
+      onboardingStore.pause();
       onboardingStore.setDialPressEnabled(false);
       onboardingStore.setDialTurnEnabled(false);
       onboardingStore.setBackEnabled(false);

@@ -244,9 +244,21 @@ class VoiceStore {
   }
 
   onWakeWord = action(() => {
-    const { viewStore, overlayController } = this.rootStore;
-    if (viewStore.appView !== "MAIN") return;
+    const { viewStore, overlayController, onboardingStore } = this.rootStore;
     if (this.isMicMuted) return;
+
+    if (viewStore.appView === "ONBOARDING") {
+      this._rejectCurrentSession();
+      this._pendingSessionRejection = false;
+      this._resetVoiceTurnTracking();
+      this._clearVoiceResultTimers();
+      this.resetVoiceSessionState();
+      onboardingStore.setWakewordTriggered(true);
+      this._startCaptureTimeout();
+      return;
+    }
+
+    if (viewStore.appView !== "MAIN") return;
     this._rejectCurrentSession();
     this._pendingSessionRejection = false;
     this.rootStore.shelfStore.clearVoiceItems();
@@ -305,6 +317,7 @@ class VoiceStore {
 
     const isSpeaking = data.state === "speaking";
     const isCleanIdle = data.state === "idle" && this._aiSawExecutingTool;
+    const isOnboarding = this.rootStore.viewStore.isOnboarding;
 
     if ((isSpeaking || isCleanIdle) && this._pendingVoicePopulation != null) {
       const pending = this._pendingVoicePopulation;
@@ -318,13 +331,17 @@ class VoiceStore {
           this._toolsExecutedThisSession,
         );
 
-        this.rootStore.shelfStore.populateVoice({
-          items: pending.voiceItems,
-          id: "voice",
-        });
+        if (!isOnboarding) {
+          this.rootStore.shelfStore.populateVoice({
+            items: pending.voiceItems,
+            id: "voice",
+          });
+        }
         this.state.intent = intent;
         this.state.showingVoiceConfirmation = !NO_ICON_INTENTS.has(intent);
-        this.goToVoiceResult(intent);
+        if (!isOnboarding) {
+          this.goToVoiceResult(intent);
+        }
       }
 
       this._resetVoiceTurnTracking();
@@ -337,7 +354,9 @@ class VoiceStore {
         prevState === "thinking" ||
         prevState === "executing_tool")
     ) {
-      this._scheduleClose();
+      if (!isOnboarding) {
+        this._scheduleClose();
+      }
     }
   });
 
@@ -392,11 +411,14 @@ class VoiceStore {
   _handleVoiceResultTool = action((data, handler) => {
     const result = data.result;
     const toolArguments = data.tool_arguments;
+    const isOnboarding = this.rootStore.viewStore.isOnboarding;
 
     if (handler.isEmpty(result)) {
       this._discardPendingVoicePopulation();
       this.state.friendlyError = "Sorry, I couldn't find anything.";
-      this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
+      if (!isOnboarding) {
+        this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
+      }
       return;
     }
 
@@ -633,6 +655,7 @@ class VoiceStore {
 
   _scheduleClose(delayMs = TIMEOUT_BEFORE_CLOSING_LISTENING_MS) {
     this._clearCloseTimeout();
+    if (this.rootStore.viewStore.isOnboarding) return;
     this._closeTimeoutId = setTimeout(
       action(() => {
         this.rootStore.overlayController.hideVoice();

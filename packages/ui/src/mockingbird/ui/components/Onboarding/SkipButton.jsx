@@ -5,7 +5,7 @@ import { LearnVoiceStepId, TTS } from "../../stores/OnboardingStore";
 import styles from "./SkipButton.module.scss";
 
 const SkipButton = () => {
-  const { onboardingStore } = useCarThingStore();
+  const { onboardingStore, voiceStore } = useCarThingStore();
   const [pressedSkip, setPressedSkip] = useState(false);
   const [animClass, setAnimClass] = useState(styles.animationEnter);
   const mounted = useRef(false);
@@ -17,7 +17,11 @@ const SkipButton = () => {
     });
   }, []);
 
-  const skip = () => {
+  const advance = () => {
+    if (voiceStore?.error) {
+      onboardingStore.nextLearnVoiceStep();
+      return;
+    }
     if (onboardingStore.learnVoiceStep === LearnVoiceStepId.LAST_STEP) {
       onboardingStore.playTts(TTS.END_TOUR_VIA_SKIP.fileName);
       onboardingStore.setOnboardingFinished();
@@ -26,15 +30,17 @@ const SkipButton = () => {
     }
   };
 
+  const label = voiceStore?.error ? "Next" : "Skip";
+
   return (
     <div
       className={`${styles.skipButtonWrapper} ${pressedSkip ? styles.pressed : ""} ${animClass}`}
-      onClick={() => skip()}
+      onClick={() => advance()}
       onPointerDown={() => setPressedSkip(true)}
       onPointerUp={() => setPressedSkip(false)}
       onPointerCancel={() => setPressedSkip(false)}
     >
-      Skip
+      {label}
     </div>
   );
 };
