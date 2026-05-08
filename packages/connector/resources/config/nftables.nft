@@ -1,0 +1,40 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table ip filter {
+    chain input {
+        type filter hook input priority filter; policy accept;
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy accept;
+
+        iifname "usb0" oifname "wlan0" ip saddr 172.16.42.0/24 ct state new accept
+        iifname "usb0" oifname "wlan0" ip saddr 172.16.42.0/24 ct state established,related accept
+
+        ip daddr 172.16.42.2 tcp dport 22 ct state new,established,related accept
+        ip daddr 172.16.42.2 tcp dport 2222 ct state new,established,related accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat; policy accept;
+
+        tcp dport 2022 iifname "wlan0" dnat to 172.16.42.2:22
+        tcp dport 2222 iifname "wlan0" dnat to 172.16.42.2:9222
+
+        tcp dport 2022 iifname "eth0" dnat to 172.16.42.2:22
+        tcp dport 2222 iifname "eth0" dnat to 172.16.42.2:9222
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        oifname "wlan0" masquerade
+    }
+}

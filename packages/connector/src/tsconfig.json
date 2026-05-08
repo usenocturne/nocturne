@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["bun"],
+    "baseUrl": ".",
+    "paths": { "@/*": ["./client/*"] }
+  },
+  "include": ["server/**/*.ts", "client/**/*.ts", "client/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

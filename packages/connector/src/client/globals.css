@@ -1,0 +1,67 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --bg: #0c0c0c;
+  --bg-raised: #141414;
+  --bg-hover: #1c1c1c;
+  --bg-inset: #0a0a0a;
+  --fg: #f0f0f0;
+  --fg-secondary: #888888;
+  --fg-muted: #505050;
+  --border: #1e1e1e;
+  --border-hover: #363636;
+  --accent: #7456c1;
+  --accent-hover: #8668d0;
+  --destructive: #ef4444;
+  --destructive-hover: #dc2626;
+  --success: #22c55e;
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --font-sans: 'Switzer', system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-raised: var(--bg-raised);
+  --color-hover: var(--bg-hover);
+  --color-inset: var(--bg-inset);
+  --color-fg: var(--fg);
+  --color-secondary: var(--fg-secondary);
+  --color-muted: var(--fg-muted);
+  --color-line: var(--border);
+  --color-line-hover: var(--border-hover);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-success: var(--success);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  overflow-x: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(116, 86, 193, 0.3);
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+  body {
+    @apply font-sans antialiased;
+  }
+}
