@@ -59,7 +59,7 @@ The guide to flash Nocturne to your Car Thing is on the [main Nocturne GitHub pa
 
 ### Voice
 
-- Say "Hey Nocturne", then speak to control your music hands-free (requires mobile app)
+- Say "Hey Nocturne", then speak to control your music hands-free (requires mobile app and Nocturne+)
 
 ## Development
 
