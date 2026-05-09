@@ -4,3 +4,4 @@
 /cache/
 /stages/
 mkcert
+.DS_Store
