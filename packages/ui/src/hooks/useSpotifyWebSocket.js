@@ -49,6 +49,7 @@ export function useSpotifyWebSocket() {
     return getSpotifySkippedState();
   });
   const [appSubscribed, setAppSubscribed] = useState(true);
+  const [appHasLifetime, setAppHasLifetime] = useState(true);
 
   useEffect(() => {
     const unsubscribe = subscribeBluetoothConnectionState((state) => {
@@ -101,6 +102,7 @@ export function useSpotifyWebSocket() {
   useEffect(() => {
     const unsubscribe = subscribeAppSubscribedState((state) => {
       setAppSubscribed(state.subscribed);
+      setAppHasLifetime(!!state.hasLifetime);
     });
 
     return () => {
@@ -121,8 +123,10 @@ export function useSpotifyWebSocket() {
           return;
         }
 
+        const subState = getAppSubscribedState();
         if (
-          !getAppSubscribedState().subscribed &&
+          !subState.subscribed &&
+          !subState.hasLifetime &&
           getAppReadyState().platform !== "web"
         ) {
           reject(new Error("Subscription required"));
@@ -286,7 +290,9 @@ export function useSpotifyWebSocket() {
     (appReady || deviceConnected) &&
     spotifyAuthenticated &&
     !spotifySkipped &&
-    (appSubscribed || getAppReadyState().platform === "web");
+    (appSubscribed ||
+      appHasLifetime ||
+      getAppReadyState().platform === "web");
 
   useEffect(() => {
     listenerIdRef.current = addMessageListener(

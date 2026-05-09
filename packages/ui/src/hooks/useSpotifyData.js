@@ -168,8 +168,10 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   } = useSpotifyWebSocket();
 
   const checkSpotifyReady = useCallback(() => {
+    const subState = getAppSubscribedState();
     if (
-      !getAppSubscribedState().subscribed &&
+      !subState.subscribed &&
+      !subState.hasLifetime &&
       getAppReadyState().platform !== "web"
     )
       return false;
@@ -214,7 +216,9 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   useEffect(() => {
     const handleSubscriptionChange = (state) => {
       if (
-        (state.subscribed || getAppReadyState().platform === "web") &&
+        (state.subscribed ||
+          state.hasLifetime ||
+          getAppReadyState().platform === "web") &&
         !initialDataLoaded &&
         !dataFetchingInProgressRef.current
       ) {

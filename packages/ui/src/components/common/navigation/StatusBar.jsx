@@ -13,9 +13,9 @@ export default function StatusBar() {
   const [batteryPercentage, setBatteryPercentage] = useState(80);
   const { lastConnectedDevice, connectedDevices, devices } = useBluetooth();
   const { currentTime, isFourDigits } = useCurrentTime();
-  const { settings, isMicLockedByPlatform } = useSettings();
+  const { settings, isMicLocked } = useSettings();
   const effectiveMicMuted =
-    !!isMicLockedByPlatform || (settings?.micMuted ?? false);
+    !!isMicLocked || (settings?.micMuted ?? false);
 
   const lastDeviceAddressLS =
     typeof localStorage !== "undefined"

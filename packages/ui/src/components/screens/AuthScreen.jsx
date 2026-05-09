@@ -134,12 +134,12 @@ const AuthScreen = ({
                 <div className="space-y-4">
                   <h2 className="text-4xl text-white tracking-tight font-[580] w-[24rem]">
                     {subscriptionRequired
-                      ? "A Nocturne+ subscription is required."
+                      ? "Nocturne Lifetime or Nocturne+ is required."
                       : "Scan the QR code with your phone's camera."}
                   </h2>
                   <p className="text-[28px] text-white/60 tracking-tight w-[22rem]">
                     {subscriptionRequired
-                      ? "To use Nocturne with your phone, you must subscribe. Follow the instructions in the app."
+                      ? "To use Nocturne with your phone, choose a plan in the app."
                       : statusMessage
                         ? statusMessage
                         : "You'll be redirected to download the Nocturne app."}

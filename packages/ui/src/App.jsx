@@ -290,7 +290,7 @@ function NotificationEffects({
 }
 
 function App() {
-  const { isSubscribed } = useSubscription();
+  const { isSubscribed, hasPhoneAccess } = useSubscription();
   const [appPlatform, setAppPlatform] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [currentTutorialStep, setCurrentTutorialStep] = useState(0);
@@ -569,7 +569,7 @@ function App() {
 
     if (!appReady) return;
 
-    if (isSubscribed === false && appPlatform !== "web") return;
+    if (hasPhoneAccess === false && appPlatform !== "web") return;
 
     let cancelled = false;
     let retryCount = 0;
@@ -616,11 +616,11 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [wsConnected, appReady, isSubscribed, appPlatform]);
+  }, [wsConnected, appReady, hasPhoneAccess, appPlatform]);
 
   useEffect(() => {
     if (!showAuthScreen || !appReady || !wsConnected) return;
-    if (isSubscribed === false && appPlatform !== "web") return;
+    if (hasPhoneAccess === false && appPlatform !== "web") return;
 
     const interval = setInterval(() => {
       sendNocturneWsRequest("spotify.auth.getStatus", {}, { timeoutMs: 5000 })
@@ -636,12 +636,12 @@ function App() {
     appReady,
     wsConnected,
     processSpotifyAuthMessage,
-    isSubscribed,
+    hasPhoneAccess,
     appPlatform,
   ]);
 
   useEffect(() => {
-    if (isSubscribed === false && appPlatform !== "web") {
+    if (hasPhoneAccess === false && appPlatform !== "web") {
       setShowAuthScreen(false);
       setShowTutorial(false);
       return;
@@ -706,7 +706,7 @@ function App() {
     isSpotifyAuthenticated,
     isSpotifySkipped,
     appReady,
-    isSubscribed,
+    hasPhoneAccess,
     appPlatform,
   ]);
 
@@ -1206,7 +1206,7 @@ function App() {
     appReady &&
     appPlatform !== null &&
     appPlatform !== "web" &&
-    isSubscribed === false;
+    hasPhoneAccess === false;
 
   const isMockingbird = isMockingbirdSetting;
 
@@ -1243,7 +1243,8 @@ function App() {
     showSubscriptionScreen ||
     showTetheringScreen ||
     !!pairingRequest ||
-    isMockingbird;
+    isMockingbird ||
+    isSubscribed === false;
 
   let content;
   if (showSplash) {

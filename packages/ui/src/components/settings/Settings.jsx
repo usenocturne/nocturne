@@ -571,7 +571,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
   const [isAnimating, setIsAnimating] = useState(false);
   const shouldExitToRecents = useRef(false);
   const scrollContainerRef = useRef(null);
-  const { settings, updateSetting, isMicLockedByPlatform } = useSettings();
+  const { settings, updateSetting, isMicLocked } = useSettings();
   const { isSubscribed } = useSubscription();
   const appPlatform = getAppReadyState().platform;
   const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false);
@@ -608,7 +608,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
       (appPlatform === "web" || isSubscribed === false)
     )
       return;
-    if (key === "micMuted" && isMicLockedByPlatform) return;
+    if (key === "micMuted" && isMicLocked) return;
     updateSetting(key, !settings[key]);
     if (key === "mockingbirdUiEnabled") {
       setTimeout(() => window.location.reload(), 150);
@@ -823,14 +823,27 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
       case "toggle": {
         const isMockingbirdToggle = item.storageKey === "mockingbirdUiEnabled";
         const isMicToggle = item.storageKey === "micMuted";
-        const isMicWebLocked = isMicToggle && isMicLockedByPlatform;
+
+        const isMicWebLocked = isMicToggle && appPlatform === "web";
+        const isMicSubLocked =
+          isMicToggle && appPlatform !== "web" && isSubscribed === false;
+        const isMockingbirdWebLocked =
+          isMockingbirdToggle && appPlatform === "web";
+        const isMockingbirdSubLocked =
+          isMockingbirdToggle &&
+          appPlatform !== "web" &&
+          isSubscribed === false;
+
         const isToggleDisabled =
-          (isMockingbirdToggle &&
-            (appPlatform === "web" || isSubscribed === false)) ||
-          isMicWebLocked;
-        const effectiveRawValue = isMicWebLocked
-          ? true
-          : settings[item.storageKey];
+          isMicWebLocked ||
+          isMicSubLocked ||
+          isMockingbirdWebLocked ||
+          isMockingbirdSubLocked;
+
+        const effectiveRawValue =
+          isMicWebLocked || isMicSubLocked
+            ? true
+            : settings[item.storageKey];
         const displayedValue = item.invert
           ? !effectiveRawValue
           : effectiveRawValue;
@@ -863,9 +876,11 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
               {isToggleDisabled
                 ? isMicWebLocked
                   ? "The microphone is only available when using the Nocturne mobile app."
-                  : appPlatform === "web"
-                    ? "Mockingbird is only available when using the Nocturne mobile app."
-                    : "Subscribe to Nocturne to use the classic Spotify Car Thing interface."
+                  : isMicSubLocked
+                    ? "Subscribe to Nocturne+ to use voice controls."
+                    : isMockingbirdWebLocked
+                      ? "Mockingbird is only available when using the Nocturne mobile app."
+                      : "Subscribe to Nocturne+ to use the classic Spotify Car Thing interface."
                 : item.description}
             </p>
           </div>

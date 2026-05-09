@@ -14,8 +14,13 @@ export function useSubscription() {
     return unsubscribe;
   }, []);
 
+  const isSubscribed = state.subscribed;
+  const hasLifetime = !!state.hasLifetime;
+
   return {
-    isSubscribed: state.subscribed,
+    isSubscribed,
     subscriptionStatus: state.status,
+    hasLifetime,
+    hasPhoneAccess: isSubscribed || hasLifetime,
   };
 }

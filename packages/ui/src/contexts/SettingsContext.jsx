@@ -5,6 +5,7 @@ import {
   getAppReadyState,
   addGlobalWsListener,
 } from "../hooks/useNocturned";
+import { useSubscription } from "../hooks/useSubscription";
 
 const SETTING_STORAGE_KEYS = {
   micMuted: "mockingbird_mic_muted",
@@ -24,7 +25,8 @@ export function SettingsProvider({ children }) {
   const [appPlatform, setAppPlatform] = useState(
     () => getAppReadyState().platform,
   );
-  const isMicLockedByPlatform = appPlatform === "web";
+  const { isSubscribed } = useSubscription();
+  const isMicLocked = appPlatform === "web" || isSubscribed === false;
 
   const [settings, setSettings] = useState({
     use24HourTime: getDefaultSettingValue("use24HourTime", false),
@@ -88,14 +90,14 @@ export function SettingsProvider({ children }) {
 
   useEffect(() => {
     if (appPlatform === null) return;
-    if (!isMicLockedByPlatform) return;
+    if (!isMicLocked) return;
     sendNocturneWsRequest("wakeword.pause", {}).catch((err) => {
       console.error(
-        "Failed to sync microphone runtime state (platform lock):",
+        "Failed to sync microphone runtime state (mic lock):",
         err,
       );
     });
-  }, [appPlatform, isMicLockedByPlatform]);
+  }, [appPlatform, isMicLocked]);
 
   const updateSetting = (key, value) => {
     const newSettings = { ...settings };
@@ -146,7 +148,7 @@ export function SettingsProvider({ children }) {
       window.dispatchEvent(new Event("timeFormatChanged"));
     }
 
-    if (key === "micMuted" && !isMicLockedByPlatform) {
+    if (key === "micMuted" && !isMicLocked) {
       const method = value ? "wakeword.pause" : "wakeword.resume";
       sendNocturneWsRequest(method, {}).catch((err) => {
         console.error(
@@ -159,7 +161,7 @@ export function SettingsProvider({ children }) {
 
   return (
     <SettingsContext.Provider
-      value={{ settings, updateSetting, isMicLockedByPlatform }}
+      value={{ settings, updateSetting, isMicLocked }}
     >
       {children}
     </SettingsContext.Provider>
