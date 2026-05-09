@@ -1,3 +1,4 @@
 /target
 .sisyphus
 .playwright-mcp
+.DS_Store
