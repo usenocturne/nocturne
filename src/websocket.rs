@@ -1369,6 +1369,9 @@ impl WebSocketServer {
                 if let Some(status) = data.get("subscriptionStatus") {
                     app_ready_data["subscriptionStatus"] = status.clone();
                 }
+                if let Some(has_lifetime) = data.get("hasLifetime") {
+                    app_ready_data["hasLifetime"] = has_lifetime.clone();
+                }
             }
         }
 

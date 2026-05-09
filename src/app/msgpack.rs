@@ -820,6 +820,9 @@ impl MsgPackProtocolHandler {
                     if let Some(status) = data.get("subscriptionStatus").and_then(|v| v.as_str()) {
                         info!("Subscription tier from app.ready: {}", status);
                     }
+                    if let Some(has_lifetime) = data.get("hasLifetime").and_then(|v| v.as_bool()) {
+                        info!("Lifetime entitlement from app.ready: {}", has_lifetime);
+                    }
 
                     info!("Broadcasting app.ready event to WebSocket clients");
                 } else if topic == "subscription.updated" {
@@ -832,6 +835,9 @@ impl MsgPackProtocolHandler {
                                 "not subscribed"
                             }
                         );
+                    }
+                    if let Some(has_lifetime) = data.get("hasLifetime").and_then(|v| v.as_bool()) {
+                        info!("Lifetime entitlement updated: {}", has_lifetime);
                     }
                 } else {
                     info!("Broadcasting event to WebSocket clients: {}", topic);
