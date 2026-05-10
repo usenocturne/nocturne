@@ -1,2 +1,5 @@
+.git
 output
 cache
+src/node_modules
+src/dist

@@ -9,3 +9,10 @@ lint:
 
 docker-qemu:
     docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+docker-build:
+    docker build -t nocturne-connector-builder .
+
+docker-run: docker-build
+    docker run --rm --privileged -v "$PWD/output:/work/output" -v "$PWD/cache:/work/cache" nocturne-connector-builder
+
