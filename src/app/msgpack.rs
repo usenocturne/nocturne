@@ -2,7 +2,7 @@ use crate::image_cache::ImageCache;
 use crate::websocket::WebSocketServer;
 use crate::{app::AppMessage, error::Result};
 use base64::{engine::general_purpose, Engine as _};
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -52,6 +52,7 @@ fn rmpv_to_json(value: rmpv::Value) -> serde_json::Value {
 const CHUNK_SIZE: usize = 2000;
 const OTA_CHUNK_SIZE: usize = 1800;
 const MSGPACK_PROTOCOL: &str = "com.usenocturne.daemon";
+const MAX_INBOUND_BUFFER: usize = 256 * 1024;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type")]
@@ -113,8 +114,86 @@ struct OtaPackageInfo {
     size: u64,
 }
 
+enum ChunkEnvelopeParse {
+    Complete {
+        message_id: String,
+        index: u16,
+        total: u16,
+        checksum: u32,
+        payload: Bytes,
+        consumed: usize,
+    },
+    NeedMore,
+    Invalid,
+}
+
+/// Binary layout:
+///   [1 byte: id_len][id_len bytes: message_id][2 bytes: index BE][2 bytes: total BE]
+///   [4 bytes: checksum BE][2 bytes: payload_len BE][payload]
+fn parse_one_chunk_envelope(data: &[u8]) -> ChunkEnvelopeParse {
+    if data.is_empty() {
+        return ChunkEnvelopeParse::NeedMore;
+    }
+
+    let id_len = data[0] as usize;
+    if id_len != 36 {
+        return ChunkEnvelopeParse::Invalid;
+    }
+
+    let header_len = 1 + id_len + 2 + 2 + 4 + 2;
+    if data.len() < header_len {
+        return ChunkEnvelopeParse::NeedMore;
+    }
+
+    let message_id = match std::str::from_utf8(&data[1..1 + id_len]) {
+        Ok(s) => s,
+        Err(_) => return ChunkEnvelopeParse::Invalid,
+    };
+
+    let chars: Vec<char> = message_id.chars().collect();
+    let hyphen_positions = [8, 13, 18, 23];
+    if !hyphen_positions
+        .iter()
+        .all(|&pos| chars.get(pos) == Some(&'-'))
+    {
+        return ChunkEnvelopeParse::Invalid;
+    }
+
+    let offset = 1 + id_len;
+    let index = u16::from_be_bytes([data[offset], data[offset + 1]]);
+    let total = u16::from_be_bytes([data[offset + 2], data[offset + 3]]);
+    let checksum = u32::from_be_bytes([
+        data[offset + 4],
+        data[offset + 5],
+        data[offset + 6],
+        data[offset + 7],
+    ]);
+    let payload_len = u16::from_be_bytes([data[offset + 8], data[offset + 9]]) as usize;
+
+    if total == 0 || index >= total || total > 1000 {
+        return ChunkEnvelopeParse::Invalid;
+    }
+
+    let total_needed = header_len + payload_len;
+    if data.len() < total_needed {
+        return ChunkEnvelopeParse::NeedMore;
+    }
+
+    let payload = Bytes::copy_from_slice(&data[header_len..total_needed]);
+
+    ChunkEnvelopeParse::Complete {
+        message_id: message_id.to_string(),
+        index,
+        total,
+        checksum,
+        payload,
+        consumed: total_needed,
+    }
+}
+
 pub struct MsgPackProtocolHandler {
     pending_messages: HashMap<String, ChunkedMessage>,
+    inbound_buffers: HashMap<u8, BytesMut>,
     call_handlers: HashMap<String, CallHandler>,
     websocket_server: Option<Arc<WebSocketServer>>,
     websocket_message_ids: HashSet<String>,
@@ -134,6 +213,7 @@ impl MsgPackProtocolHandler {
     pub fn new(websocket_server: Option<Arc<WebSocketServer>>) -> Self {
         let mut handler = Self {
             pending_messages: HashMap::new(),
+            inbound_buffers: HashMap::new(),
             call_handlers: HashMap::new(),
             websocket_server,
             websocket_message_ids: HashSet::new(),
@@ -159,6 +239,7 @@ impl MsgPackProtocolHandler {
     ) -> Self {
         let mut handler = Self {
             pending_messages: HashMap::new(),
+            inbound_buffers: HashMap::new(),
             call_handlers: HashMap::new(),
             websocket_server,
             websocket_message_ids: HashSet::new(),
@@ -290,50 +371,156 @@ impl MsgPackProtocolHandler {
         Ok(chunks)
     }
 
-    async fn handle_chunk(&mut self, data: &[u8]) -> Result<Option<Bytes>> {
+    async fn process_inbound(&mut self, session_id: u8, new_data: &[u8]) -> Result<Vec<Bytes>> {
         debug!(
-            "Handling chunk: {} bytes, first bytes: {:02x?}",
-            data.len(),
-            &data[..data.len().min(10)]
+            "Inbound EA bytes for session {}: {} new bytes, first bytes: {:02x?}",
+            session_id,
+            new_data.len(),
+            &new_data[..new_data.len().min(10)]
         );
 
-        if let Ok(_msg) = rmp_serde::from_slice::<MsgPackMessage>(data) {
-            debug!("Data is complete MessagePack RPC message, not chunked");
-            return Ok(Some(Bytes::copy_from_slice(data)));
+        {
+            let buffer = self.inbound_buffers.entry(session_id).or_default();
+            if buffer.len().saturating_add(new_data.len()) > MAX_INBOUND_BUFFER {
+                warn!(
+                    "Session {} inbound buffer would exceed cap ({} + {} > {}), discarding existing buffer",
+                    session_id,
+                    buffer.len(),
+                    new_data.len(),
+                    MAX_INBOUND_BUFFER
+                );
+                buffer.clear();
+            }
+            buffer.extend_from_slice(new_data);
         }
 
-        // Try to decode as binary chunk envelope (iOS format)
-        // Format: [1 byte: id_len][id_len bytes: message_id][2 bytes: index BE][2 bytes: total BE][4 bytes: checksum BE][2 bytes: payload_len BE][payload]
-        let (message_id, chunk_idx, total_chunks, expected_checksum, chunk_data) =
-            match Self::parse_binary_chunk_envelope(data) {
-                Some(parsed) => parsed,
-                None => {
-                    // Fallback: try MessagePack chunk envelope format
-                    #[derive(serde::Deserialize)]
-                    struct ChunkEnvelope {
-                        message_id: String,
-                        index: u16,
-                        total: u16,
-                        checksum: u32,
-                        data: Vec<u8>,
-                    }
+        let mut completed = Vec::new();
 
-                    match rmp_serde::from_slice::<ChunkEnvelope>(data) {
-                        Ok(env) => (
-                            env.message_id,
-                            env.index,
-                            env.total,
-                            env.checksum,
-                            Bytes::from(env.data),
-                        ),
-                        Err(e) => {
-                            debug!("Failed to decode as chunk envelope: {}, discarding", e);
-                            return Ok(None);
+        enum Step {
+            Stop,
+            FullMsgpack(Bytes),
+            Envelope {
+                message_id: String,
+                index: u16,
+                total: u16,
+                checksum: u32,
+                payload: Bytes,
+            },
+        }
+
+        loop {
+            let step = {
+                let buffer = match self.inbound_buffers.get_mut(&session_id) {
+                    Some(b) => b,
+                    None => break,
+                };
+
+                if buffer.is_empty() {
+                    Step::Stop
+                } else if buffer[0] == 0x24 {
+                    match parse_one_chunk_envelope(buffer) {
+                        ChunkEnvelopeParse::NeedMore => {
+                            debug!(
+                                "Session {} buffer holds partial envelope ({} bytes), waiting for more",
+                                session_id,
+                                buffer.len()
+                            );
+                            Step::Stop
                         }
+                        ChunkEnvelopeParse::Invalid => {
+                            warn!(
+                                "Session {} buffer holds invalid chunk envelope, discarding {} bytes (first: {:02x?})",
+                                session_id,
+                                buffer.len(),
+                                &buffer[..buffer.len().min(16)]
+                            );
+                            buffer.clear();
+                            Step::Stop
+                        }
+                        ChunkEnvelopeParse::Complete {
+                            message_id,
+                            index,
+                            total,
+                            checksum,
+                            payload,
+                            consumed,
+                        } => {
+                            buffer.advance(consumed);
+                            debug!(
+                                "Parsed binary chunk envelope: id={}, index={}/{}, checksum=0x{:08x}, payload={} bytes ({} bytes remain in buffer)",
+                                message_id,
+                                index + 1,
+                                total,
+                                checksum,
+                                payload.len(),
+                                buffer.len()
+                            );
+                            Step::Envelope {
+                                message_id,
+                                index,
+                                total,
+                                checksum,
+                                payload,
+                            }
+                        }
+                    }
+                } else {
+                    if rmp_serde::from_slice::<MsgPackMessage>(buffer).is_ok() {
+                        debug!(
+                            "Session {} buffer is a complete MessagePack RPC message ({} bytes), not chunked",
+                            session_id,
+                            buffer.len()
+                        );
+                        let bytes = Bytes::copy_from_slice(buffer);
+                        buffer.clear();
+                        Step::FullMsgpack(bytes)
+                    } else {
+                        warn!(
+                            "Session {} inbound buffer starts with unrecognized prefix [{:02x?}], discarding {} bytes",
+                            session_id,
+                            &buffer[..buffer.len().min(8)],
+                            buffer.len()
+                        );
+                        buffer.clear();
+                        Step::Stop
                     }
                 }
             };
 
+            match step {
+                Step::Stop => break,
+                Step::FullMsgpack(bytes) => {
+                    completed.push(bytes);
+                    break;
+                }
+                Step::Envelope {
+                    message_id,
+                    index,
+                    total,
+                    checksum,
+                    payload,
+                } => {
+                    if let Some(complete) = self
+                        .add_chunk_to_pending(message_id, index, total, checksum, payload)
+                        .await?
+                    {
+                        completed.push(complete);
+                    }
+                }
+            }
+        }
+
+        Ok(completed)
+    }
+
+    async fn add_chunk_to_pending(
+        &mut self,
+        message_id: String,
+        chunk_idx: u16,
+        total_chunks: u16,
+        expected_checksum: u32,
+        chunk_data: Bytes,
+    ) -> Result<Option<Bytes>> {
         if chunk_idx >= total_chunks || total_chunks == 0 {
             debug!(
                 "Invalid chunk indices (chunk_idx={}, total_chunks={}), discarding",
@@ -443,75 +630,6 @@ impl MsgPackProtocolHandler {
         }
 
         Ok(None)
-    }
-
-    /// Parse binary chunk envelope format used by iOS app
-    /// Format: [1 byte: id_len][id_len bytes: message_id][2 bytes: index BE][2 bytes: total BE][4 bytes: checksum BE][2 bytes: payload_len BE][payload]
-    fn parse_binary_chunk_envelope(data: &[u8]) -> Option<(String, u16, u16, u32, Bytes)> {
-        if data.is_empty() {
-            return None;
-        }
-
-        let id_len = data[0] as usize;
-
-        // UUID strings are 36 characters (e.g., "F17B3C10-32DB-4BD1-965D-8F0F6593A642")
-        if id_len == 0 || id_len > 64 {
-            return None;
-        }
-
-        // Header: 1 (id_len) + id_len + 2 (index) + 2 (total) + 4 (checksum) + 2 (payload_len) = 11 + id_len
-        let header_len = 1 + id_len + 2 + 2 + 4 + 2;
-        if data.len() < header_len {
-            return None;
-        }
-
-        let message_id = std::str::from_utf8(&data[1..1 + id_len]).ok()?;
-
-        if id_len != 36 {
-            return None;
-        }
-        let chars: Vec<char> = message_id.chars().collect();
-        let hyphen_positions = [8, 13, 18, 23];
-        if !hyphen_positions
-            .iter()
-            .all(|&pos| chars.get(pos) == Some(&'-'))
-        {
-            return None;
-        }
-
-        let offset = 1 + id_len;
-
-        let index = u16::from_be_bytes([data[offset], data[offset + 1]]);
-        let total = u16::from_be_bytes([data[offset + 2], data[offset + 3]]);
-        let checksum = u32::from_be_bytes([
-            data[offset + 4],
-            data[offset + 5],
-            data[offset + 6],
-            data[offset + 7],
-        ]);
-        let payload_len = u16::from_be_bytes([data[offset + 8], data[offset + 9]]) as usize;
-
-        let total_needed = header_len + payload_len;
-        if data.len() < total_needed {
-            return None;
-        }
-
-        if total == 0 || index >= total || total > 1000 {
-            return None;
-        }
-
-        let payload = Bytes::copy_from_slice(&data[header_len..header_len + payload_len]);
-
-        debug!(
-            "Parsed binary chunk envelope: id={}, index={}/{}, checksum=0x{:08x}, payload={} bytes",
-            message_id,
-            index + 1,
-            total,
-            checksum,
-            payload_len
-        );
-
-        Some((message_id.to_string(), index, total, checksum, payload))
     }
 
     async fn handle_msgpack_message(
@@ -901,88 +1019,127 @@ impl MsgPackProtocolHandler {
             self.session_id = Some(message.session_id);
         }
 
-        if let Some(complete_data) = self.handle_chunk(&message.data).await? {
-            debug!(
-                "Processing complete message data: {} bytes",
-                complete_data.len()
-            );
+        let completed = self
+            .process_inbound(message.session_id, &message.data)
+            .await?;
 
-            let rpc_msg = match rmp_serde::from_slice::<MsgPackMessage>(&complete_data) {
-                Ok(msg) => msg,
-                Err(de_error) => {
-                    debug!(
-                        "Direct MessagePack decode failed, trying rmpv conversion: {}",
-                        de_error
+        if completed.is_empty() {
+            return Ok(None);
+        }
+
+        let mut response_to_return: Option<AppMessage> = None;
+        for complete_data in completed {
+            let response = match self
+                .dispatch_complete_message(&message.id, complete_data)
+                .await?
+            {
+                Some(r) => r,
+                None => continue,
+            };
+
+            if response_to_return.is_none() {
+                response_to_return = Some(response);
+            } else {
+                let mut extra = response;
+                extra.session_id = message.session_id;
+                if let Some(sess_tx) = &self.session_tx {
+                    let sess_tx = sess_tx.lock().await;
+                    if let Err(e) = sess_tx.send(extra) {
+                        error!("Failed to forward extra response via session_tx: {}", e);
+                    }
+                } else {
+                    warn!(
+                        "Multiple responses produced but no session_tx available to forward them"
                     );
+                }
+            }
+        }
 
-                    if let Ok(rmpv_value) = rmpv::decode::read_value(&mut &complete_data[..]) {
-                        let json_value = rmpv_to_json(rmpv_value);
+        Ok(response_to_return)
+    }
 
-                        if let Ok(msg) =
-                            serde_json::from_value::<MsgPackMessage>(json_value.clone())
-                        {
-                            debug!("Successfully decoded via rmpv conversion");
-                            msg
-                        } else {
-                            warn!("Failed to decode MessagePack message: {}", de_error);
-                            debug!("Raw data hex: {}", hex::encode(&complete_data));
+    async fn dispatch_complete_message(
+        &mut self,
+        request_id: &str,
+        complete_data: Bytes,
+    ) -> Result<Option<AppMessage>> {
+        debug!(
+            "Processing complete message data: {} bytes",
+            complete_data.len()
+        );
 
-                            if let Some(id) = json_value.get("id").and_then(|v| v.as_str()) {
-                                if self.websocket_message_ids.contains(id) {
-                                    debug!("Sending decode error to WebSocket: {}", id);
-                                    if let Some(ws_server) = &self.websocket_server {
-                                        let ws_server = Arc::clone(ws_server);
-                                        let error_id = id.to_string();
-                                        let error_msg =
-                                            format!("MessagePack decode error: {}", de_error);
-                                        tokio::spawn(async move {
-                                            ws_server.send_error(error_id, error_msg).await;
-                                        });
-                                    }
-                                    self.websocket_message_ids.remove(id);
-                                }
-                            }
-                            return Ok(None);
-                        }
+        let rpc_msg = match rmp_serde::from_slice::<MsgPackMessage>(&complete_data) {
+            Ok(msg) => msg,
+            Err(de_error) => {
+                debug!(
+                    "Direct MessagePack decode failed, trying rmpv conversion: {}",
+                    de_error
+                );
+
+                if let Ok(rmpv_value) = rmpv::decode::read_value(&mut &complete_data[..]) {
+                    let json_value = rmpv_to_json(rmpv_value);
+
+                    if let Ok(msg) = serde_json::from_value::<MsgPackMessage>(json_value.clone()) {
+                        debug!("Successfully decoded via rmpv conversion");
+                        msg
                     } else {
                         warn!("Failed to decode MessagePack message: {}", de_error);
                         debug!("Raw data hex: {}", hex::encode(&complete_data));
+
+                        if let Some(id) = json_value.get("id").and_then(|v| v.as_str()) {
+                            if self.websocket_message_ids.contains(id) {
+                                debug!("Sending decode error to WebSocket: {}", id);
+                                if let Some(ws_server) = &self.websocket_server {
+                                    let ws_server = Arc::clone(ws_server);
+                                    let error_id = id.to_string();
+                                    let error_msg =
+                                        format!("MessagePack decode error: {}", de_error);
+                                    tokio::spawn(async move {
+                                        ws_server.send_error(error_id, error_msg).await;
+                                    });
+                                }
+                                self.websocket_message_ids.remove(id);
+                            }
+                        }
                         return Ok(None);
                     }
-                }
-            };
-
-            if let Some(response_msg) = self.handle_msgpack_message(rpc_msg).await? {
-                let response_data = rmp_serde::to_vec_named(&response_msg).map_err(|e| {
-                    crate::error::NocturnedError::Config(format!(
-                        "MessagePack serialization error: {}",
-                        e
-                    ))
-                })?;
-
-                info!(
-                    "Sending MessagePack response ({} bytes)",
-                    response_data.len()
-                );
-
-                let chunks = Self::create_chunks(&response_data)?;
-                if chunks.len() == 1 {
-                    let response = self.create_response(message.id.clone(), chunks[0].clone());
-                    debug!(
-                        "Returning response from handle_message: {} bytes, id={}",
-                        response.data.len(),
-                        message.id
-                    );
-                    return Ok(Some(response));
                 } else {
-                    error!("Multi-chunk responses not yet supported");
+                    warn!("Failed to decode MessagePack message: {}", de_error);
+                    debug!("Raw data hex: {}", hex::encode(&complete_data));
                     return Ok(None);
                 }
             }
-            Ok(None)
-        } else {
-            Ok(None)
+        };
+
+        if let Some(response_msg) = self.handle_msgpack_message(rpc_msg).await? {
+            let response_data = rmp_serde::to_vec_named(&response_msg).map_err(|e| {
+                crate::error::NocturnedError::Config(format!(
+                    "MessagePack serialization error: {}",
+                    e
+                ))
+            })?;
+
+            info!(
+                "Sending MessagePack response ({} bytes)",
+                response_data.len()
+            );
+
+            let chunks = Self::create_chunks(&response_data)?;
+            if chunks.len() == 1 {
+                let response = self.create_response(request_id.to_string(), chunks[0].clone());
+                debug!(
+                    "Returning response from handle_message: {} bytes, id={}",
+                    response.data.len(),
+                    request_id
+                );
+                return Ok(Some(response));
+            } else {
+                error!("Multi-chunk responses not yet supported");
+                return Ok(None);
+            }
         }
+
+        Ok(None)
     }
 
     pub fn create_response(&self, request_id: String, data: Bytes) -> AppMessage {
