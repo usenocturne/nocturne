@@ -1184,9 +1184,12 @@ export class SpotifyService {
       const trackData = item.track ?? item;
       const transformed = this.transformTrackResponse(trackData);
       if (params.mockingbird) {
-        const albumUri = trackData.albumOfTrack?.uri;
-        if (albumUri && albumLookup?.[albumUri]) {
+        const albumOfTrack = trackData.albumOfTrack;
+        const albumUri = albumOfTrack?.uri;
+        if (albumUri && albumLookup?.[albumUri]?.image_url) {
           transformed.album = albumLookup[albumUri];
+        } else if (albumOfTrack) {
+          transformed.album = this.buildMinimalAlbumInfo(albumOfTrack);
         } else {
           delete transformed.album;
         }
@@ -1196,6 +1199,27 @@ export class SpotifyService {
       return transformed;
     });
     return this.filterResponse({ tracks });
+  }
+
+  private buildMinimalAlbumInfo(albumOfTrack: any): any {
+    const info: any = {
+      name: albumOfTrack?.name ?? "",
+      uri: albumOfTrack?.uri ?? "",
+    };
+    const sources = albumOfTrack?.coverArt?.sources;
+    if (Array.isArray(sources) && sources.length > 0) {
+      const preferred =
+        sources.find((s: any) => s?.height === 64) ??
+        sources
+          .slice()
+          .sort(
+            (a: any, b: any) =>
+              (a?.height ?? Number.MAX_SAFE_INTEGER) -
+              (b?.height ?? Number.MAX_SAFE_INTEGER),
+          )[0];
+      if (preferred?.url) info.image_url = preferred.url;
+    }
+    return info;
   }
 
   private buildAlbumLookup(discography: any): Record<string, any> {
