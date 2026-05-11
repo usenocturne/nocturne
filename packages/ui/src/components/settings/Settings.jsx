@@ -572,7 +572,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
   const shouldExitToRecents = useRef(false);
   const scrollContainerRef = useRef(null);
   const { settings, updateSetting, isMicLocked } = useSettings();
-  const { isSubscribed } = useSubscription();
+  const { isSubscribed, hasPhoneAccess } = useSubscription();
   const appPlatform = getAppReadyState().platform;
   const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false);
 
@@ -605,7 +605,8 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
   const handleToggle = (key) => {
     if (
       key === "mockingbirdUiEnabled" &&
-      (appPlatform === "web" || isSubscribed === false)
+      appPlatform !== "web" &&
+      hasPhoneAccess === false
     )
       return;
     if (key === "micMuted" && isMicLocked) return;
@@ -827,18 +828,13 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
         const isMicWebLocked = isMicToggle && appPlatform === "web";
         const isMicSubLocked =
           isMicToggle && appPlatform !== "web" && isSubscribed === false;
-        const isMockingbirdWebLocked =
-          isMockingbirdToggle && appPlatform === "web";
         const isMockingbirdSubLocked =
           isMockingbirdToggle &&
           appPlatform !== "web" &&
-          isSubscribed === false;
+          hasPhoneAccess === false;
 
         const isToggleDisabled =
-          isMicWebLocked ||
-          isMicSubLocked ||
-          isMockingbirdWebLocked ||
-          isMockingbirdSubLocked;
+          isMicWebLocked || isMicSubLocked || isMockingbirdSubLocked;
 
         const effectiveRawValue =
           isMicWebLocked || isMicSubLocked
@@ -878,9 +874,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
                   ? "The microphone is only available when using the Nocturne mobile app."
                   : isMicSubLocked
                     ? "Subscribe to Nocturne+ to use voice controls."
-                    : isMockingbirdWebLocked
-                      ? "Mockingbird is only available when using the Nocturne mobile app."
-                      : "Subscribe to Nocturne+ to use the classic Spotify Car Thing interface."
+                    : "Get Nocturne+ or Nocturne Lifetime to use the classic Spotify Car Thing interface."
                 : item.description}
             </p>
           </div>

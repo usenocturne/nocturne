@@ -1225,7 +1225,7 @@ function App() {
     isMockingbird && !showSplash
       ? showTutorial && !hasSeenMockingbirdOnboardingFlag
         ? "tutorial"
-        : appPlatform === "web" || isSubscribed === false
+        : appPlatform !== "web" && hasPhoneAccess === false
           ? "subscription"
           : !hasSeenMockingbirdOnboardingFlag &&
               (isSpotifyAuthenticated || isSpotifySkipped) &&

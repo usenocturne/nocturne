@@ -17,7 +17,7 @@ const SubscriptionRequired = () => {
       <SpotifyIcon />
       <div className={styles.title}>Subscription required</div>
       <div className={styles.description}>
-        <p>To use Mockingbird, you need an active Nocturne subscription.</p>
+        <p>To use Mockingbird, you need Nocturne+ or Nocturne Lifetime.</p>
       </div>
     </div>
   );
