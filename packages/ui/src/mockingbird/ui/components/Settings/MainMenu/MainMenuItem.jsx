@@ -78,11 +78,18 @@ export const iconMapping = {
 
 const DynamicMicIcon = observer(() => {
   const { voiceStore } = useCarThingStore();
-  return voiceStore.isMicMuted ? <IconMicOff /> : <IconMicOn />;
+  return voiceStore.isMicLocked || voiceStore.isMicMuted ? (
+    <IconMicOff />
+  ) : (
+    <IconMicOn />
+  );
 });
 
 const DynamicMicContent = observer(() => {
   const { voiceStore } = useCarThingStore();
+  if (voiceStore.isMicLocked) {
+    return <div className={styles.micStatus}>Unavailable</div>;
+  }
   return (
     <div
       className={classNames(
@@ -102,8 +109,10 @@ const contentMapping = {
 const MainMenuItem = ({ item, active }) => {
   const { disabledOffline, id } = item;
   const [pressed, setPressed] = useState(false);
-  const { hardwareStore, settingsStore } = useCarThingStore();
-  const disabled = settingsStore.isMainMenuItemDisabled(disabledOffline);
+  const { hardwareStore, settingsStore, voiceStore } = useCarThingStore();
+  const disabled =
+    settingsStore.isMainMenuItemDisabled(disabledOffline) ||
+    (id === MainMenuItemId.MIC && voiceStore.isMicLocked);
 
   const icon = id === MainMenuItemId.MIC ? <DynamicMicIcon /> : iconMapping[id];
 

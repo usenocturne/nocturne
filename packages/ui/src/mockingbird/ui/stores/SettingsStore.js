@@ -472,7 +472,9 @@ class SettingsStore {
         break;
       case MainMenuItemId.SETTINGS_ROOT:
         if (this.highlightedItem?.id === MainMenuItemId.MIC) {
-          this.rootStore.voiceStore.toggleMic();
+          if (!this.rootStore.voiceStore.isMicLocked) {
+            this.rootStore.voiceStore.toggleMic();
+          }
         } else if (this.highlightedItem) {
           this.handleMainMenuItemSelected(this.highlightedItem);
         }
@@ -535,7 +537,9 @@ class SettingsStore {
     if (disabled) {
       this.unavailableSettingsBannerUiState.showUnavailableBanner();
     } else if (row.id === MainMenuItemId.MIC) {
-      this.rootStore.voiceStore.toggleMic();
+      if (!this.rootStore.voiceStore.isMicLocked) {
+        this.rootStore.voiceStore.toggleMic();
+      }
     } else if (row.id === MainMenuItemId.SWITCH_UI) {
       this.switchToModernUI();
     } else {

@@ -2,6 +2,7 @@ import { makeAutoObservable, action } from "mobx";
 import {
   addGlobalWsListener,
   sendNocturneWsRequest,
+  subscribeAppReadyState,
 } from "../../../hooks/useNocturned";
 import { DEFAULT_TIMEOUT_TO_NPV } from "./ViewStore";
 import {
@@ -152,9 +153,11 @@ class VoiceStore {
   state = getInitialVoiceSessionState();
   micLevelMovingAverage = 0;
   isMicMuted = localStorage.getItem("mockingbird_mic_muted") === "true";
+  isMicLocked = false;
   microphoneLevelsSlidingWindow = [];
   currentSessionId = null;
   _wsCleanup = null;
+  _appReadyCleanup = null;
   _captureTimeoutId = null;
   _aiTimeoutId = null;
   _closeTimeoutId = null;
@@ -173,6 +176,7 @@ class VoiceStore {
     makeAutoObservable(this, {
       rootStore: false,
       _wsCleanup: false,
+      _appReadyCleanup: false,
       _captureTimeoutId: false,
       _aiTimeoutId: false,
       _closeTimeoutId: false,
@@ -209,6 +213,12 @@ class VoiceStore {
         else if (topic === "audio.level") this._onMicLevel(data);
       }),
     });
+
+    this._appReadyCleanup = subscribeAppReadyState(
+      action(({ platform }) => {
+        this.isMicLocked = platform === "web";
+      }),
+    );
   }
 
   get listening() {
@@ -245,7 +255,7 @@ class VoiceStore {
 
   onWakeWord = action(() => {
     const { viewStore, overlayController, onboardingStore } = this.rootStore;
-    if (this.isMicMuted) return;
+    if (this.isMicMuted || this.isMicLocked) return;
 
     if (viewStore.appView === "ONBOARDING") {
       this._rejectCurrentSession();
@@ -468,6 +478,7 @@ class VoiceStore {
   });
 
   toggleMic = action(() => {
+    if (this.isMicLocked) return;
     this.isMicMuted = !this.isMicMuted;
     localStorage.setItem("mockingbird_mic_muted", String(this.isMicMuted));
     if (this.isMicMuted) {
