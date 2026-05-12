@@ -469,6 +469,16 @@ const setupGlobalWebSocket = async () => {
               ? false
               : !!data.data.hasLifetime;
 
+          appSubscribed = pendingSubscribed;
+          appSubscriptionStatus = pendingSubscriptionStatus;
+          appHasLifetime = pendingHasLifetime;
+          emitAppSubscribedState();
+
+          if (pendingSpotifySkipped) {
+            spotifySkipped = true;
+            emitSpotifySkippedState();
+          }
+
           const syncDeviceTime = async () => {
             while (true) {
               try {
@@ -482,16 +492,6 @@ const setupGlobalWebSocket = async () => {
             appReady = true;
             appReadyPlatform = pendingPlatform;
             emitAppReadyState();
-
-            appSubscribed = pendingSubscribed;
-            appSubscriptionStatus = pendingSubscriptionStatus;
-            appHasLifetime = pendingHasLifetime;
-            emitAppSubscribedState();
-
-            if (pendingSpotifySkipped) {
-              spotifySkipped = true;
-              emitSpotifySkippedState();
-            }
           };
 
           syncDeviceTime();
@@ -507,7 +507,10 @@ const setupGlobalWebSocket = async () => {
             appSubscribed = !!updateData.subscribed;
           }
           if (
-            Object.prototype.hasOwnProperty.call(updateData, "subscriptionStatus")
+            Object.prototype.hasOwnProperty.call(
+              updateData,
+              "subscriptionStatus",
+            )
           ) {
             appSubscriptionStatus = updateData.subscriptionStatus || null;
           }
