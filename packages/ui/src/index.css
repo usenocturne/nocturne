@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --font-inter: Inter, sans-serif;
+  --font-noto-sans-sc: "Noto Sans SC", sans-serif;
+  --font-noto-sans-tc: "Noto Sans TC", sans-serif;
+  --font-noto-serif-jp: "Noto Serif JP", serif;
+  --font-noto-sans-kr: "Noto Serif KR", serif;
+  --font-noto-naskh-ar: "Noto Naskh Arabic", serif;
+  --font-noto-sans-bn: "Noto Sans Bengali", sans-serif;
+  --font-noto-sans-dv: "Noto Sans Devanagari", sans-serif;
+  --font-noto-sans-gk: "Noto Sans Gurmukhi", sans-serif;
+  --font-noto-sans-he: "Noto Sans Hebrew", sans-serif;
+  --font-noto-sans-ta: "Noto Sans Tamil", sans-serif;
+  --font-noto-sans-th: "Noto Sans Thai", sans-serif;
+}
+
 html,
 body {
   font-family:

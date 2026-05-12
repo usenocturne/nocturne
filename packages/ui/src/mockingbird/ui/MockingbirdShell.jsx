@@ -11,199 +11,6 @@ const LazyOnboarding = React.lazy(
   () => import("./components/Onboarding/Onboarding"),
 );
 
-const mockingbirdFontStyles = `
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSpUIv3T-Book.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+0000-2BFF, U+2E00-2E7F, U+FB00-FB06, U+FE20-FE2F, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSpUIv3T-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+0000-2BFF, U+2E00-2E7F, U+FB00-FB06, U+FE20-FE2F, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSpUIv3T-Black.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+0000-2BFF, U+2E00-2E7F, U+FB00-FB06, U+FE20-FE2F, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Arab-Book.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Arab-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Arab-Black.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Cyrl-Book.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+0400-04FF, U+0500-052F, U+1C80-1C8F, U+2DE0-2DFF, U+A640-A69F;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Cyrl-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+0400-04FF, U+0500-052F, U+1C80-1C8F, U+2DE0-2DFF, U+A640-A69F;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Cyrl-Black.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+0400-04FF, U+0500-052F, U+1C80-1C8F, U+2DE0-2DFF, U+A640-A69F;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Deva-Book.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+0900-097F, U+1CD0-1CFF, U+A8E0-A8FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Deva-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+0900-097F, U+1CD0-1CFF, U+A8E0-A8FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Deva-Black.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+0900-097F, U+1CD0-1CFF, U+A8E0-A8FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Grek-Book.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+0370-03FF, U+1F00-1FFF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Grek-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+0370-03FF, U+1F00-1FFF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Grek-Black.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+0370-03FF, U+1F00-1FFF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Hebr-Book.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+0590-05FF, U+FB1D-FB4F;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Hebr-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+0590-05FF, U+FB1D-FB4F;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/CircularSp-Hebr-Black.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+0590-05FF, U+FB1D-FB4F;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansJP-VF.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+3040-309F, U+30A0-30FF, U+31F0-31FF, U+FF65-FF9F, U+1B000-1B0FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansJP-VF.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+3040-309F, U+30A0-30FF, U+31F0-31FF, U+FF65-FF9F, U+1B000-1B0FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansJP-VF.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+3040-309F, U+30A0-30FF, U+31F0-31FF, U+FF65-FF9F, U+1B000-1B0FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansKR-VF.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+1100-11FF, U+3130-318F, U+A960-A97F, U+AC00-D7AF, U+D7B0-D7FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansKR-VF.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+1100-11FF, U+3130-318F, U+A960-A97F, U+AC00-D7AF, U+D7B0-D7FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansKR-VF.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+1100-11FF, U+3130-318F, U+A960-A97F, U+AC00-D7AF, U+D7B0-D7FF;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansSC-VF.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  unicode-range: U+2E80-2EFF, U+3000-303F, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+20000-2A6DF, U+2A700-2B73F, U+2B740-2B81F;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansSC-VF.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  unicode-range: U+2E80-2EFF, U+3000-303F, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+20000-2A6DF, U+2A700-2B73F, U+2B740-2B81F;
-}
-@font-face {
-  font-family: spotify-circular;
-  src: url('/fonts/NotoSansSC-VF.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  unicode-range: U+2E80-2EFF, U+3000-303F, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+20000-2A6DF, U+2A700-2B73F, U+2B740-2B81F;
-}
-
-`;
-
 function usePlaybackPolling(parentPlayback) {
   const [localPlayback, setLocalPlayback] = useState(null);
   const pollingRef = useRef(null);
@@ -628,7 +435,6 @@ export default function MockingbirdShell({
   if (systemScreen && systemScreen !== "tutorial") {
     return (
       <div className="mockingbird-root">
-        <style>{mockingbirdFontStyles}</style>
         <CarThingStoreProvider
           currentPlayback={currentPlayback}
           playerControls={playerControls}
@@ -648,7 +454,6 @@ export default function MockingbirdShell({
   if (systemScreen === "tutorial") {
     return (
       <div className="mockingbird-root">
-        <style>{mockingbirdFontStyles}</style>
         {!dataReady ? (
           <DataLoadingScreen />
         ) : (
@@ -673,7 +478,6 @@ export default function MockingbirdShell({
 
   return (
     <div className="mockingbird-root">
-      <style>{mockingbirdFontStyles}</style>
       {!dataReady ? (
         <SplashOverlay />
       ) : (

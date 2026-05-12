@@ -15,7 +15,6 @@ components/
 │   ├── notifications/    # NotificationBanner, NotificationsContainer, UpdateCheckNotification
 │   ├── overlays/         # ButtonMappingOverlay, NetworkBanner, PowerMenuOverlay
 │   │   └── voice/        # Voice-assistant overlay: VoiceBorder, VoicePill, VoiceConfirmation, VolumeConfirmation, VoiceOverlay, constants.js
-│   ├── FontLoader.jsx    # Injects <style> with @font-face rules + document.fonts.load()
 │   ├── GradientBackground.jsx  # Animated album-art gradient (fed by useGradientState)
 │   ├── LockView.jsx            # Lock screen (right-most hardware button)
 │   ├── ScrollingText.jsx       # Marquee when text overflows (gated by trackNameScrollingEnabled)

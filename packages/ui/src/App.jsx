@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
-import FontLoader from "./components/common/FontLoader";
 import Tutorial from "./components/tutorial/Tutorial";
 import Home from "./pages/Home";
 import ContentView from "./components/content/ContentView";
@@ -57,7 +56,7 @@ function MockingbirdPairingOverlay({ pin }) {
         inset: 0,
         zIndex: 100,
         fontFamily:
-          "spotify-circular, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          "'Circular Sp UI v3 T', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
       <React.Suspense fallback={null}>
@@ -1359,7 +1358,6 @@ function App() {
           <VoiceProvider suppressed={voiceSuppressed}>
             <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
               <Router>
-                <FontLoader />
                 <main className="overflow-hidden relative min-h-screen rounded-2xl nocturne-font-stack">
                   <GradientBackground
                     gradientState={gradientState}

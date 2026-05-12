@@ -10,7 +10,7 @@ Alternative UI skin replicating the original Spotify Car Thing experience. Lazy-
 mockingbird/
 ├── UIShell.jsx                 # Gate: renders Nocturne children OR lazy-loads MockingbirdShell (37 lines)
 └── ui/
-    ├── MockingbirdShell.jsx    # Root: RootStore init, view routing, Settings overlay, playback polling, Spotify Circular font inject (520 lines)
+    ├── MockingbirdShell.jsx    # Root: RootStore init, view routing, Settings overlay, playback polling (496 lines)
     ├── components/
     │   ├── Main.jsx            # Main view container (mounts Views + Presets + overlays)
     │   ├── Views/              # AmbientBackdrop, Npv, Presets, Queue, Shelf, Tracklist + Views.jsx router
@@ -56,14 +56,14 @@ Spotify data enters via two channels only: (1) props passed from Nocturne (`curr
 
 ## KEY DIFFERENCES FROM NOCTURNE UI
 
-| Aspect           | Nocturne (main)                         | Mockingbird (this)                                         |
-| ---------------- | --------------------------------------- | ---------------------------------------------------------- |
-| State management | React Context + module-level singletons | MobX stores (`RootStore` tree)                             |
-| Styling          | Tailwind CSS                            | SCSS modules (`.module.scss`)                              |
-| Font             | Inter + Noto Sans variants              | Spotify Circular (`spotify-circular`)                      |
-| Data flow        | Custom hooks → daemon WebSocket         | `RootStore` → MobX reactions; bridged from Nocturne props  |
-| Components       | Functional + hooks                      | Functional + `observer()` from `mobx-react-lite`           |
-| Transitions      | Tailwind classes + CSS keyframes        | `CSSTransitionCompat.jsx` (react-transition-group wrapper) |
+| Aspect           | Nocturne (main)                         | Mockingbird (this)                                                                                                                 |
+| ---------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| State management | React Context + module-level singletons | MobX stores (`RootStore` tree)                                                                                                     |
+| Styling          | Tailwind CSS                            | SCSS modules (`.module.scss`)                                                                                                      |
+| Font             | Inter + Noto Sans variants              | Spotify Circular (`"Circular Sp UI v3 T"` — the typographic family fontconfig reports for `CircularSpUIv3T-{Book,Bold,Black}.ttf`) |
+| Data flow        | Custom hooks → daemon WebSocket         | `RootStore` → MobX reactions; bridged from Nocturne props                                                                          |
+| Components       | Functional + hooks                      | Functional + `observer()` from `mobx-react-lite`                                                                                   |
+| Transitions      | Tailwind classes + CSS keyframes        | `CSSTransitionCompat.jsx` (react-transition-group wrapper)                                                                         |
 
 ## STORES
 
@@ -110,7 +110,7 @@ daemon → WebSocket event → useNocturned → VoiceStore (mockingbird)
 - **SCSS modules only**: `import styles from './Foo.module.scss'` — NOT Tailwind
 - **Store access**: `useCarThingStore()` from `contexts/CarThingStore.jsx` → returns the singleton `rootStore` (plus Nocturne-bridged fields: `spotifyData`, `currentPlayback`, `playerControls`, `playbackProgress`, `onSeek`)
 - **Global store ref**: `window.carThingRootStore` set in `RootStore.constructor` for cross-UI access (Nocturne's `App.jsx` uses it for settings toggles)
-- **Spotify Circular font**: Loaded via injected `<style>` tag in `MockingbirdShell.jsx`, not through Nocturne's `FontLoader`
+- **Spotify Circular font**: Resolved by the real fontconfig family name **`"Circular Sp UI v3 T"`** (the typographic family on `CircularSpUIv3T-{Book,Bold,Black}.ttf` — name ID 16). The legacy alias `spotify-circular` is NOT a real family on the kiosk; the `@font-face` rules that used to inject that alias were removed when the kiosk was switched to system-installed fonts. No `@font-face` is shipped by the app — `public/fonts/CircularSp*.woff2` exist solely so developers can install the same fonts locally to preview the skin. The Latin-glyph file is what matters for rendering; the script-specific `CircularSp-{Arab,Cyrl,Deva,Grek,Hebr}` files have empty family names in their TTF/woff2 metadata and would need a kiosk-side fontconfig alias to be reachable from CSS.
 - **React 19 transitions**: Use `CSSTransitionCompat.jsx` (wraps react-transition-group for strict mode / concurrent rendering)
 - **Singleton RootStore**: Instantiated once at module load in `contexts/CarThingStore.jsx` — never construct another `RootStore`
 

@@ -24,20 +24,19 @@ nocturne-ui/
 ├── index.html            # Single root div, loads src/main.jsx
 ├── vite.config.js        # Legacy plugin + dev-mode chrome69 transform shim
 ├── postcss.config.js     # Custom postcss-inset-fix plugin (chrome69 lacks `inset`)
-├── tailwind.config.js    # 12-language font-family stack (Inter + Noto variants)
+├── tailwind.config.js    # 12-language font-family stack (Inter + Noto variants), resolved from system-installed fonts
 ├── eslint.config.js      # Flat config, JS only, no TS
 ├── .prettierrc           # EMPTY file — defaults only
-├── public/fonts/         # 18 woff2 files (Inter + Noto scripts), served statically
+├── public/fonts/         # 18 woff2 files — NOT loaded by the app. Kept so devs can install the same fonts locally to test the UI; production fonts come from the kiosk Linux system.
 └── src/
     ├── main.jsx          # 6-line entry: ReactDOM.createRoot(...).render(<App />)
     ├── App.jsx           # 1420-line God component: auth flow, routing, providers
-    ├── index.css         # Tailwind directives + global styles
+    ├── index.css         # Tailwind directives + global styles + `:root` block defining `--font-*` CSS vars (resolve to system-installed font families)
     ├── pages/Home.jsx    # Sidebar-driven home (+ sections under pages/home/)
     ├── components/       # UI components — see src/components/AGENTS.md
     ├── hooks/            # 18 hooks, ~10K lines, singleton state — see src/hooks/AGENTS.md
     ├── mockingbird/      # Alt UI (stock Spotify skin) — see src/mockingbird/AGENTS.md
     ├── contexts/         # SettingsContext, OTAContext, NotificationContext, VoiceContext
-    ├── constants/fonts.js # createFontFace + all font configs (269 lines)
     └── utils/            # colorExtractor (album art → gradient), helpers
 ```
 
@@ -66,19 +65,19 @@ Overlays render outside the switch: `PairingScreen`/`MockingbirdPairingOverlay`,
 
 ## WHERE TO LOOK
 
-| Task                                  | Location                                                                                                                        |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Mount order / provider stack          | `src/App.jsx` bottom (last 100 lines)                                                                                           |
-| Which screen renders when             | `src/App.jsx` content switch (~line 1226) + `mockingbirdSystemScreen`                                                           |
-| Add/modify a daemon command           | `src/hooks/useNocturned.js` → `sendNocturneWsRequest()`                                                                         |
-| Add/modify a Spotify command          | `src/hooks/useSpotifyWebSocket.js` → `sendSpotifyCommand()`                                                                     |
-| Add a user setting                    | `src/contexts/SettingsContext.jsx` (localStorage-backed defaults table)                                                         |
-| Add a font                            | `src/constants/fonts.js` + `public/fonts/` + `tailwind.config.js`                                                               |
-| Toggle stock Spotify skin             | `mockingbirdUiEnabled` setting (gated in `UIShell.jsx`)                                                                         |
-| Hardware-button preset long-press map | `src/hooks/useButtonMapping.jsx` + `App.jsx:useGlobalButtonMapping`                                                             |
-| OTA update UX                         | `src/contexts/OTAContext.jsx` + `src/components/settings/SoftwareUpdate`                                                        |
-| Icon library                          | `src/components/common/icons/index.jsx` (76 icons (75 original + `ShuffleActiveIcon` for voice confirmations), barrel exported) |
-| Voice assistant overlay               | `src/components/common/overlays/voice/` + `src/contexts/VoiceContext.jsx`                                                       |
+| Task                                  | Location                                                                                                                                                                                                                                                                                  |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mount order / provider stack          | `src/App.jsx` bottom (last 100 lines)                                                                                                                                                                                                                                                     |
+| Which screen renders when             | `src/App.jsx` content switch (~line 1226) + `mockingbirdSystemScreen`                                                                                                                                                                                                                     |
+| Add/modify a daemon command           | `src/hooks/useNocturned.js` → `sendNocturneWsRequest()`                                                                                                                                                                                                                                   |
+| Add/modify a Spotify command          | `src/hooks/useSpotifyWebSocket.js` → `sendSpotifyCommand()`                                                                                                                                                                                                                               |
+| Add a user setting                    | `src/contexts/SettingsContext.jsx` (localStorage-backed defaults table)                                                                                                                                                                                                                   |
+| Add a font                            | Install the font on the kiosk Linux system (via `nocturne-image` Buildroot package) and the dev machine; reference its family in `tailwind.config.js` + `src/index.css` `:root`. The `public/fonts/` copy is for devs to install locally — the app does not load any `@font-face` itself. |
+| Toggle stock Spotify skin             | `mockingbirdUiEnabled` setting (gated in `UIShell.jsx`)                                                                                                                                                                                                                                   |
+| Hardware-button preset long-press map | `src/hooks/useButtonMapping.jsx` + `App.jsx:useGlobalButtonMapping`                                                                                                                                                                                                                       |
+| OTA update UX                         | `src/contexts/OTAContext.jsx` + `src/components/settings/SoftwareUpdate`                                                                                                                                                                                                                  |
+| Icon library                          | `src/components/common/icons/index.jsx` (76 icons (75 original + `ShuffleActiveIcon` for voice confirmations), barrel exported)                                                                                                                                                           |
+| Voice assistant overlay               | `src/components/common/overlays/voice/` + `src/contexts/VoiceContext.jsx`                                                                                                                                                                                                                 |
 
 ## CONVENTIONS
 
@@ -89,7 +88,7 @@ Overlays render outside the switch: `PairingScreen`/`MockingbirdPairingOverlay`,
 - **Image loading:** go through `SpotifyImage` / `useImageLoader`. Direct `<img src=spotify-cdn>` URLs bypass the daemon image proxy and flash on bad networks.
 - **Global cross-UI handles:** `window.carThingRootStore` (mockingbird's MobX root), `window.testShelf`, etc. set by mockingbird for debugging and used sparingly by `App.jsx` for cross-UI toggles. Not a general-purpose globals pattern.
 - **Headless UI:** modals/switches use `@headlessui/react` — do not roll your own focus traps.
-- **Tailwind font stack:** `className="nocturne-font-stack"` or Tailwind `font-sans` — falls through 12 language variants via CSS vars. Don't inline `font-family`.
+- **Tailwind font stack:** `className="nocturne-font-stack"` or Tailwind `font-sans` — falls through 12 language variants via CSS vars defined in `src/index.css`'s `:root` block. Those vars resolve to **system-installed** font families (no `@font-face` loading from `public/fonts/`). Don't inline `font-family`.
 - **SCSS is mockingbird-only.** Main Nocturne UI uses Tailwind classes; never `import styles from './Foo.module.scss'` outside `src/mockingbird/`.
 - **Voice overlay state lives in `src/contexts/VoiceContext.jsx`** (React Context + reducer, same pattern as SettingsContext/OTAContext/NotificationContext).
 
@@ -119,7 +118,7 @@ bun run lint-check    # Prettier --check (CI)
 ## NOTES
 
 - **No automated tests.** No unit-test runner and no integration tests. Manual QA only.
-- **`public/fonts/` ships 18 woff2 files (~2MB)** — needed because the kiosk is offline-first. Don't trim without confirming.
+- **`public/fonts/` ships 18 woff2 files (~2MB)** — NOT loaded by the app. The kiosk Linux system has these fonts installed system-wide (via `nocturne-image`), and the browser resolves `Inter` / `Noto …` / `spotify-circular` by family name. The `public/` copies exist so developers can install the exact same fonts locally to preview the UI. Don't trim without confirming.
 - **`@tailwindcss/postcss` v4 is a devDep but the runtime is Tailwind 3.** The v4 package is vestigial/unused — don't migrate to v4 without a coordinated plan (mockingbird SCSS modules + Headless UI will need adjustments).
 - **`react-transition-group@4.4.5` is pinned** for React 19 compat via `mockingbird/ui/components/CSSTransitionCompat.jsx`. Don't upgrade.
 - **Legacy dev shim (`legacyDevTarget` in `vite.config.js`)** polyfills `Promise.allSettled`, `Object.fromEntries`, `String.prototype.replaceAll`, `performance.measure/mark` and retransforms every JS/TS asset to chrome69 at dev time. Production uses `@vitejs/plugin-legacy`.
