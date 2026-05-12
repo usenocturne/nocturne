@@ -38,7 +38,7 @@
 1. Download the [img.gz from the latest release](https://github.com/usenocturne/nocturne-connector/releases/latest)
 2. Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/), [balenaEtcher](https://etcher.balena.io/), or dd to flash the image to your SD card
     - In Raspberry Pi Imager, click "OS" on the left side and use "Use custom", select your SD card, and press write.
-4. If you are using Wi-Fi, download [wpa_supplicant.conf](https://github.com/usenocturne/nocturne-connector/wpa_supplicant.conf), and fill in your SSID and password (inside of quotes). Then, place it on the root of the SD card.
+4. If you are using Wi-Fi, download [wpa_supplicant.conf](https://raw.githubusercontent.com/usenocturne/nocturne-connector/refs/heads/main/README.md), and fill in your SSID and password (inside of quotes). Then, place it on the root of the SD card.
     - If your country is not the United States, replace the `US` in the file with your country code.
 4. Power the Raspberry Pi & visit `nocturne-connector.local` in any browser.
     - If this does not work, You will need to find the IP address of the Raspberry Pi from your router, and use that IP address instead of `nocturne-connector.local`. 
