@@ -632,6 +632,25 @@ async fn handle_connection_event(
                 }
             }
 
+            let incoming_title = update
+                .media_item
+                .as_ref()
+                .and_then(|m| m.title.as_ref())
+                .map(|t| t.trim().to_string());
+            let title_changed = match (&incoming_title, &now_playing_state.title) {
+                (Some(new_title), Some(old_title)) => {
+                    !new_title.is_empty() && new_title != old_title.trim()
+                }
+                _ => false,
+            };
+
+            if title_changed {
+                now_playing_state.album = None;
+                now_playing_state.duration_ms = None;
+                now_playing_state.app_name = None;
+                now_playing_state.elapsed_ms = None;
+            }
+
             if let Some(ref media) = update.media_item {
                 if let Some(ref title) = media.title {
                     now_playing_state.title = Some(title.clone());
