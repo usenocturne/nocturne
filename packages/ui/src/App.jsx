@@ -30,6 +30,7 @@ import {
 } from "./contexts/NotificationContext";
 import { VoiceProvider } from "./contexts/VoiceContext";
 import NotificationsContainer from "./components/common/notifications/NotificationsContainer";
+import NotificationBridge from "./components/common/notifications/NotificationBridge";
 import PairingScreen from "./components/screens/PairingScreen";
 import LockView from "./components/common/LockView";
 import PowerMenuOverlay from "./components/common/overlays/PowerMenuOverlay";
@@ -1341,6 +1342,7 @@ function App() {
       <OTAProvider>
         <AutoUpdateManager />
         <NotificationProvider>
+          <NotificationBridge />
           <NotificationEffects
             isUpdating={isUpdating}
             updateStatus={updateStatus}
