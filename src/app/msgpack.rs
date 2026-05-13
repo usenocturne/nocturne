@@ -996,12 +996,7 @@ impl MsgPackProtocolHandler {
                 };
 
                 if let Some(ws_server) = &self.websocket_server {
-                    tokio::spawn({
-                        let ws_server = Arc::clone(ws_server);
-                        async move {
-                            ws_server.broadcast_event(topic, data).await;
-                        }
-                    });
+                    ws_server.broadcast_event(topic, data).await;
                 }
                 Ok(None)
             }

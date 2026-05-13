@@ -54,7 +54,7 @@ main.rs
 |------|------|---------------------|
 | Add Spotify command | `app/websocket_handler.rs` | `handle_message()` match arms |
 | Add EA protocol handler | `app/mod.rs` | `AppProtocolHandlerEnum`, `register_handler()` |
-| Modify chunking/CRC | `app/msgpack.rs` | `create_chunks()`, `parse_binary_chunk_envelope()`, CHUNK_SIZE=2000 |
+| Modify chunking/CRC | `app/msgpack.rs` | `create_chunks()`, `parse_one_chunk_envelope()`, `process_inbound()` (per-session reassembly buffer), CHUNK_SIZE=2000 |
 | iAP2 config (EA protocols, NowPlaying) | `iap2_wrapper.rs` | `Iap2Config` construction |
 | MFi auth | `mfi.rs` + `mfi_impl.rs` | `MfiChip`, `HardwareMfiProvider` |
 | Bluetooth SDP/advertising | `bluetooth.rs` | `register_sdp_record()`, `set_advertising()` |
