@@ -710,7 +710,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             clearTimeout(spotifyFallbackTimeout);
           }
 
-          spotifyFallbackTimeout = setTimeout(() => {
+          const commitSpotifyPendingPlaceholder = () => {
             const currentItem = currentPlaybackRef.current?.item;
             const hasRealSpotifyData =
               currentItem?.uri?.startsWith("spotify:") &&
@@ -778,6 +778,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               processPlaybackState(placeholderState);
               pendingSpotifyMediaUpdate = null;
             }
+          };
+
+          spotifyFallbackTimeout = setTimeout(() => {
+            commitSpotifyPendingPlaceholder();
             spotifyFallbackTimeout = null;
           }, 10000);
 
@@ -785,6 +789,13 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           const hasRealSpotifyData =
             currentItem?.uri?.startsWith("spotify:") &&
             !currentItem?.is_spotify_pending;
+
+          if (currentItem?.is_phone_media) {
+            clearTimeout(spotifyFallbackTimeout);
+            spotifyFallbackTimeout = null;
+            commitSpotifyPendingPlaceholder();
+            return;
+          }
 
           if (hasRealSpotifyData) {
             const incomingTitle = media.MediaItemTitle;
@@ -862,10 +873,24 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         }
 
         if (!playback.PlaybackAppName) {
-          if (
-            currentPlaybackRef.current?.item &&
-            !currentPlaybackRef.current?.item?.is_phone_media
-          ) {
+          const currentItem = currentPlaybackRef.current?.item;
+          if (currentItem && !currentItem.is_phone_media) {
+            const incomingTitle = media.MediaItemTitle?.toLowerCase().trim();
+            const currentTitle = currentItem.name?.toLowerCase().trim();
+            const titleMatches =
+              !!incomingTitle &&
+              !!currentTitle &&
+              incomingTitle === currentTitle;
+            const isPending = currentItem.is_spotify_pending === true;
+            const currentIsPlaying =
+              currentPlaybackRef.current?.is_playing === true;
+            if (titleMatches || !incomingTitle) {
+              return;
+            }
+            if (!isPending && currentIsPlaying) {
+              return;
+            }
+          } else if (!currentItem && pendingSpotifyMediaUpdate) {
             return;
           }
         }
