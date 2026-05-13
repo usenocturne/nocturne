@@ -79,25 +79,25 @@ export function isDefinitiveAuthError(err: unknown): boolean {
 }
 
 export class AuthService {
-  private static SESSION_REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
-
   private supabase: SupabaseClient;
   private _currentUser: User | null = null;
   private _session: Session | null = null;
   private _isInitializing = true;
   private stateChangeCallbacks: ((user: User | null) => void)[] = [];
   private supabaseSubscription: { unsubscribe: () => void } | null = null;
-  private sessionRefreshTimer: ReturnType<typeof setInterval> | null = null;
   private restoreRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private restoreCancelled = false;
   private restoreGeneration = 0;
 
   constructor() {
     this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
     });
     this.setupAuthStateListener();
-    this.startSessionRefreshTimer();
   }
 
   async initialize(): Promise<void> {
@@ -152,35 +152,6 @@ export class AuthService {
     this.supabaseSubscription = data.subscription;
   }
 
-  private startSessionRefreshTimer(): void {
-    this.stopSessionRefreshTimer();
-    this.sessionRefreshTimer = setInterval(async () => {
-      if (!this._session) return;
-      try {
-        const { data, error } = await this.supabase.auth.refreshSession();
-        if (error) {
-          log.warn(`Periodic session refresh failed: ${error.message}`);
-          return;
-        }
-        if (data.session) {
-          this._session = data.session;
-          this._currentUser = data.session.user;
-          this.persistSession();
-          log.info("Periodic session refresh succeeded");
-        }
-      } catch (err) {
-        log.warn(`Periodic session refresh error: ${err}`);
-      }
-    }, AuthService.SESSION_REFRESH_INTERVAL);
-  }
-
-  private stopSessionRefreshTimer(): void {
-    if (this.sessionRefreshTimer) {
-      clearInterval(this.sessionRefreshTimer);
-      this.sessionRefreshTimer = null;
-    }
-  }
-
   destroy(): void {
     this.restoreCancelled = true;
     if (this.restoreRetryTimer) {
@@ -189,7 +160,6 @@ export class AuthService {
     }
     this.supabaseSubscription?.unsubscribe();
     this.supabaseSubscription = null;
-    this.stopSessionRefreshTimer();
   }
 
   private async restoreSession(): Promise<void> {

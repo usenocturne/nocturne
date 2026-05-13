@@ -74,6 +74,8 @@ export class NocturneManager implements RPCClientDelegate, SpotifyWebSocketDeleg
           authenticated: true,
         });
         this.spotifyWebSocket.connect().catch((err) => log.error(`WebSocket connect failed: ${err}`));
+      } else {
+        this.spotifyWebSocket.disconnect();
       }
     });
   }

@@ -16,6 +16,17 @@ import { existsSync } from "fs";
 
 const log = createLogger("Server");
 
+process.on("unhandledRejection", (reason) => {
+  const detail =
+    reason instanceof Error ? reason.stack ?? reason.message : String(reason);
+  log.error(`Unhandled promise rejection (continuing): ${detail}`);
+});
+
+process.on("uncaughtException", (err) => {
+  const detail = err instanceof Error ? err.stack ?? err.message : String(err);
+  log.error(`Uncaught exception (continuing): ${detail}`);
+});
+
 const WS_TOPIC = "events";
 let serverRef: Server<unknown> | null = null;
 let wsClientCount = 0;

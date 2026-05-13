@@ -9,6 +9,12 @@ export interface SpotifyWebSocketDelegate {
   onError(error: Error): void;
 }
 
+function isTerminalAuthError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const name = (err as { name?: string }).name;
+  return name === "NotAuthenticatedError" || name === "SpotifyAuthorizationExpiredError";
+}
+
 export class SpotifyWebSocketService {
   private ws: WebSocket | null = null;
   private delegate: SpotifyWebSocketDelegate | null = null;
@@ -25,6 +31,7 @@ export class SpotifyWebSocketService {
   private reconnectAttempts = 0;
   private reconnectBaseDelay = 1000;
   private reconnectMaxDelay = 60_000;
+  private generation = 0;
 
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -91,6 +98,11 @@ export class SpotifyWebSocketService {
       const { dealer } = await this.resolveEndpoints();
       const accessToken = await this.spotify.getValidAccessToken();
 
+      if (!this.shouldMaintainConnection || this.isIntentionalDisconnect) {
+        this.isConnecting = false;
+        return;
+      }
+
       if (this.ws) {
         this.ws.close();
         this.ws = null;
@@ -133,6 +145,7 @@ export class SpotifyWebSocketService {
   }
 
   disconnect(): void {
+    this.generation++;
     this.shouldMaintainConnection = false;
     this.isIntentionalDisconnect = true;
     this.stopPingTimer();
@@ -149,6 +162,7 @@ export class SpotifyWebSocketService {
     this.isConnecting = false;
     this.hasReceivedConnectionId = false;
     this._connectionId = null;
+    this.reconnectAttempts = 0;
     this.delegate?.onConnectionStateChange(false);
 
     setTimeout(() => {
@@ -225,7 +239,11 @@ export class SpotifyWebSocketService {
     this.stopPingTimer();
     this.pingInterval = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send('{"type":"ping"}');
+        try {
+          this.ws.send('{"type":"ping"}');
+        } catch (err) {
+          log.warn(`Ping send failed: ${err}`);
+        }
       }
     }, 10_000);
   }
@@ -260,7 +278,19 @@ export class SpotifyWebSocketService {
     this.tokenRefreshTimer = setTimeout(async () => {
       if (!this._isConnected || !this.shouldMaintainConnection) return;
       log.info("Token refresh interval reached, reconnecting with fresh token...");
-      await this.reconnect();
+      try {
+        await this.reconnect();
+      } catch (err) {
+        if (isTerminalAuthError(err)) {
+          log.warn(
+            `Token-refresh reconnect aborted (auth lost): ${err}. Disconnecting.`
+          );
+          this.disconnect();
+        } else {
+          log.error(`Token-refresh reconnect failed: ${err}`);
+          if (this.shouldMaintainConnection) this.scheduleReconnect();
+        }
+      }
     }, this.tokenRefreshInterval);
   }
 
@@ -307,7 +337,10 @@ export class SpotifyWebSocketService {
           await this.connect();
         } catch (err) {
           log.error(`Reconnect attempt ${this.reconnectAttempts} failed: ${err}`);
-          if (this.shouldMaintainConnection) {
+          if (isTerminalAuthError(err)) {
+            log.warn("Reconnect aborted: auth lost. Stopping reconnect loop.");
+            this.disconnect();
+          } else if (this.shouldMaintainConnection) {
             this.scheduleReconnect();
           }
         }
@@ -324,9 +357,15 @@ export class SpotifyWebSocketService {
 
   async reconnect(): Promise<void> {
     this.disconnect();
+    const cancelGen = this.generation;
     this.reconnectAttempts = 0;
     await new Promise((r) => setTimeout(r, 100));
+    if (this.generation !== cancelGen) {
+      log.info("Reconnect cancelled: disconnected externally during reconnect window");
+      return;
+    }
     this.isIntentionalDisconnect = false;
+    this.shouldMaintainConnection = true;
     await this.connect();
   }
 }

@@ -12,6 +12,20 @@ import { base62ToHex, hexToBase62 } from "../utils/base62";
 
 const log = createLogger("SpotifyService");
 
+export class NotAuthenticatedError extends Error {
+  constructor(message = "Not authenticated") {
+    super(message);
+    this.name = "NotAuthenticatedError";
+  }
+}
+
+export class SpotifyAuthorizationExpiredError extends Error {
+  constructor(message = "Authorization expired") {
+    super(message);
+    this.name = "SpotifyAuthorizationExpiredError";
+  }
+}
+
 export type SpotifyAuthState =
   | { status: "idle" }
   | { status: "loading" }
@@ -41,6 +55,8 @@ export class SpotifyService {
   private inFlightRefreshPromise: Promise<void> | null = null;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
   private tokenRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private authCheckRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private authCheckAttempts = 0;
   private authStateCallbacks: ((state: SpotifyAuthState) => void)[] = [];
   private getUserID: () => string | null;
 
@@ -117,12 +133,20 @@ export class SpotifyService {
   }
 
   async checkAuthStatus(): Promise<void> {
+    // Always cancel any pending retry; this call is the authoritative state probe.
+    if (this.authCheckRetryTimer) {
+      clearTimeout(this.authCheckRetryTimer);
+      this.authCheckRetryTimer = null;
+    }
+
     const userID = this.getUserID();
     if (!userID) {
+      this.authCheckAttempts = 0;
       this.setAuthState({ status: "idle" });
       return;
     }
 
+    this.authCheckAttempts++;
     try {
       const credentials = await this.dbStorage.loadCredentials(userID);
       const needsRefresh =
@@ -143,12 +167,21 @@ export class SpotifyService {
       }
 
       const displayName = await this.getSpotifyDisplayName();
+      this.authCheckAttempts = 0;
       this.setAuthState({ status: "linked", displayName });
     } catch (err: any) {
-      const msg = err.message ?? "";
+      const msg = err?.message ?? String(err);
       if (msg.includes("No credentials found")) {
+        this.authCheckAttempts = 0;
         this.setAuthState({ status: "idle" });
-      } else if (msg.includes("Authorization expired") || msg.includes("invalid_grant")) {
+        return;
+      }
+      if (
+        err instanceof SpotifyAuthorizationExpiredError ||
+        msg.includes("Authorization expired") ||
+        msg.includes("invalid_grant")
+      ) {
+        this.authCheckAttempts = 0;
         log.error(`Auth definitively expired: ${msg}, clearing credentials`);
         try {
           await this.dbStorage.deleteCredentials(userID);
@@ -157,9 +190,33 @@ export class SpotifyService {
         }
         this.cachedCredentials = null;
         this.setAuthState({ status: "idle" });
-      } else {
-        log.warn(`Auth check failed (transient, preserving credentials): ${msg}`);
+        return;
       }
+      if (err instanceof NotAuthenticatedError) {
+        this.authCheckAttempts = 0;
+        log.warn("Auth check aborted: Supabase user no longer present");
+        return;
+      }
+
+      const attempt = this.authCheckAttempts;
+      const maxAttempts = 8;
+      if (attempt >= maxAttempts) {
+        log.warn(
+          `Auth check failed (transient, giving up after ${attempt} attempts): ${msg}`
+        );
+        this.authCheckAttempts = 0;
+        return;
+      }
+      const delayMs = Math.min(60_000, 5_000 * 2 ** Math.min(attempt - 1, 4));
+      log.warn(
+        `Auth check failed (transient, attempt ${attempt}/${maxAttempts}, retry in ${delayMs / 1000}s): ${msg}`
+      );
+      this.authCheckRetryTimer = setTimeout(() => {
+        this.authCheckRetryTimer = null;
+        this.checkAuthStatus().catch((e) =>
+          log.error(`checkAuthStatus retry threw: ${e}`)
+        );
+      }, delayMs);
     }
   }
 
@@ -236,7 +293,7 @@ export class SpotifyService {
 
     this.stopPolling();
     const userID = this.getUserID();
-    if (!userID) throw new Error("No user ID available");
+    if (!userID) throw new NotAuthenticatedError("No user ID available");
 
     const expiresAt = new Date(Date.now() + data.expires_in * 1000);
     this.cachedCredentials = {
@@ -263,12 +320,14 @@ export class SpotifyService {
 
   cancelAuthorization(): void {
     this.stopPolling();
+    this.cancelAuthCheckRetry();
     this.setAuthState({ status: "idle" });
   }
 
   async disconnect(): Promise<void> {
     this.stopPolling();
     this.stopTokenRefreshTimer();
+    this.cancelAuthCheckRetry();
     const userID = this.getUserID();
     if (userID) {
       try {
@@ -281,9 +340,17 @@ export class SpotifyService {
     this.setAuthState({ status: "idle" });
   }
 
+  private cancelAuthCheckRetry(): void {
+    if (this.authCheckRetryTimer) {
+      clearTimeout(this.authCheckRetryTimer);
+      this.authCheckRetryTimer = null;
+    }
+    this.authCheckAttempts = 0;
+  }
+
   async getValidAccessToken(): Promise<string> {
     const userID = this.getUserID();
-    if (!userID) throw new Error("Not authenticated");
+    if (!userID) throw new NotAuthenticatedError();
 
     if (this.cachedCredentials?.userID === userID && this.cachedCredentials.accessTokenExpiresAt) {
       const bufferMs = 5 * 60 * 1000;
@@ -313,7 +380,7 @@ export class SpotifyService {
 
   private async _doRefreshToken(): Promise<void> {
     const userID = this.getUserID();
-    if (!userID) throw new Error("Not authenticated");
+    if (!userID) throw new NotAuthenticatedError();
     let hasRetriedInvalidGrant = false;
 
     while (true) {
@@ -357,7 +424,7 @@ export class SpotifyService {
           continue;
         }
         log.error("Got invalid_grant after retry - authorization truly expired");
-        throw new Error("Authorization expired");
+        throw new SpotifyAuthorizationExpiredError();
       }
 
       if (data.error) throw new Error(data.error_description || data.error);
