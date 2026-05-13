@@ -63,6 +63,7 @@ main.rs
 | WebSocket events to UI | `websocket.rs` | `broadcast_event()`, `WebSocketServer` |
 | OTA updates | `app/msgpack.rs` | `download_ota_chunks_task()`, MD5 verification |
 | `media.control.*` routing | `app/hid_mapping.rs` (shared mapping), `iap2_wrapper.rs` (WebSocket source), `app/msgpack.rs` (phone EA source) | Both sources resolve via `method_to_hid_command`. WebSocket path calls `lib_conn.send_hid_command` directly; Phone EA path forwards through `hid_tx` channel — see MEDIA CONTROL / HID below |
+| `notification.show` (UI alerts) | `app/msgpack.rs` (explicit log branch) | Phone-emitted events with `{id, title, body, category, daysUntilExpiry, timestamp}`. Forwarded to WebSocket UI clients via the existing `broadcast_event` fallthrough; the explicit branch only adds logging. Consumed by `nocturne-ui/src/components/common/notifications/NotificationBridge.jsx`. |
 
 ## CONVENTIONS
 

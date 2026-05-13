@@ -957,6 +957,14 @@ impl MsgPackProtocolHandler {
                     if let Some(has_lifetime) = data.get("hasLifetime").and_then(|v| v.as_bool()) {
                         info!("Lifetime entitlement updated: {}", has_lifetime);
                     }
+                } else if topic == "notification.show" {
+                    let id = data.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                    let title = data.get("title").and_then(|v| v.as_str()).unwrap_or("");
+                    let category = data.get("category").and_then(|v| v.as_str()).unwrap_or("");
+                    info!(
+                        "Forwarding notification.show to UI: id={} category={} title=\"{}\"",
+                        id, category, title
+                    );
                 } else {
                     info!("Broadcasting event to WebSocket clients: {}", topic);
                 }
