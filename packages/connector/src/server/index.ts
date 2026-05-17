@@ -3,6 +3,7 @@ import { cors } from "@elysiajs/cors";
 import type { Server } from "bun";
 import { PORT } from "./config";
 import { createLogger } from "./utils/logger";
+import { waitForClockSync } from "./utils/readiness";
 import { NocturneManager } from "./nocturne-manager";
 import { infoRoutes } from "./routes/info";
 import { powerRoutes } from "./routes/power";
@@ -38,7 +39,7 @@ function broadcast(type: string, data: any): void {
 }
 
 async function fetchAndApplyTimezone(): Promise<void> {
-  const maxAttempts = 3;
+  const maxAttempts = 8;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const tzRes = await fetch("https://api.usenocturne.com/v1/timezone");
@@ -63,11 +64,11 @@ async function fetchAndApplyTimezone(): Promise<void> {
       log.warn(`Timezone fetch attempt ${attempt} failed: ${err}`);
     }
     if (attempt < maxAttempts) {
-      const backoffMs = 1000 * 2 ** (attempt - 1);
+      const backoffMs = Math.min(30_000, 1000 * 2 ** (attempt - 1));
       await new Promise((r) => setTimeout(r, backoffMs));
     }
   }
-  log.warn("Giving up on timezone fetch after 3 attempts; using system default");
+  log.warn(`Giving up on timezone fetch after ${maxAttempts} attempts; using system default`);
 }
 
 async function main() {
@@ -75,7 +76,7 @@ async function main() {
 
   const manager = new NocturneManager();
   manager.setWSBroadcast(broadcast);
-  await manager.initialize();
+  await manager.initializeOffline();
 
   const app = new Elysia()
     .use(cors())
@@ -170,10 +171,29 @@ async function main() {
   app.listen(PORT);
   serverRef = app.server ?? null;
   log.info(`Server listening on http://0.0.0.0:${PORT}`);
+  void runOnlineInit(manager);
+}
 
-  fetchAndApplyTimezone().catch((err) => {
-    log.warn(`Background timezone fetch failed: ${err}`);
-  });
+async function runOnlineInit(manager: NocturneManager): Promise<void> {
+  try {
+    await waitForClockSync();
+  } catch (err) {
+    log.error(`Readiness gate failed unexpectedly: ${err}`);
+    return;
+  }
+
+  try {
+    await fetchAndApplyTimezone();
+  } catch (err) {
+    log.warn(`Timezone fetch failed (non-fatal, using system default): ${err}`);
+  }
+
+  try {
+    await manager.initializeOnline();
+  } catch (err) {
+    log.error(`Auth restore failed after readiness gate: ${err}`);
+  }
+
   manager.spotifyService.checkAuthStatus().catch((err) => {
     log.warn(`Background Spotify auth check failed: ${err}`);
   });

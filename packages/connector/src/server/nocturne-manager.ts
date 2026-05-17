@@ -88,8 +88,7 @@ export class NocturneManager implements RPCClientDelegate, SpotifyWebSocketDeleg
     this.wsBroadcast?.(type, data);
   }
 
-  async initialize(): Promise<void> {
-    await this.authService.initialize();
+  async initializeOffline(): Promise<void> {
     await this.bluetoothService.initialize();
 
     this.bluetoothService.rfcommServer.setDataHandler((devicePath, data) => {
@@ -113,7 +112,12 @@ export class NocturneManager implements RPCClientDelegate, SpotifyWebSocketDeleg
       this.broadcastToWebSocket(`bluetooth.${event}`, data);
     });
 
-    log.info("NocturneManager initialized");
+    log.info("NocturneManager offline init complete (Bluetooth ready)");
+  }
+
+  async initializeOnline(): Promise<void> {
+    await this.authService.initialize();
+    log.info("NocturneManager online init complete (auth restored or pending)");
   }
 
   private handleNewConnection(devicePath: string, address: string): void {

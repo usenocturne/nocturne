@@ -139,12 +139,13 @@ export class AuthService {
           this._currentUser = session.user;
           this.persistSession();
         } else if (event === "SIGNED_OUT") {
-          log.info("Supabase signed out (detected via auth state listener)");
+          log.info(
+            "Supabase signed out (auth state listener); clearing in-memory session, leaving persisted refresh token intact"
+          );
           this.cancelRestoreRetry();
           this._session = null;
           this._currentUser = null;
           this._isInitializing = false;
-          this.clearPersistedSession();
           this.notifyStateChange();
         }
       }, 0);
