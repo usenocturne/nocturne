@@ -15,6 +15,7 @@ const LOAD_MORE_CONTENT_TYPES = new Set([
   "show",
   "mix",
   "liked-songs",
+  "album",
 ]);
 
 const FORMATTED_DATE_OPTIONS = {
@@ -95,7 +96,6 @@ const ContentView = ({
   const [isLazyLoading, setIsLazyLoading] = useState(false);
   const autoLoadTimerRef = useRef(null);
   const loadMoreSentinelRef = useRef(null);
-  const initialAutoLoadTriggeredRef = useRef(false);
   const loadMoreInFlightRef = useRef(false);
   const scrollTrackingRef = useRef({ scrollTop: 0, frameId: null });
 
@@ -221,10 +221,16 @@ const ContentView = ({
             limit: 20,
           });
 
-          const newTracks = (data.items || [])
-            .map((item) => item.track)
-            .filter(Boolean);
-          const newOffset = (data.offset || offset) + newTracks.length;
+          const rawItems = data.items || [];
+          const newTracks = rawItems.map((item) => item.track).filter(Boolean);
+
+          if (rawItems.length === 0) {
+            setNextUrl(null);
+            setHasMoreTracks(false);
+            return;
+          }
+
+          const newOffset = (data.offset || offset) + rawItems.length;
           const totalTracks = data.total || 0;
           const hasMore = totalTracks > 0 && newOffset < totalTracks;
 
@@ -249,12 +255,20 @@ const ContentView = ({
 
           const data = await getPlaylistTracks(playlistId, {
             offset,
-            limit: 50,
+            limit: 20,
             fields: "offset,items(track(name,id,uri,artists(name,id)))",
           });
 
-          const newTracks = data.items.map((item) => item.track);
-          const newOffset = (data.offset || offset) + newTracks.length;
+          const rawItems = Array.isArray(data.items) ? data.items : [];
+
+          if (rawItems.length === 0) {
+            setNextUrl(null);
+            setHasMoreTracks(false);
+            return;
+          }
+
+          const newTracks = rawItems.map((item) => item.track);
+          const newOffset = (data.offset || offset) + rawItems.length;
           const totalTracks = content?.tracks?.total || 0;
           const hasMore =
             data.next || (totalTracks > 0 && newOffset < totalTracks);
@@ -278,11 +292,17 @@ const ContentView = ({
 
           const data = await getShowEpisodes(contentId, {
             offset,
-            limit: 10,
+            limit: 5,
           });
 
           const newEpisodes = data.items || [];
           const totalEpisodes = data.total || 0;
+
+          if (newEpisodes.length === 0) {
+            setNextUrl(null);
+            setHasMoreTracks(false);
+            return;
+          }
 
           setTracks((prevTracks) => {
             const updatedTracks = [...prevTracks, ...newEpisodes];
@@ -299,6 +319,34 @@ const ContentView = ({
           console.error("WebSocket load more episodes failed:", error);
           throw error;
         }
+      } else if (contentType === "album") {
+        try {
+          const offset = tracksLengthRef.current;
+          const data = await getAlbumTracks(contentId, {
+            offset,
+            limit: 50,
+          });
+
+          const rawItems = Array.isArray(data.items) ? data.items : [];
+
+          if (rawItems.length === 0) {
+            setNextUrl(null);
+            setHasMoreTracks(false);
+            return;
+          }
+
+          const newOffset = (data.offset || offset) + rawItems.length;
+          const totalTracks = content?.total_tracks || 0;
+          const hasMore =
+            data.next || (totalTracks > 0 && newOffset < totalTracks);
+
+          setTracks((prevTracks) => [...prevTracks, ...rawItems]);
+          setNextUrl(hasMore ? data.next || "has-more" : null);
+          setHasMoreTracks(hasMore);
+        } catch (error) {
+          console.error("WebSocket load more album tracks failed:", error);
+          throw error;
+        }
       } else {
         console.error(
           "Load more tracks not implemented for content type:",
@@ -308,6 +356,8 @@ const ContentView = ({
       }
     } catch (err) {
       console.error("Error loading more tracks:", err);
+      setNextUrl(null);
+      setHasMoreTracks(false);
     } finally {
       loadMoreInFlightRef.current = false;
       setIsLoadingMore(false);
@@ -321,6 +371,7 @@ const ContentView = ({
     getPlaylistTracks,
     getShowEpisodes,
     getUserTracks,
+    getAlbumTracks,
     radioMixes,
   ]);
 
@@ -333,7 +384,6 @@ const ContentView = ({
     };
 
     clearAutoLoadTimer();
-    initialAutoLoadTriggeredRef.current = false;
     setIsLazyLoading(false);
 
     return clearAutoLoadTimer;
@@ -373,8 +423,7 @@ const ContentView = ({
       !hasMoreTracks ||
       isLoadingMore ||
       isLazyLoading ||
-      tracks.length === 0 ||
-      initialAutoLoadTriggeredRef.current
+      tracks.length === 0
     ) {
       return;
     }
@@ -383,11 +432,9 @@ const ContentView = ({
       clearTimeout(autoLoadTimerRef.current);
     }
 
-    initialAutoLoadTriggeredRef.current = true;
-    setIsLazyLoading(true);
-
     autoLoadTimerRef.current = setTimeout(async () => {
       autoLoadTimerRef.current = null;
+      setIsLazyLoading(true);
 
       try {
         if (!loadMoreInFlightRef.current) {
@@ -497,7 +544,6 @@ const ContentView = ({
           clearTimeout(autoLoadTimerRef.current);
           autoLoadTimerRef.current = null;
         }
-        initialAutoLoadTriggeredRef.current = false;
 
         let contentData;
         let tracksData = [];
@@ -513,7 +559,13 @@ const ContentView = ({
               contentData = albumInfo;
               tracksData = tracksResponse.items || [];
 
-              setHasMoreTracks(false);
+              const currentOffset = tracksResponse.offset || 0;
+              const currentItems = tracksResponse.items?.length || 0;
+              const totalTracks = albumInfo.total_tracks || 0;
+              const hasMore = currentOffset + currentItems < totalTracks;
+
+              setNextUrl(hasMore ? tracksResponse.next || "has-more" : null);
+              setHasMoreTracks(hasMore);
             } catch (error) {
               console.error("WebSocket album fetch failed:", error);
               throw new Error(
@@ -688,7 +740,6 @@ const ContentView = ({
           clearTimeout(autoLoadTimerRef.current);
           autoLoadTimerRef.current = null;
         }
-        initialAutoLoadTriggeredRef.current = false;
 
         const foundMix = radioMixes.find((m) => m.id === contentId);
 
