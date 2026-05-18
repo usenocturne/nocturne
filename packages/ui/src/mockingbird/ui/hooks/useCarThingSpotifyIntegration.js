@@ -4,7 +4,10 @@ import {
   sendNocturneWsRequest,
   addGlobalWsListener,
 } from "../../../hooks/useNocturned";
-import { subscribeToPhoneVolume } from "../../../hooks/useSpotifyPlayerState";
+import {
+  subscribeToPhoneVolume,
+  getActiveDeviceType,
+} from "../../../hooks/useSpotifyPlayerState";
 import { getNpvImageUrl } from "../helpers/ImageSizeHelper";
 import { injectArtwork, retryImage } from "../utils/imageProxy";
 
@@ -571,7 +574,11 @@ export function useCarThingSpotifyIntegration(
 
     if (carThingStores.volumeStore) {
       const adjustVolume = (delta) => {
-        if (carThingStores.playerStore.isOtherMediaPlaying) {
+        const activeDeviceType = getActiveDeviceType();
+        if (
+          carThingStores.playerStore.isOtherMediaPlaying ||
+          activeDeviceType === "SMARTPHONE"
+        ) {
           if (delta > 0) {
             phoneMediaVolumeUp?.();
           } else {
