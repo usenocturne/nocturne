@@ -4,7 +4,7 @@ set -e
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Image build config
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-: "${CONNECTOR_IMAGE_VERSION:="v2.0.0"}"
+: "${CONNECTOR_IMAGE_VERSION:="v2.0.1"}"
 
 : "${ALPINE_BUILD:="3.23"}"
 : "${ALPINE_BUILD_PATCH:="4"}"
