@@ -1,6 +1,6 @@
 {
-    "version": "v4.0.2-${GIT_HASH}",
-    "shortVersion": "v4.0.2",
+    "version": "v4.0.3-${GIT_HASH}",
+    "shortVersion": "v4.0.3",
     "gitHash": "${GIT_HASH}",
     "buildDate": "${BUILD_DATE}"
 }
