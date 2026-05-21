@@ -98,7 +98,7 @@ const Tutorial = ({ onComplete, onStepChange }) => {
     },
     {
       header: "Voice",
-      subtext: "Say \"Hey Nocturne\", then speak to control your music. ",
+      subtext: 'Say "Hey Nocturne", then speak to control your music. ',
       continueType: "button",
     },
     {

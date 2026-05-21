@@ -48,15 +48,15 @@ This pattern exists in `useNocturned.js`, `useSpotifyData.js`, `useSpotifyPlayer
 
 ## WHERE TO LOOK
 
-| Task                       | Start here                                                          |
-| -------------------------- | ------------------------------------------------------------------- |
-| Add new daemon command     | `useNocturned.js` → `sendNocturneWsRequest()`                       |
-| Add new Spotify command    | `useSpotifyWebSocket.js` → `sendSpotifyCommand()`                   |
-| Debug WebSocket connection | `useNocturned.js` → `initializeWebSocket()`, reconnect logic        |
+| Task                       | Start here                                                                                                                                                                                                                                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Add new daemon command     | `useNocturned.js` → `sendNocturneWsRequest()`                                                                                                                                                                                                                                                                                                          |
+| Add new Spotify command    | `useSpotifyWebSocket.js` → `sendSpotifyCommand()`                                                                                                                                                                                                                                                                                                      |
+| Debug WebSocket connection | `useNocturned.js` → `initializeWebSocket()`, reconnect logic                                                                                                                                                                                                                                                                                           |
 | Debug Bluetooth            | `useNocturned.js` → `useBluetooth()` hook, `handleBluetoothEvent()`. Reconnect chain is a **module-level singleton** (`attemptBtReconnect`, `handleBluetoothSingletonMessage`, `handleBluetoothSingletonOpen`) — exactly one chain regardless of how many components mount `useBluetooth()`. Backoff 2s → 60s, infinite retries (no max attempts cap). |
-| Debug playback state       | `useSpotifyPlayerState.js` → `handleNowPlayingEvent()`              |
-| Add new data source        | `useSpotifyData.js` → follow existing fetch pattern with retry      |
-| Change navigation behavior | `useNavigation.js` — handles wheel, keyboard, selection             |
+| Debug playback state       | `useSpotifyPlayerState.js` → `handleNowPlayingEvent()`                                                                                                                                                                                                                                                                                                 |
+| Add new data source        | `useSpotifyData.js` → follow existing fetch pattern with retry                                                                                                                                                                                                                                                                                         |
+| Change navigation behavior | `useNavigation.js` — handles wheel, keyboard, selection                                                                                                                                                                                                                                                                                                |
 
 ## CONVENTIONS
 

@@ -236,6 +236,62 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
   const extractAlbumFromPlayerState = useCallback((playerStateData) => {
     if (!playerStateData?.item) return null;
 
+    const normalizeImgs = (imgs) => {
+      if (!imgs || !Array.isArray(imgs)) return imgs;
+      return imgs.map((img) => {
+        if (!img?.url) return img;
+        const url = img.url;
+        if (
+          url.startsWith("http://") ||
+          url.startsWith("https://") ||
+          url.startsWith("blob:") ||
+          url.startsWith("/")
+        ) {
+          return img;
+        }
+        return { ...img, url: `https://${url}` };
+      });
+    };
+
+    const itemUri = playerStateData.item.uri || "";
+    const contextUri =
+      typeof playerStateData.context?.uri === "string"
+        ? playerStateData.context.uri
+        : "";
+    const isEpisode =
+      playerStateData.item.type === "episode" ||
+      itemUri.startsWith("spotify:episode:") ||
+      contextUri.startsWith("spotify:episode:") ||
+      contextUri.startsWith("spotify:show:");
+
+    if (isEpisode) {
+      if (playerStateData.item.show) {
+        return {
+          ...playerStateData.item.show,
+          images: normalizeImgs(playerStateData.item.show.images),
+          type: "show",
+        };
+      }
+      const showUri = contextUri.startsWith("spotify:show:")
+        ? contextUri
+        : contextUri.startsWith("spotify:episode:")
+          ? contextUri
+          : itemUri;
+      const showId = showUri ? showUri.split(":")[2] || "" : "";
+      const albumLikeName = playerStateData.item.album?.name;
+      const albumLikeImages = normalizeImgs(
+        playerStateData.item.album?.images || [],
+      );
+      return {
+        id: showId,
+        uri: showUri,
+        name: albumLikeName || "Unknown Show",
+        publisher: albumLikeName,
+        images: albumLikeImages,
+        type: "show",
+      };
+    }
+
     if (playerStateData.item.type === "track" || playerStateData.item.album) {
       const currentAlbum =
         playerStateData.item.is_local || playerStateData.item.is_phone_media
@@ -248,10 +304,11 @@ export function useSpotifyData(activeSection, skipInitialFetch = false) {
               type: "local-track",
               uri: playerStateData.item.uri,
             }
-          : playerStateData.item.album;
+          : {
+              ...playerStateData.item.album,
+              images: normalizeImgs(playerStateData.item.album?.images),
+            };
       return currentAlbum;
-    } else if (playerStateData.item.type === "episode") {
-      return playerStateData.item.show;
     }
 
     return null;

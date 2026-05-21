@@ -1333,6 +1333,7 @@ function App() {
         refreshPlaybackState={refreshPlaybackState}
         onOpenContent={handleOpenContent}
         onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
+        onNavigateToNowPlaying={handleNavigateToNowPlaying}
       />
     );
   }

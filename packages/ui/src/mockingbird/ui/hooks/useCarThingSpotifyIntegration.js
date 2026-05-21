@@ -299,6 +299,26 @@ export function useCarThingSpotifyIntegration(
           npvStore.controlButtonsUiState.showOtherMediaControls = false;
         }
 
+        const incomingSpeed = currentPlayback.playback_speed;
+        if (
+          typeof incomingSpeed === "number" &&
+          isFinite(incomingSpeed) &&
+          incomingSpeed > 0
+        ) {
+          const supportedSpeeds = [0.5, 0.8, 1, 1.2, 1.5, 1.8, 2, 2.5, 3, 3.5];
+          let matchedSpeed = supportedSpeeds[0];
+          for (const s of supportedSpeeds) {
+            if (s <= incomingSpeed + 1e-6) {
+              matchedSpeed = s;
+            } else {
+              break;
+            }
+          }
+          if (npvStore.controlButtonsUiState.podcastSpeed !== matchedSpeed) {
+            npvStore.controlButtonsUiState.podcastSpeed = matchedSpeed;
+          }
+        }
+
         const repeatState = currentPlayback.repeat_state;
         const newOnRepeat = repeatState === "context";
         const newOnRepeatOnce = repeatState === "track";
@@ -702,6 +722,7 @@ export function useCarThingSpotifyIntegration(
     toggleShuffle,
     likeTrack,
     unlikeTrack,
+    currentPlayback,
   ]);
 
   useEffect(() => {

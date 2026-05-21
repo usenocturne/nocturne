@@ -12,7 +12,23 @@ function RecentsSection({
   activeSection,
   currentlyPlayingAlbumId,
   onCardClick,
+  onNavigateToNowPlaying,
 }) {
+  const isEpisodeDerivedShow = (album) =>
+    album?.type === "show" &&
+    typeof album?.uri === "string" &&
+    album.uri.startsWith("spotify:episode:");
+
+  const openAlbum = (album) => {
+    if (!album || album.type === "local-track") return;
+    if (isEpisodeDerivedShow(album)) {
+      if (typeof onNavigateToNowPlaying === "function") {
+        onNavigateToNowPlaying();
+      }
+      return;
+    }
+    onCardClick(album.id, album.type === "show" ? "show" : "album");
+  };
   if (isSpotifySkipped) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-full text-white/50 text-2xl text-center">
@@ -54,7 +70,7 @@ function RecentsSection({
   const handleItemSelect = (index) => {
     if (index !== -1 && recentAlbums[index]) {
       const album = recentAlbums[index];
-      onCardClick(album.id, "album");
+      openAlbum(album);
     }
   };
 
@@ -69,10 +85,7 @@ function RecentsSection({
           <div
             style={CARD_SIZE_STYLE}
             className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-            onClick={() =>
-              album.type !== "local-track" &&
-              onCardClick(album.id, album.type === "show" ? "show" : "album")
-            }
+            onClick={() => openAlbum(album)}
           >
             {album.type !== "local-track" ? (
               <SpotifyImage
@@ -95,10 +108,7 @@ function RecentsSection({
 
           <h4
             className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-            onClick={() =>
-              album.type !== "local-track" &&
-              onCardClick(album.id, album.type === "show" ? "show" : "album")
-            }
+            onClick={() => openAlbum(album)}
           >
             {album.name}
           </h4>

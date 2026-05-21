@@ -155,8 +155,7 @@ function PowerMenuOverlay({
   const [brightnessToggled, setBrightnessToggled] = useState(false);
   const [brightnessValue, setBrightnessValue] = useState(180);
   const { settings, updateSetting, isMicLocked } = useSettings();
-  const effectiveMicMuted =
-    !!isMicLocked || (settings?.micMuted ?? false);
+  const effectiveMicMuted = !!isMicLocked || (settings?.micMuted ?? false);
 
   useEffect(() => {
     if (show) {

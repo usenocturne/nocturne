@@ -837,9 +837,7 @@ export default function Settings({ onOpenDonationModal, setActiveSection }) {
           isMicWebLocked || isMicSubLocked || isMockingbirdSubLocked;
 
         const effectiveRawValue =
-          isMicWebLocked || isMicSubLocked
-            ? true
-            : settings[item.storageKey];
+          isMicWebLocked || isMicSubLocked ? true : settings[item.storageKey];
         const displayedValue = item.invert
           ? !effectiveRawValue
           : effectiveRawValue;

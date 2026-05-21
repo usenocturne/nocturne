@@ -125,6 +125,12 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     const isEpisode =
       data.currently_playing_type === "episode" ||
       (data?.item && data.item.type === "episode") ||
+      (data?.item &&
+        typeof data.item.uri === "string" &&
+        data.item.uri.startsWith("spotify:episode:")) ||
+      (data?.context &&
+        typeof data.context.uri === "string" &&
+        data.context.uri.startsWith("spotify:episode:")) ||
       (data?.item && data.item.show && !data.item.album && !data.item.artists);
     const hasIncompleteEpisodeData =
       data.currently_playing_type === "episode" && !data.item;
@@ -212,6 +218,49 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         };
       }
 
+      if (data.item && isEpisode && !itemWithArtwork?.show?.name) {
+        const albumLikeImages =
+          itemWithArtwork?.album?.images || data.item?.album?.images || [];
+        const albumLikeName =
+          itemWithArtwork?.album?.name || data.item?.album?.name;
+        const ctxUri =
+          typeof data.context?.uri === "string" ? data.context.uri : "";
+        const rawItemUri = itemWithArtwork?.uri || data.item?.uri || "";
+        const fallbackUri = ctxUri.startsWith("spotify:show:")
+          ? ctxUri
+          : ctxUri.startsWith("spotify:episode:")
+            ? ctxUri
+            : rawItemUri || ctxUri || "";
+        const existingShow = itemWithArtwork?.show;
+        const showUri = existingShow?.uri || fallbackUri;
+        const showId =
+          existingShow?.id || (showUri ? showUri.split(":")[2] : undefined);
+        const showName = existingShow?.name || albumLikeName || "Unknown Show";
+        const showPublisher =
+          existingShow?.publisher || existingShow?.name || albumLikeName;
+        const rawShowImages =
+          existingShow?.images?.length > 0
+            ? existingShow.images
+            : albumLikeImages;
+        const normalizedShowImages = normalizeImageArray(rawShowImages) || [];
+
+        itemWithArtwork = {
+          ...itemWithArtwork,
+          type: "episode",
+          images:
+            itemWithArtwork?.images?.length > 0
+              ? itemWithArtwork.images
+              : normalizedShowImages,
+          show: {
+            id: showId,
+            uri: showUri,
+            name: showName,
+            publisher: showPublisher,
+            images: normalizedShowImages,
+          },
+        };
+      }
+
       if (
         itemWithArtwork?.album?.images &&
         !shouldPreservePrevBlob &&
@@ -265,7 +314,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       return newPlayback;
     });
 
-    if (data?.item && data.item.type === "track") {
+    if (data?.item && data.item.type === "track" && !isEpisode) {
       const trackUri = data.item.uri;
       let cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
@@ -305,21 +354,43 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           timestamp: new Date().toISOString(),
         });
       }
-    } else if (data?.item && data.item.type === "episode") {
-      const currentShow = data.item.show;
+    } else if (isEpisode && data?.item) {
       const trackUri = data.item.uri;
       const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
 
+      const rawShow = data.item.show;
+      const albumLikeImages = data.item.album?.images || [];
+      const albumLikeName = data.item.album?.name;
+      const contextUri =
+        typeof data.context?.uri === "string" ? data.context.uri : "";
+      const showUri = rawShow?.uri
+        ? rawShow.uri
+        : contextUri.startsWith("spotify:show:")
+          ? contextUri
+          : contextUri.startsWith("spotify:episode:")
+            ? contextUri
+            : trackUri || "";
+      const showId = rawShow?.id || showUri.split(":")[2] || "";
+      const showName = rawShow?.name || albumLikeName || "Unknown Show";
+      const showPublisher =
+        rawShow?.publisher || rawShow?.name || albumLikeName;
+      const showImages = rawShow?.images?.length
+        ? rawShow.images
+        : albumLikeImages;
+
       const showAsAlbum = {
-        ...currentShow,
+        id: showId,
+        uri: showUri,
+        name: showName,
+        publisher: showPublisher,
         images: cachedArtworkUrl
           ? [{ url: cachedArtworkUrl }]
-          : normalizeImageArray(currentShow?.images),
-        artists: currentShow.publisher
+          : normalizeImageArray(showImages),
+        artists: showPublisher
           ? [
               {
-                id: `publisher-${currentShow.id}`,
-                name: currentShow.publisher,
+                id: `publisher-${showId}`,
+                name: showPublisher,
                 type: "show",
               },
             ]
@@ -328,11 +399,8 @@ export function useSpotifyPlayerState(immediateLoad = false) {
       };
       setCurrentlyPlayingAlbum(showAsAlbum);
 
-      if (currentShow?.id && data.item.id) {
-        localStorage.setItem(
-          `lastPlayedEpisode_${currentShow.id}`,
-          data.item.id,
-        );
+      if (showId && data.item.id) {
+        localStorage.setItem(`lastPlayedEpisode_${showId}`, data.item.id);
       }
     }
 

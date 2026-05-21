@@ -290,9 +290,7 @@ export function useSpotifyWebSocket() {
     (appReady || deviceConnected) &&
     spotifyAuthenticated &&
     !spotifySkipped &&
-    (appSubscribed ||
-      appHasLifetime ||
-      getAppReadyState().platform === "web");
+    (appSubscribed || appHasLifetime || getAppReadyState().platform === "web");
 
   useEffect(() => {
     listenerIdRef.current = addMessageListener(

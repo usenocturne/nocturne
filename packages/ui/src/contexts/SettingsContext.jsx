@@ -92,10 +92,7 @@ export function SettingsProvider({ children }) {
     if (appPlatform === null) return;
     if (!isMicLocked) return;
     sendNocturneWsRequest("wakeword.pause", {}).catch((err) => {
-      console.error(
-        "Failed to sync microphone runtime state (mic lock):",
-        err,
-      );
+      console.error("Failed to sync microphone runtime state (mic lock):", err);
     });
   }, [appPlatform, isMicLocked]);
 
@@ -160,9 +157,7 @@ export function SettingsProvider({ children }) {
   };
 
   return (
-    <SettingsContext.Provider
-      value={{ settings, updateSetting, isMicLocked }}
-    >
+    <SettingsContext.Provider value={{ settings, updateSetting, isMicLocked }}>
       {children}
     </SettingsContext.Provider>
   );

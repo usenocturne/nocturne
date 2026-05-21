@@ -33,6 +33,7 @@ export default function Home({
   refreshData,
   refreshPlaybackState,
   onOpenContent,
+  onNavigateToNowPlaying,
 }) {
   const { playDJMix } = useSpotifyPlayerControls(currentPlayback);
   const [showDonationModal, setShowDonationModal] = useState(false);
@@ -131,6 +132,7 @@ export default function Home({
             activeSection={activeSection}
             currentlyPlayingAlbumId={currentlyPlayingAlbumId}
             onCardClick={onOpenContent}
+            onNavigateToNowPlaying={onNavigateToNowPlaying}
           />
         );
       case "library":

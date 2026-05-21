@@ -161,6 +161,28 @@ function NowPlaying({
     }
   }, [currentPlayback?.device?.volume_percent, updateVolumeFromDevice]);
 
+  const roundDownToSupportedSpeed = useCallback((speed) => {
+    if (typeof speed !== "number" || !isFinite(speed) || speed <= 0) {
+      return null;
+    }
+    const supportedSpeeds = [0.5, 0.8, 1, 1.2, 1.5, 2];
+    let matched = supportedSpeeds[0];
+    for (const s of supportedSpeeds) {
+      if (s <= speed + 1e-6) {
+        matched = s;
+      } else {
+        break;
+      }
+    }
+    return matched;
+  }, []);
+
+  useEffect(() => {
+    const matched = roundDownToSupportedSpeed(currentPlayback?.playback_speed);
+    if (matched === null) return;
+    setPlaybackSpeed((prev) => (prev === matched ? prev : matched));
+  }, [currentPlayback?.playback_speed, roundDownToSupportedSpeed]);
+
   const showVolumeOverlay = useCallback(() => {
     volumeLastAdjustedRef.current = Date.now();
 
@@ -757,12 +779,15 @@ function NowPlaying({
     try {
       const options = await getCurrentDeviceOptions();
       if (options && options.playback_speed !== undefined) {
-        setPlaybackSpeed(options.playback_speed);
+        const matched = roundDownToSupportedSpeed(options.playback_speed);
+        if (matched !== null) {
+          setPlaybackSpeed(matched);
+        }
       }
     } catch (error) {
       console.error("Error fetching current playback speed:", error);
     }
-  }, [getCurrentDeviceOptions]);
+  }, [getCurrentDeviceOptions, roundDownToSupportedSpeed]);
 
   const handleSpeedChange = async (speed) => {
     setPlaybackSpeed(speed);
