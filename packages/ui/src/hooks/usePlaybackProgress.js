@@ -115,6 +115,19 @@ export function usePlaybackProgress(currentPlayback, refreshPlaybackState) {
   const prevRepeatStateRef = useRef(null);
   const trackIdRef = useRef(null);
   const wasAnimatingRef = useRef(false);
+  const REFRESH_INTERVAL_MS = 15000;
+
+  const scheduleNextRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
+      refreshTimeoutRef.current = null;
+      refreshPlaybackState();
+      lastRefreshTimeRef.current = Date.now();
+      scheduleNextRefresh();
+    }, REFRESH_INTERVAL_MS);
+  }, [refreshPlaybackState]);
 
   const triggerRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) {
@@ -124,12 +137,15 @@ export function usePlaybackProgress(currentPlayback, refreshPlaybackState) {
 
     refreshPlaybackState();
     lastRefreshTimeRef.current = Date.now();
-  }, [refreshPlaybackState]);
+    scheduleNextRefresh();
+  }, [refreshPlaybackState, scheduleNextRefresh]);
 
   useEffect(() => {
     if (!initialRefreshDoneRef.current) {
       initialRefreshDoneRef.current = true;
       triggerRefresh();
+    } else if (!refreshTimeoutRef.current) {
+      scheduleNextRefresh();
     }
 
     return () => {
@@ -138,7 +154,7 @@ export function usePlaybackProgress(currentPlayback, refreshPlaybackState) {
         refreshTimeoutRef.current = null;
       }
     };
-  }, [triggerRefresh]);
+  }, [triggerRefresh, scheduleNextRefresh]);
 
   useEffect(() => {
     const id = setInterval(() => {
