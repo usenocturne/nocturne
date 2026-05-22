@@ -12,6 +12,7 @@ export class PresetsUiState {
   viewStore;
   npvStore;
   interappActions;
+  tracklistStore;
 
   selectedPresetNumber = 1;
   isShowingPresets = false;
@@ -29,6 +30,7 @@ export class PresetsUiState {
     viewStore,
     npvStore,
     interappActions,
+    tracklistStore,
   ) {
     this.presetsDataStore = presetsDataStore;
     this.presetsUbiLogger = presetsUbiLogger;
@@ -39,6 +41,7 @@ export class PresetsUiState {
     this.viewStore = viewStore;
     this.npvStore = npvStore;
     this.interappActions = interappActions;
+    this.tracklistStore = tracklistStore;
 
     makeAutoObservable(this, {
       presetsDataStore: false,
@@ -50,6 +53,7 @@ export class PresetsUiState {
       viewStore: false,
       npvStore: false,
       interappActions: false,
+      tracklistStore: false,
     });
   }
 
@@ -169,7 +173,25 @@ export class PresetsUiState {
     );
   }
 
+  getViewedTracklistUri() {
+    if (!this.viewStore?.isTracklist) return null;
+    const ctx = this.tracklistStore?.tracklistUiState?.contextItem;
+    if (
+      !ctx ||
+      typeof ctx.uri !== "string" ||
+      !ctx.uri.startsWith("spotify:")
+    ) {
+      return null;
+    }
+    return ctx.uri;
+  }
+
   getCurrentSaveableUri() {
+    const viewedUri = this.getViewedTracklistUri();
+    if (viewedUri) {
+      return viewedUri;
+    }
+
     const rootStore = window.carThingRootStore;
     const currentPlayback = rootStore?.currentPlayback;
 
@@ -211,13 +233,24 @@ export class PresetsUiState {
     const currentPlayback = rootStore?.currentPlayback;
     const npvUiState = rootStore?.npvStore?.playingInfoUiState;
 
-    let contextName = "Unknown";
+    const viewedContextItem =
+      this.viewStore?.isTracklist &&
+      this.tracklistStore?.tracklistUiState?.contextItem?.uri === uri
+        ? this.tracklistStore.tracklistUiState.contextItem
+        : null;
+
+    let contextName = viewedContextItem?.title || "Unknown";
     let contextDescription = "";
-    let contextImage = currentPlayback?.item?.album?.images?.[0]?.url || "";
+    let contextImage =
+      viewedContextItem?.image_id ||
+      currentPlayback?.item?.album?.images?.[0]?.url ||
+      "";
 
     if (uri.includes("spotify:artist:")) {
-      contextName =
-        currentPlayback?.item?.artists?.[0]?.name || "Unknown Artist";
+      if (!viewedContextItem) {
+        contextName =
+          currentPlayback?.item?.artists?.[0]?.name || "Unknown Artist";
+      }
       contextDescription = "Artist";
 
       try {
@@ -238,7 +271,9 @@ export class PresetsUiState {
         contextName = "DJ";
         contextDescription = "Spotify";
       } else {
-        contextName = npvUiState?.contextHeaderTitle || "Unknown Playlist";
+        if (!viewedContextItem) {
+          contextName = npvUiState?.contextHeaderTitle || "Unknown Playlist";
+        }
         contextDescription = "Playlist";
       }
 
@@ -254,17 +289,22 @@ export class PresetsUiState {
         if (result?.name) contextName = result.name;
       } catch {}
     } else if (uri.includes("spotify:album:")) {
-      contextName =
-        currentPlayback?.item?.album?.name ||
-        (npvUiState?.contextHeaderTitle !== "Queue"
-          ? npvUiState?.contextHeaderTitle
-          : null) ||
-        "Unknown Album";
-      contextDescription = currentPlayback?.item?.artists
-        ? currentPlayback.item.artists.map((a) => a.name).join(", ")
-        : "";
+      if (!viewedContextItem) {
+        contextName =
+          currentPlayback?.item?.album?.name ||
+          (npvUiState?.contextHeaderTitle !== "Queue"
+            ? npvUiState?.contextHeaderTitle
+            : null) ||
+          "Unknown Album";
+      }
+      contextDescription =
+        !viewedContextItem && currentPlayback?.item?.artists
+          ? currentPlayback.item.artists.map((a) => a.name).join(", ")
+          : "";
     } else if (uri.includes("spotify:track:")) {
-      contextName = currentPlayback?.item?.name || "Unknown Track";
+      if (!viewedContextItem) {
+        contextName = currentPlayback?.item?.name || "Unknown Track";
+      }
       contextDescription = currentPlayback?.item?.artists
         ? currentPlayback.item.artists.map((a) => a.name).join(", ")
         : "";
@@ -272,17 +312,21 @@ export class PresetsUiState {
       uri.includes("spotify:show:") ||
       uri.includes("spotify:episode:")
     ) {
-      contextName =
-        currentPlayback?.item?.show?.name ||
-        currentPlayback?.item?.name ||
-        "Unknown";
+      if (!viewedContextItem) {
+        contextName =
+          currentPlayback?.item?.show?.name ||
+          currentPlayback?.item?.name ||
+          "Unknown";
+        contextImage = currentPlayback?.item?.images?.[0]?.url || contextImage;
+      }
       contextDescription = "Podcast";
-      contextImage = currentPlayback?.item?.images?.[0]?.url || contextImage;
     } else {
-      contextName =
-        npvUiState?.contextHeaderTitle ||
-        currentPlayback?.item?.name ||
-        "Unknown";
+      if (!viewedContextItem) {
+        contextName =
+          npvUiState?.contextHeaderTitle ||
+          currentPlayback?.item?.name ||
+          "Unknown";
+      }
       contextDescription = currentPlayback?.item?.artists
         ? currentPlayback.item.artists.map((a) => a.name).join(", ")
         : "";
@@ -546,6 +590,7 @@ export class PresetsController {
       rootStore.viewStore,
       rootStore.npvStore,
       rootStore.interappActions,
+      rootStore.tracklistStore,
     );
 
     makeAutoObservable(this, {
