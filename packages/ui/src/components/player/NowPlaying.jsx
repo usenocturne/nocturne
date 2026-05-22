@@ -99,7 +99,7 @@ function NowPlaying({
   const { elapsedTimeEnabled } = useElapsedTime();
   const { settings } = useSettings();
 
-  const { getPlaylist } = useSpotifyWebSocket();
+  const { getPlaylist, getArtist } = useSpotifyWebSocket();
 
   const {
     playTrack,
@@ -404,11 +404,29 @@ function NowPlaying({
   } = trackInfo;
 
   const contextUri = currentPlayback?.context?.uri;
-  const playlistId = useMemo(() => {
-    if (contextUri && contextUri.startsWith("spotify:playlist:")) {
-      const parts = contextUri.split(":");
-      return parts[2] || null;
+
+  const bindableContext = useMemo(() => {
+    if (!contextUri) return null;
+
+    if (/^spotify:user:[^:]+:collection$/.test(contextUri)) {
+      return { type: "liked-songs", id: "liked-songs" };
     }
+
+    const parts = contextUri.split(":");
+    if (parts.length >= 3 && parts[0] === "spotify") {
+      const kind = parts[1];
+      const id = parts[2];
+      if (!id) return null;
+      if (
+        kind === "playlist" ||
+        kind === "album" ||
+        kind === "artist" ||
+        kind === "show"
+      ) {
+        return { type: kind, id };
+      }
+    }
+
     return null;
   }, [contextUri]);
 
@@ -418,37 +436,163 @@ function NowPlaying({
   });
 
   useEffect(() => {
+    if (bindableContext?.type !== "playlist") {
+      setPlaylistDetails({ name: "", image: "" });
+      return;
+    }
+    let cancelled = false;
     const fetchPlaylistDetails = async () => {
-      if (!playlistId) {
-        setPlaylistDetails({ name: "", image: "" });
-        return;
-      }
       try {
-        const data = await getPlaylist(playlistId, "id,name,images");
+        const data = await getPlaylist(bindableContext.id, "id,name,images");
+        if (cancelled) return;
         setPlaylistDetails({
           name: data.name || "",
           image: data.images?.[1]?.url || data.images?.[0]?.url || "",
         });
       } catch (err) {
         console.error("Failed to fetch playlist details", err);
-        setPlaylistDetails({ name: "", image: "" });
+        if (!cancelled) setPlaylistDetails({ name: "", image: "" });
       }
     };
 
     fetchPlaylistDetails();
-  }, [playlistId, getPlaylist]);
+    return () => {
+      cancelled = true;
+    };
+  }, [bindableContext?.type, bindableContext?.id, getPlaylist]);
+
+  const [artistDetails, setArtistDetails] = useState({ name: "", image: "" });
+
+  useEffect(() => {
+    if (bindableContext?.type !== "artist") {
+      setArtistDetails({ name: "", image: "" });
+      return;
+    }
+    let cancelled = false;
+    const fetchArtistDetails = async () => {
+      try {
+        const data = await getArtist(bindableContext.id);
+        if (cancelled) return;
+        setArtistDetails({
+          name: data?.name || "",
+          image: data?.images?.[1]?.url || data?.images?.[0]?.url || "",
+        });
+      } catch (err) {
+        console.error("Failed to fetch artist details", err);
+        if (!cancelled) setArtistDetails({ name: "", image: "" });
+      }
+    };
+
+    fetchArtistDetails();
+    return () => {
+      cancelled = true;
+    };
+  }, [bindableContext?.type, bindableContext?.id, getArtist]);
+
+  const bindingFields = useMemo(() => {
+    if (!bindableContext) {
+      return {
+        contentId: null,
+        contentType: null,
+        contentImage: "",
+        contentName: "",
+      };
+    }
+
+    const { type, id } = bindableContext;
+
+    if (type === "playlist") {
+      return {
+        contentId: id,
+        contentType: "playlist",
+        contentImage:
+          playlistDetails.image ||
+          albumImages?.[1]?.url ||
+          albumImages?.[0]?.url ||
+          "",
+        contentName: playlistDetails.name || trackName || "",
+      };
+    }
+
+    if (type === "album") {
+      const album = currentPlayback?.item?.album;
+      return {
+        contentId: id,
+        contentType: "album",
+        contentImage:
+          album?.images?.[1]?.url ||
+          album?.images?.[0]?.url ||
+          albumImages?.[1]?.url ||
+          albumImages?.[0]?.url ||
+          "",
+        contentName: album?.name || "",
+      };
+    }
+
+    if (type === "artist") {
+      return {
+        contentId: id,
+        contentType: "artist",
+        contentImage:
+          artistDetails.image ||
+          albumImages?.[1]?.url ||
+          albumImages?.[0]?.url ||
+          "",
+        contentName:
+          artistDetails.name || currentPlayback?.item?.artists?.[0]?.name || "",
+      };
+    }
+
+    if (type === "show") {
+      const show = currentPlayback?.item?.show;
+      return {
+        contentId: id,
+        contentType: "show",
+        contentImage:
+          show?.images?.[1]?.url ||
+          show?.images?.[0]?.url ||
+          albumImages?.[1]?.url ||
+          albumImages?.[0]?.url ||
+          "",
+        contentName: show?.name || "",
+      };
+    }
+
+    if (type === "liked-songs") {
+      return {
+        contentId: "liked-songs",
+        contentType: "liked-songs",
+        contentImage: "/images/liked-songs.webp",
+        contentName: "Liked Songs",
+      };
+    }
+
+    return {
+      contentId: null,
+      contentType: null,
+      contentImage: "",
+      contentName: "",
+    };
+  }, [
+    bindableContext,
+    playlistDetails,
+    artistDetails,
+    currentPlayback,
+    albumImages,
+    trackName,
+  ]);
 
   const { showMappingOverlay, activeButton } = useButtonMapping({
-    contentId: playlistId,
-    contentType: playlistId ? "playlist" : null,
-    contentImage: playlistId
-      ? playlistDetails.image
-      : albumImages?.[1]?.url ||
-        albumImages?.[0]?.url ||
-        "/images/not-playing.webp",
-    contentName: playlistId ? playlistDetails.name : trackName,
+    contentId: bindingFields.contentId,
+    contentType: bindingFields.contentType,
+    contentImage: bindingFields.contentImage,
+    contentName: bindingFields.contentName,
     playTrack,
-    isActive: !!playlistId && !isLocalMedia && !isPhoneMedia,
+    isActive:
+      !!bindingFields.contentId &&
+      !!bindingFields.contentType &&
+      !isLocalMedia &&
+      !isPhoneMedia,
     setIgnoreNextRelease,
   });
 
