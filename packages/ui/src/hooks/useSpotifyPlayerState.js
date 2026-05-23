@@ -511,7 +511,10 @@ export function useSpotifyPlayerState(immediateLoad = false) {
     const handlePlayerStateChanged = (data) => {
       if (
         data.type === "event" &&
-        data.topic === "spotify.player.device_state_changed"
+        (data.topic === "spotify.player.device_state_changed" ||
+          data.topic === "spotify.player.update" ||
+          data.topic === "spotify.player.state_changed" ||
+          data.topic === "spotify.player.volume_changed")
       ) {
         lastDealerEventTimestamp = Date.now();
         const payloads = data.data?.payloads || [];
@@ -957,6 +960,27 @@ export function useSpotifyPlayerState(immediateLoad = false) {
           if (currentItem && !currentItem.is_phone_media) {
             const incomingTitle = media.MediaItemTitle?.toLowerCase().trim();
             const currentTitle = currentItem.name?.toLowerCase().trim();
+            const incomingArtistRaw = media.MediaItemArtist?.trim();
+            const isRealSpotify =
+              typeof currentItem.uri === "string" &&
+              currentItem.uri.startsWith("spotify:") &&
+              !currentItem.is_spotify_pending;
+            if (isRealSpotify) {
+              const isListeningOnArtifact =
+                !!incomingArtistRaw &&
+                incomingArtistRaw.startsWith("Listening on ");
+              const isSameTitle =
+                !!incomingTitle &&
+                !!currentTitle &&
+                incomingTitle === currentTitle;
+              const isComboTitle =
+                !!incomingTitle &&
+                !!currentTitle &&
+                incomingTitle.startsWith(currentTitle + " • ");
+              if (isListeningOnArtifact || isSameTitle || isComboTitle) {
+                return;
+              }
+            }
             const titleMatches =
               !!incomingTitle &&
               !!currentTitle &&
