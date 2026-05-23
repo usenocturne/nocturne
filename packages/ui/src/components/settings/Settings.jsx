@@ -181,6 +181,15 @@ const settingsStructure = {
         storageKey: "knobSeeksPlaybackEnabled",
         defaultValue: false,
       },
+      {
+        id: "idle-lock",
+        title: "Idle lock screen",
+        type: "toggle",
+        description:
+          "Lock Now Playing after 5 minutes idle while paused. Returns on resume.",
+        storageKey: "idleLockEnabled",
+        defaultValue: false,
+      },
     ],
   },
   credits: {

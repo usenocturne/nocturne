@@ -45,6 +45,8 @@ import {
 } from "../common/icons";
 import { generateRandomString } from "../../utils/helpers";
 
+const IDLE_LOCK_MS = 5 * 60 * 1000;
+
 function NowPlaying({
   currentPlayback,
   playbackProgress,
@@ -55,6 +57,7 @@ function NowPlaying({
   onNavigateToAlbum,
   setIgnoreNextRelease,
   isReceivingNowPlayingUpdates = false,
+  onIdleLock,
 }) {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
@@ -73,6 +76,7 @@ function NowPlaying({
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
   const [showDeviceSwitcher, setShowDeviceSwitcher] = useState(false);
 
+  const idleLockActivityHandlerRef = useRef(null);
   const volumeTimerRef = useRef(null);
   const volumeLastAdjustedRef = useRef(0);
   const lastWheelEventRef = useRef(0);
@@ -454,6 +458,8 @@ function NowPlaying({
 
   const handleWheel = useCallback(
     (e) => {
+      idleLockActivityHandlerRef.current?.();
+
       if (
         settings.knobSeeksPlaybackEnabled &&
         !isPhoneMedia &&
@@ -625,6 +631,64 @@ function NowPlaying({
     onSwipeDown: handleSwipeDown,
     isActive: true,
   });
+
+  const isPlayingRef = useRef(currentPlayback?.is_playing);
+  isPlayingRef.current = currentPlayback?.is_playing;
+
+  useEffect(() => {
+    if (
+      !settings.idleLockEnabled ||
+      currentPlayback?.is_playing ||
+      !onIdleLock
+    ) {
+      return;
+    }
+
+    let lastActivity = Date.now();
+    let timeoutId = null;
+
+    const schedule = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      const remaining = IDLE_LOCK_MS - (Date.now() - lastActivity);
+      timeoutId = setTimeout(
+        () => {
+          if (!isPlayingRef.current) onIdleLock();
+        },
+        Math.max(0, remaining),
+      );
+    };
+
+    const markActivity = () => {
+      lastActivity = Date.now();
+      schedule();
+    };
+
+    idleLockActivityHandlerRef.current = markActivity;
+
+    const events = [
+      ["pointerdown", document, { capture: true, passive: true }],
+      ["touchstart", document, { capture: true, passive: true }],
+      ["click", document, { capture: true, passive: true }],
+      ["wheel", document, { capture: true, passive: true }],
+      ["keydown", window, { capture: true }],
+    ];
+
+    schedule();
+
+    events.forEach(([event, target, options]) => {
+      target.addEventListener(event, markActivity, options);
+    });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (idleLockActivityHandlerRef.current === markActivity) {
+        idleLockActivityHandlerRef.current = null;
+      }
+      events.forEach(([event, target, options]) => {
+        target.removeEventListener(event, markActivity, options);
+      });
+    };
+  }, [settings.idleLockEnabled, currentPlayback?.is_playing, onIdleLock]);
 
   useEffect(() => {
     if (isLocalMedia || isPhoneMedia) {

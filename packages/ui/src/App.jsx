@@ -297,6 +297,7 @@ function App() {
   const [activeSection, setActiveSection] = useState("recents");
   const previousSectionRef = useRef("recents");
   const activeSectionRef = useRef(activeSection);
+  const idleLockActiveRef = useRef(false);
 
   useEffect(() => {
     activeSectionRef.current = activeSection;
@@ -1021,6 +1022,35 @@ function App() {
     viewingContent,
   ]);
 
+  const handleIdleLockFromNowPlaying = useCallback(() => {
+    if (activeSectionRef.current !== "nowPlaying") return;
+
+    previousSectionRef.current = "nowPlaying";
+    idleLockActiveRef.current = true;
+
+    activeSectionRef.current = "lock";
+    setActiveSection("lock");
+  }, []);
+
+  const handleCloseLockView = useCallback(() => {
+    idleLockActiveRef.current = false;
+    setActiveSection("recents");
+  }, []);
+
+  useEffect(() => {
+    if (!currentPlayback?.is_playing || !idleLockActiveRef.current) return;
+
+    const isLocked = activeSectionRef.current === "lock";
+    const target = previousSectionRef.current ?? "nowPlaying";
+
+    if (isLocked) {
+      setActiveSection(target);
+      activeSectionRef.current = target;
+    }
+
+    idleLockActiveRef.current = false;
+  }, [currentPlayback?.is_playing]);
+
   useEffect(() => {
     const holdTimerRef = { current: null };
     const longPressTriggeredRef = { current: false };
@@ -1074,10 +1104,12 @@ function App() {
       }
 
       if (activeSectionRef.current === "lock") {
+        idleLockActiveRef.current = false;
         const target = previousSectionRef.current || "recents";
         setActiveSection(target);
         activeSectionRef.current = target;
       } else {
+        idleLockActiveRef.current = false;
         previousSectionRef.current = activeSectionRef.current;
         setActiveSection("lock");
         activeSectionRef.current = "lock";
@@ -1286,6 +1318,7 @@ function App() {
         onNavigateToAlbum={handleNavigateToAlbumFromNowPlaying}
         setIgnoreNextRelease={setIgnoreNextRelease}
         isReceivingNowPlayingUpdates={isReceivingNowPlayingUpdates}
+        onIdleLock={handleIdleLockFromNowPlaying}
       />
     );
   } else if (activeSection === "lock") {
@@ -1294,7 +1327,7 @@ function App() {
         currentPlayback={currentPlayback}
         refreshPlaybackState={refreshPlaybackState}
         updateGradientColors={updateGradientColors}
-        onClose={() => setActiveSection("recents")}
+        onClose={handleCloseLockView}
       />
     );
   } else if (viewingContent) {
