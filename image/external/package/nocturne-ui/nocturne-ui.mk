@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-NOCTURNE_UI_VERSION = v4.0.3
+NOCTURNE_UI_VERSION = v4.0.4
 NOCTURNE_UI_SOURCE = nocturne-ui.zip
 NOCTURNE_UI_SITE = https://nightly.link/usenocturne/nocturne-ui/workflows/build/$(NOCTURNE_UI_VERSION)
 NOCTURNE_UI_METHOD = wget

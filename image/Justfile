@@ -1,6 +1,9 @@
+host_cc := env_var_or_default("HOSTCC", "/usr/bin/gcc-15")
+host_cxx := env_var_or_default("HOSTCXX", "/usr/bin/g++-15")
+
 menuconfig:
-    [ -f output/.config ] || make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" defconfig
-    make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" menuconfig
+    [ -f output/.config ] || make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} defconfig
+    make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} menuconfig
 
 copyconfig:
     rm -f configs/nocturne_defconfig
@@ -14,7 +17,7 @@ cleandeps:
     rm -rf buildroot/dl/nocturned buildroot/dl/nocturne-ui output/build/nocturned* output/build/nocturne-ui*
 
 install package:
-    make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" {{package}}-install
+    make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} {{package}}-install
 
 flash slot:
     dd if=output/images/rootfs.ext2 bs=1M status=progress | ssh -o StrictHostKeyChecking=no root@172.16.42.2 dd of=/dev/system_{{slot}} bs=1M
@@ -29,3 +32,4 @@ pre-commit-install:
 
 lint:
     pre-commit run --all-files
+
