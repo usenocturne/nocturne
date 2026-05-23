@@ -19,7 +19,9 @@ let spotifyFallbackTimeout = null;
 let cachedActiveDeviceType = null;
 let progressResetSignal = null;
 let nowPlayingTrackLatch = null;
-const NOWPLAYING_PRECEDENCE_WINDOW_MS = 300000;
+let lastDealerEventTimestamp = 0;
+const NOWPLAYING_PRECEDENCE_WINDOW_MS = 30000;
+const DEALER_FRESH_THRESHOLD_MS = 8000;
 
 export const getActiveDeviceType = () => cachedActiveDeviceType;
 
@@ -511,6 +513,7 @@ export function useSpotifyPlayerState(immediateLoad = false) {
         data.type === "event" &&
         data.topic === "spotify.player.device_state_changed"
       ) {
+        lastDealerEventTimestamp = Date.now();
         const payloads = data.data?.payloads || [];
 
         if (payloads.length > 0 && payloads[0]?.cluster) {
@@ -723,7 +726,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                 incomingDeviceTitle &&
                 incomingDeviceTitle !== nowPlayingTrackLatch.title
               ) {
-                nowPlayingTrackLatch.timestamp = Date.now();
                 return;
               }
               if (
@@ -873,6 +875,16 @@ export function useSpotifyPlayerState(immediateLoad = false) {
               currentTitle &&
               incomingTitle.toLowerCase().trim() !==
                 currentTitle.toLowerCase().trim();
+
+            if (isTitleChange) {
+              const dealerIsFresh =
+                lastDealerEventTimestamp > 0 &&
+                Date.now() - lastDealerEventTimestamp <
+                  DEALER_FRESH_THRESHOLD_MS;
+              if (dealerIsFresh) {
+                return;
+              }
+            }
 
             const title = incomingTitle || currentItem.name;
             const artist = media.MediaItemArtist;
@@ -1247,7 +1259,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
                     fetchedTitle &&
                     fetchedTitle !== nowPlayingTrackLatch.title
                   ) {
-                    nowPlayingTrackLatch.timestamp = Date.now();
                     return;
                   }
                   if (
@@ -1316,7 +1327,6 @@ export function useSpotifyPlayerState(immediateLoad = false) {
             if (latchAge < NOWPLAYING_PRECEDENCE_WINDOW_MS) {
               const fetchedTitle = data.item?.name?.toLowerCase()?.trim();
               if (fetchedTitle && fetchedTitle !== nowPlayingTrackLatch.title) {
-                nowPlayingTrackLatch.timestamp = Date.now();
                 return;
               }
               if (fetchedTitle && fetchedTitle === nowPlayingTrackLatch.title) {
