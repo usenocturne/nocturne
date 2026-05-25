@@ -64,6 +64,15 @@ const settingsStructure = {
         defaultValue: false,
       },
       {
+        id: "idle-lock",
+        title: "Idle lock screen",
+        type: "toggle",
+        description:
+          "Lock Now Playing after 5 minutes idle while paused. Returns on resume.",
+        storageKey: "idleLockEnabled",
+        defaultValue: false,
+      },
+      {
         id: "show-status-bar",
         title: "Toggle Status Bar",
         type: "toggle",
@@ -179,15 +188,6 @@ const settingsStructure = {
         description:
           "Use the knob to seek through playback instead of controlling volume.",
         storageKey: "knobSeeksPlaybackEnabled",
-        defaultValue: false,
-      },
-      {
-        id: "idle-lock",
-        title: "Idle lock screen",
-        type: "toggle",
-        description:
-          "Lock Now Playing after 5 minutes idle while paused. Returns on resume.",
-        storageKey: "idleLockEnabled",
         defaultValue: false,
       },
     ],
