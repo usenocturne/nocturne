@@ -117,6 +117,9 @@ export class NocturneManager implements RPCClientDelegate, SpotifyWebSocketDeleg
 
   async initializeOnline(): Promise<void> {
     await this.authService.initialize();
+    if (this.connections.size > 0) {
+      await this.sendAppReady();
+    }
     log.info("NocturneManager online init complete (auth restored or pending)");
   }
 
