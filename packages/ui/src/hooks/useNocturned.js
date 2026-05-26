@@ -370,6 +370,16 @@ const processConnectQueue = async () => {
   }
 };
 
+const readConnectResponseJson = async (response) => {
+  if (!response || typeof response.json !== "function") {
+    return {};
+  }
+  return response.json().catch(() => ({}));
+};
+
+const isConnectResponseConnected = (data) =>
+  data?.connected === true || data?.status === "connected";
+
 const attemptWsReconnection = () => {
   if (wsReconnectInProgress) {
     return;
@@ -461,7 +471,7 @@ const setupGlobalWebSocket = async () => {
         if (data && data.type === "event" && data.topic === "app.ready") {
           const pendingPlatform = data.data?.platform || null;
 
-          if (pendingPlatform === "ios" || pendingPlatform === "android") {
+          if (pendingPlatform === "ios") {
             sendWsRequest("device.launchApp", {
               bundleId: "com.usenocturne.nocturne",
             }).catch((err) => {
@@ -855,8 +865,8 @@ export async function attemptBtReconnect() {
     }
 
     if (response && response.ok) {
-      const data = await response.json().catch(() => ({}));
-      if (data.connected) {
+      const data = await readConnectResponseJson(response);
+      if (isConnectResponseConnected(data)) {
         clearBtReconnectTimer();
         btReconnectAttempts = 0;
         btReconnectInProgress = false;
@@ -1683,6 +1693,17 @@ export const useBluetooth = () => {
         const response = await queueConnectRequest(deviceAddress);
 
         if (response.ok) {
+          const data = await readConnectResponseJson(response);
+
+          if (!isConnectResponseConnected(data)) {
+            if (data.status === "waiting_for_android") {
+              console.log(
+                "Android wake pending, continuing reconnect attempts",
+              );
+            }
+            return false;
+          }
+
           console.log("Network connection established successfully");
 
           isPolling = false;
