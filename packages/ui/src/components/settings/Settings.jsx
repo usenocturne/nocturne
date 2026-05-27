@@ -65,10 +65,10 @@ const settingsStructure = {
       },
       {
         id: "idle-lock",
-        title: "Idle lock screen",
+        title: "Auto-lock when idle",
         type: "toggle",
         description:
-          "Lock Now Playing after 5 minutes idle while paused. Returns on resume.",
+          "Lock Now Playing after being idle for 5 minutes. Returns on resume.",
         storageKey: "idleLockEnabled",
         defaultValue: false,
       },
