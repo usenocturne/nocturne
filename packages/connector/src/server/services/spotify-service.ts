@@ -33,6 +33,18 @@ export type SpotifyAuthState =
   | { status: "linked"; displayName: string | null }
   | { status: "skipped" };
 
+export interface SpotifyTrackInfo {
+  uri: string;
+  id: string;
+  title: string | null;
+  artistName: string | null;
+  artists: { id: string; name: string; uri: string; type: string }[];
+  albumTitle: string | null;
+  albumUri: string | null;
+  imageUrl: string | null;
+  durationMs: number | null;
+}
+
 interface CachedCredentials {
   userID: string;
   accessToken: string;
@@ -565,19 +577,25 @@ export class SpotifyService {
   }
 
   async fetchTrackArtists(trackId: string): Promise<{ id: string; name: string; uri: string; type: string }[]> {
-    try {
-      const artists = await this.fetchTrackArtistsFromMetadata(trackId);
-      if (artists.length > 0 && artists.some((a) => a.name)) return artists;
-    } catch {}
-
-    try {
-      return await this.fetchTrackArtistsFromGraphQL(trackId);
-    } catch {}
-
-    return [];
+    const info = await this.fetchTrackInfo(trackId);
+    return info?.artists ?? [];
   }
 
-  private async fetchTrackArtistsFromMetadata(trackId: string): Promise<{ id: string; name: string; uri: string; type: string }[]> {
+  async fetchTrackInfo(trackId: string): Promise<SpotifyTrackInfo | null> {
+    try {
+      const info = await this.fetchTrackInfoFromGraphQL(trackId);
+      if (info && (info.title || info.artists.length > 0)) return info;
+    } catch {}
+
+    try {
+      const info = await this.fetchTrackInfoFromMetadata(trackId);
+      if (info) return info;
+    } catch {}
+
+    return null;
+  }
+
+  private async fetchTrackInfoFromMetadata(trackId: string): Promise<SpotifyTrackInfo | null> {
     const accessToken = await this.getValidAccessToken();
     const hexId = base62ToHex(trackId);
     const spclient = this.spclientEndpoint || "gue1-spclient.spotify.com";
@@ -590,43 +608,137 @@ export class SpotifyService {
     });
 
     if (!res.ok) throw new Error(`metadata request failed: ${res.status}`);
-    const json = await res.json();
-    const artistArray = json?.artist;
-    if (!Array.isArray(artistArray)) return [];
+    const json: any = await res.json();
 
-    return artistArray.map((a: any) => {
-      const gid = a.gid ?? "";
+    const artistArray = Array.isArray(json?.artist) ? json.artist : [];
+    const artists = artistArray.map((a: any) => {
+      const gid = a?.gid ?? "";
       const id = gid ? hexToBase62(gid) : "";
       return {
         id,
-        name: a.name ?? "",
+        name: a?.name ?? "",
         uri: id ? `spotify:artist:${id}` : "",
         type: "artist",
       };
     });
+    const artistName = artists.map((a: { name: string }) => a.name).filter(Boolean).join(", ") || null;
+
+    const album = json?.album;
+    const albumTitle = typeof album?.name === "string" ? album.name : null;
+    const albumUri = album?.gid ? `spotify:album:${hexToBase62(album.gid)}` : null;
+
+    let imageUrl: string | null = null;
+    const images = album?.cover_group?.image;
+    if (Array.isArray(images) && images.length > 0) {
+      const withFileId = images.filter((img: any) => typeof img?.file_id === "string");
+      const picked =
+        withFileId.slice().sort((a: any, b: any) => (b?.width ?? 0) - (a?.width ?? 0))[0] ??
+        withFileId[0];
+      if (picked?.file_id) {
+        imageUrl = `https://i.scdn.co/image/${String(picked.file_id).toLowerCase()}`;
+      }
+    }
+
+    let durationMs: number | null = null;
+    if (typeof json?.duration === "number") durationMs = json.duration;
+    else if (typeof json?.duration === "string") {
+      const parsed = parseInt(json.duration, 10);
+      if (Number.isFinite(parsed) && parsed > 0) durationMs = parsed;
+    }
+
+    return {
+      uri: `spotify:track:${trackId}`,
+      id: trackId,
+      title: typeof json?.name === "string" ? json.name : null,
+      artistName,
+      artists,
+      albumTitle,
+      albumUri,
+      imageUrl,
+      durationMs,
+    };
   }
 
-  private async fetchTrackArtistsFromGraphQL(trackId: string): Promise<{ id: string; name: string; uri: string; type: string }[]> {
+  private async fetchTrackInfoFromGraphQL(trackId: string): Promise<SpotifyTrackInfo | null> {
     const result = await this.performPathfinderRequest(
       "getTrack",
       SpotifyOperationHash.getTrack,
       { uri: `spotify:track:${trackId}` }
     );
 
-    const items = result?.data?.trackUnion?.artists?.items;
-    if (!Array.isArray(items)) return [];
+    const trackUnion = result?.data?.trackUnion;
+    if (!trackUnion) return null;
 
-    return items.map((a: any) => {
-      const uri = a.uri ?? "";
+    const items = Array.isArray(trackUnion?.artists?.items) ? trackUnion.artists.items : [];
+    const artists = items.map((a: any) => {
+      const uri = typeof a?.uri === "string" ? a.uri : "";
       const parts = uri.split(":");
       const id = parts.length >= 3 ? parts[2] : "";
       return {
         id,
-        name: a.profile?.name ?? "",
+        name: a?.profile?.name ?? "",
         uri,
         type: "artist",
       };
     });
+    const artistName = artists.map((a: { name: string }) => a.name).filter(Boolean).join(", ") || null;
+
+    const albumOfTrack = trackUnion?.albumOfTrack;
+    const albumTitle = typeof albumOfTrack?.name === "string" ? albumOfTrack.name : null;
+    const albumUri = typeof albumOfTrack?.uri === "string" ? albumOfTrack.uri : null;
+
+    let imageUrl: string | null = null;
+    const sources = albumOfTrack?.coverArt?.sources;
+    if (Array.isArray(sources) && sources.length > 0) {
+      const withUrls = sources.filter((s: any) => typeof s?.url === "string" && s.url);
+      const largest = withUrls
+        .slice()
+        .sort((a: any, b: any) => (b?.width ?? 0) - (a?.width ?? 0))[0];
+      if (largest?.url) imageUrl = largest.url;
+    }
+
+    let durationMs: number | null = null;
+    const dur = trackUnion?.duration;
+    if (typeof dur?.totalMilliseconds === "number") durationMs = dur.totalMilliseconds;
+    else if (typeof dur === "number") durationMs = dur;
+
+    return {
+      uri: typeof trackUnion?.uri === "string" ? trackUnion.uri : `spotify:track:${trackId}`,
+      id: trackId,
+      title: typeof trackUnion?.name === "string" ? trackUnion.name : null,
+      artistName,
+      artists,
+      albumTitle,
+      albumUri,
+      imageUrl,
+      durationMs,
+    };
+  }
+
+  mergeTrackInfoIntoPlayerState(playerState: any, info: SpotifyTrackInfo): void {
+    if (!playerState) return;
+
+    const track = playerState.track;
+    if (track) {
+      track.metadata = track.metadata ?? {};
+      const meta = track.metadata;
+      if (info.title != null && !meta.title) meta.title = info.title;
+      if (info.artistName != null && !meta.artist_name) meta.artist_name = info.artistName;
+      if (
+        info.artists.length > 0 &&
+        (!Array.isArray(meta.artists) || meta.artists.length === 0)
+      ) {
+        meta.artists = info.artists;
+      }
+      if (info.albumTitle != null && !meta.album_title) meta.album_title = info.albumTitle;
+      if (info.albumUri != null && !meta.album_uri) meta.album_uri = info.albumUri;
+      if (info.imageUrl != null && !meta.image_url) meta.image_url = info.imageUrl;
+      if (info.durationMs != null && !meta.duration) meta.duration = String(info.durationMs);
+    }
+
+    if (info.durationMs != null && !playerState.duration) {
+      playerState.duration = String(info.durationMs);
+    }
   }
 
   async handlePlay(params: any): Promise<any> {
@@ -858,10 +970,9 @@ export class SpotifyService {
     if (typeof trackUri === "string" && trackUri.startsWith("spotify:track:")) {
       try {
         const trackId = trackUri.slice("spotify:track:".length);
-        const artists = await this.fetchTrackArtists(trackId);
-        if (artists.length > 0) {
-          state.player_state.track.metadata = state.player_state.track.metadata ?? {};
-          state.player_state.track.metadata.artists = artists;
+        const info = await this.fetchTrackInfo(trackId);
+        if (info) {
+          this.mergeTrackInfoIntoPlayerState(state.player_state, info);
         }
       } catch {}
     }

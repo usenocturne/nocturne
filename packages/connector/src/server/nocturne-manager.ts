@@ -409,7 +409,7 @@ export class NocturneManager implements RPCClientDelegate, SpotifyWebSocketDeleg
     const result = cleanupWebSocketMessage(event);
     if (!result) return;
 
-    this.enrichWithArtists(result.data)
+    this.enrichTrackMetadata(result.data)
       .then(() => {
         this.cachePlayerState(result.data);
         this.broadcastToDevices(result.topic, result.data);
@@ -433,21 +433,23 @@ export class NocturneManager implements RPCClientDelegate, SpotifyWebSocketDeleg
     }
   }
 
-  private async enrichWithArtists(data: any): Promise<void> {
-    const track = data?.payloads?.[0]?.cluster?.player_state?.track;
-    if (!track?.uri || !track.metadata) return;
+  private async enrichTrackMetadata(data: any): Promise<void> {
+    const playerState = data?.payloads?.[0]?.cluster?.player_state;
+    const track = playerState?.track;
+    if (!playerState || !track?.uri) return;
 
+    track.metadata = track.metadata ?? {};
     const uri: string = track.uri;
 
     if (uri.startsWith("spotify:track:")) {
       const trackId = uri.slice("spotify:track:".length);
-      const artists = await this.spotifyService.fetchTrackArtists(trackId);
-      if (artists.length > 0) {
-        track.metadata.artists = artists;
+      const info = await this.spotifyService.fetchTrackInfo(trackId);
+      if (info) {
+        this.spotifyService.mergeTrackInfoIntoPlayerState(playerState, info);
       }
     } else if (uri.startsWith("spotify:local:")) {
       const parts = uri.split(":");
-      if (parts.length >= 5) {
+      if (parts.length >= 5 && (!Array.isArray(track.metadata.artists) || track.metadata.artists.length === 0)) {
         const decoded = decodeURIComponent(parts[2]).replace(/\+/g, " ");
         const names = decoded.split(",").map((n) => n.trim()).filter(Boolean);
         track.metadata.artists = names.map((name) => ({
