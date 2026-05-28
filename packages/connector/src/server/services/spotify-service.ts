@@ -583,13 +583,13 @@ export class SpotifyService {
 
   async fetchTrackInfo(trackId: string): Promise<SpotifyTrackInfo | null> {
     try {
-      const info = await this.fetchTrackInfoFromGraphQL(trackId);
+      const info = await this.fetchTrackInfoFromMetadata(trackId);
       if (info && (info.title || info.artists.length > 0)) return info;
     } catch {}
 
     try {
-      const info = await this.fetchTrackInfoFromMetadata(trackId);
-      if (info) return info;
+      const info = await this.fetchTrackInfoFromGraphQL(trackId);
+      if (info && (info.title || info.artists.length > 0)) return info;
     } catch {}
 
     return null;
@@ -1839,7 +1839,7 @@ export class SpotifyService {
     return { albums };
   }
 
-  private async fetchAlbumArtists(albumId: string): Promise<any[]> {
+  async fetchAlbumArtists(albumId: string): Promise<any[]> {
     const result = await this.performPathfinderRequest("getAlbum", SpotifyOperationHash.getAlbum, {
       uri: `spotify:album:${albumId}`,
       locale: "",

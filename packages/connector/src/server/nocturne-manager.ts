@@ -440,12 +440,14 @@ export class NocturneManager implements RPCClientDelegate, SpotifyWebSocketDeleg
 
     track.metadata = track.metadata ?? {};
     const uri: string = track.uri;
+    let hasArtists = Array.isArray(track.metadata.artists) && track.metadata.artists.length > 0;
 
     if (uri.startsWith("spotify:track:")) {
       const trackId = uri.slice("spotify:track:".length);
       const info = await this.spotifyService.fetchTrackInfo(trackId);
       if (info) {
         this.spotifyService.mergeTrackInfoIntoPlayerState(playerState, info);
+        hasArtists = Array.isArray(track.metadata.artists) && track.metadata.artists.length > 0;
       }
     } else if (uri.startsWith("spotify:local:")) {
       const parts = uri.split(":");
@@ -458,6 +460,16 @@ export class NocturneManager implements RPCClientDelegate, SpotifyWebSocketDeleg
           uri: "",
           type: "artist",
         }));
+        hasArtists = track.metadata.artists.length > 0;
+      }
+    }
+
+    const albumUri = track.metadata.album_uri;
+    if (!hasArtists && typeof albumUri === "string" && albumUri.startsWith("spotify:album:")) {
+      const albumId = albumUri.slice("spotify:album:".length);
+      const artists = await this.spotifyService.fetchAlbumArtists(albumId);
+      if (artists.length > 0) {
+        track.metadata.artists = artists;
       }
     }
   }
