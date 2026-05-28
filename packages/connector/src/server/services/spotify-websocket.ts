@@ -38,7 +38,9 @@ export class SpotifyWebSocketService {
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
   private tokenRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   private lastMessageTime = Date.now();
+  private lastPlayerEventTime: number | null = null;
   private connectionTimeout = 180_000; // 3 minutes
+  private playerEventStaleTimeout = 90_000;
   private tokenRefreshInterval = 50 * 60 * 1000; // 50 minutes
 
   constructor(spotify: SpotifyService) {
@@ -111,10 +113,12 @@ export class SpotifyWebSocketService {
       this.ws = new WebSocket(`wss://${dealer}/?access_token=${accessToken}`);
 
       this.ws.onopen = () => {
+        const now = Date.now();
         this._isConnected = true;
         this.isConnecting = false;
         this.reconnectAttempts = 0;
-        this.lastMessageTime = Date.now();
+        this.lastMessageTime = now;
+        this.lastPlayerEventTime = now;
         this.delegate?.onConnectionStateChange(true);
         this.startPingTimer();
         this.startHealthCheck();
@@ -162,6 +166,7 @@ export class SpotifyWebSocketService {
     this.isConnecting = false;
     this.hasReceivedConnectionId = false;
     this._connectionId = null;
+    this.lastPlayerEventTime = null;
     this.reconnectAttempts = 0;
     this.delegate?.onConnectionStateChange(false);
 
@@ -193,6 +198,7 @@ export class SpotifyWebSocketService {
     if (json.type === "pong") return;
 
     if (json.payloads) {
+      this.lastPlayerEventTime = Date.now();
       this.delegate?.onPlayerEvent(json);
     }
   }
@@ -259,9 +265,18 @@ export class SpotifyWebSocketService {
     this.stopHealthCheck();
     this.healthCheckInterval = setInterval(() => {
       if (!this._isConnected) return;
-      if (Date.now() - this.lastMessageTime > this.connectionTimeout) {
+      const now = Date.now();
+      if (now - this.lastMessageTime > this.connectionTimeout) {
         log.warn("Connection stale, reconnecting...");
         this.reconnect().catch((err) => log.error(`Stale reconnect failed: ${err}`));
+        return;
+      }
+      if (
+        this.lastPlayerEventTime != null &&
+        now - this.lastPlayerEventTime > this.playerEventStaleTimeout
+      ) {
+        log.warn("Dealer alive but no player events received, reconnecting...");
+        this.reconnect().catch((err) => log.error(`Player-event reconnect failed: ${err}`));
       }
     }, 30_000);
   }
