@@ -11,9 +11,12 @@ mod image_cache;
 mod mfi;
 mod mfi_impl;
 mod wakeword;
+mod webapp_server;
 mod websocket;
 
 use anyhow::Result;
+use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use tracing::{error, info, warn};
@@ -68,6 +71,17 @@ async fn main() -> Result<()> {
     });
 
     info!("WebSocket server started on port 5000");
+
+    let webapps_dir: PathBuf = std::env::var("NOCTURNE_WEBAPPS_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(webapp_server::DEFAULT_WEBAPPS_DIR));
+    let webapp_addr: SocketAddr = webapp_server::DEFAULT_LISTEN.parse()?;
+    tokio::spawn(async move {
+        if let Err(e) = webapp_server::run(webapp_addr, webapps_dir).await {
+            error!("Webapp HTTP server error: {}", e);
+        }
+    });
+    info!("Webapp HTTP server task spawned (port 8080)");
 
     brightness::start_ambient_light_task(Arc::clone(&websocket_server));
     info!("Ambient light sensor polling started");

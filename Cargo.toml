@@ -1,6 +1,6 @@
 [package]
 name = "nocturned"
-version = "2.0.2"
+version = "2.0.4"
 edition = "2021"
 
 [dependencies]
@@ -31,3 +31,5 @@ md5 = "0.7"
 opus = "0.3"
 tract-ndarray = { package = "ndarray", version = "0.16.1" }
 tract-onnx = "0.21"
+axum = "0.8"
+tower-http = { version = "0.6", features = ["fs"] }
