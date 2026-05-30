@@ -1,0 +1,17 @@
+{
+  "name": "@usenocturne/monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Nocturne firmware monorepo - image, daemon, device UI, and Wi-Fi connector.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "ui:dev": "bun --cwd packages/ui run dev",
+    "ui:build": "bun --cwd packages/ui run build",
+    "ui:lint": "bun --cwd packages/ui run lint-check",
+    "connector:dev": "bun --cwd packages/connector run dev",
+    "connector:build": "bun --cwd packages/connector run build"
+  },
+  "packageManager": "bun@1.3.14"
+}

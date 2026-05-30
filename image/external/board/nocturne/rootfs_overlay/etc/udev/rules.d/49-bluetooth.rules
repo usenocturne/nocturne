@@ -1,3 +1,0 @@
-ACTION=="add", KERNEL=="ttyS1", RUN+="/bin/attach-bt"
-ACTION=="add", KERNEL=="hci0", RUN+="/bin/enable-bt"
-ACTION=="remove", KERNEL=="ttyS1", RUN+="/bin/detach-bt"

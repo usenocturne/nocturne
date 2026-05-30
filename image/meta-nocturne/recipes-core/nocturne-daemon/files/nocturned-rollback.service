@@ -1,0 +1,8 @@
+[Unit]
+Description=Nocturne daemon rollback after restart-burst failure
+After=opt-overlay@nocturne.service var-lib-bandaid.mount
+Requires=var-lib-bandaid.mount
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/nocturned-rollback

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# reboot the device into u-boot fastboot so env / partition writes don't need a
+# full mask-rom wic flash. host then talks to the device via `fastboot`.
+set -euo pipefail
+
+HOST="${SUPERBIRD_HOST:-nocturne.local}"
+
+exec ssh \
+    -o UserKnownHostsFile=/dev/null \
+    -o StrictHostKeyChecking=no \
+    -o LogLevel=ERROR \
+    "root@${HOST}" 'systemctl reboot --reboot-argument=bootloader'

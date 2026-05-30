@@ -1,35 +1,151 @@
-host_cc := env_var_or_default("HOSTCC", "/usr/bin/gcc-15")
-host_cxx := env_var_or_default("HOSTCXX", "/usr/bin/g++-15")
+# Nocturne (Yocto) Justfile
 
-menuconfig:
-    [ -f output/.config ] || make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} defconfig
-    make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} menuconfig
+default := "nocturne"
+export KAS_CONTAINER_ENGINE := env_var_or_default('KAS_CONTAINER_ENGINE', 'docker')
+# Set YOCTO_BUILD_DIR on macOS (or any case-insensitive FS) to redirect bitbake's
+# TMPDIR onto a case-sensitive volume. Unset on Linux = build/ stays in-workspace.
+export KAS_BUILD_DIR := env_var_or_default('YOCTO_BUILD_DIR', '')
+flashthing := env_var_or_default('FLASHTHING_CLI', 'flashthing-cli')
 
-copyconfig:
-    rm -f configs/nocturne_defconfig
-    cp output/.config configs/nocturne_defconfig
+# --- Build ---
 
-clean: cleandeps
-    make -C buildroot O="$PWD/output" clean
-    rm -rf output/package
+# Fetch/checkout layers
+checkout target=default:
+  kas-container checkout kas/{{target}}.yml
 
-cleandeps:
-    rm -rf buildroot/dl/nocturned buildroot/dl/nocturne-ui output/build/nocturned* output/build/nocturne-ui*
+# Build the named image set inside the kas container.
+build target=default:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  args=()
+  if [ -n "${KAS_BUILD_DIR:-}" ]; then
+    mkdir -p "$KAS_BUILD_DIR"
+  fi
+  if [ "{{target}}" = "nocturne-local" ]; then
+    if [ ! -f kas/nocturne-local.yml ]; then
+      echo "kas/nocturne-local.yml missing - copy kas/nocturne-local.example.yml and edit NOCTURNE_LOCAL_*" >&2
+      exit 1
+    fi
+    for var in NOCTURNE_LOCAL_NOCTURNED NOCTURNE_LOCAL_NOCTURNE_UI; do
+      local_dir=$(sed -n "s/.*${var}[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" kas/nocturne-local.yml | head -n1)
+      if [ -z "$local_dir" ] || [ ! -d "$local_dir" ]; then
+        echo "${var} in kas/nocturne-local.yml is missing or not a directory: '$local_dir'" >&2
+        exit 1
+      fi
+      args+=(--runtime-args "-v $local_dir:$local_dir")
+    done
+  fi
+  kas-container ${args[@]+"${args[@]}"} build kas/{{target}}.yml
 
-install package:
-    make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} {{package}}-install
+# Drop into a bitbake shell inside the container.
+shell target=default:
+  kas-container shell kas/{{target}}.yml
 
-flash slot:
-    dd if=output/images/rootfs.ext2 bs=1M status=progress | ssh -o StrictHostKeyChecking=no root@172.16.42.2 dd of=/dev/system_{{slot}} bs=1M
-    ssh -o StrictHostKeyChecking=no root@172.16.42.2 phb -s $([ "{{slot}}" = "a" ] && echo 0 || echo 1)
+# Wipe local bitbake output. Layer clones + downloads cache survive.
+clean-build:
+  rm -rf build
 
-flashconnector slot:
-    dd if=output/images/rootfs.ext2 bs=1M status=progress | ssh -p 2022 -o StrictHostKeyChecking=no root@nocturne-connector dd of=/dev/system_{{slot}} bs=1M
-    ssh -p 2022 -o StrictHostKeyChecking=no root@nocturne-connector phb -s $([ "{{slot}}" = "a" ] && echo 0 || echo 1)
+# Drop poky-layout symlinks under sources/ for the vscode bitbake extension.
+vscode-setup:
+  test -d sources/openembedded-core || just checkout
+  ln -sfn openembedded-core/meta sources/meta
+  ln -sfn meta-yocto/meta-poky   sources/meta-poky
+  @echo "symlinks ready: sources/{meta,meta-poky}"
 
-pre-commit-install:
-    pre-commit install
+# --- Cache server ---
 
+cache_host    := env_var_or_default('YOCTO_CACHE_HOST', '10.1.10.10')
+cache_port    := env_var_or_default('YOCTO_CACHE_RSYNC_PORT', '8733')
+
+push-sstate:
+  rsync -ah --info=progress2 --ignore-existing --partial --append-verify \
+    --port={{cache_port}} \
+    build/sstate-cache/ \
+    rsync://{{cache_host}}/sstate/
+
+# --- Flash ---
+
+# Flash a full image to the device.
+flash image="nocturne-dev-image":
+  {{flashthing}} build/tmp/deploy/images/superbird/{{image}}-superbird-flashthing.zip
+
+# Env-only reflash.
+flash-env image="nocturne-dev-image":
+  {{flashthing}} build/tmp/deploy/images/superbird/{{image}}-superbird-flashthing-env-only.zip
+
+# --- Release / install (no-build dev path) ---
+
+release *args:
+  scripts/nocturne-release {{args}}
+
+# Stage release artifacts and publish to OTA server.
+# Usage: NOCTURNE_RELEASE_VERSION=4.1.0 just publish prod
+publish variant="prod":
+  scripts/nocturne-publish {{variant}}
+
+# Pull latest dev image from ota manifest and flash it.
+install-dev:
+  scripts/nocturne-install dev
+
+install-prod:
+  scripts/nocturne-install prod
+
+# --- Device helpers ---
+
+# SSH into the device over USB-CDC-NCM.
+ssh *args:
+  scripts/nocturne-ssh {{args}}
+
+# UART console agent. Subcommand: start | stop | restart | status.
+console subcmd="status":
+  scripts/nocturne-console.sh {{subcmd}}
+
+# Send a single command via the uart console agent.
+cmd *args:
+  scripts/nocturne-cmd.sh {{args}}
+
+# Hold the FT232 RTS line deasserted (reset released) for the lifetime of this command. Foreground.
+reset-hold:
+  scripts/nocturne-reset-hold.py
+
+# One-shot reset pulse.
+reset-pulse duration_ms="200":
+  scripts/nocturne-reset-hold.py --pulse --duration-ms {{duration_ms}}
+
+# Exit mask-rom usb mode and cold-boot into the on-disk image.
+boot-kernel:
+  scripts/nocturne-boot-kernel.sh
+
+# Reboot a running device into amlogic mask-rom usb mode (1b8e:c003) for flashthing-cli.
+reboot-to-maskrom:
+  scripts/nocturne-reboot-to-maskrom
+
+# Reboot a running device into u-boot fastboot.
+reboot-to-fastboot:
+  scripts/nocturne-reboot-to-fastboot
+
+# Write a single gpt partition over u-boot fastboot.
+flash-fast partlabel file="":
+  scripts/nocturne-flash-fast {{partlabel}} {{file}}
+
+# Push a webapp bundle into /var/nocturne/webapps/<name>/.
+push-webapp local name="":
+  scripts/nocturne-push-webapp {{local}} {{name}}
+
+# SSH-tunnel chromium's CDP from the device's 127.0.0.1:9222 to the host.
+cdp port="9223":
+  scripts/nocturne-cdp {{port}}
+
+# Delta-OTA from a booted device.
+ota *args:
+  scripts/nocturne-ota {{args}}
+
+# --- Lint ---
+
+# Run pre-commit hooks (shellcheck, shfmt, yamllint) across the tree.
 lint:
-    pre-commit run --all-files
+  pre-commit run --all-files
 
+# Install the pre-commit git hook so `git commit` runs the lint set.
+pre-commit-install:
+  pre-commit install

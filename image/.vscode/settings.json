@@ -1,3 +1,9 @@
 {
-    "cmake.ignoreCMakeListsMissing": true
+  "bitbake.pathToBuildFolder": "${workspaceFolder}/build",
+  "files.associations": {
+    "*.bbappend": "bitbake",
+    "*.bb": "bitbake",
+    "*.inc": "bitbake",
+    "*.bbclass": "bitbake"
+  }
 }

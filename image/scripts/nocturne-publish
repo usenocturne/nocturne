@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Stage release artifacts and publish them into the OTA image tree.
+# Usage: NOCTURNE_RELEASE_VERSION=4.1.0 nocturne-publish prod
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+DEPLOY_DIR="${NOCTURNE_DEPLOY_DIR:-$REPO_ROOT/build/tmp/deploy/images/superbird}"
+PUBLISH_ROOT="${NOCTURNE_OTA_IMAGES_DIR:-$HOME/Code/nocturne/nocturne-ota/images}"
+
+VARIANT="${1:-prod}"
+case "$VARIANT" in
+  dev) CHANNEL="dev" ;;
+  prod) CHANNEL="stable" ;;
+  *) echo "usage: $(basename "$0") [dev|prod]" >&2; exit 2 ;;
+esac
+
+VERSION="${NOCTURNE_RELEASE_VERSION:-}"
+if [[ -z "$VERSION" ]]; then
+  echo "[publish] NOCTURNE_RELEASE_VERSION is required, e.g. NOCTURNE_RELEASE_VERSION=4.1.0 $0 $VARIANT" >&2
+  exit 2
+fi
+
+for cmd in python3 rsync sha256sum stat; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "[publish] missing required command: $cmd" >&2; exit 2; }
+done
+
+[[ -d "$DEPLOY_DIR" ]] || { echo "[publish] deploy directory missing: $DEPLOY_DIR" >&2; exit 1; }
+
+STAGE_DIR="${NOCTURNE_PUBLISH_STAGE:-$REPO_ROOT/build/nocturne-publish/$VERSION}"
+DEST_DIR="$PUBLISH_ROOT/$VERSION"
+MANIFEST="$STAGE_DIR/manifest.json"
+
+rm -rf "$STAGE_DIR"
+mkdir -p "$STAGE_DIR" "$DEST_DIR"
+
+echo "[publish] staging variant=$VARIANT channel=$CHANNEL version=$VERSION from $DEPLOY_DIR"
+
+shopt -s nullglob
+artifacts=(
+  "$DEPLOY_DIR"/*"$VARIANT"*.swu
+  "$DEPLOY_DIR"/*"$VARIANT"*.swu.zck
+  "$DEPLOY_DIR"/*"$VARIANT"*.zck
+  "$DEPLOY_DIR"/*"$VARIANT"*.zip
+  "$DEPLOY_DIR"/*"$VARIANT"*.wic.gz
+  "$DEPLOY_DIR"/*"$VARIANT"*.wic.bmap
+)
+shopt -u nullglob
+
+if (( ${#artifacts[@]} == 0 )); then
+  echo "[publish] no artifacts found for variant '$VARIANT' in $DEPLOY_DIR" >&2
+  exit 1
+fi
+
+for artifact in "${artifacts[@]}"; do
+  cp -a "$artifact" "$STAGE_DIR/"
+done
+
+for zck in "$STAGE_DIR"/*.zck; do
+  [[ -e "$zck" ]] || continue
+  # TODO: swupdate-tools cms_sign --key "$NOCTURNE_SWUPDATE_SIGNING_KEY" --cert "$NOCTURNE_SWUPDATE_SIGNING_CERT" "$zck"
+  echo "[publish] TODO sign zchunk artifact: $(basename "$zck")"
+done
+
+python3 - "$STAGE_DIR" "$VERSION" "$CHANNEL" "$VARIANT" >"$MANIFEST" <<'PY'
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+stage = Path(sys.argv[1])
+version, channel, variant = sys.argv[2:5]
+artifacts = []
+for path in sorted(stage.iterdir()):
+    if not path.is_file() or path.name == "manifest.json":
+        continue
+    artifacts.append({
+        "name": path.name,
+        "size": path.stat().st_size,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    })
+
+json.dump({
+    "version": version,
+    "channel": channel,
+    "variant": variant,
+    "artifacts": artifacts,
+}, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+
+echo "[publish] manifest: $MANIFEST"
+rsync -a --delete "$STAGE_DIR/" "$DEST_DIR/"
+
+# TODO: replace the local publish root with the production OTA host once provisioned, for example:
+# rsync -az --delete "$STAGE_DIR/" "${NOCTURNE_OTA_SSH_USER:?}@${NOCTURNE_OTA_HOST:?}:${NOCTURNE_OTA_REMOTE_DIR:-/srv/nocturne-ota/images}/$VERSION/"
+
+echo "[publish] published $VERSION to $DEST_DIR"

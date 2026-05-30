@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# ssh tunnel from host:PORT to the device's chromium cdp at 127.0.0.1:9223. ctrl-c to close.
+
+set -euo pipefail
+
+PORT="${1:-9223}"
+HOST="${SUPERBIRD_HOST:-nocturne.local}"
+
+exec ssh \
+    -L "${PORT}:127.0.0.1:9223" \
+    -N -T \
+    -o ServerAliveInterval=10 \
+    -o UserKnownHostsFile=/dev/null \
+    -o StrictHostKeyChecking=no \
+    -o LogLevel=ERROR \
+    "root@${HOST}"

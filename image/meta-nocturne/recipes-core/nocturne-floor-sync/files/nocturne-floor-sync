@@ -1,0 +1,69 @@
+#!/bin/sh
+# Sync the rootfs-baked daemon + UI floor into the bandaid partition on OS upgrade.
+#
+# Background: meta-superbird's `superbird-bsp-update.inc` only rewrites boot.vfat
+# + root_X via libswupdate, NOT the bandaid partition. Without this service, an
+# OS OTA that ships a newer nocturned/nocturne-ui floor would still execute the
+# OLD versions from bandaid (because opt-overlay-bind only seeds when the vendor
+# dir is missing).
+#
+# Strategy: per-recipe semver tag at /etc/nocturne/floor-version.
+# Compare to /var/lib/bandaid/nocturne/.floor-version. If different, copy
+# floor files in atomically (mv-after-write), rotate current/previous for rollback.
+set -eu
+
+ROOTFS_FLOOR_DIR=/usr/lib/nocturne
+BANDAID_DIR=/var/lib/bandaid/nocturne
+FLOOR_VERSION_FILE=/etc/nocturne/floor-version
+BANDAID_VERSION_FILE=${BANDAID_DIR}/.floor-version
+
+# read rootfs floor version (DISTRO_VERSION at bake time)
+if [ ! -f "$FLOOR_VERSION_FILE" ]; then
+    echo "no rootfs floor-version stamp; skipping" >&2
+    exit 0
+fi
+ROOTFS_VERSION=$(cat "$FLOOR_VERSION_FILE")
+
+# read bandaid version (empty if first boot since reflash)
+if [ -f "$BANDAID_VERSION_FILE" ]; then
+    BANDAID_VERSION=$(cat "$BANDAID_VERSION_FILE")
+else
+    BANDAID_VERSION=""
+fi
+
+if [ "$ROOTFS_VERSION" = "$BANDAID_VERSION" ]; then
+    echo "floor in sync (${ROOTFS_VERSION})"
+    exit 0
+fi
+
+echo "syncing bandaid floor: '${BANDAID_VERSION}' -> '${ROOTFS_VERSION}'"
+
+# daemon: copy nocturned.current with rotate
+DAEMON_SRC=${ROOTFS_FLOOR_DIR}/daemon/nocturned.current
+DAEMON_DEST=${BANDAID_DIR}/daemon
+if [ -f "$DAEMON_SRC" ]; then
+    mkdir -p "$DAEMON_DEST"
+    cp "$DAEMON_SRC" "${DAEMON_DEST}/nocturned.next"
+    if [ -f "${DAEMON_DEST}/nocturned.current" ]; then
+        mv "${DAEMON_DEST}/nocturned.current" "${DAEMON_DEST}/nocturned.previous"
+    fi
+    mv "${DAEMON_DEST}/nocturned.next" "${DAEMON_DEST}/nocturned.current"
+    chmod 0755 "${DAEMON_DEST}/nocturned.current"
+fi
+
+# webapp: rsync-like copy of ui/ tree
+UI_SRC=${ROOTFS_FLOOR_DIR}/webapps/ui
+UI_DEST=${BANDAID_DIR}/webapps/ui
+if [ -d "$UI_SRC" ]; then
+    mkdir -p "${BANDAID_DIR}/webapps"
+    if [ -d "$UI_DEST" ]; then
+        mv "$UI_DEST" "${BANDAID_DIR}/webapps/ui.previous"
+    fi
+    cp -a "$UI_SRC" "$UI_DEST"
+fi
+
+# stamp new version
+mkdir -p "$BANDAID_DIR"
+echo "$ROOTFS_VERSION" > "$BANDAID_VERSION_FILE"
+sync
+echo "floor sync complete: ${ROOTFS_VERSION}"

@@ -1,0 +1,22 @@
+[Unit]
+Description=Nocturne daemon
+After=network.target superbird-init.service opt-overlay@nocturne.service nocturne-floor-sync.service
+Wants=bluetooth.service
+Requires=opt-overlay@nocturne.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+OnFailure=nocturned-rollback.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+ExecStart=/opt/nocturne/daemon/nocturned.current
+Restart=on-failure
+RestartSec=2
+TimeoutStartSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

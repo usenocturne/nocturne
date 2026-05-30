@@ -1,4 +1,0 @@
-config BR2_PACKAGE_STATIC_WEB_SERVER
-    bool "static-web-server"
-    help
-      Static web server for nocturne-ui.

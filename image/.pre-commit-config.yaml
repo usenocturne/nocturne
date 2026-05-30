@@ -1,9 +1,9 @@
-exclude: ./buildroot
+exclude: ^(sources/|build/|ccache/|.*\.patch$|meta-nocturne/recipes-extended/nocturne-fonts/files/.*\.ttf$|meta-nocturne/recipes-extended/nocturne-models/files/.*\.onnx$)
 repos:
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.7.2
     hooks:
-    - id: shellcheck
+      - id: shellcheck
 
   - repo: https://github.com/pecigonzalo/pre-commit-shfmt
     rev: v2.2.0
@@ -15,5 +15,12 @@ repos:
           - -ci
           - -sr
           - -d
-          - "./external"
           - "./scripts"
+          - "./meta-nocturne"
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        files: ^kas/.*\.ya?ml$
+        args: ["-d", "{extends: relaxed, rules: {line-length: disable}}"]

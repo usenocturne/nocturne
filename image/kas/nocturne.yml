@@ -1,0 +1,28 @@
+header:
+  version: 18
+  includes:
+    - repo: yocto-superbird
+      file: kas/superbird.yml
+
+distro: nocturne
+
+target:
+  - nocturne-dev-image
+  - nocturne-update-dev
+  - nocturne-update-dev-delta
+  - nocturne-prod-image
+  - nocturne-update-prod
+  - nocturne-update-prod-delta
+
+repos:
+  yocto-superbird:
+    url: https://github.com/JoeyEamigh/yocto-superbird.git
+    refspec: be71edbf115400e59c52042f39ab8ef142943cc9
+    path: sources/yocto-superbird
+    layers:
+      meta-superbird:
+
+  meta-nocturne:
+    path: .
+    layers:
+      meta-nocturne:

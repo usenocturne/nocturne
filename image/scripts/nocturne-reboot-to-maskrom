@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# reboot the device into amlogic mask-rom usb mode (1b8e:c003) so flashthing-cli
+# can write the wic. drives the kernel's syscon-reboot-mode wired against
+# PREG_STICKY_REG3; u-boot's carthing_boot_route catches it on next boot.
+set -euo pipefail
+
+HOST="${SUPERBIRD_HOST:-nocturne.local}"
+
+exec ssh \
+    -o UserKnownHostsFile=/dev/null \
+    -o StrictHostKeyChecking=no \
+    -o LogLevel=ERROR \
+    "root@${HOST}" 'systemctl reboot --reboot-argument=maskrom'

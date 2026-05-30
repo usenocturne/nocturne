@@ -1,1 +1,0 @@
-ACTION=="add|change", KERNEL=="event1", ENV{ID_INPUT_MOUSE}="1"

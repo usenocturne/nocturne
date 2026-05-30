@@ -26,3 +26,15 @@ rustc-ice-*.txt
 .sisyphus
 .playwright-mcp
 .DS_Store
+
+
+# Bun workspace (root-level)
+node_modules
+
+# Cross-component build outputs (each component has its own .gitignore too)
+**/dist
+**/build
+
+# Editor / OS
+.vscode
+.idea

@@ -1,0 +1,3 @@
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+
+SRC_URI += "file://${SUPERBIRD_BOOT_LOGO_NAME}"

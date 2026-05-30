@@ -1,0 +1,56 @@
+# Local-source override for Nocturne recipes. Lets you build the dev image
+# from your in-tree daemon and/or UI working tree (under crates/daemon and
+# packages/ui in this monorepo) instead of the github checkout listed in
+# each recipe's SRC_URI.
+#
+# Usage:
+#   1. Copy this file to kas/nocturne-local.yml (gitignored):
+#        cp kas/nocturne-local.example.yml kas/nocturne-local.yml
+#   2. Edit NOCTURNE_LOCAL_NOCTURNED and/or NOCTURNE_LOCAL_NOCTURNE_UI to
+#      point at your local checkouts (absolute paths). The Justfile reads
+#      these back out of this file and bind-mounts them into the kas
+#      container. NOCTURNE_LOCAL_NOCTURNED expects the daemon's Cargo
+#      workspace root; NOCTURNE_LOCAL_NOCTURNE_UI expects the UI's built
+#      `dist/` directory (run `just ui-build` from the monorepo root first).
+#   3. Build with `just build nocturne-local` (instead of `just build` /
+#      `just build nocturne`).
+
+header:
+  version: 18
+  includes:
+    - repo: yocto-superbird
+      file: kas/nocturne.yml
+
+local_conf_header:
+  externalsrc: |
+    NOCTURNE_LOCAL_NOCTURNED   = "/home/dominic/Code/nocturne/nocturne/crates/daemon"
+    NOCTURNE_LOCAL_NOCTURNE_UI = "/home/dominic/Code/nocturne/nocturne/packages/ui/dist"
+
+    INHERIT += "externalsrc"
+
+    EXTERNALSRC:pn-nocturned = "${NOCTURNE_LOCAL_NOCTURNED}"
+    EXTERNALSRC_BUILD:pn-nocturned = "${WORKDIR}/build"
+
+    EXTERNALSRC:pn-nocturne-ui = "${NOCTURNE_LOCAL_NOCTURNE_UI}"
+    EXTERNALSRC_BUILD:pn-nocturne-ui = "${WORKDIR}/build"
+
+    SRC_URI:remove:pn-nocturned = "git://github.com/usenocturne/nocturned.git;protocol=https;branch=main;destsuffix=${BP}"
+    SRC_URI:remove:pn-nocturne-ui = "https://nightly.link/usenocturne/nocturne-ui/workflows/build/v4.0.4/nocturne-ui.zip;name=ui;subdir=${BP}"
+    SRCREV:pn-nocturned = "INVALID"
+
+    EXTERNALSRC_SYMLINKS = ""
+
+    CARGO_BUILD_FLAGS:append:pn-nocturned = " --config profile.release.lto=false --config profile.release.codegen-units=32"
+
+repos:
+  yocto-superbird:
+    url: https://github.com/JoeyEamigh/yocto-superbird.git
+    refspec: be71edbf115400e59c52042f39ab8ef142943cc9
+    path: sources/yocto-superbird
+    layers:
+      meta-superbird:
+
+  meta-nocturne:
+    path: .
+    layers:
+      meta-nocturne:

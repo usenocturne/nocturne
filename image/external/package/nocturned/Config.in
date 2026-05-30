@@ -1,6 +1,0 @@
-config BR2_PACKAGE_NOCTURNED
-    bool "nocturned (private)"
-    depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
-    select BR2_PACKAGE_HOST_RUSTC
-    help
-      Nocturne daemon (private).

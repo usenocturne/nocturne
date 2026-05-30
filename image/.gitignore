@@ -1,2 +1,19 @@
-output
-dl
+# kas-managed upstream layer clones live under sources/
+/sources/
+
+# kas internal state
+/.kas/
+
+# local-only kas overlay for externalsrc against unpushed nocturned / nocturne-ui;
+# see kas/nocturne-local.example.yml
+/kas/nocturne-local.yml
+
+# bitbake build dir + ccache + flash artifact staging
+/build/
+/ccache/
+/artifacts/
+
+# editor / OS
+.DS_Store
+*.swp
+__pycache__/

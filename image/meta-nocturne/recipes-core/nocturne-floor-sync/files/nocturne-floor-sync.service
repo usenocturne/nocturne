@@ -1,0 +1,15 @@
+[Unit]
+Description=Nocturne bandaid floor sync
+After=opt-overlay@nocturne.service var-lib-bandaid.mount
+Requires=opt-overlay@nocturne.service
+Before=nocturned.service
+DefaultDependencies=no
+ConditionPathExists=/var/lib/bandaid/nocturne
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/nocturne-floor-sync
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

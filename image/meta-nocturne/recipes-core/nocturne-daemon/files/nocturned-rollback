@@ -1,0 +1,32 @@
+#!/bin/sh
+set -eu
+
+BANDAID_VENDOR=/var/lib/bandaid/nocturne
+DAEMON_DIR=${BANDAID_VENDOR}/daemon
+CURRENT=${DAEMON_DIR}/nocturned.current
+PREVIOUS=${DAEMON_DIR}/nocturned.previous
+TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+BROKEN=${DAEMON_DIR}/nocturned.broken.${TIMESTAMP}
+
+if [ ! -d "$BANDAID_VENDOR" ]; then
+    exit 0
+fi
+
+if [ -e "$PREVIOUS" ]; then
+    if [ -e "$CURRENT" ]; then
+        mv "$CURRENT" "$BROKEN"
+    fi
+    mv "$PREVIOUS" "$CURRENT"
+
+    ls -1t "${DAEMON_DIR}"/nocturned.broken.* 2>/dev/null \
+        | tail -n +4 \
+        | xargs -r rm -f
+
+    systemctl reset-failed nocturned.service
+    systemctl start nocturned.service
+    exit 0
+fi
+
+rm -rf "${BANDAID_VENDOR}"
+sync
+systemctl reboot

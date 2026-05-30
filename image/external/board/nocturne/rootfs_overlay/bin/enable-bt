@@ -1,8 +1,0 @@
-#!/bin/sh
-
-for dir in /sys/class/rfkill/*; do
-  if grep -q 'hci0' "$dir"/name; then
-    echo 1 > "$dir"/state
-    break
-  fi
-done

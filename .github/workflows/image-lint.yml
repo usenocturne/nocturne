@@ -1,0 +1,30 @@
+name: Image
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "image/**"
+      - ".github/workflows/image-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "image/**"
+      - ".github/workflows/image-lint.yml"
+
+jobs:
+  lint:
+    name: Lint (shfmt + pre-commit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install shfmt
+        uses: mfinelli/setup-shfmt@v4
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --config image/.pre-commit-config.yaml --all-files

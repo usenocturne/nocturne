@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# upload nocturne image artifacts to r2 under images/<channel>/<image-version>/.
+# usage: nocturne-release [dev|prod|all]
+# env: SUPERBIRD_RELEASE_VERSION, R2_BUCKET (default nocturne-ota), RCLONE_REMOTE (default r2).
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+DEPLOY="$REPO_ROOT/build/tmp/deploy/images/superbird"
+
+R2_BUCKET="${R2_BUCKET:-nocturne-ota}"
+RCLONE_REMOTE="${RCLONE_REMOTE:-r2}"
+
+VARIANT_ARG="${1:-all}"
+case "$VARIANT_ARG" in
+  dev|prod|all) ;;
+  *) echo "usage: $(basename "$0") [dev|prod|all]" >&2; exit 2 ;;
+esac
+
+if ! command -v rclone >/dev/null 2>&1; then
+  echo "rclone not on PATH (https://rclone.org/install/)" >&2
+  exit 2
+fi
+
+if ! rclone listremotes 2>/dev/null | grep -q "^${RCLONE_REMOTE}:$"; then
+  echo "rclone remote '${RCLONE_REMOTE}:' not configured" >&2
+  exit 2
+fi
+
+variant_to_channel() {
+  case "$1" in
+    dev)  echo dev ;;
+    prod) echo stable ;;
+    *)    echo "unknown variant: $1" >&2; exit 2 ;;
+  esac
+}
+
+version_from_artifact() {
+  date -u -r "$1" +'%Y%m%d-%H%M%S'
+}
+
+upload_variant() {
+  local variant="$1"
+  local channel
+  channel="$(variant_to_channel "$variant")"
+
+  local swu_full="$DEPLOY/nocturne-update-${variant}-superbird.swu"
+  local swu_delta="$DEPLOY/nocturne-update-${variant}-delta-superbird.swu"
+  local zip="$DEPLOY/nocturne-${variant}-image-superbird-flashthing.zip"
+
+  # glob the .zck since the fstype varies per image variant
+  local zck
+  zck="$(ls "$DEPLOY/nocturne-${variant}-image-superbird".*.zck 2>/dev/null | grep -v zckheader | head -n1)"
+
+  if [[ -z "$zck" ]]; then
+    echo "[release] no .zck artifact found for variant $variant under $DEPLOY; run 'just build' first" >&2
+    exit 1
+  fi
+
+  for f in "$swu_full" "$swu_delta" "$zck" "$zip"; do
+    if [[ ! -e "$f" ]]; then
+      echo "[release] missing $(basename "$f") for variant $variant; run 'just build' first" >&2
+      exit 1
+    fi
+  done
+
+  local version
+  version="${SUPERBIRD_RELEASE_VERSION:-$(version_from_artifact "$swu_full")}"
+  if [[ -z "${SUPERBIRD_RELEASE_VERSION:-}" ]]; then
+    echo "[release] WARN: SUPERBIRD_RELEASE_VERSION unset; using artifact mtime $version" >&2
+  fi
+
+  local prefix="images/${channel}/${version}"
+  local dest="${RCLONE_REMOTE}:${R2_BUCKET}/${prefix}"
+
+  echo "[release] variant=$variant channel=$channel version=$version -> $dest"
+  for f in "$swu_full" "$swu_delta" "$zck" "$zip"; do
+    rclone copyto --progress --copy-links "$f" "$dest/$(basename "$f")" --s3-no-check-bucket
+  done
+}
+
+if [[ "$VARIANT_ARG" == "all" ]]; then
+  upload_variant dev
+  upload_variant prod
+else
+  upload_variant "$VARIANT_ARG"
+fi
+
+echo "[release] artifacts uploaded. regenerate the discover manifest via usenocturne.com bun run manifest:build, then rclone copyto manifest/fixture.json to manifest.json."

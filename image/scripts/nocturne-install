@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# pull the latest nocturne image from the ota manifest and flash to a device in burn mode.
+# requires flashthing-cli, curl, jq. OTA_PUBLIC_BASE overrides the manifest host.
+
+set -euo pipefail
+
+variant="${1:-}"
+case "$variant" in
+  dev|prod) ;;
+  *) echo "usage: $(basename "$0") dev|prod" >&2; exit 1 ;;
+esac
+
+OTA_PUBLIC_BASE="${OTA_PUBLIC_BASE:-https://ota.usenocturne.com}"
+
+flashthing="${FLASHTHING_CLI:-flashthing-cli}"
+if ! command -v "$flashthing" >/dev/null 2>&1; then
+  echo "flashthing-cli not on PATH; cargo install flashthing-cli or set FLASHTHING_CLI" >&2
+  exit 2
+fi
+
+for tool in curl jq; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "$tool not on PATH" >&2
+    exit 2
+  fi
+done
+
+manifest_url="${OTA_PUBLIC_BASE}/manifest/${variant}"
+echo "[install] fetching manifest: $manifest_url"
+manifest="$(curl -fsSL "$manifest_url")"
+
+zip_url="$(printf '%s' "$manifest" | jq -r '.flashthing_zip_url')"
+zip_size="$(printf '%s' "$manifest" | jq -r '.flashthing_zip_size')"
+version="$(printf '%s' "$manifest" | jq -r '.version')"
+
+if [[ -z "$zip_url" || "$zip_url" == "null" ]]; then
+  echo "[install] manifest missing flashthing_zip_url" >&2
+  exit 1
+fi
+
+echo "[install] $variant version $version (~$((zip_size / 1024 / 1024)) MiB)"
+dest="${TMPDIR:-/tmp}/nocturne-${variant}-image-superbird-flashthing.zip"
+echo "[install] downloading $zip_url"
+curl -fL --output "$dest" "$zip_url"
+
+echo "[install] flashing $variant image..."
+"$flashthing" "$dest"
+echo "[install] flash complete. exit burn mode with: just boot-kernel"

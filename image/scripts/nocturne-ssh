@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# ssh into the device over the usb gadget. SUPERBIRD_HOST overrides the mdns default.
+set -euo pipefail
+
+HOST=${SUPERBIRD_HOST:-nocturne.local}
+
+exec ssh \
+    -o UserKnownHostsFile=/dev/null \
+    -o StrictHostKeyChecking=no \
+    -o GlobalKnownHostsFile=/dev/null \
+    -o ConnectTimeout=5 \
+    -o LogLevel=ERROR \
+    "root@$HOST" "$@"
