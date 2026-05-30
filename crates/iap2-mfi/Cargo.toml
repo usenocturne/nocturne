@@ -1,0 +1,15 @@
+[package]
+name = "iap2-mfi"
+rust-version.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Apple MFi authentication coprocessor driver. Forked from bridgething/crates/mfi (MIT, Joey Eamigh)."
+
+[dependencies]
+i2cdev = "0.6.1"
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+hex-literal = "1.0.0"

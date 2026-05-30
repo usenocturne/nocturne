@@ -1,0 +1,19 @@
+[package]
+name = "nocturne-swupdate-sys"
+description = "Self-contained static build of libswupdate's network_ipc + progress_ipc client surfaces, vendored from upstream."
+rust-version.workspace = true
+version.workspace = true
+edition.workspace = true
+license = "LGPL-2.1-or-later"
+authors.workspace = true
+homepage.workspace = true
+links = "swupdate_ipc_vendored"
+
+[lib]
+test = false
+doctest = false
+
+[dependencies]
+
+[build-dependencies]
+cc = { workspace = true }

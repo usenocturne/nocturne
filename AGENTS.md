@@ -29,9 +29,22 @@ just copy                    # Build + scp binary to Car Thing at 172.16.42.2
 ## STRUCTURE
 
 ```
-nocturned-private/
-├── src/                    # Rust daemon source (17 modules) — see src/AGENTS.md
-├── Cargo.toml              # Binary crate manifest (binary: nocturned). iap2-rs pulled from GitHub SSH.
+nocturned/
+├── crates/
+│   ├── daemon/             # Daemon binary crate (nocturned)
+│   ├── shared/             # Shared wire types library
+│   │   └── generated/      # Codegen outputs
+│   │       ├── ts/
+│   │       ├── swift/
+│   │       ├── kotlin/
+│   │       └── rust/
+│   ├── iap2/               # iAP2 protocol stack (package: iap2-rs)
+│   ├── iap2-macros/        # Proc macros for iAP2 control-session messages
+│   ├── iap2-mfi/           # Apple MFi authentication coprocessor driver
+│   └── swupdate-sys/       # SWUpdate FFI bindings
+├── tools/
+│   └── codegen/            # Schema emitter
+├── Cargo.toml              # Workspace manifest
 ├── Cargo.lock
 ├── Cross.toml              # ARM cross-compilation config (libdbus-1-dev, libopus-dev pre-installed)
 ├── Justfile                # Build/lint/deploy commands
@@ -40,13 +53,32 @@ nocturned-private/
 └── target/                 # Cargo build output (gitignored)
 ```
 
+### Code generation surface
+
+The protocol uses a code generation pipeline to ensure type safety across Rust, TypeScript, Swift, and Kotlin.
+
+- **Canonical schema**: `tools/codegen/src/dispatch/inventory.rs` is the source of truth for all wire types.
+- **Emitter modules**: `tools/codegen/src/dispatch/{rust,typescript,swift,kotlin}.rs` produce the target-specific bindings.
+- **Output paths**: `crates/shared/generated/{rust,ts,swift,kotlin}/` for shared daemon/app/UI schemas; `crates/iap2/src/csm/generated.rs` for daemon-internal iAP2 CSM structs.
+- **Regeneration**:
+  - `just codegen`: Writes only into the local `crates/shared/generated/` directory.
+  - `just codegen --mirror`: Also writes into mobile app trees at `nocturne-app/ios/Sources/Nocturne/Generated/` and `nocturne-app/android/app/src/main/kotlin/generated/`.
+- **Hand-edit policy**: NEVER edit anything under `crates/shared/generated/`, `crates/iap2/src/csm/generated.rs`, or any `generated/` directory in consumer repos. Edit the inventory or emitter instead.
+- **Determinism contract**: Emitters MUST be byte-stable. A second `just codegen` invocation must produce zero diffs. CI is expected to enforce this once the codegen track ships.
+- **Casing convention**: Wire is `snake_case` (canonical). Emitters convert to `camelCase` for TS/Swift/Kotlin, while `snake_case` is kept in Rust.
+- **Cross-link**: See `tools/codegen/src/dispatch/casing.rs` for transforms.
+
+### iAP2 workspace crates
+
+`crates/iap2`, `crates/iap2-macros`, and `crates/iap2-mfi` are now first-class workspace members. They originated as a GPL-3.0-only fork of Joey Eamigh's bridgething iAP2/MFi crates; attribution lives in `ATTRIBUTION.md`. The standalone `iap2-rs` repo is archived at commit `968eea0`, and future iAP2 work happens here alongside the daemon for Tier 1 codegen unification and Tier 2 observability evolution.
+
 **Wire boundaries** (consumers/producers of this daemon's APIs — separate repos, NOT subdirs):
 
-- `iap2-rs` — iAP2 protocol library; consumed via Cargo git dependency on GitHub SSH (`ssh://git@github.com/usenocturne/iap2-rs.git`). To test against a local checkout, add a `[patch]` override in `Cargo.toml`.
+- `crates/iap2` — iAP2 protocol library package (`iap2-rs`) consumed by the daemon through the workspace dependency.
 - `nocturne-ui` — Car Thing web frontend. Connects to this daemon over WebSocket port 5000.
-- `nocturne-app` — iOS/Android companion. Connects over Bluetooth (iAP2 EA on iOS, RFCOMM SPP on Android), both speaking MsgPack RPC handled by `src/app/msgpack.rs`.
+- `nocturne-app` — iOS/Android companion. Connects over Bluetooth (iAP2 EA on iOS, RFCOMM SPP on Android), both speaking MsgPack RPC handled by `crates/daemon/src/app/msgpack.rs`.
 - `nocturne-image` — Buildroot firmware. Bakes this daemon into the Car Thing rootfs at build time.
-- `nocturne-ota` — OTA server. `src/app/msgpack.rs::download_ota_chunks_task` fetches signed SWU packages from there. Server URL configured in `/etc/nocturne/config.json` (loaded by `src/config.rs`).
+- `nocturne-ota` — OTA server. `crates/daemon/src/app/msgpack.rs::download_ota_chunks_task` fetches signed SWU packages from there. Server URL configured in `/etc/nocturne/config.json` (loaded by `crates/daemon/src/system/config.rs`).
 
 ## ARCHITECTURE
 
@@ -54,17 +86,18 @@ The daemon follows a layered protocol architecture:
 
 ```
 main.rs
-├── bluetooth.rs          RFCOMM listener & connection management
-├── websocket.rs          WebSocket server for UI communication (port 5000)
-├── audio.rs              Audio capture, Opus encoding & broadcast
-├── wakeword.rs           ONNX wake word detection → triggers audio recording
+├── bluetooth/            RFCOMM listener, SDP registration, pairing agent
+├── http/                 WebSocket + webapp HTTP servers
+├── audio/                Audio capture, Opus encoding, wake word detection
+├── hardware/             Brightness, image cache, raw MFi chip driver
+├── system/               Config loading and A/B slot helpers
 ├── app/                  Application layer
 │   ├── mod.rs            App communication manager & message types
 │   ├── msgpack.rs        MsgPack RPC handler (chunking, CRC32, EA commands)
 │   └── websocket_handler.rs  WebSocket→iPhone command routing
-├── iap2_wrapper.rs       Bridge to iap2-rs crate (config, events, EA session routing)
-├── mfi.rs + mfi_impl.rs  MFi hardware chip interface (/dev/apple_mfi)
-└── iap2-rs/ (external)   Protocol implementation
+├── iap2/                 Bridge to iap2-rs crate + MFi trait provider
+├── ota/                  OTA actor, range proxy, slots, swap helpers
+└── crates/iap2/          Protocol implementation
     ├── link.rs           Link layer: packet framing, SYN/ACK, sequence numbers
     ├── packet.rs         Binary packet encode/decode, CRC-8 checksums
     ├── auth.rs           MFi certificate authentication
@@ -90,10 +123,10 @@ nocturne-ui (Car Thing display, served via Chromium kiosk)
 
 | Task | Location | Notes |
 |------|----------|-------|
-| Daemon code | `src/` | Binary crate, 17 modules — see `src/AGENTS.md` |
-| iAP2 protocol internals | `iap2-rs` repo | link, packet, session, auth layers (Cargo git dep, not in this repo) |
+| Daemon code | `crates/daemon/src/` | Binary crate, 17 modules — see `crates/daemon/src/AGENTS.md` |
+| iAP2 protocol internals | `crates/iap2/` | link, packet, session, auth layers in this workspace |
 | Car Thing UI internals | `nocturne-ui` repo | Vite+React; WebSocket client to this daemon on port 5000 |
-| Mobile-app internals | `nocturne-app` repo | iOS+Android via Skip; BT client to this daemon |
+| Mobile-app internals | `nocturne-app` repo | iOS (Swift) + Android (Kotlin) apps; BT client to this daemon |
 | MFi auth details | `MFi.md` | IOCTL ops, cert format, challenge-response flow |
 | Protocol reference | `resources.zip` (unzip locally — reverse-eng artifacts) | `accessoryd-packets-spotify.txt`, `full_pseudo_c.txt` (`sub_97754` = main) |
 | CI pipeline | `.github/workflows/build.yml` | Cross-build for ARM, SSH deploy key for `iap2-rs` |
@@ -139,21 +172,21 @@ Unzip `resources.zip` locally (gitignored — too large to track) for reverse-en
 - **Profile**: `spotify.me.profile`
 
 ### Audio Streaming
-- **Capture**: `src/audio.rs` spawns `arecord` (ALSA `hw:0,0`, 16kHz mono S16_LE), Opus encoding (24kbps VBR)
+- **Capture**: `crates/daemon/src/audio/capture.rs` spawns `arecord` (ALSA `hw:0,0`, 16kHz mono S16_LE), Opus encoding (24kbps VBR)
 - **Wire Format**: MsgPack events — `audio.recording.started`, `audio.data` (base64 Opus), `audio.recording.stopped`
 - **Control**: WebSocket commands `audio.record.start` / `audio.record.stop`
 
 ### MFi Hardware
-- Certificate from `/dev/apple_mfi` via ioctl `0x80107704`/`0x80107705`
+- Certificate from `/dev/apple_mfi` via ioctl `0x80107704`/`0x80107705` in `crates/daemon/src/hardware/mfi_chip.rs`
 - Challenge-response: 32-byte challenge → ECDSA P-256 64-byte signature via `0x40107706`/`0x80107707`
 - Falls back to hardcoded cert/response on non-Car Thing hardware
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
 - **Hardcoded paths are intentional**: `/etc/nocturne/`, `/dev/apple_mfi`, `/dev/misc`, ALSA `hw:0,0` are Car Thing constants — don't refactor into config
-- **`iap2-rs` is a git dependency**: `Cargo.toml` pulls it from GitHub SSH using a pinned SHA. To test a local checkout against this daemon, add a `[patch."ssh://git@github.com/usenocturne/iap2-rs.git"]` override in `Cargo.toml`.
-- **Don't edit other repos from here.** `nocturne-ui`, `nocturne-app`, `iap2-rs`, `nocturne-image`, `nocturne-ota`, `nocturne-connector` each maintain their own conventions — only change them in their respective checkouts.
-- **Don't add `lib.rs`**: this is intentionally a binary crate; shared types live in module files
+- **`iap2-rs` is in-tree**: `Cargo.toml` resolves it from `crates/iap2`; keep daemon+iAP2 protocol evolution atomic inside this workspace.
+- **Don't edit other repos from here.** `nocturne-ui`, `nocturne-app`, `nocturne-image`, `nocturne-ota`, `nocturne-connector` each maintain their own conventions — only change them in their respective checkouts.
+- **Don't add `lib.rs` to `crates/daemon`**: the daemon binary crate stays binary-only; shared types live in `crates/shared/`
 - **Don't change MsgPack chunk format silently**: the iOS app and Android app both expect 36-char UUID message IDs, CRC32 checksums, and 2000-byte chunks — this is part of the public BT wire contract.
 
 ## NOTES

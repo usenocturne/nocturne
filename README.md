@@ -17,14 +17,22 @@
 
 ## Building
 
-Use the `Justfile`. `just build` will cross-compile a Linux armv7 release binary. Cross-compilation is driven by [`cross`](https://github.com/cross-rs/cross), so a working Docker runtime is required.
+Use the `Justfile`. `just build` will cross-compile a Linux arm64 release binary. Cross-compilation is driven by [`cross`](https://github.com/cross-rs/cross), so a working Docker runtime is required.
 
 ```
 $ just -l
 Available recipes:
-  build
-  copy
-  lint
+    build
+    codegen *args
+    codegen-check
+    codegen-mirror
+    codegen-snapshot-review
+    copy
+    fmt-check
+    lint
+    lint-check
+    test
+    test-emulator~
 ```
 
 ## Donate
@@ -39,7 +47,6 @@ All donations are split between the three members of the Nocturne team and go to
 
 - [nocturne](https://github.com/usenocturne/nocturne)
 - [nocturne-ui](https://github.com/usenocturne/nocturne-ui) - Nocturne's standalone web application written with Vite + React
-- [iap2-rs](https://github.com/usenocturne/iap2-rs) - Rust implementation of iAP2 used by this daemon
 
 ## Credits
 
@@ -47,6 +54,8 @@ This software was made possible only through the following individuals:
 
 - [Dominic Frye](https://github.com/itsnebulalol)
 - [Neel Patel](https://github.com/68p)
+
+We'd like to give a huge thanks to [Joey Eamigh](https://github.com/JoeyEamigh) for [bridgething](https://github.com/JoeyEamigh/bridgething) (protocol, more robust iAP2, OTA, and more), [yocto-superbird](https://github.com/JoeyEamigh/yocto-superbird), and for a ton of help during the Yocto migration. We'd also like to thank [lmore377](https://github.com/lmore377) for modernizing the Car Thing's tooling and contributions to bridgething/yocto-superbird. The new Nocturne OS image powered by Yocto and modern software wouldn't be possible without them.
 
 ## License
 

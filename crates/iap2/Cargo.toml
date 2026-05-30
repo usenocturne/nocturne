@@ -1,0 +1,34 @@
+[package]
+name = "iap2-rs"
+rust-version.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Rust iAP2 protocol stack. Forked from bridgething/crates/iap2 (MIT, Joey Eamigh)."
+
+[features]
+emulator = []
+frame-tap = []
+
+[dependencies]
+iap2-macros = { path = "../iap2-macros" }
+iap2-mfi = { path = "../iap2-mfi" }
+bytes = { version = "1.10.1", features = ["serde"] }
+bitflags = "2.9.4"
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["rt", "sync", "time", "io-util", "macros"] }
+tokio-util = { workspace = true, features = ["codec"] }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+criterion = "0.5"
+tokio = { workspace = true, features = ["full", "test-util"] }
+futures = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[[bench]]
+name = "hot_paths"
+harness = false
