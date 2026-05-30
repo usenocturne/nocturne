@@ -1,0 +1,23 @@
+@use "../../../styles/variables.module" as vars;
+
+.headerWrapper {
+  height: 152px;
+  width: 100%;
+  padding-right: 72px;
+  z-index: vars.$overlay-z-index + 10;
+  display: flex;
+
+  @include vars.transition-background;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  @include vars.transition-transform;
+
+  &.smallHeader {
+    transform: translateY(40px);
+  }
+}

@@ -1,0 +1,11 @@
+.container {
+  overflow: visible !important;
+
+  :global {
+    .swiper-wrapper {
+      .swiper-slide-prev {
+        transform: translateX(-18px);
+      }
+    }
+  }
+}

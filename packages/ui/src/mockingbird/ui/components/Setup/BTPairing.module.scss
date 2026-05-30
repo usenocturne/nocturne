@@ -1,0 +1,35 @@
+@use "../../styles/variables.module" as vars;
+
+.screen {
+  background: vars.$aubergine;
+  height: vars.$device-height;
+  width: vars.$device-width;
+  padding: 32px 48px 40px;
+}
+
+.content {
+  height: 260px;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+}
+
+.title {
+  margin-bottom: 32px;
+  color: vars.$pink;
+
+  @include vars.text-style(120px, 120px, -0.04em);
+}
+
+.texts {
+  color: vars.$pink;
+  width: 650px;
+
+  @include vars.text-style(36px, 48px, -0.02em);
+}
+
+.pinCode {
+  color: vars.$pink;
+
+  @include vars.text-style(72px, 72px, -0.03em);
+}

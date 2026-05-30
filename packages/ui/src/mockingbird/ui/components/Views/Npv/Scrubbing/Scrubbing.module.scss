@@ -1,0 +1,9 @@
+@use "../../../../styles/variables.module" as vars;
+
+.scrubbingClickArea {
+  z-index: 15;
+  position: absolute;
+  bottom: 144px;
+  height: 72px;
+  width: vars.$device-width;
+}

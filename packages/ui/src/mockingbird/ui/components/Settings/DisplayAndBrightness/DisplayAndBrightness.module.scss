@@ -1,0 +1,79 @@
+@use "../../../styles/variables.module" as vars;
+
+.header {
+  position: sticky;
+  background-color: vars.$black;
+  z-index: vars.$overlay-z-index + 20;
+  height: 128px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+
+  span {
+    margin-left: 40px;
+    color: vars.$white;
+    font-weight: bold;
+    @include vars.text-style(44px, 48px, -0.02em);
+  }
+}
+
+.container {
+  height: 352px;
+  overflow: scroll;
+  background: vars.$black;
+
+  .notification {
+    height: 96px;
+    margin-bottom: 40px;
+    padding-left: 40px;
+    padding-right: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    @include vars.transition-background-border;
+    background: vars.$white-10;
+
+    &.pressed {
+      color: vars.$white-70;
+      background: rgb(255 255 255 / 5%);
+      border: none;
+    }
+  }
+
+  .label {
+    font-weight: 700;
+    color: vars.$white;
+    @include vars.text-style(36px, 48px, -0.02em);
+  }
+
+  .value {
+    font-weight: 700;
+    color: vars.$white-70;
+    @include vars.text-style(36px, 48px, -0.02em);
+
+    &.greenOn {
+      color: vars.$positive;
+    }
+  }
+
+  .comingSoon {
+    color: vars.$white-70;
+    text-align: right;
+    max-width: 360px;
+    font-weight: 400;
+    @include vars.text-style(28px, 32px, -0.02em);
+  }
+
+  .text {
+    color: vars.$gray-80;
+    padding-left: 40px;
+    padding-right: 40px;
+    @include vars.text-style(32px, 40px, -0.02em);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}

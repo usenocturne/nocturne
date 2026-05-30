@@ -1,0 +1,68 @@
+@use "../../../../styles/variables.module" as vars;
+
+.otherMedia {
+  background: #000000;
+  height: calc(100% - 144px);
+  padding: 24px 40px;
+  box-sizing: border-box;
+}
+
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 44px;
+  margin-right: 6px;
+}
+
+.widget {
+  margin-top: 12px;
+  width: 720px;
+  height: 224px;
+  background-color: vars.$gray-20;
+  border-radius: 16px;
+  display: flex;
+  overflow: hidden;
+}
+
+.artwork {
+  flex-shrink: 0;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.metadata {
+  width: 100%;
+  padding: 12px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  overflow: hidden;
+}
+
+.source {
+  @include vars.text-style(28px, 32px, -0.01em);
+  font-weight: bold;
+  color: vars.$opacity-white-70;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title {
+  @include vars.text-style(52px, 60px, -0.03em);
+  font-weight: bold;
+  color: vars.$white;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.subtitle {
+  @include vars.text-style(32px, 40px, normal);
+  color: vars.$white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

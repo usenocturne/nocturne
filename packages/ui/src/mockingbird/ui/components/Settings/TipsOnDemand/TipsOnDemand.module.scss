@@ -1,0 +1,129 @@
+@use "../../../styles/variables.module" as vars;
+
+.nextButton {
+  background-color: vars.$white-30;
+  color: vars.$white;
+  height: 128px;
+  width: 128px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  @include vars.text-style(32px, 40px, -0.02em);
+  cursor: pointer;
+}
+
+.pressed {
+  opacity: 0.7;
+}
+
+.buttonContainer {
+  justify-content: flex-end;
+  display: flex;
+}
+
+.background {
+  height: vars.$device-height;
+  width: 100%;
+  background:
+    linear-gradient(0deg, rgb(11 99 202 / 20%), rgb(11 99 202 / 20%)),
+    radial-gradient(
+      100% 100% at 0% 0%,
+      #000 27.85%,
+      rgb(255 255 255 / 10%) 100%
+    );
+}
+
+.tipsOnDemand {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 32px 48px 32px 40px;
+  will-change: transform;
+}
+
+.tipContent {
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.tipTitle {
+  @include vars.text-style(36px, 48px, -0.02em);
+  font-weight: 700;
+  color: vars.$green-light;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tipDescription {
+  margin-top: 16px;
+  @include vars.text-style(44px, 48px, -0.02em);
+  font-weight: 700;
+  color: vars.$white;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  justify-content: space-between;
+  padding: 72px 120px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.errorTitle {
+  @include vars.text-style(44px, 48px, -0.02em);
+  font-weight: 700;
+  color: vars.$white;
+}
+
+.errorDescription {
+  @include vars.text-style(32px, 40px, -0.02em);
+  color: vars.$white;
+}
+
+.okButton {
+  @include vars.text-style(32px, 40px, -0.02em);
+  font-weight: 700;
+  background-color: vars.$white;
+  color: vars.$black;
+  border-radius: 48px;
+  padding: 16px 64px;
+  cursor: pointer;
+
+  &.pressed {
+    opacity: 0.7;
+  }
+}
+
+.tipOnDemandEnter {
+  opacity: 0;
+  transform: translateX(40px);
+}
+
+.tipOnDemandEnterActive {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.tipOnDemandExit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.tipOnDemandExitActive {
+  opacity: 0;
+  transform: translateX(-40px);
+}

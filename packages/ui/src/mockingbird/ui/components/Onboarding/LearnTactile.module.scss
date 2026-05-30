@@ -1,0 +1,17 @@
+@use "../../styles/variables.module" as vars;
+
+.learnTactile {
+  height: vars.$device-height;
+  width: vars.$device-width;
+  background-color: transparent;
+  position: relative;
+}
+
+.blockTouch {
+  height: vars.$device-height;
+  width: vars.$device-width;
+  position: absolute;
+  top: 0;
+  z-index: vars.$onboarding-tactile-z-index + 1;
+  background-color: transparent;
+}

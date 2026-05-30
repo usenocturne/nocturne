@@ -1,0 +1,44 @@
+@use "../../../styles/variables.module" as vars;
+
+.licenses {
+  width: vars.$device-width;
+  height: vars.$device-height;
+  background-color: vars.$white;
+  color: vars.$black;
+  padding: 42px;
+  box-sizing: border-box;
+}
+
+.header {
+  font-weight: bold;
+  @include vars.text-style(44px, 48px, -0.02em);
+  margin-bottom: 42px;
+}
+
+.textContainer {
+  height: 300px;
+  overflow-y: auto;
+}
+
+.licenseText {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 12px;
+  font-family: monospace;
+  line-height: 12px;
+  margin: 0;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  @include vars.text-style(32px, 40px, 0);
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}

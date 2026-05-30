@@ -1,0 +1,50 @@
+@use "../../../styles/variables.module" as vars;
+
+.factoryReset {
+  width: vars.$device-width;
+  height: vars.$device-height;
+  padding: 68px 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.description {
+  @include vars.text-style(32px, 40px, 0);
+  color: vars.$white;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.button {
+  @include vars.text-style(32px, 40px, -0.02em);
+  font-weight: bold;
+  border: none;
+  border-radius: 500px;
+  padding: 16px 32px;
+  min-width: 200px;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.primary {
+  background-color: vars.$white;
+  color: vars.$black;
+}
+
+.secondary {
+  background-color: vars.$white-10;
+  color: vars.$white;
+}

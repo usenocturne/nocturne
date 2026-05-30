@@ -1,0 +1,24 @@
+@use "../../../styles/variables.module" as vars;
+
+.powerTutorial {
+  width: vars.$device-width;
+  height: vars.$device-height;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  @include vars.text-style(44px, 48px, -0.02em);
+  color: vars.$white;
+  font-weight: bold;
+  margin-bottom: 32px;
+}
+
+.description {
+  @include vars.text-style(32px, 40px, 0);
+  color: vars.$white;
+  text-align: center;
+  max-width: 560px;
+}

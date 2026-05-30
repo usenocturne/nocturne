@@ -1,0 +1,45 @@
+@use "../../../styles/variables.module" as vars;
+
+.scrollContainer {
+  height: 352px;
+  overflow: scroll;
+}
+
+.submenuItemWrapper {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.toggleRow {
+  height: 96px;
+  padding: 0 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: vars.$white-10;
+  @include vars.transition-background-opacity;
+}
+
+.label {
+  font-weight: bold;
+  color: vars.$white;
+  @include vars.text-style(36px, 40px, -0.02em);
+}
+
+.value {
+  color: vars.$white-70;
+  @include vars.text-style(36px, 40px, -0.02em);
+}
+
+.comingSoon {
+  color: vars.$white-70;
+  text-align: right;
+  max-width: 360px;
+  @include vars.text-style(28px, 32px, -0.02em);
+}
+
+.text {
+  padding: 40px;
+  color: vars.$gray-80;
+  @include vars.text-style(32px, 40px, -0.02em);
+}

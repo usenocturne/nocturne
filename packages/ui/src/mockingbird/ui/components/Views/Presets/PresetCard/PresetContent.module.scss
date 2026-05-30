@@ -1,0 +1,34 @@
+@use "../../../../styles/variables.module" as vars;
+
+.presetTitle {
+  text-align: center;
+  width: 168px;
+  margin-top: 16px;
+}
+
+.title {
+  color: vars.$white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 8px;
+
+  &.active {
+    color: vars.$green-light;
+  }
+}
+
+.subtitle {
+  color: vars.$opacity-white-70;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nowPlayingContainer {
+  margin-top: 4px;
+}
+
+.nowPlaying {
+  color: vars.$green-light;
+}

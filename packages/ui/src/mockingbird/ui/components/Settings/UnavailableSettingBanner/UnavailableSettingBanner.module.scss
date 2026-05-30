@@ -1,0 +1,33 @@
+@use "../../../styles/variables.module" as vars;
+
+.banner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 64px;
+  background-color: rgba(50, 50, 50, 0.95);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  box-sizing: border-box;
+  transform: translateY(64px);
+  transition: transform 300ms vars.$easing-function;
+  z-index: 100;
+}
+
+.show {
+  transform: translateY(0);
+}
+
+.icon {
+  color: vars.$white;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.text {
+  @include vars.text-style(24px, 32px, 0);
+  color: vars.$white;
+}

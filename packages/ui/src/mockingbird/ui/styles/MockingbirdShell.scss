@@ -1,0 +1,21 @@
+.mockingbird-root {
+  font-family:
+    "Circular Sp UI v3 T",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: white;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  img,
+  video {
+    max-width: none;
+    height: auto;
+  }
+}

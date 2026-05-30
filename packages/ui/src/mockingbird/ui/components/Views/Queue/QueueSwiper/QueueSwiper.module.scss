@@ -1,0 +1,30 @@
+@use "../../../../styles/variables.module" as vars;
+
+$dial-center-diff: 68px;
+
+.container {
+  position: relative;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: vars.$device-height + $dial-center-diff;
+  overflow: hidden;
+  z-index: vars.$overlay-z-index;
+  background: transparent;
+
+  .swiper {
+    background: transparent;
+  }
+
+  .swiper-wrapper {
+    background: transparent;
+  }
+
+  .swiper-slide {
+    background: transparent;
+  }
+}
+
+.queueSlideScrolled {
+  transform: translateY(48px);
+}

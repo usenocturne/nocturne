@@ -1,0 +1,48 @@
+@use "../../styles/variables.module" as vars;
+
+.errorModal {
+  height: 365px;
+  width: 560px;
+}
+
+.modalRoot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .modalIcon {
+    margin-top: 38px;
+    transform: scale(2.5);
+  }
+
+  .iconNowPlaying {
+    color: vars.$green-light;
+  }
+
+  .modalTitle {
+    margin-top: 23px;
+
+    @include vars.text-style(48px, 36px, -0.04em);
+
+    font-weight: bold;
+    color: vars.$green-light;
+  }
+
+  .modalError {
+    color: vars.$red-light;
+  }
+
+  .modalText {
+    margin-top: 24px;
+    color: vars.$black;
+
+    @include vars.text-style(32px, 40px, -0.02em);
+
+    text-align: center;
+    width: 485px;
+
+    .boldText {
+      font-weight: bold;
+    }
+  }
+}

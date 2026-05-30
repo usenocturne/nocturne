@@ -1,0 +1,23 @@
+@use "../../../styles/variables.module" as vars;
+
+.mainMenu {
+  background-color: vars.$black;
+  height: vars.$device-height;
+}
+
+.header {
+  background: vars.$black;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 144px;
+
+  p {
+    margin-left: 40px;
+    padding: 0;
+    color: vars.$white;
+    font-weight: bold;
+
+    @include vars.text-style(44px, 49px, -0.02em);
+  }
+}

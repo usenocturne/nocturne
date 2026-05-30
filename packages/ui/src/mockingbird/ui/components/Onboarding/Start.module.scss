@@ -1,0 +1,46 @@
+@use "../../styles/variables.module" as vars;
+
+.start {
+  height: vars.$device-height;
+  width: vars.$device-width;
+  background-color: vars.$pink;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: column;
+  padding: 32px 40px;
+}
+
+.title {
+  @include vars.text-style(120px, 120px, -0.04em);
+
+  color: vars.$aubergine;
+}
+
+.tourAction {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .subtitle {
+    @include vars.text-style(72px, 72px, -0.03em);
+
+    color: vars.$aubergine;
+  }
+
+  .arrowWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: vars.$aubergine;
+
+    svg {
+      transform: scale(3);
+      color: vars.$pink;
+    }
+  }
+}

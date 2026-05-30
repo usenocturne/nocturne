@@ -1,0 +1,103 @@
+@use "../../styles/variables.module" as vars;
+
+$transition-duration: 800ms;
+$transition-delay: 1000ms;
+$jellyfish-wrapper-padding: 40px;
+
+.learnVoiceStep {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 400px;
+  margin: 40px 128px 40px 40px;
+}
+
+.headerAndTitle {
+  position: relative;
+}
+
+.header {
+  color: vars.$green;
+  font-weight: bold;
+  margin-bottom: 24px;
+
+  @include vars.text-style(36px, 48px, -0.02em);
+}
+
+.title {
+  @include vars.text-style(72px, 72px, -0.03em);
+
+  font-weight: bold;
+  color: vars.$white;
+}
+
+.errorContent {
+  @include vars.text-style(52px, 60px, -0.03em);
+
+  font-weight: bold;
+  color: vars.$white;
+  margin-bottom: 32px;
+}
+
+.transition {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.voiceActive {
+  transition: opacity 200ms;
+  opacity: 0.1;
+}
+
+.skipOrJellyfish {
+  width: 128px;
+  height: 128px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.jellyfishContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 128px;
+  height: 128px;
+}
+
+.contentEnter {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.contentEnterActive {
+  @include vars.transition-opacity-transform(
+    $transition-duration,
+    vars.$easing-function-ease-out-cubic,
+    $transition-delay
+  );
+
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.contentExit {
+  opacity: 1;
+}
+
+.contentExitActive {
+  @include vars.transition-opacity(500ms, vars.$easing-function-ease-out-cubic);
+
+  opacity: 0;
+}
+
+.stepExit {
+  opacity: 1;
+}
+
+.stepExitActive {
+  opacity: 0;
+  transition: opacity 1300ms vars.$easing-function-ease-out-cubic;
+}

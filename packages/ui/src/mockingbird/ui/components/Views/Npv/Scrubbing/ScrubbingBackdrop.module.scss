@@ -1,0 +1,40 @@
+@use "../../../../styles/variables.module" as vars;
+
+.scrubbingBackdrop {
+  position: absolute;
+  width: vars.$device-width;
+  height: vars.$device-height;
+  background: rgb(0 0 0 / 85%);
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 15;
+  transition: opacity 300ms;
+
+  &.hidden {
+    opacity: 0;
+    transition-timing-function: cubic-bezier(1, 0, 0.7, 1);
+  }
+
+  &.visible {
+    opacity: 1;
+    transition-timing-function: cubic-bezier(0.3, 0, 0.7, 1);
+  }
+}
+
+.time {
+  width: vars.$device-width - 80px;
+  height: vars.$device-height - 180px;
+  display: flex;
+  justify-content: space-between;
+
+  span {
+    @include vars.text-style(72px, 72px, -0.03em);
+
+    height: 72px;
+    color: vars.$white;
+    align-self: flex-end;
+  }
+}

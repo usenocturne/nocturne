@@ -1,0 +1,137 @@
+@use "../../../styles/variables.module" as vars;
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: vars.$device-width;
+  height: vars.$device-height;
+  z-index: 20;
+  animation: fadeIn 300ms ease both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.overlayClosing {
+  animation: fadeOut 300ms ease both;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.dialog {
+  padding: 0 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  height: vars.$device-height;
+  background-color: vars.$opacity-black-90;
+  box-sizing: border-box;
+}
+
+.title {
+  @include vars.text-style(52px, 56px, -0.03em);
+  color: vars.$white;
+  margin-top: 24px;
+  margin-bottom: 32px;
+  font-weight: bold;
+}
+
+.subtitle {
+  margin-top: 32px;
+  flex-direction: column;
+  align-items: center;
+  color: vars.$white;
+  @include vars.text-style(44px, 48px, -0.02em);
+  font-weight: bold;
+
+  p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.description {
+  @include vars.text-style(32px, 40px, -0.01em);
+  color: vars.$white;
+  margin-bottom: 40px;
+  width: 540px;
+}
+
+.pairingCode {
+  @include vars.text-style(52px, 56px, -0.03em);
+  color: vars.$green-light;
+}
+
+.iconCheck {
+  margin-top: 42px;
+  margin-bottom: 42px;
+  transform: scale(4);
+  color: vars.$green-light;
+}
+
+.spinnerBig {
+  width: 64px;
+  height: 64px;
+  border: 4px solid vars.$opacity-white-30;
+  border-top: 4px solid vars.$white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.button {
+  @include vars.text-style(32px, 40px, -0.02em);
+  font-weight: bold;
+  border: none;
+  border-radius: 500px;
+  padding: 16px 32px;
+  min-width: 200px;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.primary {
+  background-color: vars.$white;
+  color: vars.$black;
+}
+
+.secondary {
+  background-color: vars.$white-10;
+  color: vars.$white;
+}

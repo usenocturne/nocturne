@@ -1,0 +1,81 @@
+@use "../../../styles/variables.module" as vars;
+
+.bassBold {
+  @include vars.text-style(120px, 137px, -0.04em);
+  font-weight: bold;
+}
+
+.bassBook {
+  @include vars.text-style(120px, 137px, -0.04em);
+}
+
+.forteBold {
+  @include vars.text-style(72px, 72px, -0.03em);
+  font-weight: bold;
+}
+
+.forteBook {
+  @include vars.text-style(72px, 72px, -0.03em);
+}
+
+.brioBold {
+  @include vars.text-style(52px, 60px, -0.03em);
+  font-weight: bold;
+}
+
+.brioBook {
+  @include vars.text-style(52px, 60px, -0.03em);
+}
+
+.altoBold {
+  @include vars.text-style(44px, 49px, -0.02em);
+  font-weight: bold;
+}
+
+.altoBook {
+  @include vars.text-style(44px, 49px, -0.02em);
+}
+
+.canonBold {
+  @include vars.text-style(36px, 48px, -0.02em);
+  font-weight: bold;
+}
+
+.canonBook {
+  @include vars.text-style(36px, 48px, 0);
+  color: vars.$opacity-white-70;
+}
+
+.celloBold {
+  @include vars.text-style(32px, 40px, -0.02em);
+  font-weight: bold;
+}
+
+.celloBook {
+  @include vars.text-style(32px, 40px, 0);
+  color: vars.$opacity-white-70;
+}
+
+.balladBold {
+  @include vars.text-style(28px, 32px, -0.01em);
+  font-weight: bold;
+}
+
+.balladBook {
+  @include vars.text-style(28px, 32px, 0);
+  color: vars.$opacity-white-70;
+}
+
+.mestroBold {
+  @include vars.text-style(24px, 32px, -0.01em);
+  font-weight: bold;
+}
+
+.mestroBook {
+  @include vars.text-style(24px, 32px, 0);
+  color: vars.$opacity-white-70;
+}
+
+.minuet {
+  @include vars.text-style(20px, 24px, 0.1em);
+}

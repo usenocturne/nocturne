@@ -1,0 +1,36 @@
+@use "../../../../styles/variables.module" as vars;
+
+.headerWrapper {
+  height: 152px;
+  display: flex;
+  padding-left: 40px;
+  padding-right: 104px;
+  @include vars.transition-background;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  @include vars.transition-transform;
+
+  &.smallHeader {
+    transform: translateY(38px);
+    width: 134%;
+  }
+}
+
+.queueTitle {
+  @include vars.transition-transform;
+  transform-origin: top left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: bold;
+  color: vars.$white;
+
+  &.smallHeader {
+    transform: scale(calc(32 / 44));
+  }
+}

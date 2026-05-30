@@ -1,0 +1,39 @@
+@use "../../styles/variables.module" as vars;
+
+.screen {
+  background: vars.$aubergine;
+  height: vars.$device-height;
+  width: vars.$device-width;
+  padding: 32px 48px 40px;
+  box-sizing: border-box;
+}
+
+.subtitle {
+  color: vars.$pink;
+  @include vars.text-style(36px, 48px, -0.03em);
+  max-width: 704px;
+}
+
+.texts {
+  height: 300px;
+}
+
+.content {
+  width: 704px;
+  height: 410px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.backToSetup {
+  color: vars.$pink;
+  margin-top: 20px;
+  @include vars.text-style(36px, 40px, -0.02em);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.white {
+  color: vars.$white;
+}

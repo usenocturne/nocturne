@@ -1,0 +1,109 @@
+@use "../../../styles/variables.module" as vars;
+
+$support-text-gray: #7f7f7f;
+
+.aviHeader {
+  position: sticky;
+  background-color: vars.$black;
+  z-index: vars.$overlay-z-index + 20;
+  height: 128px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+
+  span {
+    margin-left: 40px;
+    color: vars.$white;
+    font-weight: bold;
+    @include vars.text-style(44px, 48px, -0.02em);
+  }
+}
+
+.aviContainer {
+  height: 352px;
+  overflow: scroll;
+  background: vars.$black;
+
+  .notification {
+    color: vars.$white;
+    box-sizing: border-box;
+    height: 96px;
+    margin-bottom: 40px;
+    padding-left: 40px;
+    padding-right: 72px;
+    width: vars.$device-width;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgb(255 255 255 / 20%);
+    border-bottom: 1px solid rgb(255 255 255 / 20%);
+    font-weight: 700;
+    @include vars.text-style(36px, 48px, -0.02em);
+    @include vars.transition-background-border;
+
+    &.pressed {
+      color: vars.$white-70;
+      background: rgb(255 255 255 / 5%);
+    }
+
+    &.focused {
+      background: rgb(255 255 255 / 10%);
+      border: none;
+    }
+
+    &.pressed.focused {
+      background: rgb(255 255 255 / 5%);
+      border: none;
+    }
+  }
+
+  .onOff {
+    color: vars.$positive;
+  }
+
+  .comingSoon {
+    color: vars.$white-70;
+    text-align: right;
+    max-width: 360px;
+    font-weight: 400;
+    @include vars.text-style(28px, 32px, -0.02em);
+  }
+
+  .texts {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 16px 40px 48px;
+    color: vars.$gray-85;
+
+    p,
+    ul,
+    span {
+      width: 100%;
+    }
+
+    p {
+      @include vars.text-style(32px, 48px, -0.03em);
+    }
+
+    .intro {
+      color: vars.$gray-80;
+      margin-bottom: 36px;
+    }
+
+    ul {
+      margin-bottom: 32px;
+
+      li {
+        @include vars.text-style(32px, 40px, -0.02em);
+        font-weight: 700;
+        margin-bottom: 14px;
+      }
+    }
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}

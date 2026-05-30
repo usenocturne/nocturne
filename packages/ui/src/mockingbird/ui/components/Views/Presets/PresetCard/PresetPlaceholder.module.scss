@@ -1,0 +1,22 @@
+@use "../../../../styles/variables.module" as vars;
+
+$preset-card-width: 168px;
+
+.presetPlaceholder {
+  text-align: center;
+  width: $preset-card-width;
+  height: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  width: $preset-card-width;
+  color: vars.$opacity-white-70;
+  font-weight: bold;
+
+  &.active {
+    color: vars.$white;
+  }
+}
