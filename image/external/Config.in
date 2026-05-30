@@ -1,0 +1,11 @@
+menu "Nocturne options"
+    # hi
+endmenu
+
+menu "Nocturne packages"
+    source "$BR2_EXTERNAL_Nocturne_PATH/package/stock-blobs/Config.in"
+    source "$BR2_EXTERNAL_Nocturne_PATH/package/static-web-server/Config.in"
+    source "$BR2_EXTERNAL_Nocturne_PATH/package/nocturned/Config.in"
+    source "$BR2_EXTERNAL_Nocturne_PATH/package/nocturne-ui/Config.in"
+    source "$BR2_EXTERNAL_Nocturne_PATH/package/fastfetch/Config.in"
+endmenu

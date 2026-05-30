@@ -1,0 +1,5 @@
+#!/bin/sh
+
+ENTRY=$(grep apple_mfi_ioctl /proc/devices)
+MAJOR=$(echo "$ENTRY" | cut -d ' ' -f1)
+mknod -m 0666 /dev/apple_mfi c "$MAJOR" 0
