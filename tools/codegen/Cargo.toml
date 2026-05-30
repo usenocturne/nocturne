@@ -1,0 +1,26 @@
+[package]
+name = "nocturne-codegen"
+version.workspace = true
+edition = "2024"
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+default-run = "codegen"
+
+[[bin]]
+name = "codegen"
+path = "src/bin/codegen.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+quote = "1.0.41"
+regex = "1.12.3"
+syn = { version = "2.0.117", features = ["full", "parsing"] }
+ts-rs = { workspace = true, features = ["format"] }
+typeshare = { workspace = true }
+walkdir = "2.5.0"
+
+[dev-dependencies]
+insta = "1"
+proptest = "1.5"

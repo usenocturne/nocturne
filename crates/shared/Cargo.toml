@@ -1,0 +1,43 @@
+[package]
+name = "libnocturne"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+bytes = { workspace = true, features = ["serde"] }
+uuid = { workspace = true, features = ["serde"] }
+serde_with = { workspace = true, features = ["json"] }
+derive_more = { workspace = true, features = ["debug", "from"] }
+ts-rs = { workspace = true, features = ["uuid-impl", "no-serde-warnings"] }
+typeshare = { workspace = true }
+tokio-util = { workspace = true, features = ["codec"], optional = true }
+thiserror = { workspace = true, optional = true }
+flate2 = { workspace = true, optional = true }
+rmp-serde = { workspace = true, optional = true }
+rmpv = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+iap2-rs = { workspace = true, optional = true }
+
+[features]
+default = ["protocol"]
+protocol = [
+  "dep:tokio-util",
+  "dep:thiserror",
+  "dep:flate2",
+  "dep:rmp-serde",
+  "dep:rmpv",
+  "dep:tracing",
+]
+iap2 = ["dep:iap2-rs"]
+
+[dev-dependencies]
+bytes = { workspace = true }
+hex = { workspace = true }
+iap2-rs = { workspace = true }
+tokio-util = { workspace = true, features = ["codec"] }

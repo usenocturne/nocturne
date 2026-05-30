@@ -1,0 +1,51 @@
+[package]
+name = "nocturned"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+
+[features]
+default = []
+device = ["dep:nocturne-swupdate-sys"]
+debug-iap2-frame-tap = ["iap2-rs/frame-tap"]
+
+[dependencies]
+tokio = { workspace = true, features = ["full"] }
+bluer = { workspace = true, features = ["rfcomm", "bluetoothd"] }
+iap2-rs = { workspace = true }
+bytes = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+rmp-serde = { workspace = true }
+rmpv = { workspace = true }
+hex = { workspace = true }
+base64 = { workspace = true }
+uuid = { workspace = true }
+futures = { workspace = true }
+libc = { workspace = true }
+dbus = { workspace = true }
+dbus-crossroads = { workspace = true }
+tokio-tungstenite = { workspace = true }
+tungstenite = { workspace = true }
+async-trait = { workspace = true }
+crc32fast = { workspace = true }
+md5 = { workspace = true }
+opus = { workspace = true }
+tract-ndarray = { workspace = true }
+tract-onnx = { workspace = true }
+axum = { workspace = true }
+tower-http = { workspace = true, features = ["fs"] }
+async-stream = { workspace = true }
+libnocturne = { path = "../shared", features = ["iap2"] }
+nocturne-swupdate-sys = { path = "../swupdate-sys", optional = true }
+sha2 = { workspace = true }
+tempfile = { workspace = true }
+tokio-util = { workspace = true }
+filetime = { workspace = true }
