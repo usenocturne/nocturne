@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+APP_URL="${NOCTURNE_CHROMIUM_URL:-http://localhost:8080}"
+WAIT_URL="${NOCTURNE_CHROMIUM_WAIT_URL:-http://127.0.0.1:8080/}"
+CHROME="${NOCTURNE_CHROME_BIN:-/usr/bin/chromium-browser/chrome}"
+
+attempt=0
+until wget -q -T 2 -O /dev/null "$WAIT_URL"; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -eq 1 ] || [ $((attempt % 5)) -eq 0 ]; then
+    echo "start-chromium: waiting for webapp server at $WAIT_URL (attempt $attempt)"
+  fi
+  sleep 1
+done
+
+echo "start-chromium: webapp server ready; launching Chromium at $APP_URL"
+
+exec "$CHROME" \
+  --no-sandbox \
+  --in-process-gpu \
+  --remote-debugging-port=2222 \
+  --user-data-dir=/var/lib/chrome_storage \
+  --kiosk \
+  --disable-pinch \
+  --allow-file-access-from-files \
+  --ignore-certificate-errors \
+  --enable-experimental-web-platform-features \
+  --app="$APP_URL"
