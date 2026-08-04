@@ -1,0 +1,76 @@
+{
+  "bluetooth.agent": {
+    "event": {
+      "accepted": true,
+      "address": "AA:BB:CC:DD:EE:FF",
+      "device": "/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF",
+      "entered": 3,
+      "event": "authorize_service",
+      "name": "Nocturne Phone",
+      "passkey": 123456,
+      "pin": "123456",
+      "pincode": "0000",
+      "type": "bluetooth_pin",
+      "uuid": "00001101-0000-1000-8000-00805f9b34fb"
+    }
+  },
+  "bluetooth.connection": {
+    "event": {
+      "channel": 1,
+      "connection_type": "iap2",
+      "device": "AA:BB:CC:DD:EE:FF",
+      "device_type": "iphone",
+      "event": "connection_established",
+      "initiated_by": "daemon"
+    }
+  },
+  "bluetooth.device": {
+    "event": { "device": "AA:BB:CC:DD:EE:FF", "event": "connected" }
+  },
+  "bluetooth.device.connect": {
+    "request": { "address": "AA:BB:CC:DD:EE:FF", "channel": 1 },
+    "response": { "device": "AA:BB:CC:DD:EE:FF", "status": "connected" }
+  },
+  "bluetooth.device.disconnect": {
+    "request": { "address": "AA:BB:CC:DD:EE:FF" },
+    "response": { "device": "AA:BB:CC:DD:EE:FF", "status": "disconnected" }
+  },
+  "bluetooth.device.unpair": {
+    "request": { "address": "AA:BB:CC:DD:EE:FF" },
+    "response": { "device": "AA:BB:CC:DD:EE:FF", "status": "unpaired" }
+  },
+  "bluetooth.devices.list": {
+    "request": null,
+    "response": {
+      "payload": [
+        {
+          "address": "AA:BB:CC:DD:EE:FF",
+          "blocked": false,
+          "connected": true,
+          "default": true,
+          "device_info": { "name": "Nocturne Phone" }
+        }
+      ],
+      "type": "bluetooth_device_list"
+    }
+  },
+  "bluetooth.discoverable": {
+    "event": { "discoverable": true },
+    "request": { "discoverable": true },
+    "response": { "discoverable": true, "status": "requested" }
+  },
+  "bluetooth.mfi": {
+    "event": {
+      "device": "AA:BB:CC:DD:EE:FF",
+      "event": "authentication_failed",
+      "reason": "challenge_rejected"
+    }
+  },
+  "bluetooth.pairing": {
+    "event": {
+      "device": "AA:BB:CC:DD:EE:FF",
+      "event": "paired",
+      "type": "pairing_succeeded"
+    }
+  }
+}

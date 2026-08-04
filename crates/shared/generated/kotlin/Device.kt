@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AmbientLightUpdateEvent(
   @SerialName("value") val value: UInt,
+  @SerialName("normalized_value") val normalizedValue: UInt,
 )
 
 @Serializable
@@ -19,6 +20,8 @@ data class AppReadyEvent(
   @SerialName("subscribed") val subscribed: Boolean? = null,
   @SerialName("subscription_status") val subscriptionStatus: String? = null,
   @SerialName("has_lifetime") val hasLifetime: Boolean? = null,
+  @SerialName("is_admin") val isAdmin: Boolean? = null,
+  @SerialName("entitlements_verified") val entitlementsVerified: Boolean? = null,
   @SerialName("spotify_skipped") val spotifySkipped: Boolean? = null,
 )
 
@@ -127,6 +130,36 @@ data class DeviceBrightnessSetResponse(
 )
 
 @Serializable
+object DeviceDisplayGetRequest
+
+@Serializable
+data class DeviceDisplayGetResponse(
+  @SerialName("auto") val auto: Boolean,
+  @SerialName("brightness") val brightness: UByte,
+  @SerialName("sleeping") val sleeping: Boolean,
+)
+
+@Serializable
+object DeviceDisplaySleepRequest
+
+@Serializable
+data class DeviceDisplaySleepResponse(
+  @SerialName("auto") val auto: Boolean,
+  @SerialName("brightness") val brightness: UByte,
+  @SerialName("sleeping") val sleeping: Boolean,
+)
+
+@Serializable
+object DeviceDisplayWakeRequest
+
+@Serializable
+data class DeviceDisplayWakeResponse(
+  @SerialName("auto") val auto: Boolean,
+  @SerialName("brightness") val brightness: UByte,
+  @SerialName("sleeping") val sleeping: Boolean,
+)
+
+@Serializable
 enum class DeviceEvent {
   @SerialName("app_ready")
   APP_READY,
@@ -136,6 +169,8 @@ enum class DeviceEvent {
   NETWORK_STATUS,
   @SerialName("notification_show")
   NOTIFICATION_SHOW,
+  @SerialName("notification_remove")
+  NOTIFICATION_REMOVE,
   @SerialName("ambient_light_update")
   AMBIENT_LIGHT_UPDATE,
 }
@@ -157,6 +192,8 @@ data class DeviceInfoResponse(
   @SerialName("device") val device: String,
   @SerialName("version") val version: String,
   @SerialName("full_version") val fullVersion: String? = null,
+  @SerialName("image_version") val imageVersion: String? = null,
+  @SerialName("bandaid_version") val bandaidVersion: String? = null,
   @SerialName("build_date") val buildDate: String? = null,
   @SerialName("git_hash") val gitHash: String? = null,
   @SerialName("serial_number") val serialNumber: String? = null,
@@ -200,6 +237,12 @@ enum class DeviceMethod {
   DEVICE_BRIGHTNESS_SET,
   @SerialName("device_brightness_auto")
   DEVICE_BRIGHTNESS_AUTO,
+  @SerialName("device_display_get")
+  DEVICE_DISPLAY_GET,
+  @SerialName("device_display_sleep")
+  DEVICE_DISPLAY_SLEEP,
+  @SerialName("device_display_wake")
+  DEVICE_DISPLAY_WAKE,
   @SerialName("device_ab_get")
   DEVICE_AB_GET,
   @SerialName("device_ab_reset")
@@ -247,6 +290,7 @@ object DeviceTimeGetRequest
 @Serializable
 data class DeviceTimeGetResponse(
   @SerialName("datetime") val datetime: String,
+  @SerialName("time") val time: String? = null,
 )
 
 @Serializable
@@ -264,6 +308,8 @@ object DeviceVersionRequest
 data class DeviceVersionResponse(
   @SerialName("version") val version: String? = null,
   @SerialName("short_version") val shortVersion: String? = null,
+  @SerialName("image_version") val imageVersion: String? = null,
+  @SerialName("bandaid_version") val bandaidVersion: String? = null,
   @SerialName("git_hash") val gitHash: String? = null,
   @SerialName("build_date") val buildDate: String? = null,
   @SerialName("error") val error: String? = null,
@@ -275,20 +321,6 @@ enum class Encoding {
   MSGPACK,
   @SerialName("json")
   JSON,
-}
-
-@Serializable
-enum class EndecError {
-  @SerialName("invalid_magic")
-  INVALID_MAGIC,
-  @SerialName("unsupported_version")
-  UNSUPPORTED_VERSION,
-  @SerialName("rmp_serialization")
-  RMP_SERIALIZATION,
-  @SerialName("typed_decode")
-  TYPED_DECODE,
-  @SerialName("io")
-  IO,
 }
 
 @Serializable
@@ -309,13 +341,24 @@ data class NetworkStatusEvent(
 )
 
 @Serializable
+data class NotificationRemoveEvent(
+  @SerialName("id") val id: String,
+)
+
+@Serializable
 data class NotificationShowEvent(
   @SerialName("id") val id: String? = null,
   @SerialName("title") val title: String,
   @SerialName("body") val body: String? = null,
+  @SerialName("subtitle") val subtitle: String? = null,
   @SerialName("category") val category: String? = null,
   @SerialName("days_until_expiry") val daysUntilExpiry: Long? = null,
   @SerialName("timestamp") val timestamp: ULong? = null,
+  @SerialName("app_bundle_id") val appBundleId: String? = null,
+  @SerialName("app_name") val appName: String? = null,
+  @SerialName("silent") val silent: Boolean? = null,
+  @SerialName("important") val important: Boolean? = null,
+  @SerialName("pre_existing") val preExisting: Boolean? = null,
 )
 
 @Serializable
@@ -348,15 +391,9 @@ data class SubscriptionUpdatedEvent(
   @SerialName("subscribed") val subscribed: Boolean? = null,
   @SerialName("subscription_status") val subscriptionStatus: String? = null,
   @SerialName("has_lifetime") val hasLifetime: Boolean? = null,
+  @SerialName("is_admin") val isAdmin: Boolean? = null,
+  @SerialName("entitlements_verified") val entitlementsVerified: Boolean? = null,
 )
-
-@Serializable
-enum class TypedDecodeError {
-  @SerialName("rmp")
-  RMP,
-  @SerialName("json")
-  JSON,
-}
 
 @Serializable
 enum class WireError {

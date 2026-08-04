@@ -1,0 +1,62 @@
+# Nocturne A/B OTA: raw write to boot_X + root_X by partlabel; bootenv flips slot_active + tries.
+# selector via `swupdate-client -e stable,slot_a|slot_b`.
+
+software =
+{
+    version = "@@VERSION@@";
+    description = "Nocturne full image OTA";
+
+    # Matched against /etc/hwrevision (`superbird 1.0`) - second column.
+    hardware-compatibility: [ "1.0" ];
+
+    stable: {
+        slot_a: {
+            images: (
+                {
+                    filename = "boot.vfat";
+                    sha256 = "$swupdate_get_sha256(boot.vfat)";
+                    compressed = "zstd";
+                    type = "raw";
+                    device = "/dev/disk/by-partlabel/boot_a";
+                    installed-directly = true;
+                },
+                {
+                    filename = "system.img";
+                    sha256 = "$swupdate_get_sha256(system.img)";
+                    compressed = "zstd";
+                    type = "raw";
+                    device = "/dev/disk/by-partlabel/root_a";
+                    installed-directly = true;
+                }
+            );
+            bootenv: (
+                { name = "slot_active";  value = "a"; },
+                { name = "slot_a_tries"; value = "3"; }
+            );
+        };
+        slot_b: {
+            images: (
+                {
+                    filename = "boot.vfat";
+                    sha256 = "$swupdate_get_sha256(boot.vfat)";
+                    compressed = "zstd";
+                    type = "raw";
+                    device = "/dev/disk/by-partlabel/boot_b";
+                    installed-directly = true;
+                },
+                {
+                    filename = "system.img";
+                    sha256 = "$swupdate_get_sha256(system.img)";
+                    compressed = "zstd";
+                    type = "raw";
+                    device = "/dev/disk/by-partlabel/root_b";
+                    installed-directly = true;
+                }
+            );
+            bootenv: (
+                { name = "slot_active";  value = "b"; },
+                { name = "slot_b_tries"; value = "3"; }
+            );
+        };
+    };
+};

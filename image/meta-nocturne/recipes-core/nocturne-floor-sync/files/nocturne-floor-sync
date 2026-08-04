@@ -7,63 +7,244 @@
 # OLD versions from bandaid (because opt-overlay-bind only seeds when the vendor
 # dir is missing).
 #
-# Strategy: per-recipe semver tag at /etc/nocturne/floor-version.
-# Compare to /var/lib/bandaid/nocturne/.floor-version. If different, copy
-# floor files in atomically (mv-after-write), rotate current/previous for rollback.
+# Strategy: compare the rootfs release at /etc/nocturne/floor-version with the
+# installed overlay release at /var/lib/bandaid/nocturne/.floor-version. Only a
+# newer rootfs may replace the overlay, so a newer hot update survives reboot.
+# Copy floor files in atomically and rotate current/previous for rollback.
 set -eu
 
-ROOTFS_FLOOR_DIR=/usr/lib/nocturne
-BANDAID_DIR=/var/lib/bandaid/nocturne
-FLOOR_VERSION_FILE=/etc/nocturne/floor-version
+ROOTFS_FLOOR_DIR=${NOCTURNE_ROOTFS_FLOOR_DIR:-/usr/lib/nocturne}
+BANDAID_DIR=${NOCTURNE_BANDAID_DIR:-/var/lib/bandaid/nocturne}
+FLOOR_VERSION_FILE=${NOCTURNE_FLOOR_VERSION_FILE:-/etc/nocturne/floor-version}
 BANDAID_VERSION_FILE=${BANDAID_DIR}/.floor-version
+
+rootfs_is_newer() {
+  awk -v candidate="$1" -v installed="$2" '
+        function parse(value, dash, plus, count, parts, i) {
+            sub(/^v/, "", value)
+            plus = index(value, "+")
+            build_version = ""
+            if (plus > 0) {
+                build_version = substr(value, plus + 1)
+                if (build_version == "")
+                    return 0
+                value = substr(value, 1, plus - 1)
+                count = split(build_version, parts, ".")
+                for (i = 1; i <= count; i++)
+                    if (parts[i] == "" || parts[i] ~ /[^0-9A-Za-z-]/)
+                        return 0
+            }
+            dash = index(value, "-")
+            prerelease = ""
+            if (dash > 0) {
+                prerelease = substr(value, dash + 1)
+                if (prerelease == "")
+                    return 0
+                value = substr(value, 1, dash - 1)
+                count = split(prerelease, parts, ".")
+                for (i = 1; i <= count; i++)
+                    if (parts[i] == "" || parts[i] ~ /[^0-9A-Za-z-]/)
+                        return 0
+            }
+            count = split(value, parts, ".")
+            if (count != 3)
+                return 0
+            for (i = 1; i <= 3; i++) {
+                if (parts[i] !~ /^[0-9]+$/)
+                    return 0
+                core_values[i] = parts[i] + 0
+            }
+            return 1
+        }
+        function compare_prerelease(left, right, left_count, right_count, left_parts, right_parts, i, left_numeric, right_numeric) {
+            if (left == "" && right == "")
+                return 0
+            if (left == "")
+                return 1
+            if (right == "")
+                return -1
+            left_count = split(left, left_parts, ".")
+            right_count = split(right, right_parts, ".")
+            for (i = 1; i <= left_count && i <= right_count; i++) {
+                left_numeric = left_parts[i] ~ /^[0-9]+$/
+                right_numeric = right_parts[i] ~ /^[0-9]+$/
+                if (left_numeric && right_numeric) {
+                    if ((left_parts[i] + 0) != (right_parts[i] + 0))
+                        return (left_parts[i] + 0) > (right_parts[i] + 0) ? 1 : -1
+                } else if (left_numeric != right_numeric) {
+                    return left_numeric ? -1 : 1
+                } else if (left_parts[i] != right_parts[i]) {
+                    return left_parts[i] > right_parts[i] ? 1 : -1
+                }
+            }
+            if (left_count == right_count)
+                return 0
+            return left_count > right_count ? 1 : -1
+        }
+        function compare_numeric_strings(left, right) {
+            sub(/^0+/, "", left)
+            sub(/^0+/, "", right)
+            if (left == "")
+                left = "0"
+            if (right == "")
+                right = "0"
+            if (length(left) != length(right))
+                return length(left) > length(right) ? 1 : -1
+            if (left == right)
+                return 0
+            return left > right ? 1 : -1
+        }
+        function compare_build(left, right, left_count, right_count, left_parts, right_parts, i, left_numeric, right_numeric, result) {
+            if (left == "" && right == "")
+                return 0
+            if (left == "")
+                return -1
+            if (right == "")
+                return 1
+            left_count = split(left, left_parts, ".")
+            right_count = split(right, right_parts, ".")
+            for (i = 1; i <= left_count && i <= right_count; i++) {
+                if (left_parts[i] == right_parts[i])
+                    continue
+                left_numeric = left_parts[i] ~ /^[0-9]+$/
+                right_numeric = right_parts[i] ~ /^[0-9]+$/
+                if (left_numeric && right_numeric) {
+                    result = compare_numeric_strings(left_parts[i], right_parts[i])
+                    if (result != 0)
+                        return result
+                } else {
+                    return left_parts[i] > right_parts[i] ? 1 : -1
+                }
+            }
+            if (left_count == right_count)
+                return 0
+            return left_count > right_count ? 1 : -1
+        }
+        BEGIN {
+            if (!parse(candidate))
+                exit 2
+            for (i = 1; i <= 3; i++)
+                candidate_core[i] = core_values[i]
+            candidate_prerelease = prerelease
+            candidate_build = build_version
+            if (installed == "")
+                exit 0
+            if (!parse(installed))
+                exit 3
+            for (i = 1; i <= 3; i++) {
+                if (candidate_core[i] != core_values[i])
+                    exit candidate_core[i] > core_values[i] ? 0 : 1
+            }
+            prerelease_result = compare_prerelease(candidate_prerelease, prerelease)
+            if (prerelease_result != 0)
+                exit prerelease_result > 0 ? 0 : 1
+            exit compare_build(candidate_build, build_version) > 0 ? 0 : 1
+        }
+    '
+}
 
 # read rootfs floor version (DISTRO_VERSION at bake time)
 if [ ! -f "$FLOOR_VERSION_FILE" ]; then
-    echo "no rootfs floor-version stamp; skipping" >&2
-    exit 0
+  echo "no rootfs floor-version stamp; skipping" >&2
+  exit 0
 fi
 ROOTFS_VERSION=$(cat "$FLOOR_VERSION_FILE")
 
 # read bandaid version (empty if first boot since reflash)
 if [ -f "$BANDAID_VERSION_FILE" ]; then
-    BANDAID_VERSION=$(cat "$BANDAID_VERSION_FILE")
+  BANDAID_VERSION=$(cat "$BANDAID_VERSION_FILE")
 else
-    BANDAID_VERSION=""
+  BANDAID_VERSION=""
 fi
 
 if [ "$ROOTFS_VERSION" = "$BANDAID_VERSION" ]; then
-    echo "floor in sync (${ROOTFS_VERSION})"
-    exit 0
+  echo "floor in sync (${ROOTFS_VERSION})"
+  exit 0
+fi
+
+if rootfs_is_newer "$ROOTFS_VERSION" "$BANDAID_VERSION"; then
+  :
+else
+  COMPARE_STATUS=$?
+  case "$COMPARE_STATUS" in
+    1)
+      echo "preserving bandaid ${BANDAID_VERSION}; rootfs floor ${ROOTFS_VERSION} is not newer"
+      exit 0
+      ;;
+    2)
+      echo "invalid rootfs floor version: ${ROOTFS_VERSION}" >&2
+      exit 1
+      ;;
+    3)
+      echo "invalid bandaid floor version: ${BANDAID_VERSION}; preserving overlay" >&2
+      exit 0
+      ;;
+    *)
+      echo "failed to compare floor versions" >&2
+      exit 1
+      ;;
+  esac
 fi
 
 echo "syncing bandaid floor: '${BANDAID_VERSION}' -> '${ROOTFS_VERSION}'"
 
-# daemon: copy nocturned.current with rotate
+# Stage both floor components before replacing either live component.
 DAEMON_SRC=${ROOTFS_FLOOR_DIR}/daemon/nocturned.current
 DAEMON_DEST=${BANDAID_DIR}/daemon
-if [ -f "$DAEMON_SRC" ]; then
-    mkdir -p "$DAEMON_DEST"
-    cp "$DAEMON_SRC" "${DAEMON_DEST}/nocturned.next"
-    if [ -f "${DAEMON_DEST}/nocturned.current" ]; then
-        mv "${DAEMON_DEST}/nocturned.current" "${DAEMON_DEST}/nocturned.previous"
-    fi
-    mv "${DAEMON_DEST}/nocturned.next" "${DAEMON_DEST}/nocturned.current"
-    chmod 0755 "${DAEMON_DEST}/nocturned.current"
+if [ ! -f "$DAEMON_SRC" ]; then
+  echo "rootfs floor is missing nocturned.current" >&2
+  exit 1
 fi
+mkdir -p "$DAEMON_DEST"
+cp "$DAEMON_SRC" "${DAEMON_DEST}/nocturned.next"
+chmod 0755 "${DAEMON_DEST}/nocturned.next"
 
-# webapp: rsync-like copy of ui/ tree
 UI_SRC=${ROOTFS_FLOOR_DIR}/webapps/ui
 UI_DEST=${BANDAID_DIR}/webapps/ui
-if [ -d "$UI_SRC" ]; then
-    mkdir -p "${BANDAID_DIR}/webapps"
-    if [ -d "$UI_DEST" ]; then
-        mv "$UI_DEST" "${BANDAID_DIR}/webapps/ui.previous"
-    fi
-    cp -a "$UI_SRC" "$UI_DEST"
+UI_PREVIOUS=${BANDAID_DIR}/webapps/ui.previous
+UI_NEXT=${BANDAID_DIR}/webapps/ui.next
+if [ ! -f "${UI_SRC}/index.html" ]; then
+  echo "rootfs UI floor is missing index.html" >&2
+  exit 1
+fi
+mkdir -p "${BANDAID_DIR}/webapps"
+rm -rf "$UI_NEXT"
+cp -a "$UI_SRC" "$UI_NEXT"
+if [ ! -f "${UI_NEXT}/index.html" ]; then
+  echo "staged UI floor is missing index.html" >&2
+  rm -rf "$UI_NEXT"
+  exit 1
 fi
 
-# stamp new version
+rm -rf "$UI_PREVIOUS"
+if [ -d "$UI_DEST" ]; then
+  mv "$UI_DEST" "$UI_PREVIOUS"
+fi
+if ! mv "$UI_NEXT" "$UI_DEST"; then
+  if [ -d "$UI_PREVIOUS" ] && [ ! -e "$UI_DEST" ]; then
+    mv "$UI_PREVIOUS" "$UI_DEST"
+  fi
+  exit 1
+fi
+
+if [ -f "${DAEMON_DEST}/nocturned.current" ]; then
+  mv "${DAEMON_DEST}/nocturned.current" "${DAEMON_DEST}/nocturned.previous"
+fi
+if ! mv "${DAEMON_DEST}/nocturned.next" "${DAEMON_DEST}/nocturned.current"; then
+  if [ -f "${DAEMON_DEST}/nocturned.previous" ] && [ ! -e "${DAEMON_DEST}/nocturned.current" ]; then
+    mv "${DAEMON_DEST}/nocturned.previous" "${DAEMON_DEST}/nocturned.current"
+  fi
+  rm -rf "$UI_DEST"
+  if [ -d "$UI_PREVIOUS" ]; then
+    mv "$UI_PREVIOUS" "$UI_DEST"
+  fi
+  exit 1
+fi
+chmod 0755 "${DAEMON_DEST}/nocturned.current"
+
+# Stamp the installed overlay version only after both components are live.
 mkdir -p "$BANDAID_DIR"
-echo "$ROOTFS_VERSION" > "$BANDAID_VERSION_FILE"
+printf '%s\n' "$ROOTFS_VERSION" > "${BANDAID_VERSION_FILE}.next"
+mv "${BANDAID_VERSION_FILE}.next" "$BANDAID_VERSION_FILE"
 sync
 echo "floor sync complete: ${ROOTFS_VERSION}"

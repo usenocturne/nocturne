@@ -35,6 +35,7 @@ object SpotifyArtistGetResponse
 @Serializable
 data class SpotifyArtistTopTracksRequest(
   @SerialName("content_id") val contentId: String,
+  @SerialName("mockingbird") val mockingbird: Boolean? = null,
 )
 
 @Serializable
@@ -418,6 +419,7 @@ data class SpotifyPlaylistTracksRequest(
   @SerialName("content_id") val contentId: String,
   @SerialName("limit") val limit: UInt? = null,
   @SerialName("offset") val offset: UInt? = null,
+  @SerialName("mockingbird") val mockingbird: Boolean? = null,
 )
 
 @Serializable

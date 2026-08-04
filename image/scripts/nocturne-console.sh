@@ -15,8 +15,12 @@ resolve_dev() {
     readlink -f "$SUPERBIRD_UART_DEV"
     return
   fi
-  local d
-  d=$(ls /dev/serial/by-id/usb-FTDI*FT232* 2>/dev/null | head -n1 || true)
+  local candidate d=""
+  for candidate in /dev/serial/by-id/usb-FTDI*FT232*; do
+    [[ -e "$candidate" ]] || continue
+    d="$candidate"
+    break
+  done
   if [[ -n "$d" ]]; then
     readlink -f "$d"
   else
@@ -26,17 +30,18 @@ resolve_dev() {
 
 stop() {
   if [[ -f "$PID" ]]; then
-    kill "$(cat "$PID")" 2>/dev/null || true
+    kill "$(cat "$PID")" 2> /dev/null || true
     sleep 1
     rm -f "$PID"
   fi
-  local dev; dev=$(resolve_dev)
-  fuser -k -TERM "$dev" 2>/dev/null || true
+  local dev
+  dev=$(resolve_dev)
+  fuser -k -TERM "$dev" 2> /dev/null || true
   sleep 1
 }
 
 start() {
-  if [[ -f "$PID" ]] && kill -0 "$(cat "$PID")" 2>/dev/null; then
+  if [[ -f "$PID" ]] && kill -0 "$(cat "$PID")" 2> /dev/null; then
     echo "already running: $(cat "$PID")"
     return
   fi
@@ -45,7 +50,7 @@ start() {
   echo $! > "$PID"
   disown
   sleep 2
-  if ! kill -0 "$(cat "$PID")" 2>/dev/null; then
+  if ! kill -0 "$(cat "$PID")" 2> /dev/null; then
     echo "agent failed to stay up" >&2
     cat "$OUT" >&2
     return 1
@@ -54,14 +59,21 @@ start() {
 }
 
 case "${1:-status}" in
-  start)   start ;;
-  stop)    stop ;;
-  restart) stop; start ;;
+  start) start ;;
+  stop) stop ;;
+  restart)
+    stop
+    start
+    ;;
   status)
-    if [[ -f "$PID" ]] && kill -0 "$(cat "$PID")" 2>/dev/null; then
+    if [[ -f "$PID" ]] && kill -0 "$(cat "$PID")" 2> /dev/null; then
       echo "running pid=$(cat "$PID")"
     else
       echo "not running"
-    fi ;;
-  *) echo "usage: $0 {start|stop|restart|status}" >&2; exit 2 ;;
+    fi
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart|status}" >&2
+    exit 2
+    ;;
 esac

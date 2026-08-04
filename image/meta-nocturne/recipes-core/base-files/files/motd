@@ -7,9 +7,8 @@
   KMMMMMMMW    x,      MM     MW   W0:,,dMc  .Mk;,;oW,   MMc   ;MK:,lKM  MM     0M     MM   0Wdccd0
     :MMMMd
 
-   ${VERSION} (${GIT_HASH})
+   @@VERSION@@ (@@BUILD_ID@@)
 
  * Website:      https://usenocturne.com
  * Source Code:  https://github.com/usenocturne/nocturne
  * Discord:      https://discord.gg/GTP9AawHPt
-

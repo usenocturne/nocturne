@@ -34,10 +34,14 @@ enum class OtaKind {
   DAEMON,
   @SerialName("builtin_webapp")
   BUILTIN_WEBAPP,
+  @SerialName("bandaid")
+  BANDAID,
 }
 
 @Serializable
 enum class OtaPhase {
+  @SerialName("downloading")
+  DOWNLOADING,
   @SerialName("streaming")
   STREAMING,
   @SerialName("verifying")

@@ -7,11 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "ui:dev": "bun --cwd packages/ui run dev",
-    "ui:build": "bun --cwd packages/ui run build",
-    "ui:lint": "bun --cwd packages/ui run lint-check",
-    "connector:dev": "bun --cwd packages/connector run dev",
-    "connector:build": "bun --cwd packages/connector run build"
+    "ui:dev": "bun run --filter=nocturne-vite dev",
+    "ui:build": "bun run --filter=nocturne-vite build",
+    "ui:lint": "bun run --filter=nocturne-vite lint-check"
   },
   "packageManager": "bun@1.3.14"
 }

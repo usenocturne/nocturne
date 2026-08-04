@@ -16,7 +16,15 @@ pub struct AppMessage {
     pub id: String,
     pub protocol: String,
     pub session_id: u8,
+    pub priority: AppMessagePriority,
     pub data: Bytes,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum AppMessagePriority {
+    #[default]
+    Normal,
+    Bulk,
 }
 
 #[allow(dead_code)]
@@ -61,11 +69,11 @@ impl AppProtocolHandlerEnum {
 pub struct AppCommunicationManager {
     sessions: HashMap<u8, AppSession>,
     handlers: HashMap<String, AppProtocolHandlerEnum>,
-    to_iap2_tx: mpsc::UnboundedSender<(u8, Bytes)>,
+    to_iap2_tx: mpsc::UnboundedSender<(u8, AppMessagePriority, Bytes)>,
 }
 
 impl AppCommunicationManager {
-    pub fn new(to_iap2_tx: mpsc::UnboundedSender<(u8, Bytes)>) -> Self {
+    pub fn new(to_iap2_tx: mpsc::UnboundedSender<(u8, AppMessagePriority, Bytes)>) -> Self {
         Self {
             sessions: HashMap::new(),
             handlers: HashMap::new(),
@@ -117,7 +125,7 @@ impl AppCommunicationManager {
                     session_id, message.id
                 );
 
-                if let Err(e) = to_iap2_tx.send((session_id, message.data)) {
+                if let Err(e) = to_iap2_tx.send((session_id, message.priority, message.data)) {
                     warn!("Failed to send message to iAP2: {}", e);
                     break;
                 }
@@ -141,12 +149,13 @@ impl AppCommunicationManager {
 
         if let Some(handler) = self.handlers.get_mut(protocol) {
             if let Some(mp_handler) = handler.as_msgpack_mut() {
-                mp_handler.set_session_info(session_tx, session_id);
+                mp_handler.set_session_info(session_tx, session_id).await;
             }
             let message = AppMessage {
                 id: uuid::Uuid::new_v4().to_string(),
                 protocol: protocol.clone(),
                 session_id,
+                priority: AppMessagePriority::Normal,
                 data,
             };
 

@@ -1,1 +1,0 @@
-console=serial0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 fsck.repair=yes rw rootwait

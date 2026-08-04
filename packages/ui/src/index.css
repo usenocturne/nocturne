@@ -102,6 +102,197 @@ body {
   }
 }
 
+@keyframes notification-banner-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.notification-banner-enter {
+  animation: notification-banner-enter 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: bottom center;
+}
+
+.queue-swipe-content {
+  backface-visibility: hidden;
+  transition: transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.queue-swipe-content-active,
+.queue-swipe-action-active {
+  will-change: transform;
+}
+
+.queue-swipe-content-dragging {
+  transition: none;
+}
+
+.queue-swipe-content-committing {
+  transition-duration: 220ms;
+}
+
+.queue-swipe-action {
+  background-color: rgb(255 255 255 / 0.14);
+  transition:
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease-out,
+    background-color 180ms ease-out;
+}
+
+.queue-swipe-action-dragging {
+  transition: background-color 140ms ease-out;
+}
+
+.queue-swipe-action-armed {
+  background-color: rgb(255 255 255 / 0.24);
+}
+
+.queue-swipe-action-pending {
+  background-color: rgb(255 255 255 / 0.2);
+}
+
+.queue-swipe-action-success {
+  background-color: rgb(34 197 94 / 0.9);
+}
+
+.queue-swipe-action-error {
+  background-color: rgb(239 68 68 / 0.9);
+}
+
+.queue-swipe-icon-stage {
+  height: 36px;
+  width: 36px;
+  transform-origin: center;
+}
+
+.queue-swipe-icon-bump {
+  height: 100%;
+  position: relative;
+  width: 100%;
+}
+
+@keyframes queue-swipe-arm {
+  0% {
+    transform: scale(1);
+  }
+
+  55% {
+    transform: scale(1.14);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.queue-swipe-icon-bump-armed {
+  animation: queue-swipe-arm 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.queue-swipe-icon-layer {
+  inset: 0;
+  position: absolute;
+  transition:
+    opacity 180ms ease-out,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.queue-swipe-icon-layer-visible {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.queue-swipe-icon-layer-hidden {
+  opacity: 0;
+  transform: scale(0.58) rotate(-10deg);
+}
+
+@keyframes queue-swipe-pending {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.queue-swipe-spinner {
+  animation: queue-swipe-pending 720ms linear infinite;
+  border: 3px solid rgb(255 255 255 / 0.3);
+  border-radius: 9999px;
+  border-top-color: white;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+@keyframes queue-swipe-confirm {
+  0% {
+    transform: scale(0.72);
+  }
+
+  58% {
+    transform: scale(1.12);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.queue-swipe-icon-confirm.queue-swipe-icon-layer-visible {
+  animation: queue-swipe-confirm 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes queue-swipe-error {
+  0% {
+    transform: scale(0.8) translateX(0);
+  }
+
+  35% {
+    transform: scale(1) translateX(3px);
+  }
+
+  62% {
+    transform: scale(1) translateX(-3px);
+  }
+
+  82% {
+    transform: scale(1) translateX(2px);
+  }
+
+  100% {
+    transform: scale(1) translateX(0);
+  }
+}
+
+.queue-swipe-icon-error.queue-swipe-icon-layer-visible {
+  animation: queue-swipe-error 240ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-banner-enter {
+    animation: none;
+  }
+
+  .queue-swipe-action,
+  .queue-swipe-content,
+  .queue-swipe-icon-layer {
+    transition-duration: 80ms;
+    transition-timing-function: linear;
+  }
+
+  .queue-swipe-icon-bump-armed,
+  .queue-swipe-icon-confirm.queue-swipe-icon-layer-visible,
+  .queue-swipe-icon-error.queue-swipe-icon-layer-visible,
+  .queue-swipe-spinner {
+    animation: none;
+  }
+}
+
 .fadeIn-animation {
   animation: 0.8s fadeIn;
 }
@@ -188,7 +379,7 @@ section {
   animation-delay: calc(var(--wave-offset) - 0.4s);
 }
 
-.text-[40px].font-[580].tracking-tight.transition-colors {
+.text-\[40px\].font-\[580\].tracking-tight.transition-colors {
   transition: color 0.3s ease-in-out;
   will-change: color;
   transform: translateZ(0);

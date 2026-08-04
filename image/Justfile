@@ -2,48 +2,244 @@
 
 default := "nocturne"
 export KAS_CONTAINER_ENGINE := env_var_or_default('KAS_CONTAINER_ENGINE', 'docker')
-# Set YOCTO_BUILD_DIR on macOS (or any case-insensitive FS) to redirect bitbake's
-# TMPDIR onto a case-sensitive volume. Unset on Linux = build/ stays in-workspace.
-export KAS_BUILD_DIR := env_var_or_default('YOCTO_BUILD_DIR', '')
+
+# kas-container calls `realpath` with GNU-only flags (-e, -qe, --relative-base)
+# that BSD /bin/realpath rejects. scripts/macos-shims/ carries a GNU-realpath
+# shim; prepend it on macOS so kas-container resolves `realpath` to grealpath.
+# Empty branch on Linux = PATH untouched.
+macos_shim_dir := if os() == "macos" { justfile_directory() / "scripts" / "macos-shims" } else { "" }
+export PATH := if macos_shim_dir == "" { env_var('PATH') } else { macos_shim_dir + ":" + env_var('PATH') }
+
+# macOS: the bitbake build tree lives in a Docker NAMED VOLUME, not on the Mac
+# filesystem. Bind-mounting a host dir is impossible - Docker Desktop's
+# libkrun/virtiofs fails every flock() bitbake relies on (confirmed 200/200 EIO)
+# and presents bind-mount roots as root:root. A named volume is real ext4 inside
+# the Docker VM: reliable, case-sensitive, persistent. Empty on Linux (the build
+# stays in the in-repo build/).
+build_vol := if os() == "macos" { "carthing-yocto" } else { "" }
+
+# Extra `docker run` args kas-container needs on macOS:
+#  - mount the build volume at /build (kas's entrypoint only chowns its known
+#    managed dirs - /build, /work, ... - so the volume MUST land on one of them);
+#  - KAS_DOCKER_ROOTLESS=1 triggers that in-container chown of the root-owned
+#    volume mount root, so bitbake's os.access(TOPDIR, W_OK) preflight passes for
+#    the non-root build user (the chown only touches the container's view, never
+#    host ownership);
+#  - TOPDIR=/build/build (not /build) so ccache's ${TOPDIR}/../ccache resolves to
+#    /build/ccache *inside* the writable volume - with TOPDIR=/build it escapes
+#    to /ccache on the container root and ccache dies "Permission denied". This
+#    mirrors Linux's /work/build TOPDIR + /work/ccache sibling exactly.
+# Empty on Linux.
+macos_runtime_args := if os() == "macos" { "-e KAS_DOCKER_ROOTLESS=1 -e KAS_BUILD_DIR=/build/build -v " + build_vol + ":/build" } else { "" }
+
+# Host-side build dir. On Linux this IS the live build tree (override with
+# YOCTO_BUILD_DIR). On macOS the build tree is the named volume; this is only
+# where `just build` mirrors deploy artifacts (images/.swu/flashthing zips) out
+# of the volume so they land on the Mac disk for flashing/distribution.
+export KAS_BUILD_DIR := if os() == "macos" { "" } else { env_var_or_default('YOCTO_BUILD_DIR', '') }
+build_dir := if KAS_BUILD_DIR == "" { justfile_directory() / "build" } else { KAS_BUILD_DIR }
+
 flashthing := env_var_or_default('FLASHTHING_CLI', 'flashthing-cli')
+
+# Monorepo root. `just build nocturne-local` bind-mounts this at /monorepo, the
+# fixed container path kas/nocturne-local.yml points EXTERNALSRC at. Derived,
+# not configured - nothing to edit per machine. Read-write: kas mounts the repo
+# read-only at /repo, but bun and cargo both write into the tree.
+monorepo_dir := parent_directory(justfile_directory())
+monorepo_mount := "/monorepo"
 
 # --- Build ---
 
+# One-time macOS host setup (idempotent): GNU coreutils (for the realpath shim)
+# + the Docker named volume that holds the build tree.
+[macos]
+macos-setup:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  command -v grealpath >/dev/null 2>&1 || { echo "Installing coreutils (GNU realpath)..."; brew install coreutils; }
+  if docker volume inspect {{build_vol}} >/dev/null 2>&1; then
+    echo "Docker build volume '{{build_vol}}' already exists"
+  else
+    echo "Creating Docker build volume '{{build_vol}}'..."
+    docker volume create {{build_vol}} >/dev/null
+  fi
+  echo "OK - 'just build' builds in volume '{{build_vol}}' and mirrors deploy artifacts to {{build_dir}}/tmp/deploy"
+
 # Fetch/checkout layers
 checkout target=default:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ -z "${NETRC_FILE:-}" ] && [ -n "${HOME:-}" ] && [ -f "$HOME/.netrc" ]; then
+    export NETRC_FILE="$HOME/.netrc"
+  fi
+  if [ -n "${NETRC_FILE:-}" ] && [ ! -f "$NETRC_FILE" ]; then
+    echo "NETRC_FILE is set but is not a file: $NETRC_FILE" >&2
+    exit 1
+  fi
   kas-container checkout kas/{{target}}.yml
 
 # Build the named image set inside the kas container.
 build target=default:
   #!/usr/bin/env bash
   set -euo pipefail
-  args=()
-  if [ -n "${KAS_BUILD_DIR:-}" ]; then
+  if [ -z "${NETRC_FILE:-}" ] && [ -n "${HOME:-}" ] && [ -f "$HOME/.netrc" ]; then
+    export NETRC_FILE="$HOME/.netrc"
+  fi
+  if [ -n "${NETRC_FILE:-}" ] && [ ! -f "$NETRC_FILE" ]; then
+    echo "NETRC_FILE is set but is not a file: $NETRC_FILE" >&2
+    exit 1
+  fi
+  runtime_args="{{macos_runtime_args}}"
+  if [ "$(uname)" = "Darwin" ]; then
+    docker volume inspect {{build_vol}} >/dev/null 2>&1 || docker volume create {{build_vol}} >/dev/null
+  elif [ -n "${KAS_BUILD_DIR:-}" ]; then
+    mkdir -p "$KAS_BUILD_DIR"
+  fi
+  signing_mode="${NOCTURNE_SWUPDATE_SIGNING_MODE:-production}"
+  build_id="${NOCTURNE_BUILD_ID:-$(date -u +%Y%m%d%H%M%S)}"
+  scripts/nocturne-validate-build-id "$build_id"
+  runtime_args="$runtime_args -e NOCTURNE_BUILD_ID=$build_id"
+  echo "Nocturne build version suffix: +$build_id"
+  case "$signing_mode" in
+    production)
+      signing_key="${NOCTURNE_SWUPDATE_PRIVATE_KEY:-}"
+      if [ -z "$signing_key" ]; then
+        echo "Production builds require NOCTURNE_SWUPDATE_PRIVATE_KEY to point to the release RSA private key." >&2
+        echo "For local-only unsigned artifacts, explicitly set NOCTURNE_SWUPDATE_SIGNING_MODE=development-unsigned." >&2
+        exit 2
+      fi
+      command -v openssl >/dev/null 2>&1 || { echo "openssl is required to validate the SWUpdate signing key" >&2; exit 2; }
+      signing_key=$(realpath "$signing_key")
+      [ -f "$signing_key" ] || { echo "NOCTURNE_SWUPDATE_PRIVATE_KEY is not a file: $signing_key" >&2; exit 2; }
+      case "$signing_key" in
+        *[[:space:]]*) echo "NOCTURNE_SWUPDATE_PRIVATE_KEY path cannot contain whitespace: $signing_key" >&2; exit 2 ;;
+      esac
+      derived_public=$(mktemp)
+      trap 'rm -f "$derived_public"' EXIT
+      openssl pkey -in "$signing_key" -pubout -out "$derived_public"
+      if ! cmp -s "$derived_public" meta-nocturne/recipes-core/nocturne-keys/files/nocturne.pem; then
+        echo "NOCTURNE_SWUPDATE_PRIVATE_KEY does not match the public key baked into the image" >&2
+        exit 2
+      fi
+      runtime_args="$runtime_args -e NOCTURNE_SWUPDATE_SIGNING_MODE=production -e NOCTURNE_SWUPDATE_PRIVATE_KEY=$signing_key -v $signing_key:$signing_key:ro"
+      ;;
+    development-unsigned)
+      runtime_args="$runtime_args -e NOCTURNE_SWUPDATE_SIGNING_MODE=development-unsigned"
+      ;;
+    *)
+      echo "NOCTURNE_SWUPDATE_SIGNING_MODE must be production or development-unsigned, got: $signing_mode" >&2
+      exit 2
+      ;;
+  esac
+  if [ "{{target}}" = "nocturne-local" ]; then
+    runtime_args="$runtime_args -v {{monorepo_dir}}:{{monorepo_mount}}"
+  fi
+  if [ -n "$runtime_args" ]; then
+    kas-container --runtime-args "$runtime_args" build "kas/{{target}}.yml"
+  else
+    kas-container build "kas/{{target}}.yml"
+  fi
+  # macOS: lift deploy artifacts out of the build volume onto the Mac disk.
+  [ "$(uname)" = "Darwin" ] && just pull-deploy || true
+
+
+# Rebuild only nocturned through Yocto/kas, using the same local-source mounts
+# as `just build nocturne-local` when target is nocturne-local.
+build-nocturned target="nocturne-local":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ -z "${NETRC_FILE:-}" ] && [ -n "${HOME:-}" ] && [ -f "$HOME/.netrc" ]; then
+    export NETRC_FILE="$HOME/.netrc"
+  fi
+  if [ -n "${NETRC_FILE:-}" ] && [ ! -f "$NETRC_FILE" ]; then
+    echo "NETRC_FILE is set but is not a file: $NETRC_FILE" >&2
+    exit 1
+  fi
+  runtime_args="{{macos_runtime_args}}"
+  if [ "$(uname)" = "Darwin" ]; then
+    docker volume inspect {{build_vol}} >/dev/null 2>&1 || docker volume create {{build_vol}} >/dev/null
+  elif [ -n "${KAS_BUILD_DIR:-}" ]; then
     mkdir -p "$KAS_BUILD_DIR"
   fi
   if [ "{{target}}" = "nocturne-local" ]; then
-    if [ ! -f kas/nocturne-local.yml ]; then
-      echo "kas/nocturne-local.yml missing - copy kas/nocturne-local.example.yml and edit NOCTURNE_LOCAL_*" >&2
-      exit 1
-    fi
-    for var in NOCTURNE_LOCAL_NOCTURNED NOCTURNE_LOCAL_NOCTURNE_UI; do
-      local_dir=$(sed -n "s/.*${var}[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" kas/nocturne-local.yml | head -n1)
-      if [ -z "$local_dir" ] || [ ! -d "$local_dir" ]; then
-        echo "${var} in kas/nocturne-local.yml is missing or not a directory: '$local_dir'" >&2
-        exit 1
-      fi
-      args+=(--runtime-args "-v $local_dir:$local_dir")
-    done
+    runtime_args="$runtime_args -v {{monorepo_dir}}:{{monorepo_mount}}"
   fi
-  kas-container ${args[@]+"${args[@]}"} build kas/{{target}}.yml
-
+  if [ -n "$runtime_args" ]; then
+    kas-container --runtime-args "$runtime_args" shell -c 'bitbake -C compile nocturned' "kas/{{target}}.yml"
+  else
+    kas-container shell -c 'bitbake -C compile nocturned' "kas/{{target}}.yml"
+  fi
+  # macOS: the bitbake tree lives in the Docker named volume, so the freshly
+  # built binary never lands on the Mac disk. Lift it to where daemon-install
+  # expects it. Linux builds write there natively, so this is a no-op there.
+  if [ "$(uname)" = "Darwin" ]; then
+    just pull-nocturned
+  fi
 # Drop into a bitbake shell inside the container.
 shell target=default:
-  kas-container shell kas/{{target}}.yml
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ -z "${NETRC_FILE:-}" ] && [ -n "${HOME:-}" ] && [ -f "$HOME/.netrc" ]; then
+    export NETRC_FILE="$HOME/.netrc"
+  fi
+  if [ -n "${NETRC_FILE:-}" ] && [ ! -f "$NETRC_FILE" ]; then
+    echo "NETRC_FILE is set but is not a file: $NETRC_FILE" >&2
+    exit 1
+  fi
+  if [ "$(uname)" = "Darwin" ]; then
+    docker volume inspect {{build_vol}} >/dev/null 2>&1 || docker volume create {{build_vol}} >/dev/null
+  fi
+  if [ -n "{{macos_runtime_args}}" ]; then
+    kas-container --runtime-args "{{macos_runtime_args}}" shell "kas/{{target}}.yml"
+  else
+    kas-container shell "kas/{{target}}.yml"
+  fi
 
-# Wipe local bitbake output. Layer clones + downloads cache survive.
+# macOS only: mirror deploy artifacts (images, .swu, flashthing zips) out of the
+# build volume onto the Mac disk at build_dir/tmp/deploy, where `just flash`
+# looks. Plain file copies (no flock), so virtiofs handles them fine. Run
+# automatically by `just build`; also useful standalone.
+[macos]
+pull-deploy:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  mkdir -p "{{build_dir}}/tmp/deploy"
+  docker run --rm -v {{build_vol}}:/build -v "{{build_dir}}/tmp/deploy":/out alpine sh -c '
+    if [ ! -d /build/build/tmp/deploy ]; then echo "no deploy dir in volume {{build_vol}} yet"; exit 0; fi
+    apk add --no-cache rsync >/dev/null 2>&1
+    rsync -a --delete /build/build/tmp/deploy/ /out/
+    echo "mirrored $(find /out -type f | wc -l | tr -d " ") files"'
+  echo "deploy artifacts on disk at {{build_dir}}/tmp/deploy"
+
+# macOS only: lift the freshly-built nocturned binary out of the build volume
+# onto the Mac disk at the same path the Linux build tree uses, so the
+# top-level `just daemon-deploy`/`daemon-install` can scp it. Invoked
+# automatically by `build-nocturned`; harmless to run standalone after a build.
+[macos]
+pull-nocturned:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  rel="tmp/work/cortexa53-poky-linux/nocturned/2.1.0/image/usr/lib/nocturne/daemon"
+  mkdir -p "{{build_dir}}/${rel}"
+  docker run --rm -v {{build_vol}}:/build -v "{{build_dir}}/${rel}":/out alpine sh -c '
+    src=/build/build/tmp/work/cortexa53-poky-linux/nocturned/2.1.0/image/usr/lib/nocturne/daemon/nocturned.current
+    if [ ! -f "$src" ]; then echo "no nocturned binary in volume {{build_vol}} yet; run: just build-nocturned" >&2; exit 1; fi
+    cp "$src" /out/nocturned.current'
+  echo "nocturned binary on disk at {{build_dir}}/${rel}/nocturned.current"
+
+# Wipe local bitbake output. Layer clones + ccache survive.
 clean-build:
-  rm -rf build
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ "$(uname)" = "Darwin" ]; then
+    # Remove TOPDIR inside the volume but keep the sibling /build/ccache (mirrors
+    # the Linux `rm -rf build` which preserves /work/ccache). Then drop the host
+    # deploy mirror.
+    docker run --rm -v {{build_vol}}:/build alpine rm -rf /build/build
+    rm -rf "{{build_dir}}"
+  else
+    rm -rf {{build_dir}}
+  fi
 
 # Drop poky-layout symlinks under sources/ for the vscode bitbake extension.
 vscode-setup:
@@ -58,30 +254,69 @@ cache_host    := env_var_or_default('YOCTO_CACHE_HOST', '10.1.10.10')
 cache_port    := env_var_or_default('YOCTO_CACHE_RSYNC_PORT', '8733')
 
 push-sstate:
-  rsync -ah --info=progress2 --ignore-existing --partial --append-verify \
-    --port={{cache_port}} \
-    build/sstate-cache/ \
-    rsync://{{cache_host}}/sstate/
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ "$(uname)" = "Darwin" ]; then
+    # sstate lives in the build volume - rsync straight from it via a container.
+    docker run --rm -v {{build_vol}}:/build alpine sh -c '
+      apk add --no-cache rsync >/dev/null 2>&1
+      rsync -ah --info=progress2 --ignore-existing --partial --append-verify \
+        --port={{cache_port}} /build/build/sstate-cache/ rsync://{{cache_host}}/sstate/'
+  else
+    rsync -ah --info=progress2 --ignore-existing --partial --append-verify \
+      --port={{cache_port}} \
+      {{build_dir}}/sstate-cache/ \
+      rsync://{{cache_host}}/sstate/
+  fi
 
 # --- Flash ---
 
 # Flash a full image to the device.
 flash image="nocturne-dev-image":
-  {{flashthing}} build/tmp/deploy/images/superbird/{{image}}-superbird-flashthing.zip
+  {{flashthing}} {{build_dir}}/tmp/deploy/images/superbird/{{image}}-superbird-flashthing.zip
 
 # Env-only reflash.
 flash-env image="nocturne-dev-image":
-  {{flashthing}} build/tmp/deploy/images/superbird/{{image}}-superbird-flashthing-env-only.zip
+  {{flashthing}} {{build_dir}}/tmp/deploy/images/superbird/{{image}}-superbird-flashthing-env-only.zip
 
-# --- Release / install (no-build dev path) ---
+# --- Release / install (no-build path) ---
 
+# Compatibility wrapper for publishing already-built image artifacts through
+# the v2 OTA server. Prefer `just publish` or the root `just release-image`.
 release *args:
   scripts/nocturne-release {{args}}
 
 # Stage release artifacts and publish to OTA server.
-# Usage: NOCTURNE_RELEASE_VERSION=4.1.0 just publish prod
+# Use the exact build-stamped version declared by the SWU.
+# Usage: NOCTURNE_RELEASE_VERSION=4.1.0+20260725192800 NOCTURNE_DELTA_FROM_VERSIONS=4.1.0+20260725192800 just publish prod
 publish variant="prod":
   scripts/nocturne-publish {{variant}}
+
+# Package one AArch64 daemon binary for a daemon-only OTA.
+package-daemon binary output="build/ota-components/daemon":
+  scripts/nocturne-package-component daemon {{binary}} {{output}}
+
+# Package a built UI dist directory for a builtinWebapp OTA.
+package-ui dist output="build/ota-components/builtinWebapp":
+  scripts/nocturne-package-component builtinWebapp {{dist}} {{output}}
+
+# Package a daemon and UI dist together for an atomic bandaid OTA.
+package-bandaid binary dist output="build/ota-components/bandaid":
+  scripts/nocturne-package-component bandaid {{binary}} {{dist}} {{output}}
+
+# Publish a packaged component directory through nocturne-ota's validated publisher.
+publish-component kind version source minimum_image_version channel="stable":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  case "{{kind}}" in daemon|builtinWebapp|bandaid) ;; *) echo "invalid component kind: {{kind}}" >&2; exit 2 ;; esac
+  command -v bun >/dev/null 2>&1 || { echo "bun is required" >&2; exit 2; }
+  bun ../nocturne-ota/scripts/publish-yocto-version.ts \
+    --source "{{source}}" \
+    --version "{{version}}" \
+    --channel "{{channel}}" \
+    --kind "{{kind}}" \
+    --minimum-image-version "{{minimum_image_version}}" \
+    --images-root "${NOCTURNE_OTA_IMAGES_DIR:-../nocturne-ota/images}"
 
 # Pull latest dev image from ota manifest and flash it.
 install-dev:
@@ -128,11 +363,11 @@ reboot-to-fastboot:
 flash-fast partlabel file="":
   scripts/nocturne-flash-fast {{partlabel}} {{file}}
 
-# Push a webapp bundle into /var/nocturne/webapps/<name>/.
+# Push a webapp bundle into /opt/nocturne/webapps/<name>/.
 push-webapp local name="":
   scripts/nocturne-push-webapp {{local}} {{name}}
 
-# SSH-tunnel chromium's CDP from the device's 127.0.0.1:9222 to the host.
+# SSH-tunnel chromium's CDP from the device's 127.0.0.1:9223 to the host.
 cdp port="9223":
   scripts/nocturne-cdp {{port}}
 
@@ -145,6 +380,17 @@ ota *args:
 # Run pre-commit hooks (shellcheck, shfmt, yamllint) across the tree.
 lint:
   pre-commit run --all-files
+
+# Run host-side image helper tests.
+test:
+  tests/nocturne-build-id.test.sh
+  tests/nocturne-floor-sync.test.sh
+  tests/nocturne-install.test.sh
+  tests/nocturne-publish.test.sh
+  tests/nocturne-release-image.test.sh
+  python3 tests/nocturne-swu-description.test.py
+  tests/swupdate-progress-service.test.sh
+  tests/swupdate-version-policy.test.sh
 
 # Install the pre-commit git hook so `git commit` runs the lint set.
 pre-commit-install:

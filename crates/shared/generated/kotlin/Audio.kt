@@ -10,6 +10,8 @@ import kotlinx.serialization.Serializable
 enum class AudioEvent {
   @SerialName("audio_level")
   AUDIO_LEVEL,
+  @SerialName("wind_level")
+  WIND_LEVEL,
 }
 
 @Serializable
@@ -39,5 +41,11 @@ object AudioRecordStopRequest
 @Serializable
 data class AudioRecordStopResponse(
   @SerialName("status") val status: String,
+)
+
+@Serializable
+data class WindLevelEvent(
+  @SerialName("level") val level: UByte,
+  @SerialName("stat") val stat: Double,
 )
 

@@ -32,6 +32,7 @@ pub struct BluetoothConnectionEvent {
 pub struct BluetoothDeviceConnectRequest {
     pub address: String,
     pub channel: Option<u8>,
+    pub device_type: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

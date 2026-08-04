@@ -66,9 +66,10 @@ pub const MEDIA_ITEM_SUBSCRIBE: &[u16] = &[
 /// `PlaybackQueueList*` trio (`0x0E`/`0x0F`/`0x11`) is omitted: those
 /// require companion subscribe-side fields this CSM does not carry, and
 /// iOS silently rejects the entire subscribe when they are listed alone.
+/// `PlaybackPositionMs` (`0x01`, elapsed time) is also omitted: the UI
+/// never consumes elapsed time, so we do not ask the iPhone to stream it.
 pub const PLAYBACK_SUBSCRIBE: &[u16] = &[
     PLAYBACK_STATE,
-    PLAYBACK_POSITION_MS,
     PLAYBACK_QUEUE_INDEX,
     PLAYBACK_QUEUE_COUNT,
     PLAYBACK_SHUFFLE_MODE,

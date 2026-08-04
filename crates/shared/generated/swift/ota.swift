@@ -18,9 +18,11 @@ public enum OtaKind: String, Codable, Sendable {
   case image = "image"
   case daemon = "daemon"
   case builtinWebapp = "builtinWebapp"
+  case bandaid = "bandaid"
 }
 
 public enum OtaPhase: String, Codable, Sendable {
+  case downloading = "downloading"
   case streaming = "streaming"
   case verifying = "verifying"
   case writing = "writing"

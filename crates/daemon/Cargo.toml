@@ -32,6 +32,7 @@ futures = { workspace = true }
 libc = { workspace = true }
 dbus = { workspace = true }
 dbus-crossroads = { workspace = true }
+dbus-tokio = { workspace = true }
 tokio-tungstenite = { workspace = true }
 tungstenite = { workspace = true }
 async-trait = { workspace = true }
@@ -49,3 +50,5 @@ sha2 = { workspace = true }
 tempfile = { workspace = true }
 tokio-util = { workspace = true }
 filetime = { workspace = true }
+zstd = { workspace = true }
+tar = { workspace = true }

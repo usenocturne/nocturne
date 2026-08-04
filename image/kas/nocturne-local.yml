@@ -1,0 +1,55 @@
+# Local-source override for the recipes built out of this monorepo. Builds
+# nocturned and nocturne-ui from the working tree instead of the github
+# checkout in nocturne-monorepo.inc's SRC_URI.
+#
+#   just build nocturne-local
+#
+# No setup, no host paths: the Justfile bind-mounts the monorepo root at
+# /monorepo, so this file is identical on every machine and is committed as-is.
+# The mount is read-write and separate from kas's own read-only /repo, because
+# both toolchains write into the tree (bun's node_modules/, cargo's registry).
+#
+# Mechanic: externalsrc.bbclass replaces do_fetch/do_unpack with "use this path
+# as ${S}". EXTERNALSRC_BUILD redirects build output into the bitbake workdir so
+# cargo's target/ never lands in your tree. EXTERNALSRC_SYMLINKS = "" stops
+# oe-workdir / oe-logs symlinks being dropped in the source tree - they point at
+# container-internal paths and would just clutter `git status`.
+#
+# The SRC_URI:remove pair drops the git fetch. externalsrc strips it too, but
+# only after resolving AUTOREV over the network, so removing it here keeps local
+# builds offline and independent of what's on the branch. Both lines reference
+# NOCTURNE_MONOREPO_SRC_URI from nocturne-monorepo.inc rather than spelling the
+# URL again - that duplication is exactly what silently broke this file before.
+
+header:
+  version: 18
+  includes:
+    - repo: meta-nocturne
+      file: kas/nocturne.yml
+
+local_conf_header:
+  externalsrc: |
+    NOCTURNE_LOCAL_MONOREPO = "/monorepo"
+
+    INHERIT += "externalsrc"
+
+    EXTERNALSRC:pn-nocturned = "${NOCTURNE_LOCAL_MONOREPO}"
+    EXTERNALSRC_BUILD:pn-nocturned = "${WORKDIR}/build"
+
+    EXTERNALSRC:pn-nocturne-ui = "${NOCTURNE_LOCAL_MONOREPO}"
+    EXTERNALSRC_BUILD:pn-nocturne-ui = "${WORKDIR}/build"
+
+    SRC_URI:remove:pn-nocturned = "${NOCTURNE_MONOREPO_SRC_URI}"
+    SRC_URI:remove:pn-nocturne-ui = "${NOCTURNE_MONOREPO_SRC_URI}"
+    SRCREV:pn-nocturned = "INVALID"
+    SRCREV:pn-nocturne-ui = "INVALID"
+
+    EXTERNALSRC_SYMLINKS = ""
+
+    CARGO_BUILD_FLAGS:append:pn-nocturned = " --config profile.release.lto=false --config profile.release.codegen-units=32"
+
+repos:
+  meta-nocturne:
+    path: .
+    layers:
+      meta-nocturne:

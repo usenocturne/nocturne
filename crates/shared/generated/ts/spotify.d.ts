@@ -201,6 +201,10 @@ export interface SpotifyArtistTopTracksRequest {
    * Spotify artist id. Current source method/field are camel/id. Inventory field `content_id` emits as `contentId`. Current source key: `id`.
    */
   contentId: string;
+  /**
+   * Include album metadata needed by the mockingbird artist tracklist. Inventory field `mockingbird` emits as `mockingbird`.
+   */
+  mockingbird?: boolean;
 }
 
 /**
@@ -2089,6 +2093,10 @@ export interface SpotifyPlaylistTracksRequest {
    * Page offset. Inventory field `offset` emits as `offset`.
    */
   offset?: number;
+  /**
+   * Return compact per-track album artwork for the mockingbird UI. Inventory field `mockingbird` emits as `mockingbird`.
+   */
+  mockingbird?: boolean;
 }
 
 /**

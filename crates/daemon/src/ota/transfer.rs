@@ -29,6 +29,8 @@ pub enum ChunkOutcome {
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransferError {
+    #[error("transfer metadata does not match the requested artifact")]
+    MetadataMismatch,
     #[error("chunk offset {got} != expected {expected}")]
     OffsetMismatch { expected: u64, got: u64 },
     #[error("sha256 mismatch: expected {expected}, got {got}")]
@@ -58,25 +60,32 @@ impl ChunkedTransfer {
         update_id: &str,
         expected_size: u64,
         expected_sha256: &str,
-        _target_dir: Option<&Path>,
     ) -> Result<u64, TransferError> {
         tokio::fs::create_dir_all(&self.transfers_dir).await?;
 
         let partial_path = self.path(update_id);
         let meta_path = self.meta_path(update_id);
+        let partial_exists = tokio::fs::try_exists(&partial_path).await?;
+        let meta_exists = tokio::fs::try_exists(&meta_path).await?;
+        match (partial_exists, meta_exists) {
+            (true, true) => {
+                return self
+                    .resume_offset(update_id, expected_size, expected_sha256)
+                    .await;
+            }
+            (true, false) => remove_if_exists(partial_path.clone()).await?,
+            (false, true) => remove_if_exists(meta_path.clone()).await?,
+            (false, false) => {}
+        }
+
         let file = OpenOptions::new()
             .create(true)
-            // OTA partials are resumable; keep already-downloaded bytes across Begin retries.
             .truncate(false)
             .read(true)
             .write(true)
             .open(&partial_path)
             .await?;
-        let mut received = file.metadata().await?.len();
-        if received > expected_size {
-            file.set_len(expected_size).await?;
-            received = expected_size;
-        }
+        let received = file.metadata().await?.len();
 
         let meta = TransferMeta {
             expected_size,
@@ -84,6 +93,29 @@ impl ChunkedTransfer {
             received,
         };
         write_meta_atomic(&meta_path, &meta).await?;
+        Ok(received)
+    }
+
+    pub async fn resume_offset(
+        &self,
+        update_id: &str,
+        expected_size: u64,
+        expected_sha256: &str,
+    ) -> Result<u64, TransferError> {
+        let meta = load_meta(&self.meta_path(update_id)).await?;
+        if meta.expected_size != expected_size
+            || !meta.expected_sha256.eq_ignore_ascii_case(expected_sha256)
+        {
+            return Err(TransferError::MetadataMismatch);
+        }
+
+        let received = tokio::fs::metadata(self.path(update_id)).await?.len();
+        if received > expected_size {
+            return Err(TransferError::SizeMismatch {
+                expected: expected_size,
+                got: received,
+            });
+        }
         Ok(received)
     }
 
@@ -307,7 +339,7 @@ mod tests {
         let sha = sha256_bytes(body);
 
         let received = transfer
-            .begin("update-1", body.len() as u64, &sha, None)
+            .begin("update-1", body.len() as u64, &sha)
             .await
             .unwrap();
         assert_eq!(received, 0);
@@ -321,7 +353,7 @@ mod tests {
 
         let resumed = ChunkedTransfer::new(temp.path().to_path_buf());
         let received = resumed
-            .begin("update-1", body.len() as u64, &sha, None)
+            .begin("update-1", body.len() as u64, &sha)
             .await
             .unwrap();
         assert_eq!(received, first.len() as u64);
@@ -344,7 +376,7 @@ mod tests {
         let sha = sha256_bytes(body);
 
         transfer
-            .begin("upd-resume", body.len() as u64, &sha, None)
+            .begin("upd-resume", body.len() as u64, &sha)
             .await
             .unwrap();
         let first = &body[..5];
@@ -355,10 +387,39 @@ mod tests {
 
         let transfer2 = ChunkedTransfer::new(temp.path().to_path_buf());
         let offset = transfer2
-            .begin("upd-resume", body.len() as u64, &sha, None)
+            .begin("upd-resume", body.len() as u64, &sha)
             .await
             .unwrap();
         assert_eq!(offset, first.len() as u64);
+    }
+
+    #[tokio::test]
+    async fn begin_rejects_changed_metadata_for_existing_partial() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let transfer = ChunkedTransfer::new(temp.path().to_path_buf());
+        let body = b"immutable update metadata";
+        let sha = sha256_bytes(body);
+
+        transfer
+            .begin("upd-metadata", body.len() as u64, &sha)
+            .await
+            .unwrap();
+        transfer
+            .write_chunk("upd-metadata", 0, &body[..5], false)
+            .await
+            .unwrap();
+
+        let err = transfer
+            .begin("upd-metadata", body.len() as u64 + 1, &sha)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, TransferError::MetadataMismatch));
+        assert_eq!(
+            tokio::fs::read(transfer.path("upd-metadata"))
+                .await
+                .unwrap(),
+            &body[..5]
+        );
     }
 
     #[tokio::test]
@@ -369,7 +430,7 @@ mod tests {
         let sha = sha256_bytes(body);
 
         transfer
-            .begin("upd-offset", body.len() as u64, &sha, None)
+            .begin("upd-offset", body.len() as u64, &sha)
             .await
             .unwrap();
 
@@ -390,7 +451,7 @@ mod tests {
         let body = b"0123456789";
         let sha = sha256_bytes(body);
 
-        transfer.begin("upd-size", 10, &sha, None).await.unwrap();
+        transfer.begin("upd-size", 10, &sha).await.unwrap();
 
         let err = transfer
             .write_chunk("upd-size", 0, &body[..5], true)
@@ -410,7 +471,7 @@ mod tests {
         let wrong_sha = sha256_bytes(b"wrong bytes");
 
         transfer
-            .begin("upd-hash", body.len() as u64, &wrong_sha, None)
+            .begin("upd-hash", body.len() as u64, &wrong_sha)
             .await
             .unwrap();
 
@@ -432,7 +493,7 @@ mod tests {
         let sha = sha256_bytes(body);
 
         transfer
-            .begin("upd-done", body.len() as u64, &sha, None)
+            .begin("upd-done", body.len() as u64, &sha)
             .await
             .unwrap();
 
@@ -451,7 +512,7 @@ mod tests {
         let sha = sha256_bytes(body);
 
         transfer
-            .begin("upd-abandon", body.len() as u64, &sha, None)
+            .begin("upd-abandon", body.len() as u64, &sha)
             .await
             .unwrap();
         transfer
@@ -477,7 +538,7 @@ mod tests {
         let sha = sha256_bytes(body);
 
         transfer
-            .begin("stale-id", body.len() as u64, &sha, None)
+            .begin("stale-id", body.len() as u64, &sha)
             .await
             .unwrap();
         transfer
@@ -514,7 +575,7 @@ mod tests {
         let sha = sha256_bytes(body);
 
         transfer
-            .begin("fresh-id", body.len() as u64, &sha, None)
+            .begin("fresh-id", body.len() as u64, &sha)
             .await
             .unwrap();
         transfer

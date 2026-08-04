@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 1 ]; then
+  echo "usage: $(basename "$0") YYYYMMDDhhmmss" >&2
+  exit 2
+fi
+
+BUILD_ID=$1
+case "$BUILD_ID" in
+  '' | *[!0-9]*)
+    echo "Nocturne build ID must contain exactly 14 decimal digits (YYYYMMDDhhmmss): $BUILD_ID" >&2
+    exit 2
+    ;;
+esac
+
+if [ "${#BUILD_ID}" -ne 14 ]; then
+  echo "Nocturne build ID must contain exactly 14 decimal digits (YYYYMMDDhhmmss): $BUILD_ID" >&2
+  exit 2
+fi

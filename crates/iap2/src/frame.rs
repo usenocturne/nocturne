@@ -15,6 +15,12 @@ use crate::frame_tap::FrameTap;
 /// Length of the link-layer header in bytes.
 pub const LINK_HEADER_LEN: usize = 9;
 
+/// Length of the payload checksum trailer in bytes.
+pub const PAYLOAD_TRAILER_LEN: usize = 1;
+
+/// Total link-layer overhead for a packet carrying a payload.
+pub const LINK_FRAME_OVERHEAD: usize = LINK_HEADER_LEN + PAYLOAD_TRAILER_LEN;
+
 /// First two bytes of every link-layer packet.
 pub const LINK_MAGIC: [u8; 2] = [0xFF, 0x5A];
 
@@ -185,8 +191,8 @@ impl Lsp {
     pub fn accessory_default() -> Self {
         Self {
             version: 1,
-            max_outgoing: 5,
-            max_len: 2048,
+            max_outgoing: 32,
+            max_len: 4096,
             retransmission_timeout_ms: 6000,
             ack_timeout_ms: 3000,
             max_retransmissions: 30,
@@ -464,6 +470,14 @@ mod tests {
         assert_eq!(bytes.len(), 10 + 3 * 3);
         let parsed = Lsp::decode(&bytes).unwrap();
         assert_eq!(parsed, lsp);
+    }
+
+    #[test]
+    fn accessory_default_uses_production_link_window() {
+        let lsp = Lsp::accessory_default();
+        assert_eq!(lsp.max_outgoing, 32);
+        assert_eq!(lsp.max_len, 4096);
+        assert_eq!(lsp.max_ack, 3);
     }
 
     #[test]

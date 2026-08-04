@@ -20,11 +20,13 @@ BAD_RECOMMENDATIONS += "kernel-modules udev-hwdb wpa-supplicant wireless-regdb w
 SUPERBIRD_ROOTFS_TYPE ??= "ext4"
 EXTRA_IMAGECMD:squashfs-lz4 = "-b 1M -no-xattrs -all-root -Xhc"
 EXTRA_IMAGECMD:ext4 = "-i 16384 -m 0 -O ^has_journal -O ^huge_file"
+ZSTD_DEFAULTS = "-19 -T0"
 
-IMAGE_FSTYPES = "wic ${SUPERBIRD_ROOTFS_TYPE} ${SUPERBIRD_ROOTFS_TYPE}.zck ${SUPERBIRD_ROOTFS_TYPE}.zck.zckheader"
+IMAGE_FSTYPES = "wic ${SUPERBIRD_ROOTFS_TYPE} ${SUPERBIRD_ROOTFS_TYPE}.zst ${SUPERBIRD_ROOTFS_TYPE}.zck ${SUPERBIRD_ROOTFS_TYPE}.zck.zckheader"
 IMAGE_CLASSES += "image_types_zchunk"
 
-WKS_FILE = "superbird-mainline.wks.in"
+SUPERBIRD_WKS_ROOTFS_MKFS_EXTRAOPTS ??= "${@'-F -i 16384 -m 0 -O ^has_journal -O ^huge_file' if (d.getVar('SUPERBIRD_WKS_ROOTFS_FSTYPE') or '') == 'ext4' else ''}"
+WKS_FILE = "nocturne-mainline.wks.in"
 
 do_image_wic[depends] += " \
     virtual/kernel:do_deploy \
@@ -37,7 +39,7 @@ EXTRA_IMAGEDEPENDS += "superbird-uboot nocturne-bandaid"
 
 NOCTURNE_CHANNEL ?= "stable"
 NOCTURNE_IMAGE_VARIANT ?= "prod"
-NOCTURNE_IMAGE_VERSION ?= "${DISTRO_VERSION}"
+NOCTURNE_IMAGE_VERSION ?= "${DISTRO_VERSION}+${NOCTURNE_BUILD_ID}"
 
 nocturne_meta_postprocess() {
     META=${IMAGE_ROOTFS}${datadir}/superbird/meta.json.in
@@ -61,20 +63,11 @@ nocturne_meta_postprocess() {
     ' "$META" > "$META.tmp" && mv "$META.tmp" "$META"
 }
 
-nocturne_version_postprocess() {
+nocturne_floor_version_postprocess() {
     VERSION_DIR="${IMAGE_ROOTFS}${sysconfdir}/nocturne"
     install -d "$VERSION_DIR"
-    cat > "$VERSION_DIR/version.json" <<EOF
-{
-  "version": "v${DISTRO_VERSION}",
-  "shortVersion": "v${DISTRO_VERSION}",
-  "gitHash": "yocto",
-  "buildDate": "${DATETIME}"
+    echo "${NOCTURNE_IMAGE_VERSION}" > "$VERSION_DIR/floor-version"
 }
-EOF
-    echo "${DISTRO_VERSION}" > "$VERSION_DIR/floor-version"
-}
-nocturne_version_postprocess[vardepsexclude] = "DATETIME"
 
 _NOCTURNE_META_VARDEPS = " \
     NOCTURNE_CHANNEL \
@@ -84,4 +77,4 @@ _NOCTURNE_META_VARDEPS = " \
 nocturne_meta_postprocess[vardeps] += "${_NOCTURNE_META_VARDEPS}"
 IMAGE_PREPROCESS_COMMAND[vardeps] += "${_NOCTURNE_META_VARDEPS}"
 do_image[vardeps] += "${_NOCTURNE_META_VARDEPS}"
-IMAGE_PREPROCESS_COMMAND:append = " nocturne_meta_postprocess; nocturne_version_postprocess; "
+IMAGE_PREPROCESS_COMMAND:append = " nocturne_meta_postprocess; nocturne_floor_version_postprocess; "

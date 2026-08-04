@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "event", content = "data")]
 pub enum AudioEvent {
     AudioLevel(AudioLevelEvent),
+    WindLevel(WindLevelEvent),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -35,4 +36,10 @@ pub struct AudioRecordStopRequest;
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AudioRecordStopResponse {
     pub status: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct WindLevelEvent {
+    pub level: u8,
+    pub stat: f64,
 }

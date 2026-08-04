@@ -94,18 +94,22 @@ public struct BluetoothConnectionEvent: Codable, Sendable {
 public struct BluetoothDeviceConnectRequest: Codable, Sendable {
   public let address: String
   public let channel: UInt8?
+  public let deviceType: String?
 
   public init(
     address: String,
-    channel: UInt8?
+    channel: UInt8?,
+    deviceType: String?
   ) {
     self.address = address
     self.channel = channel
+    self.deviceType = deviceType
   }
 
   private enum CodingKeys: String, CodingKey {
     case address = "address"
     case channel = "channel"
+    case deviceType = "device_type"
   }
 }
 

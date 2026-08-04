@@ -8,6 +8,7 @@ pub mod device;
 pub mod iap2;
 pub mod media_control;
 pub mod ota;
+pub mod phone;
 pub mod spotify;
 pub mod voice;
 
@@ -17,5 +18,6 @@ pub use bt_only::*;
 pub use device::*;
 pub use iap2::*;
 pub use media_control::*;
+pub use phone::*;
 pub use spotify::*;
 pub use voice::*;

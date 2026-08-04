@@ -20,11 +20,8 @@ use tokio::{
 use super::{encode_packet, tap_outbound_wire, write_packet};
 use crate::{
     error::Result,
-    frame::{ControlBits, LinkCodec, LinkPacket, Lsp, LINK_HEADER_LEN},
+    frame::{ControlBits, LinkCodec, LinkPacket, Lsp, LINK_FRAME_OVERHEAD},
 };
-
-const PAYLOAD_TRAILER: usize = 1;
-const FRAME_OVERHEAD: usize = LINK_HEADER_LEN + PAYLOAD_TRAILER;
 
 #[derive(Debug, Clone, Copy)]
 struct LinkParams {
@@ -40,7 +37,10 @@ impl LinkParams {
     fn from_peer_lsp(lsp: &Lsp) -> Self {
         Self {
             max_outgoing: lsp.max_outgoing.max(1),
-            max_payload_len: lsp.max_len.saturating_sub(FRAME_OVERHEAD as u16).max(1),
+            max_payload_len: lsp
+                .max_len
+                .saturating_sub(LINK_FRAME_OVERHEAD as u16)
+                .max(1),
             retransmission_timeout: Duration::from_millis(lsp.retransmission_timeout_ms as u64),
             ack_timeout: Duration::from_millis(lsp.ack_timeout_ms as u64),
             max_retransmissions: lsp.max_retransmissions.max(1),
@@ -406,7 +406,7 @@ mod tests {
     fn enqueue_send_chunks_at_max_payload_len() {
         let mut state = EstablishedState::new(99, 50, &test_lsp(127, 60, 3));
         let max_payload = state.params.max_payload_len as usize;
-        assert_eq!(max_payload, 60 - FRAME_OVERHEAD);
+        assert_eq!(max_payload, 60 - LINK_FRAME_OVERHEAD);
         let total = max_payload * 2 + 5;
         let payload = Bytes::from(vec![0xABu8; total]);
         state.enqueue_send(1, payload);

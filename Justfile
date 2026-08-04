@@ -18,9 +18,25 @@ daemon-build:
 daemon-host:
     cargo build -p nocturned
 
-# Build + scp the daemon binary to the running Car Thing at 172.16.42.2.
-daemon-copy: daemon-build
-    scp target/aarch64-unknown-linux-gnu/release/nocturned root@172.16.42.2:/usr/bin/nocturned
+# Build only nocturned through Yocto, copy it into the bandaid overlay, and
+# restart the on-device services.
+daemon-deploy host="nocturne.local" binary="image/build/tmp/work/cortexa53-poky-linux/nocturned/2.1.0/image/usr/lib/nocturne/daemon/nocturned.current" target="nocturne-local":
+    cd image && just build-nocturned {{target}}
+    just daemon-install {{host}} {{binary}}
+
+# Copy an existing daemon binary into the bandaid overlay and restart services.
+daemon-install host="nocturne.local" binary="image/build/tmp/work/cortexa53-poky-linux/nocturned/2.1.0/image/usr/lib/nocturne/daemon/nocturned.current":
+    @if [ ! -f "{{binary}}" ]; then echo "Missing {{binary}}"; echo "Run: just daemon-deploy {{host}}"; exit 1; fi
+    scp "{{binary}}" root@{{host}}:/var/lib/bandaid/nocturne/daemon/nocturned.next
+    ssh root@{{host}} 'set -eu; systemctl stop nocturned || true; if [ -f /var/lib/bandaid/nocturne/daemon/nocturned.current ]; then cp /var/lib/bandaid/nocturne/daemon/nocturned.current /var/lib/bandaid/nocturne/daemon/nocturned.previous; fi; mv /var/lib/bandaid/nocturne/daemon/nocturned.next /var/lib/bandaid/nocturne/daemon/nocturned.current; chmod 0755 /var/lib/bandaid/nocturne/daemon/nocturned.current; sync; systemctl restart superbird-weston; systemctl restart nocturned; sha256sum /opt/nocturne/daemon/nocturned.current; for i in $(seq 1 20); do pid=$(pidof nocturned.current || true); [ -n "$pid" ] && break; sleep 0.5; done; if [ -n "$pid" ]; then sha256sum /proc/$pid/exe; else echo "warning: nocturned not running yet"; fi'
+
+# Build with cross instead of Yocto, then deploy that binary.
+daemon-deploy-cross host="nocturne.local": daemon-build
+    just daemon-install {{host}} target/aarch64-unknown-linux-gnu/release/nocturned
+
+# Back-compat alias for daemon-deploy.
+daemon-copy host="nocturne.local":
+    just daemon-deploy {{host}}
 
 # ---- Device UI (React + Vite + Bun) ------------------------------------
 
@@ -47,7 +63,18 @@ connector-build:
 # `crates/daemon/` and `packages/ui/dist/`, so make sure those are built
 # first if you want fresh contents.
 image-build:
-    cd image && ./scripts/build.sh
+    cd image && just build
+
+# Build and publish a signed full + zchunk image OTA using one exact version.
+# Usage: just release-image 4.1.0 /secure/nocturne.pem [delta-from-versions] [variant] [target]
+release-image version_core signing_key delta_from_versions="*" variant="prod" target="nocturne-local":
+    image/scripts/nocturne-release-image {{quote(version_core)}} {{quote(signing_key)}} {{quote(delta_from_versions)}} {{quote(variant)}} {{quote(target)}}
+
+# Build and publish a combined daemon + UI bandaid OTA.
+# Usage: just release-bandaid 4.2.1 4.2.0+20260725192800 [channel]
+# Set NOCTURNE_BUILD_ID to reproduce a known release version.
+release-bandaid version_core minimum_image_version channel="stable":
+    image/scripts/nocturne-release-bandaid {{quote(version_core)}} {{quote(minimum_image_version)}} {{quote(channel)}}
 
 # ---- Codegen + workspace gates -----------------------------------------
 
@@ -75,7 +102,11 @@ test-emulator:
     cargo test --workspace --features iap2-rs/emulator
 
 lint:
-    cargo clippy --workspace -- -D warnings
+    @if [ "$(uname -s)" = "Linux" ]; then \
+        cargo clippy --workspace -- -D warnings; \
+    else \
+        cross clippy --workspace --target=aarch64-unknown-linux-gnu --release --features device -- -D warnings; \
+    fi
     cargo fmt --check
 
 fmt:

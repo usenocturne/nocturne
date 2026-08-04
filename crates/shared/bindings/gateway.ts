@@ -2,34 +2,112 @@
 import type { OtaError, OtaKind, OtaProgress, RangePart, RangeSpec } from "./shared";
 import type { MsgMeta, WireError } from "./wire";
 
-export type GatewayToNocturneMsg = { id: string, meta: MsgMeta, data: GatewayToNocturneMsgData, };
+export type GatewayToNocturneMsg = {
+  id: string;
+  meta: MsgMeta;
+  data: GatewayToNocturneMsgData;
+};
 
-export type GatewayToNocturneMsgData = { "type": "system", "data": GatewayToNocturneSystemMsg } | { "type": "error", "data": WireError };
+export type GatewayToNocturneMsgData = {
+  "type": "system";
+  "data": GatewayToNocturneSystemMsg;
+} | { "type": "error"; "data": WireError };
 
-export type GatewayToNocturneSystemMsg = { "event": "otaBegin", "data": OtaBegin } | { "event": "otaChunk", "data": OtaChunk } | { "event": "otaAbandon", "data": OtaAbandon } | { "event": "otaAssetRangeReply", "data": OtaAssetRangeReply } | { "event": "otaAssetRangeRejected", "data": OtaAssetRangeRejected } | { "event": "otaAssetRangeChunk", "data": OtaAssetRangeChunk };
+export type GatewayToNocturneSystemMsg =
+  | { "event": "otaBegin"; "data": OtaBegin }
+  | { "event": "otaChunk"; "data": OtaChunk }
+  | { "event": "otaAbandon"; "data": OtaAbandon }
+  | { "event": "otaDownloadProgress"; "data": OtaDownloadProgress }
+  | { "event": "otaPackageReady"; "data": OtaPackageReady }
+  | { "event": "otaAssetRangeReply"; "data": OtaAssetRangeReply }
+  | { "event": "otaAssetRangeRejected"; "data": OtaAssetRangeRejected }
+  | { "event": "otaAssetRangeChunk"; "data": OtaAssetRangeChunk };
 
-export type NocturneToGatewayMsg = { id: string, meta: MsgMeta, data: NocturneToGatewayMsgData, };
+export type NocturneToGatewayMsg = {
+  id: string;
+  meta: MsgMeta;
+  data: NocturneToGatewayMsgData;
+};
 
-export type NocturneToGatewayMsgData = { "type": "system", "data": NocturneToGatewaySystemMsg } | { "type": "error", "data": WireError } | { "type": "ack" } | { "type": "done" };
+export type NocturneToGatewayMsgData =
+  | { "type": "system"; "data": NocturneToGatewaySystemMsg }
+  | { "type": "error"; "data": WireError }
+  | { "type": "ack" }
+  | { "type": "done" };
 
-export type NocturneToGatewaySystemMsg = { "event": "otaProgress", "data": OtaProgress } | { "event": "otaError", "data": OtaError } | { "event": "otaBeginAck", "data": OtaBeginAck } | { "event": "otaBeginRejected", "data": OtaBeginRejected } | { "event": "otaAssetRange", "data": OtaAssetRange } | { "event": "otaAssetRangeAbandon", "data": OtaAssetRangeAbandon };
+export type NocturneToGatewaySystemMsg =
+  | { "event": "otaProgress"; "data": OtaProgress }
+  | { "event": "otaError"; "data": OtaError }
+  | { "event": "otaBeginAck"; "data": OtaBeginAck }
+  | { "event": "otaBeginRejected"; "data": OtaBeginRejected }
+  | { "event": "otaAssetRange"; "data": OtaAssetRange }
+  | { "event": "otaAssetRangeAbandon"; "data": OtaAssetRangeAbandon };
 
-export type OtaAbandon = { updateId: string, };
+export type OtaAbandon = { updateId: string };
 
-export type OtaAssetRange = { updateId: string, asset: string, ranges: Array<RangeSpec>, };
+export type OtaAssetRange = {
+  updateId: string;
+  asset: string;
+  ranges: Array<RangeSpec>;
+};
 
-export type OtaAssetRangeAbandon = { requestId: string, };
+export type OtaAssetRangeAbandon = { requestId: string };
 
-export type OtaAssetRangeChunk = { requestId: string, partIndex: number, offset: number, bytes: Uint8Array, last: boolean, };
+export type OtaAssetRangeChunk = {
+  requestId: string;
+  partIndex: number;
+  offset: number;
+  bytes: Uint8Array;
+  last: boolean;
+};
 
-export type OtaAssetRangeRejected = { reason: string, };
+export type OtaAssetRangeRejected = { requestId: string; reason: string };
 
-export type OtaAssetRangeReply = { totalSize: number, parts: Array<RangePart>, };
+export type OtaAssetRangeReply = {
+  requestId: string;
+  totalSize: number;
+  parts: Array<RangePart>;
+};
 
-export type OtaBegin = { kind: OtaKind, updateId: string, updateUrlBase: string | null, expectedSha256: string, expectedSize: number, };
+export type OtaBegin = {
+  kind: OtaKind;
+  updateId: string;
+  updateUrlBase: string | null;
+  expectedSha256: string;
+  expectedSize: number;
+};
 
-export type OtaBeginAck = { resumeFromOffset: number, };
+export type OtaBeginAck = { resumeFromOffset: number };
 
-export type OtaBeginRejected = { reason: string, };
+export type OtaBeginRejected = { reason: string };
 
-export type OtaChunk = { updateId: string, offset: number, bytes: Uint8Array, last: boolean, };
+export type OtaChunk = {
+  updateId: string;
+  offset: number;
+  bytes: Uint8Array;
+  last: boolean;
+};
+
+/**
+ * Companion-reported progress for the artifact download (OTA server -> phone),
+ * which the daemon cannot observe directly. Sent (throttled) while the phone is
+ * downloading, before it begins streaming chunks. The daemon re-emits it as an
+ * `OtaProgress` with `OtaPhase::Downloading` so the device webapp can show it.
+ */
+export type OtaDownloadProgress = { updateId: string; percent: number };
+
+/**
+ * Companion has finished downloading and verifying the primary OTA artifact.
+ * The daemon should now pull fixed-size byte ranges from the companion with
+ * `device.ota.transfer`, matching the old Nocturne OTA transfer model.
+ */
+export type OtaPackageReady = {
+  updateId: string;
+  version: string;
+  size: number;
+  expectedSha256: string;
+  resumeFromOffset: number;
+  maxTransferChunkSize: number | null;
+  supportsChunkedTransferResponse: boolean | null;
+  transferDataEncoding: string | null;
+};

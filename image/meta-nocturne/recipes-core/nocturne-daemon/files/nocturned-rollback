@@ -9,22 +9,22 @@ TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
 BROKEN=${DAEMON_DIR}/nocturned.broken.${TIMESTAMP}
 
 if [ ! -d "$BANDAID_VENDOR" ]; then
-    exit 0
+  exit 0
 fi
 
 if [ -e "$PREVIOUS" ]; then
-    if [ -e "$CURRENT" ]; then
-        mv "$CURRENT" "$BROKEN"
-    fi
-    mv "$PREVIOUS" "$CURRENT"
+  if [ -e "$CURRENT" ]; then
+    mv "$CURRENT" "$BROKEN"
+  fi
+  mv "$PREVIOUS" "$CURRENT"
 
-    ls -1t "${DAEMON_DIR}"/nocturned.broken.* 2>/dev/null \
-        | tail -n +4 \
-        | xargs -r rm -f
+  ls -1t "${DAEMON_DIR}"/nocturned.broken.* 2> /dev/null |
+    tail -n +4 |
+    xargs -r rm -f
 
-    systemctl reset-failed nocturned.service
-    systemctl start nocturned.service
-    exit 0
+  systemctl reset-failed nocturned.service
+  systemctl start nocturned.service
+  exit 0
 fi
 
 rm -rf "${BANDAID_VENDOR}"

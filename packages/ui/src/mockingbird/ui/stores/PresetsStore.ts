@@ -1,0 +1,677 @@
+import { makeAutoObservable, action } from "mobx";
+import {
+  getActivePresetDeviceId,
+  getMockingbirdPresetsStorageKey,
+  migrateLegacyMockingbirdPresets,
+  normalizePresetDeviceId,
+} from "../../../utils/presetStorage";
+
+/** @typedef {import("@schema/spotify").SpotifyArtistGetRequest} SpotifyArtistGetRequest */
+/** @typedef {import("@schema/spotify").SpotifyMeTracksRequest} SpotifyMeTracksRequest */
+/** @typedef {import("@schema/spotify").SpotifyPlaylistGetRequest} SpotifyPlaylistGetRequest */
+
+export const PRESET_NUMBERS = [1, 2, 3, 4];
+
+export class PresetsUiState {
+  declare tempPreset: UiLooseData | null;
+  declare middlewareActions: UiLooseData;
+  presetsDataStore;
+  presetsUbiLogger;
+  overlayController;
+  playerStore;
+  shelfStore;
+  queueStore;
+  viewStore;
+  npvStore;
+  interappActions;
+  tracklistStore;
+
+  selectedPresetNumber = 1;
+  isShowingPresets = false;
+  isAnimatingOut = false;
+  presetsTimeout = null;
+  currentlyPlayingContextUri = null;
+
+  constructor(
+    presetsDataStore,
+    presetsUbiLogger,
+    overlayController,
+    playerStore,
+    shelfStore,
+    queueStore,
+    viewStore,
+    npvStore,
+    interappActions: UiLooseData,
+    tracklistStore,
+  ) {
+    this.presetsDataStore = presetsDataStore;
+    this.presetsUbiLogger = presetsUbiLogger;
+    this.overlayController = overlayController;
+    this.playerStore = playerStore;
+    this.shelfStore = shelfStore;
+    this.queueStore = queueStore;
+    this.viewStore = viewStore;
+    this.npvStore = npvStore;
+    this.interappActions = interappActions;
+    this.tracklistStore = tracklistStore;
+
+    makeAutoObservable(this, {
+      presetsDataStore: false,
+      presetsUbiLogger: false,
+      overlayController: false,
+      playerStore: false,
+      shelfStore: false,
+      queueStore: false,
+      viewStore: false,
+      npvStore: false,
+      interappActions: false,
+      tracklistStore: false,
+    });
+  }
+
+  get currentIsPresets() {
+    return this.isShowingPresets && !this.isAnimatingOut;
+  }
+
+  get presets() {
+    return PRESET_NUMBERS.map((number) => {
+      const preset = this.presetsDataStore.getPreset(number);
+
+      if (preset) {
+        return { ...preset, slot_index: number, type: "preset" };
+      }
+
+      return { slot_index: number, type: "placeholder" };
+    });
+  }
+
+  get isPlaying() {
+    return this.playerStore.isPlayingSpotify;
+  }
+
+  showNowPlaying(contextUri) {
+    if (!this.isPlaying) return false;
+
+    const isLikedSongs = contextUri === "spotify:collection:your-music";
+
+    if (this.currentlyPlayingContextUri) {
+      if (this.currentlyPlayingContextUri === contextUri) return true;
+      if (
+        isLikedSongs &&
+        this.currentlyPlayingContextUri.includes(":collection")
+      )
+        return true;
+      return false;
+    }
+
+    const rootStore = window.carThingRootStore;
+    const activeContextUri = rootStore?.currentPlayback?.context?.uri;
+    if (activeContextUri) {
+      if (activeContextUri === contextUri) return true;
+      if (isLikedSongs && activeContextUri.includes(":collection")) return true;
+    }
+
+    return this.playerStore.contextUri === contextUri;
+  }
+
+  handlePresetButtonPress(presetNumber) {
+    this.presetsUbiLogger?.logPresetButtonPressed?.(presetNumber);
+    this.selectedPresetNumber = presetNumber;
+    this.showPresets();
+    this.loadPreset(presetNumber);
+  }
+
+  handlePresetButtonLongPress(presetNumber) {
+    this.presetsUbiLogger?.logPresetButtonLongPressed?.(presetNumber);
+    this.selectedPresetNumber = presetNumber;
+    this.showPresets();
+    this.saveCurrentContextToPreset(presetNumber);
+  }
+
+  handleTapOnPreset(presetNumber) {
+    this.presetsUbiLogger?.logPresetCardTapped?.(presetNumber);
+    this.loadPreset(presetNumber);
+  }
+
+  handleDialPress() {
+    this.handleTapOnPreset(this.selectedPresetNumber);
+  }
+
+  handleDialLeft() {
+    if (this.selectedPresetNumber > 1) {
+      this.selectedPresetNumber = this.selectedPresetNumber - 1;
+    }
+  }
+
+  handleDialRight() {
+    if (this.selectedPresetNumber < 4) {
+      this.selectedPresetNumber = this.selectedPresetNumber + 1;
+    }
+  }
+
+  handleSwipeUp() {
+    this.hidePresets();
+  }
+
+  loadPreset(presetNumber) {
+    this.presetsDataStore.syncActiveDeviceFromStorage();
+    const preset = this.presetsDataStore.getPreset(presetNumber);
+
+    if (!preset) {
+      this.playTTS("no_presets");
+      return;
+    }
+
+    if (this.presetsDataStore.isUnavailable(presetNumber)) {
+      this.playTTS("preset_unavailable");
+      return;
+    }
+
+    this.playPresetContext(preset);
+  }
+
+  async saveCurrentContextToPreset(presetNumber) {
+    this.presetsDataStore.syncActiveDeviceFromStorage();
+    const currentUri = this.getCurrentSaveableUri();
+
+    if (!currentUri) {
+      return;
+    }
+
+    const contextData = await this.getContextData(currentUri);
+    await this.presetsDataStore.savePreset(
+      currentUri,
+      presetNumber,
+      "car_thing",
+      contextData,
+    );
+  }
+
+  getViewedTracklistUri() {
+    if (!this.viewStore?.isTracklist) return null;
+    const ctx = this.tracklistStore?.tracklistUiState?.contextItem;
+    if (
+      !ctx ||
+      typeof ctx.uri !== "string" ||
+      !ctx.uri.startsWith("spotify:")
+    ) {
+      return null;
+    }
+    return ctx.uri;
+  }
+
+  getCurrentSaveableUri() {
+    const viewedUri = this.getViewedTracklistUri();
+    if (viewedUri) {
+      return viewedUri;
+    }
+
+    const rootStore = window.carThingRootStore;
+    const currentPlayback = rootStore?.currentPlayback;
+
+    if (currentPlayback) {
+      const contextUri = currentPlayback.context?.uri;
+      const trackUri = currentPlayback.item?.uri;
+      const albumUri = currentPlayback.item?.album?.uri;
+
+      if (contextUri && contextUri.startsWith("spotify:search")) {
+        return trackUri;
+      }
+
+      if (!contextUri || contextUri.includes("queue")) {
+        return albumUri || trackUri;
+      }
+
+      return contextUri || albumUri || trackUri;
+    }
+
+    const contextUri = this.playerStore.contextUri;
+    const trackUri = this.playerStore.currentTrack?.uri;
+    const albumUri = this.playerStore.currentTrack?.album?.uri;
+
+    if (contextUri && contextUri.startsWith("spotify:search")) {
+      return trackUri;
+    }
+
+    if (!contextUri || contextUri.includes("queue")) {
+      return albumUri || trackUri;
+    }
+
+    return contextUri && contextUri !== "spotify:track:unknown"
+      ? contextUri
+      : albumUri || trackUri;
+  }
+
+  async getContextData(uri) {
+    const rootStore = window.carThingRootStore;
+    const currentPlayback = rootStore?.currentPlayback;
+    const npvUiState = rootStore?.npvStore?.playingInfoUiState;
+
+    const viewedContextItem =
+      this.viewStore?.isTracklist &&
+      this.tracklistStore?.tracklistUiState?.contextItem?.uri === uri
+        ? this.tracklistStore.tracklistUiState.contextItem
+        : null;
+
+    let contextName = viewedContextItem?.title || "Unknown";
+    let contextDescription = "";
+    let contextImage =
+      viewedContextItem?.image_id ||
+      currentPlayback?.item?.album?.images?.[0]?.url ||
+      "";
+
+    if (uri.includes("spotify:artist:")) {
+      if (!viewedContextItem) {
+        contextName =
+          currentPlayback?.item?.artists?.[0]?.name || "Unknown Artist";
+      }
+      contextDescription = "Artist";
+
+      try {
+        const artistId = uri.replace("spotify:artist:", "");
+        const { sendNocturneWsRequest } =
+          await import("../../../hooks/useNocturned");
+        const result = await sendNocturneWsRequest(
+          "spotify.artist.get",
+          /** @type {SpotifyArtistGetRequest} */ { contentId: artistId },
+          { timeoutMs: 5000 },
+        );
+        if (result?.images?.[0]?.url) contextImage = result.images[0].url;
+        if (result?.name) contextName = result.name;
+      } catch {}
+    } else if (uri.includes("spotify:playlist:")) {
+      const playlistId = uri.replace("spotify:playlist:", "");
+      if (playlistId === "37i9dQZF1EYkqdzj48dyYq") {
+        contextName = "DJ";
+        contextDescription = "Spotify";
+      } else {
+        if (!viewedContextItem) {
+          contextName = npvUiState?.contextHeaderTitle || "Unknown Playlist";
+        }
+        contextDescription = "Playlist";
+      }
+
+      try {
+        const { sendNocturneWsRequest } =
+          await import("../../../hooks/useNocturned");
+        const result = await sendNocturneWsRequest(
+          "spotify.playlist.get",
+          /** @type {SpotifyPlaylistGetRequest} */ {
+            contentId: playlistId,
+            fields: "name,images",
+          },
+          { timeoutMs: 5000 },
+        );
+        if (result?.images?.[0]?.url) contextImage = result.images[0].url;
+        if (result?.name) contextName = result.name;
+      } catch {}
+    } else if (uri.includes("spotify:album:")) {
+      if (!viewedContextItem) {
+        contextName =
+          currentPlayback?.item?.album?.name ||
+          (npvUiState?.contextHeaderTitle !== "Queue"
+            ? npvUiState?.contextHeaderTitle
+            : null) ||
+          "Unknown Album";
+      }
+      contextDescription =
+        !viewedContextItem && currentPlayback?.item?.artists
+          ? currentPlayback.item.artists.map((a) => a.name).join(", ")
+          : "";
+    } else if (uri.includes("spotify:track:")) {
+      if (!viewedContextItem) {
+        contextName = currentPlayback?.item?.name || "Unknown Track";
+      }
+      contextDescription = currentPlayback?.item?.artists
+        ? currentPlayback.item.artists.map((a) => a.name).join(", ")
+        : "";
+    } else if (
+      uri.includes("spotify:show:") ||
+      uri.includes("spotify:episode:")
+    ) {
+      if (!viewedContextItem) {
+        contextName =
+          currentPlayback?.item?.show?.name ||
+          currentPlayback?.item?.name ||
+          "Unknown";
+        contextImage = currentPlayback?.item?.images?.[0]?.url || contextImage;
+      }
+      contextDescription = "Podcast";
+    } else {
+      if (!viewedContextItem) {
+        contextName =
+          npvUiState?.contextHeaderTitle ||
+          currentPlayback?.item?.name ||
+          "Unknown";
+      }
+      contextDescription = currentPlayback?.item?.artists
+        ? currentPlayback.item.artists.map((a) => a.name).join(", ")
+        : "";
+    }
+
+    return {
+      context_uri: uri,
+      name: contextName,
+      description: contextDescription,
+      image_url: contextImage,
+    };
+  }
+
+  showSaveError() {
+    this.overlayController?.showModal?.("saving_preset_failed");
+  }
+
+  playTTS(audioType) {
+    console.log(`Playing TTS: ${audioType}`);
+  }
+
+  async playPresetContext(preset) {
+    this.currentlyPlayingContextUri = null;
+    this.currentlyPlayingContextUri = preset.context_uri;
+    this.playerStore.setContextUri(preset.context_uri);
+
+    const rootStore = window.carThingRootStore;
+    const playTrack = rootStore?.spotifyControls?.playTrack;
+
+    if (!playTrack) {
+      console.error("playTrack not available on spotifyControls");
+      this.currentlyPlayingContextUri = null;
+      return;
+    }
+
+    try {
+      const uri = preset.context_uri;
+
+      if (uri === "spotify:collection:your-music") {
+        const { sendNocturneWsRequest } =
+          await import("../../../hooks/useNocturned");
+        try {
+          const profile = await sendNocturneWsRequest(
+            "spotify.me.profile",
+            {},
+            { timeoutMs: 5000 },
+          );
+          const userId = profile?.id;
+          if (userId) {
+            await playTrack(null, `spotify:user:${userId}:collection`);
+          } else {
+            const result = await sendNocturneWsRequest(
+              "spotify.me.tracks",
+              /** @type {SpotifyMeTracksRequest} */ { limit: 50 },
+              { timeoutMs: 8000 },
+            );
+            const trackUris = (result?.items || [])
+              .map((i) => i.track?.uri)
+              .filter(Boolean);
+            if (trackUris.length > 0) {
+              await playTrack(trackUris[0], null, trackUris);
+            }
+          }
+        } catch (e) {
+          console.error("Error playing Liked Songs:", e);
+          this.currentlyPlayingContextUri = null;
+          return;
+        }
+      } else if (uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq") {
+        const playDJMix = rootStore?.spotifyControls?.playDJMix;
+        const deviceId = rootStore?.currentPlayback?.device?.id;
+        if (playDJMix) {
+          await playDJMix(deviceId);
+        } else {
+          await playTrack(null, uri);
+        }
+      } else if (uri.includes("spotify:track:")) {
+        await playTrack(uri);
+      } else {
+        await playTrack(null, uri);
+      }
+
+      this.viewStore.showNpv();
+    } catch (error) {
+      console.error("Error playing preset:", error);
+      this.currentlyPlayingContextUri = null;
+    }
+  }
+
+  showPresets() {
+    this.presetsDataStore.syncActiveDeviceFromStorage();
+    this.isShowingPresets = true;
+
+    if (this.presetsTimeout) {
+      clearTimeout(this.presetsTimeout);
+    }
+
+    this.presetsTimeout = setTimeout(
+      action(() => {
+        this.hidePresets();
+      }),
+      4000,
+    );
+  }
+
+  hidePresets() {
+    this.isAnimatingOut = true;
+
+    setTimeout(
+      action(() => {
+        this.isShowingPresets = false;
+        this.isAnimatingOut = false;
+      }),
+      500,
+    );
+  }
+
+  reset() {
+    this.selectedPresetNumber = 1;
+    this.isShowingPresets = false;
+    this.tempPreset = null;
+  }
+
+  logPresetsImpression() {
+    this.presetsUbiLogger?.logImpression?.();
+  }
+}
+
+export class PresetsDataStore {
+  declare middlewareActions: UiLooseData;
+  presets = {};
+  unavailablePresets = new Set();
+  activeDeviceId = getActivePresetDeviceId();
+
+  constructor() {
+    makeAutoObservable(this);
+    this.loadPresetsFromStorage();
+  }
+
+  setActiveDeviceId(deviceId) {
+    const nextDeviceId = normalizePresetDeviceId(deviceId);
+    if (nextDeviceId === this.activeDeviceId) return;
+
+    this.activeDeviceId = nextDeviceId;
+    this.loadPresetsFromStorage();
+  }
+
+  syncActiveDeviceFromStorage() {
+    this.setActiveDeviceId(getActivePresetDeviceId());
+  }
+
+  get storageKey() {
+    return getMockingbirdPresetsStorageKey(this.activeDeviceId);
+  }
+
+  getPreset(presetNumber) {
+    return this.presets[presetNumber];
+  }
+
+  isUnavailable(presetNumber) {
+    return this.unavailablePresets.has(presetNumber);
+  }
+
+  async savePreset(uri, slotIndex, source, tempPresetData) {
+    try {
+      this.syncActiveDeviceFromStorage();
+
+      const presetData = {
+        context_uri: uri,
+        slot_index: slotIndex,
+        name: tempPresetData?.name || "Saved Preset",
+        description: tempPresetData?.description || "",
+        image_url: tempPresetData?.image_url || "",
+      };
+
+      this.presets[slotIndex] = presetData;
+      this.savePresetsToStorage();
+      return true;
+    } catch (error) {
+      console.error("Failed to save preset:", error);
+      throw error;
+    }
+  }
+
+  loadPresetsFromStorage() {
+    try {
+      migrateLegacyMockingbirdPresets(this.activeDeviceId);
+
+      const stored = localStorage.getItem(this.storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        this.presets =
+          parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? parsed
+            : {};
+        this.refreshPresetImages();
+      } else {
+        this.setDefaultPresets();
+      }
+    } catch (error) {
+      console.error("Error loading presets from localStorage:", error);
+      this.setDefaultPresets();
+    }
+  }
+
+  setDefaultPresets() {
+    this.presets = {
+      1: {
+        context_uri: "spotify:collection:your-music",
+        name: "Liked Songs",
+        description: "",
+        image_url: "/images/liked-songs.webp",
+      },
+      3: {
+        context_uri: "spotify:playlist:37i9dQZF1EfYtRPpxPqlEQ",
+        name: "Daily Drive",
+        description: "Spotify",
+        image_url: "",
+      },
+    };
+
+    this.savePresetsToStorage();
+    this.refreshPresetImages();
+  }
+
+  async refreshPresetImages() {
+    const deviceId = this.activeDeviceId;
+
+    try {
+      const { sendNocturneWsRequest } =
+        await import("../../../hooks/useNocturned");
+      for (const [slotIndex, preset] of Object.entries(this.presets)) {
+        if (preset.image_url || !preset.context_uri) continue;
+        const uri = preset.context_uri;
+        if (uri.includes("spotify:playlist:")) {
+          const playlistId = uri.replace("spotify:playlist:", "");
+          try {
+            const result = await sendNocturneWsRequest(
+              "spotify.playlist.get",
+              /** @type {SpotifyPlaylistGetRequest} */ {
+                contentId: playlistId,
+                fields: "name,images",
+              },
+              { timeoutMs: 5000 },
+            );
+            if (deviceId !== this.activeDeviceId) return;
+            if (result?.images?.[0]?.url) {
+              this.presets[slotIndex] = {
+                ...preset,
+                image_url: result.images[0].url,
+              };
+              if (result.name) this.presets[slotIndex].name = result.name;
+            }
+          } catch {}
+        }
+      }
+      if (deviceId === this.activeDeviceId) {
+        this.savePresetsToStorage(deviceId);
+      }
+    } catch {}
+  }
+
+  savePresetsToStorage(deviceId = this.activeDeviceId) {
+    try {
+      localStorage.setItem(
+        getMockingbirdPresetsStorageKey(deviceId),
+        JSON.stringify(this.presets),
+      );
+    } catch (error) {
+      console.error("Error saving presets to localStorage:", error);
+    }
+  }
+
+  loadPresets() {
+    this.syncActiveDeviceFromStorage();
+    this.loadPresetsFromStorage();
+    return Promise.resolve();
+  }
+
+  reset() {
+    this.presets = {};
+    this.unavailablePresets.clear();
+  }
+}
+
+export class PresetsController {
+  declare middlewareActions: UiLooseData;
+  rootStore;
+  interappActions;
+  presetsUiState;
+
+  constructor(rootStore: UiLooseData, interappActions: UiLooseData) {
+    this.rootStore = rootStore;
+    this.interappActions = interappActions;
+    this.presetsUiState = new PresetsUiState(
+      rootStore.presetsDataStore,
+      rootStore.ubiLogger?.presetsUbiLogger,
+      rootStore.overlayController,
+      rootStore.playerStore,
+      rootStore.shelfStore,
+      rootStore.queueStore,
+      rootStore.viewStore,
+      rootStore.npvStore,
+      rootStore.interappActions,
+      rootStore.tracklistStore,
+    );
+
+    makeAutoObservable(this, {
+      rootStore: false,
+      interappActions: false,
+      presetsUiState: false,
+    });
+  }
+
+  get isPresetButtonsEnabled() {
+    return true;
+  }
+
+  get isSwipeDownPresetsEnabled() {
+    return (
+      this.isPresetButtonsEnabled &&
+      !this.rootStore.overlayController?.isShowing?.("voice")
+    );
+  }
+
+  reset() {
+    this.presetsUiState.reset();
+  }
+}
+
+export default PresetsController;

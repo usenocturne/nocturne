@@ -10,19 +10,27 @@ import kotlinx.serialization.Serializable
 data class AiResponseEvent(
   @SerialName("message") val message: String? = null,
   @SerialName("text") val text: String? = null,
+  @SerialName("is_final") val isFinal: Boolean? = null,
+  @SerialName("session_id") val sessionId: String? = null,
 )
 
 @Serializable
 data class AiStateEvent(
   @SerialName("state") val state: String,
   @SerialName("message") val message: String? = null,
+  @SerialName("session_id") val sessionId: String? = null,
 )
 
 @Serializable
 data class AiToolExecutedEvent(
   @SerialName("tool_name") val toolName: String? = null,
+  @SerialName("tool") val tool: String? = null,
+  @SerialName("call_id") val callId: String? = null,
+  @SerialName("status") val status: String? = null,
+  @SerialName("tool_arguments") val toolArguments: Value? = null,
   @SerialName("result") val result: Value? = null,
   @SerialName("error") val error: String? = null,
+  @SerialName("session_id") val sessionId: String? = null,
 )
 
 @Serializable
@@ -39,6 +47,12 @@ object TtsStopRequest
 
 @Serializable
 object TtsStopResponse
+
+@Serializable
+object VoiceCancelRequest
+
+@Serializable
+object VoiceCancelResponse
 
 @Serializable
 enum class VoiceEvent {
@@ -66,12 +80,15 @@ enum class VoiceMethod {
   TTS_SPEAK,
   @SerialName("tts_stop")
   TTS_STOP,
+  @SerialName("voice_cancel")
+  VOICE_CANCEL,
 }
 
 @Serializable
 data class VoiceTranscriptionEvent(
   @SerialName("transcript") val transcript: String,
   @SerialName("is_final") val isFinal: Boolean,
+  @SerialName("session_id") val sessionId: String? = null,
 )
 
 @Serializable

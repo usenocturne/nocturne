@@ -58,6 +58,8 @@ fn voice_wire_snapshots_round_trip() {
     assert_empty_payload::<TtsSpeakResponse>(&snapshot, "tts.speak", "response");
     assert_empty_payload::<TtsStopRequest>(&snapshot, "tts.stop", "request");
     assert_empty_payload::<TtsStopResponse>(&snapshot, "tts.stop", "response");
+    assert_empty_payload::<VoiceCancelRequest>(&snapshot, "voice.cancel", "request");
+    assert_empty_payload::<VoiceCancelResponse>(&snapshot, "voice.cancel", "response");
     assert_round_trip::<OnboardingSetStateRequest>(&snapshot, "onboarding.set_state", "request");
     assert_empty_payload::<OnboardingSetStateResponse>(
         &snapshot,

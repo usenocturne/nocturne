@@ -1,5 +1,3 @@
-pub mod mfi;
-
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -7,15 +5,16 @@ use std::time::{Duration, Instant};
 use base64::Engine;
 use bluer::{rfcomm::Stream, Address};
 use bytes::Bytes;
+use iap2_rs::session::TelephonyCommand;
 use iap2_rs::{
     csm::{
         external_accessory::{AppLaunchMethod, RequestAppLaunch},
-        hid::TRANSPORT_COMPONENT_ID,
         identification::{
             CarthingIdentification, EaProtocol, EaProtocolMatchAction, HidComponentFunction,
             IdentificationConfig,
         },
         now_playing::{NowPlayingUpdate, PlaybackState, RepeatMode, ShuffleMode},
+        telephony::{AcceptCall, EndCall},
         CsmFrame,
     },
     EaPriority, EaStreamSender, HidCommand, Iap2Command, Iap2Session, Link, LinkConfig, Lsp,
@@ -30,8 +29,11 @@ use libnocturne::generated::media_control::{
     MediaControlVolumeDownResponse, MediaControlVolumeUpResponse, MediaNowPlayingArtworkEvent,
     MediaNowPlayingUpdateEvent,
 };
+use libnocturne::generated::phone::{
+    PhoneCallAcceptResponse, PhoneCallDeclineResponse, PhoneCallsGetResponse,
+};
 use tokio::sync::{broadcast, mpsc, Mutex};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::app::{
     msgpack::{
@@ -40,16 +42,31 @@ use crate::app::{
         create_daemon_ready_event, MsgPackProtocolHandler,
     },
     websocket_handler::WebSocketProtocolHandler,
-    AppCommunicationManager, AppMessage, AppProtocolHandlerEnum,
+    AppCommunicationManager, AppMessage, AppMessagePriority, AppProtocolHandlerEnum,
 };
 use crate::audio;
 use crate::error::{NocturnedError, Result};
 use crate::http::WebSocketServer;
-use crate::iap2::mfi::HardwareMfiProvider;
 use audio::{AudioCommand, AudioEvent, WakeWordCommand};
+
+mod telephony;
+
+use telephony::{CallLifecycleEvent, CallTracker};
 
 const NOCTURNE_EA_PROTOCOL: &str = "com.usenocturne.daemon";
 const DEFAULT_APP_BUNDLE_ID: &str = "com.usenocturne.nocturne";
+// iOS ignores RequestAppLaunch for an app that is already running, and it
+// background-launches the app itself shortly after the accessory connects.
+// The visible (foreground) launch therefore only happens when this fires
+// before the app's background EA session forms — keep the window tight so
+// the cold-start launch wins that race.
+const APP_LAUNCH_INITIAL_DELAY: Duration = Duration::from_millis(2_500);
+/// Used instead of [`APP_LAUNCH_INITIAL_DELAY`] when the phone paired moments
+/// ago (the Settings > Bluetooth setup flow): fire on the first tick so the
+/// launch request beats iOS's background spawn of the app.
+const APP_LAUNCH_FRESH_PAIR_DELAY: Duration = Duration::from_millis(250);
+const APP_LAUNCH_RETRY_INTERVAL: Duration = Duration::from_secs(15);
+const APP_LAUNCH_MAX_ATTEMPTS: u32 = 5;
 
 #[derive(Default, Clone)]
 struct NowPlayingState {
@@ -58,7 +75,6 @@ struct NowPlayingState {
     album: Option<String>,
     duration_ms: Option<u64>,
     status: Option<String>,
-    elapsed_ms: Option<u64>,
     shuffle_mode: Option<String>,
     repeat_mode: Option<String>,
     app_name: Option<String>,
@@ -103,10 +119,6 @@ impl NowPlayingState {
             playback_json["PlaybackStatus"] = serde_json::json!(status);
             has_playback = true;
         }
-        if let Some(elapsed) = self.elapsed_ms {
-            playback_json["PlaybackElapsedTime"] = serde_json::json!(elapsed);
-            has_playback = true;
-        }
         if let Some(ref shuffle) = self.shuffle_mode {
             playback_json["PlaybackShuffleMode"] = serde_json::json!(shuffle);
             has_playback = true;
@@ -126,6 +138,7 @@ impl NowPlayingState {
         MediaNowPlayingUpdateEvent {
             media_item_attributes: json.get("MediaItemAttributes").cloned(),
             playback_attributes: json.get("PlaybackAttributes").cloned(),
+            media_generation: None,
         }
     }
 
@@ -142,6 +155,15 @@ pub struct Iap2Connection {
     websocket_tx: mpsc::UnboundedSender<AppMessage>,
 }
 
+pub struct Iap2ConnectionOptions {
+    pub websocket_server: Option<Arc<WebSocketServer>>,
+    pub audio_event_rx: broadcast::Receiver<AudioEvent>,
+    pub audio_cmd_tx: mpsc::UnboundedSender<AudioCommand>,
+    pub wakeword_pause_tx: mpsc::UnboundedSender<WakeWordCommand>,
+    pub ota_cmd_tx: Option<mpsc::Sender<crate::ota::Command>>,
+    pub fast_app_launch: bool,
+}
+
 struct Iap2TaskInputs {
     websocket_server: Option<Arc<WebSocketServer>>,
     websocket_rx: mpsc::UnboundedReceiver<AppMessage>,
@@ -153,6 +175,7 @@ struct Iap2TaskInputs {
     audio_cmd_tx: mpsc::UnboundedSender<AudioCommand>,
     wakeword_pause_tx: mpsc::UnboundedSender<WakeWordCommand>,
     ota_cmd_tx: Option<mpsc::Sender<crate::ota::Command>>,
+    fast_app_launch: bool,
 }
 
 struct ActiveEaStream {
@@ -161,19 +184,41 @@ struct ActiveEaStream {
     outbound: EaStreamSender,
 }
 
+fn ea_priority(priority: AppMessagePriority) -> EaPriority {
+    match priority {
+        AppMessagePriority::Normal => EaPriority::Normal,
+        AppMessagePriority::Bulk => EaPriority::Bulk,
+    }
+}
+
 struct SessionEventContext<'a> {
     websocket_server: &'a Option<Arc<WebSocketServer>>,
     device_address: &'a Address,
     now_playing_state: &'a mut NowPlayingState,
+    call_tracker: &'a mut CallTracker,
     app_manager: &'a mut AppCommunicationManager,
     active_ea: &'a mut Option<ActiveEaStream>,
     ea_inbound_rx: &'a mut Option<mpsc::Receiver<Bytes>>,
     next_local_session_id: &'a mut u8,
 }
 
+struct WebSocketMessageContext<'a> {
+    app_manager: &'a mut AppCommunicationManager,
+    active_ea: Option<&'a ActiveEaStream>,
+    websocket_server: &'a Option<Arc<WebSocketServer>>,
+    hid_tx: &'a mpsc::Sender<HidCommand>,
+    telephony_tx: &'a mpsc::Sender<TelephonyCommand>,
+    call_tracker: &'a CallTracker,
+    link_command_tx: &'a mpsc::Sender<Iap2Command>,
+}
+
 impl Iap2Connection {
     pub fn address(&self) -> Address {
         self.device_address
+    }
+
+    pub fn route_id(&self) -> String {
+        format!("iap2:{}", self.device_address)
     }
 
     pub fn user_disconnect_flag(&self) -> Arc<Mutex<bool>> {
@@ -183,12 +228,16 @@ impl Iap2Connection {
     pub async fn new(
         device_address: Address,
         stream: Stream,
-        websocket_server: Option<Arc<WebSocketServer>>,
-        audio_event_rx: broadcast::Receiver<AudioEvent>,
-        audio_cmd_tx: mpsc::UnboundedSender<AudioCommand>,
-        wakeword_pause_tx: mpsc::UnboundedSender<WakeWordCommand>,
-        ota_cmd_tx: Option<mpsc::Sender<crate::ota::Command>>,
+        options: Iap2ConnectionOptions,
     ) -> Result<Self> {
+        let Iap2ConnectionOptions {
+            websocket_server,
+            audio_event_rx,
+            audio_cmd_tx,
+            wakeword_pause_tx,
+            ota_cmd_tx,
+            fast_app_launch,
+        } = options;
         let (websocket_tx, websocket_rx) = mpsc::unbounded_channel();
         let (hid_tx, hid_rx) = mpsc::unbounded_channel();
         let running = Arc::new(Mutex::new(false));
@@ -218,6 +267,7 @@ impl Iap2Connection {
                     audio_cmd_tx,
                     wakeword_pause_tx,
                     ota_cmd_tx,
+                    fast_app_launch,
                 },
             )
             .await;
@@ -254,6 +304,10 @@ impl Iap2Connection {
         self.device_address
     }
 
+    pub async fn is_running(&self) -> bool {
+        *self.running.lock().await
+    }
+
     pub async fn close(&mut self) {
         *self.running.lock().await = false;
         info!(%self.device_address, "Closing iAP2 connection");
@@ -282,16 +336,24 @@ async fn run_iap2_connection(
         audio_cmd_tx,
         wakeword_pause_tx,
         ota_cmd_tx,
+        fast_app_launch,
     } = inputs;
 
-    let identification = build_identification_config(device_address)?;
-    let mfi = HardwareMfiProvider::new();
+    let identification = build_identification_config()?;
+    let mfi_auth = tokio::task::spawn_blocking(iap2_rs::MfiAuth::open_default)
+        .await
+        .map_err(|err| NocturnedError::MfiDevice(format!("MFi open task panicked: {err}")))?
+        .map_err(|err| {
+            NocturnedError::MfiDevice(format!("Cannot open MFi coprocessor on /dev/i2c-3: {err}"))
+        })?;
+    let mfi_worker = iap2_rs::WorkerMfiAccess::spawn(mfi_auth);
+    let mfi = mfi_worker.handle();
     let (link_command_tx, link_command_rx) = mpsc::channel(64);
     let (link_event_tx, link_event_rx) = mpsc::channel(64);
     let (session_event_tx, mut session_event_rx) = mpsc::channel(64);
     let (session_hid_tx, session_hid_rx) = mpsc::channel(16);
     let (_now_playing_tx, now_playing_rx) = mpsc::channel(16);
-    let (_telephony_tx, telephony_rx) = mpsc::channel(16);
+    let (telephony_tx, telephony_rx) = mpsc::channel(16);
 
     let link_config = LinkConfig::new(Lsp::accessory_default());
     // Follow-up: when `debug-iap2-frame-tap` is enabled, construct an iap2_rs::FrameTap,
@@ -338,7 +400,8 @@ async fn run_iap2_connection(
         if let Some(ota_cmd_tx) = ota_cmd_tx.clone() {
             mp_handler.set_ota_cmd_tx(ota_cmd_tx);
         }
-        mp_handler.set_ota_peer(device_address);
+        mp_handler.set_connection_peer(device_address);
+        mp_handler.set_connection_route(format!("iap2:{device_address}"));
         app_manager.register_handler(AppProtocolHandlerEnum::MsgPack(Box::new(mp_handler)));
     }
 
@@ -346,6 +409,7 @@ async fn run_iap2_connection(
         .app_ready_flag()
         .unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
     let mut now_playing_state = NowPlayingState::default();
+    let mut call_tracker = CallTracker::new(device_address.to_string());
     let mut active_ea: Option<ActiveEaStream> = None;
     let mut ea_inbound_rx: Option<mpsc::Receiver<Bytes>> = None;
     let mut next_local_session_id: u8 = 1;
@@ -355,6 +419,16 @@ async fn run_iap2_connection(
     let mut last_heartbeat = Instant::now();
     let mut last_daemon_ready = Instant::now();
     let mut audio_events_closed = false;
+
+    let mut ea_session_waiting_since = Instant::now();
+    let mut app_launch_attempts: u32 = 0;
+    let mut last_app_launch_attempt: Option<Instant> = None;
+    let mut ea_session_ever_established = false;
+    let app_launch_initial_delay = if fast_app_launch {
+        APP_LAUNCH_FRESH_PAIR_DELAY
+    } else {
+        APP_LAUNCH_INITIAL_DELAY
+    };
 
     while *running.lock().await {
         let ea_inbound = async {
@@ -368,10 +442,24 @@ async fn run_iap2_connection(
             session_event = session_event_rx.recv() => {
                 match session_event {
                     Some(event) => {
+                        match &event {
+                            SessionEvent::EaStreamOpened { .. } => {
+                                app_launch_attempts = 0;
+                                last_app_launch_attempt = None;
+                                ea_session_ever_established = true;
+                            }
+                            SessionEvent::EaStreamClosed { .. } => {
+                                ea_session_waiting_since = Instant::now();
+                                app_launch_attempts = 0;
+                                last_app_launch_attempt = None;
+                            }
+                            _ => {}
+                        }
                         let context = SessionEventContext {
                             websocket_server: &websocket_server,
                             device_address: &device_address,
                             now_playing_state: &mut now_playing_state,
+                            call_tracker: &mut call_tracker,
                             app_manager: &mut app_manager,
                             active_ea: &mut active_ea,
                             ea_inbound_rx: &mut ea_inbound_rx,
@@ -394,7 +482,7 @@ async fn run_iap2_connection(
             ea_data = ea_inbound => {
                 if let Some(data) = ea_data {
                     if let Some(active) = active_ea.as_ref() {
-                        info!(bytes = data.len(), session = active.local_session_id, "FROM_IPHONE: Received EA data");
+                        trace!(bytes = data.len(), session = active.local_session_id, "FROM_IPHONE: Received EA data");
                         if let Err(err) = app_manager.handle_incoming_data(active.local_session_id, data).await {
                             error!(%err, "Failed to handle EA data");
                         }
@@ -407,10 +495,10 @@ async fn run_iap2_connection(
             }
 
             ea_out = ea_data_rx.recv() => {
-                if let Some((session_id, data)) = ea_out {
+                if let Some((session_id, priority, data)) = ea_out {
                     if let Some(active) = active_ea.as_ref().filter(|active| active.local_session_id == session_id) {
-                        info!(bytes = data.len(), session = session_id, stream = active.stream_id, "TO_IPHONE: Sending EA data");
-                        if let Err(err) = active.outbound.send(EaPriority::Normal, data).await {
+                        trace!(bytes = data.len(), session = session_id, stream = active.stream_id, ?priority, "TO_IPHONE: Sending EA data");
+                        if let Err(err) = active.outbound.send(ea_priority(priority), data).await {
                             error!(%err, "Failed to send EA data");
                         }
                     } else {
@@ -424,11 +512,15 @@ async fn run_iap2_connection(
                     info!(id = %message.id, "WebSocket message received");
                     if let Err(err) = handle_websocket_message_new(
                         &message,
-                        &mut app_manager,
-                        active_ea.as_ref(),
-                        &websocket_server,
-                        &session_hid_tx,
-                        &link_command_tx,
+                        WebSocketMessageContext {
+                            app_manager: &mut app_manager,
+                            active_ea: active_ea.as_ref(),
+                            websocket_server: &websocket_server,
+                            hid_tx: &session_hid_tx,
+                            telephony_tx: &telephony_tx,
+                            call_tracker: &call_tracker,
+                            link_command_tx: &link_command_tx,
+                        },
                     ).await {
                         error!(%err, "Failed to handle WebSocket message");
                     }
@@ -471,11 +563,31 @@ async fn run_iap2_connection(
                         send_heartbeat(active.local_session_id, &active.outbound).await;
                         last_heartbeat = Instant::now();
                     }
+                } else if !ea_session_ever_established
+                    && app_launch_attempts < APP_LAUNCH_MAX_ATTEMPTS
+                    && ea_session_waiting_since.elapsed() >= app_launch_initial_delay
+                    && last_app_launch_attempt
+                        .map(|at| at.elapsed() >= APP_LAUNCH_RETRY_INTERVAL)
+                        .unwrap_or(true)
+                {
+                    app_launch_attempts += 1;
+                    last_app_launch_attempt = Some(Instant::now());
+                    info!(
+                        "No EA session with {} yet, sending RequestAppLaunch for {} (attempt {}/{})",
+                        device_address,
+                        DEFAULT_APP_BUNDLE_ID,
+                        app_launch_attempts,
+                        APP_LAUNCH_MAX_ATTEMPTS
+                    );
+                    if let Err(e) = send_app_launch(&link_command_tx, DEFAULT_APP_BUNDLE_ID).await {
+                        warn!("Failed to send RequestAppLaunch: {}", e);
+                    }
                 }
             }
         }
     }
 
+    broadcast_phone_call_events(&websocket_server, call_tracker.drain("connection_lost")).await;
     let _ = link_command_tx.send(Iap2Command::Disconnect).await;
     link_handle.abort();
     session_handle.abort();
@@ -491,13 +603,25 @@ async fn handle_session_event(
         websocket_server,
         device_address,
         now_playing_state,
+        call_tracker,
         app_manager,
         active_ea,
         ea_inbound_rx,
         next_local_session_id,
     } = context;
     match event {
-        SessionEvent::LinkEstablished(_) => info!(%device_address, "Link established"),
+        SessionEvent::LinkEstablished(lsp) => info!(
+            %device_address,
+            version = lsp.version,
+            max_outgoing = lsp.max_outgoing,
+            max_len = lsp.max_len,
+            retransmission_timeout_ms = lsp.retransmission_timeout_ms,
+            ack_timeout_ms = lsp.ack_timeout_ms,
+            max_retransmissions = lsp.max_retransmissions,
+            max_ack = lsp.max_ack,
+            sessions = ?lsp.sessions,
+            "Link established"
+        ),
         SessionEvent::Authenticated => {
             info!(%device_address, "Authentication succeeded");
             broadcast_mfi(
@@ -563,6 +687,7 @@ async fn handle_session_event(
                 let event = MediaNowPlayingArtworkEvent {
                     data: base64::engine::general_purpose::STANDARD.encode(bytes),
                     content_type: "image/jpeg".to_string(),
+                    media_generation: None,
                 };
                 ws_server
                     .broadcast_event(
@@ -579,7 +704,11 @@ async fn handle_session_event(
                 "Queue snapshot transfer complete"
             );
         }
-        SessionEvent::CallStateUpdate(update) => debug!(?update, "Telephony call state update"),
+        SessionEvent::CallStateUpdate(update) => {
+            debug!(?update, "Telephony call state update");
+            let events = call_tracker.apply(update);
+            broadcast_phone_call_events(websocket_server, events).await;
+        }
         SessionEvent::CommunicationsUpdate(update) => {
             debug!(?update, "Telephony communications update")
         }
@@ -638,7 +767,6 @@ async fn handle_now_playing_update(
         state.album = None;
         state.duration_ms = None;
         state.app_name = None;
-        state.elapsed_ms = None;
     }
 
     if let Some(media) = update.media_item {
@@ -659,9 +787,6 @@ async fn handle_now_playing_update(
     if let Some(playback) = update.playback {
         if let Some(status) = playback.state {
             state.status = Some(playback_status(status).to_string());
-        }
-        if let Some(position) = playback.position_ms {
-            state.elapsed_ms = Some(u64::from(position));
         }
         if let Some(shuffle) = playback.shuffle_mode {
             state.shuffle_mode = Some(shuffle_mode(shuffle).to_string());
@@ -686,12 +811,17 @@ async fn handle_now_playing_update(
 
 async fn handle_websocket_message_new(
     message: &AppMessage,
-    app_manager: &mut AppCommunicationManager,
-    active_ea: Option<&ActiveEaStream>,
-    websocket_server: &Option<Arc<WebSocketServer>>,
-    hid_tx: &mpsc::Sender<HidCommand>,
-    link_command_tx: &mpsc::Sender<Iap2Command>,
+    context: WebSocketMessageContext<'_>,
 ) -> Result<()> {
+    let WebSocketMessageContext {
+        app_manager,
+        active_ea,
+        websocket_server,
+        hid_tx,
+        telephony_tx,
+        call_tracker,
+        link_command_tx,
+    } = context;
     info!(id = %message.id, "Routing WebSocket message");
     let ws_data: serde_json::Value = serde_json::from_slice(&message.data)?;
     if ws_data
@@ -725,6 +855,80 @@ async fn handle_websocket_message_new(
         .get("params")
         .cloned()
         .unwrap_or(serde_json::Value::Null);
+
+    if method == "phone.calls.get" {
+        if let Some(ws_server) = websocket_server {
+            ws_server
+                .send_response(
+                    message.id.clone(),
+                    phone_payload(PhoneCallsGetResponse {
+                        calls: call_tracker.snapshot(),
+                    }),
+                )
+                .await;
+        }
+        return Ok(());
+    }
+
+    if method == "phone.call.accept" || method == "phone.call.decline" {
+        let call_id = params
+            .get("call_id")
+            .or_else(|| params.get("callId"))
+            .and_then(serde_json::Value::as_str)
+            .filter(|call_id| !call_id.is_empty());
+        let Some(call_id) = call_id else {
+            if let Some(ws_server) = websocket_server {
+                ws_server
+                    .send_error(message.id.clone(), "Missing call_id".to_string())
+                    .await;
+            }
+            return Ok(());
+        };
+        if !call_tracker.is_ringing_incoming(call_id) {
+            if let Some(ws_server) = websocket_server {
+                ws_server
+                    .send_error(message.id.clone(), "Call is no longer ringing".to_string())
+                    .await;
+            }
+            return Ok(());
+        }
+
+        let command = if method == "phone.call.accept" {
+            TelephonyCommand::Accept(AcceptCall {
+                accept_action: 0,
+                call_uuid: Some(call_id.to_string()),
+            })
+        } else {
+            TelephonyCommand::End(EndCall {
+                end_action: 0,
+                call_uuid: Some(call_id.to_string()),
+            })
+        };
+        match telephony_tx.send(command).await {
+            Ok(()) => {
+                if let Some(ws_server) = websocket_server {
+                    let response = if method == "phone.call.accept" {
+                        phone_payload(PhoneCallAcceptResponse {
+                            status: "ok".to_string(),
+                        })
+                    } else {
+                        phone_payload(PhoneCallDeclineResponse {
+                            status: "ok".to_string(),
+                        })
+                    };
+                    ws_server.send_response(message.id.clone(), response).await;
+                }
+            }
+            Err(err) => {
+                if let Some(ws_server) = websocket_server {
+                    ws_server
+                        .send_error(message.id.clone(), err.to_string())
+                        .await;
+                }
+            }
+        }
+        return Ok(());
+    }
 
     if method.starts_with("media.control.") {
         if let Some(cmd) = crate::app::hid_mapping::method_to_hid_command(method) {
@@ -938,23 +1142,23 @@ async fn send_msgpack_chunks<T: serde::Serialize>(
     debug!(session_id, label, "Sent msgpack event to phone");
 }
 
-fn build_identification_config(device_address: Address) -> Result<IdentificationConfig> {
+fn build_identification_config() -> Result<IdentificationConfig> {
     let serial_number = crate::system::config::get_serial_number()?;
     let last_four = if serial_number.len() >= 4 {
         &serial_number[serial_number.len() - 4..]
     } else {
         &serial_number
-    }
-    .to_string();
+    };
+    let name = format!("Nocturne ({last_four})");
     let firmware_version = crate::system::config::get_firmware_version()?;
-    let bt_mac = address_to_mac(device_address)?;
+    let bt_mac = crate::system::config::get_bluetooth_mac()?;
 
     let mut config = IdentificationConfig::for_carthing(CarthingIdentification {
         serial_number,
         firmware_version,
         bt_mac,
     });
-    config.name = format!("Nocturne ({last_four})");
+    config.name = name;
     config.model_identifier = "YX5H6679".to_string();
     config.manufacturer = "Vanta Labs".to_string();
     config.hardware_version = "1".to_string();
@@ -962,8 +1166,8 @@ fn build_identification_config(device_address: Address) -> Result<Identification
     config.supported_external_accessory_protocols = vec![EaProtocol {
         id: 1,
         name: NOCTURNE_EA_PROTOCOL.to_string(),
-        match_action: EaProtocolMatchAction::NoAction,
-        native_transport_component_identifier: Some(TRANSPORT_COMPONENT_ID),
+        match_action: EaProtocolMatchAction::NoAlertAction,
+        native_transport_component_identifier: None,
     }];
     for component in &mut config.bluetooth_transport_components {
         component.name = "Nocturne BT".to_string();
@@ -973,23 +1177,6 @@ fn build_identification_config(device_address: Address) -> Result<Identification
         component.function = HidComponentFunction::MediaPlaybackRemote;
     }
     Ok(config)
-}
-
-fn address_to_mac(address: Address) -> Result<[u8; 6]> {
-    let text = address.to_string();
-    let parts: Vec<&str> = text.split(':').collect();
-    if parts.len() != 6 {
-        return Err(NocturnedError::Iap2Protocol(format!(
-            "invalid Bluetooth address: {text}"
-        )));
-    }
-    let mut mac = [0u8; 6];
-    for (idx, part) in parts.iter().enumerate() {
-        mac[idx] = u8::from_str_radix(part, 16).map_err(|err| {
-            NocturnedError::Iap2Protocol(format!("invalid Bluetooth address {text}: {err}"))
-        })?;
-    }
-    Ok(mac)
 }
 
 async fn broadcast_mfi(
@@ -1043,7 +1230,41 @@ fn repeat_mode(mode: RepeatMode) -> &'static str {
 }
 
 fn media_control_payload<T: serde::Serialize>(payload: T) -> serde_json::Value {
-    serde_json::to_value(payload).expect("generated media_control payload must serialize")
+    let mut value =
+        serde_json::to_value(payload).expect("generated media_control payload must serialize");
+    if value
+        .get("media_generation")
+        .is_some_and(serde_json::Value::is_null)
+    {
+        value
+            .as_object_mut()
+            .expect("generated media_control payload must be an object")
+            .remove("media_generation");
+    }
+    value
+}
+
+fn phone_payload<T: serde::Serialize>(payload: T) -> serde_json::Value {
+    serde_json::to_value(payload).expect("generated phone payload must serialize")
+}
+
+async fn broadcast_phone_call_events(
+    websocket_server: &Option<Arc<WebSocketServer>>,
+    events: Vec<CallLifecycleEvent>,
+) {
+    let Some(websocket_server) = websocket_server else {
+        return;
+    };
+    for event in events {
+        let (topic, payload) = match event {
+            CallLifecycleEvent::Started(event) => ("phone.call.started", phone_payload(event)),
+            CallLifecycleEvent::Updated(event) => ("phone.call.updated", phone_payload(event)),
+            CallLifecycleEvent::Ended(event) => ("phone.call.ended", phone_payload(event)),
+        };
+        websocket_server
+            .broadcast_event(topic.to_string(), payload)
+            .await;
+    }
 }
 
 fn media_control_response_payload(method: &str) -> Option<serde_json::Value> {

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AmbientLightUpdateEvent {
   pub value: u32,
+  pub normalized_value: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -20,6 +21,8 @@ pub struct AppReadyEvent {
   pub subscribed: Option<bool>,
   pub subscription_status: Option<String>,
   pub has_lifetime: Option<bool>,
+  pub is_admin: Option<bool>,
+  pub entitlements_verified: Option<bool>,
   pub spotify_skipped: Option<bool>,
 }
 
@@ -120,12 +123,43 @@ pub struct DeviceBrightnessSetResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct DeviceDisplayGetRequest;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct DeviceDisplayGetResponse {
+  pub auto: bool,
+  pub brightness: u8,
+  pub sleeping: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct DeviceDisplaySleepRequest;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct DeviceDisplaySleepResponse {
+  pub auto: bool,
+  pub brightness: u8,
+  pub sleeping: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct DeviceDisplayWakeRequest;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct DeviceDisplayWakeResponse {
+  pub auto: bool,
+  pub brightness: u8,
+  pub sleeping: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "event", content = "data")]
 pub enum DeviceEvent {
   AppReady(AppReadyEvent),
   SubscriptionUpdated(SubscriptionUpdatedEvent),
   NetworkStatus(NetworkStatusEvent),
   NotificationShow(NotificationShowEvent),
+  NotificationRemove(NotificationRemoveEvent),
   AmbientLightUpdate(AmbientLightUpdateEvent),
 }
 
@@ -146,6 +180,8 @@ pub struct DeviceInfoResponse {
   pub device: String,
   pub version: String,
   pub full_version: Option<String>,
+  pub image_version: Option<String>,
+  pub bandaid_version: Option<String>,
   pub build_date: Option<String>,
   pub git_hash: Option<String>,
   pub serial_number: Option<String>,
@@ -177,6 +213,9 @@ pub enum DeviceMethod {
   DeviceBrightnessGet(DeviceBrightnessGetRequest),
   DeviceBrightnessSet(DeviceBrightnessSetRequest),
   DeviceBrightnessAuto(DeviceBrightnessAutoRequest),
+  DeviceDisplayGet(DeviceDisplayGetRequest),
+  DeviceDisplaySleep(DeviceDisplaySleepRequest),
+  DeviceDisplayWake(DeviceDisplayWakeRequest),
   DeviceAbGet(DeviceAbGetRequest),
   DeviceAbReset(DeviceAbResetRequest),
   DeviceAbSetSlot(DeviceAbSetSlotRequest),
@@ -218,6 +257,7 @@ pub struct DeviceTimeGetRequest;
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct DeviceTimeGetResponse {
   pub datetime: String,
+  pub time: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -235,6 +275,8 @@ pub struct DeviceVersionRequest;
 pub struct DeviceVersionResponse {
   pub version: Option<String>,
   pub short_version: Option<String>,
+  pub image_version: Option<String>,
+  pub bandaid_version: Option<String>,
   pub git_hash: Option<String>,
   pub build_date: Option<String>,
   pub error: Option<String>,
@@ -246,13 +288,24 @@ pub struct NetworkStatusEvent {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct NotificationRemoveEvent {
+  pub id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct NotificationShowEvent {
   pub id: Option<String>,
   pub title: String,
   pub body: Option<String>,
+  pub subtitle: Option<String>,
   pub category: Option<String>,
   pub days_until_expiry: Option<i64>,
   pub timestamp: Option<u64>,
+  pub app_bundle_id: Option<String>,
+  pub app_name: Option<String>,
+  pub silent: Option<bool>,
+  pub important: Option<bool>,
+  pub pre_existing: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -277,4 +330,6 @@ pub struct SubscriptionUpdatedEvent {
   pub subscribed: Option<bool>,
   pub subscription_status: Option<String>,
   pub has_lifetime: Option<bool>,
+  pub is_admin: Option<bool>,
+  pub entitlements_verified: Option<bool>,
 }

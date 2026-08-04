@@ -52,6 +52,7 @@ fn device_wire_snapshots_round_trip() {
     assert_round_trip::<AmbientLightUpdateEvent>(&snapshot, "ambient_light_update", "event");
     assert_round_trip::<AppReadyEvent>(&snapshot, "app.ready", "event");
     assert_round_trip::<NetworkStatusEvent>(&snapshot, "network.status", "event");
+    assert_round_trip::<NotificationRemoveEvent>(&snapshot, "notification.remove", "event");
     assert_round_trip::<NotificationShowEvent>(&snapshot, "notification.show", "event");
     assert_round_trip::<SubscriptionUpdatedEvent>(&snapshot, "subscription.updated", "event");
 
@@ -96,6 +97,13 @@ fn device_wire_snapshots_round_trip() {
         "device.brightness.set",
         "response",
     );
+
+    assert_empty_request::<DeviceDisplayGetRequest>(&snapshot, "device.display.get");
+    assert_round_trip::<DeviceDisplayGetResponse>(&snapshot, "device.display.get", "response");
+    assert_empty_request::<DeviceDisplaySleepRequest>(&snapshot, "device.display.sleep");
+    assert_round_trip::<DeviceDisplaySleepResponse>(&snapshot, "device.display.sleep", "response");
+    assert_empty_request::<DeviceDisplayWakeRequest>(&snapshot, "device.display.wake");
+    assert_round_trip::<DeviceDisplayWakeResponse>(&snapshot, "device.display.wake", "response");
 
     assert_empty_request::<DeviceFactoryResetRequest>(&snapshot, "device.factory_reset");
     assert_round_trip::<DeviceFactoryResetResponse>(&snapshot, "device.factory_reset", "response");

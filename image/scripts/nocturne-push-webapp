@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
-# rsync a webapp bundle to /var/nocturne/webapps/<name>/. default name = basename of local path.
+# rsync a webapp bundle to /opt/nocturne/webapps/<name>/. default name = basename of local path.
 
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
-    echo "usage: nocturne-push-webapp <local-path> [<remote-name>]" >&2
-    exit 2
+  echo "usage: nocturne-push-webapp <local-path> [<remote-name>]" >&2
+  exit 2
 fi
 
 LOCAL="$1"
 NAME="${2:-$(basename "$LOCAL")}"
 
 if [ ! -e "$LOCAL" ]; then
-    echo "nocturne-push-webapp: local path does not exist: $LOCAL" >&2
-    exit 1
+  echo "nocturne-push-webapp: local path does not exist: $LOCAL" >&2
+  exit 1
 fi
 
 HOST="${SUPERBIRD_HOST:-nocturne.local}"
-DEST="/var/nocturne/webapps/${NAME}"
+DEST="/opt/nocturne/webapps/${NAME}"
 
 exec rsync -avz --delete \
-    -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR" \
-    "${LOCAL%/}/" "root@${HOST}:${DEST}/"
+  -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR" \
+  "${LOCAL%/}/" "root@${HOST}:${DEST}/"

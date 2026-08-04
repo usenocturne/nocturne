@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Build and publish one signed full + zchunk image OTA.
+# Usage: nocturne-release-image <version-core> <signing-key> [delta-from-versions] [variant] [target]
+
+set -euo pipefail
+
+if [[ $# -lt 2 || $# -gt 5 ]]; then
+  sed -n '2,3p' "$0" | sed 's/^# \?//' >&2
+  exit 2
+fi
+
+VERSION_CORE=$1
+SIGNING_KEY=$2
+DELTA_FROM_VERSIONS=${3:-*}
+VARIANT=${4:-prod}
+TARGET=${5:-nocturne-local}
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+IMAGE_DIR=$(dirname "$SCRIPT_DIR")
+REPO_ROOT=$(dirname "$IMAGE_DIR")
+
+case "$VERSION_CORE" in
+  *+*)
+    echo "version core must not contain build metadata: $VERSION_CORE" >&2
+    exit 2
+    ;;
+esac
+if [[ ! "$VERSION_CORE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "version core must use X.Y.Z format: $VERSION_CORE" >&2
+  exit 2
+fi
+
+case "$VARIANT" in
+  dev | prod) ;;
+  *)
+    echo "variant must be dev or prod: $VARIANT" >&2
+    exit 2
+    ;;
+esac
+
+if [[ -z "$DELTA_FROM_VERSIONS" ]]; then
+  echo "delta-from-versions cannot be empty" >&2
+  exit 2
+fi
+if [[ "$DELTA_FROM_VERSIONS" == *'*'* && "$DELTA_FROM_VERSIONS" != '*' ]]; then
+  echo "delta-from-versions cannot mix '*' with explicit versions: $DELTA_FROM_VERSIONS" >&2
+  exit 2
+fi
+
+if [[ ! -f "$SIGNING_KEY" ]]; then
+  echo "signing key is not a file: $SIGNING_KEY" >&2
+  exit 2
+fi
+
+case "$TARGET" in
+  nocturne | nocturne-local) ;;
+  *)
+    echo "image build target must be nocturne or nocturne-local: $TARGET" >&2
+    exit 2
+    ;;
+esac
+if [[ ! -f "$IMAGE_DIR/kas/$TARGET.yml" ]]; then
+  echo "image build target configuration is missing: $IMAGE_DIR/kas/$TARGET.yml" >&2
+  exit 2
+fi
+
+DISTRO_VERSION=$(sed -n 's/^DISTRO_VERSION[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
+  "$IMAGE_DIR/meta-nocturne/conf/distro/nocturne.conf")
+if [[ -z "$DISTRO_VERSION" ]]; then
+  echo "could not read DISTRO_VERSION from the Nocturne distro configuration" >&2
+  exit 1
+fi
+
+if [[ "$VERSION_CORE" != "$DISTRO_VERSION" ]]; then
+  echo "version core must match the image build: expected $DISTRO_VERSION, got $VERSION_CORE" >&2
+  exit 2
+fi
+
+BUILD_ID=${NOCTURNE_BUILD_ID:-$(date -u +%Y%m%d%H%M%S)}
+"$SCRIPT_DIR/nocturne-validate-build-id" "$BUILD_ID"
+if [[ "$VARIANT" == "prod" ]]; then
+  RELEASE_VERSION="$VERSION_CORE+$BUILD_ID"
+else
+  RELEASE_VERSION="$VERSION_CORE-dev+$BUILD_ID"
+fi
+echo "Nocturne image release version: $RELEASE_VERSION"
+
+cd "$REPO_ROOT"
+NOCTURNE_BUILD_ID="$BUILD_ID" \
+  NOCTURNE_SWUPDATE_SIGNING_MODE=production \
+  NOCTURNE_SWUPDATE_PRIVATE_KEY="$SIGNING_KEY" \
+  just -f "$IMAGE_DIR/Justfile" build "$TARGET"
+
+NOCTURNE_RELEASE_VERSION="$RELEASE_VERSION" \
+  NOCTURNE_DELTA_FROM_VERSIONS="$DELTA_FROM_VERSIONS" \
+  NOCTURNE_SWUPDATE_SIGNING_MODE=production \
+  just -f "$IMAGE_DIR/Justfile" publish "$VARIANT"
+
+echo "Published $VARIANT image $RELEASE_VERSION (delta from: $DELTA_FROM_VERSIONS)"

@@ -9,15 +9,19 @@ import Foundation
 
 public struct AmbientLightUpdateEvent: Codable, Sendable {
   public let value: UInt32
+  public let normalizedValue: UInt32
 
   public init(
-    value: UInt32
+    value: UInt32,
+    normalizedValue: UInt32
   ) {
     self.value = value
+    self.normalizedValue = normalizedValue
   }
 
   private enum CodingKeys: String, CodingKey {
     case value = "value"
+    case normalizedValue = "normalized_value"
   }
 }
 
@@ -28,6 +32,8 @@ public struct AppReadyEvent: Codable, Sendable {
   public let subscribed: Bool?
   public let subscriptionStatus: String?
   public let hasLifetime: Bool?
+  public let isAdmin: Bool?
+  public let entitlementsVerified: Bool?
   public let spotifySkipped: Bool?
 
   public init(
@@ -37,6 +43,8 @@ public struct AppReadyEvent: Codable, Sendable {
     subscribed: Bool?,
     subscriptionStatus: String?,
     hasLifetime: Bool?,
+    isAdmin: Bool?,
+    entitlementsVerified: Bool?,
     spotifySkipped: Bool?
   ) {
     self.datetime = datetime
@@ -45,6 +53,8 @@ public struct AppReadyEvent: Codable, Sendable {
     self.subscribed = subscribed
     self.subscriptionStatus = subscriptionStatus
     self.hasLifetime = hasLifetime
+    self.isAdmin = isAdmin
+    self.entitlementsVerified = entitlementsVerified
     self.spotifySkipped = spotifySkipped
   }
 
@@ -55,6 +65,8 @@ public struct AppReadyEvent: Codable, Sendable {
     case subscribed = "subscribed"
     case subscriptionStatus = "subscription_status"
     case hasLifetime = "has_lifetime"
+    case isAdmin = "is_admin"
+    case entitlementsVerified = "entitlements_verified"
     case spotifySkipped = "spotify_skipped"
   }
 }
@@ -339,11 +351,90 @@ public struct DeviceBrightnessSetResponse: Codable, Sendable {
   }
 }
 
+public struct DeviceDisplayGetRequest: Codable, Sendable {
+  public init() {}
+}
+
+public struct DeviceDisplayGetResponse: Codable, Sendable {
+  public let auto: Bool
+  public let brightness: UInt8
+  public let sleeping: Bool
+
+  public init(
+    auto: Bool,
+    brightness: UInt8,
+    sleeping: Bool
+  ) {
+    self.auto = auto
+    self.brightness = brightness
+    self.sleeping = sleeping
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case auto = "auto"
+    case brightness = "brightness"
+    case sleeping = "sleeping"
+  }
+}
+
+public struct DeviceDisplaySleepRequest: Codable, Sendable {
+  public init() {}
+}
+
+public struct DeviceDisplaySleepResponse: Codable, Sendable {
+  public let auto: Bool
+  public let brightness: UInt8
+  public let sleeping: Bool
+
+  public init(
+    auto: Bool,
+    brightness: UInt8,
+    sleeping: Bool
+  ) {
+    self.auto = auto
+    self.brightness = brightness
+    self.sleeping = sleeping
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case auto = "auto"
+    case brightness = "brightness"
+    case sleeping = "sleeping"
+  }
+}
+
+public struct DeviceDisplayWakeRequest: Codable, Sendable {
+  public init() {}
+}
+
+public struct DeviceDisplayWakeResponse: Codable, Sendable {
+  public let auto: Bool
+  public let brightness: UInt8
+  public let sleeping: Bool
+
+  public init(
+    auto: Bool,
+    brightness: UInt8,
+    sleeping: Bool
+  ) {
+    self.auto = auto
+    self.brightness = brightness
+    self.sleeping = sleeping
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case auto = "auto"
+    case brightness = "brightness"
+    case sleeping = "sleeping"
+  }
+}
+
 public enum DeviceEvent: Codable, Sendable {
   case appReady(AppReadyEvent)
   case subscriptionUpdated(SubscriptionUpdatedEvent)
   case networkStatus(NetworkStatusEvent)
   case notificationShow(NotificationShowEvent)
+  case notificationRemove(NotificationRemoveEvent)
   case ambientLightUpdate(AmbientLightUpdateEvent)
 }
 
@@ -377,6 +468,8 @@ public struct DeviceInfoResponse: Codable, Sendable {
   public let device: String
   public let version: String
   public let fullVersion: String?
+  public let imageVersion: String?
+  public let bandaidVersion: String?
   public let buildDate: String?
   public let gitHash: String?
   public let serialNumber: String?
@@ -385,6 +478,8 @@ public struct DeviceInfoResponse: Codable, Sendable {
     device: String,
     version: String,
     fullVersion: String?,
+    imageVersion: String?,
+    bandaidVersion: String?,
     buildDate: String?,
     gitHash: String?,
     serialNumber: String?
@@ -392,6 +487,8 @@ public struct DeviceInfoResponse: Codable, Sendable {
     self.device = device
     self.version = version
     self.fullVersion = fullVersion
+    self.imageVersion = imageVersion
+    self.bandaidVersion = bandaidVersion
     self.buildDate = buildDate
     self.gitHash = gitHash
     self.serialNumber = serialNumber
@@ -401,6 +498,8 @@ public struct DeviceInfoResponse: Codable, Sendable {
     case device = "device"
     case version = "version"
     case fullVersion = "full_version"
+    case imageVersion = "image_version"
+    case bandaidVersion = "bandaid_version"
     case buildDate = "build_date"
     case gitHash = "git_hash"
     case serialNumber = "serial_number"
@@ -449,6 +548,9 @@ public enum DeviceMethod: Codable, Sendable {
   case deviceBrightnessGet(DeviceBrightnessGetRequest)
   case deviceBrightnessSet(DeviceBrightnessSetRequest)
   case deviceBrightnessAuto(DeviceBrightnessAutoRequest)
+  case deviceDisplayGet(DeviceDisplayGetRequest)
+  case deviceDisplaySleep(DeviceDisplaySleepRequest)
+  case deviceDisplayWake(DeviceDisplayWakeRequest)
   case deviceAbGet(DeviceAbGetRequest)
   case deviceAbReset(DeviceAbResetRequest)
   case deviceAbSetSlot(DeviceAbSetSlotRequest)
@@ -529,15 +631,19 @@ public struct DeviceTimeGetRequest: Codable, Sendable {
 
 public struct DeviceTimeGetResponse: Codable, Sendable {
   public let datetime: String
+  public let time: String?
 
   public init(
-    datetime: String
+    datetime: String,
+    time: String?
   ) {
     self.datetime = datetime
+    self.time = time
   }
 
   private enum CodingKeys: String, CodingKey {
     case datetime = "datetime"
+    case time = "time"
   }
 }
 
@@ -566,6 +672,8 @@ public struct DeviceVersionRequest: Codable, Sendable {
 public struct DeviceVersionResponse: Codable, Sendable {
   public let version: String?
   public let shortVersion: String?
+  public let imageVersion: String?
+  public let bandaidVersion: String?
   public let gitHash: String?
   public let buildDate: String?
   public let error: String?
@@ -573,12 +681,16 @@ public struct DeviceVersionResponse: Codable, Sendable {
   public init(
     version: String?,
     shortVersion: String?,
+    imageVersion: String?,
+    bandaidVersion: String?,
     gitHash: String?,
     buildDate: String?,
     error: String?
   ) {
     self.version = version
     self.shortVersion = shortVersion
+    self.imageVersion = imageVersion
+    self.bandaidVersion = bandaidVersion
     self.gitHash = gitHash
     self.buildDate = buildDate
     self.error = error
@@ -587,6 +699,8 @@ public struct DeviceVersionResponse: Codable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case version = "version"
     case shortVersion = "short_version"
+    case imageVersion = "image_version"
+    case bandaidVersion = "bandaid_version"
     case gitHash = "git_hash"
     case buildDate = "build_date"
     case error = "error"
@@ -607,37 +721,75 @@ public struct NetworkStatusEvent: Codable, Sendable {
   }
 }
 
+public struct NotificationRemoveEvent: Codable, Sendable {
+  public let id: String
+
+  public init(
+    id: String
+  ) {
+    self.id = id
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id = "id"
+  }
+}
+
 public struct NotificationShowEvent: Codable, Sendable {
   public let id: String?
   public let title: String
   public let body: String?
+  public let subtitle: String?
   public let category: String?
   public let daysUntilExpiry: Int64?
   public let timestamp: UInt64?
+  public let appBundleId: String?
+  public let appName: String?
+  public let silent: Bool?
+  public let important: Bool?
+  public let preExisting: Bool?
 
   public init(
     id: String?,
     title: String,
     body: String?,
+    subtitle: String?,
     category: String?,
     daysUntilExpiry: Int64?,
-    timestamp: UInt64?
+    timestamp: UInt64?,
+    appBundleId: String?,
+    appName: String?,
+    silent: Bool?,
+    important: Bool?,
+    preExisting: Bool?
   ) {
     self.id = id
     self.title = title
     self.body = body
+    self.subtitle = subtitle
     self.category = category
     self.daysUntilExpiry = daysUntilExpiry
     self.timestamp = timestamp
+    self.appBundleId = appBundleId
+    self.appName = appName
+    self.silent = silent
+    self.important = important
+    self.preExisting = preExisting
   }
 
   private enum CodingKeys: String, CodingKey {
     case id = "id"
     case title = "title"
     case body = "body"
+    case subtitle = "subtitle"
     case category = "category"
     case daysUntilExpiry = "days_until_expiry"
     case timestamp = "timestamp"
+    case appBundleId = "app_bundle_id"
+    case appName = "app_name"
+    case silent = "silent"
+    case important = "important"
+    case preExisting = "pre_existing"
   }
 }
 
@@ -685,20 +837,28 @@ public struct SubscriptionUpdatedEvent: Codable, Sendable {
   public let subscribed: Bool?
   public let subscriptionStatus: String?
   public let hasLifetime: Bool?
+  public let isAdmin: Bool?
+  public let entitlementsVerified: Bool?
 
   public init(
     subscribed: Bool?,
     subscriptionStatus: String?,
-    hasLifetime: Bool?
+    hasLifetime: Bool?,
+    isAdmin: Bool?,
+    entitlementsVerified: Bool?
   ) {
     self.subscribed = subscribed
     self.subscriptionStatus = subscriptionStatus
     self.hasLifetime = hasLifetime
+    self.isAdmin = isAdmin
+    self.entitlementsVerified = entitlementsVerified
   }
 
   private enum CodingKeys: String, CodingKey {
     case subscribed = "subscribed"
     case subscriptionStatus = "subscription_status"
     case hasLifetime = "has_lifetime"
+    case isAdmin = "is_admin"
+    case entitlementsVerified = "entitlements_verified"
   }
 }

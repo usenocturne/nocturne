@@ -7,19 +7,27 @@ use serde::{Deserialize, Serialize};
 pub struct AiResponseEvent {
     pub message: Option<String>,
     pub text: Option<String>,
+    pub is_final: Option<bool>,
+    pub session_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AiStateEvent {
     pub state: String,
     pub message: Option<String>,
+    pub session_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AiToolExecutedEvent {
     pub tool_name: Option<String>,
+    pub tool: Option<String>,
+    pub call_id: Option<String>,
+    pub status: Option<String>,
+    pub tool_arguments: Option<serde_json::Value>,
     pub result: Option<serde_json::Value>,
     pub error: Option<String>,
+    pub session_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -36,6 +44,12 @@ pub struct TtsStopRequest;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct TtsStopResponse;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct VoiceCancelRequest;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct VoiceCancelResponse;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "event", content = "data")]
@@ -55,12 +69,14 @@ pub enum VoiceMethod {
     WakewordResume(WakewordResumeRequest),
     TtsSpeak(TtsSpeakRequest),
     TtsStop(TtsStopRequest),
+    VoiceCancel(VoiceCancelRequest),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct VoiceTranscriptionEvent {
     pub transcript: String,
     pub is_final: bool,
+    pub session_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

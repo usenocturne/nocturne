@@ -106,6 +106,7 @@ data class MediaControlVolumeUpResponse(
 data class MediaNowPlayingArtworkEvent(
   @SerialName("data") val data: String,
   @SerialName("content_type") val contentType: String,
+  @SerialName("media_generation") val mediaGeneration: ULong? = null,
 )
 
 @Serializable
@@ -117,6 +118,7 @@ data class MediaNowPlayingArtworkFailedEvent(
 data class MediaNowPlayingUpdateEvent(
   @SerialName("media_item_attributes") val mediaItemAttributes: Value? = null,
   @SerialName("playback_attributes") val playbackAttributes: Value? = null,
+  @SerialName("media_generation") val mediaGeneration: ULong? = null,
 )
 
 @Serializable

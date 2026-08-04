@@ -202,10 +202,26 @@ fn emit_all(
     emit_lang(inv, Lang::Swift, &paths.swift)?;
     emit_lang(inv, Lang::Kotlin, &paths.kotlin)?;
     if mirror {
-        emit_lang(inv, Lang::Swift, &paths.ios_mirror)?;
+        emit_swift_ios_mirror(inv, &paths.ios_mirror)?;
         emit_lang(inv, Lang::Kotlin, &paths.android_mirror)?;
     }
     Ok(())
+}
+
+fn emit_swift_ios_mirror(
+    inv: &nocturne_codegen::dispatch::inventory::Inventory,
+    out_dir: &Path,
+) -> Result<()> {
+    emit_lang(inv, Lang::Swift, out_dir)?;
+    let generated_path = out_dir.join("Generated.swift");
+    let module_path = out_dir.join("GeneratedModule.swift");
+    fs::rename(&generated_path, &module_path).with_context(|| {
+        format!(
+            "rename {} to {}",
+            generated_path.display(),
+            module_path.display()
+        )
+    })
 }
 
 fn emit_iap2_csm(

@@ -1,16 +1,19 @@
-use crate::app::AppMessage;
+use crate::app::{AppMessage, AppMessagePriority};
 use crate::error::Result;
 use crate::hardware::ImageCache;
+use crate::ota::slots;
 use crate::system::ab;
 use bytes::Bytes;
 use futures::{SinkExt, StreamExt};
 use libnocturne::generated::bluetooth::*;
 use libnocturne::generated::device::*;
+use libnocturne::generated::media_control::MediaNowPlayingUpdateEvent;
 use libnocturne::generated::spotify::*;
 use libnocturne::generated::voice::VoiceWakewordStateEvent;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, Mutex, RwLock};
@@ -48,6 +51,19 @@ pub struct WebSocketConnection {
     #[allow(dead_code)]
     addr: SocketAddr,
     tx: mpsc::UnboundedSender<WebSocketMessage>,
+}
+
+fn playback_active_from_now_playing(data: &serde_json::Value) -> Option<bool> {
+    let event = serde_json::from_value::<MediaNowPlayingUpdateEvent>(data.clone()).ok()?;
+    let playback_attributes = event
+        .playback_attributes
+        .or_else(|| data.get("PlaybackAttributes").cloned())?;
+    let status = playback_attributes
+        .get("PlaybackStatus")
+        .or_else(|| playback_attributes.get("playback_status"))
+        .or_else(|| playback_attributes.get("playbackStatus"))?
+        .as_str()?;
+    Some(status.eq_ignore_ascii_case("playing"))
 }
 
 pub(crate) fn canonical_music_request(
@@ -106,6 +122,43 @@ pub(crate) fn canonical_music_request(
         _ => unreachable!("canonical music method table drifted"),
     }?;
     Ok(Some((canonical_method.to_string(), data)))
+}
+
+fn companion_music_request(
+    method: &str,
+    params: serde_json::Value,
+    platform: Option<&str>,
+) -> std::result::Result<Option<(String, serde_json::Value)>, String> {
+    let Some((canonical_method, mut params)) = canonical_music_request(method, params)? else {
+        return Ok(None);
+    };
+
+    if platform != Some("web") {
+        return Ok(Some((canonical_method, params)));
+    }
+
+    if matches!(
+        canonical_method.as_str(),
+        "spotify.album.tracks" | "spotify.playlist.tracks"
+    ) {
+        if let serde_json::Value::Object(map) = &mut params {
+            if let Some(content_id) = map.get("content_id").cloned() {
+                map.entry("id".to_string()).or_insert(content_id);
+            }
+        }
+    }
+
+    let method = match canonical_method.as_str() {
+        "spotify.artist.top_tracks" => "spotify.artist.topTracks",
+        "spotify.auth.get_status" => "spotify.auth.getStatus",
+        "spotify.me.recently_played" => "spotify.me.recentlyPlayed",
+        "spotify.me.top_artists" => "spotify.me.topArtists",
+        "spotify.me.top_tracks" => "spotify.me.topTracks",
+        "spotify.radio.top_mix" => "spotify.radio.topMix",
+        _ => canonical_method.as_str(),
+    };
+
+    Ok(Some((method.to_string(), params)))
 }
 
 fn typed<T>(params: serde_json::Value) -> std::result::Result<serde_json::Value, String>
@@ -242,14 +295,158 @@ fn normalize_alias(map: &mut serde_json::Map<String, serde_json::Value>, target:
     }
 }
 
+const UNSCOPED_APP_ROUTE: &str = "__unscoped__";
+
+#[derive(Clone)]
+struct AppReadyEntry {
+    data: serde_json::Value,
+    source_peer: Option<String>,
+    generation: u64,
+}
+
+#[derive(Clone)]
+struct ActiveAppReady {
+    data: serde_json::Value,
+    route: Option<String>,
+    source_peer: Option<String>,
+}
+
+#[derive(Default)]
+struct AppReadyRegistry {
+    entries: HashMap<String, AppReadyEntry>,
+    active_route: Option<String>,
+    next_generation: u64,
+}
+
+impl AppReadyRegistry {
+    fn register(
+        &mut self,
+        route: Option<&str>,
+        source_peer: Option<&str>,
+        data: serde_json::Value,
+    ) {
+        self.next_generation = self.next_generation.saturating_add(1);
+        let route = route.unwrap_or(UNSCOPED_APP_ROUTE).to_string();
+        self.entries.insert(
+            route.clone(),
+            AppReadyEntry {
+                data,
+                source_peer: source_peer.map(ToOwned::to_owned),
+                generation: self.next_generation,
+            },
+        );
+        self.active_route = Some(route);
+    }
+
+    fn active(&self) -> Option<ActiveAppReady> {
+        let route = self.active_route.as_ref()?;
+        let entry = self.entries.get(route)?;
+        Some(ActiveAppReady {
+            data: entry.data.clone(),
+            route: (route != UNSCOPED_APP_ROUTE).then(|| route.clone()),
+            source_peer: entry.source_peer.clone(),
+        })
+    }
+
+    fn is_active(&self, route: &str) -> bool {
+        self.active_route.as_deref() == Some(route)
+    }
+
+    fn update_active(&mut self, update: &serde_json::Value) {
+        let Some(route) = self.active_route.as_ref() else {
+            return;
+        };
+        let Some(entry) = self.entries.get_mut(route) else {
+            return;
+        };
+        if let Some(subscribed) = update.get("subscribed") {
+            entry.data["subscribed"] = subscribed.clone();
+        }
+        update_compatible_field(
+            &mut entry.data,
+            update,
+            "subscription_status",
+            "subscriptionStatus",
+        );
+        update_compatible_field(&mut entry.data, update, "has_lifetime", "hasLifetime");
+        update_compatible_field(&mut entry.data, update, "is_admin", "isAdmin");
+        update_compatible_field(
+            &mut entry.data,
+            update,
+            "entitlements_verified",
+            "entitlementsVerified",
+        );
+    }
+
+    fn remove(&mut self, route: &str) -> Option<ActiveAppReady> {
+        self.entries.remove(route);
+        if self.active_route.as_deref() != Some(route) {
+            return None;
+        }
+
+        self.active_route = self
+            .entries
+            .iter()
+            .max_by_key(|(_, entry)| entry.generation)
+            .map(|(route, _)| route.clone());
+        self.active()
+    }
+}
+
+fn update_compatible_field(
+    cached: &mut serde_json::Value,
+    update: &serde_json::Value,
+    canonical: &str,
+    compatible: &str,
+) {
+    let Some(value) = update.get(canonical).or_else(|| update.get(compatible)) else {
+        return;
+    };
+
+    if cached.get(canonical).is_some() || cached.get(compatible).is_none() {
+        cached[canonical] = value.clone();
+    }
+    if cached.get(compatible).is_some() {
+        cached[compatible] = value.clone();
+    }
+}
+
+fn phone_request_route(device: &str, active_app: Option<&ActiveAppReady>) -> String {
+    if let Some(active_app) = active_app {
+        let is_android = active_app
+            .data
+            .get("platform")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|platform| platform.eq_ignore_ascii_case("android"));
+        let peer_matches = active_app
+            .source_peer
+            .as_deref()
+            .is_some_and(|peer| peer.eq_ignore_ascii_case(device));
+        if is_android && peer_matches {
+            if let Some(route) = active_app
+                .route
+                .as_deref()
+                .filter(|route| route.starts_with("spp:"))
+            {
+                return route.to_string();
+            }
+        }
+    }
+
+    format!("iap2:{device}")
+}
+
 pub struct WebSocketServer {
     connections: Arc<RwLock<HashMap<String, WebSocketConnection>>>,
     app_manager_tx: mpsc::UnboundedSender<AppMessage>,
     port: u16,
     image_cache: Arc<Mutex<ImageCache>>,
     pending_image_fetches: Arc<RwLock<HashSet<String>>>,
-    last_app_ready: Arc<RwLock<Option<serde_json::Value>>>,
+    app_ready_registry: Arc<RwLock<AppReadyRegistry>>,
     last_wakeword_state: Arc<RwLock<Option<bool>>>,
+    last_playback_active: Arc<AtomicBool>,
+    pairing_window_lock: Arc<Mutex<()>>,
+    pairing_window_requested: Arc<AtomicBool>,
 }
 
 impl WebSocketServer {
@@ -291,9 +488,44 @@ impl WebSocketServer {
             port,
             image_cache,
             pending_image_fetches: Arc::new(RwLock::new(HashSet::new())),
-            last_app_ready: Arc::new(RwLock::new(None)),
+            app_ready_registry: Arc::new(RwLock::new(AppReadyRegistry::default())),
             last_wakeword_state: Arc::new(RwLock::new(None)),
+            last_playback_active: Arc::new(AtomicBool::new(false)),
+            pairing_window_lock: Arc::new(Mutex::new(())),
+            pairing_window_requested: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    async fn apply_pairing_window(
+        adapter: &bluer::Adapter,
+        discoverable: bool,
+    ) -> bluer::Result<()> {
+        if discoverable {
+            adapter.set_pairable(true).await?;
+            if let Err(error) = adapter.set_discoverable(true).await {
+                if let Err(rollback_error) = adapter.set_pairable(false).await {
+                    warn!(
+                        "Failed to close Pairable after discovery failed: {}",
+                        rollback_error
+                    );
+                }
+                return Err(error);
+            }
+        } else {
+            let discoverable_result = adapter.set_discoverable(false).await;
+            let pairable_result = adapter.set_pairable(false).await;
+            discoverable_result?;
+            pairable_result?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn restore_pairing_window(&self, adapter: &bluer::Adapter) -> bluer::Result<bool> {
+        let _transition = self.pairing_window_lock.lock().await;
+        let discoverable = self.pairing_window_requested.load(Ordering::SeqCst);
+        Self::apply_pairing_window(adapter, discoverable).await?;
+        Ok(discoverable)
     }
 
     pub fn image_cache(&self) -> Arc<Mutex<ImageCache>> {
@@ -399,7 +631,7 @@ impl WebSocketServer {
             connections.insert(connection_id.clone(), connection);
         }
 
-        if let Some(data) = self.last_app_ready.read().await.clone() {
+        if let Some(active_app) = self.app_ready_registry.read().await.active() {
             info!(
                 "Replaying cached app.ready to new WebSocket client {}",
                 connection_id
@@ -408,7 +640,7 @@ impl WebSocketServer {
             if let Some(conn) = connections.get(&connection_id) {
                 let _ = conn.tx.send(WebSocketMessage::Event {
                     topic: "app.ready".to_string(),
-                    data,
+                    data: active_app.data,
                     server_timestamp_ms: None,
                 });
             }
@@ -711,32 +943,93 @@ impl WebSocketServer {
                     }
                 }
 
+                if method.starts_with("device.display.") {
+                    match method.as_str() {
+                        "device.display.get" => {
+                            match crate::hardware::get_display_config().await {
+                                Ok(config) => {
+                                    self.send_typed_response(
+                                        id,
+                                        DeviceDisplayGetResponse {
+                                            auto: config.auto,
+                                            brightness: config.brightness,
+                                            sleeping: crate::hardware::is_display_sleeping(),
+                                        },
+                                    )
+                                    .await;
+                                }
+                                Err(e) => {
+                                    self.send_error(id, e.to_string()).await;
+                                }
+                            }
+                            return Ok(());
+                        }
+                        "device.display.sleep" => {
+                            match crate::hardware::sleep_display().await {
+                                Ok(config) => {
+                                    self.send_typed_response(
+                                        id,
+                                        DeviceDisplaySleepResponse {
+                                            auto: config.auto,
+                                            brightness: config.brightness,
+                                            sleeping: crate::hardware::is_display_sleeping(),
+                                        },
+                                    )
+                                    .await;
+                                }
+                                Err(e) => {
+                                    self.send_error(id, e.to_string()).await;
+                                }
+                            }
+                            return Ok(());
+                        }
+                        "device.display.wake" => {
+                            match crate::hardware::wake_display().await {
+                                Ok(config) => {
+                                    self.send_typed_response(
+                                        id,
+                                        DeviceDisplayWakeResponse {
+                                            auto: config.auto,
+                                            brightness: config.brightness,
+                                            sleeping: crate::hardware::is_display_sleeping(),
+                                        },
+                                    )
+                                    .await;
+                                }
+                                Err(e) => {
+                                    self.send_error(id, e.to_string()).await;
+                                }
+                            }
+                            return Ok(());
+                        }
+                        _ => {}
+                    }
+                }
+
                 if method == "bluetooth.discoverable" {
                     let request = Self::decode_params::<BluetoothDiscoverableRequest>(params)
                         .unwrap_or(BluetoothDiscoverableRequest { discoverable: true });
                     let discoverable = request.discoverable;
 
-                    info!("Setting Bluetooth discoverability to: {}", discoverable);
+                    info!("Setting Bluetooth pairing window to: {}", discoverable);
 
-                    tokio::spawn(async move {
-                        match bluer::Session::new().await {
-                            Ok(session) => match session.default_adapter().await {
-                                Ok(adapter) => {
-                                    if let Err(e) = adapter.set_discoverable(discoverable).await {
-                                        warn!("Failed to set Bluetooth discoverability: {}", e);
-                                    } else {
-                                        info!("Bluetooth discoverability set to: {}", discoverable);
-                                    }
-                                }
-                                Err(e) => {
-                                    warn!("Failed to get default Bluetooth adapter: {}", e);
-                                }
-                            },
-                            Err(e) => {
-                                warn!("Failed to create Bluetooth session: {}", e);
-                            }
-                        }
-                    });
+                    let transition_result = async {
+                        let _transition = self.pairing_window_lock.lock().await;
+                        self.pairing_window_requested
+                            .store(discoverable, Ordering::SeqCst);
+                        let session = bluer::Session::new().await?;
+                        let adapter = session.default_adapter().await?;
+                        Self::apply_pairing_window(&adapter, discoverable).await
+                    }
+                    .await;
+
+                    if let Err(error) = transition_result {
+                        warn!("Failed to set Bluetooth pairing window: {}", error);
+                        self.send_error(id, error.to_string()).await;
+                        return Ok(());
+                    }
+
+                    info!("Bluetooth pairing window set to: {}", discoverable);
 
                     self.send_typed_response(
                         id,
@@ -787,6 +1080,22 @@ impl WebSocketServer {
                                         .unwrap_or("Unknown Device")
                                         .to_string();
 
+                                    let icon = device_props
+                                        .get("Icon")
+                                        .and_then(|v| v.0.as_str())
+                                        .map(|value| value.to_string());
+
+                                    let class =
+                                        device_props.get("Class").and_then(|v| v.0.as_u64());
+
+                                    let looks_like_macos_connector =
+                                        crate::bluetooth::metadata_identifies_computer(
+                                            icon.as_deref(),
+                                            class.and_then(|value| u32::try_from(value).ok()),
+                                            Some(&name),
+                                            Some(&name),
+                                        );
+
                                     let paired = device_props
                                         .get("Paired")
                                         .and_then(|v| v.0.as_u64())
@@ -812,15 +1121,38 @@ impl WebSocketServer {
                                         .unwrap_or(false);
 
                                     if paired {
-                                        devices.push(serde_json::json!({
+                                        let mut payload = serde_json::json!({
                                             "address": address,
                                             "blocked": blocked,
                                             "default": trusted,
                                             "connected": connected,
                                             "device_info": {
-                                                "name": name
+                                                "name": name,
+                                                "icon": icon,
+                                                "class": class
                                             }
-                                        }));
+                                        });
+
+                                        if looks_like_macos_connector {
+                                            if let Some(object) = payload.as_object_mut() {
+                                                object.insert(
+                                                    "device_type".to_string(),
+                                                    serde_json::json!("macos_connector"),
+                                                );
+                                                object.insert(
+                                                    "connection_type".to_string(),
+                                                    serde_json::json!("macos_connector"),
+                                                );
+                                                object.insert(
+                                                    "channel".to_string(),
+                                                    serde_json::json!(
+                                                        crate::bluetooth::BluetoothDaemon::MACOS_CONNECTOR_PROBE_CHANNEL
+                                                    ),
+                                                );
+                                            }
+                                        }
+
+                                        devices.push(payload);
                                     }
                                 }
                             }
@@ -863,6 +1195,7 @@ impl WebSocketServer {
                         id,
                         protocol: "bluetooth.control".to_string(),
                         session_id: 1,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&serde_json::json!({
                             "method": method,
                             "params": params
@@ -898,6 +1231,7 @@ impl WebSocketServer {
                         id,
                         protocol: "bluetooth.control".to_string(),
                         session_id: 1,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&serde_json::json!({
                             "method": method,
                             "params": params
@@ -929,6 +1263,7 @@ impl WebSocketServer {
                         id,
                         protocol: "bluetooth.control".to_string(),
                         session_id: 1,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&serde_json::json!({
                             "method": method,
                             "params": params
@@ -963,50 +1298,39 @@ impl WebSocketServer {
                     return Ok(());
                 }
 
-                if method == "ota.request_check" {
-                    info!(
-                        "ota.request_check from UI; forwarding to companion over existing app path"
-                    );
+                // The UI drives OTA in two explicit steps: `ota.request_check`
+                // asks the companion to check the server (it replies with an
+                // `ota.check_result` event and does NOT download), and
+                // `ota.request_install` tells it to download + stream the update.
+                // Both forward as events, the same `{topic, data}` shape the
+                // companion already decodes, rather than `{method, params}` calls:
+                // the phone's RPC client drops messages with no message `type`,
+                // and the gateway tags a topic payload as an event.
+                if method == "ota.request_check" || method == "ota.request_install" {
+                    info!("{method} from UI; forwarding to companion over existing app path");
                     let app_msg = AppMessage {
                         id,
                         protocol: "com.usenocturne.daemon".to_string(),
                         session_id: 1,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&serde_json::json!({
-                            "method": method,
-                            "params": params
+                            "topic": method.as_str(),
+                            "data": params
                         }))?),
                     };
                     if let Err(e) = self.app_manager_tx.send(app_msg) {
-                        error!("Failed to forward ota.request_check to app manager: {}", e);
+                        error!("Failed to forward {method} to app manager: {}", e);
                     }
                     return Ok(());
                 }
 
                 if method == "reset_boot_counter" {
-                    info!("Received reset_boot_counter command, executing phb -r 1");
+                    info!("Received reset_boot_counter command, marking active slot successful");
 
-                    let output = tokio::process::Command::new("phb")
-                        .arg("-r")
-                        .arg("1")
-                        .output()
-                        .await;
-
-                    let result = match output {
-                        Ok(result) => {
-                            if result.status.success() {
-                                info!("phb -r 1 executed successfully");
-                                serde_json::json!({ "success": true })
-                            } else {
-                                let stderr = String::from_utf8_lossy(&result.stderr).to_string();
-                                warn!("phb -r 1 failed: {}", stderr);
-                                serde_json::json!({
-                                    "success": false,
-                                    "error": stderr
-                                })
-                            }
-                        }
+                    let result = match slots::active_slot().and_then(slots::mark_slot_ok) {
+                        Ok(()) => serde_json::json!({ "success": true }),
                         Err(e) => {
-                            warn!("Failed to execute phb -r 1: {}", e);
+                            warn!("Failed to mark active slot successful: {}", e);
                             serde_json::json!({
                                 "success": false,
                                 "error": e.to_string()
@@ -1237,7 +1561,54 @@ impl WebSocketServer {
                     return Ok(());
                 }
 
-                let (method, params) = match canonical_music_request(&method, params.clone()) {
+                if matches!(
+                    method.as_str(),
+                    "phone.calls.get" | "phone.call.accept" | "phone.call.decline"
+                ) {
+                    let device = params
+                        .get("device")
+                        .and_then(serde_json::Value::as_str)
+                        .filter(|device| !device.is_empty());
+                    let Some(device) = device else {
+                        self.send_error(id, "Missing phone device".to_string())
+                            .await;
+                        return Ok(());
+                    };
+                    let active_app = self.app_ready_registry.read().await.active();
+                    let target_connection = phone_request_route(device, active_app.as_ref());
+                    let app_request = serde_json::json!({
+                        "method": method,
+                        "params": params,
+                        "_targetConnection": target_connection,
+                    });
+                    let app_msg = AppMessage {
+                        id,
+                        protocol: "com.usenocturne.daemon".to_string(),
+                        session_id: 1,
+                        priority: AppMessagePriority::Normal,
+                        data: Bytes::from(serde_json::to_vec(&app_request)?),
+                    };
+                    if let Err(error) = self.app_manager_tx.send(app_msg) {
+                        error!(%error, "Failed to route native phone request");
+                    }
+                    return Ok(());
+                }
+
+                let Some(active_app) = self.app_ready_registry.read().await.active() else {
+                    self.send_error(id, "No active app session".to_string())
+                        .await;
+                    return Ok(());
+                };
+                let companion_platform = active_app
+                    .data
+                    .get("platform")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned);
+                let (method, params) = match companion_music_request(
+                    &method,
+                    params.clone(),
+                    companion_platform.as_deref(),
+                ) {
                     Ok(Some(request)) => request,
                     Ok(None) => (method, params),
                     Err(error) => {
@@ -1277,14 +1648,20 @@ impl WebSocketServer {
                     self.track_image_fetch(id.clone()).await;
                 }
 
+                let mut app_request = serde_json::json!({
+                    "method": method,
+                    "params": params,
+                });
+                if let Some(route) = active_app.route {
+                    app_request["_targetConnection"] = serde_json::json!(route);
+                }
+
                 let app_msg = AppMessage {
                     id,
                     protocol: "com.usenocturne.daemon".to_string(),
                     session_id: 1,
-                    data: Bytes::from(serde_json::to_vec(&serde_json::json!({
-                        "method": method,
-                        "params": params
-                    }))?),
+                    priority: AppMessagePriority::Normal,
+                    data: Bytes::from(serde_json::to_vec(&app_request)?),
                 };
 
                 if let Err(e) = self.app_manager_tx.send(app_msg) {
@@ -1299,28 +1676,73 @@ impl WebSocketServer {
         Ok(())
     }
 
-    pub async fn clear_app_ready(&self) {
-        *self.last_app_ready.write().await = None;
+    pub async fn clear_app_ready_for_route(&self, route: &str) {
+        let (was_active, promoted) = {
+            let mut registry = self.app_ready_registry.write().await;
+            let was_active = registry.is_active(route);
+            let promoted = registry.remove(route);
+            (was_active, promoted)
+        };
+        if !was_active {
+            return;
+        }
+        self.last_playback_active.store(false, Ordering::Relaxed);
+
+        if let Some(active_app) = promoted {
+            info!(
+                route = active_app.route.as_deref().unwrap_or("unscoped"),
+                "Promoted surviving app connection after active route closed"
+            );
+            self.send_event_to_clients("app.ready".to_string(), active_app.data)
+                .await;
+        }
+    }
+
+    pub async fn has_ready_app_session(&self) -> bool {
+        self.app_ready_registry.read().await.active().is_some()
+    }
+
+    pub fn playback_active_flag(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.last_playback_active)
     }
 
     pub async fn broadcast_event(&self, topic: String, data: serde_json::Value) {
+        self.broadcast_event_from_route(topic, data, None, None)
+            .await;
+    }
+
+    pub async fn broadcast_event_from_route(
+        &self,
+        topic: String,
+        data: serde_json::Value,
+        route: Option<&str>,
+        source_peer: Option<&str>,
+    ) {
         if topic == "app.ready" {
-            *self.last_app_ready.write().await = Some(data.clone());
-        } else if topic == "subscription.updated" {
-            let mut cached = self.last_app_ready.write().await;
-            if let Some(ref mut app_ready_data) = *cached {
-                if let Some(subscribed) = data.get("subscribed") {
-                    app_ready_data["subscribed"] = subscribed.clone();
-                }
-                if let Some(status) = data.get("subscriptionStatus") {
-                    app_ready_data["subscriptionStatus"] = status.clone();
-                }
-                if let Some(has_lifetime) = data.get("hasLifetime") {
-                    app_ready_data["hasLifetime"] = has_lifetime.clone();
-                }
+            self.app_ready_registry
+                .write()
+                .await
+                .register(route, source_peer, data.clone());
+        } else if let Some(route) = route {
+            let registry = self.app_ready_registry.read().await;
+            if registry.active_route.is_some() && !registry.is_active(route) {
+                debug!(route, %topic, "Ignoring event from inactive app connection");
+                return;
             }
         }
 
+        if topic == "subscription.updated" {
+            self.app_ready_registry.write().await.update_active(&data);
+        } else if topic == "media.now_playing.update" || topic == "media.nowPlaying.update" {
+            if let Some(active) = playback_active_from_now_playing(&data) {
+                self.last_playback_active.store(active, Ordering::Relaxed);
+            }
+        }
+
+        self.send_event_to_clients(topic, data).await;
+    }
+
+    async fn send_event_to_clients(&self, topic: String, data: serde_json::Value) {
         let event = WebSocketMessage::Event {
             topic,
             data,
@@ -1370,5 +1792,346 @@ impl WebSocketServer {
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const LEGACY_CONNECTOR_METHODS: [(&str, &str); 6] = [
+        ("spotify.artist.topTracks", "spotify.artist.top_tracks"),
+        ("spotify.auth.getStatus", "spotify.auth.get_status"),
+        ("spotify.me.recentlyPlayed", "spotify.me.recently_played"),
+        ("spotify.me.topArtists", "spotify.me.top_artists"),
+        ("spotify.me.topTracks", "spotify.me.top_tracks"),
+        ("spotify.radio.topMix", "spotify.radio.top_mix"),
+    ];
+
+    fn valid_music_params(method: &str) -> serde_json::Value {
+        if matches!(
+            method,
+            "spotify.artist.topTracks" | "spotify.artist.top_tracks"
+        ) {
+            serde_json::json!({ "content_id": "artist-id" })
+        } else {
+            serde_json::json!({})
+        }
+    }
+
+    #[test]
+    fn canonical_music_request_normalizes_legacy_connector_methods() {
+        for (legacy, canonical) in LEGACY_CONNECTOR_METHODS {
+            let (method, _) = canonical_music_request(legacy, valid_music_params(legacy))
+                .expect("legacy method should decode")
+                .expect("legacy method should be recognized");
+
+            assert_eq!(method, canonical);
+        }
+    }
+
+    #[test]
+    fn companion_music_request_preserves_mockingbird_artist_metadata_flag() {
+        for platform in [None, Some("ios"), Some("android"), Some("web")] {
+            let (_, params) = companion_music_request(
+                "spotify.artist.top_tracks",
+                serde_json::json!({
+                    "contentId": "artist-id",
+                    "mockingbird": true,
+                }),
+                platform,
+            )
+            .expect("artist top tracks request should decode")
+            .expect("artist top tracks request should be recognized");
+
+            assert_eq!(params["content_id"], "artist-id");
+            assert_eq!(params["mockingbird"], true);
+        }
+    }
+
+    #[test]
+    fn companion_music_request_preserves_canonical_methods_for_native_apps() {
+        for (_, canonical) in LEGACY_CONNECTOR_METHODS {
+            for platform in [None, Some("ios"), Some("android")] {
+                let (method, _) =
+                    companion_music_request(canonical, valid_music_params(canonical), platform)
+                        .expect("canonical method should decode")
+                        .expect("canonical method should be recognized");
+
+                assert_eq!(method, canonical);
+            }
+        }
+    }
+
+    #[test]
+    fn companion_music_request_uses_legacy_methods_for_web_connector() {
+        for (legacy, canonical) in LEGACY_CONNECTOR_METHODS {
+            let (method, _) =
+                companion_music_request(canonical, valid_music_params(canonical), Some("web"))
+                    .expect("canonical method should decode")
+                    .expect("canonical method should be recognized");
+
+            assert_eq!(method, legacy);
+        }
+    }
+
+    #[test]
+    fn companion_music_request_adds_legacy_content_id_for_connector_track_lists() {
+        for method in ["spotify.album.tracks", "spotify.playlist.tracks"] {
+            let (_, params) = companion_music_request(
+                method,
+                serde_json::json!({ "contentId": "spotify-id" }),
+                Some("web"),
+            )
+            .expect("track-list method should decode")
+            .expect("track-list method should be recognized");
+
+            assert_eq!(params["content_id"], "spotify-id");
+            assert_eq!(params["id"], "spotify-id");
+        }
+    }
+
+    #[test]
+    fn app_ready_registry_applies_canonical_subscription_update_to_replay() {
+        let mut registry = AppReadyRegistry::default();
+        registry.register(
+            Some("spp:phone"),
+            Some("D8:3A:DD:31:B0:49"),
+            serde_json::json!({
+                "platform": "android",
+                "subscribed": false,
+                "subscription_status": "none",
+                "has_lifetime": true,
+                "is_admin": false,
+                "entitlements_verified": false,
+            }),
+        );
+
+        registry.update_active(&serde_json::json!({
+            "subscribed": true,
+            "subscription_status": "active",
+            "has_lifetime": false,
+            "is_admin": true,
+            "entitlements_verified": true,
+        }));
+
+        let replay = registry.active().expect("active phone route").data;
+        assert_eq!(replay["subscribed"], true);
+        assert_eq!(replay["subscription_status"], "active");
+        assert_eq!(replay["has_lifetime"], false);
+        assert_eq!(replay["is_admin"], true);
+        assert_eq!(replay["entitlements_verified"], true);
+        assert_eq!(replay["platform"], "android");
+        assert!(replay.get("subscriptionStatus").is_none());
+        assert!(replay.get("hasLifetime").is_none());
+        assert!(replay.get("isAdmin").is_none());
+        assert!(replay.get("entitlementsVerified").is_none());
+    }
+
+    #[test]
+    fn app_ready_registry_preserves_camel_case_subscription_compatibility() {
+        let mut registry = AppReadyRegistry::default();
+        registry.register(
+            Some("iap2:phone"),
+            Some("A8:AB:B5:AB:02:ED"),
+            serde_json::json!({
+                "platform": "ios",
+                "subscribed": false,
+                "subscriptionStatus": "none",
+                "hasLifetime": true,
+                "isAdmin": false,
+                "entitlementsVerified": false,
+            }),
+        );
+
+        registry.update_active(&serde_json::json!({
+            "subscribed": true,
+            "subscriptionStatus": "trialing",
+            "hasLifetime": false,
+            "isAdmin": true,
+            "entitlementsVerified": true,
+        }));
+
+        let replay = registry.active().expect("active phone route").data;
+        assert_eq!(replay["subscribed"], true);
+        assert_eq!(replay["subscriptionStatus"], "trialing");
+        assert_eq!(replay["hasLifetime"], false);
+        assert_eq!(replay["isAdmin"], true);
+        assert_eq!(replay["entitlementsVerified"], true);
+        assert_eq!(replay["platform"], "ios");
+        assert!(replay.get("subscription_status").is_none());
+        assert!(replay.get("has_lifetime").is_none());
+        assert!(replay.get("is_admin").is_none());
+        assert!(replay.get("entitlements_verified").is_none());
+    }
+
+    #[test]
+    fn app_ready_registry_promotes_most_recent_surviving_route() {
+        let mut registry = AppReadyRegistry::default();
+        registry.register(
+            Some("spp:pi"),
+            Some("D8:3A:DD:31:B0:49"),
+            serde_json::json!({ "platform": "web" }),
+        );
+        registry.register(
+            Some("spp:mac"),
+            Some("50:F2:65:EB:36:E1"),
+            serde_json::json!({ "platform": "ios" }),
+        );
+
+        let active = registry.active().expect("active Mac route");
+        assert_eq!(active.route.as_deref(), Some("spp:mac"));
+        assert_eq!(active.source_peer.as_deref(), Some("50:F2:65:EB:36:E1"));
+        assert_eq!(active.data["platform"], "ios");
+
+        let promoted = registry
+            .remove("spp:mac")
+            .expect("Pi route should be promoted");
+        assert_eq!(promoted.route.as_deref(), Some("spp:pi"));
+        assert_eq!(promoted.source_peer.as_deref(), Some("D8:3A:DD:31:B0:49"));
+        assert_eq!(promoted.data["platform"], "web");
+    }
+
+    #[test]
+    fn app_ready_registry_ignores_non_owner_close() {
+        let mut registry = AppReadyRegistry::default();
+        registry.register(
+            Some("spp:pi"),
+            Some("D8:3A:DD:31:B0:49"),
+            serde_json::json!({ "platform": "web" }),
+        );
+        registry.register(
+            Some("spp:mac"),
+            Some("50:F2:65:EB:36:E1"),
+            serde_json::json!({ "platform": "ios" }),
+        );
+
+        assert!(registry.remove("spp:pi").is_none());
+        let active = registry.active().expect("Mac route should remain active");
+        assert_eq!(active.route.as_deref(), Some("spp:mac"));
+        assert_eq!(active.data["platform"], "ios");
+    }
+
+    #[test]
+    fn active_route_platform_drives_matching_method_adapter() {
+        let mut registry = AppReadyRegistry::default();
+        registry.register(
+            Some("spp:pi"),
+            Some("D8:3A:DD:31:B0:49"),
+            serde_json::json!({ "platform": "web" }),
+        );
+        registry.register(
+            Some("spp:mac"),
+            Some("50:F2:65:EB:36:E1"),
+            serde_json::json!({ "platform": "ios" }),
+        );
+
+        let active = registry.active().expect("active Mac route");
+        let platform = active.data["platform"].as_str();
+        let (native_method, _) =
+            companion_music_request("spotify.auth.getStatus", serde_json::json!({}), platform)
+                .expect("native request should decode")
+                .expect("native request should be recognized");
+        assert_eq!(native_method, "spotify.auth.get_status");
+
+        let promoted = registry
+            .remove("spp:mac")
+            .expect("Pi route should be promoted");
+        let platform = promoted.data["platform"].as_str();
+        let (connector_method, _) =
+            companion_music_request("spotify.auth.getStatus", serde_json::json!({}), platform)
+                .expect("connector request should decode")
+                .expect("connector request should be recognized");
+        assert_eq!(connector_method, "spotify.auth.getStatus");
+    }
+
+    #[test]
+    fn android_phone_request_targets_latest_exact_spp_route() {
+        let peer = "D8:3A:DD:31:B0:49";
+        let mut registry = AppReadyRegistry::default();
+        registry.register(
+            Some("spp:stale"),
+            Some(peer),
+            serde_json::json!({ "platform": "android" }),
+        );
+        registry.register(
+            Some("spp:current"),
+            Some(peer),
+            serde_json::json!({ "platform": "android" }),
+        );
+
+        let active = registry.active().expect("active Android route");
+        assert_eq!(phone_request_route(peer, Some(&active)), "spp:current");
+
+        assert!(registry.remove("spp:stale").is_none());
+        let active = registry.active().expect("current route remains active");
+        assert_eq!(phone_request_route(peer, Some(&active)), "spp:current");
+    }
+
+    #[test]
+    fn phone_request_preserves_iap2_routing_for_ios_and_other_peers() {
+        let android = ActiveAppReady {
+            data: serde_json::json!({ "platform": "android" }),
+            route: Some("spp:android".to_string()),
+            source_peer: Some("D8:3A:DD:31:B0:49".to_string()),
+        };
+        assert_eq!(
+            phone_request_route("A8:AB:B5:AB:02:ED", Some(&android)),
+            "iap2:A8:AB:B5:AB:02:ED"
+        );
+
+        let ios = ActiveAppReady {
+            data: serde_json::json!({ "platform": "ios" }),
+            route: Some("iap2:A8:AB:B5:AB:02:ED".to_string()),
+            source_peer: Some("A8:AB:B5:AB:02:ED".to_string()),
+        };
+        assert_eq!(
+            phone_request_route("A8:AB:B5:AB:02:ED", Some(&ios)),
+            "iap2:A8:AB:B5:AB:02:ED"
+        );
+    }
+
+    #[test]
+    fn playback_active_from_now_playing_detects_playing_case_insensitively() {
+        let data = serde_json::json!({
+            "playback_attributes": {
+                "PlaybackStatus": "Playing"
+            }
+        });
+
+        assert_eq!(playback_active_from_now_playing(&data), Some(true));
+    }
+
+    #[test]
+    fn playback_active_from_now_playing_detects_paused() {
+        let data = serde_json::json!({
+            "playback_attributes": {
+                "PlaybackStatus": "paused"
+            }
+        });
+
+        assert_eq!(playback_active_from_now_playing(&data), Some(false));
+    }
+
+    #[test]
+    fn playback_active_from_now_playing_accepts_canonical_status_casing() {
+        let data = serde_json::json!({
+            "playback_attributes": {
+                "playback_status": "playing"
+            }
+        });
+
+        assert_eq!(playback_active_from_now_playing(&data), Some(true));
+    }
+
+    #[test]
+    fn playback_active_from_now_playing_accepts_companion_status_casing() {
+        let data = serde_json::json!({
+            "playback_attributes": {
+                "playbackStatus": "playing"
+            }
+        });
+
+        assert_eq!(playback_active_from_now_playing(&data), Some(true));
     }
 }

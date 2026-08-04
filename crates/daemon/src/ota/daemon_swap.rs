@@ -31,7 +31,8 @@ impl DaemonSwap {
         remove_file_if_exists(&next).await?;
         remove_file_if_exists(&previous).await?;
 
-        move_cross_device_safe(partial_path, &next).await?;
+        fs::copy(partial_path, &next).await?;
+        fs::set_permissions(&next, std::fs::Permissions::from_mode(0o755)).await?;
 
         let had_current = fs::try_exists(&current).await?;
         if had_current {
@@ -51,8 +52,6 @@ impl DaemonSwap {
             }
             return Err(DaemonSwapError::Io(err));
         }
-        fs::set_permissions(&current, std::fs::Permissions::from_mode(0o755)).await?;
-
         Ok(())
     }
 }
@@ -63,21 +62,35 @@ pub enum DaemonSwapError {
     Io(#[from] io::Error),
 }
 
-async fn move_cross_device_safe(from: &Path, to: &Path) -> io::Result<()> {
-    match fs::rename(from, to).await {
-        Ok(()) => Ok(()),
-        Err(err) if err.raw_os_error() == Some(libc::EXDEV) => {
-            fs::copy(from, to).await?;
-            fs::remove_file(from).await
-        }
-        Err(err) => Err(err),
-    }
-}
-
 async fn remove_file_if_exists(path: &Path) -> io::Result<()> {
     match fs::remove_file(path).await {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(err) => Err(err),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn install_preserves_verified_payload_until_actor_cleanup() {
+        let root = tempfile::TempDir::new().unwrap();
+        let partial = root.path().join("update.partial");
+        tokio::fs::write(&partial, b"new daemon").await.unwrap();
+
+        DaemonSwap::new(root.path().join("bandaid"))
+            .install(&partial)
+            .await
+            .unwrap();
+
+        assert_eq!(tokio::fs::read(&partial).await.unwrap(), b"new daemon");
+        assert_eq!(
+            tokio::fs::read(root.path().join("bandaid/daemon/nocturned.current"))
+                .await
+                .unwrap(),
+            b"new daemon"
+        );
     }
 }

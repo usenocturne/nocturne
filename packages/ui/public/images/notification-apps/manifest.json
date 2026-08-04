@@ -1,0 +1,253 @@
+[
+  {
+    "name": "Messages",
+    "bundleId": "com.apple.MobileSMS",
+    "trackId": 1146560473,
+    "file": "messages.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0e/08/07/0e080793-1b66-d9b3-0bbe-8222669abf79/messages-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "816f0111ae24526378e79af91c56c50027a64cfb8b6f82852e7778781150a9b4"
+  },
+  {
+    "name": "Phone",
+    "bundleId": "com.apple.mobilephone",
+    "trackId": 1146562108,
+    "file": "phone.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/46/2a/e1/462ae1c9-9347-efd0-5e99-41e7f636e3f7/phone-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "67f95ddf9df57ccc6f0d745b15f4a8fef9f1d73eb974c0f7d20f1facf7c09836"
+  },
+  {
+    "name": "FaceTime",
+    "bundleId": "com.apple.facetime",
+    "trackId": 1110145091,
+    "file": "facetime.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/9a/11/89/9a11899c-f0fb-c22b-2c41-a3c2540abf5f/facetime-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "cb802fe86100bd5b4a0865dcd6f6388dccf229d36a39d3359882a57d13556408"
+  },
+  {
+    "name": "Snapchat",
+    "bundleId": "com.toyopagroup.picaboo",
+    "trackId": 447188370,
+    "file": "snapchat.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/0d/6b/c2/0d6bc297-0884-b35c-0f8c-6283ef454606/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/512x512bb.jpg",
+    "sha256": "f4c2f1ef1ad3715df8aa05c62d2b8b500ba8e53d8d448577ec0090de3777889e"
+  },
+  {
+    "name": "Instagram",
+    "bundleId": "com.burbn.instagram",
+    "trackId": 389801252,
+    "file": "instagram.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/fd/4d/56/fd4d5647-b299-0ca9-67cd-a256af840bc4/Prod-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "0eee65d02f62583033ff84957b6b71683e6a52713101262eb8889aaeec1865ad"
+  },
+  {
+    "name": "YouTube",
+    "bundleId": "com.google.ios.youtube",
+    "trackId": 544007664,
+    "file": "youtube.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d9/27/c3/d927c357-3219-36a7-9821-316c15cc6b40/logo_youtube_2024_q4_color-0-0-1x_U007emarketing-0-0-0-7-0-0-0-85-220.png/512x512bb.jpg",
+    "sha256": "9eeca22960ed2aad45279d390d64dedc48e0d8cc4ab269ce118b2e22eae1ab08"
+  },
+  {
+    "name": "WhatsApp",
+    "bundleId": "net.whatsapp.WhatsApp",
+    "trackId": 310633997,
+    "file": "whatsapp.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/e3/8b/2f/e38b2fe8-5991-2e46-8b1c-64315e08a3e7/AppIcon-0-0-1x_U007epad-0-0-0-1-0-0-sRGB-0-85-220.png/512x512bb.jpg",
+    "sha256": "97b357b48c188e6a4b98ed2ab6712ead893063ab081fe332c652159c05736d63"
+  },
+  {
+    "name": "Messenger",
+    "bundleId": "com.facebook.Messenger",
+    "trackId": 454638411,
+    "file": "messenger.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/85/86/a8/8586a8e9-16da-41f4-1fe0-bf376b4261ed/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "bba33d17b1d3ed1c6e31dc1aff4433c2bc015f117682748ebcdd75387fb520ae"
+  },
+  {
+    "name": "TikTok",
+    "bundleId": "com.zhiliaoapp.musically",
+    "trackId": 835599320,
+    "file": "tiktok.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/d0/d1/ea/d0d1eae0-540c-2a47-7977-6edd9f1898e3/TikTok_AppIcon26-0-0-1x_U007epad-0-1-0-85-220.png/512x512bb.jpg",
+    "sha256": "38c2e52f001db79a979f12745f3efa512bd68825ff5d5e8a6caec129a410ac98"
+  },
+  {
+    "name": "Gmail",
+    "bundleId": "com.google.Gmail",
+    "trackId": 422689480,
+    "file": "gmail.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/bb/f2/62/bbf2623e-c118-233b-0e5f-eec91af48194/gmail_2026_ios-0-0-1x_U007epad-0-0-0-1-0-0-sRGB-0-0-85-220.png/512x512bb.jpg",
+    "sha256": "6eadf8cf40a8917116b82074cb4fa9f731eede00a36c6755a35b28cf84483566"
+  },
+  {
+    "name": "Maps",
+    "bundleId": "com.apple.Maps",
+    "trackId": 915056765,
+    "file": "apple-maps.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/67/05/f8/6705f876-0db2-711d-0d42-524ef6432165/maps-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "16d12974aa4ce9cae66a6996e7f629ffca60cc574a5642a2ae305bb605367e78"
+  },
+  {
+    "name": "Find My",
+    "bundleId": "com.apple.findmy",
+    "trackId": 1514844621,
+    "file": "find-my.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/e7/f8/dc/e7f8dca5-9326-58ce-a058-74269c035717/findmy-0-0-1x_U007epad-0-1-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "3a8b135aa8c99e4cfd2342a9fc7fcb3cd414640d6b6a685a21396516d6455823"
+  },
+  {
+    "name": "Google Maps",
+    "bundleId": "com.google.Maps",
+    "trackId": 585027354,
+    "file": "google-maps.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/5c/92/76/5c9276ad-36f4-4df7-bbf5-b80b818b75ef/maps_2025-0-0-1x_U007epad-0-0-0-1-0-0-sRGB-0-0-85-220.png/512x512bb.jpg",
+    "sha256": "6917c88314fe3ee83c3cf77776e0bc4bcb6e912447c6aab26ca6cb977e3d56ae"
+  },
+  {
+    "name": "Discord",
+    "bundleId": "com.hammerandchisel.discord",
+    "trackId": 985746746,
+    "file": "discord.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/27/e0/e1/27e0e19b-e5ec-89a1-2841-20b2c593618f/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/512x512bb.jpg",
+    "sha256": "2fd5c8e3cb11df8d79ba3347466bec9a3bb3b377d7d738693e5f86754ab31f93"
+  },
+  {
+    "name": "Telegram",
+    "bundleId": "ph.telegra.Telegraph",
+    "trackId": 686449807,
+    "file": "telegram.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/bd/eb/c5/bdebc573-5de3-f649-f199-83ccec4c519d/Telegram-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "9b1392f0dc10cd6e76b88240d4d4e22ac609f78ae29a0c4eab2332854daf14ee"
+  },
+  {
+    "name": "X",
+    "bundleId": "com.atebits.Tweetie2",
+    "trackId": 333903271,
+    "file": "x.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/b1/18/e3/b118e371-e002-fcd8-6c26-639a8f6a6639/ProductionAppIcon-0-0-1x_U007emarketing-0-8-0-0-0-85-220.png/512x512bb.jpg",
+    "sha256": "47a1cbab67e57aa7aa5de361d6ccf906404fa22b789532596725526e5c03821d"
+  },
+  {
+    "name": "Reddit",
+    "bundleId": "com.reddit.Reddit",
+    "trackId": 1064216828,
+    "file": "reddit.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/cb/bd/63/cbbd635f-347f-733f-2842-d7a95ce2ed04/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/512x512bb.jpg",
+    "sha256": "b428d4092fdfba64be930931db4349b385cd389c9dfb102915658df9261f2593"
+  },
+  {
+    "name": "Slack",
+    "bundleId": "com.tinyspeck.chatlyio",
+    "trackId": 618783545,
+    "file": "slack.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/65/20/d2/6520d2f4-2fcc-9a71-6b1c-5fee0ed3ea71/slack_icon_prod-0-0-1x_U007epad-0-1-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "9f0798b35feeb931a379fb6da20eddec0b837d9ae2c2d9d16586c2eaad857149"
+  },
+  {
+    "name": "Mail",
+    "bundleId": "com.apple.mobilemail",
+    "trackId": 1108187098,
+    "file": "mail.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/cf/a0/8c/cfa08c8a-5789-d605-a3cb-760ab70d52e1/mail-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "e990cb7c84094e827aff55b383a9879f8c0102c7a20c7d5cb5dfd35cbce3d493"
+  },
+  {
+    "name": "Calendar",
+    "bundleId": "com.apple.mobilecal",
+    "trackId": 1108185179,
+    "file": "calendar.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/58/79/e0/5879e09e-20ac-a4c1-80e1-5669247cad4c/calendar-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "3f8a7bb7cbb97f00f371a1d3152fda6f671ffbe442082bcef6597e53514da440"
+  },
+  {
+    "name": "Facebook",
+    "bundleId": "com.facebook.Facebook",
+    "trackId": 284882215,
+    "file": "facebook.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/f7/7d/9b/f77d9b8f-1ea8-b201-791d-e06014b8b5d1/Icon-Production-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+    "sha256": "b65a93cdc511e52b8d5ea5e165a91a83a0ee052d851ecd43c3bea91be47e9195"
+  },
+  {
+    "name": "LinkedIn",
+    "bundleId": "com.linkedin.LinkedIn",
+    "trackId": 288429040,
+    "file": "linkedin.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/97/b2/b9/97b2b966-75f7-3052-04ed-059bc2d324f0/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg",
+    "sha256": "bc481bf58edbd044185fa451fd9d5c9d89f1971781bd42c360f38ae96d1b9674"
+  },
+  {
+    "name": "Outlook",
+    "bundleId": "com.microsoft.Office.Outlook",
+    "trackId": 951937596,
+    "file": "outlook.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/bb/73/ea/bb73ea76-9207-8e1b-a83e-1903b02cb2e4/AppIcon-outlook.prod-0-0-1x_U007epad-0-1-0-0-0-85-220.png/512x512bb.jpg",
+    "sha256": "6253097314d884dd8148d671f142d864222b5fe6471e3ca7f3dabe5c634eb645"
+  },
+  {
+    "name": "Microsoft Teams",
+    "bundleId": "com.microsoft.skype.teams",
+    "trackId": 1113153706,
+    "file": "teams.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/45/2c/5b/452c5be8-226d-acc7-3e27-dac45371d03f/AppIcon-0-0-1x_U007epad-0-1-0-0-85-220.png/512x512bb.jpg",
+    "sha256": "6451ffc88c093a56d1fd894c903b18a635be6fac597fda1f541ebe3d18cd5249"
+  },
+  {
+    "name": "Signal",
+    "bundleId": "org.whispersystems.signal",
+    "trackId": 874139669,
+    "file": "signal.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/29/bc/6c/29bc6c62-9d37-cde7-e647-55d73d763b99/AppIcon-0-0-1x_U007epad-0-0-0-1-0-0-sRGB-0-85-220.png/512x512bb.jpg",
+    "sha256": "f2d1e39c669605bd299405a896ec749b5f95b68939eca69c927ced36f183e060"
+  },
+  {
+    "name": "Twitch",
+    "bundleId": "tv.twitch",
+    "trackId": 460177396,
+    "file": "twitch.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/86/fe/fb/86fefbfe-29cb-5db8-372c-3b442a20eb50/TwitchAppIcon-0-0-1x_U007epad-0-1-0-0-0-0-85-220.png/512x512bb.jpg",
+    "sha256": "9bd4041aa7b6f19015054e182abef0cb8ab669176b4cf5696ebeb175f5f593f3"
+  },
+  {
+    "name": "Pinterest",
+    "bundleId": "pinterest",
+    "trackId": 429047995,
+    "file": "pinterest.jpg",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/8f/b1/9c/8fb19c91-d028-c50e-8f59-009590faea04/AppIcon-0-0-1x_U007epad-0-1-0-0-0-85-220.png/512x512bb.jpg",
+    "sha256": "4387383fa9d68719cd4a990cc00dddd7e82bcb5eafff1912c5cc815a6a054c1d"
+  },
+  {
+    "name": "Google Messages",
+    "packageId": "com.google.android.apps.messaging",
+    "file": "google-messages.png",
+    "source": "https://play-lh.googleusercontent.com/Mgukz1fq2stUYX_lQf79gmMeDzNvRCu5eobmiJwNkXl4riNY6HZ3VB-HRW5QciwEuLnFyk_ZmHumvn8RJ5Um",
+    "sha256": "e9313b7fb693a09b317bc458ebb7f32a8a3ac4120c6a867ca9170b1fb98cae41"
+  },
+  {
+    "name": "Phone by Google",
+    "packageId": "com.google.android.dialer",
+    "file": "google-phone.png",
+    "source": "https://play-lh.googleusercontent.com/b0ipxfvtgDE5kT8PscD8hggLVWrP5Zodu2EwIPN0ub-3UBJ7CosIHCP0V9pSjV-hPdXQjd7u7JP2gGMrfSMZmA",
+    "sha256": "13213f3523e57ea100862cc31bcb450ba45bc4fde69c5b87f537733dd7e4a8f1"
+  },
+  {
+    "name": "Google Calendar",
+    "packageId": "com.google.android.calendar",
+    "file": "google-calendar.png",
+    "source": "https://play-lh.googleusercontent.com/vEoqLbT_QkYcEaawWBRc22N6i98OUtOUpM1LmKdVs_xx7lCsUyFfV0ZiqoUXjMijUteiBhhN4K5MpoF96FRNOg",
+    "sha256": "f2a869c1703c7c244d3e9d3d15a0dc82b005ff4440407cd0a1c4d631d1539c24"
+  },
+  {
+    "name": "Google Home",
+    "packageId": "com.google.android.apps.chromecast.app",
+    "file": "google-home.png",
+    "source": "https://play-lh.googleusercontent.com/Y35Iso7Wf1by9qyzQ0971DtYaQooYt1k5cdDCuDu_pEP-1arRaIjpeUR9lOIoiK6hqgR6eklcWucoZbbZc1PlEA",
+    "sha256": "1f946eb2960ea9c7675d046e3eeae7e7bb859b970304aeb9e19b841ed67a395c"
+  },
+  {
+    "name": "Google",
+    "packageId": "com.google.android.googlequicksearchbox",
+    "file": "google.png",
+    "source": "https://play-lh.googleusercontent.com/xqk8hd6dMyffxE6iQa59cUt75EA-0YDvjnJlxH4z8W63-e5KwaWXbrNob6Q-OoH5SSDa78Y0I0YA3BB0zDVnB8w",
+    "sha256": "1ae8cc79b7d0e765b3d22edb1788b06f8cfcaf3e348299188df102bfbddff9b5"
+  }
+]

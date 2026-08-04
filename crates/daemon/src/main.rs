@@ -10,12 +10,12 @@ mod system;
 
 use anyhow::Result;
 use bytes::Bytes;
-use libnocturne::generated::audio::AudioLevelEvent;
+use libnocturne::generated::audio::{AudioLevelEvent, WindLevelEvent};
 use libnocturne::generated::voice::VoiceWakewordEvent;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -88,9 +88,9 @@ async fn main() -> Result<()> {
     info!("Webapp HTTP server task spawned (port 8080)");
 
     let (ota_events_tx, mut ota_events_rx) = mpsc::channel(64);
-    let range_proxy_handle = ota::RangeProxy::spawn(
+    let delta_source_handle = ota::DeltaSource::spawn(
         ota_events_tx.clone(),
-        libnocturne::NOCTURNE_OTA_RANGE_PROXY_PORT,
+        ota::delta_source::DEFAULT_SOCKET_PATH,
     )
     .await;
     let transfers_dir = PathBuf::from("/var/lib/nocturne/transfers");
@@ -98,48 +98,16 @@ async fn main() -> Result<()> {
     let _transfer_reaper_cancel = CancellationToken::new();
     let _transfer_reaper =
         ota::transfer::spawn_reaper(transfers_dir, _transfer_reaper_cancel.clone());
-    let terminators = ota::OtaTerminators {
-        reboot: Arc::new(|| {
-            #[cfg(feature = "device")]
-            {
-                if let Err(err) = std::process::Command::new("systemctl")
-                    .arg("reboot")
-                    .spawn()
-                {
-                    tracing::error!(?err, "failed to invoke systemctl reboot after OTA");
-                }
-            }
-            #[cfg(not(feature = "device"))]
-            tracing::info!("host OTA reboot terminator invoked (no-op)");
-        }),
-        restart_self: Arc::new(|| {
-            #[cfg(feature = "device")]
-            {
-                if let Err(err) = std::process::Command::new("systemctl")
-                    .args(["restart", "nocturned"])
-                    .spawn()
-                {
-                    tracing::error!(
-                        ?err,
-                        "failed to invoke systemctl restart nocturned after OTA"
-                    );
-                }
-            }
-            #[cfg(not(feature = "device"))]
-            tracing::info!("host OTA restart-self terminator invoked (no-op)");
-        }),
-    };
     let ota_handle = ota::OtaActor::spawn(
         transfers,
         ota_events_tx.clone(),
-        terminators,
-        range_proxy_handle.proxy.clone(),
+        delta_source_handle.source.clone(),
         PathBuf::from("/var/lib/nocturne"),
     );
     let ws_for_ota = Arc::clone(&websocket_server);
     tokio::spawn(async move {
         while let Some(event) = ota_events_rx.recv().await {
-            let (topic, data, target_peer) = match event {
+            let (topic, data, forward_to_mobile, target_peer, target_route) = match event {
                 ota::OtaEvent::Begin {
                     update_id,
                     kind,
@@ -151,25 +119,34 @@ async fn main() -> Result<()> {
                         "kind": kind,
                         "version": version,
                     }),
+                    false,
+                    None,
                     None,
                 ),
                 ota::OtaEvent::Progress(progress) => (
                     "ota.progress".to_string(),
                     serde_json::to_value(progress).unwrap_or_else(|_| serde_json::json!({})),
+                    false,
+                    None,
                     None,
                 ),
                 ota::OtaEvent::Error(error) => (
                     "ota.error".to_string(),
                     serde_json::to_value(error).unwrap_or_else(|_| serde_json::json!({})),
+                    true,
+                    None,
                     None,
                 ),
                 ota::OtaEvent::Complete { update_id } => (
                     "ota.complete".to_string(),
                     serde_json::json!({ "updateId": update_id }),
+                    true,
+                    None,
                     None,
                 ),
                 ota::OtaEvent::AssetRange {
                     peer,
+                    route,
                     request_id,
                     req,
                 } => (
@@ -181,44 +158,59 @@ async fn main() -> Result<()> {
                         "asset": req.asset,
                         "ranges": req.ranges,
                     }),
+                    true,
                     peer.map(|peer| peer.to_string()),
+                    route,
                 ),
-                ota::OtaEvent::AssetRangeAbandon { peer, abandon } => (
+                ota::OtaEvent::AssetRangeAbandon {
+                    peer,
+                    route,
+                    abandon,
+                } => (
                     "ota.asset_range_abandon".to_string(),
                     serde_json::json!({
                         "request_id": abandon.request_id,
                         "requestId": abandon.request_id,
                     }),
+                    true,
                     peer.map(|peer| peer.to_string()),
+                    route,
                 ),
             };
             ws_for_ota
                 .broadcast_event(topic.clone(), data.clone())
                 .await;
 
-            let mut mobile_payload = serde_json::json!({
-                "topic": topic,
-                "data": data,
-            });
-            if let Some(peer) = target_peer {
-                mobile_payload["_targetPeer"] = serde_json::json!(peer);
-            }
-            if let Ok(payload) = serde_json::to_vec(&mobile_payload) {
-                let _ = app_manager_tx_for_ota.send(app::AppMessage {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    protocol: "com.usenocturne.daemon".to_string(),
-                    session_id: 1,
-                    data: Bytes::from(payload),
+            if forward_to_mobile {
+                let mut mobile_payload = serde_json::json!({
+                    "topic": topic,
+                    "data": data,
                 });
+                if let Some(peer) = target_peer {
+                    mobile_payload["_targetPeer"] = serde_json::json!(peer);
+                }
+                if let Some(route) = target_route {
+                    mobile_payload["_targetConnection"] = serde_json::json!(route);
+                }
+                if let Ok(payload) = serde_json::to_vec(&mobile_payload) {
+                    let _ = app_manager_tx_for_ota.send(app::AppMessage {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        protocol: "com.usenocturne.daemon".to_string(),
+                        session_id: 1,
+                        priority: app::AppMessagePriority::Bulk,
+                        data: Bytes::from(payload),
+                    });
+                }
             }
         }
     });
-    info!("OTA actor and range proxy started");
+    info!("OTA actor and delta source started");
 
     hardware::start_ambient_light_task(Arc::clone(&websocket_server));
     info!("Ambient light sensor polling started");
 
-    let (audio_capture, audio_event_rx) = audio::AudioCapture::new();
+    let (wind_frame_tx, mut wind_event_rx) = audio::start_wind_detector();
+    let (audio_capture, audio_event_rx) = audio::AudioCapture::new(wind_frame_tx.clone());
     let mut audio_events_for_wakeword = audio_capture.subscribe();
     let mut audio_events_for_mic_level = audio_capture.subscribe();
     let (audio_cmd_tx, audio_cmd_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -227,13 +219,35 @@ async fn main() -> Result<()> {
 
     let models_dir =
         std::env::var("WAKEWORD_MODELS_DIR").unwrap_or_else(|_| "/etc/nocturne/models".to_string());
-    let threshold = std::env::var("WAKEWORD_THRESHOLD")
-        .ok()
-        .and_then(|s| s.parse::<f32>().ok())
-        .unwrap_or(0.5);
+    let threshold = audio::threshold_from_env("WAKEWORD_THRESHOLD", 0.65);
+    let support_threshold =
+        audio::threshold_from_env("WAKEWORD_SUPPORT_THRESHOLD", threshold.min(0.5));
+    let default_playback_threshold = threshold.max(0.9);
+    let configured_playback_threshold =
+        audio::threshold_from_env("WAKEWORD_PLAYBACK_THRESHOLD", default_playback_threshold);
+    let playback_threshold = if configured_playback_threshold < threshold {
+        warn!(
+            configured_playback_threshold,
+            activation_threshold = threshold,
+            "Playback wake word threshold is below the activation threshold; using the activation threshold"
+        );
+        threshold
+    } else {
+        configured_playback_threshold
+    };
+    info!(
+        activation_threshold = threshold,
+        support_threshold, playback_threshold, "Wake word sensitivity configured"
+    );
 
-    let (wakeword_detector, mut wakeword_event_rx) =
-        audio::WakeWordDetector::new(models_dir, threshold);
+    let (wakeword_detector, mut wakeword_event_rx) = audio::WakeWordDetector::new(
+        models_dir,
+        threshold,
+        support_threshold,
+        playback_threshold,
+        websocket_server.playback_active_flag(),
+        wind_frame_tx,
+    );
     let (wakeword_pause_tx, wakeword_pause_rx) =
         mpsc::unbounded_channel::<audio::WakeWordCommand>();
     tokio::spawn(async move {
@@ -243,81 +257,143 @@ async fn main() -> Result<()> {
     });
     info!("Wake word detector initialized");
 
+    let ws_for_wind = Arc::clone(&websocket_server);
+    tokio::spawn(async move {
+        loop {
+            match wind_event_rx.recv().await {
+                Ok(reading) => {
+                    ws_for_wind
+                        .broadcast_event(
+                            "wind_level".to_string(),
+                            serde_json::to_value(WindLevelEvent {
+                                level: reading.level,
+                                stat: f64::from(reading.stat),
+                            })
+                            .expect("generated wind level event should serialize"),
+                        )
+                        .await;
+                }
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    warn!(skipped, "wind detector event receiver lagged");
+                }
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+
     let ws_for_wakeword = Arc::clone(&websocket_server);
     let audio_cmd_for_wakeword = audio_cmd_tx.clone();
     let wakeword_pause_for_handler = wakeword_pause_tx.clone();
     tokio::spawn(async move {
-        while let Ok(event) = wakeword_event_rx.recv().await {
-            match event {
-                audio::WakeWordEvent::Detected {
-                    ref keyword,
-                    confidence,
-                } => {
-                    info!(
-                        "Wake word detected: {} (confidence: {:.2})",
-                        keyword, confidence
-                    );
-                    ws_for_wakeword
-                        .broadcast_event(
-                            "voice.wakeword".to_string(),
-                            serde_json::to_value(VoiceWakewordEvent {
-                                keyword: keyword.to_string(),
-                                confidence: f64::from(confidence),
-                            })
-                            .expect("generated voice wakeword event should serialize"),
-                        )
-                        .await;
-                    let (ack_tx, ack_rx) = tokio::sync::oneshot::channel();
-                    let _ = wakeword_pause_for_handler.send(audio::WakeWordCommand::Pause {
-                        ack: Some(ack_tx),
-                        persist: false,
-                    });
-                    match tokio::time::timeout(std::time::Duration::from_secs(1), ack_rx).await {
-                        Ok(Ok(())) => {}
-                        _ => warn!("Wakeword pause ack timed out, proceeding anyway"),
+        loop {
+            match wakeword_event_rx.recv().await {
+                Ok(event) => match event {
+                    audio::WakeWordEvent::Detected {
+                        ref keyword,
+                        confidence,
+                    } => {
+                        if !ws_for_wakeword.has_ready_app_session().await {
+                            warn!(
+                                "Ignoring wake word '{}' because no companion app session is ready",
+                                keyword
+                            );
+                            let _ = wakeword_pause_for_handler
+                                .send(audio::WakeWordCommand::RejectDetection);
+                            continue;
+                        }
+                        info!(
+                            "Wake word detected: {} (confidence: {:.2})",
+                            keyword, confidence
+                        );
+                        ws_for_wakeword
+                            .broadcast_event(
+                                "voice.wakeword".to_string(),
+                                serde_json::to_value(VoiceWakewordEvent {
+                                    keyword: keyword.to_string(),
+                                    confidence: f64::from(confidence),
+                                })
+                                .expect("generated voice wakeword event should serialize"),
+                            )
+                            .await;
+                        let (ack_tx, ack_rx) = tokio::sync::oneshot::channel();
+                        let _ = wakeword_pause_for_handler.send(audio::WakeWordCommand::Pause {
+                            ack: Some(ack_tx),
+                            persist: false,
+                        });
+                        match tokio::time::timeout(std::time::Duration::from_secs(1), ack_rx).await
+                        {
+                            Ok(Ok(())) => {}
+                            _ => warn!("Wakeword pause ack timed out, proceeding anyway"),
+                        }
+                        let _ = audio_cmd_for_wakeword.send(audio::AudioCommand::Start);
                     }
-                    let _ = audio_cmd_for_wakeword.send(audio::AudioCommand::Start);
+                    audio::WakeWordEvent::StateChanged { muted } => {
+                        ws_for_wakeword.update_last_wakeword_state(muted).await;
+                    }
+                },
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    warn!(
+                        skipped,
+                        "wakeword event receiver lagged; continuing with future events"
+                    );
                 }
-                audio::WakeWordEvent::StateChanged { muted } => {
-                    ws_for_wakeword.update_last_wakeword_state(muted).await;
-                }
+                Err(broadcast::error::RecvError::Closed) => break,
             }
         }
     });
 
     let wakeword_pause_for_audio = wakeword_pause_tx.clone();
     tokio::spawn(async move {
-        while let Ok(event) = audio_events_for_wakeword.recv().await {
-            match event {
-                audio::AudioEvent::Started { .. } => {
-                    let _ = wakeword_pause_for_audio.send(audio::WakeWordCommand::Pause {
-                        ack: None,
-                        persist: false,
-                    });
+        loop {
+            match audio_events_for_wakeword.recv().await {
+                Ok(event) => match event {
+                    audio::AudioEvent::Started { .. } => {
+                        let _ = wakeword_pause_for_audio.send(audio::WakeWordCommand::Pause {
+                            ack: None,
+                            persist: false,
+                        });
+                    }
+                    audio::AudioEvent::Stopped { .. } => {
+                        let _ = wakeword_pause_for_audio
+                            .send(audio::WakeWordCommand::Resume { persist: false });
+                    }
+                    audio::AudioEvent::Data { .. } => {}
+                    audio::AudioEvent::MicLevel { .. } => {}
+                },
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    warn!(
+                        skipped,
+                        "audio wakeword bridge lagged; continuing with future events"
+                    );
                 }
-                audio::AudioEvent::Stopped { .. } => {
-                    let _ = wakeword_pause_for_audio
-                        .send(audio::WakeWordCommand::Resume { persist: false });
-                }
-                audio::AudioEvent::Data { .. } => {}
-                audio::AudioEvent::MicLevel { .. } => {}
+                Err(broadcast::error::RecvError::Closed) => break,
             }
         }
     });
 
     let ws_for_mic_level = Arc::clone(&websocket_server);
     tokio::spawn(async move {
-        while let Ok(event) = audio_events_for_mic_level.recv().await {
-            if let audio::AudioEvent::MicLevel { level } = event {
-                ws_for_mic_level
-                    .broadcast_event(
-                        "audio.level".to_string(),
-                        serde_json::to_value(AudioLevelEvent {
-                            level: level.into(),
-                        })
-                        .expect("generated audio event should serialize"),
-                    )
-                    .await;
+        loop {
+            match audio_events_for_mic_level.recv().await {
+                Ok(audio::AudioEvent::MicLevel { level }) => {
+                    ws_for_mic_level
+                        .broadcast_event(
+                            "audio.level".to_string(),
+                            serde_json::to_value(AudioLevelEvent {
+                                level: level.into(),
+                            })
+                            .expect("generated audio event should serialize"),
+                        )
+                        .await;
+                }
+                Ok(_) => {}
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    warn!(
+                        skipped,
+                        "audio mic-level bridge lagged; continuing with future events"
+                    );
+                }
+                Err(broadcast::error::RecvError::Closed) => break,
             }
         }
     });

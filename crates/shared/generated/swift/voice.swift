@@ -6,58 +6,90 @@ import Foundation
 public struct AiResponseEvent: Codable, Sendable {
   public let message: String?
   public let text: String?
+  public let isFinal: Bool?
+  public let sessionId: String?
 
   public init(
     message: String?,
-    text: String?
+    text: String?,
+    isFinal: Bool?,
+    sessionId: String?
   ) {
     self.message = message
     self.text = text
+    self.isFinal = isFinal
+    self.sessionId = sessionId
   }
 
   private enum CodingKeys: String, CodingKey {
     case message = "message"
     case text = "text"
+    case isFinal = "is_final"
+    case sessionId = "session_id"
   }
 }
 
 public struct AiStateEvent: Codable, Sendable {
   public let state: String
   public let message: String?
+  public let sessionId: String?
 
   public init(
     state: String,
-    message: String?
+    message: String?,
+    sessionId: String?
   ) {
     self.state = state
     self.message = message
+    self.sessionId = sessionId
   }
 
   private enum CodingKeys: String, CodingKey {
     case state = "state"
     case message = "message"
+    case sessionId = "session_id"
   }
 }
 
 public struct AiToolExecutedEvent: Codable, Sendable {
   public let toolName: String?
+  public let tool: String?
+  public let callId: String?
+  public let status: String?
+  public let toolArguments: Value?
   public let result: Value?
   public let error: String?
+  public let sessionId: String?
 
   public init(
     toolName: String?,
+    tool: String?,
+    callId: String?,
+    status: String?,
+    toolArguments: Value?,
     result: Value?,
-    error: String?
+    error: String?,
+    sessionId: String?
   ) {
     self.toolName = toolName
+    self.tool = tool
+    self.callId = callId
+    self.status = status
+    self.toolArguments = toolArguments
     self.result = result
     self.error = error
+    self.sessionId = sessionId
   }
 
   private enum CodingKeys: String, CodingKey {
     case toolName = "tool_name"
+    case tool = "tool"
+    case callId = "call_id"
+    case status = "status"
+    case toolArguments = "tool_arguments"
     case result = "result"
     case error = "error"
+    case sessionId = "session_id"
   }
 }
 
@@ -91,6 +123,14 @@ public struct TtsStopResponse: Codable, Sendable {
   public init() {}
 }
 
+public struct VoiceCancelRequest: Codable, Sendable {
+  public init() {}
+}
+
+public struct VoiceCancelResponse: Codable, Sendable {
+  public init() {}
+}
+
 public enum VoiceEvent: Codable, Sendable {
   case voiceWakeword(VoiceWakewordEvent)
   case voiceWakewordState(VoiceWakewordStateEvent)
@@ -105,23 +145,28 @@ public enum VoiceMethod: Codable, Sendable {
   case wakewordResume(WakewordResumeRequest)
   case ttsSpeak(TtsSpeakRequest)
   case ttsStop(TtsStopRequest)
+  case voiceCancel(VoiceCancelRequest)
 }
 
 public struct VoiceTranscriptionEvent: Codable, Sendable {
   public let transcript: String
   public let isFinal: Bool
+  public let sessionId: String?
 
   public init(
     transcript: String,
-    isFinal: Bool
+    isFinal: Bool,
+    sessionId: String?
   ) {
     self.transcript = transcript
     self.isFinal = isFinal
+    self.sessionId = sessionId
   }
 
   private enum CodingKeys: String, CodingKey {
     case transcript = "transcript"
     case isFinal = "is_final"
+    case sessionId = "session_id"
   }
 }
 

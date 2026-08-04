@@ -10,6 +10,7 @@ pub enum OtaKind {
     Image,
     Daemon,
     BuiltinWebapp,
+    Bandaid,
 }
 
 #[typeshare]
@@ -17,6 +18,11 @@ pub enum OtaKind {
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "shared.ts")]
 pub enum OtaPhase {
+    /// Companion downloading the artifact from the OTA server (server -> phone),
+    /// reported by the phone via `ota.download_progress`. Precedes `Streaming`.
+    Downloading,
+    /// Companion transferring the downloaded artifact to the device over the
+    /// link (phone -> daemon), tracked daemon-side from received chunk bytes.
     Streaming,
     Verifying,
     Writing,
@@ -26,13 +32,16 @@ pub enum OtaPhase {
 
 #[typeshare]
 #[serde_with::skip_serializing_none]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "shared.ts")]
 pub struct OtaProgress {
     pub phase: OtaPhase,
     pub percent: u8,
     pub eta_ms: Option<u32>,
+    pub asset: Option<String>,
+    pub transferred_bytes: Option<u32>,
+    pub total_bytes: Option<u32>,
 }
 
 #[typeshare]

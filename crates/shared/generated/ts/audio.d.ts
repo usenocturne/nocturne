@@ -9,6 +9,7 @@ export type AudioJsonValue = string | number | boolean | null | AudioJsonValue[]
  */
 export type AudioEvent =
   | AudioLevelEventMessage
+  | WindLevelEventMessage
 ;
 
 /**
@@ -154,5 +155,36 @@ export interface AudioRecordStopResponse {
    * idle. Inventory field `status` emits as `status`.
    */
   status: string;
+}
+
+/**
+ * Event payload for `wind_level`.
+ * Microphone wind interference level event.
+ * Inventory: `EVENT_INVENTORY` entry `wind_level` payload.
+ */
+export interface WindLevelEvent {
+  /**
+   * Stock-compatible wind interference level from 0 to 4. Inventory field `level` emits as `level`.
+   */
+  level: number;
+  /**
+   * Smoothed wind interference score from 0 to 100. Inventory field `stat` emits as `stat`.
+   */
+  stat: number;
+}
+
+/**
+ * Event envelope for `wind_level` in the `audio` event union.
+ * Inventory: `EVENT_INVENTORY` entry `wind_level`.
+ */
+export interface WindLevelEventMessage {
+  /**
+   * Discriminator from the inventory `event` tag.
+   */
+  event: "wind_level";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: WindLevelEvent;
 }
 

@@ -1,0 +1,74 @@
+# Nocturne A/B delta OTA: zchunk delta on both boot.vfat and rootfs.
+# The delta handler reuses chunks from the active slot and fetches missing chunks
+# from nocturned over local IPC, then chains to the raw handler for the inactive slot.
+
+software =
+{
+    version = "@@VERSION@@";
+    description = "Nocturne delta image OTA";
+
+    hardware-compatibility: [ "1.0" ];
+
+    stable: {
+        slot_a: {
+            images: (
+                {
+                    filename = "boot.vfat.zck.zckheader";
+                    sha256 = "$swupdate_get_sha256(boot.vfat.zck.zckheader)";
+                    type = "delta";
+                    device = "/dev/disk/by-partlabel/boot_a";
+                    properties: {
+                        url = "@@DELTA_URL_BASE@@/boot.vfat.zck";
+                        source = "/dev/disk/by-partlabel/boot_b";
+                        chain = "raw";
+                    };
+                },
+                {
+                    filename = "system.img.zck.zckheader";
+                    sha256 = "$swupdate_get_sha256(system.img.zck.zckheader)";
+                    type = "delta";
+                    device = "/dev/disk/by-partlabel/root_a";
+                    properties: {
+                        url = "@@DELTA_URL_BASE@@/system.img.zck";
+                        source = "/dev/disk/by-partlabel/root_b";
+                        chain = "raw";
+                    };
+                }
+            );
+            bootenv: (
+                { name = "slot_active";  value = "a"; },
+                { name = "slot_a_tries"; value = "3"; }
+            );
+        };
+        slot_b: {
+            images: (
+                {
+                    filename = "boot.vfat.zck.zckheader";
+                    sha256 = "$swupdate_get_sha256(boot.vfat.zck.zckheader)";
+                    type = "delta";
+                    device = "/dev/disk/by-partlabel/boot_b";
+                    properties: {
+                        url = "@@DELTA_URL_BASE@@/boot.vfat.zck";
+                        source = "/dev/disk/by-partlabel/boot_a";
+                        chain = "raw";
+                    };
+                },
+                {
+                    filename = "system.img.zck.zckheader";
+                    sha256 = "$swupdate_get_sha256(system.img.zck.zckheader)";
+                    type = "delta";
+                    device = "/dev/disk/by-partlabel/root_b";
+                    properties: {
+                        url = "@@DELTA_URL_BASE@@/system.img.zck";
+                        source = "/dev/disk/by-partlabel/root_a";
+                        chain = "raw";
+                    };
+                }
+            );
+            bootenv: (
+                { name = "slot_active";  value = "b"; },
+                { name = "slot_b_tries"; value = "3"; }
+            );
+        };
+    };
+};

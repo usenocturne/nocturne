@@ -91,7 +91,8 @@ fn bluetooth_wire_snapshots_round_trip() {
         "bluetooth.device.connect": {
             "request": typed_value(BluetoothDeviceConnectRequest {
                 address: "AA:BB:CC:DD:EE:FF".to_string(),
-                channel: Some(1),
+                channel: Some(3),
+                device_type: Some("macos_connector".to_string()),
             }),
             "response": typed_value(BluetoothDeviceConnectResponse {
                 status: "connected".to_string(),

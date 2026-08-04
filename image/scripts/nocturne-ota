@@ -15,33 +15,64 @@ ZCK=""
 URL=""
 
 usage() {
-    sed -n '2,/^$/p' "$0" | sed 's/^# \?//'
-    exit 2
+  sed -n '2,/^$/p' "$0" | sed 's/^# \?//'
+  exit 2
 }
 
 while [ $# -gt 0 ]; do
-    case "$1" in
-        --image)      IMAGE="$2"; shift 2 ;;
-        --swu)        SWU="$2"; shift 2 ;;
-        --zck)        ZCK="$2"; shift 2 ;;
-        --url)        URL="$2"; shift 2 ;;
-        -h|--help)    usage ;;
-        *)            echo "unknown arg: $1" >&2; exit 2 ;;
-    esac
+  case "$1" in
+    --image)
+      IMAGE="$2"
+      shift 2
+      ;;
+    --swu)
+      SWU="$2"
+      shift 2
+      ;;
+    --zck)
+      ZCK="$2"
+      shift 2
+      ;;
+    --url)
+      URL="$2"
+      shift 2
+      ;;
+    -h | --help) usage ;;
+    *)
+      echo "unknown arg: $1" >&2
+      exit 2
+      ;;
+  esac
 done
 
 case "$IMAGE" in
-    dev|prod) ;;
-    *) echo "[ota] --image must be 'dev' or 'prod', got: $IMAGE" >&2; exit 2 ;;
+  dev | prod) ;;
+  *)
+    echo "[ota] --image must be 'dev' or 'prod', got: $IMAGE" >&2
+    exit 2
+    ;;
 esac
 
 : "${SWU:=$DEPLOY_DIR/nocturne-update-${IMAGE}-delta-superbird.swu}"
 if [ -z "$ZCK" ]; then
-    ZCK="$(ls "$DEPLOY_DIR/nocturne-${IMAGE}-image-superbird".*.zck 2>/dev/null | grep -v zckheader | head -n1)"
+  for candidate in "$DEPLOY_DIR/nocturne-${IMAGE}-image-superbird".*.zck; do
+    case "$candidate" in
+      *zckheader*) continue ;;
+    esac
+    [ -f "$candidate" ] || continue
+    ZCK="$candidate"
+    break
+  done
 fi
 
-[ -f "$SWU" ] || { echo "[ota] swu not found: $SWU" >&2; exit 1; }
-[ -f "$ZCK" ] || { echo "[ota] zck not found: $ZCK" >&2; exit 1; }
+[ -f "$SWU" ] || {
+  echo "[ota] swu not found: $SWU" >&2
+  exit 1
+}
+[ -f "$ZCK" ] || {
+  echo "[ota] zck not found: $ZCK" >&2
+  exit 1
+}
 
 HOST="${SUPERBIRD_HOST:-nocturne.local}"
 : "${URL:=ws://${HOST}:8892/}"
@@ -51,9 +82,9 @@ echo "[ota] zck  = $(basename "$ZCK") ($(du -h "$ZCK" | cut -f1))"
 echo "[ota] url  = $URL"
 
 cargo run --quiet --manifest-path "$NOCTURNE_DIR/Cargo.toml" -p nocturne-host-gateway -- \
-    --url "$URL" \
-    push-update \
-    --zck "$ZCK" \
-    "$SWU"
+  --url "$URL" \
+  push-update \
+  --zck "$ZCK" \
+  "$SWU"
 
 echo "[ota] done."

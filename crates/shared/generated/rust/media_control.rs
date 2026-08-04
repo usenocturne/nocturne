@@ -93,6 +93,7 @@ pub struct MediaControlVolumeUpResponse {
 pub struct MediaNowPlayingArtworkEvent {
     pub data: String,
     pub content_type: String,
+    pub media_generation: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -104,6 +105,7 @@ pub struct MediaNowPlayingArtworkFailedEvent {
 pub struct MediaNowPlayingUpdateEvent {
     pub media_item_attributes: Option<serde_json::Value>,
     pub playback_attributes: Option<serde_json::Value>,
+    pub media_generation: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

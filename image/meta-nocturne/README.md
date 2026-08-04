@@ -29,10 +29,10 @@ The Nocturne distro inherits `conf/distro/superbird.conf` and overrides:
 | Recipe | What it does |
 |---|---|
 | `nocturned` | Rust daemon: BlueZ iAP2 + WebSocket UI bridge on `:5000` + MFi via `/dev/apple_mfi` + ALSA wake-word + embedded HTTP file server on `:8080` |
-| `nocturne-ui` | Prebuilt React/Vite SPA, installed under the bandaid floor |
+| `nocturne-ui` | React/Vite SPA built from the monorepo's `packages/ui`, installed under the bandaid floor |
+| `bun-native` | Prebuilt Bun binary staged into the native sysroot so `nocturne-ui` can build |
 | `nocturne-models` | ONNX wake-word + mel-spectrogram models, rootfs-immutable |
 | `nocturne-fonts` | Circular + Inter + Noto subset, rootfs-immutable |
-| `nocturne-mfi` | udev rule + helpers that surface the Apple MFi chip at `/dev/apple_mfi` |
 | `nocturne-bandaid` | Wraps `bandaid-image.bbclass` to produce `bandaid.ext4` (daemon + UI floor) |
 | `nocturne-ab` | A/B slot debug helper - `nocturne-ab status` on device |
 | `nocturne-floor-sync` | systemd one-shot: re-seeds the bandaid floor from rootfs on OS upgrade |
@@ -58,7 +58,7 @@ The Nocturne distro inherits `conf/distro/superbird.conf` and overrides:
 
 The bandaid partition holds `nocturned.current` and the SPA bundle. The opt-overlay systemd unit bind-mounts `/var/lib/bandaid/nocturne` at `/opt/nocturne`, so what the daemon actually executes is whatever the bandaid has - independent of the rootfs.
 
-Full SWU updates only rewrite boot + rootfs, leaving the bandaid stale. `nocturne-floor-sync.service` runs on every boot, compares `/etc/nocturne/floor-version` (rendered at image build time) against `/var/lib/bandaid/nocturne/.floor-version`, and atomically re-seeds the bandaid from the rootfs floor when the rootfs is newer. This closes the gap so OS upgrades that ship newer factory defaults actually take effect.
+Full SWU updates only rewrite boot + rootfs, leaving the bandaid stale. `/var/lib/bandaid/nocturne/.floor-version` is the canonical installed version for both hot updates and floor sync. `nocturne-floor-sync.service` replaces the overlay only when the baked rootfs floor is newer, using SemVer ordering plus `+build` identifiers as a final Nocturne build tie-breaker. It stages and validates both the daemon and UI, then promotes them before atomically updating the stamp. A newer hot update therefore survives a reboot into an older rootfs. A failed promotion restores the previous daemon when possible and leaves the stamp unchanged so the next boot retries.
 
 Daemon-only and webapp-only updates bypass the rootfs entirely and rewrite the bandaid directly via the companion app's `applyUpdate { kind: daemon | builtin-webapp }`.
 
@@ -72,6 +72,12 @@ bitbake -e nocturne-prod-image | grep ^IMAGE_INSTALL
 ```
 
 The `IMAGE_INSTALL` output should include `swupdate`, `swupdate-client`, `swupdate-tools`, `nocturne-keys`, and `nocturne-state-dirs` via `packagegroup-nocturne-core`.
+
+Production is the default signing mode. It requires `NOCTURNE_SWUPDATE_PRIVATE_KEY`, validates that the key matches the baked public key, enables SWUpdate signed-image verification, and signs every full and delta wrapper. `NOCTURNE_SWUPDATE_SIGNING_MODE=development-unsigned` is the only unsigned mode and must be selected explicitly for local builds.
+
+Full wrappers stage zstd-compressed boot and rootfs artifacts under their stable CPIO names and stream-decompress them into the inactive partitions. The authenticated hashes cover the compressed archive members. Delta wrappers continue to carry only zchunk headers and fetch changed ranges from the canonical zchunk assets.
+
+The runtime libconfig is installed as `/etc/swupdate.cfg`. Files under `/etc/swupdate/conf.d` are shell fragments consumed by the BSP service wrapper and must not contain libconfig syntax. The packaged version-policy fragment supplies SWUpdate's valid `no-downgrading` and `no-reinstalling` arguments from the canonical installed marker. SWUpdate applies standard SemVer precedence and ignores `+build` metadata, so the server and daemon additionally enforce Nocturne's build-identifier ordering.
 
 ## Adding a recipe
 

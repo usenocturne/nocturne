@@ -13,6 +13,10 @@ export interface AmbientLightUpdateEvent {
    * Raw ambient light sensor value. Inventory field `value` emits as `value`.
    */
   value: number;
+  /**
+   * Stock-compatible ambient darkness value from 0 to 100. Inventory field `normalized_value` emits as `normalizedValue`.
+   */
+  normalizedValue: number;
 }
 
 /**
@@ -60,6 +64,14 @@ export interface AppReadyEvent {
    * Lifetime entitlement; current app uses camelCase. Inventory field `has_lifetime` emits as `hasLifetime`. Current source key: `hasLifetime`.
    */
   hasLifetime?: boolean;
+  /**
+   * Admin entitlement from the authenticated profile; current app uses camelCase. Inventory field `is_admin` emits as `isAdmin`. Current source key: `isAdmin`.
+   */
+  isAdmin?: boolean;
+  /**
+   * Whether entitlements were verified for the current authenticated user; current app uses camelCase. Inventory field `entitlements_verified` emits as `entitlementsVerified`. Current source key: `entitlementsVerified`.
+   */
+  entitlementsVerified?: boolean;
   /**
    * Spotify auth skipped; current app uses camelCase. Inventory field `spotify_skipped` emits as `spotifySkipped`. Current source key: `spotifySkipped`.
    */
@@ -530,7 +542,7 @@ export interface DeviceBrightnessAutoResponse {
    */
   auto: boolean;
   /**
-   * Backlight value, inverted Car Thing scale 1..255. Inventory field `brightness` emits as `brightness`.
+   * Backlight value, inverted Car Thing scale 0..160. Inventory field `brightness` emits as `brightness`.
    */
   brightness: number;
 }
@@ -584,7 +596,7 @@ export interface DeviceBrightnessGetResponse {
    */
   auto: boolean;
   /**
-   * Backlight value, inverted Car Thing scale 1..255. Inventory field `brightness` emits as `brightness`.
+   * Backlight value, inverted Car Thing scale 0..160. Inventory field `brightness` emits as `brightness`.
    */
   brightness: number;
 }
@@ -626,7 +638,7 @@ export interface DeviceBrightnessSetMethodResponseMessage {
  */
 export interface DeviceBrightnessSetRequest {
   /**
-   * Backlight value, inverted Car Thing scale 1..255. Inventory field `brightness` emits as `brightness`.
+   * Backlight value, inverted Car Thing scale 0..160. Inventory field `brightness` emits as `brightness`.
    */
   brightness: number;
 }
@@ -642,9 +654,183 @@ export interface DeviceBrightnessSetResponse {
    */
   auto: boolean;
   /**
-   * Backlight value, inverted Car Thing scale 1..255. Inventory field `brightness` emits as `brightness`.
+   * Backlight value, inverted Car Thing scale 0..160. Inventory field `brightness` emits as `brightness`.
    */
   brightness: number;
+}
+
+/**
+ * Request envelope for `device.display.get` in the `device` method union.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.get`.
+ */
+export interface DeviceDisplayGetMethodMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "device.display.get";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: DeviceDisplayGetRequest;
+}
+
+/**
+ * Response envelope for `device.display.get` in the `device` method response union.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.get`.
+ */
+export interface DeviceDisplayGetMethodResponseMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "device.display.get";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: DeviceDisplayGetResponse;
+}
+
+/**
+ * Request payload for `device.display.get`.
+ * No payload.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.get` request.
+ */
+export interface DeviceDisplayGetRequest {
+}
+
+/**
+ * Response payload for `device.display.get`.
+ * Display sleep state response.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.get` response.
+ */
+export interface DeviceDisplayGetResponse {
+  /**
+   * Whether automatic brightness is enabled. Inventory field `auto` emits as `auto`.
+   */
+  auto: boolean;
+  /**
+   * Saved backlight value, inverted Car Thing scale 0..160. Inventory field `brightness` emits as `brightness`.
+   */
+  brightness: number;
+  /**
+   * Whether the display backlight is sleeping. Inventory field `sleeping` emits as `sleeping`.
+   */
+  sleeping: boolean;
+}
+
+/**
+ * Request envelope for `device.display.sleep` in the `device` method union.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.sleep`.
+ */
+export interface DeviceDisplaySleepMethodMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "device.display.sleep";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: DeviceDisplaySleepRequest;
+}
+
+/**
+ * Response envelope for `device.display.sleep` in the `device` method response union.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.sleep`.
+ */
+export interface DeviceDisplaySleepMethodResponseMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "device.display.sleep";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: DeviceDisplaySleepResponse;
+}
+
+/**
+ * Request payload for `device.display.sleep`.
+ * No payload.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.sleep` request.
+ */
+export interface DeviceDisplaySleepRequest {
+}
+
+/**
+ * Response payload for `device.display.sleep`.
+ * Display sleep state response.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.sleep` response.
+ */
+export interface DeviceDisplaySleepResponse {
+  /**
+   * Whether automatic brightness is enabled. Inventory field `auto` emits as `auto`.
+   */
+  auto: boolean;
+  /**
+   * Saved backlight value, inverted Car Thing scale 0..160. Inventory field `brightness` emits as `brightness`.
+   */
+  brightness: number;
+  /**
+   * Whether the display backlight is sleeping. Inventory field `sleeping` emits as `sleeping`.
+   */
+  sleeping: boolean;
+}
+
+/**
+ * Request envelope for `device.display.wake` in the `device` method union.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.wake`.
+ */
+export interface DeviceDisplayWakeMethodMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "device.display.wake";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: DeviceDisplayWakeRequest;
+}
+
+/**
+ * Response envelope for `device.display.wake` in the `device` method response union.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.wake`.
+ */
+export interface DeviceDisplayWakeMethodResponseMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "device.display.wake";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: DeviceDisplayWakeResponse;
+}
+
+/**
+ * Request payload for `device.display.wake`.
+ * No payload.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.wake` request.
+ */
+export interface DeviceDisplayWakeRequest {
+}
+
+/**
+ * Response payload for `device.display.wake`.
+ * Display sleep state response.
+ * Inventory: `METHOD_INVENTORY` entry `device.display.wake` response.
+ */
+export interface DeviceDisplayWakeResponse {
+  /**
+   * Whether automatic brightness is enabled. Inventory field `auto` emits as `auto`.
+   */
+  auto: boolean;
+  /**
+   * Saved backlight value, inverted Car Thing scale 0..160. Inventory field `brightness` emits as `brightness`.
+   */
+  brightness: number;
+  /**
+   * Whether the display backlight is sleeping. Inventory field `sleeping` emits as `sleeping`.
+   */
+  sleeping: boolean;
 }
 
 /**
@@ -656,6 +842,7 @@ export type DeviceEvent =
   | SubscriptionUpdatedEventMessage
   | NetworkStatusEventMessage
   | NotificationShowEventMessage
+  | NotificationRemoveEventMessage
   | AmbientLightUpdateEventMessage
 ;
 
@@ -770,6 +957,14 @@ export interface DeviceInfoResponse {
    */
   fullVersion?: string;
   /**
+   * Exact version baked into the running rootfs image. Inventory field `image_version` emits as `imageVersion`. Current source key: `imageVersion`.
+   */
+  imageVersion?: string;
+  /**
+   * Version of the active daemon and webapp overlay, falling back to the rootfs image version. Inventory field `bandaid_version` emits as `bandaidVersion`. Current source key: `bandaidVersion`.
+   */
+  bandaidVersion?: string;
+  /**
    * Build date. Inventory field `build_date` emits as `buildDate`. Current source key: `buildDate`.
    */
   buildDate?: string;
@@ -855,6 +1050,9 @@ export type DeviceMethod =
   | DeviceBrightnessGetMethodMessage
   | DeviceBrightnessSetMethodMessage
   | DeviceBrightnessAutoMethodMessage
+  | DeviceDisplayGetMethodMessage
+  | DeviceDisplaySleepMethodMessage
+  | DeviceDisplayWakeMethodMessage
   | DeviceAbGetMethodMessage
   | DeviceAbResetMethodMessage
   | DeviceAbSetSlotMethodMessage
@@ -881,6 +1079,9 @@ export type DeviceMethodResponse =
   | DeviceBrightnessGetMethodResponseMessage
   | DeviceBrightnessSetMethodResponseMessage
   | DeviceBrightnessAutoMethodResponseMessage
+  | DeviceDisplayGetMethodResponseMessage
+  | DeviceDisplaySleepMethodResponseMessage
+  | DeviceDisplayWakeMethodResponseMessage
   | DeviceAbGetMethodResponseMessage
   | DeviceAbResetMethodResponseMessage
   | DeviceAbSetSlotMethodResponseMessage
@@ -1099,6 +1300,10 @@ export interface DeviceTimeGetResponse {
    * Phone-provided date string accepted by date -s. Inventory field `datetime` emits as `datetime`.
    */
   datetime: string;
+  /**
+   * Phone-provided local HH:mm:ss time string for UI display. Inventory field `time` emits as `time`.
+   */
+  time?: string;
 }
 
 /**
@@ -1200,7 +1405,7 @@ export interface DeviceVersionRequest {
 
 /**
  * Response payload for `device.version`.
- * Version JSON from /etc/nocturne/version.json. Current file uses camelCase; inventory canonicalizes to snake_case.
+ * Version metadata derived from /etc/superbird. Inventory canonicalizes camelCase wire fields to snake_case.
  * Inventory: `METHOD_INVENTORY` entry `device.version` response.
  */
 export interface DeviceVersionResponse {
@@ -1212,6 +1417,14 @@ export interface DeviceVersionResponse {
    * Short firmware version. Inventory field `short_version` emits as `shortVersion`. Current source key: `shortVersion`.
    */
   shortVersion?: string;
+  /**
+   * Exact version baked into the running rootfs image. Inventory field `image_version` emits as `imageVersion`. Current source key: `imageVersion`.
+   */
+  imageVersion?: string;
+  /**
+   * Version of the active daemon and webapp overlay, falling back to the rootfs image version. Inventory field `bandaid_version` emits as `bandaidVersion`. Current source key: `bandaidVersion`.
+   */
+  bandaidVersion?: string;
   /**
    * Build git hash. Inventory field `git_hash` emits as `gitHash`. Current source key: `gitHash`.
    */
@@ -1254,6 +1467,33 @@ export interface NetworkStatusEventMessage {
 }
 
 /**
+ * Event payload for `notification.remove`.
+ * Notification removal event.
+ * Inventory: `EVENT_INVENTORY` entry `notification.remove` payload.
+ */
+export interface NotificationRemoveEvent {
+  /**
+   * Notification id to remove. Inventory field `id` emits as `id`.
+   */
+  id: string;
+}
+
+/**
+ * Event envelope for `notification.remove` in the `device` event union.
+ * Inventory: `EVENT_INVENTORY` entry `notification.remove`.
+ */
+export interface NotificationRemoveEventMessage {
+  /**
+   * Discriminator from the inventory `event` tag.
+   */
+  event: "notification.remove";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: NotificationRemoveEvent;
+}
+
+/**
  * Event payload for `notification.show`.
  * Notification event.
  * Inventory: `EVENT_INVENTORY` entry `notification.show` payload.
@@ -1272,6 +1512,10 @@ export interface NotificationShowEvent {
    */
   body?: string;
   /**
+   * Secondary notification text. Inventory field `subtitle` emits as `subtitle`.
+   */
+  subtitle?: string;
+  /**
    * Notification category. Inventory field `category` emits as `category`.
    */
   category?: string;
@@ -1283,6 +1527,26 @@ export interface NotificationShowEvent {
    * Unix timestamp millis. Inventory field `timestamp` emits as `timestamp`.
    */
   timestamp?: number;
+  /**
+   * Originating iOS app bundle identifier. Inventory field `app_bundle_id` emits as `appBundleId`.
+   */
+  appBundleId?: string;
+  /**
+   * Originating app display name when available. Inventory field `app_name` emits as `appName`.
+   */
+  appName?: string;
+  /**
+   * Whether the source notification is silent. Inventory field `silent` emits as `silent`.
+   */
+  silent?: boolean;
+  /**
+   * Whether the source marked the notification important. Inventory field `important` emits as `important`.
+   */
+  important?: boolean;
+  /**
+   * Whether the notification predates the current ANCS session. Inventory field `pre_existing` emits as `preExisting`.
+   */
+  preExisting?: boolean;
 }
 
 /**
@@ -1422,6 +1686,14 @@ export interface SubscriptionUpdatedEvent {
    * Lifetime entitlement; current app uses camelCase. Inventory field `has_lifetime` emits as `hasLifetime`. Current source key: `hasLifetime`.
    */
   hasLifetime?: boolean;
+  /**
+   * Admin entitlement from the authenticated profile; current app uses camelCase. Inventory field `is_admin` emits as `isAdmin`. Current source key: `isAdmin`.
+   */
+  isAdmin?: boolean;
+  /**
+   * Whether entitlements were verified for the current authenticated user; current app uses camelCase. Inventory field `entitlements_verified` emits as `entitlementsVerified`. Current source key: `entitlementsVerified`.
+   */
+  entitlementsVerified?: boolean;
 }
 
 /**

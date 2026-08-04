@@ -24,6 +24,7 @@ pub mod remote;
 pub use linux::{LinuxI2c, LinuxI2cConfig};
 
 pub(crate) const RETRY_LIMIT: u8 = 3;
+#[cfg(target_os = "linux")]
 pub(crate) const RETRY_DELAY: Duration = Duration::from_micros(860);
 pub(crate) const CERT_SETTLE: Duration = Duration::from_millis(10);
 

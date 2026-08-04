@@ -1,25 +1,23 @@
 SUMMARY = "Nocturne daemon"
 DESCRIPTION = "Nocturne Rust daemon."
-HOMEPAGE = "https://github.com/usenocturne/nocturned"
 LICENSE = "GPL-3.0-only"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/GPL-3.0-only;md5=c79ff39f19dfec6d293b95dea7b07891"
 
+require recipes-core/nocturne-monorepo.inc
+
 inherit cargo systemd pkgconfig
 
-SRC_URI = "gitsm://github.com/usenocturne/nocturned.git;protocol=https;branch=main;destsuffix=${BP} \
-           file://nocturned.service \
-           file://nocturned.conf \
-           file://nocturned-rollback \
-           file://nocturned-rollback.service \
-           file://nocturned-dev.conf"
-# TODO: pin this to the real v2.1.0 SHA once nocturned's OTA branch is merged and tagged.
-# This Yocto PV is intentionally forward-looking; nocturned Cargo.toml remains 2.0.4 until that tag exists.
-SRCREV = "AUTOREV"
+SRC_URI += "file://nocturned.service \
+            file://nocturned.conf \
+            file://nocturned-rollback \
+            file://nocturned-rollback.service \
+            file://nocturned-dev.conf"
 
 do_compile[network] = "1"
 CARGO_DISABLE_BITBAKE_VENDORING = "1"
 CARGO_BUILD_FLAGS:remove = "--frozen"
 CARGO_BUILD_FLAGS:append = " --locked"
+CARGO_BUILD_FLAGS:append = " --package nocturned"
 CARGO_BUILD_FLAGS:append = " --features device"
 
 export LIBCLANG_PATH = "${STAGING_LIBDIR_NATIVE}"
@@ -30,7 +28,7 @@ DEPENDS = "dbus libopus swupdate clang-native"
 SYSTEMD_SERVICE:${PN} = "nocturned.service"
 SYSTEMD_AUTO_ENABLE = "enable"
 
-RDEPENDS:${PN} += "opt-overlay bluez5 alsa-utils nocturne-models nocturne-mfi"
+RDEPENDS:${PN} += "opt-overlay bluez5 alsa-utils nocturne-models"
 
 DAEMON_FLOOR_DIR = "${nonarch_libdir}/nocturne/daemon"
 

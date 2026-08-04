@@ -14,7 +14,6 @@ RDEPENDS:${PN} = " \
     nocturne-ui \
     nocturne-models \
     nocturne-fonts \
-    nocturne-mfi \
     nocturne-ab \
     nocturne-floor-sync \
     nocturne-keys \

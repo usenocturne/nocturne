@@ -92,6 +92,10 @@ enum class GatewayToNocturneSystemMsg {
   OTA_CHUNK,
   @SerialName("ota_abandon")
   OTA_ABANDON,
+  @SerialName("ota_download_progress")
+  OTA_DOWNLOAD_PROGRESS,
+  @SerialName("ota_package_ready")
+  OTA_PACKAGE_READY,
   @SerialName("ota_asset_range_reply")
   OTA_ASSET_RANGE_REPLY,
   @SerialName("ota_asset_range_rejected")

@@ -1,0 +1,325 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Nocturne Team <hello@usenocturne.com>
+Date: Wed, 24 Jun 2026 00:00:00 +0000
+Subject: [PATCH] delta_downloader: add Nocturne IPC range source
+
+Upstream-Status: Inappropriate [Nocturne-specific local IPC bridge]
+
+Signed-off-by: Nocturne Team <hello@usenocturne.com>
+---
+ handlers/delta_downloader.c | 259 +++++++++++++++++++++++++++++++++++-
+ 1 file changed, 258 insertions(+), 1 deletion(-)
+
+diff --git a/handlers/delta_downloader.c b/handlers/delta_downloader.c
+index 248ebbb..7944639 100644
+--- a/handlers/delta_downloader.c
++++ b/handlers/delta_downloader.c
+@@ -19,13 +19,17 @@
+ 
+ #include <stdbool.h>
+ #include <stdio.h>
++#include <stdint.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
++#include <sys/socket.h>
++#include <sys/un.h>
+ #include <unistd.h>
+ #include <fcntl.h>
+ #include <stdlib.h>
+ #include <errno.h>
+ #include <string.h>
++#include <arpa/inet.h>
+ #include <util.h>
+ #include <pctl.h>
+ #include <zlib.h>
+@@ -48,6 +52,13 @@ typedef struct {
+ 
+ extern channel_op_res_t channel_curl_init(void);
+ 
++#define NOCTURNE_DELTA_URL_SCHEME "nocturne:"
++#define NOCTURNE_DELTA_SOCKET "/run/nocturne/ota-range.sock"
++#define NOCTURNE_FRAME_HEADER 'H'
++#define NOCTURNE_FRAME_DATA 'D'
++#define NOCTURNE_FRAME_COMPLETE 'C'
++#define NOCTURNE_FRAME_ERROR 'E'
++
+ static channel_data_t channel_data_defaults = {
+ 					.debug = false,
+ 					.source=SOURCE_CHUNKS_DOWNLOADER,
+@@ -132,6 +143,252 @@ static size_t delta_callback_headers(char *buffer, size_t size, size_t nitems, v
+ 	return nitems * size;
+ }
+ 
++static bool is_nocturne_delta_url(const char *url)
++{
++	return url && !strncmp(url, NOCTURNE_DELTA_URL_SCHEME,
++			       strlen(NOCTURNE_DELTA_URL_SCHEME));
++}
++
++static const char *nocturne_asset_from_url(const char *url)
++{
++	const char *asset = url + strlen(NOCTURNE_DELTA_URL_SCHEME);
++
++	while (*asset == '/')
++		asset++;
++
++	return *asset ? asset : NULL;
++}
++
++static int write_all(int fd, const void *buf, size_t len)
++{
++	const char *ptr = buf;
++
++	while (len > 0) {
++		ssize_t ret = write(fd, ptr, len);
++		if (ret < 0) {
++			if (errno == EINTR)
++				continue;
++			return -1;
++		}
++		if (ret == 0)
++			return -1;
++		ptr += ret;
++		len -= ret;
++	}
++
++	return 0;
++}
++
++static int read_all(int fd, void *buf, size_t len)
++{
++	char *ptr = buf;
++
++	while (len > 0) {
++		ssize_t ret = read(fd, ptr, len);
++		if (ret < 0) {
++			if (errno == EINTR)
++				continue;
++			return -1;
++		}
++		if (ret == 0)
++			return -1;
++		ptr += ret;
++		len -= ret;
++	}
++
++	return 0;
++}
++
++static int connect_nocturne_delta_socket(void)
++{
++	int fd;
++	struct sockaddr_un addr = {0};
++
++	fd = socket(AF_UNIX, SOCK_STREAM, 0);
++	if (fd < 0)
++		return -1;
++
++	addr.sun_family = AF_UNIX;
++	if (strlen(NOCTURNE_DELTA_SOCKET) >= sizeof(addr.sun_path)) {
++		close(fd);
++		errno = ENAMETOOLONG;
++		return -1;
++	}
++	strncpy(addr.sun_path, NOCTURNE_DELTA_SOCKET, sizeof(addr.sun_path) - 1);
++
++	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
++		close(fd);
++		return -1;
++	}
++
++	return fd;
++}
++
++static int send_nocturne_request(int fd, const char *asset, const char *range)
++{
++	if (write_all(fd, "GET ", 4) < 0 ||
++	    write_all(fd, asset, strlen(asset)) < 0 ||
++	    write_all(fd, " ", 1) < 0 ||
++	    write_all(fd, range, strlen(range)) < 0 ||
++	    write_all(fd, "\n", 1) < 0)
++		return -1;
++
++	return 0;
++}
++
++static int send_answer(int writefd, range_answer_t *answer)
++{
++	return copy_write(&writefd, answer, sizeof(*answer));
++}
++
++static channel_op_res_t send_nocturne_header(int writefd, range_answer_t *answer,
++					     uint32_t id, size_t len, int fd)
++{
++	if (len >= RANGE_PAYLOAD_SIZE) {
++		ERROR("Nocturne delta header is too large: %zu", len);
++		return CHANNEL_EIO;
++	}
++	if (read_all(fd, answer->data, len) < 0)
++		return CHANNEL_EIO;
++
++	answer->id = id;
++	answer->type = RANGE_HEADERS;
++	answer->len = len;
++	answer->crc = 0;
++	answer->data[answer->len] = '\0';
++
++	if (send_answer(writefd, answer) < 0)
++		return CHANNEL_EIO;
++
++	return CHANNEL_OK;
++}
++
++static channel_op_res_t send_nocturne_data(int writefd, range_answer_t *answer,
++					   uint32_t id, size_t len, int fd)
++{
++	while (len > 0) {
++		size_t chunk_len = min(len, RANGE_PAYLOAD_SIZE);
++		if (read_all(fd, answer->data, chunk_len) < 0)
++			return CHANNEL_EIO;
++
++		answer->id = id;
++		answer->type = RANGE_DATA;
++		answer->len = chunk_len;
++		answer->crc = crc32(0, (unsigned char *)answer->data, answer->len);
++
++		if (send_answer(writefd, answer) < 0)
++			return CHANNEL_EIO;
++
++		len -= chunk_len;
++	}
++
++	return CHANNEL_OK;
++}
++
++static channel_op_res_t drain_nocturne_error(size_t len, int fd)
++{
++	char buf[256];
++	size_t total = 0;
++
++	while (len > 0) {
++		size_t chunk_len = min(len, sizeof(buf) - 1);
++		if (read_all(fd, buf, chunk_len) < 0)
++			return CHANNEL_EIO;
++		buf[chunk_len] = '\0';
++		if (total == 0)
++			ERROR("Nocturne delta source error: %s", buf);
++		total += chunk_len;
++		len -= chunk_len;
++	}
++
++	if (total == 0)
++		ERROR("Nocturne delta source reported an empty error");
++
++	return CHANNEL_EIO;
++}
++
++static channel_op_res_t get_nocturne_delta_range(range_request_t *req,
++						 range_answer_t *answer,
++						 int writefd)
++{
++	const char *asset = nocturne_asset_from_url(req->data);
++	const char *range = &req->data[req->urllen + 1];
++	int fd;
++
++	if (!asset) {
++		ERROR("Nocturne delta URL is missing an asset name: %s", req->data);
++		return CHANNEL_EIO;
++	}
++	if (!range || !*range) {
++		ERROR("Nocturne delta request is missing a range list");
++		return CHANNEL_EIO;
++	}
++
++	fd = connect_nocturne_delta_socket();
++	if (fd < 0) {
++		ERROR("Cannot connect to Nocturne delta source socket %s: %s",
++		      NOCTURNE_DELTA_SOCKET, strerror(errno));
++		return CHANNEL_EIO;
++	}
++
++	if (send_nocturne_request(fd, asset, range) < 0) {
++		ERROR("Cannot send Nocturne delta source request: %s", strerror(errno));
++		close(fd);
++		return CHANNEL_EIO;
++	}
++
++	for (;;) {
++		unsigned char kind;
++		uint32_t payload_len_be;
++		size_t payload_len;
++		channel_op_res_t result;
++
++		if (read_all(fd, &kind, sizeof(kind)) < 0 ||
++		    read_all(fd, &payload_len_be, sizeof(payload_len_be)) < 0) {
++			ERROR("Nocturne delta source disconnected mid-frame");
++			close(fd);
++			return CHANNEL_EIO;
++		}
++
++		payload_len = ntohl(payload_len_be);
++
++		switch (kind) {
++		case NOCTURNE_FRAME_HEADER:
++			result = send_nocturne_header(writefd, answer, req->id,
++						      payload_len, fd);
++			if (result != CHANNEL_OK) {
++				close(fd);
++				return result;
++			}
++			break;
++		case NOCTURNE_FRAME_DATA:
++			result = send_nocturne_data(writefd, answer, req->id,
++						    payload_len, fd);
++			if (result != CHANNEL_OK) {
++				close(fd);
++				return result;
++			}
++			break;
++		case NOCTURNE_FRAME_COMPLETE:
++			if (payload_len) {
++				ERROR("Nocturne delta completion frame had payload");
++				close(fd);
++				return CHANNEL_EIO;
++			}
++			close(fd);
++			return CHANNEL_OK;
++		case NOCTURNE_FRAME_ERROR:
++			result = drain_nocturne_error(payload_len, fd);
++			close(fd);
++			return result;
++		default:
++			ERROR("Unknown Nocturne delta source frame type: %u", kind);
++			close(fd);
++			return CHANNEL_EIO;
++		}
++	}
++}
++
+ /*
+  * Process that is spawned by the handler to download the missing chunks.
+  * Downloading should be done in a separate process to not break
+@@ -209,8 +466,11 @@ int start_delta_downloader(const char __attribute__ ((__unused__)) *fname,
+ 
+ 		swupdate_cfg_destroy(&handle);
+ 
+-		if (channel->open(channel, &channel_data) == CHANNEL_OK) {
++		if (is_nocturne_delta_url(channel_data.url)) {
++			transfer = get_nocturne_delta_range(req, answer, sw_sockfd);
++		} else if (channel->open(channel, &channel_data) == CHANNEL_OK) {
+ 			transfer = channel->get_file(channel, (void *)&channel_data);
++			(void)channel->close(channel);
+ 		} else {
+ 			ERROR("Cannot open channel for communication");
+ 			transfer = CHANNEL_EINIT;
+@@ -222,8 +482,6 @@ int start_delta_downloader(const char __attribute__ ((__unused__)) *fname,
+ 		if (write(sw_sockfd, answer, sizeof(*answer)) != sizeof(*answer)) {
+ 			ERROR("Answer cannot be sent back, maybe deadlock !!");
+ 		}
+-
+-		(void)channel->close(channel);
+ 	}
+ 
+ 	exit (EXIT_SUCCESS);
+-- 
+2.50.0

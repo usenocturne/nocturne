@@ -32,19 +32,16 @@
 
 ### Requirements
 
-- A booted Linux/macOS host (Windows under WSL works for flashing but not for builds)
-- [`flashthing-cli`](https://crates.io/crates/flashthing-cli) installed via `cargo install flashthing-cli`
-- Your user in the `dialout` (Debian/Ubuntu) or `uucp` (Arch) group for `/dev/ttyUSB*`
+- Terbium driver is required on Windows: `irm https://driver.terbium.app/get | iex` (Powershell)
 
 ### Flashing
 
-1. Download a flashthing zip from [Releases](https://github.com/usenocturne/nocturne/releases) (the file ends in `-superbird-flashthing.zip`)
-2. Put the Car Thing into Amlogic mask-rom USB mode: hold the wheel-click button while plugging in USB (the host should see USB id `1b8e:c003`)
-3. Run `flashthing-cli <path-to-zip>`
+The recommended way to flash is to use the Flash with Terbium button on our [install page](https://usenocturne.com/install).
 
-Flashing takes about 30-60 seconds for the first install. Subsequent updates use OTA over USB and don't need mask-rom mode.
+Flashing will likely take about 5-10 minutes, depending on your USB ports and some other factors. Please try multiple ports if one isn't working (Rear IO USB 3/2, BIOS flash port if on AMD, etc).
 
-If you're coming from the old Buildroot Nocturne, your Car Thing is already in good shape - the same `1b8e:c003` mask-rom mode works, just with a different host tool.
+> [!NOTE]
+> If Terbium does not work correctly for you, you may try [flashthing](https://github.com/JoeyEamigh/flashthing) and an installer zip from the [Releases](https://github.com/usenocturne/nocturne/releases).
 
 ### Connecting to Nocturne
 
@@ -60,11 +57,12 @@ Nocturne supports Bluetooth without tethering. An internet connection is still r
 </details>
 
 <details>
-<summary><img src="https://usenocturne.com/favicon.ico" height="14" style="vertical-align: middle;"> Standalone (WiFi, Raspberry Pi)</summary>
+<summary><img src="https://usenocturne.com/favicon.ico" height="14" style="vertical-align: middle;"> Standalone (WiFi, Raspberry Pi, macOS 15.0+)</summary>
 
-Nocturne Connector turns a Raspberry Pi into a Wi-Fi bridge for your Car Thing, so you can use Nocturne without being connected to your phone. The Connector source lives in this repo under [`packages/connector/`](packages/connector).
+Nocturne Connector turns a Raspberry Pi into a Wi-Fi bridge for your Car Thing, so you can use Nocturne without being connected to your phone. The Connector source lives under [nocturne-connector](https://github.com/usenocturne/nocturne-connector). See [Connector → Building](https://github.com/usenocturne/nocturne-connector#building) for build instructions, or grab a prebuilt image from [Releases](https://github.com/usenocturne/nocturne-connector/releases/latest).
 
-See [Building → Connector](#connector) for build instructions, or grab a prebuilt image from [Releases](https://github.com/usenocturne/nocturne/releases).
+Nocturne Companion for Mac functions in the same way as the mobile app, but does not require Nocturne Lifetime or Nocturne+. Nocturne Companion for Mac can be downloaded [here.](https://github.com/usenocturne/nocturne-connector/releases/latest)
+
 </details>
 
 ### Uninstall
@@ -81,7 +79,7 @@ All donations are split between the three members of the Nocturne team and go to
 
 ## Building
 
-Nocturne is a monorepo. Nocturne OS, nocturned (the on-device daemon), nocturne-ui (web UI written with Vite + React), and Nocturne Connector (the standalone Wi-Fi connector) all live in the same tree and build through the same `Justfile` at the repo root.
+Nocturne is a monorepo. Nocturne OS, nocturned (the on-device daemon), and nocturne-ui (web UI written with Vite + React) all live in the same tree and build through the same `Justfile` at the repo root.
 
 ### Required host tools
 
@@ -89,7 +87,7 @@ Nocturne is a monorepo. Nocturne OS, nocturned (the on-device daemon), nocturne-
 |---|---|
 | [`just`](https://github.com/casey/just) | drives the recipes in the top-level and per-component `Justfile`s |
 | [`cargo`](https://rustup.rs/) + [`cross`](https://github.com/cross-rs/cross) | builds the daemon, cross-compiled to aarch64 for the Car Thing |
-| [`bun`](https://bun.sh/) | builds the device UI and the connector setup UI |
+| [`bun`](https://bun.sh/) | builds the device UI |
 | `docker` or `podman` | runs the kas container for the image build |
 | [`kas`](https://kas.readthedocs.io/) | invoked through `kas-container` |
 | [`flashthing-cli`](https://crates.io/crates/flashthing-cli) | host-side burn-mode flasher |
@@ -99,6 +97,11 @@ Nocturne is a monorepo. Nocturne OS, nocturned (the on-device daemon), nocturne-
 
 ```bash
 just image-build              # default: nocturne-{prod,dev}-image + 4 OTA wrappers
+VERSION_CORE=4.1.0
+BUILD_ID=$(date -u +%Y%m%d%H%M%S)
+NOCTURNE_BUILD_ID="$BUILD_ID" \
+  just release-image "$VERSION_CORE" /secure/nocturne.pem \
+  "${VERSION_CORE}+${BUILD_ID}" prod nocturne-local # build and publish full/zchunk OTA
 ```
 
 The first cold build downloads upstream layers, crates, and tarballs (multiple gigabytes). Subsequent builds reuse `image/build/sstate-cache/` and `image/ccache/`. `yocto-superbird` exposes a public sstate mirror at `http://yocto.24hgr.love/sstate/` that primes most of the build for you.
@@ -118,7 +121,7 @@ Outputs land in `image/build/tmp/deploy/images/superbird/`:
 ```bash
 just daemon-host              # cargo build for the dev host (no swupdate)
 just daemon-build             # cross build for aarch64 + --features device
-just daemon-copy              # daemon-build + scp to a running device at 172.16.42.2
+just daemon-copy              # build daemon via Yocto + install to a running device (default: nocturne.local)
 just test                     # cargo test --workspace
 just lint                     # cargo clippy --workspace -- -D warnings + cargo fmt --check
 ```
@@ -133,13 +136,6 @@ just ui-build                 # static bundle (image build picks this up via EXT
 just ui-lint
 ```
 
-### Connector
-
-```bash
-just connector-dev            # vite dev server for the setup UI
-just connector-build          # builds the Pi OS image (see packages/connector/README.md)
-```
-
 ### Codegen
 
 The canonical wire schema lives in [`crates/shared/src/`](crates/shared/src). After any wire-protocol change:
@@ -149,7 +145,7 @@ just codegen                  # regenerate TS / Swift / Kotlin bindings under cr
 just codegen-check            # CI-style check that bindings are up to date
 ```
 
-The generated bindings are consumed by `packages/ui/`, `packages/connector/`, and the (external) mobile app.
+The generated bindings are consumed by `packages/ui/` and the external mobile app and Connector.
 
 ### Talking to a booted device
 
@@ -167,15 +163,16 @@ The UART agent keeps FT232 RTS deasserted (it's wired to the SoC reset pin), so 
 
 ### OTA
 
-OTAs are A/B with libswupdate. A successful install writes the inactive slot, flips `slot_active` in u-boot env, and reboots. If the new slot fails to come up three times the bootloader rolls back.
+OTAs are A/B with libswupdate. A successful install writes the inactive slot, flips `slot_active` in u-boot env, and waits for the user to restart from the settings UI. If the new slot fails to come up three times the bootloader rolls back.
 
-Three install kinds (driven by the companion app):
+Four install kinds (driven by the companion app):
 
 - `image` - writes a full `.swu` to the inactive root partition
 - `daemon` - aarch64 `nocturned` binary rotated atomically on the bandaid bind-mount, service restart
 - `builtin-webapp` - SPA bundle swapped on the bandaid bind-mount, service restart
+- `bandaid` - combined daemon and SPA bundle update
 
-Delta OTAs (zchunk) ship only the changed chunks via HTTP range requests over the USB link.
+Delta OTAs (zchunk) ship only the changed chunks via HTTP range requests over the USB link. See [`image/README.md`](image/README.md) for the signing, publishing, and release-manifest details.
 
 ## Layout
 
@@ -188,7 +185,6 @@ Delta OTAs (zchunk) ship only the changed chunks via HTTP range requests over th
 | [`crates/swupdate-sys/`](crates/swupdate-sys) | Vendored libswupdate IPC client sources, built into a static lib by `cc::Build`. |
 | [`tools/codegen/`](tools/codegen) | Wire-schema codegen for TS/Swift/Kotlin. Reads `crates/shared/src/`, writes `crates/shared/generated/`. |
 | [`packages/ui/`](packages/ui) | React 19 + Vite kiosk app served by Chromium on the Car Thing (480x800). |
-| [`packages/connector/`](packages/connector) | Raspberry Pi OS image that bridges Wi-Fi to the Car Thing. Bun + Elysia server + Vite + React setup UI. |
 
 The mobile companion app, the website, the OTA server, and the backend API for AI and payments are private and live in their own repositories. Anything that ships inside the firmware lives here; anything that's a remote service that Nocturne talks to does not.
 
@@ -199,7 +195,6 @@ This software was made possible only through the following individuals and open 
 - [Brandon Saldan](https://github.com/brandonsaldan)
 - [Neel Patel](https://github.com/68p)
 - [Dominic Frye](https://github.com/itsnebulalol)
-- [Joey Eamigh](https://github.com/JoeyEamigh) - yocto-superbird / bridgething developer
 
 <hr>
 

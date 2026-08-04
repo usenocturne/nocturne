@@ -1,0 +1,12 @@
+# env / boot_a / root_a / boot_b / root_b / bandaid; data is carved at first boot.
+# Root mkfs options are supplied by Nocturne so prod ext4 WIC images match
+# EXTRA_IMAGECMD:ext4 and do not waste fixed-slot space on a journal.
+
+part env     --source rawcopy --sourceparams="file=superbird-uenv.vfat" --part-name env     --label env     --fstype=vfat --align 4096 --fixed-size ${SUPERBIRD_ENV_PART_SIZE}M
+part boot_a  --source bootimg-partition                                 --part-name boot_a  --label boot_a  --fstype=vfat --align 4096 --fixed-size ${SUPERBIRD_BOOT_PART_SIZE}M
+part root_a  --source rootfs                                            --part-name root_a                  --fstype=${SUPERBIRD_WKS_ROOTFS_FSTYPE} --mkfs-extraopts="${SUPERBIRD_WKS_ROOTFS_MKFS_EXTRAOPTS}" --align 4096 --fixed-size ${SUPERBIRD_ROOT_PART_SIZE}M
+part boot_b  --source bootimg-partition                                 --part-name boot_b  --label boot_b  --fstype=vfat --align 4096 --fixed-size ${SUPERBIRD_BOOT_PART_SIZE}M
+part root_b  --source rootfs                                            --part-name root_b                  --fstype=${SUPERBIRD_WKS_ROOTFS_FSTYPE} --mkfs-extraopts="${SUPERBIRD_WKS_ROOTFS_MKFS_EXTRAOPTS}" --align 4096 --fixed-size ${SUPERBIRD_ROOT_PART_SIZE}M
+part bandaid                                                            --part-name bandaid --label bandaid --fstype=ext4 --align 4096 --fixed-size ${SUPERBIRD_BANDAID_PART_SIZE}M
+
+bootloader --ptable gpt

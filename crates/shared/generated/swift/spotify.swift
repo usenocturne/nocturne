@@ -67,15 +67,19 @@ public struct SpotifyArtistGetResponse: Codable, Sendable {
 
 public struct SpotifyArtistTopTracksRequest: Codable, Sendable {
   public let contentId: String
+  public let mockingbird: Bool?
 
   public init(
-    contentId: String
+    contentId: String,
+    mockingbird: Bool?
   ) {
     self.contentId = contentId
+    self.mockingbird = mockingbird
   }
 
   private enum CodingKeys: String, CodingKey {
     case contentId = "content_id"
+    case mockingbird = "mockingbird"
   }
 }
 
@@ -757,21 +761,25 @@ public struct SpotifyPlaylistTracksRequest: Codable, Sendable {
   public let contentId: String
   public let limit: UInt32?
   public let offset: UInt32?
+  public let mockingbird: Bool?
 
   public init(
     contentId: String,
     limit: UInt32?,
-    offset: UInt32?
+    offset: UInt32?,
+    mockingbird: Bool?
   ) {
     self.contentId = contentId
     self.limit = limit
     self.offset = offset
+    self.mockingbird = mockingbird
   }
 
   private enum CodingKeys: String, CodingKey {
     case contentId = "content_id"
     case limit = "limit"
     case offset = "offset"
+    case mockingbird = "mockingbird"
   }
 }
 

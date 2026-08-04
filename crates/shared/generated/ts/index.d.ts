@@ -5,6 +5,7 @@ export * from "./bluetooth";
 export * from "./device";
 export * from "./audio";
 export * from "./media_control";
+export * from "./phone";
 export * from "./spotify";
 export * from "./voice";
 export * from "./bt_only";

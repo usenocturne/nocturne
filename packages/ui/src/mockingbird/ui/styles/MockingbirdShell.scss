@@ -1,3 +1,15 @@
+@use "./variables.module" as vars;
+
+html.mockingbird-night-mode-active {
+  background: vars.$gray-15;
+
+  body {
+    background-color: transparent;
+    opacity: var(--mockingbird-night-opacity, 1);
+    @include vars.transition-opacity(1000ms);
+  }
+}
+
 .mockingbird-root {
   font-family:
     "Circular Sp UI v3 T",

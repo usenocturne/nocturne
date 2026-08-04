@@ -1,99 +1,296 @@
 #!/usr/bin/env bash
-# Stage release artifacts and publish them into the OTA image tree.
-# Usage: NOCTURNE_RELEASE_VERSION=4.1.0 nocturne-publish prod
+# Stage signed full and delta image releases into the OTA server image tree.
+# Usage: NOCTURNE_RELEASE_VERSION=4.1.0+20260725192800 NOCTURNE_DELTA_FROM_VERSIONS=4.1.0+20260725192800 nocturne-publish prod
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DEPLOY_DIR="${NOCTURNE_DEPLOY_DIR:-$REPO_ROOT/build/tmp/deploy/images/superbird}"
-PUBLISH_ROOT="${NOCTURNE_OTA_IMAGES_DIR:-$HOME/Code/nocturne/nocturne-ota/images}"
+PUBLISH_ROOT="${NOCTURNE_OTA_IMAGES_DIR:-$REPO_ROOT/../nocturne-ota/images}"
+PUBLIC_KEY="$REPO_ROOT/meta-nocturne/recipes-core/nocturne-keys/files/nocturne.pem"
 
 VARIANT="${1:-prod}"
 case "$VARIANT" in
-  dev) CHANNEL="dev" ;;
-  prod) CHANNEL="stable" ;;
-  *) echo "usage: $(basename "$0") [dev|prod]" >&2; exit 2 ;;
+  dev)
+    CHANNEL="dev"
+    ROOT_ZCK_NAME="nocturne-dev-image-superbird.squashfs-lz4.zck"
+    ;;
+  prod)
+    CHANNEL="stable"
+    ROOT_ZCK_NAME="nocturne-prod-image-superbird.ext4.zck"
+    ;;
+  *)
+    echo "usage: $(basename "$0") [dev|prod]" >&2
+    exit 2
+    ;;
 esac
 
 VERSION="${NOCTURNE_RELEASE_VERSION:-}"
 if [[ -z "$VERSION" ]]; then
-  echo "[publish] NOCTURNE_RELEASE_VERSION is required, e.g. NOCTURNE_RELEASE_VERSION=4.1.0 $0 $VARIANT" >&2
+  echo "[publish] NOCTURNE_RELEASE_VERSION is required" >&2
   exit 2
 fi
+case "$VARIANT" in
+  prod) VERSION_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]{14}$' ;;
+  dev) VERSION_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{14}$' ;;
+esac
+if [[ ! "$VERSION" =~ $VERSION_PATTERN ]]; then
+  echo "[publish] $VARIANT image version must include a 14-digit UTC build ID: $VERSION" >&2
+  exit 2
+fi
+"$REPO_ROOT/scripts/nocturne-validate-build-id" "${VERSION##*+}"
 
-for cmd in python3 rsync sha256sum stat; do
-  command -v "$cmd" >/dev/null 2>&1 || { echo "[publish] missing required command: $cmd" >&2; exit 2; }
+DELTA_FROM_VERSIONS="${NOCTURNE_DELTA_FROM_VERSIONS:-}"
+if [[ -z "$DELTA_FROM_VERSIONS" ]]; then
+  echo "[publish] NOCTURNE_DELTA_FROM_VERSIONS is required for a delta release" >&2
+  echo "[publish] use a comma-separated compatibility list or '*' after validating universal compatibility" >&2
+  exit 2
+fi
+if [[ "$DELTA_FROM_VERSIONS" != "*" ]]; then
+  IFS=',' read -r -a delta_sources <<< "$DELTA_FROM_VERSIONS"
+  for delta_source in "${delta_sources[@]}"; do
+    if [[ ! "$delta_source" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9]{14})?$ ]]; then
+      echo "[publish] invalid delta source version: $delta_source" >&2
+      exit 2
+    fi
+  done
+fi
+
+SIGNING_MODE="${NOCTURNE_SWUPDATE_SIGNING_MODE:-production}"
+case "$SIGNING_MODE" in
+  production | development-unsigned) ;;
+  *)
+    echo "[publish] invalid NOCTURNE_SWUPDATE_SIGNING_MODE: $SIGNING_MODE" >&2
+    exit 2
+    ;;
+esac
+
+for cmd in bsdtar openssl python3 rsync; do
+  command -v "$cmd" > /dev/null 2>&1 || {
+    echo "[publish] missing required command: $cmd" >&2
+    exit 2
+  }
 done
 
-[[ -d "$DEPLOY_DIR" ]] || { echo "[publish] deploy directory missing: $DEPLOY_DIR" >&2; exit 1; }
+[[ -d "$DEPLOY_DIR" ]] || {
+  echo "[publish] deploy directory missing: $DEPLOY_DIR" >&2
+  exit 1
+}
+
+FULL_SWU="$DEPLOY_DIR/nocturne-update-${VARIANT}-superbird.swu"
+DELTA_SWU="$DEPLOY_DIR/nocturne-update-${VARIANT}-delta-superbird.swu"
+ROOT_ZCK="$DEPLOY_DIR/$ROOT_ZCK_NAME"
+BOOT_ZCK="$DEPLOY_DIR/boot.vfat.zck"
+for artifact in "$FULL_SWU" "$DELTA_SWU" "$ROOT_ZCK" "$BOOT_ZCK"; do
+  [[ -f "$artifact" ]] || {
+    echo "[publish] required artifact missing: $artifact" >&2
+    exit 1
+  }
+done
+
+VERIFY_DIR=$(mktemp -d)
+trap 'rm -rf "$VERIFY_DIR"' EXIT
+
+verify_swu() {
+  local swu="$1"
+  local label="$2"
+  local description="$VERIFY_DIR/${label}.sw-description"
+  local signature="$VERIFY_DIR/${label}.sw-description.sig"
+  local declared_version
+  local first_member
+  local second_member
+
+  bsdtar -xOf "$swu" sw-description > "$description"
+  declared_version=$(sed -n 's/^[[:space:]]*version = "\([^"]*\)";.*/\1/p' "$description")
+  if [[ -z "$declared_version" ]] || [[ "$declared_version" == *$'\n'* ]]; then
+    echo "[publish] $swu does not contain exactly one sw-description version" >&2
+    exit 1
+  fi
+  if [[ "$declared_version" != "$VERSION" ]]; then
+    echo "[publish] release version $VERSION does not match $swu version $declared_version" >&2
+    exit 1
+  fi
+
+  if [[ "$SIGNING_MODE" == "production" ]]; then
+    first_member=$(bsdtar -tf "$swu" | sed -n '1p')
+    second_member=$(bsdtar -tf "$swu" | sed -n '2p')
+    if [[ "$first_member" != "sw-description" || "$second_member" != "sw-description.sig" ]]; then
+      echo "[publish] signed SWU must begin with sw-description followed by sw-description.sig: $swu" >&2
+      exit 1
+    fi
+    bsdtar -xOf "$swu" sw-description.sig > "$signature"
+    if ! openssl dgst -sha256 -verify "$PUBLIC_KEY" -signature "$signature" "$description" > /dev/null; then
+      echo "[publish] SWU signature verification failed: $swu" >&2
+      exit 1
+    fi
+  else
+    echo "[publish] WARNING: accepting explicitly unsigned development artifact $swu" >&2
+  fi
+
+  python3 - "$swu" "$description" << 'PY'
+import hashlib
+import pathlib
+import re
+import subprocess
+import sys
+
+swu = pathlib.Path(sys.argv[1])
+description_path = pathlib.Path(sys.argv[2])
+description = description_path.read_text()
+
+filenames = re.findall(r'\bfilename\s*=\s*"([^"]+)"\s*;', description)
+hashed_images = re.findall(
+    r'\bfilename\s*=\s*"([^"]+)"\s*;\s*'
+    r'sha256\s*=\s*"([a-fA-F0-9]{64})"\s*;',
+    description,
+)
+
+if not filenames:
+    raise SystemExit(f"{swu} does not declare any image members")
+if len(hashed_images) != len(filenames):
+    raise SystemExit(
+        f"{swu} declares {len(filenames)} image members but only "
+        f"{len(hashed_images)} authenticated SHA-256 values"
+    )
+
+expected_by_member: dict[str, str] = {}
+for member, expected in hashed_images:
+    normalized = expected.lower()
+    previous = expected_by_member.setdefault(member, normalized)
+    if previous != normalized:
+        raise SystemExit(f"{swu} declares conflicting hashes for {member}")
+
+for member, expected in expected_by_member.items():
+    process = subprocess.Popen(
+        ["bsdtar", "-xOf", str(swu), member],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert process.stdout is not None
+    digest = hashlib.sha256()
+    while chunk := process.stdout.read(1024 * 1024):
+        digest.update(chunk)
+    stderr = process.stderr.read() if process.stderr is not None else b""
+    returncode = process.wait()
+    if returncode != 0:
+        raise SystemExit(
+            f"failed to extract {member} from {swu}: "
+            f"{stderr.decode(errors='replace').strip()}"
+        )
+    actual = digest.hexdigest()
+    if actual != expected:
+        raise SystemExit(
+            f"{swu} has wrong authenticated hash for {member}: "
+            f"declared {expected}, actual {actual}"
+        )
+PY
+}
+
+verify_swu "$FULL_SWU" full
+verify_swu "$DELTA_SWU" delta
 
 STAGE_DIR="${NOCTURNE_PUBLISH_STAGE:-$REPO_ROOT/build/nocturne-publish/$VERSION}"
-DEST_DIR="$PUBLISH_ROOT/$VERSION"
+DEST_DIR="$PUBLISH_ROOT/$VERSION/image"
 MANIFEST="$STAGE_DIR/manifest.json"
 
-rm -rf "$STAGE_DIR"
-mkdir -p "$STAGE_DIR" "$DEST_DIR"
-
-echo "[publish] staging variant=$VARIANT channel=$CHANNEL version=$VERSION from $DEPLOY_DIR"
-
-shopt -s nullglob
-artifacts=(
-  "$DEPLOY_DIR"/*"$VARIANT"*.swu
-  "$DEPLOY_DIR"/*"$VARIANT"*.swu.zck
-  "$DEPLOY_DIR"/*"$VARIANT"*.zck
-  "$DEPLOY_DIR"/*"$VARIANT"*.zip
-  "$DEPLOY_DIR"/*"$VARIANT"*.wic.gz
-  "$DEPLOY_DIR"/*"$VARIANT"*.wic.bmap
-)
-shopt -u nullglob
-
-if (( ${#artifacts[@]} == 0 )); then
-  echo "[publish] no artifacts found for variant '$VARIANT' in $DEPLOY_DIR" >&2
+if [[ -e "$DEST_DIR" && "${NOCTURNE_ALLOW_REPLACE:-0}" != "1" ]]; then
+  echo "[publish] image release already exists: $DEST_DIR" >&2
+  echo "[publish] use a new version or set NOCTURNE_ALLOW_REPLACE=1 deliberately" >&2
   exit 1
 fi
 
-for artifact in "${artifacts[@]}"; do
-  cp -a "$artifact" "$STAGE_DIR/"
+rm -rf "$STAGE_DIR"
+mkdir -p "$STAGE_DIR/assets" "$DEST_DIR"
+
+FULL_NAME=$(basename "$FULL_SWU")
+DELTA_NAME=$(basename "$DELTA_SWU")
+cp -L "$FULL_SWU" "$STAGE_DIR/assets/$FULL_NAME"
+cp -L "$DELTA_SWU" "$STAGE_DIR/assets/$DELTA_NAME"
+cp -L "$BOOT_ZCK" "$STAGE_DIR/assets/boot.vfat.zck"
+cp -L "$ROOT_ZCK" "$STAGE_DIR/assets/system.img.zck"
+
+while IFS= read -r asset; do
+  [[ -n "$asset" ]] || continue
+  if [[ ! -f "$STAGE_DIR/assets/$asset" ]]; then
+    echo "[publish] delta SWU references missing range asset: $asset" >&2
+    exit 1
+  fi
+done < <(sed -n 's/.*url = "nocturne:\/\/\([^"]*\)";.*/\1/p' "$VERIFY_DIR/delta.sw-description" | sort -u)
+
+if grep -q '@@DELTA_URL_BASE@@' "$VERIFY_DIR/delta.sw-description"; then
+  echo "[publish] delta SWU still contains an unresolved delta URL placeholder" >&2
+  exit 1
+fi
+
+for required_asset in boot.vfat.zck system.img.zck; do
+  if ! grep -Fq "url = \"nocturne://$required_asset\";" "$VERIFY_DIR/delta.sw-description"; then
+    echo "[publish] delta SWU does not reference canonical range asset: $required_asset" >&2
+    exit 1
+  fi
 done
 
-for zck in "$STAGE_DIR"/*.zck; do
-  [[ -e "$zck" ]] || continue
-  # TODO: swupdate-tools cms_sign --key "$NOCTURNE_SWUPDATE_SIGNING_KEY" --cert "$NOCTURNE_SWUPDATE_SIGNING_CERT" "$zck"
-  echo "[publish] TODO sign zchunk artifact: $(basename "$zck")"
-done
-
-python3 - "$STAGE_DIR" "$VERSION" "$CHANNEL" "$VARIANT" >"$MANIFEST" <<'PY'
+python3 - "$STAGE_DIR/assets" "$VERSION" "$CHANNEL" "$FULL_NAME" "$DELTA_NAME" "$DELTA_FROM_VERSIONS" "${NOCTURNE_UPDATE_ID:-}" > "$MANIFEST" << 'PY'
 import hashlib
 import json
 import sys
+import uuid
 from pathlib import Path
 
-stage = Path(sys.argv[1])
-version, channel, variant = sys.argv[2:5]
-artifacts = []
-for path in sorted(stage.iterdir()):
-    if not path.is_file() or path.name == "manifest.json":
-        continue
-    artifacts.append({
-        "name": path.name,
-        "size": path.stat().st_size,
-        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-    })
+assets_dir = Path(sys.argv[1])
+version, channel, full_name, delta_name, delta_from_raw, update_id = sys.argv[2:8]
+if not update_id:
+    update_id = uuid.uuid4().hex.upper()
+
+delta_from_versions = [item.strip() for item in delta_from_raw.split(",") if item.strip()]
+if not delta_from_versions:
+    raise SystemExit("NOCTURNE_DELTA_FROM_VERSIONS produced an empty compatibility list")
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def describe(name):
+    path = assets_dir / name
+    if not path.is_file():
+        raise SystemExit(f"missing staged asset {name}")
+    return {"name": name, "size": path.stat().st_size, "sha256": sha256(path)}
+
+full = describe(full_name)
+delta = describe(delta_name)
+boot = describe("boot.vfat.zck")
+system = describe("system.img.zck")
+all_assets = [full, delta, boot, system]
 
 json.dump({
+    "update_id": update_id,
     "version": version,
     "channel": channel,
-    "variant": variant,
-    "artifacts": artifacts,
+    "kind": "image",
+    "expected_sha256": full["sha256"],
+    "expected_size": full["size"],
+    "assets": all_assets,
+    "packages": {
+        "full": {
+            "expected_sha256": full["sha256"],
+            "expected_size": full["size"],
+            "assets": [full],
+        },
+        "delta": {
+            "expected_sha256": delta["sha256"],
+            "expected_size": delta["size"],
+            "assets": [delta, boot, system],
+            "from_versions": delta_from_versions,
+        },
+    },
 }, sys.stdout, indent=2)
 sys.stdout.write("\n")
 PY
 
+echo "[publish] validated full+delta release version=$VERSION channel=$CHANNEL"
 echo "[publish] manifest: $MANIFEST"
 rsync -a --delete "$STAGE_DIR/" "$DEST_DIR/"
-
-# TODO: replace the local publish root with the production OTA host once provisioned, for example:
-# rsync -az --delete "$STAGE_DIR/" "${NOCTURNE_OTA_SSH_USER:?}@${NOCTURNE_OTA_HOST:?}:${NOCTURNE_OTA_REMOTE_DIR:-/srv/nocturne-ota/images}/$VERSION/"
-
 echo "[publish] published $VERSION to $DEST_DIR"

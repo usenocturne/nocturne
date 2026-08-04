@@ -12,69 +12,68 @@ IMAGE="${SUPERBIRD_FLASH_FAST_IMAGE:-nocturne-dev-image}"
 DEPLOY_DIR="${SUPERBIRD_DEPLOY_DIR:-build/tmp/deploy/images/superbird}"
 
 if [ -z "$PARTLABEL" ]; then
-    echo "usage: $0 <partlabel> [file]" >&2
-    echo "partlabel: env | boot_a | boot_b | root_a | root_b | bandaid" >&2
-    echo "if file is omitted, looks up the matching deploy artifact for \$SUPERBIRD_FLASH_FAST_IMAGE." >&2
-    exit 2
+  echo "usage: $0 <partlabel> [file]" >&2
+  echo "partlabel: env | boot_a | boot_b | root_a | root_b | bandaid" >&2
+  echo "if file is omitted, looks up the matching deploy artifact for \$SUPERBIRD_FLASH_FAST_IMAGE." >&2
+  exit 2
 fi
 
 if [ -z "$FILE" ]; then
-    case "$PARTLABEL" in
-        boot_a|boot_b)
-            FILE="${DEPLOY_DIR}/${IMAGE}-superbird.boot.vfat"
-            ;;
-        root_a|root_b)
-            FILE="${DEPLOY_DIR}/${IMAGE}-superbird.squashfs-lz4"
-            [ -f "$FILE" ] || FILE="${DEPLOY_DIR}/${IMAGE}-superbird.ext4"
-            ;;
-        bandaid)
-            FILE="${DEPLOY_DIR}/nocturne-bandaid-1.0.ext4"
-            [ -f "$FILE" ] || FILE="${DEPLOY_DIR}/bandaid.ext4"
-            ;;
-        env)
-            FILE="${DEPLOY_DIR}/superbird-uenv.vfat"
-            ;;
-        *)
-            echo "unknown partlabel '$PARTLABEL'; pass a file explicitly" >&2
-            exit 2
-            ;;
-    esac
+  case "$PARTLABEL" in
+    boot_a | boot_b)
+      FILE="${DEPLOY_DIR}/${IMAGE}-superbird.boot.vfat"
+      ;;
+    root_a | root_b)
+      FILE="${DEPLOY_DIR}/${IMAGE}-superbird.squashfs-lz4"
+      [ -f "$FILE" ] || FILE="${DEPLOY_DIR}/${IMAGE}-superbird.ext4"
+      ;;
+    bandaid)
+      FILE="${DEPLOY_DIR}/nocturne-bandaid-1.0.ext4"
+      [ -f "$FILE" ] || FILE="${DEPLOY_DIR}/bandaid.ext4"
+      ;;
+    env)
+      FILE="${DEPLOY_DIR}/superbird-uenv.vfat"
+      ;;
+    *)
+      echo "unknown partlabel '$PARTLABEL'; pass a file explicitly" >&2
+      exit 2
+      ;;
+  esac
 fi
 
 if [ ! -f "$FILE" ]; then
-    echo "file not found: $FILE" >&2
-    exit 2
+  echo "file not found: $FILE" >&2
+  exit 2
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOST="${SUPERBIRD_HOST:-nocturne.local}"
 
-if lsusb -d 18d1:fada >/dev/null 2>&1; then
-    echo "device already in fastboot"
+if lsusb -d 18d1:fada > /dev/null 2>&1; then
+  echo "device already in fastboot"
 else
-    echo "rebooting device into fastboot..."
-    ssh \
-        -o UserKnownHostsFile=/dev/null \
-        -o StrictHostKeyChecking=no \
-        -o LogLevel=ERROR \
-        "root@${HOST}" 'systemctl reboot --reboot-argument=bootloader'
+  echo "rebooting device into fastboot..."
+  ssh \
+    -o UserKnownHostsFile=/dev/null \
+    -o StrictHostKeyChecking=no \
+    -o LogLevel=ERROR \
+    "root@${HOST}" 'systemctl reboot --reboot-argument=bootloader'
 
-    echo -n "waiting for fastboot enumeration"
-    for _ in $(seq 1 30); do
-        if lsusb -d 18d1:fada >/dev/null 2>&1; then
-            echo
-            break
-        fi
-        echo -n "."
-        sleep 1
-    done
-    if ! lsusb -d 18d1:fada >/dev/null 2>&1; then
-        echo
-        echo "device did not enter fastboot (timeout 30s); check uart" >&2
-        exit 3
+  echo -n "waiting for fastboot enumeration"
+  for _ in $(seq 1 30); do
+    if lsusb -d 18d1:fada > /dev/null 2>&1; then
+      echo
+      break
     fi
-    # fastboot binary needs a beat to find the device after enumeration.
+    echo -n "."
     sleep 1
+  done
+  if ! lsusb -d 18d1:fada > /dev/null 2>&1; then
+    echo
+    echo "device did not enter fastboot (timeout 30s); check uart" >&2
+    exit 3
+  fi
+  # fastboot binary needs a beat to find the device after enumeration.
+  sleep 1
 fi
 
 echo "fastboot flash ${PARTLABEL} ${FILE}"

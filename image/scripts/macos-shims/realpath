@@ -1,0 +1,14 @@
+#!/bin/sh
+# GNU realpath shim for macOS.
+#
+# kas-container relies on GNU realpath flags (-e, -qe, -q --relative-base=...)
+# that BSD /bin/realpath does not implement; the script aborts before docker
+# is ever invoked. Homebrew's coreutils ships GNU realpath as `grealpath`.
+#
+# This shim is ONLY placed on PATH for macOS (see the Justfile's `export PATH`),
+# so on Linux the distro's GNU realpath is used unchanged.
+if command -v grealpath > /dev/null 2>&1; then
+  exec grealpath "$@"
+fi
+echo "realpath: GNU realpath not found - run 'brew install coreutils' (or 'just macos-setup')" >&2
+exit 127

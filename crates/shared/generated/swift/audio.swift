@@ -5,6 +5,7 @@ import Foundation
 
 public enum AudioEvent: Codable, Sendable {
   case audioLevel(AudioLevelEvent)
+  case windLevel(WindLevelEvent)
 }
 
 public struct AudioLevelEvent: Codable, Sendable {
@@ -59,6 +60,24 @@ public struct AudioRecordStopResponse: Codable, Sendable {
 
   private enum CodingKeys: String, CodingKey {
     case status = "status"
+  }
+}
+
+public struct WindLevelEvent: Codable, Sendable {
+  public let level: UInt8
+  public let stat: Double
+
+  public init(
+    level: UInt8,
+    stat: Double
+  ) {
+    self.level = level
+    self.stat = stat
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case level = "level"
+    case stat = "stat"
   }
 }
 

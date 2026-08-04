@@ -31,7 +31,7 @@ use crate::{
 #[cfg(feature = "frame-tap")]
 use crate::frame_tap::{FrameTap, FrameTapDirection};
 
-const READ_CAPACITY: usize = 4096;
+const READ_CAPACITY: usize = 16 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct LinkConfig {
@@ -565,5 +565,17 @@ pub(super) fn tap_outbound_wire(_codec: &LinkCodec, _wire: &Bytes) {
 fn tap_detect(codec: &LinkCodec, direction: FrameTapDirection) {
     if let Some(tap) = codec.frame_tap() {
         tap.detect(direction);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::READ_CAPACITY;
+    use crate::frame::Lsp;
+
+    #[test]
+    fn read_buffer_holds_four_default_maximum_frames() {
+        let maximum_frame_len = usize::from(Lsp::accessory_default().max_len);
+        assert!(READ_CAPACITY >= maximum_frame_len * 4);
     }
 }

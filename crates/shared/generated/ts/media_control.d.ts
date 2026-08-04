@@ -458,6 +458,10 @@ export interface MediaNowPlayingArtworkEvent {
    * Artwork MIME type. Current daemon uses contentType. Inventory field `content_type` emits as `contentType`. Current source key: `contentType`.
    */
   contentType: string;
+  /**
+   * Optional producer generation correlating artwork with metadata. Inventory field `media_generation` emits as `mediaGeneration`.
+   */
+  mediaGeneration?: number;
 }
 
 /**
@@ -516,6 +520,10 @@ export interface MediaNowPlayingUpdateEvent {
    * Canonical wrapper for iAP2 PlaybackAttributes. Inventory field `playback_attributes` emits as `playbackAttributes`. Current source key: `PlaybackAttributes`.
    */
   playbackAttributes?: MediaNowPlayingUpdateEventPlaybackAttributes;
+  /**
+   * Optional producer generation correlating metadata with artwork. Inventory field `media_generation` emits as `mediaGeneration`.
+   */
+  mediaGeneration?: number;
 }
 
 /**

@@ -1,47 +1,81 @@
 #!/usr/bin/env bash
-# pull the latest nocturne image from the ota manifest and flash to a device in burn mode.
-# requires flashthing-cli, curl, jq. OTA_PUBLIC_BASE overrides the manifest host.
+# pull the latest public Nocturne image from the OTA server and flash it in burn mode.
+# requires flashthing-cli, curl, jq, and a SHA-256 utility. OTA_PUBLIC_BASE
+# overrides the manifest host.
 
 set -euo pipefail
 
 variant="${1:-}"
 case "$variant" in
-  dev|prod) ;;
-  *) echo "usage: $(basename "$0") dev|prod" >&2; exit 1 ;;
+  dev | prod) ;;
+  *)
+    echo "usage: $(basename "$0") dev|prod" >&2
+    exit 1
+    ;;
 esac
 
 OTA_PUBLIC_BASE="${OTA_PUBLIC_BASE:-https://ota.usenocturne.com}"
 
+case "$variant" in
+  prod) channel=stable ;;
+  dev) channel=preview ;;
+esac
+
 flashthing="${FLASHTHING_CLI:-flashthing-cli}"
-if ! command -v "$flashthing" >/dev/null 2>&1; then
+if ! command -v "$flashthing" > /dev/null 2>&1; then
   echo "flashthing-cli not on PATH; cargo install flashthing-cli or set FLASHTHING_CLI" >&2
   exit 2
 fi
 
 for tool in curl jq; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
+  if ! command -v "$tool" > /dev/null 2>&1; then
     echo "$tool not on PATH" >&2
     exit 2
   fi
 done
 
-manifest_url="${OTA_PUBLIC_BASE}/manifest/${variant}"
+sha256_file() {
+  if command -v sha256sum > /dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum > /dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    echo "[install] sha256sum or shasum is required" >&2
+    exit 2
+  fi
+}
+
+manifest_url="${OTA_PUBLIC_BASE}/manifest.json"
 echo "[install] fetching manifest: $manifest_url"
 manifest="$(curl -fsSL "$manifest_url")"
 
-zip_url="$(printf '%s' "$manifest" | jq -r '.flashthing_zip_url')"
-zip_size="$(printf '%s' "$manifest" | jq -r '.flashthing_zip_size')"
-version="$(printf '%s' "$manifest" | jq -r '.version')"
+version="$(printf '%s' "$manifest" | jq -r --arg channel "$channel" '.channels[$channel].latest // empty')"
+zip_url="$(printf '%s' "$manifest" | jq -r --arg version "$version" '.releases[$version].download.url // empty')"
+zip_size="$(printf '%s' "$manifest" | jq -r --arg version "$version" '.releases[$version].download.size // empty')"
+expected_sha256="$(printf '%s' "$manifest" | jq -r --arg version "$version" '.releases[$version].download.sha256 // empty')"
 
-if [[ -z "$zip_url" || "$zip_url" == "null" ]]; then
-  echo "[install] manifest missing flashthing_zip_url" >&2
+if [[ -z "$version" || -z "$zip_url" || -z "$zip_size" || -z "$expected_sha256" ]]; then
+  echo "[install] public manifest has no latest $channel image release" >&2
+  exit 1
+fi
+if [[ ! "$zip_size" =~ ^[0-9]+$ || ! "$expected_sha256" =~ ^[a-fA-F0-9]{64}$ ]]; then
+  echo "[install] public manifest has invalid image metadata for $version" >&2
   exit 1
 fi
 
 echo "[install] $variant version $version (~$((zip_size / 1024 / 1024)) MiB)"
 dest="${TMPDIR:-/tmp}/nocturne-${variant}-image-superbird-flashthing.zip"
+trap 'rm -f -- "$dest"' EXIT
 echo "[install] downloading $zip_url"
 curl -fL --output "$dest" "$zip_url"
+
+actual_size="$(wc -c < "$dest" | tr -d '[:space:]')"
+actual_sha256="$(sha256_file "$dest")"
+expected_sha256_lower="$(printf '%s' "$expected_sha256" | tr '[:upper:]' '[:lower:]')"
+if [[ "$actual_size" != "$zip_size" || "$actual_sha256" != "$expected_sha256_lower" ]]; then
+  echo "[install] downloaded image failed size or SHA-256 verification" >&2
+  exit 1
+fi
 
 echo "[install] flashing $variant image..."
 "$flashthing" "$dest"

@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# Build, package, publish, and verify one combined daemon + UI bandaid OTA.
+# Usage: nocturne-release-bandaid <version-core> <minimum-image-version> [channel]
+
+set -euo pipefail
+
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+  sed -n '2,3p' "$0" | sed 's/^# \?//' >&2
+  exit 2
+fi
+
+VERSION_CORE=$1
+MINIMUM_IMAGE_VERSION=$2
+CHANNEL=${3:-stable}
+
+case "$VERSION_CORE" in
+  *+*)
+    echo "version core must not contain build metadata: $VERSION_CORE" >&2
+    exit 2
+    ;;
+esac
+
+if [[ -z "$CHANNEL" ]]; then
+  echo "channel cannot be empty" >&2
+  exit 2
+fi
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+IMAGE_DIR=$(dirname "$SCRIPT_DIR")
+REPO_ROOT=$(dirname "$IMAGE_DIR")
+PUBLISHER="$REPO_ROOT/nocturne-ota/scripts/publish-yocto-version.ts"
+
+if [[ ! -f "$PUBLISHER" ]]; then
+  echo "nocturne-ota must exist beside this monorepo checkout" >&2
+  exit 2
+fi
+
+BUILD_ID=${NOCTURNE_BUILD_ID:-$(date -u +%Y%m%d%H%M%S)}
+"$SCRIPT_DIR/nocturne-validate-build-id" "$BUILD_ID"
+RELEASE_VERSION="$VERSION_CORE+$BUILD_ID"
+
+cd "$REPO_ROOT"
+bun -e '
+  import { isValidVersion } from "./nocturne-ota/src/semver.ts";
+  const [releaseVersion, minimumImageVersion] = Bun.argv.slice(1);
+  if (!isValidVersion(releaseVersion)) throw new Error("Invalid bandaid version: " + releaseVersion);
+  if (!isValidVersion(minimumImageVersion)) throw new Error("Invalid minimum image version: " + minimumImageVersion);
+' -- "$RELEASE_VERSION" "$MINIMUM_IMAGE_VERSION"
+
+IMAGES_ROOT=${NOCTURNE_OTA_IMAGES_DIR:-$REPO_ROOT/nocturne-ota/images}
+case "$IMAGES_ROOT" in
+  /*) ;;
+  *) IMAGES_ROOT="$REPO_ROOT/$IMAGES_ROOT" ;;
+esac
+DESTINATION="$IMAGES_ROOT/$RELEASE_VERSION/bandaid"
+
+if [[ -e "$DESTINATION" ]]; then
+  echo "bandaid release already exists: $DESTINATION" >&2
+  exit 1
+fi
+
+just daemon-build
+just ui-build
+
+STAGE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/nocturne-bandaid.XXXXXX")
+cleanup() {
+  rm -rf -- "$STAGE_DIR"
+}
+trap cleanup EXIT
+
+just -f "$IMAGE_DIR/Justfile" package-bandaid \
+  ../target/aarch64-unknown-linux-gnu/release/nocturned \
+  ../packages/ui/dist \
+  "$STAGE_DIR"
+NOCTURNE_OTA_IMAGES_DIR="$IMAGES_ROOT" just -f "$IMAGE_DIR/Justfile" publish-component \
+  bandaid \
+  "$RELEASE_VERSION" \
+  "$STAGE_DIR" \
+  "$MINIMUM_IMAGE_VERSION" \
+  "$CHANNEL"
+
+MANIFEST_PATH="$DESTINATION/manifest.json"
+bun -e '
+  import { dirname, join } from "node:path";
+  const [manifestPath, version, minimumImageVersion, channel] = Bun.argv.slice(1);
+  const manifest = await Bun.file(manifestPath).json();
+  if (manifest.version !== version || manifest.kind !== "bandaid") {
+    throw new Error("Published manifest has the wrong version or kind: " + manifestPath);
+  }
+  if (manifest.minimum_image_version !== minimumImageVersion || manifest.channel !== channel) {
+    throw new Error("Published manifest has the wrong minimum image version or channel: " + manifestPath);
+  }
+  if (manifest.assets?.length !== 1 || manifest.assets[0]?.name !== "nocturne-bandaid.tar.zst") {
+    throw new Error("Published manifest has the wrong bandaid assets: " + manifestPath);
+  }
+  const asset = manifest.assets[0];
+  if (manifest.expected_size !== asset.size || manifest.expected_sha256 !== asset.sha256) {
+    throw new Error("Published bandaid primary asset metadata is inconsistent: " + manifestPath);
+  }
+  const assetFile = Bun.file(join(dirname(manifestPath), "assets", asset.name));
+  if (!(await assetFile.exists()) || assetFile.size !== asset.size) {
+    throw new Error("Published bandaid size does not match its manifest: " + asset.name);
+  }
+  const hasher = new Bun.CryptoHasher("sha256");
+  hasher.update(await assetFile.arrayBuffer());
+  if (hasher.digest("hex") !== asset.sha256) {
+    throw new Error("Published bandaid hash does not match its manifest: " + asset.name);
+  }
+  console.log("Published bandaid " + version + " to " + manifestPath);
+' -- "$MANIFEST_PATH" "$RELEASE_VERSION" "$MINIMUM_IMAGE_VERSION" "$CHANNEL"

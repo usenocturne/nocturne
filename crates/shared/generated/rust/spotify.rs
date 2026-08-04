@@ -32,6 +32,7 @@ pub struct SpotifyArtistGetResponse;
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SpotifyArtistTopTracksRequest {
     pub content_id: String,
+    pub mockingbird: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -371,6 +372,7 @@ pub struct SpotifyPlaylistTracksRequest {
     pub content_id: String,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    pub mockingbird: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

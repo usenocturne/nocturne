@@ -1,4 +1,4 @@
-use super::AppMessage;
+use super::{AppMessage, AppMessagePriority};
 use crate::audio;
 use crate::error::Result;
 use crate::hardware::ImageCache;
@@ -9,11 +9,12 @@ use libnocturne::generated::audio::{AudioRecordStartResponse, AudioRecordStopRes
 use libnocturne::generated::device::OnboardingSetStateRequest;
 use libnocturne::generated::spotify::{SpotifyImageFetchRequest, SpotifyImageFetchResponse};
 use libnocturne::generated::voice::{
-    TtsSpeakRequest, TtsStopRequest, WakewordPauseRequest, WakewordPauseResponse,
-    WakewordResumeRequest, WakewordResumeResponse,
+    TtsSpeakRequest, TtsStopRequest, VoiceCancelRequest, WakewordPauseRequest,
+    WakewordPauseResponse, WakewordResumeRequest, WakewordResumeResponse,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::sync::{mpsc, Mutex};
+use tokio::time::timeout;
 use tracing::{debug, info, warn};
 
 pub struct WebSocketProtocolHandler {
@@ -53,6 +54,28 @@ impl WebSocketProtocolHandler {
 
     pub fn set_wakeword_pause_tx(&mut self, tx: mpsc::UnboundedSender<WakeWordCommand>) {
         self.wakeword_pause_tx = Some(tx);
+    }
+
+    async fn pause_wakeword_for_recording(&self) {
+        let Some(tx) = &self.wakeword_pause_tx else {
+            return;
+        };
+        let (ack_tx, ack_rx) = tokio::sync::oneshot::channel();
+        if tx
+            .send(WakeWordCommand::Pause {
+                ack: Some(ack_tx),
+                persist: false,
+            })
+            .is_err()
+        {
+            warn!("Failed to pause wakeword before starting audio recording");
+            return;
+        }
+
+        match timeout(Duration::from_secs(1), ack_rx).await {
+            Ok(Ok(())) => {}
+            _ => warn!("Wakeword pause ack timed out, proceeding with audio recording"),
+        }
     }
 }
 
@@ -124,6 +147,7 @@ impl WebSocketProtocolHandler {
                         id: message.id,
                         protocol: "com.usenocturne.daemon".to_string(),
                         session_id: message.session_id,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&request)?),
                     }));
                 }
@@ -154,6 +178,7 @@ impl WebSocketProtocolHandler {
                         id: message.id,
                         protocol: "com.usenocturne.daemon".to_string(),
                         session_id: message.session_id,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&request)?),
                     }));
                 }
@@ -174,6 +199,7 @@ impl WebSocketProtocolHandler {
                         id: message.id,
                         protocol: "com.usenocturne.daemon".to_string(),
                         session_id: message.session_id,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&request)?),
                     }));
                 }
@@ -190,6 +216,31 @@ impl WebSocketProtocolHandler {
                         id: message.id,
                         protocol: "com.usenocturne.daemon".to_string(),
                         session_id: message.session_id,
+                        priority: AppMessagePriority::Normal,
+                        data: Bytes::from(serde_json::to_vec(&request)?),
+                    }));
+                }
+                "voice.cancel" => {
+                    debug!(
+                        "Voice cancel requested; stopping audio capture before routing to phone"
+                    );
+                    if let Some(tx) = &self.audio_cmd_tx {
+                        let _ = tx.send(AudioCommand::Stop);
+                    }
+
+                    let typed = VoiceCancelRequest;
+                    let request = serde_json::json!({
+                        "method": method,
+                        "params": serde_json::to_value(typed)?
+                    });
+
+                    info!("Routing WebSocket request to iPhone: {}", method);
+
+                    return Ok(Some(AppMessage {
+                        id: message.id,
+                        protocol: "com.usenocturne.daemon".to_string(),
+                        session_id: message.session_id,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&request)?),
                     }));
                 }
@@ -210,11 +261,13 @@ impl WebSocketProtocolHandler {
                         id: message.id,
                         protocol: "com.usenocturne.daemon".to_string(),
                         session_id: message.session_id,
+                        priority: AppMessagePriority::Normal,
                         data: Bytes::from(serde_json::to_vec(&request)?),
                     }));
                 }
                 "audio.record.start" => {
                     debug!("Audio record start requested");
+                    self.pause_wakeword_for_recording().await;
                     if let Some(tx) = &self.audio_cmd_tx {
                         let _ = tx.send(AudioCommand::Start);
                     }
@@ -347,5 +400,59 @@ impl WebSocketProtocolHandler {
         }
 
         Ok(None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn websocket_message(method: &str) -> AppMessage {
+        AppMessage {
+            id: "request-1".to_string(),
+            protocol: "websocket.message".to_string(),
+            session_id: 1,
+            priority: AppMessagePriority::Normal,
+            data: Bytes::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "method": method,
+                    "params": {}
+                }))
+                .expect("test message should serialize"),
+            ),
+        }
+    }
+
+    #[tokio::test]
+    async fn audio_start_pauses_wakeword_before_recording() {
+        let image_cache = Arc::new(Mutex::new(ImageCache::with_dir(std::env::temp_dir())));
+        let mut handler = WebSocketProtocolHandler::new_with_cache(None, image_cache);
+        let (audio_tx, mut audio_rx) = mpsc::unbounded_channel();
+        let (wakeword_tx, mut wakeword_rx) = mpsc::unbounded_channel();
+        handler.set_audio_cmd_tx(audio_tx);
+        handler.set_wakeword_pause_tx(wakeword_tx);
+
+        let handle = tokio::spawn(async move {
+            handler
+                .handle_message(websocket_message("audio.record.start"))
+                .await
+        });
+
+        let command = wakeword_rx
+            .recv()
+            .await
+            .expect("audio start should pause wakeword first");
+        let WakeWordCommand::Pause { ack, persist } = command else {
+            panic!("audio start should pause wakeword");
+        };
+        assert!(!persist);
+        assert!(audio_rx.try_recv().is_err());
+
+        ack.expect("pause command should include ack")
+            .send(())
+            .expect("handler should wait for wakeword ack");
+
+        assert_eq!(audio_rx.recv().await, Some(AudioCommand::Start));
+        assert!(handle.await.expect("handler task should complete").is_ok());
     }
 }

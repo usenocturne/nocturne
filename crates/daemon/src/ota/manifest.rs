@@ -8,6 +8,10 @@ pub struct PersistedState {
     pub kind: libnocturne::OtaKind,
     pub expected_size: u64,
     pub expected_sha256: String,
+    #[serde(default)]
+    pub target_version: Option<String>,
+    #[serde(default)]
+    pub transfer_window_size: Option<u32>,
     pub peer: Option<String>,
 }
 

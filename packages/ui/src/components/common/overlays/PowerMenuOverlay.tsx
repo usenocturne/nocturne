@@ -1,0 +1,400 @@
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import PowerIcon from "../icons/PowerIcon";
+import RefreshIcon from "../icons/RefreshIcon";
+import BrightnessMidIcon from "../icons/BrightnessMidIcon";
+import BrightnessLowIcon from "../icons/BrightnessLowIcon";
+import BrightnessHighIcon from "../icons/BrightnessHighIcon";
+import MicrophoneIcon from "../icons/MicrophoneIcon";
+import MicrophoneOffIcon from "../icons/MicrophoneOffIcon";
+import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
+import { useSettings } from "../../../contexts/SettingsContext";
+interface BrightnessState {
+  auto?: boolean;
+  brightness?: number;
+}
+
+interface RangeSliderProps {
+  min?: number;
+  max?: number;
+  value?: number;
+  disabled?: boolean;
+  onChange?: (value: number) => void;
+  className?: string;
+  trackStyle?: React.CSSProperties;
+  thumbClassName?: string;
+}
+
+interface PowerMenuOverlayProps {
+  show: boolean;
+  onShutdown: () => void;
+  onReboot: () => void;
+  onClose: () => void;
+  onBrightnessToggle?: (enabled: boolean) => void;
+}
+
+const BRIGHTNESS_BRIGHTEST = 0;
+const BRIGHTNESS_DIMMEST = 160;
+const DEFAULT_BRIGHTNESS = 113;
+const MIN_MANUAL_BACKLIGHT = 8;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function normalizeBrightness(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return DEFAULT_BRIGHTNESS;
+  }
+  return clamp(Math.round(value), BRIGHTNESS_BRIGHTEST, BRIGHTNESS_DIMMEST);
+}
+
+function brightnessToSliderValue(value: number) {
+  return clamp(
+    BRIGHTNESS_DIMMEST - normalizeBrightness(value),
+    MIN_MANUAL_BACKLIGHT,
+    BRIGHTNESS_DIMMEST,
+  );
+}
+
+function sliderValueToBrightness(value: number) {
+  return (
+    BRIGHTNESS_DIMMEST -
+    clamp(Math.round(value), MIN_MANUAL_BACKLIGHT, BRIGHTNESS_DIMMEST)
+  );
+}
+
+function getPositionValue(
+  clientX: number,
+  trackRect: DOMRect,
+  min: number,
+  max: number,
+) {
+  const ratio = clamp((clientX - trackRect.left) / trackRect.width, 0, 1);
+  const rawValue = min + ratio * (max - min);
+  return Math.round(rawValue);
+}
+
+function RangeSlider({
+  min = 0,
+  max = 100,
+  value = 0,
+  disabled = false,
+  onChange,
+  className = "",
+  trackStyle = {},
+  thumbClassName = "",
+}: RangeSliderProps) {
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const percentage = useMemo(() => {
+    if (max === min) return 0;
+    return ((clamp(value, min, max) - min) / (max - min)) * 100;
+  }, [value, min, max]);
+
+  const startDraggingAt = useCallback(
+    (clientX: number) => {
+      if (disabled) return;
+      const track = trackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const newValue = getPositionValue(clientX, rect, min, max);
+      onChange?.(newValue);
+      setIsDragging(true);
+    },
+    [disabled, min, max, onChange],
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      startDraggingAt(e.clientX);
+    },
+    [startDraggingAt],
+  );
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      if (e.touches && e.touches[0]) {
+        startDraggingAt(e.touches[0].clientX);
+      }
+    },
+    [startDraggingAt],
+  );
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
+      const track = trackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const newValue = getPositionValue(e.clientX, rect, min, max);
+      onChange?.(newValue);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!e.touches || !e.touches[0]) return;
+      const track = trackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const newValue = getPositionValue(e.touches[0].clientX, rect, min, max);
+      onChange?.(newValue);
+    };
+
+    const stopDragging = () => setIsDragging(false);
+
+    document.addEventListener("mousemove", handleMouseMove, { passive: false });
+    document.addEventListener("mouseup", stopDragging);
+    document.addEventListener("touchmove", handleTouchMove, { passive: true });
+    document.addEventListener("touchend", stopDragging);
+    document.addEventListener("touchcancel", stopDragging);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", stopDragging);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", stopDragging);
+      document.removeEventListener("touchcancel", stopDragging);
+    };
+  }, [isDragging, min, max, onChange]);
+
+  return (
+    <div
+      className={`relative ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      role="slider"
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value}
+      aria-disabled={disabled}
+      style={{ touchAction: "none" }}
+    >
+      <div className="py-3 select-none">
+        <div
+          ref={trackRef}
+          className="relative h-2 rounded-lg bg-neutral-700"
+          style={trackStyle}
+        >
+          <div
+            className="absolute inset-y-0 left-0 rounded-lg bg-white"
+            style={{ width: `${percentage}%` }}
+          />
+          <div
+            className={`absolute top-1/2 -translate-y-1/2 -ml-3 w-6 h-6 rounded-full bg-white ${disabled ? "pointer-events-none" : ""} ${thumbClassName}`}
+            style={{ left: `calc(${percentage}% + 0px)` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PowerMenuOverlay({
+  show,
+  onShutdown,
+  onReboot,
+  onClose,
+  onBrightnessToggle,
+}: PowerMenuOverlayProps) {
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [brightnessToggled, setBrightnessToggled] = useState(false);
+  const [brightnessValue, setBrightnessValue] = useState(DEFAULT_BRIGHTNESS);
+  const { settings, updateSetting, isMicLocked } = useSettings();
+  const effectiveMicMuted = !!isMicLocked || (settings?.micMuted ?? false);
+
+  useEffect(() => {
+    if (show) {
+      setShouldRender(true);
+      const t = setTimeout(() => setIsVisible(true), 10);
+
+      sendNocturneWsRequest<BrightnessState>("device.brightness.get", {})
+        .then((data) => {
+          setBrightnessToggled(Boolean(data.auto));
+          setBrightnessValue(normalizeBrightness(data.brightness));
+        })
+        .catch((error) => {
+          console.error("Failed to fetch brightness state:", error);
+        });
+
+      return () => clearTimeout(t);
+    } else {
+      setIsVisible(false);
+      const t = setTimeout(() => setShouldRender(false), 300);
+      return () => clearTimeout(t);
+    }
+  }, [show]);
+
+  useEffect(() => {
+    if (!show) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        e.stopPropagation();
+        onClose?.();
+      }
+    };
+    window.addEventListener("keydown", handleKey, true);
+    return () => window.removeEventListener("keydown", handleKey, true);
+  }, [show, onClose]);
+
+  useEffect(() => {
+    if (show) {
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+    } else {
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
+    };
+  }, [show]);
+
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ease-in-out ${isVisible ? "opacity-100" : "opacity-0"}`}
+      onClick={() => onClose?.()}
+    >
+      <div className="absolute inset-0 bg-black/80" />
+      <div
+        className="relative bg-neutral-900/90 rounded-2xl px-8 py-6 flex flex-col items-center space-y-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex space-x-8">
+          <button
+            onClick={() => {
+              sendNocturneWsRequest("device.power.shutdown", {})
+                .then(() => {
+                  console.log("Shutdown request sent");
+                  onShutdown?.();
+                })
+                .catch((err) => {
+                  console.error("Shutdown request failed:", err);
+                });
+            }}
+            className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center hover:bg-red-700 transition-colors focus:outline-none"
+          >
+            <PowerIcon className="w-10 h-10 text-white" />
+          </button>
+          <button
+            onClick={() => {
+              sendNocturneWsRequest("device.power.reboot", {})
+                .then(() => {
+                  console.log("Reboot request sent");
+                  onReboot?.();
+                })
+                .catch((err) => {
+                  console.error("Reboot request failed:", err);
+                });
+            }}
+            className="w-24 h-24 rounded-full bg-neutral-700 flex items-center justify-center hover:bg-neutral-600 transition-colors focus:outline-none"
+          >
+            <RefreshIcon className="w-10 h-10 text-white" />
+          </button>
+          <button
+            onClick={() => {
+              const newToggleState = !brightnessToggled;
+              setBrightnessToggled(newToggleState);
+              onBrightnessToggle?.(newToggleState);
+
+              sendNocturneWsRequest<BrightnessState>("device.brightness.auto", {
+                enabled: newToggleState,
+              })
+                .then((data) => {
+                  setBrightnessToggled(Boolean(data.auto));
+                  setBrightnessValue(
+                    typeof data.brightness === "number"
+                      ? normalizeBrightness(data.brightness)
+                      : newToggleState
+                        ? DEFAULT_BRIGHTNESS
+                        : brightnessValue,
+                  );
+                })
+                .catch((error) => {
+                  console.error("Failed to toggle auto brightness:", error);
+                  setBrightnessToggled(!newToggleState);
+                });
+            }}
+            className={`w-24 h-24 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-0 ${
+              brightnessToggled
+                ? "bg-white hover:bg-gray-100"
+                : "bg-neutral-700 hover:bg-neutral-600"
+            }`}
+          >
+            <BrightnessMidIcon
+              className={`w-10 h-10 ${brightnessToggled ? "text-black" : "text-white"}`}
+            />
+          </button>
+          <button
+            onClick={() => {
+              if (isMicLocked) return;
+              updateSetting("micMuted", !(settings?.micMuted ?? false));
+            }}
+            disabled={isMicLocked}
+            className={`w-24 h-24 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-0 ${
+              effectiveMicMuted
+                ? "bg-neutral-700 hover:bg-neutral-600"
+                : "bg-white hover:bg-gray-100"
+            } ${isMicLocked ? "opacity-50" : ""}`}
+          >
+            {effectiveMicMuted ? (
+              <MicrophoneOffIcon className="w-10 h-10 text-white" />
+            ) : (
+              <MicrophoneIcon className="w-10 h-10 text-black" />
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-4 w-full max-w-sm">
+          <BrightnessLowIcon className="w-8 h-8 text-white flex-shrink-0" />
+          <div className="flex-1 relative">
+            <RangeSlider
+              min={MIN_MANUAL_BACKLIGHT}
+              max={BRIGHTNESS_DIMMEST}
+              value={brightnessToSliderValue(brightnessValue)}
+              disabled={brightnessToggled}
+              onChange={(sliderPos: number) => {
+                const newValue = sliderValueToBrightness(sliderPos);
+                setBrightnessValue(newValue);
+                sendNocturneWsRequest<BrightnessState>(
+                  "device.brightness.set",
+                  {
+                    brightness: newValue,
+                  },
+                )
+                  .then((data) => {
+                    setBrightnessToggled(Boolean(data.auto));
+                    setBrightnessValue(
+                      typeof data.brightness === "number"
+                        ? normalizeBrightness(data.brightness)
+                        : newValue,
+                    );
+                  })
+                  .catch((error) => {
+                    console.error("Failed to set brightness:", error);
+                  });
+              }}
+            />
+          </div>
+          <BrightnessHighIcon className="w-8 h-8 text-white flex-shrink-0" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default PowerMenuOverlay;

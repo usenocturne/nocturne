@@ -25,8 +25,8 @@ fn device_inventory() -> Inventory {
         .filter(|event| event.family == Family::Device)
         .collect();
 
-    assert_eq!(methods.len(), 19, "device method fixture drifted");
-    assert_eq!(events.len(), 5, "device event fixture drifted");
+    assert_eq!(methods.len(), 22, "device method fixture drifted");
+    assert_eq!(events.len(), 6, "device event fixture drifted");
 
     Inventory {
         wire_enums: HashMap::new(),

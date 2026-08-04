@@ -1,4 +1,5 @@
-exclude: ^(sources/|build/|ccache/|.*\.patch$|meta-nocturne/recipes-extended/nocturne-fonts/files/.*\.ttf$|meta-nocturne/recipes-extended/nocturne-models/files/.*\.onnx$)
+files: ^image/
+exclude: ^image/(sources/|build/|ccache/|.*\.patch$|meta-nocturne/recipes-extended/nocturne-fonts/files/.*\.ttf$|meta-nocturne/recipes-extended/nocturne-models/files/.*\.onnx$)
 repos:
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.7.2
@@ -15,12 +16,10 @@ repos:
           - -ci
           - -sr
           - -d
-          - "./scripts"
-          - "./meta-nocturne"
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1
     hooks:
       - id: yamllint
-        files: ^kas/.*\.ya?ml$
+        files: ^image/kas/.*\.ya?ml$
         args: ["-d", "{extends: relaxed, rules: {line-length: disable}}"]

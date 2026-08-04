@@ -3,6 +3,7 @@ Description=Nocturne daemon
 After=network.target superbird-init.service opt-overlay@nocturne.service nocturne-floor-sync.service
 Wants=bluetooth.service
 Requires=opt-overlay@nocturne.service
+Conflicts=superbird-als.service
 StartLimitIntervalSec=60
 StartLimitBurst=3
 OnFailure=nocturned-rollback.service

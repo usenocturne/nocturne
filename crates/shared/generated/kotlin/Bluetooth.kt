@@ -35,6 +35,7 @@ data class BluetoothConnectionEvent(
 data class BluetoothDeviceConnectRequest(
   @SerialName("address") val address: String,
   @SerialName("channel") val channel: UByte? = null,
+  @SerialName("device_type") val deviceType: String? = null,
 )
 
 @Serializable

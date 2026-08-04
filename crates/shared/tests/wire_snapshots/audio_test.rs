@@ -50,6 +50,7 @@ fn audio_wire_snapshots_round_trip() {
     );
 
     assert_round_trip::<AudioLevelEvent>(&snapshot, "audio.level", "event");
+    assert_round_trip::<WindLevelEvent>(&snapshot, "wind_level", "event");
     assert_empty_request::<AudioRecordStartRequest>(&snapshot, "audio.record.start");
     assert_round_trip::<AudioRecordStartResponse>(&snapshot, "audio.record.start", "response");
     assert_empty_request::<AudioRecordStopRequest>(&snapshot, "audio.record.stop");

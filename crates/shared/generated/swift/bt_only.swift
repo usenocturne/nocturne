@@ -153,6 +153,8 @@ public enum GatewayToNocturneSystemMsg: Codable, Sendable {
   case otaBegin(OtaBegin)
   case otaChunk(OtaChunk)
   case otaAbandon(OtaAbandon)
+  case otaDownloadProgress(OtaDownloadProgress)
+  case otaPackageReady(OtaPackageReady)
   case otaAssetRangeReply(OtaAssetRangeReply)
   case otaAssetRangeRejected(OtaAssetRangeRejected)
   case otaAssetRangeChunk(OtaAssetRangeChunk)

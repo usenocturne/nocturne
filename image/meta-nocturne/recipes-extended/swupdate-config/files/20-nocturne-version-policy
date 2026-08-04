@@ -1,0 +1,18 @@
+# Image SWUs must be compared with the exact version baked into the running
+# rootfs, not a newer bandaid overlay that the image update does not replace.
+# The pinned SWUpdate 2025.12 follows standard SemVer precedence and ignores
+# +build metadata, so nocturned independently enforces Nocturne's build
+# identifier tie-break before opening an install.
+NOCTURNE_INSTALLED_VERSION_FILE=${NOCTURNE_INSTALLED_VERSION_FILE:-/etc/nocturne/floor-version}
+
+if [ -r "$NOCTURNE_INSTALLED_VERSION_FILE" ]; then
+  IFS= read -r NOCTURNE_INSTALLED_VERSION < "$NOCTURNE_INSTALLED_VERSION_FILE" || true
+  case "$NOCTURNE_INSTALLED_VERSION" in
+    '' | *[!0-9A-Za-z.+-]*)
+      echo "Ignoring invalid Nocturne installed version: $NOCTURNE_INSTALLED_VERSION" >&2
+      ;;
+    *)
+      SWUPDATE_ARGS="$SWUPDATE_ARGS --no-downgrading $NOCTURNE_INSTALLED_VERSION --no-reinstalling $NOCTURNE_INSTALLED_VERSION"
+      ;;
+  esac
+fi

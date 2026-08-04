@@ -7,25 +7,28 @@ This is the **Yocto-based** Nocturne firmware for the Spotify Car Thing.
 | Dir | Purpose |
 |---|---|
 | `meta-nocturne/` | application layer (recipes, image defs, distro conf). Depends on `meta-superbird` for BSP. |
-| `kas/nocturne.yml` | kas config — pins `yocto-superbird` upstream by commit + adds `meta-nocturne` |
-| `kas/nocturne-local.example.yml` | template for `externalsrc` against unpushed `nocturned` / `nocturne-ui` checkouts. Copy → `nocturne-local.yml` (gitignored) → edit the two `NOCTURNE_LOCAL_*` paths. |
+| `kas/nocturne.yml` | kas config - pins the private `yocto-superbird` upstream over HTTPS by commit + adds `meta-nocturne` |
+| `kas/nocturne-local.yml` | `externalsrc` overlay for building `nocturned` + `nocturne-ui` from the working tree. Committed and host-independent: the Justfile mounts the monorepo root at `/monorepo`, so there is nothing to copy or edit. |
+| `meta-nocturne/recipes-core/nocturne-monorepo.inc` | the monorepo `SRC_URI`/`SRCREV`, `require`d by both recipes built from this tree. |
 | `scripts/` | host helpers (`nocturne-{ssh,console,reset-hold,boot-kernel,flash-fast,…}`). PEP-723 metadata in the Python ones — `uv` runs them. |
 | `Justfile` | **canonical command surface**. `just -l` always lists current verbs. |
 
 ## Build / lint / test
 
 ```bash
-just build                 # default = nocturne (prod+dev images + 4 OTA wrappers)
-just build nocturne-local  # use unpushed nocturned + nocturne-ui via externalsrc
+just build                 # signed prod+dev images and 4 OTA wrappers
+NOCTURNE_SWUPDATE_SIGNING_MODE=development-unsigned just build # explicit local-only mode
+just build nocturne-local  # rebuild the local UI, then use it and local nocturned via externalsrc
 just shell                 # bitbake shell inside the kas container
+just test                  # host-side image helper tests
 just lint                  # pre-commit: shellcheck + shfmt + yamllint
 ```
 
-Requires `docker` or `podman` + `kas` + `just`. First cold build downloads ~gigabytes; public sstate mirror at `http://yocto.24hgr.love/sstate/` primes most of it (configured in upstream `yocto-superbird/kas/base.yml`).
+Requires `docker` or `podman` + `kas` + `just` + GitHub HTTPS credentials for the private `yocto-superbird` repo. Set `NETRC_FILE` to a netrc with GitHub repo access, or keep it at `$HOME/.netrc` for the Justfile default. First cold build downloads ~gigabytes; public sstate mirror at `http://yocto.24hgr.love/sstate/` primes most of it (configured in upstream `yocto-superbird/kas/base.yml`).
 
 **Outputs land in `build/tmp/deploy/images/superbird/`** — note the path is `superbird/`, not `nocturne/` (that's the MACHINE name, BSP-owned, do not rename).
 
-There is no host-side test suite. Verification is "build the image, flash it, drive the device". Static checks: `just lint` and `bitbake -p` (recipe parse) inside `just shell`.
+The host-side suite covers release helper invariants such as bandaid floor version ordering. Run `just test` and `just lint`, then use `bitbake -p` inside `just shell`. Final verification remains "build the image, flash it, drive the device".
 
 ## Conventions that bite
 
@@ -33,11 +36,19 @@ There is no host-side test suite. Verification is "build the image, flash it, dr
 
 **Recipe filename = PV.** When bumping `nocturned` etc., rename `nocturned_2.0.4.bb` → `nocturned_2.0.5.bb` and update `SRCREV`. **Do not set `PV =` inside the recipe** — bitbake derives it from the filename.
 
-**Bandaid contents are deliberately small.** The bandaid partition (`/var/lib/bandaid/nocturne`, bind-mounted at `/opt/nocturne`) holds only `nocturned` + `nocturne-ui`, the two things that hot-swap via `applyUpdate { kind: daemon | builtin-webapp }`. Models, fonts, MFi rules, and the `nocturne-ab` helper go in **rootfs**. Default bandaid size is 192 MiB. See `nocturne-bandaid.bb`'s `BANDAID_PACKAGES`.
+**Bandaid contents are deliberately small.** The bandaid partition (`/var/lib/bandaid/nocturne`, bind-mounted at `/opt/nocturne`) holds only `nocturned` + `nocturne-ui`, the two things that hot-swap via OTA kinds `daemon`, `builtinWebapp`, or combined `bandaid`. Models, fonts, and the `nocturne-ab` helper go in **rootfs**. Default bandaid size is 192 MiB. See `nocturne-bandaid.bb`'s `BANDAID_PACKAGES`.
 
-**Floor sync exists because of an OS-OTA gap.** Full SWU updates rewrite boot + rootfs only — the bandaid partition stays stale. `nocturne-floor-sync.service` runs on boot, compares `/etc/nocturne/floor-version` (baked into the rootfs at build time, see `nocturne-image-base.inc`'s `nocturne_version_postprocess`) vs `/var/lib/bandaid/nocturne/.floor-version`, and atomically re-seeds the bandaid from the rootfs floor on version mismatch. Don't remove or short-circuit this.
+**Floor sync exists because of an OS-OTA gap.** Full SWU updates rewrite boot + rootfs only - the bandaid partition stays stale. `/var/lib/bandaid/nocturne/.floor-version` is the canonical installed overlay version for both hot updates and floor sync. `nocturne-floor-sync.service` re-seeds only when `/etc/nocturne/floor-version` is newer. It follows SemVer core and prerelease ordering, then uses `+build` identifiers as a Nocturne build-order tie-breaker. An older rootfs cannot overwrite a newer hot update. Keep the comparison, atomic marker write, and rollback behavior together.
 
-**`just build` (default) requires nocturned to be pushed to GitHub.** It fetches via `SRC_URI = "git://github.com/usenocturne/nocturned.git;...;tag=v…"` at the pinned `SRCREV`. If you have local-only commits in `~/Code/nocturne/nocturned`, use `just build nocturne-local` until you push.
+**Prod OTA rootfs size is fixed to the A/B slot.** Existing devices have 516 MiB `root_a` and `root_b` partitions. `nocturne-prod-image.bb` forces the standalone ext4 to `SUPERBIRD_ROOT_PART_SIZE` before mkfs and asserts the exact byte count before zchunk conversion. Full and delta OTAs both derive from that artifact. Do not add `IMAGE_ROOTFS_EXTRA_SPACE`, grow the slots, or move the check after image conversions; a payload that no longer fits must fail during mkfs.
+
+**Mockingbird uses every Circular script variant.** `75-nocturne-circular.conf` assigns the otherwise unnamed Arabic, Cyrillic, Devanagari, Greek, and Hebrew Book/Bold files to `Circular Sp UI v3 T` during fontconfig scanning. Keep that mapping and the Latin Book/Bold files together. Mockingbird only requests weights 400 and 700, so Black variants are intentionally omitted from `SRC_URI`. `/var` is persistent across A/B updates, so `05-nocturne-ro-cachedir.conf` puts the authoritative fontconfig cache on the immutable rootfs ahead of the stale writable cache. Keep `${datadir}/fontconfig/cache` packaged with the font recipe.
+
+**`just build` (default) requires this monorepo's changes to be pushed to GitHub.** Both `nocturned` and `nocturne-ui` fetch the workspace from `usenocturne/nocturne` (via `nocturne-monorepo.inc`) so Cargo and Bun see the same graph local builds use. Use `just build nocturne-local` while daemon or UI changes are still local.
+
+**Declare the monorepo URL only in `nocturne-monorepo.inc`.** `kas/nocturne-local.yml`'s `SRC_URI:remove` lines reference `${NOCTURNE_MONOREPO_SRC_URI}` rather than restating the URL. Spelling it twice is what silently broke local builds before: the recipe moved to `nocturne-mono` while the removes still named `usenocturne/nocturned`, so they matched nothing and the git fetch survived into local builds. `:remove` values expand lazily in the recipe's datastore, so the indirection works without depending on anonymous-python ordering.
+
+**The UI builds inside Yocto, not on the host.** `nocturne-ui` runs `bun install --frozen-lockfile` + `bun run ui:build` in `do_compile` against `bun-native`, exactly as `nocturned` runs cargo. Keep `bun-native`'s `PV` in step with `packageManager` in the root `package.json`. Nothing about the local path prebuilds a `dist/`. Keep `build-nocturned` daemon-only so `just daemon-deploy` stays fast.
 
 **`do_compile[network] = "1"`** is set on the nocturned recipe so cargo can fetch the `iap2-rs` git dep at compile time. The build is *not* fully offline-reproducible. Sources mirrors would have to be set up explicitly if that matters.
 
@@ -51,12 +62,16 @@ There is no host-side test suite. Verification is "build the image, flash it, dr
 It reads (these are hardcoded; don't try to make them configurable in recipes):
 
 - `/etc/nocturne/config.json` (optional)
-- `/etc/nocturne/version.json` (rendered at image build time)
 - `/etc/nocturne/models/*.onnx` (from `nocturne-models` recipe)
-- `/dev/apple_mfi` (from `nocturne-mfi` udev rule)
-- `/sys/class/efuse/usid` (BSP-provided)
-- `/sys/class/backlight/aml-bl/brightness` (BSP-provided)
-- spawns `arecord` subprocess (so `alsa-utils` is an `RDEPENDS`)
+- the MFi auth coprocessor on `/dev/i2c-3` @ `0x10` (kernel i2c-dev; userspace driver in `nocturned` via the `iap2-mfi` crate, matching bridgething)
+- `/etc/superbird` for identity/version metadata plus efuse nvmem cells under `/sys/bus/nvmem/devices/efuse0/cells/` (`serial-number@*`, `bt-mac@*`)
+- display backlight through `/sys/class/backlight/*/brightness` discovered at runtime from sysfs
+- ambient light through IIO sysfs devices, preferring `in_intensity0_raw` and falling back to `in_illuminance0_input`; `nocturned` sets TMD2772 integration time to `0.100` and gain to `16` at discovery because the kernel default is near-blind
+- `nocturned.service` conflicts with `superbird-als.service` so only one process owns the backlight policy
+- `nocturned.service` wants, but is deliberately not ordered after, `bluetooth.service`. HTTP and WebSocket startup must not wait for BlueZ or `hci0`.
+- The daemon retries Bluetooth session initialization indefinitely with a capped 250 ms to 5 second backoff. This covers missing adapters, transient BlueZ errors, and later BlueZ restarts without delaying HTTP readiness.
+- `chromium-kiosk.service` pulls in `nocturned.service` and probes `127.0.0.1:8080` every 500 ms for up to 30 seconds before launching Chromium. Keep the HTTP readiness probe: `After=nocturned.service` alone is insufficient because the daemon is `Type=simple`, and Cast Shell does not retry an initial failed navigation.
+- spawns `arecord` against ALSA `hw:0,0` after routing TODDR_A/B to PDM `IN 4` (so `alsa-utils` is an `RDEPENDS`)
 
 Build-time DEPENDS for the OTA-enabled daemon are `dbus libopus swupdate clang-native`. The recipe exports `LIBCLANG_PATH=${STAGING_LIBDIR_NATIVE}` and `BINDGEN_EXTRA_CLANG_ARGS=--sysroot=${RECIPE_SYSROOT}` so the `nocturne-swupdate-sys` bindgen build sees Yocto's libswupdate headers through the recipe sysroot.
 
@@ -99,5 +114,12 @@ When bumping the nocturned recipe filename to `nocturned_X.Y.Z.bb`, update `vers
 
 - `nocturne-swupdate-sys` is built for device images with Yocto-provided `swupdate` headers and `clang-native`; keep the `LIBCLANG_PATH` and `BINDGEN_EXTRA_CLANG_ARGS` exports in the recipe when touching bindgen or vendoring behavior.
 - The daemon recipe appends `--features device` to `CARGO_BUILD_FLAGS`; host/dev cargo checks can keep using the default host-stub path.
-- `swupdate-config.bbappend` layers Nocturne's public key and accepted selectors on top of the BSP `swupdate-config` recipe. The BSP owns the baseline `swupdate.service` packaging and auto-enable behavior.
-- `just publish` stages artifacts from `build/tmp/deploy/images/superbird/`, writes a per-version manifest, and copies them into `NOCTURNE_OTA_IMAGES_DIR` (default `~/Code/nocturne/nocturne-ota/images`). Required env: `NOCTURNE_RELEASE_VERSION`. Useful overrides: `NOCTURNE_DEPLOY_DIR`, `NOCTURNE_PUBLISH_STAGE`, `NOCTURNE_OTA_IMAGES_DIR`; remote SSH publish is intentionally TODO until signing keys and host/user details are provisioned.
+- `swupdate-config.bbappend` installs Nocturne's runtime configuration at `/etc/swupdate.cfg`. Do not put libconfig files in `/etc/swupdate/conf.d`: the BSP startup script sources that directory as shell. The BSP still owns the service packaging and auto-enable behavior.
+- The layer-local `swupdate-progress.service` intentionally runs `swupdate-progress -w` without `-r`. A successful full image OTA stages the inactive slot, cleans daemon OTA state, emits `ota.complete`, and waits for the user to select Restart in the settings UI. Do not restore automatic reboot behavior.
+- `20-nocturne-version-policy` passes the running rootfs image version from `/etc/nocturne/floor-version` through SWUpdate's valid `--no-downgrading` and `--no-reinstalling` options. Never use the bandaid marker for this native image check because an image SWU does not replace that partition. The pinned SWUpdate 2025.12 ignores SemVer `+build` metadata for precedence, so this protects core/prerelease ordering and exact reinstalls while the OTA server and daemon enforce Nocturne's build-identifier tie-break. Do not use the unrecognized `no-downgrade-check` libconfig key.
+- Production is the default and fails closed unless `NOCTURNE_SWUPDATE_PRIVATE_KEY` points to the RSA key matching `meta-nocturne/recipes-core/nocturne-keys/files/nocturne.pem`. Use `NOCTURNE_SWUPDATE_SIGNING_MODE=development-unsigned` only for artifacts that cannot be released.
+- Signed full and delta descriptions come from `recipes-extended/nocturne-update/files/{full,delta}`. Every image entry must keep its adjacent `$swupdate_get_sha256(...)` declaration pointed at the exact staged CPIO member. SWUpdate 2025.12 rejects a signed container if any installed image lacks a valid authenticated hash, and `nocturne-publish` independently verifies those hashes against the final archive bytes.
+- Full SWUs stage zstd-compressed boot and rootfs bytes under the stable `boot.vfat` and `system.img` CPIO names. Their descriptions must retain `compressed = "zstd"`, `type = "raw"`, and `installed-directly = true`; hashes cover the compressed members. Delta headers and zchunk assets are not wrapped in this compression path.
+- Image, SWU, manifest, and bandaid floor versions use the same build-stamped form, such as `4.1.0+20260725192800`. `NOCTURNE_BUILD_ID` is exactly 14 decimal UTC timestamp digits in `YYYYMMDDhhmmss` shape; the host build, BitBake, publisher, and daemon all reject other shapes. `just build` creates one ID and passes it to every target; the variable participates in task hashes so an incremental SWU build cannot reuse an image with a different installed version. Override it only to reproduce a known build, including through `release-image` or `release-bandaid`. This prevents a successfully installed rebuild from being offered forever and permits a later build of the same release core.
+- `just publish` requires both full and delta SWUs, verifies their exact build-stamped release version and production signature, copies canonical `boot.vfat.zck` and `system.img.zck` names, and verifies every `nocturne://` delta reference. Set `NOCTURNE_RELEASE_VERSION` to the full version and `NOCTURNE_DELTA_FROM_VERSIONS` to a comma-separated list of exact compatible installed builds, or `*` only when every earlier version is compatible. Delta source entries must be valid SemVer versions. Existing image-version directories are immutable by default; set `NOCTURNE_ALLOW_REPLACE=1` only for an intentional replacement. The manifest publishes a full fallback and a compatible delta variant. From the monorepo root, prefer `just release-image <version-core> <signing-key> [delta-from-versions] [variant] [target]`; it generates one UTC build ID, forces production signing, defaults to the `nocturne-local` kas target so the current daemon/UI sources are included, and publishes the resulting exact image version without requiring release environment variables. Pass `nocturne` as the final argument to build the pinned remote sources instead. The `just release` compatibility wrapper delegates to the same v2 publisher and reads the SWU version when no version variable is supplied.
+- `just package-daemon`, `just package-ui`, and `just package-bandaid` create the three hot-update payload shapes. `just publish-component <kind> <version> <source> <minimum-image-version> [channel]` promotes one of them through the OTA server publisher. From the monorepo root, `just release-bandaid <version-core> <minimum-image-version> [channel]` is the preferred end-to-end path: it creates a build-stamped version, builds both inputs, packages them in a fresh temporary directory, rejects release collisions, publishes them, and verifies the stored asset and manifest. The minimum image version is mandatory so an older device can be routed through a full or zchunk image prerequisite before the hot update. Image and component releases publish into separate `images/<version>/<kind>/` directories so both can exist at one product version.

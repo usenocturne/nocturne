@@ -1,1 +1,1 @@
-{"audio.level":{"event":{"level":0.42}},"audio.record.start":{"request":null,"response":{"status":"recording"}},"audio.record.stop":{"request":null,"response":{"status":"idle"}}}
+{"audio.level":{"event":{"level":0.42}},"audio.record.start":{"request":null,"response":{"status":"recording"}},"audio.record.stop":{"request":null,"response":{"status":"idle"}},"wind_level":{"event":{"level":3,"stat":72.5}}}

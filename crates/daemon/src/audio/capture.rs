@@ -18,7 +18,7 @@ const OPUS_OUTPUT_BYTES: usize = 4096;
 const EVENT_CHANNEL_CAPACITY: usize = 64;
 const SILENCE_THRESHOLD_RMS: f32 = 300.0;
 const SILENCE_DURATION_MS: u64 = 1500;
-const SILENCE_GRACE_PERIOD_MS: u64 = 700;
+const SILENCE_GRACE_PERIOD_MS: u64 = 1500;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AudioEvent {
@@ -67,6 +67,7 @@ impl Default for AudioConfig {
 pub struct AudioCapture {
     config: AudioConfig,
     event_tx: broadcast::Sender<AudioEvent>,
+    wind_frame_tx: super::wind::WindFrameSender,
 }
 
 struct RecordingHandle {
@@ -92,12 +93,15 @@ impl CaptureState {
 }
 
 impl AudioCapture {
-    pub fn new() -> (AudioCapture, broadcast::Receiver<AudioEvent>) {
+    pub fn new(
+        wind_frame_tx: super::wind::WindFrameSender,
+    ) -> (AudioCapture, broadcast::Receiver<AudioEvent>) {
         let (event_tx, event_rx) = broadcast::channel::<AudioEvent>(EVENT_CHANNEL_CAPACITY);
         (
             Self {
                 config: AudioConfig::default(),
                 event_tx,
+                wind_frame_tx,
             },
             event_rx,
         )
@@ -125,8 +129,9 @@ impl AudioCapture {
                             let (done_tx, done_rx) = mpsc::unbounded_channel();
                             let config = self.config;
                             let event_tx = self.event_tx.clone();
+                            let wind_frame_tx = self.wind_frame_tx.clone();
                             let task = tokio::spawn(async move {
-                                if let Err(err) = run_recording_task(config, event_tx, stop_rx, done_tx).await {
+                                if let Err(err) = run_recording_task(config, event_tx, wind_frame_tx, stop_rx, done_tx).await {
                                     warn!("audio capture task failed: {}", err);
                                 }
                             });
@@ -177,6 +182,7 @@ impl AudioCapture {
 async fn run_recording_task(
     config: AudioConfig,
     event_tx: broadcast::Sender<AudioEvent>,
+    wind_frame_tx: super::wind::WindFrameSender,
     mut stop_rx: oneshot::Receiver<()>,
     done_tx: mpsc::UnboundedSender<()>,
 ) -> Result<()> {
@@ -186,7 +192,7 @@ async fn run_recording_task(
         return Err(err);
     }
 
-    let mut child = match spawn_arecord(config) {
+    let mut child = match spawn_arecord(config).await {
         Ok(child) => child,
         Err(err) => {
             send_stopped(&event_tx, err.to_string(), 0);
@@ -232,10 +238,11 @@ async fn run_recording_task(
     };
 
     let mut pcm_buffer = BytesMut::with_capacity(PCM_FRAME_BYTES * 2);
+    let mut converter = super::ARecordPcmConverter::with_wind_detection(wind_frame_tx);
     let mut seq = 0u64;
     let mut total_frames = 0u64;
     let mut started_sent = false;
-    let recording_started_at = Instant::now();
+    let mut first_frame_at = None;
     let mut silence_start = None;
     let mut mic_level_counter = 0u64;
 
@@ -247,7 +254,7 @@ async fn run_recording_task(
                 let _ = done_tx.send(());
                 return Ok(());
             }
-            frame = next_pcm_frame(&mut stdout, &mut pcm_buffer) => {
+            frame = next_pcm_frame(&mut stdout, &mut converter, &mut pcm_buffer) => {
                 match frame {
                     Ok(Some(pcm_frame)) => {
                         if !started_sent {
@@ -260,7 +267,8 @@ async fn run_recording_task(
                         }
 
                         let now = Instant::now();
-                        let within_grace_period = now.duration_since(recording_started_at)
+                        let first_frame = *first_frame_at.get_or_insert(now);
+                        let within_grace_period = now.duration_since(first_frame)
                             < Duration::from_millis(SILENCE_GRACE_PERIOD_MS);
                         let rms = rms_energy(&pcm_frame);
 
@@ -325,18 +333,10 @@ fn validate_config(config: AudioConfig) -> Result<()> {
     Ok(())
 }
 
-fn spawn_arecord(config: AudioConfig) -> Result<Child> {
+async fn spawn_arecord(_config: AudioConfig) -> Result<Child> {
+    super::configure_capture_route().await?;
     Command::new("arecord")
-        .arg("-D")
-        .arg("hw:0,0")
-        .arg("-f")
-        .arg("S16_LE")
-        .arg("-c")
-        .arg(config.channels.to_string())
-        .arg("-r")
-        .arg(config.sample_rate.to_string())
-        .arg("-t")
-        .arg("raw")
+        .args(super::ARECORD_ARGS)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true)
@@ -357,6 +357,7 @@ fn build_encoder() -> Result<Encoder> {
 
 async fn next_pcm_frame(
     stdout: &mut ChildStdout,
+    converter: &mut super::ARecordPcmConverter,
     pcm_buffer: &mut BytesMut,
 ) -> std::io::Result<Option<Vec<u8>>> {
     loop {
@@ -371,7 +372,7 @@ async fn next_pcm_frame(
             return Ok(None);
         }
 
-        pcm_buffer.extend_from_slice(&chunk[..bytes_read]);
+        converter.push_raw(&chunk[..bytes_read], pcm_buffer);
     }
 }
 

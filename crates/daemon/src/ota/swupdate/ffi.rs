@@ -15,7 +15,7 @@ use super::{OtaPhase, SwupdateError, SwupdateEvent};
 const CHUNK_SIZE: usize = 64 * 1024;
 const PROGRESS_MIN_INTERVAL: Duration = Duration::from_millis(100);
 const SWUPDATE_CTRL_SOCKET: &str = "/tmp/sockinstctrl";
-const SWUPDATE_PROGRESS_SOCKET: &str = "/run/swupdate-progress";
+const SWUPDATE_PROGRESS_SOCKET: &str = "/tmp/swupdateprog";
 
 unsafe extern "C" {
     static mut SOCKET_CTRL_PATH: *mut c_char;
@@ -24,9 +24,12 @@ unsafe extern "C" {
     fn ipc_inst_start_ext(priv_: *mut c_void, size: isize) -> c_int;
     fn ipc_send_data(connfd: c_int, buf: *mut c_char, size: c_int) -> c_int;
     fn ipc_end(connfd: c_int);
+    fn ipc_wait_for_complete(callback: GetStatusCallback) -> c_int;
     fn progress_ipc_connect(reconnect: bool) -> c_int;
     fn progress_ipc_receive(connfd: *mut c_int, msg: *mut ProgressMsg) -> c_int;
 }
+
+type GetStatusCallback = Option<unsafe extern "C" fn(*mut c_void) -> c_int>;
 
 const SWUPDATE_API_VERSION: c_uint = 0x1;
 const SOURCE_LOCAL: c_uint = 4;
@@ -78,9 +81,7 @@ impl Swupdate {
         let _progress_handle = task::spawn_blocking(move || progress_reader(prog_tx));
 
         let path = swu_path.to_path_buf();
-        let send_handle = task::spawn_blocking(move || install_blocking(path, selector));
-        let mut send_handle = Some(send_handle);
-        let mut send_done = false;
+        let mut send_handle = task::spawn_blocking(move || install_blocking(path, selector));
         let mut last_emit: Option<(OtaPhase, u8, Instant)> = None;
 
         loop {
@@ -97,7 +98,6 @@ impl Swupdate {
                     match status {
                         RECOVERY_STATUS_SUCCESS => {
                             tracing::info!("libswupdate reported SUCCESS");
-                            return Ok(());
                         }
                         RECOVERY_STATUS_FAILURE => {
                             let msg = info_str(&msg);
@@ -107,32 +107,12 @@ impl Swupdate {
                         _ => {}
                     }
                 }
-                res = wait_send(&mut send_handle), if send_handle.is_some() => {
-                    send_done = true;
+                res = &mut send_handle => {
                     match res {
-                        Ok(Ok(())) => tracing::debug!("install bytes streamed; awaiting libswupdate completion via progress socket"),
+                        Ok(Ok(())) => return Ok(()),
                         Ok(Err(err)) => return Err(err),
                         Err(err) => return Err(SwupdateError::Ipc(format!("install task panic: {err}"))),
                     }
-                }
-                else => {
-                    if send_done {
-                        // Bytes finished streaming and the progress socket closed without emitting
-                        // a terminal SUCCESS/FAILURE. We cannot tell from here whether libswupdate
-                        // actually finished writing the image (closed cleanly) or crashed (closed
-                        // mid-write). Treating this as success would risk marking a failed install
-                        // as committed, so fail loudly instead. Operator can retry or check journal.
-                        tracing::error!(
-                            "progress socket closed after install bytes streamed without terminal \
-                             status; failing install to avoid a false-success commit",
-                        );
-                        return Err(SwupdateError::Ipc(
-                            "progress socket closed without SUCCESS/FAILURE; install state \
-                             ambiguous, refusing to assume success"
-                                .into(),
-                        ));
-                    }
-                    return Err(SwupdateError::Ipc("progress socket closed before install completed".into()));
                 }
             }
         }
@@ -169,15 +149,6 @@ fn ensure_socket_paths() {
             SOCKET_PROGRESS_PATH = prog.into_raw();
         }
     });
-}
-
-async fn wait_send(
-    handle: &mut Option<task::JoinHandle<Result<(), SwupdateError>>>,
-) -> Result<Result<(), SwupdateError>, task::JoinError> {
-    let h = handle
-        .take()
-        .expect("wait_send only called when handle is Some");
-    h.await
 }
 
 fn should_emit(
@@ -264,8 +235,17 @@ fn install_blocking(swu_path: PathBuf, selector: Selector) -> Result<(), Swupdat
         }
 
         ipc_end(fd);
+
+        match ipc_wait_for_complete(None) {
+            value if value == RECOVERY_STATUS_SUCCESS as c_int => Ok(()),
+            value if value == RECOVERY_STATUS_FAILURE as c_int => Err(SwupdateError::WriteFailed {
+                msg: "swupdate reported failure".into(),
+            }),
+            value => Err(SwupdateError::Ipc(format!(
+                "ipc_wait_for_complete returned {value}"
+            ))),
+        }
     }
-    Ok(())
 }
 
 fn progress_reader(tx: mpsc::Sender<ProgressMsg>) {
@@ -306,8 +286,7 @@ fn translate(msg: &ProgressMsg) -> SwupdateEvent {
 fn info_str(msg: &ProgressMsg) -> String {
     let infolen = msg.infolen.min(PRINFOSIZE as c_uint) as usize;
     let info = unsafe { std::ptr::addr_of!(msg.info).read_unaligned() };
-    let bytes = &info[..infolen];
+    let bytes = unsafe { std::slice::from_raw_parts(info.as_ptr().cast::<u8>(), infolen) };
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-    String::from_utf8_lossy(&bytes[..end].iter().map(|&b| b as u8).collect::<Vec<u8>>())
-        .into_owned()
+    String::from_utf8_lossy(&bytes[..end]).into_owned()
 }

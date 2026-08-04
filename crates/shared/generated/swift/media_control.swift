@@ -168,18 +168,22 @@ public struct MediaControlVolumeUpResponse: Codable, Sendable {
 public struct MediaNowPlayingArtworkEvent: Codable, Sendable {
   public let data: Data
   public let contentType: String
+  public let mediaGeneration: UInt64?
 
   public init(
     data: Data,
-    contentType: String
+    contentType: String,
+    mediaGeneration: UInt64?
   ) {
     self.data = data
     self.contentType = contentType
+    self.mediaGeneration = mediaGeneration
   }
 
   private enum CodingKeys: String, CodingKey {
     case data = "data"
     case contentType = "content_type"
+    case mediaGeneration = "media_generation"
   }
 }
 
@@ -200,18 +204,22 @@ public struct MediaNowPlayingArtworkFailedEvent: Codable, Sendable {
 public struct MediaNowPlayingUpdateEvent: Codable, Sendable {
   public let mediaItemAttributes: Value?
   public let playbackAttributes: Value?
+  public let mediaGeneration: UInt64?
 
   public init(
     mediaItemAttributes: Value?,
-    playbackAttributes: Value?
+    playbackAttributes: Value?,
+    mediaGeneration: UInt64?
   ) {
     self.mediaItemAttributes = mediaItemAttributes
     self.playbackAttributes = playbackAttributes
+    self.mediaGeneration = mediaGeneration
   }
 
   private enum CodingKeys: String, CodingKey {
     case mediaItemAttributes = "media_item_attributes"
     case playbackAttributes = "playback_attributes"
+    case mediaGeneration = "media_generation"
   }
 }
 

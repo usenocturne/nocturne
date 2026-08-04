@@ -77,7 +77,7 @@ export interface BluetoothAgentEventMessage {
  */
 export interface BluetoothConnectionEvent {
   /**
-   * connecting, connection_established, or connection_closed. Inventory field `event` emits as `event`.
+   * connecting, connector_probe, connection_established, or connection_closed. Inventory field `event` emits as `event`.
    */
   event: string;
   /**
@@ -158,9 +158,13 @@ export interface BluetoothDeviceConnectRequest {
    */
   address: string;
   /**
-   * Optional RFCOMM channel hint; current daemon auto-detects. Inventory field `channel` emits as `channel`.
+   * Optional RFCOMM channel hint; 3 forces the macOS connector probe, otherwise the daemon auto-detects. Inventory field `channel` emits as `channel`.
    */
   channel?: number;
+  /**
+   * Optional peer type hint; computer/mac/macos/macos_connector force the macOS connector probe. Inventory field `device_type` emits as `deviceType`.
+   */
+  deviceType?: string;
 }
 
 /**
@@ -170,7 +174,7 @@ export interface BluetoothDeviceConnectRequest {
  */
 export interface BluetoothDeviceConnectResponse {
   /**
-   * connected or waiting_for_android. Inventory field `status` emits as `status`.
+   * connected, waiting_for_ios, waiting_for_macos_connector, or waiting_for_android. Inventory field `status` emits as `status`.
    */
   status: string;
   /**
@@ -371,7 +375,7 @@ export interface BluetoothDevicesListRequest {
  */
 export interface BluetoothDevicesListResponse {
   /**
-   * Paired BlueZ devices. Inventory field `payload` emits as `payload`.
+   * Paired BlueZ devices. device_info carries name/icon/class; computer-class peers are additionally annotated with device_type/connection_type macos_connector and channel 3 so the UI can echo them back on bluetooth.device.connect. Inventory field `payload` emits as `payload`.
    */
   payload: BluetoothDevicesListResponsePayload[];
   /**
@@ -382,7 +386,7 @@ export interface BluetoothDevicesListResponse {
 
 /**
  * Opaque object shape for `payload` nested under `BluetoothDevicesListResponse`.
- * Paired BlueZ devices.
+ * Paired BlueZ devices. device_info carries name/icon/class; computer-class peers are additionally annotated with device_type/connection_type macos_connector and channel 3 so the UI can echo them back on bluetooth.device.connect.
  * Inventory: field `payload` in `METHOD_INVENTORY` entry `bluetooth.devices.list` response.
  */
 export interface BluetoothDevicesListResponsePayload {

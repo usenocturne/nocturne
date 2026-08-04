@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# Build one OTA-server-ready daemon, UI, or combined bandaid payload directory.
+# Usage:
+#   nocturne-package-component daemon <nocturned> <output-dir>
+#   nocturne-package-component builtinWebapp <ui-dist> <output-dir>
+#   nocturne-package-component bandaid <nocturned> <ui-dist> <output-dir>
+
+set -euo pipefail
+
+usage() {
+  sed -n '2,6p' "$0" | sed 's/^# \?//' >&2
+  exit 2
+}
+
+KIND="${1:-}"
+shift || true
+
+case "$KIND" in
+  daemon)
+    [[ $# -eq 2 ]] || usage
+    DAEMON_SOURCE="$1"
+    OUTPUT_DIR="$2"
+    UI_SOURCE=""
+    ;;
+  builtinWebapp)
+    [[ $# -eq 2 ]] || usage
+    UI_SOURCE="$1"
+    OUTPUT_DIR="$2"
+    DAEMON_SOURCE=""
+    ;;
+  bandaid)
+    [[ $# -eq 3 ]] || usage
+    DAEMON_SOURCE="$1"
+    UI_SOURCE="$2"
+    OUTPUT_DIR="$3"
+    ;;
+  *) usage ;;
+esac
+
+if [[ -e "$OUTPUT_DIR" ]] && [[ -n "$(find "$OUTPUT_DIR" -mindepth 1 -maxdepth 1 -print -quit 2> /dev/null)" ]]; then
+  echo "output directory is not empty: $OUTPUT_DIR" >&2
+  exit 1
+fi
+mkdir -p "$OUTPUT_DIR"
+
+validate_daemon() {
+  local binary="$1"
+  local description
+  [[ -f "$binary" && -x "$binary" ]] || {
+    echo "daemon is not an executable file: $binary" >&2
+    exit 1
+  }
+  command -v file > /dev/null 2>&1 || {
+    echo "file is required to validate the daemon architecture" >&2
+    exit 2
+  }
+  description=$(file "$binary")
+  if [[ "${NOCTURNE_SKIP_ARCH_CHECK:-0}" != "1" ]] &&
+    [[ "$description" != *"ELF 64-bit"*"ARM aarch64"* ]] &&
+    [[ "$description" != *"ELF 64-bit"*"ARM64"* ]]; then
+    echo "daemon is not an AArch64 ELF: $description" >&2
+    exit 1
+  fi
+}
+
+validate_ui() {
+  local dist="$1"
+  [[ -d "$dist" ]] || {
+    echo "UI dist directory does not exist: $dist" >&2
+    exit 1
+  }
+  [[ -f "$dist/index.html" ]] || {
+    echo "UI dist is missing index.html: $dist" >&2
+    exit 1
+  }
+}
+
+create_tar_zst() {
+  local source="$1"
+  local output="$2"
+  command -v tar > /dev/null 2>&1 || {
+    echo "tar is required" >&2
+    exit 2
+  }
+  command -v zstd > /dev/null 2>&1 || {
+    echo "zstd is required" >&2
+    exit 2
+  }
+  COPYFILE_DISABLE=1 tar -C "$source" --exclude='.DS_Store' -cf - . |
+    zstd -q -19 -T0 -o "$output"
+  zstd -q -t "$output"
+}
+
+case "$KIND" in
+  daemon)
+    validate_daemon "$DAEMON_SOURCE"
+    install -m 0755 "$DAEMON_SOURCE" "$OUTPUT_DIR/nocturned"
+    ;;
+  builtinWebapp)
+    validate_ui "$UI_SOURCE"
+    create_tar_zst "$UI_SOURCE" "$OUTPUT_DIR/nocturne-ui.tar.zst"
+    if ! zstd -q -dc "$OUTPUT_DIR/nocturne-ui.tar.zst" | tar -tf - | sed 's#^\./##' | grep -qx 'index.html'; then
+      echo "generated UI payload is missing index.html" >&2
+      exit 1
+    fi
+    ;;
+  bandaid)
+    validate_daemon "$DAEMON_SOURCE"
+    validate_ui "$UI_SOURCE"
+    STAGING_DIR=$(mktemp -d)
+    trap 'rm -rf "$STAGING_DIR"' EXIT
+    install -d "$STAGING_DIR/daemon" "$STAGING_DIR/webapps/ui"
+    install -m 0755 "$DAEMON_SOURCE" "$STAGING_DIR/daemon/nocturned.current"
+    cp -a "$UI_SOURCE"/. "$STAGING_DIR/webapps/ui/"
+    create_tar_zst "$STAGING_DIR" "$OUTPUT_DIR/nocturne-bandaid.tar.zst"
+    archive_members=$(zstd -q -dc "$OUTPUT_DIR/nocturne-bandaid.tar.zst" | tar -tf - | sed 's#^\./##')
+    grep -qx 'daemon/nocturned.current' <<< "$archive_members" || {
+      echo "generated bandaid is missing daemon/nocturned.current" >&2
+      exit 1
+    }
+    grep -qx 'webapps/ui/index.html' <<< "$archive_members" || {
+      echo "generated bandaid is missing webapps/ui/index.html" >&2
+      exit 1
+    }
+    ;;
+esac
+
+echo "packaged $KIND OTA payload in $OUTPUT_DIR"

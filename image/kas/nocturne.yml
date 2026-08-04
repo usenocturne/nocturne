@@ -6,6 +6,11 @@ header:
 
 distro: nocturne
 
+env:
+  NOCTURNE_BUILD_ID: null
+  NOCTURNE_SWUPDATE_SIGNING_MODE: null
+  NOCTURNE_SWUPDATE_PRIVATE_KEY: null
+
 target:
   - nocturne-dev-image
   - nocturne-update-dev
@@ -17,7 +22,7 @@ target:
 repos:
   yocto-superbird:
     url: https://github.com/JoeyEamigh/yocto-superbird.git
-    refspec: be71edbf115400e59c52042f39ab8ef142943cc9
+    commit: f0e7aa50a941f28ec196312f68c454982b191fee
     path: sources/yocto-superbird
     layers:
       meta-superbird:

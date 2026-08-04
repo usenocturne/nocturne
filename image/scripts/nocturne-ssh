@@ -5,9 +5,9 @@ set -euo pipefail
 HOST=${SUPERBIRD_HOST:-nocturne.local}
 
 exec ssh \
-    -o UserKnownHostsFile=/dev/null \
-    -o StrictHostKeyChecking=no \
-    -o GlobalKnownHostsFile=/dev/null \
-    -o ConnectTimeout=5 \
-    -o LogLevel=ERROR \
-    "root@$HOST" "$@"
+  -o UserKnownHostsFile=/dev/null \
+  -o StrictHostKeyChecking=no \
+  -o GlobalKnownHostsFile=/dev/null \
+  -o ConnectTimeout=5 \
+  -o LogLevel=ERROR \
+  "root@$HOST" "$@"

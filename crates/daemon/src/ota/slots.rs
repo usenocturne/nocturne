@@ -4,6 +4,7 @@ use std::{
 };
 
 const TRY_MAX: &str = "3";
+const CMDLINE_PATH: &str = "/proc/cmdline";
 
 #[derive(Debug, thiserror::Error)]
 pub enum SlotsError {
@@ -40,11 +41,45 @@ pub fn active_slot() -> Result<char, SlotsError> {
 }
 
 pub fn inactive_slot() -> Result<char, SlotsError> {
-    match active_slot()? {
+    inactive_from_running_slot(running_slot()?)
+}
+
+fn inactive_from_running_slot(running: char) -> Result<char, SlotsError> {
+    match running {
         'a' => Ok('b'),
         'b' => Ok('a'),
         value => Err(SlotsError::BadValue(value.to_string())),
     }
+}
+
+fn running_slot() -> Result<char, SlotsError> {
+    if host_stub_enabled() {
+        tracing::warn!("NOCTURNE_SLOTS_STUB=1; defaulting running slot to a");
+        return Ok('a');
+    }
+
+    let cmdline = std::fs::read_to_string(CMDLINE_PATH)?;
+    parse_running_slot(&cmdline)
+}
+
+fn parse_running_slot(cmdline: &str) -> Result<char, SlotsError> {
+    let mut parsed = None;
+    for value in cmdline
+        .split_ascii_whitespace()
+        .filter_map(|arg| arg.strip_prefix("superbird.slot="))
+    {
+        if parsed.is_some() {
+            return Err(SlotsError::BadValue(
+                "multiple superbird.slot values in kernel cmdline".into(),
+            ));
+        }
+        parsed = Some(match value {
+            "a" => 'a',
+            "b" => 'b',
+            value => return Err(SlotsError::BadValue(value.to_string())),
+        });
+    }
+    parsed.ok_or_else(|| SlotsError::BadValue("missing superbird.slot in kernel cmdline".into()))
 }
 
 pub fn mark_slot_ok(slot: char) -> Result<(), SlotsError> {
@@ -70,4 +105,39 @@ pub fn mark_slot_ok(slot: char) -> Result<(), SlotsError> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_the_actual_running_slot_from_kernel_cmdline() {
+        assert_eq!(
+            parse_running_slot("root=PARTLABEL=root_a superbird.slot=a ro").unwrap(),
+            'a'
+        );
+        assert_eq!(
+            parse_running_slot("root=PARTLABEL=root_b ro superbird.slot=b").unwrap(),
+            'b'
+        );
+    }
+
+    #[test]
+    fn rejects_missing_or_invalid_running_slot() {
+        assert!(parse_running_slot("root=PARTLABEL=root_a ro").is_err());
+        assert!(parse_running_slot("root=PARTLABEL=root_c superbird.slot=c").is_err());
+        assert!(parse_running_slot("superbird.slot=a superbird.slot=b").is_err());
+        assert!(parse_running_slot("superbird.slot=a superbird.slot=a").is_err());
+    }
+
+    #[test]
+    fn staged_next_boot_selection_cannot_change_the_running_slot_target() {
+        let running =
+            parse_running_slot("root=PARTLABEL=root_b superbird.slot=b slot_active=a ro rootwait")
+                .unwrap();
+
+        assert_eq!(running, 'b');
+        assert_eq!(inactive_from_running_slot(running).unwrap(), 'a');
+    }
 }

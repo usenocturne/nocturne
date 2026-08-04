@@ -1,87 +1,12 @@
-<h1 align="center">
-  <img src="https://usenocturne.com/images/logo.png" alt="Nocturne" width="200">
-  <br>
-  Nocturne
-  <br>
-</h1>
+# Nocturne OS image
 
-<p align="center">The most advanced custom firmware for the <a href="https://carthing.spotify.com" target="_blank">Spotify Car Thing</a>.</p>
+The Yocto image for the Car Thing. `kas/nocturne.yml` pins the [`yocto-superbird`](https://github.com/JoeyEamigh/yocto-superbird) BSP upstream and adds [`meta-nocturne/`](meta-nocturne).
 
-<p align="center">
-  <a href="#flashing">Flashing</a> •
-  <a href="#donate">Donate</a> •
-  <a href="#building">Building</a> •
-  <a href="#subprojects">Subprojects</a> •
-  <a href="#credits">Credits</a> •
-  <a href="#license">License</a>
-</p>
+This document covers building the image and driving a device from a host. For flashing a release, connecting your phone, and the rest of the project see the [root README](../README.md). Layer internals are documented in [`meta-nocturne/README.md`](meta-nocturne/README.md).
 
-<div align="center">
-  <a href="https://usenocturne.com"><img alt="Website" src="https://img.shields.io/badge/website-gray?style=flat-square&logo=react&logoColor=FFFFFF"></a>
-  <a href="https://discord.gg/mnURjt3M6m"><img alt="Discord" src="https://img.shields.io/discord/1304909652387172493?style=flat-square&logo=discord&logoColor=FFFFFF&label=discord"></a>
-</div>
-
-<br>
-
-<p align="center"><img width=600 src="https://usenocturne.com/images/nocturne.png" alt="Nocturne screenshot"></p>
-
-## Setup
-
-> [!WARNING]
-> Bricking the Car Thing is nearly impossible, but the risk is always there when flashing custom firmware.
-
-### Requirements
-
-- A booted Linux/macOS host (Windows under WSL works for flashing but not for builds)
-- [`flashthing-cli`](https://crates.io/crates/flashthing-cli) installed via `cargo install flashthing-cli`
-- Your user in the `dialout` (Debian/Ubuntu) or `uucp` (Arch) group for `/dev/ttyUSB*`
-
-### Flashing
-
-1. Download a flashthing zip from [Releases](https://github.com/usenocturne/nocturne/releases) (the file ends in `-superbird-flashthing.zip`)
-2. Put the Car Thing into Amlogic mask-rom USB mode: hold the wheel-click button while plugging in USB (the host should see USB id `1b8e:c003`)
-3. Run `flashthing-cli <path-to-zip>`
-
-Flashing takes about 30-60 seconds for the first install. Subsequent updates use OTA over USB and don't need mask-rom mode.
-
-If you're coming from the old Buildroot Nocturne, your Car Thing is already in good shape - the same `1b8e:c003` mask-rom mode works, just with a different host tool.
-
-### Connecting to Nocturne
-
-<details>
-<summary><img src="https://camo.githubusercontent.com/b9c79d36777ba11fe5423f498b522f7b786898772a1ddbb44074fb6bc59adf06/68747470733a2f2f7573656e6f637475726e652e636f6d2f696d616765732f6c6f676f2e706e67" height="14" style="vertical-align: middle;"> Mobile Device (iOS 16.1+ / Android 13+, recommended)</summary>
-
-Nocturne supports Bluetooth without tethering. An internet connection is still required to access the Spotify API. App access requires Nocturne Lifetime ($9.99 one-time) or Nocturne+ ($1.99/month). Nocturne+ also unlocks voice controls on your Car Thing.
-
-1. Download [Nocturne Companion](https://usenocturne.com/app).
-2. Follow the steps inside the app to pair your Car Thing.
-
-**Tip:** Make sure your Car Thing is not connected to a computer, as this may conflict with Bluetooth.
-</details>
-
-<details>
-<summary><img src="https://usenocturne.com/favicon.ico" height="14" style="vertical-align: middle;"> Standalone (WiFi, Raspberry Pi)</summary>
-
-Nocturne Connector requires a Raspberry Pi, but allows you to use Nocturne without being connected to your phone.
-
-See more on the [Nocturne Connector GitHub](https://github.com/usenocturne/nocturne-connector).
-</details>
-
-### Uninstall
-
-Use a tool of your choice (`flashthing-cli` with stock firmware, or Terbium for the old Buildroot path) to flash stock or a different firmware.
-
-## Donate
-
-Nocturne is a massive endeavor, and the team has spent every day over the last year making it a reality out of our passion for creating something that people like you love to use.
-
-All donations are split between the three members of the Nocturne team and go towards the development of future features. We are so grateful for your support!
-
-[Donation Page](https://usenocturne.com/support)
+Everything here runs from `image/`. The root `Justfile` wraps the common recipes (`just image-build`, `just release-image`) if you'd rather stay at the top level.
 
 ## Building
-
-Nocturne builds on the [`yocto-superbird`](https://github.com/JoeyEamigh/yocto-superbird) BSP, pulled in as a kas-managed dependency.
 
 ### Required host tools
 
@@ -91,19 +16,16 @@ Nocturne builds on the [`yocto-superbird`](https://github.com/JoeyEamigh/yocto-s
 | `docker` or `podman` | runs the kas container |
 | [`kas`](https://kas.readthedocs.io/) | invoked through `kas-container` |
 | [`flashthing-cli`](https://crates.io/crates/flashthing-cli) | host-side burn-mode flasher |
-| `uv` (optional) | runs the PEP-723 helper scripts under `scripts/` |
+| `uv` (optional) | runs the PEP-723 helper scripts under [`scripts/`](scripts) |
 
 ### One-shot build
 
 ```bash
-just build              # default: nocturne-{prod,dev}-image + 4 OTA wrappers
+just build
+KAS_CONTAINER_ENGINE=podman just build   # if you don't run docker
 ```
 
 The first cold build downloads upstream layers, crates, and tarballs (multiple gigabytes). Subsequent builds reuse `build/sstate-cache/` and `ccache/`. `yocto-superbird` exposes a public sstate mirror at `http://yocto.24hgr.love/sstate/` that primes most of the build for you.
-
-```bash
-KAS_CONTAINER_ENGINE=podman just build   # if you don't run docker
-```
 
 Outputs land in `build/tmp/deploy/images/superbird/`:
 
@@ -113,47 +35,33 @@ Outputs land in `build/tmp/deploy/images/superbird/`:
 - `nocturne-update-{prod,dev}-delta-superbird.swu` - zchunk delta OTA payloads
 - `bandaid.ext4` - nocturned + nocturne-ui floor for the bandaid partition
 
-### Iterating on the daemon or UI
+### Signing
 
-If you're hacking on [`nocturned`](https://github.com/usenocturne/nocturned) or [`nocturne-ui`](https://github.com/usenocturne/nocturne-ui) and don't want to push a tag every time, point the build at your local checkouts:
+Production builds are signed and fail before BitBake starts when the private key is missing or does not match the public key baked into the image. For local testing only, build explicitly unsigned artifacts with:
 
 ```bash
-cp kas/nocturne-local.example.yml kas/nocturne-local.yml
-# edit the two NOCTURNE_LOCAL_* paths
+NOCTURNE_SWUPDATE_SIGNING_MODE=development-unsigned just build
+```
+
+Unsigned artifacts cannot pass the production publisher.
+
+### Build IDs
+
+The build command prints the generated `NOCTURNE_BUILD_ID`. It is exactly 14 decimal UTC timestamp digits in `YYYYMMDDhhmmss` shape. That same identifier is embedded in the image, both SWUs, and the bandaid floor marker. Set `NOCTURNE_BUILD_ID` explicitly only when reproducing a known build; changing it invalidates the relevant BitBake task hashes so image and wrapper versions cannot drift. Both the host command and BitBake reject any other shape so the image, OTA server, floor sync, and daemon use one ordering policy.
+
+### Iterating on the daemon or UI
+
+`nocturned` and `nocturne-ui` are built from this repo, so the default `just build` needs your changes pushed. While they're still local, build from the working tree instead:
+
+```bash
 just build nocturne-local
 ```
 
-### Justfile reference
+No setup — the Justfile mounts the monorepo root at `/monorepo` and `kas/nocturne-local.yml` points `EXTERNALSRC` there, so the same committed config works on every machine. Both recipes compile inside the kas container (cargo for the daemon, `bun-native` for the UI); nothing has to be prebuilt on the host.
 
-```
-$ just -l
-Available recipes:
-    boot-kernel             # Exit mask-rom usb mode and cold-boot into the on-disk image
-    build target=default    # Build the named image set inside the kas container
-    cdp port="9223"         # SSH-tunnel chromium's CDP from the device to the host
-    checkout target=default # Fetch/checkout layers
-    cmd *args               # Send a single command via the uart console agent
-    console subcmd="status" # UART console agent. Subcommand: start | stop | restart | status
-    flash image=...         # Flash a full image to the device
-    flash-env image=...     # Env-only reflash (~2s vs 30-60s for full)
-    flash-fast partlabel    # Write a single GPT partition over u-boot fastboot
-    install-dev             # Pull latest dev image from OTA manifest and flash it
-    install-prod            # Pull latest prod image from OTA manifest and flash it
-    ota *args               # Push a delta OTA to a booted device
-    publish variant=...     # Cut a release: bundles + manifest + R2 upload
-    push-sstate             # Push local sstate-cache to your team's rsync mirror
-    push-webapp local name  # Push a webapp bundle into /var/nocturne/webapps/<name>
-    reboot-to-fastboot      # Reboot device into u-boot fastboot
-    reboot-to-maskrom       # Reboot device into mask-rom USB (1b8e:c003)
-    release *args           # Upload build artifacts to R2
-    reset-hold              # Hold FT232 RTS deasserted (reset released)
-    reset-pulse duration_ms # One-shot reset pulse
-    shell target=default    # Drop into a bitbake shell inside the kas container
-    ssh *args               # SSH into the device over USB-CDC-NCM
-    vscode-setup            # Drop poky-layout symlinks under sources/
-```
+Note the container's `bun install` writes `node_modules/` into your tree, so don't run a host `bun install` at the same time as a local image build.
 
-### Talking to a booted device
+## Talking to a booted device
 
 Over USB-CDC-NCM, the device shows up on mDNS as `nocturne.local`:
 
@@ -172,59 +80,102 @@ just console stop
 
 The agent keeps FT232 RTS deasserted (it's wired to the SoC reset pin), so the board doesn't reset every time another process opens the serial node. Don't open `/dev/ttyUSB0` directly while the agent is running.
 
-### OTA
+Reflashing a development device:
 
-OTAs are A/B with libswupdate. A successful install writes the inactive slot, flips `slot_active` in u-boot env, and reboots. If the new slot fails to come up three times the bootloader rolls back.
+```bash
+just reboot-to-maskrom  # drop to 1b8e:c003
+just flash              # full image via flashthing-cli
+just flash-env          # env-only reflash, much faster
+just ota                # delta OTA push to a booted device
+```
 
-Three install kinds (driven by the companion app):
+## Releasing
 
-- `image` - writes a full `.swu` to the inactive root partition
-- `daemon` - aarch64 `nocturned` binary rotated atomically on the bandaid bind-mount, service restart
-- `builtin-webapp` - SPA bundle swapped on the bandaid bind-mount, service restart
+Image release manifests contain a signed full SWU fallback and a signed delta SWU with an explicit source-version compatibility list. Full SWUs stream zstd-compressed boot and rootfs members directly into the inactive slot. Delta OTAs use zchunk HTTP range requests for changed chunks only. The publisher rejects a release-version mismatch, a missing canonical zchunk asset, an unresolved `nocturne://` reference, or an unsigned production SWU.
 
-Delta OTAs (zchunk) ship only the changed chunks via HTTP range requests over the USB link.
+The v2 OTA server reads releases from `images/<version>/<kind>/manifest.json` and `images/<version>/<kind>/assets/`. By default, the image publisher writes to `../nocturne-ota/images`, which is the directory mounted by the OTA server's Docker Compose service. Set `NOCTURNE_OTA_IMAGES_DIR` when the server uses a different images root. There is no R2 manifest generation step in this workflow.
 
-## Subprojects
+The end-to-end recipe generates one UTC `+YYYYMMDDhhmmss` stamp and uses it for both the build and publish steps. Set `NOCTURNE_BUILD_ID` to reproduce a known build. The version core must match `DISTRO_VERSION`. Both `prod` and `dev` releases remain production-signed; the variant chooses which built image is published. Publishing an existing image version is rejected unless `NOCTURNE_ALLOW_REPLACE=1` is set deliberately.
 
-Nocturne consists of several Git repos, all of which are public and open-source.
+Image publishing requires `bsdtar`, `openssl`, `python3`, and `rsync`. Component packaging additionally requires `bun`, `zstd`, and `file`.
 
-- [nocturne](https://github.com/usenocturne/nocturne) - this Yocto image
-- [nocturne-ui](https://github.com/usenocturne/nocturne-ui) - Nocturne's web application written with Vite + React
-- [nocturned](https://github.com/usenocturne/nocturned) - the local daemon: BlueZ + iAP2 + MFi + WebSocket UI bridge + embedded HTTP file server
+```bash
+# Preferred 4.1.0 end-to-end command, run from the monorepo root. The exact
+# release version is the only delta source, so older image layouts get full.
+VERSION_CORE=4.1.0
+BUILD_ID=$(date -u +%Y%m%d%H%M%S)
+NOCTURNE_BUILD_ID="$BUILD_ID" \
+  just release-image "$VERSION_CORE" /secure/nocturne.pem \
+  "${VERSION_CORE}+${BUILD_ID}" prod nocturne-local
 
-## Credits
+# Or name every argument and use the pinned remote-source kas target.
+NOCTURNE_BUILD_ID="$BUILD_ID" \
+  just release-image "$VERSION_CORE" /secure/nocturne.pem \
+  "${VERSION_CORE}+${BUILD_ID}" prod nocturne
 
-This software was made possible only through the following individuals and open source projects:
+# Lower-level publish-only path, run from image/ after building matching artifacts.
+NOCTURNE_RELEASE_VERSION=4.1.0+20260725192800 \
+NOCTURNE_DELTA_FROM_VERSIONS=4.1.0+20260725192800 \
+NOCTURNE_SWUPDATE_PRIVATE_KEY=/secure/nocturne.pem \
+just publish prod
 
-- [Brandon Saldan](https://github.com/brandonsaldan)
-- [Neel Patel](https://github.com/68p)
-- [Dominic Frye](https://github.com/itsnebulalol)
-- [Joey Eamigh](https://github.com/JoeyEamigh) - yocto-superbird/bridgething developer
+# Compatibility wrapper for an already-built 4.1.0 image.
+NOCTURNE_RELEASE_VERSION=4.1.0+20260725192800 \
+NOCTURNE_DELTA_FROM_VERSIONS=4.1.0+20260725192800 \
+just release prod
+```
 
-<hr>
+Component (hot) updates that don't require a full image:
 
-We'd like to give a huge thanks to [Joey Eamigh](https://github.com/JoeyEamigh) for [bridgething](https://github.com/JoeyEamigh/bridgething) (protocol, more robust iAP2, OTA, and more), [yocto-superbird](https://github.com/JoeyEamigh/yocto-superbird), and for a ton of help during the Yocto migration. We'd also like to thank [lmore377](https://github.com/lmore377) for modernizing the Car Thing's tooling and contributions to bridgething/yocto-superbird. The new Nocturne OS image powered by Yocto and modern software wouldn't be possible without them.
+```bash
+just package-daemon ../target/aarch64-unknown-linux-gnu/release/nocturned build/ota-components/daemon
+just package-ui ../packages/ui/dist build/ota-components/builtinWebapp
+just package-bandaid ../target/aarch64-unknown-linux-gnu/release/nocturned ../packages/ui/dist build/ota-components/bandaid
+just publish-component bandaid 4.2.0+20260725192800 build/ota-components/bandaid 4.1.0+20260718120000 stable
 
-- [The Yocto Project](https://www.yoctoproject.org/) and [OpenEmbedded](https://www.openembedded.org/)
-- [Benjamin McGill](https://www.linkedin.com/in/benjamin-mcgill/), for providing Brandon a Car Thing
-- [bishopdynamics](https://github.com/bishopdynamics), for the original [superbird-tool](https://github.com/bishopdynamics/superbird-tool), [superbird-debian-kiosk](https://github.com/bishopdynamics/superbird-debian-kiosk), and modifying [aml-imgpack](https://github.com/bishopdynamics/aml-imgpack)
-- [Thing Labs' fork of superbird-tool](https://github.com/thinglabsoss/superbird-tool), for their contributions on the original superbird-tool
+# Preferred end-to-end command, run from the monorepo root. It builds both inputs.
+NOCTURNE_BUILD_ID=20260725192800 just release-bandaid 4.2.0 4.1.0+20260718120000 stable
+```
+
+## Justfile reference
+
+```
+$ just -l
+Available recipes:
+    boot-kernel                             # Exit mask-rom usb mode and cold-boot into the on-disk image.
+    build target=default                    # Build the named image set inside the kas container.
+    build-nocturned target="nocturne-local" # Build just the daemon recipe.
+    cdp port="9223"                         # SSH-tunnel chromium's CDP from the device's 127.0.0.1:9223 to the host.
+    checkout target=default                 # Fetch/checkout layers
+    clean-build                             # Wipe local bitbake output. Layer clones + ccache survive.
+    cmd *args                               # Send a single command via the uart console agent.
+    console subcmd="status"                 # UART console agent. Subcommand: start | stop | restart | status.
+    flash image="nocturne-dev-image"        # Flash a full image to the device.
+    flash-env image="nocturne-dev-image"    # Env-only reflash.
+    flash-fast partlabel file=""            # Write a single gpt partition over u-boot fastboot.
+    install-dev                             # Pull latest preview image from the public OTA manifest and flash it.
+    install-prod                            # Pull latest stable image from the public OTA manifest and flash it.
+    lint                                    # Run pre-commit hooks (shellcheck, shfmt, yamllint) across the tree.
+    ota *args                               # Delta-OTA from a booted device.
+    package-bandaid binary dist output=...  # Package a daemon and UI dist together for an atomic bandaid OTA.
+    package-daemon binary output=...        # Package one AArch64 daemon binary for a daemon-only OTA.
+    package-ui dist output=...              # Package a built UI dist directory for a builtinWebapp OTA.
+    pre-commit-install                      # Install the pre-commit git hook so `git commit` runs the lint set.
+    publish variant="prod"                  # Stage signed full + compatible delta release metadata.
+    publish-component kind version ...      # Publish a packaged component directory through nocturne-ota.
+    push-sstate                             # Push local sstate-cache to your team's rsync mirror.
+    push-webapp local name=""               # Push a webapp bundle into /opt/nocturne/webapps/<name>/.
+    reboot-to-fastboot                      # Reboot a running device into u-boot fastboot.
+    reboot-to-maskrom                       # Reboot a running device into amlogic mask-rom usb mode (1b8e:c003).
+    release *args                           # Compatibility wrapper for v2 image publishing.
+    reset-hold                              # Hold the FT232 RTS line deasserted (reset released). Foreground.
+    reset-pulse duration_ms="200"           # One-shot reset pulse.
+    shell target=default                    # Drop into a bitbake shell inside the container.
+    ssh *args                               # SSH into the device over USB-CDC-NCM.
+    test                                    # Run host-side image helper tests.
+    vscode-setup                            # Drop poky-layout symlinks under sources/ for the vscode bitbake extension.
+```
 
 ## License
 
-This project is licensed under the **GPL-3.0** license.
-
-We kindly ask that any modifications or distributions made outside of direct forks from this repository include attribution to the original project in the README, as we have worked hard on this. :)
-
-This software contains calls to the Nocturne API. Any use, distribution, or modification of this software constitutes acceptance of the Nocturne API License.
-
----
-
-> © 2026 Vanta Labs.
-
-> "Spotify" and "Car Thing" are trademarks of Spotify AB. This software is not affiliated with or endorsed by Spotify AB.
-
-> [usenocturne.com](https://usenocturne.com) &nbsp;&middot;&nbsp;
-> [GitHub](https://github.com/usenocturne) &nbsp;&middot;&nbsp;
-> [X](https://x.com/usenocturne) &nbsp;&middot;&nbsp;
-> [Discord](https://discord.gg/mnURjt3M6m)
+GPL-3.0, same as the rest of the monorepo. See the [root README](../README.md#license).

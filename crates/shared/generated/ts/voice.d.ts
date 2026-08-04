@@ -17,6 +17,14 @@ export interface AiResponseEvent {
    * Legacy response text alias. Inventory field `text` emits as `text`.
    */
   text?: string;
+  /**
+   * Whether this response chunk is final. Inventory field `is_final` emits as `isFinal`.
+   */
+  isFinal?: boolean;
+  /**
+   * Voice session identifier used to reject stale turn events. Inventory field `session_id` emits as `sessionId`.
+   */
+  sessionId?: string;
 }
 
 /**
@@ -48,6 +56,10 @@ export interface AiStateEvent {
    * Optional status text. Inventory field `message` emits as `message`.
    */
   message?: string;
+  /**
+   * Voice session identifier used to reject stale turn events. Inventory field `session_id` emits as `sessionId`.
+   */
+  sessionId?: string;
 }
 
 /**
@@ -76,6 +88,22 @@ export interface AiToolExecutedEvent {
    */
   toolName?: string;
   /**
+   * Legacy executed tool name alias. Inventory field `tool` emits as `tool`.
+   */
+  tool?: string;
+  /**
+   * LLM tool-call id. Inventory field `call_id` emits as `callId`.
+   */
+  callId?: string;
+  /**
+   * Tool execution status. Inventory field `status` emits as `status`.
+   */
+  status?: string;
+  /**
+   * Tool arguments decoded from the LLM call. Inventory field `tool_arguments` emits as `toolArguments`.
+   */
+  toolArguments?: VoiceJsonValue;
+  /**
    * Tool-specific result. Inventory field `result` emits as `result`.
    */
   result?: VoiceJsonValue;
@@ -83,6 +111,10 @@ export interface AiToolExecutedEvent {
    * Tool error text. Inventory field `error` emits as `error`.
    */
   error?: string;
+  /**
+   * Voice session identifier used to reject stale turn events. Inventory field `session_id` emits as `sessionId`.
+   */
+  sessionId?: string;
 }
 
 /**
@@ -201,6 +233,52 @@ export interface TtsStopResponse {
 }
 
 /**
+ * Request envelope for `voice.cancel` in the `voice` method union.
+ * Inventory: `METHOD_INVENTORY` entry `voice.cancel`.
+ */
+export interface VoiceCancelMethodMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "voice.cancel";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: VoiceCancelRequest;
+}
+
+/**
+ * Response envelope for `voice.cancel` in the `voice` method response union.
+ * Inventory: `METHOD_INVENTORY` entry `voice.cancel`.
+ */
+export interface VoiceCancelMethodResponseMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "voice.cancel";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: VoiceCancelResponse;
+}
+
+/**
+ * Request payload for `voice.cancel`.
+ * No payload.
+ * Inventory: `METHOD_INVENTORY` entry `voice.cancel` request.
+ */
+export interface VoiceCancelRequest {
+}
+
+/**
+ * Response payload for `voice.cancel`.
+ * Opaque JSON payload owned by the companion app or legacy daemon code.
+ * Inventory: `METHOD_INVENTORY` entry `voice.cancel` response.
+ */
+export interface VoiceCancelResponse {
+}
+
+/**
  * Discriminated event union for the `voice` inventory family.
  * Inventory: `EVENT_INVENTORY` entries grouped by `Family`.
  */
@@ -222,6 +300,7 @@ export type VoiceMethod =
   | WakewordResumeMethodMessage
   | TtsSpeakMethodMessage
   | TtsStopMethodMessage
+  | VoiceCancelMethodMessage
 ;
 
 /**
@@ -233,6 +312,7 @@ export type VoiceMethodResponse =
   | WakewordResumeMethodResponseMessage
   | TtsSpeakMethodResponseMessage
   | TtsStopMethodResponseMessage
+  | VoiceCancelMethodResponseMessage
 ;
 
 /**
@@ -249,6 +329,10 @@ export interface VoiceTranscriptionEvent {
    * Whether this transcript is final. Inventory field `is_final` emits as `isFinal`.
    */
   isFinal: boolean;
+  /**
+   * Voice session identifier used to reject stale turn events. Inventory field `session_id` emits as `sessionId`.
+   */
+  sessionId?: string;
 }
 
 /**
