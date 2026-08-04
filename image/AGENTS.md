@@ -108,7 +108,7 @@ just ota                # delta OTA push to a booted device
 - Workspace deps are pinned with `=` versions to keep the wire ecosystem reproducible.
 - Workspace `[workspace.dependencies]` entries can NOT specify features; each member's `[dependencies]` re-declares features as needed. Learned at T1.01.
 
-When bumping the nocturned recipe filename to `nocturned_X.Y.Z.bb`, update `version` in `[workspace.package]` of root `Cargo.toml` to match, unless the Yocto bump is explicitly forward-looking while waiting for a daemon branch/tag. The OTA bring-up recipe is `nocturned_2.1.0.bb` while nocturned's Cargo workspace remains at `2.0.4` until the OTA branch is merged and tagged.
+When bumping the nocturned recipe filename to `nocturned_X.Y.Z.bb`, update `version` in `[workspace.package]` of root `Cargo.toml` to match. The daemon component is currently `2.1.0` in both places. That component version is independent from the firmware image's `DISTRO_VERSION` (`4.1.0` here); the image version and build ID come from the `/etc/superbird` metadata file and are what the daemon reports as its installed image lane.
 
 ## OTA stack notes
 
