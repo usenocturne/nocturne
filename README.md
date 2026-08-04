@@ -196,8 +196,6 @@ This software was made possible only through the following individuals and open 
 - [Neel Patel](https://github.com/68p)
 - [Dominic Frye](https://github.com/itsnebulalol)
 
-<hr>
-
 We'd like to give a huge thanks to [Joey Eamigh](https://github.com/JoeyEamigh) for [bridgething](https://github.com/JoeyEamigh/bridgething) (protocol, more robust iAP2, OTA, and more), [yocto-superbird](https://github.com/JoeyEamigh/yocto-superbird), and for a ton of help during the Yocto migration. We'd also like to thank [lmore377](https://github.com/lmore377) for modernizing the Car Thing's tooling and contributions to bridgething/yocto-superbird. The new Nocturne OS image powered by Yocto and modern software wouldn't be possible without them.
 
 - [The Yocto Project](https://www.yoctoproject.org/) and [OpenEmbedded](https://www.openembedded.org/)
