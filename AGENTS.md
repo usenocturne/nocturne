@@ -42,7 +42,7 @@ just ui-dev                 # vite dev server for the device UI
 just ui-build               # static bundle the device UI ships with
 just image-build            # bitbake the SWU firmware image
 just release-image <version-core> <signing-key> [delta-from-versions] [variant] [target] # stamp, build, and publish full/zchunk OTA
-just release-bandaid <version-core> <minimum-image-version> [channel] # build + publish daemon/UI bandaid OTA
+just release-bandaid <version-core> <minimum-image-version> [channel] # build + export daemon/UI bandaid OTA
 just codegen                # regenerate wire-protocol bindings
 just test                   # cargo test --workspace
 just lint                   # Linux host clippy, non-Linux aarch64 cross clippy, plus cargo fmt --check

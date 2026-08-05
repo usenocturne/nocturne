@@ -59,6 +59,8 @@ sed \
 
 printf 'boot-zchunk\n' > "${DEPLOY}/boot.vfat.zck"
 printf 'system-zchunk\n' > "${DEPLOY}/nocturne-prod-image-superbird.ext4.zck"
+mkdir -p "${TEST_ROOT}/stage/${VERSION}/bandaid"
+printf 'preserve sibling release\n' > "${TEST_ROOT}/stage/${VERSION}/bandaid/manifest.json"
 
 NOCTURNE_DEPLOY_DIR=$DEPLOY \
   NOCTURNE_OTA_IMAGES_DIR=${TEST_ROOT}/published \
@@ -78,6 +80,15 @@ assert manifest["packages"]["full"]["assets"][0]["name"] == "nocturne-update-pro
 assert manifest["packages"]["delta"]["assets"][0]["name"] == "nocturne-update-prod-delta-superbird.swu"
 assert manifest["packages"]["delta"]["from_versions"] == ["9.8.6+20260724000100"]
 PY
+
+test -f "${TEST_ROOT}/stage/${VERSION}/image/manifest.json"
+test -f "${TEST_ROOT}/stage/${VERSION}/image/assets/nocturne-update-prod-superbird.swu"
+test -f "${TEST_ROOT}/stage/${VERSION}/image/assets/nocturne-update-prod-delta-superbird.swu"
+test -f "${TEST_ROOT}/stage/${VERSION}/image/assets/boot.vfat.zck"
+test -f "${TEST_ROOT}/stage/${VERSION}/image/assets/system.img.zck"
+test ! -e "${TEST_ROOT}/stage/manifest.json"
+test ! -e "${TEST_ROOT}/stage/assets"
+grep -q 'preserve sibling release' "${TEST_ROOT}/stage/${VERSION}/bandaid/manifest.json"
 
 NOCTURNE_DEPLOY_DIR=$DEPLOY \
   NOCTURNE_OTA_IMAGES_DIR=${TEST_ROOT}/compat-published \

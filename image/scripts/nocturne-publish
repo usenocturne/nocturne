@@ -190,7 +190,9 @@ PY
 verify_swu "$FULL_SWU" full
 verify_swu "$DELTA_SWU" delta
 
-STAGE_DIR="${NOCTURNE_PUBLISH_STAGE:-$REPO_ROOT/build/nocturne-publish/$VERSION}"
+STAGE_ROOT="${NOCTURNE_PUBLISH_STAGE:-$REPO_ROOT/build/nocturne-publish}"
+STAGE_VERSION_DIR="$STAGE_ROOT/$VERSION"
+STAGE_DIR="$STAGE_VERSION_DIR/image"
 DEST_DIR="$PUBLISH_ROOT/$VERSION/image"
 MANIFEST="$STAGE_DIR/manifest.json"
 
@@ -200,7 +202,7 @@ if [[ -e "$DEST_DIR" && "${NOCTURNE_ALLOW_REPLACE:-0}" != "1" ]]; then
   exit 1
 fi
 
-rm -rf "$STAGE_DIR"
+rm -rf "${STAGE_DIR:?}"
 mkdir -p "$STAGE_DIR/assets" "$DEST_DIR"
 
 FULL_NAME=$(basename "$FULL_SWU")
@@ -291,6 +293,7 @@ sys.stdout.write("\n")
 PY
 
 echo "[publish] validated full+delta release version=$VERSION channel=$CHANNEL"
+echo "[publish] exported OTA image tree: $STAGE_ROOT"
 echo "[publish] manifest: $MANIFEST"
 rsync -a --delete "$STAGE_DIR/" "$DEST_DIR/"
 echo "[publish] published $VERSION to $DEST_DIR"

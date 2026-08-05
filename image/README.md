@@ -93,7 +93,7 @@ just ota                # delta OTA push to a booted device
 
 Image release manifests contain a signed full SWU fallback and a signed delta SWU with an explicit source-version compatibility list. Full SWUs stream zstd-compressed boot and rootfs members directly into the inactive slot. Delta OTAs use zchunk HTTP range requests for changed chunks only. The publisher rejects a release-version mismatch, a missing canonical zchunk asset, an unresolved `nocturne://` reference, or an unsigned production SWU.
 
-The v2 OTA server reads releases from `images/<version>/<kind>/manifest.json` and `images/<version>/<kind>/assets/`. By default, the image publisher writes to `../nocturne-ota/images`, which is the directory mounted by the OTA server's Docker Compose service. Set `NOCTURNE_OTA_IMAGES_DIR` when the server uses a different images root. There is no R2 manifest generation step in this workflow.
+The v2 OTA server reads releases from `images/<version>/<kind>/manifest.json` and `images/<version>/<kind>/assets/`. Image and bandaid release commands export OTA-server-ready trees at `build/nocturne-publish/<version>/<kind>/`. `release-bandaid` stops at that export and never writes into `nocturne-ota/images`; the exported version directory is ready for the deployment system to install under the server's `images/` root. The image publisher also copies its release into `../nocturne-ota/images` by default. Set `NOCTURNE_PUBLISH_STAGE` to choose the shared export root. Exporting one kind preserves other kinds at the same version. There is no R2 manifest generation step in this workflow.
 
 The end-to-end recipe generates one UTC `+YYYYMMDDhhmmss` stamp and uses it for both the build and publish steps. Set `NOCTURNE_BUILD_ID` to reproduce a known build. The version core must match `DISTRO_VERSION`. Both `prod` and `dev` releases remain production-signed; the variant chooses which built image is published. Publishing an existing image version is rejected unless `NOCTURNE_ALLOW_REPLACE=1` is set deliberately.
 
@@ -134,6 +134,7 @@ just package-bandaid ../target/aarch64-unknown-linux-gnu/release/nocturned ../pa
 just publish-component bandaid 4.2.0+20260725192800 build/ota-components/bandaid 4.1.0+20260718120000 stable
 
 # Preferred end-to-end command, run from the monorepo root. It builds both inputs.
+# The finished release is exported under image/build/nocturne-publish/<version>/bandaid/.
 NOCTURNE_BUILD_ID=20260725192800 just release-bandaid 4.2.0 4.1.0+20260718120000 stable
 ```
 

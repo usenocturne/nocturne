@@ -47,15 +47,15 @@ bun -e '
   if (!isValidVersion(minimumImageVersion)) throw new Error("Invalid minimum image version: " + minimumImageVersion);
 ' -- "$RELEASE_VERSION" "$MINIMUM_IMAGE_VERSION"
 
-IMAGES_ROOT=${NOCTURNE_OTA_IMAGES_DIR:-$REPO_ROOT/nocturne-ota/images}
-case "$IMAGES_ROOT" in
+EXPORT_ROOT=${NOCTURNE_PUBLISH_STAGE:-$IMAGE_DIR/build/nocturne-publish}
+case "$EXPORT_ROOT" in
   /*) ;;
-  *) IMAGES_ROOT="$REPO_ROOT/$IMAGES_ROOT" ;;
+  *) EXPORT_ROOT="$REPO_ROOT/$EXPORT_ROOT" ;;
 esac
-DESTINATION="$IMAGES_ROOT/$RELEASE_VERSION/bandaid"
+EXPORT_DESTINATION="$EXPORT_ROOT/$RELEASE_VERSION/bandaid"
 
-if [[ -e "$DESTINATION" ]]; then
-  echo "bandaid release already exists: $DESTINATION" >&2
+if [[ -e "$EXPORT_DESTINATION" ]]; then
+  echo "bandaid release already exists: $EXPORT_DESTINATION" >&2
   exit 1
 fi
 
@@ -72,14 +72,14 @@ just -f "$IMAGE_DIR/Justfile" package-bandaid \
   ../target/aarch64-unknown-linux-gnu/release/nocturned \
   ../packages/ui/dist \
   "$STAGE_DIR"
-NOCTURNE_OTA_IMAGES_DIR="$IMAGES_ROOT" just -f "$IMAGE_DIR/Justfile" publish-component \
+NOCTURNE_OTA_IMAGES_DIR="$EXPORT_ROOT" just -f "$IMAGE_DIR/Justfile" publish-component \
   bandaid \
   "$RELEASE_VERSION" \
   "$STAGE_DIR" \
   "$MINIMUM_IMAGE_VERSION" \
   "$CHANNEL"
 
-MANIFEST_PATH="$DESTINATION/manifest.json"
+MANIFEST_PATH="$EXPORT_DESTINATION/manifest.json"
 bun -e '
   import { dirname, join } from "node:path";
   const [manifestPath, version, minimumImageVersion, channel] = Bun.argv.slice(1);
@@ -106,5 +106,5 @@ bun -e '
   if (hasher.digest("hex") !== asset.sha256) {
     throw new Error("Published bandaid hash does not match its manifest: " + asset.name);
   }
-  console.log("Published bandaid " + version + " to " + manifestPath);
+  console.log("Exported bandaid " + version + " to " + manifestPath);
 ' -- "$MANIFEST_PATH" "$RELEASE_VERSION" "$MINIMUM_IMAGE_VERSION" "$CHANNEL"

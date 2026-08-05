@@ -70,7 +70,7 @@ image-build:
 release-image version_core signing_key delta_from_versions="*" variant="prod" target="nocturne-local":
     image/scripts/nocturne-release-image {{quote(version_core)}} {{quote(signing_key)}} {{quote(delta_from_versions)}} {{quote(variant)}} {{quote(target)}}
 
-# Build and publish a combined daemon + UI bandaid OTA.
+# Build and export a combined daemon + UI bandaid OTA.
 # Usage: just release-bandaid 4.2.1 4.2.0+20260725192800 [channel]
 # Set NOCTURNE_BUILD_ID to reproduce a known release version.
 release-bandaid version_core minimum_image_version channel="stable":

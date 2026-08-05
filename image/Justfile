@@ -387,6 +387,7 @@ test:
   tests/nocturne-floor-sync.test.sh
   tests/nocturne-install.test.sh
   tests/nocturne-publish.test.sh
+  tests/nocturne-release-bandaid.test.sh
   tests/nocturne-release-image.test.sh
   python3 tests/nocturne-swu-description.test.py
   tests/swupdate-progress-service.test.sh
