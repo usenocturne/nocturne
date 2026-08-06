@@ -25,6 +25,7 @@ import {
 } from "./contexts/NotificationContext";
 import { VoiceProvider, useVoice } from "./contexts/VoiceContext";
 import NotificationBridge from "./components/common/notifications/NotificationBridge";
+import NavNotificationBridge from "./components/common/notifications/NavNotificationBridge";
 import {
   getActivePresetDeviceId,
   getButtonMappingValue,
@@ -1966,6 +1967,7 @@ function AppContent() {
     <OTAProvider initialDataLoaded={initialDataLoaded}>
       <NotificationProvider>
         <NotificationBridge />
+        <NavNotificationBridge />
         <VoiceProvider suppressed={voiceSuppressed}>
           <DeviceSwitcherContext.Provider value={deviceSwitcherContextValue}>
             <Router>
