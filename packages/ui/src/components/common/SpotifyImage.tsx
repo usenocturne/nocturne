@@ -5,6 +5,8 @@ import type { SpotifyImage as SpotifyImageEntry } from "../../types";
 
 type ImageData = string | ArrayBuffer | Uint8Array;
 
+const STALE_ARTWORK_GRACE_MS = 4000;
+
 interface SpotifyImageProps extends Omit<
   ImgHTMLAttributes<HTMLImageElement>,
   "onLoad" | "onError"
@@ -59,6 +61,15 @@ export default function SpotifyImage({
   const currentImageUrlRef = useRef<string | null>(null);
   const blobUrlRef = useRef<string | null>(null);
   const failedImageUrlRef = useRef<string | null>(null);
+  const loadedUrlRef = useRef<string | null>(null);
+  const staleGraceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearStaleGraceTimer = useCallback(() => {
+    if (staleGraceTimerRef.current) {
+      clearTimeout(staleGraceTimerRef.current);
+      staleGraceTimerRef.current = null;
+    }
+  }, []);
 
   const imageUrl =
     typeof images === "string"
@@ -87,7 +98,10 @@ export default function SpotifyImage({
   const loadImageData = useCallback(async () => {
     if (!isMountedRef.current) return;
 
+    clearStaleGraceTimer();
+
     if (failedImageUrlRef.current && failedImageUrlRef.current === imageUrl) {
+      loadedUrlRef.current = imageUrl;
       setCurrentSrc(fallbackSrc);
       setHasError(true);
       setIsLoading(false);
@@ -95,6 +109,7 @@ export default function SpotifyImage({
     }
 
     if (!imageUrl || hasImageFailed(imageUrl)) {
+      loadedUrlRef.current = imageUrl || null;
       setCurrentSrc(fallbackSrc);
       setHasError(true);
       setIsLoading(false);
@@ -102,6 +117,7 @@ export default function SpotifyImage({
     }
 
     if (imageUrl === fallbackSrc) {
+      loadedUrlRef.current = imageUrl;
       setCurrentSrc(fallbackSrc);
       setIsLoading(false);
       setHasError(false);
@@ -120,6 +136,7 @@ export default function SpotifyImage({
       if (!imageUrl.startsWith("blob:")) {
         cleanupBlobUrl();
       }
+      loadedUrlRef.current = imageUrl;
       setCurrentSrc(imageUrl);
       setIsLoading(false);
       setHasError(false);
@@ -147,9 +164,28 @@ export default function SpotifyImage({
       (skipFetchWhenNowPlaying && isReceivingNowPlayingUpdates)
     ) {
       cancelRequest(imageUrl);
+      if (loadedUrlRef.current !== imageUrl) {
+        loadedUrlRef.current = imageUrl;
+        setCurrentSrc(fallbackSrc);
+      }
       setIsLoading(false);
       setHasError(false);
       return;
+    }
+
+    if (loadedUrlRef.current !== imageUrl) {
+      const staleForUrl = imageUrl;
+      staleGraceTimerRef.current = setTimeout(() => {
+        staleGraceTimerRef.current = null;
+        if (
+          isMountedRef.current &&
+          currentImageUrlRef.current === staleForUrl &&
+          loadedUrlRef.current !== staleForUrl
+        ) {
+          loadedUrlRef.current = staleForUrl;
+          setCurrentSrc(fallbackSrc);
+        }
+      }, STALE_ARTWORK_GRACE_MS);
     }
 
     setIsLoading(true);
@@ -194,8 +230,10 @@ export default function SpotifyImage({
           return;
         }
 
+        clearStaleGraceTimer();
         cleanupBlobUrl();
         blobUrlRef.current = blobUrl;
+        loadedUrlRef.current = imageUrl;
         setCurrentSrc(blobUrl);
 
         if (onLoad) {
@@ -207,6 +245,8 @@ export default function SpotifyImage({
     } catch (error) {
       if (!isMountedRef.current) return;
 
+      clearStaleGraceTimer();
+
       if (error instanceof Error && error.message === "Request cancelled") {
         return;
       }
@@ -217,6 +257,7 @@ export default function SpotifyImage({
       if (imageUrl) {
         failedImageUrlRef.current = imageUrl;
       }
+      loadedUrlRef.current = imageUrl;
       setCurrentSrc(fallbackSrc);
       setHasError(true);
 
@@ -244,6 +285,7 @@ export default function SpotifyImage({
     isReceivingNowPlayingUpdates,
     disableSpotifyFetch,
     cancelRequest,
+    clearStaleGraceTimer,
   ]);
 
   useEffect(() => {
@@ -254,9 +296,10 @@ export default function SpotifyImage({
       if (currentImageUrlRef.current) {
         cancelRequest(currentImageUrlRef.current);
       }
+      clearStaleGraceTimer();
       cleanupBlobUrl();
     };
-  }, [cancelRequest, cleanupBlobUrl]);
+  }, [cancelRequest, cleanupBlobUrl, clearStaleGraceTimer]);
 
   useEffect(() => {
     if (currentImageUrlRef.current && currentImageUrlRef.current !== imageUrl) {
@@ -267,12 +310,21 @@ export default function SpotifyImage({
     if (imageUrl) {
       loadImageData();
     } else {
+      clearStaleGraceTimer();
       cleanupBlobUrl();
+      loadedUrlRef.current = null;
       setCurrentSrc(fallbackSrc);
       setHasError(false);
       setIsLoading(false);
     }
-  }, [imageUrl, loadImageData, fallbackSrc, cancelRequest, cleanupBlobUrl]);
+  }, [
+    imageUrl,
+    loadImageData,
+    fallbackSrc,
+    cancelRequest,
+    cleanupBlobUrl,
+    clearStaleGraceTimer,
+  ]);
 
   useEffect(() => {
     if (failedImageUrlRef.current && failedImageUrlRef.current !== imageUrl) {
@@ -307,6 +359,7 @@ export default function SpotifyImage({
     if (!isMountedRef.current) return;
     if (imageUrl) {
       failedImageUrlRef.current = imageUrl;
+      loadedUrlRef.current = imageUrl;
     }
     if (currentSrc !== fallbackSrc) {
       setCurrentSrc(fallbackSrc);

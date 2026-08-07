@@ -7,6 +7,7 @@ import {
   isPendingSpotifyTrackChange,
   mediaGenerationsCorrelate,
   normalizeMediaGeneration,
+  shouldClearDisplayedMediaForEmptyUpdate,
   shouldIgnoreInactiveForeignMedia,
 } from "./useSpotifyPlayerState";
 
@@ -287,5 +288,44 @@ describe("inactive phone media precedence", () => {
         "paused",
       ),
     ).toBe(false);
+  });
+});
+
+describe("cleared phone media updates", () => {
+  it("clears displayed phone media when the phone's media slot empties", () => {
+    expect(
+      shouldClearDisplayedMediaForEmptyUpdate(
+        { uri: "local:media:Old Video", is_phone_media: true },
+        true,
+      ),
+    ).toBe(true);
+  });
+
+  it("clears a pending Spotify placeholder when the phone's media slot empties", () => {
+    expect(
+      shouldClearDisplayedMediaForEmptyUpdate(
+        { uri: "spotify:pending:Song", is_spotify_pending: true },
+        true,
+      ),
+    ).toBe(true);
+  });
+
+  it("never clears canonical Spotify playback", () => {
+    expect(
+      shouldClearDisplayedMediaForEmptyUpdate(
+        { uri: "spotify:track:current" },
+        true,
+      ),
+    ).toBe(false);
+  });
+
+  it("ignores non-empty updates and missing items", () => {
+    expect(
+      shouldClearDisplayedMediaForEmptyUpdate(
+        { uri: "local:media:Old Video", is_phone_media: true },
+        false,
+      ),
+    ).toBe(false);
+    expect(shouldClearDisplayedMediaForEmptyUpdate(null, true)).toBe(false);
   });
 });

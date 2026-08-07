@@ -13,7 +13,7 @@ describe("normalizeNavUpdate", () => {
       eta: "Arrive 5:16 PM",
     });
     expect(nav).toEqual({
-      instruction: "Turn left onto Norcap Crescent",
+      instruction: "Turn left onto Finch Crescent",
       distance: "190 m",
       eta: "Arrive 5:16 PM",
     });

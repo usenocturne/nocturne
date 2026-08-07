@@ -48,7 +48,6 @@ export interface NavNotificationController {
 const navDescription = (guidance: NavGuidance): string =>
   [guidance.distance, guidance.eta].filter(Boolean).join("  ·  ");
 
-
 export const createNavNotificationController = ({
   addNotification,
   removeNotification,

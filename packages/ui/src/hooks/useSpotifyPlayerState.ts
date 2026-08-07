@@ -188,6 +188,15 @@ const mediaGenerationCorrelator = createMediaGenerationCorrelator();
 export const isCurrentMediaArtwork = (data: unknown): boolean =>
   mediaGenerationCorrelator.acceptsArtwork(data);
 
+export const shouldClearDisplayedMediaForEmptyUpdate = (
+  currentItem: SpotifyTrack | null | undefined,
+  isEmptyUpdate: boolean,
+): boolean =>
+  Boolean(
+    isEmptyUpdate &&
+    (currentItem?.is_phone_media || currentItem?.is_spotify_pending),
+  );
+
 export const isCanonicalSpotifyItem = (
   item: SpotifyTrack | null | undefined,
 ): boolean =>
@@ -1243,6 +1252,27 @@ export function useSpotifyPlayerState() {
           return;
         }
 
+        const hasTitle =
+          media.MediaItemTitle && media.MediaItemTitle.trim() !== "";
+        const hasArtist =
+          media.MediaItemArtist && media.MediaItemArtist.trim() !== "";
+        const isStopped = playback.PlaybackStatus === "stopped";
+        const isEmpty = !hasTitle && !hasArtist && isStopped;
+
+        if (isEmpty) {
+          if (
+            shouldClearDisplayedMediaForEmptyUpdate(
+              currentPlaybackRef.current?.item,
+              isEmpty,
+            )
+          ) {
+            currentPlaybackRef.current = null;
+            setCurrentPlayback(null);
+            setCurrentlyPlayingAlbum(null);
+          }
+          return;
+        }
+
         if (!playback.PlaybackAppName) {
           const currentItem = currentPlaybackRef.current?.item;
           if (currentItem && !currentItem.is_phone_media) {
@@ -1285,17 +1315,6 @@ export function useSpotifyPlayerState() {
           } else if (!currentItem && pendingSpotifyMediaUpdate) {
             return;
           }
-        }
-
-        const hasTitle =
-          media.MediaItemTitle && media.MediaItemTitle.trim() !== "";
-        const hasArtist =
-          media.MediaItemArtist && media.MediaItemArtist.trim() !== "";
-        const isStopped = playback.PlaybackStatus === "stopped";
-        const isEmpty = !hasTitle && !hasArtist && isStopped;
-
-        if (isEmpty) {
-          return;
         }
 
         const shuffleState =
