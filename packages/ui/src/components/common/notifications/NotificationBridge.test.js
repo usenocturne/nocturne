@@ -502,6 +502,31 @@ describe("notification bridge lifecycle", () => {
     expect(harness.timers.size).toBe(1);
   });
 
+  test("ignores identical mirrored re-posts so the dismiss timer keeps running", () => {
+    const harness = createHarness();
+    const payload = {
+      id: "android:0|com.example|1|tag|10001",
+      title: "Alex",
+      body: "On my way",
+      category: "android.msg",
+      app_name: "Messages",
+      app_bundle_id: "com.example.messages",
+    };
+    harness.controller.handle(event("notification.show", payload));
+    harness.controller.handle(
+      event("notification.show", { ...payload, timestamp: 1713000999999 }),
+    );
+
+    expect(harness.added).toHaveLength(1);
+    expect(harness.removed).toEqual([]);
+    expect(harness.cancelledTimers).toEqual([]);
+    expect(harness.timers.size).toBe(1);
+
+    harness.timers.get(1).callback();
+    expect(harness.removed).toEqual(["internal-1"]);
+    expect(harness.timers.size).toBe(0);
+  });
+
   test("replaces an updated mirrored notification and routes its removal", () => {
     const harness = createHarness();
     harness.controller.handle(
@@ -551,12 +576,12 @@ describe("notification bridge lifecycle", () => {
         }),
       );
     }
-    expect(harness.removed).toEqual(["internal-1"]);
-    expect(harness.timers.size).toBe(3);
-
-    harness.timers.get(2).callback();
     expect(harness.removed).toEqual(["internal-1", "internal-2"]);
     expect(harness.timers.size).toBe(2);
+
+    harness.timers.get(3).callback();
+    expect(harness.removed).toEqual(["internal-1", "internal-2", "internal-3"]);
+    expect(harness.timers.size).toBe(1);
   });
 
   test("manual dismissal forgets external state without double-removing", () => {

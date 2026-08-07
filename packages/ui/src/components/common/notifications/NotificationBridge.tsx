@@ -93,6 +93,17 @@ export const normalizeNotificationRemove = (value: unknown): string | null => {
   return data ? stringValue(data, "id") : null;
 };
 
+export const mirroredNotificationContentKey = (
+  data: NormalizedNotificationShow,
+): string =>
+  JSON.stringify([
+    data.title,
+    data.description,
+    data.category,
+    data.appName,
+    data.appBundleId,
+  ]);
+
 const isAuthenticated = (value: unknown): boolean => {
   const data = asRecord(value);
   const authenticated = data?.authenticated;
@@ -101,7 +112,7 @@ const isAuthenticated = (value: unknown): boolean => {
 
 const AUTO_DISMISS_ON_SPOTIFY_AUTH_IDS = new Set(["spotify.auth.reconnecting"]);
 const MIRRORED_NOTIFICATION_DURATION_MS = 8000;
-const MAX_VISIBLE_MIRRORED_NOTIFICATIONS = 3;
+const MAX_VISIBLE_MIRRORED_NOTIFICATIONS = 2;
 
 const iconForCategory = (category: string): NotificationIcon => {
   if (category.startsWith("ios.") || category.startsWith("android.")) {
@@ -244,6 +255,7 @@ export const createNotificationBridgeController = ({
 }: NotificationBridgeControllerOptions): NotificationBridgeController => {
   const internalIds = new Map<string, string>();
   const dismissTimers = new Map<string, DismissTimer>();
+  const mirroredContentKeys = new Map<string, string>();
   let mirroredOrder: string[] = [];
   let canPresentMirroredNotifications = mirroredPresentationEnabled;
   const autoDismissInternalIds = new Map<string, string>();
@@ -251,6 +263,7 @@ export const createNotificationBridgeController = ({
   const forgetExternal = (externalId: string) => {
     internalIds.delete(externalId);
     autoDismissInternalIds.delete(externalId);
+    mirroredContentKeys.delete(externalId);
     const timer = dismissTimers.get(externalId);
     if (timer !== undefined) cancel(timer);
     dismissTimers.delete(externalId);
@@ -282,6 +295,11 @@ export const createNotificationBridgeController = ({
 
       if (externalId && internalIds.has(externalId)) {
         if (!data.isMirroredPhoneNotification) return;
+        if (
+          mirroredContentKeys.get(externalId) ===
+          mirroredNotificationContentKey(data)
+        )
+          return;
         dismissExternal(externalId);
       }
       if (data.isMirroredPhoneNotification && externalId) {
@@ -310,6 +328,10 @@ export const createNotificationBridgeController = ({
         }
         if (data.isMirroredPhoneNotification) {
           mirroredOrder.push(externalId);
+          mirroredContentKeys.set(
+            externalId,
+            mirroredNotificationContentKey(data),
+          );
           dismissTimers.set(
             externalId,
             schedule(
@@ -353,6 +375,7 @@ export const createNotificationBridgeController = ({
     dismissTimers.clear();
     internalIds.clear();
     autoDismissInternalIds.clear();
+    mirroredContentKeys.clear();
     mirroredOrder = [];
   };
 
