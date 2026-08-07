@@ -39,6 +39,7 @@ async-trait = { workspace = true }
 crc32fast = { workspace = true }
 md5 = { workspace = true }
 opus = { workspace = true }
+nnnoiseless = { workspace = true }
 tract-ndarray = { workspace = true }
 tract-onnx = { workspace = true }
 axum = { workspace = true }

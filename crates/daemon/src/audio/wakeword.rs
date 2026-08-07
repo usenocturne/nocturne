@@ -151,6 +151,7 @@ pub struct WakeWordDetector {
     playback_active: Arc<AtomicBool>,
     event_tx: broadcast::Sender<WakeWordEvent>,
     wind_frame_tx: super::wind::WindFrameSender,
+    preroll: Arc<super::PreRollBuffer>,
 }
 
 impl WakeWordDetector {
@@ -161,6 +162,7 @@ impl WakeWordDetector {
         playback_threshold: f32,
         playback_active: Arc<AtomicBool>,
         wind_frame_tx: super::wind::WindFrameSender,
+        preroll: Arc<super::PreRollBuffer>,
     ) -> (Self, broadcast::Receiver<WakeWordEvent>) {
         let (event_tx, event_rx) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
         let support_threshold = if support_threshold > activation_threshold {
@@ -182,9 +184,14 @@ impl WakeWordDetector {
                 playback_active,
                 event_tx,
                 wind_frame_tx,
+                preroll,
             },
             event_rx,
         )
+    }
+
+    fn fresh_converter(&self) -> super::ARecordPcmConverter {
+        super::ARecordPcmConverter::with_wind_detection(self.wind_frame_tx.clone())
     }
 
     pub async fn run(self, mut cmd_rx: mpsc::UnboundedReceiver<WakeWordCommand>) -> Result<()> {
@@ -224,8 +231,7 @@ impl WakeWordDetector {
         let mut child = None;
         let mut stdout = None;
         let mut pcm_buffer = BytesMut::with_capacity(FRAME_BYTES * 2);
-        let mut converter =
-            super::ARecordPcmConverter::with_wind_detection(self.wind_frame_tx.clone());
+        let mut converter = self.fresh_converter();
         let mut mel_overlap: Vec<f32> = vec![0.0; MEL_OVERLAP_SAMPLES];
         let mut mel_buffer: Vec<[f32; MEL_BINS]> = Vec::new();
         let mut mel_frames_since_embed: usize = 0;
@@ -234,14 +240,14 @@ impl WakeWordDetector {
         let mut candidate_pending = false;
 
         loop {
-            if pause_state.is_paused() {
+            if pause_state.user_muted {
                 if let Some(mut active_child) = child.take() {
                     let _ = stop_child(&mut active_child).await;
                 }
                 stdout = None;
                 pcm_buffer.clear();
-                converter =
-                    super::ARecordPcmConverter::with_wind_detection(self.wind_frame_tx.clone());
+                self.preroll.reset_stream();
+                converter = self.fresh_converter();
                 mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                 mel_buffer.clear();
                 mel_frames_since_embed = 0;
@@ -255,7 +261,7 @@ impl WakeWordDetector {
                             if let Some(muted) = pause_state.resume(persist) {
                                 persist_and_notify(&self.event_tx, muted).await;
                             }
-                            if !pause_state.is_paused() {
+                            if !pause_state.user_muted {
                                 info!("Resuming wake word detection");
                                 break;
                             }
@@ -289,9 +295,8 @@ impl WakeWordDetector {
                             child = Some(spawned_child);
                             stdout = Some(spawned_stdout);
                             pcm_buffer.clear();
-                            converter = super::ARecordPcmConverter::with_wind_detection(
-                                self.wind_frame_tx.clone(),
-                            );
+                            self.preroll.reset_stream();
+                            converter = self.fresh_converter();
                             mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                             mel_buffer.clear();
                             mel_frames_since_embed = 0;
@@ -319,14 +324,15 @@ impl WakeWordDetector {
                     match cmd {
                         Some(WakeWordCommand::Pause { ack, persist }) => {
                             let notify_muted = pause_state.pause(persist);
-                            if let Some(mut active_child) = child.take() {
-                                let _ = stop_child(&mut active_child).await;
+                            if persist {
+                                if let Some(mut active_child) = child.take() {
+                                    let _ = stop_child(&mut active_child).await;
+                                }
+                                stdout = None;
+                                pcm_buffer.clear();
+                                self.preroll.reset_stream();
+                                converter = self.fresh_converter();
                             }
-                            stdout = None;
-                            pcm_buffer.clear();
-                            converter = super::ARecordPcmConverter::with_wind_detection(
-                                self.wind_frame_tx.clone(),
-                            );
                             mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                             mel_buffer.clear();
                             mel_frames_since_embed = 0;
@@ -365,7 +371,7 @@ impl WakeWordDetector {
                     let stdout = stdout.as_mut().ok_or_else(|| {
                         std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "wake word stdout unavailable")
                     })?;
-                    next_pcm_frame(stdout, &mut converter, &mut pcm_buffer).await
+                    next_pcm_frame(stdout, &mut converter, &mut pcm_buffer, &self.preroll).await
                 } => frame,
             };
 
@@ -378,8 +384,7 @@ impl WakeWordDetector {
                     }
                     stdout = None;
                     pcm_buffer.clear();
-                    converter =
-                        super::ARecordPcmConverter::with_wind_detection(self.wind_frame_tx.clone());
+                    converter = self.fresh_converter();
                     mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                     mel_buffer.clear();
                     mel_frames_since_embed = 0;
@@ -396,8 +401,7 @@ impl WakeWordDetector {
                     }
                     stdout = None;
                     pcm_buffer.clear();
-                    converter =
-                        super::ARecordPcmConverter::with_wind_detection(self.wind_frame_tx.clone());
+                    converter = self.fresh_converter();
                     mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                     mel_buffer.clear();
                     mel_frames_since_embed = 0;
@@ -408,6 +412,10 @@ impl WakeWordDetector {
                     continue;
                 }
             };
+
+            if pause_state.is_paused() {
+                continue;
+            }
 
             let audio_f32 = pcm_to_f32(&pcm_frame);
             let mut mel_input_data = Vec::with_capacity(MEL_INPUT_SAMPLES);
@@ -692,7 +700,7 @@ fn model_path(models_dir: &Path, file_name: &str) -> PathBuf {
 async fn spawn_arecord() -> Result<Child> {
     super::configure_capture_route().await?;
     Command::new("arecord")
-        .args(super::ARECORD_ARGS)
+        .args(super::arecord_args(super::ARECORD_WAKEWORD_DEVICE))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true)
@@ -720,6 +728,7 @@ async fn next_pcm_frame(
     stdout: &mut ChildStdout,
     converter: &mut super::ARecordPcmConverter,
     pcm_buffer: &mut BytesMut,
+    preroll: &super::PreRollBuffer,
 ) -> std::io::Result<Option<Vec<u8>>> {
     loop {
         if pcm_buffer.len() >= FRAME_BYTES {
@@ -732,6 +741,7 @@ async fn next_pcm_frame(
             return Ok(None);
         }
 
+        preroll.push(&chunk[..bytes_read]);
         converter.push_raw(&chunk[..bytes_read], pcm_buffer);
     }
 }

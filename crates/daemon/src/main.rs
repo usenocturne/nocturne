@@ -210,7 +210,9 @@ async fn main() -> Result<()> {
     info!("Ambient light sensor polling started");
 
     let (wind_frame_tx, mut wind_event_rx) = audio::start_wind_detector();
-    let (audio_capture, audio_event_rx) = audio::AudioCapture::new(wind_frame_tx.clone());
+    let voice_preroll = Arc::new(audio::PreRollBuffer::new());
+    let (audio_capture, audio_event_rx) =
+        audio::AudioCapture::new(wind_frame_tx.clone(), Arc::clone(&voice_preroll));
     let mut audio_events_for_wakeword = audio_capture.subscribe();
     let mut audio_events_for_mic_level = audio_capture.subscribe();
     let (audio_cmd_tx, audio_cmd_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -247,6 +249,7 @@ async fn main() -> Result<()> {
         playback_threshold,
         websocket_server.playback_active_flag(),
         wind_frame_tx,
+        voice_preroll,
     );
     let (wakeword_pause_tx, wakeword_pause_rx) =
         mpsc::unbounded_channel::<audio::WakeWordCommand>();

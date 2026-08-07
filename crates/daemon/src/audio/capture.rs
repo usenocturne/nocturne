@@ -1,4 +1,5 @@
 use std::process::Stdio;
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::anyhow;
@@ -8,7 +9,7 @@ use tokio::io::AsyncReadExt;
 use tokio::process::{Child, ChildStdout, Command};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use crate::error::{NocturnedError, Result};
 
@@ -16,9 +17,13 @@ const PCM_FRAME_BYTES: usize = 1920;
 const PCM_FRAME_SAMPLES: usize = 960;
 const OPUS_OUTPUT_BYTES: usize = 4096;
 const EVENT_CHANNEL_CAPACITY: usize = 64;
-const SILENCE_THRESHOLD_RMS: f32 = 300.0;
+const SILENCE_THRESHOLD_RMS: f32 = 200.0;
+const VAD_ACTIVITY_MIN: f32 = 0.15;
+const VAD_CONFIDENT_SPEECH: f32 = 0.75;
 const SILENCE_DURATION_MS: u64 = 1500;
 const SILENCE_GRACE_PERIOD_MS: u64 = 1500;
+const PREROLL_MARGIN: Duration = Duration::from_millis(300);
+const RAW_BYTES_PER_MS: usize = 48 * 16;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AudioEvent {
@@ -68,6 +73,7 @@ pub struct AudioCapture {
     config: AudioConfig,
     event_tx: broadcast::Sender<AudioEvent>,
     wind_frame_tx: super::wind::WindFrameSender,
+    preroll: Arc<super::PreRollBuffer>,
 }
 
 struct RecordingHandle {
@@ -95,6 +101,7 @@ impl CaptureState {
 impl AudioCapture {
     pub fn new(
         wind_frame_tx: super::wind::WindFrameSender,
+        preroll: Arc<super::PreRollBuffer>,
     ) -> (AudioCapture, broadcast::Receiver<AudioEvent>) {
         let (event_tx, event_rx) = broadcast::channel::<AudioEvent>(EVENT_CHANNEL_CAPACITY);
         (
@@ -102,6 +109,7 @@ impl AudioCapture {
                 config: AudioConfig::default(),
                 event_tx,
                 wind_frame_tx,
+                preroll,
             },
             event_rx,
         )
@@ -130,8 +138,9 @@ impl AudioCapture {
                             let config = self.config;
                             let event_tx = self.event_tx.clone();
                             let wind_frame_tx = self.wind_frame_tx.clone();
+                            let preroll = Arc::clone(&self.preroll);
                             let task = tokio::spawn(async move {
-                                if let Err(err) = run_recording_task(config, event_tx, wind_frame_tx, stop_rx, done_tx).await {
+                                if let Err(err) = run_recording_task(config, event_tx, wind_frame_tx, preroll, stop_rx, done_tx).await {
                                     warn!("audio capture task failed: {}", err);
                                 }
                             });
@@ -183,9 +192,11 @@ async fn run_recording_task(
     config: AudioConfig,
     event_tx: broadcast::Sender<AudioEvent>,
     wind_frame_tx: super::wind::WindFrameSender,
+    preroll: Arc<super::PreRollBuffer>,
     mut stop_rx: oneshot::Receiver<()>,
     done_tx: mpsc::UnboundedSender<()>,
 ) -> Result<()> {
+    let task_started = Instant::now();
     if let Err(err) = validate_config(config) {
         send_stopped(&event_tx, err.to_string(), 0);
         let _ = done_tx.send(());
@@ -238,13 +249,45 @@ async fn run_recording_task(
     };
 
     let mut pcm_buffer = BytesMut::with_capacity(PCM_FRAME_BYTES * 2);
-    let mut converter = super::ARecordPcmConverter::with_wind_detection(wind_frame_tx);
+    let mut converter =
+        super::ARecordPcmConverter::with_wind_detection(wind_frame_tx).with_denoise();
     let mut seq = 0u64;
     let mut total_frames = 0u64;
     let mut started_sent = false;
     let mut first_frame_at = None;
     let mut silence_start = None;
     let mut mic_level_counter = 0u64;
+    let mut first_chunk = [0u8; PCM_FRAME_BYTES];
+    let first_len = tokio::select! {
+        _ = &mut stop_rx => {
+            let _ = stop_child(&mut child).await;
+            send_stopped(&event_tx, "stopped".to_string(), 0);
+            let _ = done_tx.send(());
+            return Ok(());
+        }
+        read = stdout.read(&mut first_chunk) => match read {
+            Ok(0) | Err(_) => {
+                let _ = stop_child(&mut child).await;
+                send_stopped(&event_tx, "startup_failed".to_string(), 0);
+                let _ = done_tx.send(());
+                return Ok(());
+            }
+            Ok(bytes_read) => bytes_read,
+        }
+    };
+    let preroll_cutoff = task_started
+        .checked_sub(PREROLL_MARGIN)
+        .unwrap_or(task_started);
+    let preroll_bytes = preroll.snapshot_since(preroll_cutoff);
+    if !preroll_bytes.is_empty() {
+        converter.push_raw(&preroll_bytes, &mut pcm_buffer);
+    }
+    converter.push_raw(&first_chunk[..first_len], &mut pcm_buffer);
+    info!(
+        preroll_ms = preroll_bytes.len() / RAW_BYTES_PER_MS,
+        startup_ms = task_started.elapsed().as_millis() as u64,
+        "voice capture live"
+    );
 
     loop {
         tokio::select! {
@@ -271,6 +314,7 @@ async fn run_recording_task(
                         let within_grace_period = now.duration_since(first_frame)
                             < Duration::from_millis(SILENCE_GRACE_PERIOD_MS);
                         let rms = rms_energy(&pcm_frame);
+                        let vad_peak = converter.take_vad_peak();
 
                         mic_level_counter += 1;
                         if mic_level_counter.is_multiple_of(3) {
@@ -279,15 +323,23 @@ async fn run_recording_task(
 
                             if mic_level_counter.is_multiple_of(18) {
                                 debug!(
-                                    "mic_level: rms={:.1} normalized={:.3}",
-                                    rms, normalized
+                                    "mic_level: rms={:.1} vad={:?} normalized={:.3}",
+                                    rms, vad_peak, normalized
                                 );
                             }
                         }
 
-                        if within_grace_period {
+                        let voice_active = match vad_peak {
+                            Some(vad) => {
+                                (rms >= SILENCE_THRESHOLD_RMS && vad >= VAD_ACTIVITY_MIN)
+                                    || vad >= VAD_CONFIDENT_SPEECH
+                            }
+                            None => rms >= SILENCE_THRESHOLD_RMS,
+                        };
+
+                        if within_grace_period || voice_active {
                             silence_start = None;
-                        } else if rms < SILENCE_THRESHOLD_RMS {
+                        } else {
                             let silence_since = silence_start.get_or_insert(now);
                             if now.duration_since(*silence_since)
                                 >= Duration::from_millis(SILENCE_DURATION_MS)
@@ -297,8 +349,6 @@ async fn run_recording_task(
                                 let _ = done_tx.send(());
                                 return Ok(());
                             }
-                        } else {
-                            silence_start = None;
                         }
 
                         let opus_data = encode_pcm_frame(&mut encoder, &pcm_frame)?;
@@ -336,7 +386,7 @@ fn validate_config(config: AudioConfig) -> Result<()> {
 async fn spawn_arecord(_config: AudioConfig) -> Result<Child> {
     super::configure_capture_route().await?;
     Command::new("arecord")
-        .args(super::ARECORD_ARGS)
+        .args(super::arecord_args(super::ARECORD_CAPTURE_DEVICE))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true)
