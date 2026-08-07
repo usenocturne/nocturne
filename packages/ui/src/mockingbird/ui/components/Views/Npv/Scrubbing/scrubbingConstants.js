@@ -1,0 +1,2 @@
+export const SCRUB_SETTLE_TIMEOUT_MS = 350;
+export const SCRUB_IDLE_TIMEOUT_MS = 3000;

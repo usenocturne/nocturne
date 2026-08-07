@@ -868,16 +868,20 @@ function NowPlaying({
   const handleSeek = useCallback(
     async (position) => {
       if (isPhoneMedia) {
-        return;
+        return false;
       }
 
       try {
         if (currentPlayback?.item) {
-          await seekToPosition(position);
+          const succeeded = await seekToPosition(position);
+          if (!succeeded) return false;
           updateProgress(position);
+          return true;
         }
+        return false;
       } catch (error) {
         console.error("Error seeking:", error);
+        return false;
       }
     },
     [isPhoneMedia, currentPlayback?.item, seekToPosition, updateProgress],
@@ -1200,7 +1204,6 @@ function NowPlaying({
                 ? 1
                 : 0
           }
-          isPlaying={isPlaying && !isStartingPlayback}
           durationMs={duration}
           onSeek={handleSeek}
           onPlayPause={handlePlayPause}

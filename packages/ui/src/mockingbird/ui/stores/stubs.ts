@@ -1,5 +1,9 @@
 import { makeAutoObservable, reaction, runInAction } from "mobx";
 import { SwipeHandlerClass } from "../components/Views/Npv/SwipeHandler/SwipeHandler";
+import {
+  SCRUB_IDLE_TIMEOUT_MS,
+  SCRUB_SETTLE_TIMEOUT_MS,
+} from "../components/Views/Npv/Scrubbing/scrubbingConstants";
 
 export class NpvStore {
   declare carThingStores: UiLooseData;
@@ -147,32 +151,17 @@ export class NpvStore {
         window.clearTimeout(this.scrubbingTimeoutId);
       }
       this.scrubbingTimeoutId = window.setTimeout(() => {
-        if (
-          window.scrubbingHardwareDialHandler &&
-          window.scrubbingTimeoutShouldSeek
-        ) {
-          const scrubbingProgress = window.scrubbingProgressValue;
-          const playbackProgress = window.scrubbingPlaybackProgress;
-          const onSeek = window.scrubbingOnSeek;
-
-          if (
-            scrubbingProgress !== null &&
-            playbackProgress?.duration &&
-            onSeek
-          ) {
-            const seekMs = Math.floor(
-              scrubbingProgress * playbackProgress.duration,
-            );
-            if (seekMs >= playbackProgress.duration - 1000) {
-              const rootStore = window.carThingRootStore;
-              rootStore?.npvStore?.npvController?.next?.();
-            } else {
-              onSeek(seekMs);
-            }
-          }
-        }
         this.stopScrubbing();
-      }, 3000);
+      }, SCRUB_IDLE_TIMEOUT_MS);
+    },
+
+    resetScrubbingCommitTimer() {
+      if (this.scrubbingTimeoutId) {
+        window.clearTimeout(this.scrubbingTimeoutId);
+      }
+      this.scrubbingTimeoutId = window.setTimeout(() => {
+        window.scrubbingCommit?.();
+      }, SCRUB_SETTLE_TIMEOUT_MS);
     },
 
     handleScrubberClick() {
@@ -231,10 +220,13 @@ export class NpvStore {
       const rootStore = window.carThingRootStore || document.rootStore;
       const npvStore = rootStore?.npvStore;
 
-      if (npvStore?.scrubbingUiState?.isScrubbing) {
-        if (window.scrubbingHardwareDialHandler) {
-          window.scrubbingHardwareDialHandler("left");
-        }
+      const knobSeeksPlayback =
+        localStorage.getItem("knobSeeksPlaybackEnabled") === "true";
+      if (
+        (npvStore?.scrubbingUiState?.isScrubbing || knobSeeksPlayback) &&
+        window.scrubbingHardwareDialHandler
+      ) {
+        window.scrubbingHardwareDialHandler("left");
       } else {
         const volumeStore = rootStore?.volumeStore;
         volumeStore?.decreaseVolume?.();
@@ -245,10 +237,13 @@ export class NpvStore {
       const rootStore = window.carThingRootStore || document.rootStore;
       const npvStore = rootStore?.npvStore;
 
-      if (npvStore?.scrubbingUiState?.isScrubbing) {
-        if (window.scrubbingHardwareDialHandler) {
-          window.scrubbingHardwareDialHandler("right");
-        }
+      const knobSeeksPlayback =
+        localStorage.getItem("knobSeeksPlaybackEnabled") === "true";
+      if (
+        (npvStore?.scrubbingUiState?.isScrubbing || knobSeeksPlayback) &&
+        window.scrubbingHardwareDialHandler
+      ) {
+        window.scrubbingHardwareDialHandler("right");
       } else {
         const volumeStore = rootStore?.volumeStore;
         volumeStore?.increaseVolume?.();

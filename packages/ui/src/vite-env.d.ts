@@ -157,14 +157,7 @@ interface Window {
     track?: (event: string, data?: Record<string, unknown>) => void;
   };
   scrubbingHardwareDialHandler?: ((delta: string | number) => void) | null;
-  scrubbingTimeoutShouldSeek?: boolean;
-  scrubbingProgressValue?: number | null;
-  scrubbingPlaybackProgress?: {
-    duration?: number;
-    durationMs?: number;
-    progressMs?: number;
-  };
-  scrubbingOnSeek?: (positionMs: number) => void | Promise<void>;
+  scrubbingCommit?: () => void | Promise<void>;
   carThingSkipNext?: () => void | Promise<void>;
   carThingSkipPrev?: () => void | Promise<void>;
 }

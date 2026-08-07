@@ -2,6 +2,7 @@ import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
 import { useState, useCallback, useEffect, useRef } from "react";
 import styles from "./ScrubbingBackdrop.module.scss";
+import { SCRUB_SETTLE_TIMEOUT_MS } from "./scrubbingConstants";
 
 const formatTime = (ms) => {
   const totalSeconds = Math.floor(ms / 1000);
@@ -17,32 +18,136 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
   const timeoutRef = useRef(null);
+  const scrubbingProgressRef = useRef(null);
+  const hasPendingSeekRef = useRef(false);
+  const commitQueueRef = useRef(Promise.resolve());
+  const onSeekRef = useRef(onSeek);
+
+  useEffect(() => {
+    onSeekRef.current = onSeek;
+  }, [onSeek]);
+
+  const commitScrub = useCallback(() => {
+    if (!hasPendingSeekRef.current) return;
+
+    hasPendingSeekRef.current = false;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    const progress = scrubbingProgressRef.current;
+    const duration = playbackProgress?.duration;
+    const seek = onSeekRef.current;
+    if (progress === null || !duration || !seek) {
+      uiState.stopScrubbing();
+      setScrubbingProgress(null);
+      scrubbingProgressRef.current = null;
+      return;
+    }
+
+    const seekMs = Math.floor(progress * duration);
+    const clearCommittedProgress = () => {
+      if (scrubbingProgressRef.current === progress) {
+        scrubbingProgressRef.current = null;
+        setScrubbingProgress((current) =>
+          current === progress ? null : current,
+        );
+      }
+    };
+    uiState.stopScrubbing();
+
+    if (seekMs >= duration - 1000) {
+      clearCommittedProgress();
+      const rootStore = window.carThingRootStore;
+      rootStore?.npvStore?.npvController?.next?.();
+      return;
+    }
+
+    const commit = () =>
+      Promise.resolve()
+        .then(() => seek(seekMs))
+        .then((succeeded) => {
+          if (succeeded !== false) {
+            playbackProgress.updateProgress(seekMs);
+          }
+          return undefined;
+        })
+        .finally(clearCommittedProgress);
+    commitQueueRef.current = commitQueueRef.current
+      .catch(() => undefined)
+      .then(commit)
+      .catch((error) => {
+        console.error("Error committing scrub position:", error);
+      });
+  }, [playbackProgress?.duration, uiState]);
+
+  const cancelScrub = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    uiState.stopScrubbing();
+    setScrubbingProgress(null);
+    scrubbingProgressRef.current = null;
+    hasPendingSeekRef.current = false;
+  }, [uiState]);
+
+  const handleHardwareDial = useCallback(
+    (direction) => {
+      if (!playbackProgress?.duration) return;
+      if (!uiState.isScrubbing) {
+        uiState.startScrubbing();
+      }
+      uiState.resetScrubbingViewTimer();
+      hasPendingSeekRef.current = true;
+      const fiveSecondsPercent = 5000 / playbackProgress.duration;
+
+      setScrubbingProgress((prev) => {
+        const currentPercent =
+          prev !== null
+            ? prev
+            : (playbackProgress?.progressPercentage || 0) / 100;
+        const nextValue = Math.max(
+          0,
+          Math.min(
+            1,
+            currentPercent +
+              (direction === "right"
+                ? fiveSecondsPercent
+                : -fiveSecondsPercent),
+          ),
+        );
+        scrubbingProgressRef.current = nextValue;
+        return nextValue;
+      });
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        commitScrub();
+      }, SCRUB_SETTLE_TIMEOUT_MS);
+    },
+    [commitScrub, playbackProgress, uiState],
+  );
 
   const handleTouchMove = useCallback(
     (e) => {
       if (!playbackProgress?.duration) return;
-      window.scrubbingTimeoutShouldSeek = false;
       uiState.resetScrubbingViewTimer();
       const x = e.touches[0].clientX;
       const percent = Math.max(0, Math.min(1, x / 800));
+      scrubbingProgressRef.current = percent;
+      hasPendingSeekRef.current = true;
       setScrubbingProgress(percent);
     },
     [playbackProgress?.duration, uiState],
   );
 
   const handleTouchEnd = useCallback(() => {
-    if (scrubbingProgress !== null && playbackProgress?.duration && onSeek) {
-      const seekMs = Math.floor(scrubbingProgress * playbackProgress.duration);
-      if (seekMs >= playbackProgress.duration - 1000) {
-        const rootStore = window.carThingRootStore;
-        rootStore?.npvStore?.npvController?.next?.();
-      } else {
-        onSeek(seekMs);
-      }
-    }
-    uiState.stopScrubbing();
-    setScrubbingProgress(null);
-  }, [scrubbingProgress, playbackProgress?.duration, onSeek, uiState]);
+    commitScrub();
+  }, [commitScrub]);
 
   useEffect(() => {
     if (uiState.isScrubbing) {
@@ -74,29 +179,15 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
       event.stopPropagation();
       const delta = event.deltaX;
       const step = 1.5;
+      hasPendingSeekRef.current = true;
+      uiState.resetScrubbingViewTimer();
 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
       timeoutRef.current = setTimeout(() => {
-        if (
-          scrubbingProgress !== null &&
-          playbackProgress?.duration &&
-          onSeek
-        ) {
-          const seekMs = Math.floor(
-            scrubbingProgress * playbackProgress.duration,
-          );
-          if (seekMs >= playbackProgress.duration - 1000) {
-            const rootStore = window.carThingRootStore;
-            rootStore?.npvStore?.npvController?.next?.();
-          } else {
-            onSeek(seekMs);
-          }
-        }
-        uiState.stopScrubbing();
-        setScrubbingProgress(null);
-      }, 3000);
+        commitScrub();
+      }, SCRUB_SETTLE_TIMEOUT_MS);
 
       setScrubbingProgress((prev) => {
         const currentPercent =
@@ -105,35 +196,9 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
             : (playbackProgress?.progressPercentage || 0) / 100;
         const nextValue =
           currentPercent + (delta > 0 ? step / 100 : -step / 100);
-        return Math.max(0, Math.min(1, nextValue));
-      });
-    };
-
-    const handleHardwareDial = (direction) => {
-      if (!playbackProgress?.duration) return;
-      window.scrubbingTimeoutShouldSeek = true;
-      window.scrubbingOnSeek = onSeek;
-      window.scrubbingPlaybackProgress = playbackProgress;
-      uiState.resetScrubbingViewTimer();
-      const fiveSecondsPercent = 5000 / playbackProgress.duration;
-
-      setScrubbingProgress((prev) => {
-        const currentPercent =
-          prev !== null
-            ? prev
-            : (playbackProgress?.progressPercentage || 0) / 100;
-        const nextValue = Math.max(
-          0,
-          Math.min(
-            1,
-            currentPercent +
-              (direction === "right"
-                ? fiveSecondsPercent
-                : -fiveSecondsPercent),
-          ),
-        );
-        window.scrubbingProgressValue = nextValue;
-        return nextValue;
+        const clampedValue = Math.max(0, Math.min(1, nextValue));
+        scrubbingProgressRef.current = clampedValue;
+        return clampedValue;
       });
     };
 
@@ -141,18 +206,13 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
       if (event.key === "Enter") {
         event.preventDefault();
         event.stopPropagation();
-        handleTouchEnd();
+        commitScrub();
       } else if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
-        uiState.stopScrubbing();
-        setScrubbingProgress(null);
+        cancelScrub();
       }
     };
-
-    if (typeof window !== "undefined") {
-      window.scrubbingHardwareDialHandler = handleHardwareDial;
-    }
 
     window.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("keydown", handleKeyDown, { capture: true });
@@ -162,7 +222,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
 
       if (typeof window !== "undefined") {
-        window.scrubbingHardwareDialHandler = null;
+        window.scrubbingCommit = null;
       }
     };
   }, [
@@ -170,8 +230,34 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
     playbackProgress?.progressPercentage,
     playbackProgress?.duration,
     handleTouchEnd,
+    commitScrub,
+    cancelScrub,
     uiState,
   ]);
+
+  useEffect(() => {
+    window.scrubbingHardwareDialHandler = handleHardwareDial;
+    return () => {
+      if (window.scrubbingHardwareDialHandler === handleHardwareDial) {
+        window.scrubbingHardwareDialHandler = null;
+      }
+    };
+  }, [handleHardwareDial]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && uiState.isScrubbing) {
+      window.scrubbingCommit = commitScrub;
+    }
+
+    return () => {
+      if (
+        typeof window !== "undefined" &&
+        window.scrubbingCommit === commitScrub
+      ) {
+        window.scrubbingCommit = null;
+      }
+    };
+  }, [commitScrub, uiState.isScrubbing]);
 
   if (!shouldRender) {
     return null;
@@ -191,7 +277,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
     <div
       data-testid="scrubbing-backdrop-area"
       className={`${styles.scrubbingBackdrop} ${isVisible ? styles.visible : styles.hidden}`}
-      onClick={() => uiState.stopScrubbing()}
+      onClick={cancelScrub}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >

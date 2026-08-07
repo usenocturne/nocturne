@@ -1,5 +1,6 @@
 import classnames from "classnames";
 import { observer } from "mobx-react-lite";
+import { useSettings } from "../../../../../contexts/SettingsContext";
 import { useCarThingStore } from "../../../contexts/CarThingStore";
 import DelayedRender from "../../DelayedRender";
 import CSSTransition from "../../CSSTransitionCompat";
@@ -24,6 +25,7 @@ const Npv = ({ playbackProgress, onSeek }: UiComponentProps) => {
   const carThingStores = useCarThingStore();
   const { npvStore, overlayController, ubiLogger, bannerStore, queueStore } =
     carThingStores;
+  const { settings } = useSettings();
 
   const { npvController } = npvStore;
 
@@ -83,6 +85,10 @@ const Npv = ({ playbackProgress, onSeek }: UiComponentProps) => {
       e.stopPropagation();
 
       const delta = e.deltaX;
+      if (settings.knobSeeksPlaybackEnabled) {
+        window.scrubbingHardwareDialHandler?.(delta > 0 ? "right" : "left");
+        return;
+      }
       wheelDeltaAccumulatorRef.current += delta;
 
       if (Math.abs(wheelDeltaAccumulatorRef.current) >= 2) {
@@ -103,6 +109,7 @@ const Npv = ({ playbackProgress, onSeek }: UiComponentProps) => {
       overlayController.anyOverlayIsShowing,
       carThingStores,
       npvStore.scrubbingUiState.isScrubbing,
+      settings.knobSeeksPlaybackEnabled,
     ],
   );
 

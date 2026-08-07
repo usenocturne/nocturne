@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useProgressValue } from "../../hooks/usePlaybackProgress";
 
-const SCRUB_TIMEOUT_MS = 3000;
+const SCRUB_SETTLE_TIMEOUT_MS = 350;
+const SCRUB_IDLE_TIMEOUT_MS = 3000;
 
 const ProgressBar = ({
   progress,
-  isPlaying,
   durationMs,
   onSeek,
   onScrubbingChange,
@@ -16,11 +16,11 @@ const ProgressBar = ({
   const { progressMs, progressPercentage } = useProgressValue();
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubbingProgress, setScrubbingProgress] = useState(null);
-  const wasPlayingRef = useRef(false);
   const containerRef = useRef(null);
   const scrubTimeoutRef = useRef(null);
   const hasScrubbedRef = useRef(false);
   const scrubbingProgressRef = useRef(null);
+  const commitQueueRef = useRef(Promise.resolve());
   const durationMsRef = useRef(durationMs);
   const onSeekRef = useRef(onSeek);
   const onScrubbingChangeRef = useRef(onScrubbingChange);
@@ -57,8 +57,21 @@ const ProgressBar = ({
       const seekMs = Math.floor(
         (scrubbingProgressRef.current / 100) * durationMsRef.current,
       );
-      onSeekRef.current(seekMs);
-      updateProgressRef.current?.(seekMs);
+      const commit = () =>
+        Promise.resolve()
+          .then(() => onSeekRef.current(seekMs))
+          .then((succeeded) => {
+            if (succeeded !== false) {
+              updateProgressRef.current?.(seekMs);
+            }
+            return undefined;
+          });
+      commitQueueRef.current = commitQueueRef.current
+        .catch(() => undefined)
+        .then(commit)
+        .catch((error) => {
+          console.error("Error committing scrub position:", error);
+        });
     }
 
     setScrubbingProgress(null);
@@ -71,7 +84,6 @@ const ProgressBar = ({
 
     setIsScrubbing(true);
     onScrubbingChange(true);
-    wasPlayingRef.current = isPlaying;
     hasScrubbedRef.current = false;
     scrubbingProgressRef.current = null;
 
@@ -80,7 +92,7 @@ const ProgressBar = ({
       if (!hasScrubbedRef.current) {
         exitScrubbing(false);
       }
-    }, SCRUB_TIMEOUT_MS);
+    }, SCRUB_IDLE_TIMEOUT_MS);
   };
 
   useEffect(() => {
@@ -103,7 +115,7 @@ const ProgressBar = ({
         clearScrubTimeout();
         scrubTimeoutRef.current = setTimeout(() => {
           exitScrubbing(true);
-        }, SCRUB_TIMEOUT_MS);
+        }, SCRUB_SETTLE_TIMEOUT_MS);
 
         return clampedValue;
       });
@@ -122,7 +134,6 @@ const ProgressBar = ({
 
       setIsScrubbing(true);
       onScrubbingChangeRef.current(true);
-      wasPlayingRef.current = isPlaying;
       hasScrubbedRef.current = true;
 
       const delta =
@@ -138,7 +149,7 @@ const ProgressBar = ({
       clearScrubTimeout();
       scrubTimeoutRef.current = setTimeout(() => {
         exitScrubbing(true);
-      }, SCRUB_TIMEOUT_MS);
+      }, SCRUB_SETTLE_TIMEOUT_MS);
     };
 
     window.addEventListener("wheel", handleWheelToActivate, { passive: false });
@@ -149,7 +160,6 @@ const ProgressBar = ({
     disabled,
     isProgressUnknown,
     effectiveProgress,
-    isPlaying,
   ]);
 
   useEffect(() => {
