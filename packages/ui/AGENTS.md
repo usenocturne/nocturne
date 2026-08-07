@@ -91,6 +91,10 @@ Both UI skins must send `audio.record.stop` and `voice.cancel` when dismissing a
 
 The microphone fails closed for connector platforms. Both `web` and `macos` `app.ready` sessions keep wake-word controls disabled unless a future attested macOS connector advertises an explicit voice capability. Do not infer macOS voice support from the platform name alone.
 
+### Voice Capture Liveness
+
+Both UI skins rearm the pending capture timeout on every `audio.level` event: mic frames only flow while the daemon is actively recording, so they prove capture is alive even when no partial transcripts arrive. Android companions transcribe remotely and emit exactly one final `voice.transcription`, so without this the capture timeout would dismiss the overlay mid-utterance while the request still executes. Android also emits `ai.state` `thinking` as soon as recording stops on the upload path; both skins must accept a session-tagged `ai.state` on an active turn _before_ any transcript and bind the voice session from it (`VoiceContext` binds on open turns, `VoiceStore` while a capture/AI timeout is pending). iOS streams on-device partials and needs neither path, but is unaffected by both.
+
 ### Display Sleep Contract
 
 The rightmost top button opens the lock screen; it must not immediately turn off the backlight. The General setting `idleLockEnabled` auto-locks after 5 minutes of inactivity. The separate `idleDisplaySleepEnabled` setting turns the backlight off after 20 minutes of inactivity while playback is not actively playing by sending `device.display.sleep` on the existing `nocturned` WebSocket, and wakes with `device.display.wake` on the first wake input, player event, or processed `player.state` response with `is_playing: true`. The daemon owns transient backlight restore, including auto-brightness restart. Do not implement sleep by calling `device.brightness.set`; it persists manual brightness and can leave the device saved at the dimmest value.

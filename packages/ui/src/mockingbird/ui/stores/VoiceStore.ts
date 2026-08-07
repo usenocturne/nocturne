@@ -337,6 +337,15 @@ class VoiceStore {
   /** @param {AiStateEvent & {session_id?: string, sessionId?: string}} data */
   onAIState = action((data) => {
     if (this._handleLateArrivalAfterDismissal(data)) return;
+    const sessionId = data.session_id || data.sessionId;
+    if (
+      this.currentSessionId === null &&
+      sessionId &&
+      !this._rejectedSessionIds.has(sessionId) &&
+      (this._captureTimeoutId || this._aiTimeoutId)
+    ) {
+      this.currentSessionId = sessionId;
+    }
     if (this._isStaleEvent(data, "ai")) return;
 
     const prevState = this.state.aiState;
@@ -467,6 +476,10 @@ class VoiceStore {
   /** @param {AudioLevelEvent} data */
   _onMicLevel = action((data) => {
     this.micLevelMovingAverage = data.level || 0;
+    
+    if (this._captureTimeoutId) {
+      this._startCaptureTimeout();
+    }
   });
 
   retry = action(() => {

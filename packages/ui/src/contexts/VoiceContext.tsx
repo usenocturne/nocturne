@@ -227,7 +227,18 @@ export function voiceReducer(
           nextPhase = "idle";
         }
       }
-      return { ...state, phase: nextPhase };
+
+      let nextSessionId = state.currentSessionId;
+      const sessionId = voiceSessionId(payload);
+      if (
+        state.isOpen &&
+        nextSessionId === null &&
+        sessionId &&
+        !state.rejectedSessionIds.includes(sessionId)
+      ) {
+        nextSessionId = sessionId;
+      }
+      return { ...state, phase: nextPhase, currentSessionId: nextSessionId };
     }
 
     case "AI_RESPONSE": {
@@ -579,6 +590,10 @@ export function VoiceProvider({
         const raw = typeof audioLevel.level === "number" ? audioLevel.level : 0;
         micSmoothedRef.current =
           micSmoothedRef.current + 0.3 * (raw - micSmoothedRef.current);
+
+        if (captureTimerRef.current) {
+          startCaptureTimeout();
+        }
       }
     };
 

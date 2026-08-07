@@ -84,14 +84,15 @@ export default function VoicePill({
     };
   }, []);
 
-  const isListeningEmpty = phase === "listening" && !transcript;
+  const isAwaitingContent =
+    (phase === "listening" || phase === "thinking") && !transcript;
   const isThinking = phase === "thinking" && transcript;
   const isSpeaking = phase === "speaking" && aiResponse;
 
   let pillContent;
   let ariaLive: "off" | "polite" = "polite";
 
-  if (isListeningEmpty) {
+  if (isAwaitingContent) {
     pillContent = (
       <div
         style={{
