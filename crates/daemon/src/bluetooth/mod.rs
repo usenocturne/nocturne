@@ -429,16 +429,48 @@ fn is_transient_adapter_startup_error(error: &bluer::Error) -> bool {
         )
 }
 
-async fn configure_adapter(adapter: &Adapter) -> bluer::Result<()> {
-    adapter.set_powered(true).await?;
-    adapter.set_discoverable(false).await?;
-    adapter.set_pairable(false).await?;
-    adapter.set_discoverable_timeout(0).await?;
-    adapter.set_pairable_timeout(0).await?;
+#[derive(Debug, PartialEq, Eq)]
+enum AdapterConfigurationStep<'a> {
+    Powered(bool),
+    Alias(&'a str),
+    Discoverable(bool),
+    Pairable(bool),
+    DiscoverableTimeout(u32),
+    PairableTimeout(u32),
+}
+
+fn adapter_configuration_steps(device_name: &str) -> [AdapterConfigurationStep<'_>; 6] {
+    [
+        AdapterConfigurationStep::Alias(device_name),
+        AdapterConfigurationStep::Powered(true),
+        AdapterConfigurationStep::Discoverable(false),
+        AdapterConfigurationStep::Pairable(false),
+        AdapterConfigurationStep::DiscoverableTimeout(0),
+        AdapterConfigurationStep::PairableTimeout(0),
+    ]
+}
+
+async fn configure_adapter(adapter: &Adapter, device_name: &str) -> bluer::Result<()> {
+    for step in adapter_configuration_steps(device_name) {
+        match step {
+            AdapterConfigurationStep::Powered(powered) => adapter.set_powered(powered).await?,
+            AdapterConfigurationStep::Alias(alias) => adapter.set_alias(alias.to_string()).await?,
+            AdapterConfigurationStep::Discoverable(discoverable) => {
+                adapter.set_discoverable(discoverable).await?
+            }
+            AdapterConfigurationStep::Pairable(pairable) => adapter.set_pairable(pairable).await?,
+            AdapterConfigurationStep::DiscoverableTimeout(timeout) => {
+                adapter.set_discoverable_timeout(timeout).await?
+            }
+            AdapterConfigurationStep::PairableTimeout(timeout) => {
+                adapter.set_pairable_timeout(timeout).await?
+            }
+        }
+    }
     Ok(())
 }
 
-async fn wait_for_ready_bluetooth() -> (Session, Adapter) {
+async fn wait_for_ready_bluetooth(device_name: &str) -> (Session, Adapter) {
     let mut attempts = 0_u32;
     let mut retry_interval = DEFAULT_ADAPTER_RETRY_INTERVAL;
 
@@ -446,7 +478,7 @@ async fn wait_for_ready_bluetooth() -> (Session, Adapter) {
         let result: bluer::Result<(Session, Adapter)> = async {
             let session = Session::new().await?;
             let adapter = session.default_adapter().await?;
-            configure_adapter(&adapter).await?;
+            configure_adapter(&adapter, device_name).await?;
             Ok((session, adapter))
         }
         .await;
@@ -489,6 +521,7 @@ async fn wait_for_ready_bluetooth() -> (Session, Adapter) {
 pub struct BluetoothDaemon {
     session: Session,
     adapter: Adapter,
+    device_name: String,
     accessory_setup: Option<accessory_setup::AccessorySetupBootstrap>,
     ancs_monitor: Option<ancs::AncsMonitor>,
     ancs_manager: Option<ancs::AncsManager>,
@@ -516,10 +549,6 @@ impl BluetoothDaemon {
         wakeword_pause_tx: mpsc::UnboundedSender<WakeWordCommand>,
         ota_cmd_tx: Option<mpsc::Sender<crate::ota::Command>>,
     ) -> Result<Self> {
-        let (session, adapter) = wait_for_ready_bluetooth().await;
-
-        info!("Using Bluetooth adapter: {}", adapter.name());
-
         let device_name = crate::system::config::get_bluetooth_device_name().unwrap_or_else(|e| {
             warn!(
                 "Failed to get dynamic device name, falling back to 'Nocturne': {}",
@@ -527,14 +556,10 @@ impl BluetoothDaemon {
             );
             "Nocturne".to_string()
         });
-        if let Err(e) = adapter.set_alias(device_name.clone()).await {
-            warn!(
-                "Failed to set Bluetooth device name to '{}': {}",
-                device_name, e
-            );
-        } else {
-            info!("Set Bluetooth device name to: {}", device_name);
-        }
+        let (session, adapter) = wait_for_ready_bluetooth(&device_name).await;
+
+        info!("Using Bluetooth adapter: {}", adapter.name());
+        info!("Set Bluetooth device name to: {}", device_name);
 
         if let Err(e) = pairing::start_agent_thread(websocket_server.clone()) {
             warn!("Failed to start Bluetooth pairing agent: {}", e);
@@ -546,6 +571,7 @@ impl BluetoothDaemon {
         Ok(BluetoothDaemon {
             session,
             adapter,
+            device_name,
             accessory_setup: None,
             ancs_monitor: None,
             ancs_manager: None,
@@ -1264,11 +1290,7 @@ impl BluetoothDaemon {
     /// advertisement. Bonded peers keep the advertisement alive so iOS can
     /// restore the LE link used by ANCS without reopening classic discovery.
     async fn register_accessory_setup_bootstrap(&mut self) {
-        let device_name = self
-            .adapter
-            .alias()
-            .await
-            .unwrap_or_else(|_| "Nocturne".to_string());
+        let device_name = self.device_name.clone();
         let device_serial =
             crate::system::config::get_serial_number().unwrap_or_else(|_| device_name.clone());
         match accessory_setup::AccessorySetupBootstrap::register(
@@ -3013,6 +3035,24 @@ impl BluetoothDaemon {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn adapter_identity_is_set_before_the_radio_is_powered() {
+        let steps = adapter_configuration_steps("Nocturne (Q01S)");
+        let alias_index = steps
+            .iter()
+            .position(|step| matches!(step, AdapterConfigurationStep::Alias(_)))
+            .expect("adapter alias step");
+        let powered_index = steps
+            .iter()
+            .position(|step| matches!(step, AdapterConfigurationStep::Powered(true)))
+            .expect("adapter powered step");
+
+        assert!(
+            alias_index < powered_index,
+            "the serialized adapter name must be set before the radio can advertise"
+        );
+    }
 
     fn address(value: &str) -> Address {
         Address::from_str(value).expect("valid Bluetooth address")

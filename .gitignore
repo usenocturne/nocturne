@@ -26,7 +26,7 @@ rustc-ice-*.txt
 .sisyphus
 .playwright-mcp
 .DS_Store
-
+nocturne-ota/
 
 # Bun workspace (root-level)
 node_modules
