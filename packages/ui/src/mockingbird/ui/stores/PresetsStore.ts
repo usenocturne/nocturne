@@ -5,6 +5,7 @@ import {
   migrateLegacyMockingbirdPresets,
   normalizePresetDeviceId,
 } from "../../../utils/presetStorage";
+import { normalizeSpotifyContext } from "../../../utils/spotifyContext";
 
 /** @typedef {import("@schema/spotify").SpotifyArtistGetRequest} SpotifyArtistGetRequest */
 /** @typedef {import("@schema/spotify").SpotifyMeTracksRequest} SpotifyMeTracksRequest */
@@ -92,26 +93,28 @@ export class PresetsUiState {
   showNowPlaying(contextUri) {
     if (!this.isPlaying) return false;
 
-    const isLikedSongs = contextUri === "spotify:collection:your-music";
+    const normalizedContextUri =
+      normalizeSpotifyContext(contextUri)?.uri || contextUri;
 
     if (this.currentlyPlayingContextUri) {
-      if (this.currentlyPlayingContextUri === contextUri) return true;
-      if (
-        isLikedSongs &&
-        this.currentlyPlayingContextUri.includes(":collection")
-      )
-        return true;
-      return false;
+      const normalizedPlayingUri =
+        normalizeSpotifyContext(this.currentlyPlayingContextUri)?.uri ||
+        this.currentlyPlayingContextUri;
+      return normalizedPlayingUri === normalizedContextUri;
     }
 
     const rootStore = window.carThingRootStore;
     const activeContextUri = rootStore?.currentPlayback?.context?.uri;
     if (activeContextUri) {
-      if (activeContextUri === contextUri) return true;
-      if (isLikedSongs && activeContextUri.includes(":collection")) return true;
+      const normalizedActiveContextUri =
+        normalizeSpotifyContext(activeContextUri)?.uri || activeContextUri;
+      if (normalizedActiveContextUri === normalizedContextUri) return true;
     }
 
-    return this.playerStore.contextUri === contextUri;
+    const normalizedPlayerContextUri =
+      normalizeSpotifyContext(this.playerStore.contextUri)?.uri ||
+      this.playerStore.contextUri;
+    return normalizedPlayerContextUri === normalizedContextUri;
   }
 
   handlePresetButtonPress(presetNumber) {
@@ -197,7 +200,7 @@ export class PresetsUiState {
     ) {
       return null;
     }
-    return ctx.uri;
+    return normalizeSpotifyContext(ctx.uri)?.uri || ctx.uri;
   }
 
   getCurrentSaveableUri() {
@@ -210,7 +213,9 @@ export class PresetsUiState {
     const currentPlayback = rootStore?.currentPlayback;
 
     if (currentPlayback) {
-      const contextUri = currentPlayback.context?.uri;
+      const rawContextUri = currentPlayback.context?.uri;
+      const contextUri =
+        normalizeSpotifyContext(rawContextUri)?.uri || rawContextUri;
       const trackUri = currentPlayback.item?.uri;
       const albumUri = currentPlayback.item?.album?.uri;
 
@@ -225,7 +230,9 @@ export class PresetsUiState {
       return contextUri || albumUri || trackUri;
     }
 
-    const contextUri = this.playerStore.contextUri;
+    const rawContextUri = this.playerStore.contextUri;
+    const contextUri =
+      normalizeSpotifyContext(rawContextUri)?.uri || rawContextUri;
     const trackUri = this.playerStore.currentTrack?.uri;
     const albumUri = this.playerStore.currentTrack?.album?.uri;
 
@@ -366,9 +373,11 @@ export class PresetsUiState {
   }
 
   async playPresetContext(preset) {
+    const normalizedContext = normalizeSpotifyContext(preset.context_uri);
+    const presetUri = normalizedContext?.uri || preset.context_uri;
     this.currentlyPlayingContextUri = null;
-    this.currentlyPlayingContextUri = preset.context_uri;
-    this.playerStore.setContextUri(preset.context_uri);
+    this.currentlyPlayingContextUri = presetUri;
+    this.playerStore.setContextUri(presetUri);
 
     const rootStore = window.carThingRootStore;
     const playTrack = rootStore?.spotifyControls?.playTrack;
@@ -380,7 +389,7 @@ export class PresetsUiState {
     }
 
     try {
-      const uri = preset.context_uri;
+      const uri = presetUri;
 
       if (uri === "spotify:collection:your-music") {
         const { sendNocturneWsRequest } =

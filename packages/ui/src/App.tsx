@@ -14,7 +14,10 @@ import {
   subscribeSpotifySkippedState,
   getBluetoothPresentationState,
 } from "./hooks/useNocturned";
-import { useSpotifyData } from "./hooks/useSpotifyData";
+import {
+  getSpotifyProfileIdentity,
+  useSpotifyData,
+} from "./hooks/useSpotifyData";
 import { usePlaybackProgress } from "./hooks/usePlaybackProgress";
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import { OTAProvider } from "./contexts/OTAContext";
@@ -258,8 +261,25 @@ function useGlobalButtonMapping({
             }
           }
         } else if (mappedType === "liked-songs") {
-          if (spotifyUserId) {
-            contextUri = `spotify:user:${spotifyUserId}:collection`;
+          let resolvedUserId = spotifyUserId;
+          if (!resolvedUserId) {
+            try {
+              const profile = await sendNocturneWsRequest(
+                "spotify.me.profile",
+                {},
+                { timeoutMs: 5000 },
+              );
+              resolvedUserId = getSpotifyProfileIdentity(profile);
+            } catch (error) {
+              console.warn(
+                "Could not resolve Spotify profile for Liked Songs:",
+                error,
+              );
+            }
+          }
+
+          if (resolvedUserId) {
+            contextUri = `spotify:user:${resolvedUserId}:collection`;
           } else {
             const likedTracksJson = getButtonMappingValue(
               buttonNumber,
@@ -272,6 +292,26 @@ function useGlobalButtonMapping({
                 uris = isStringArray(likedTracks) ? likedTracks : null;
               } catch (e) {
                 console.error("Error parsing liked tracks:", e);
+              }
+            }
+
+            if (!uris?.length) {
+              try {
+                const likedTracks = await sendNocturneWsRequest(
+                  "spotify.me.tracks",
+                  { limit: 50 },
+                  { timeoutMs: 8000 },
+                );
+                uris = Array.isArray(likedTracks?.items)
+                  ? likedTracks.items
+                      .map((item) => item?.track?.uri)
+                      .filter((uri): uri is string => typeof uri === "string")
+                  : null;
+              } catch (error) {
+                console.error(
+                  "Could not load a Liked Songs playback fallback:",
+                  error,
+                );
               }
             }
           }

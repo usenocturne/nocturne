@@ -209,7 +209,7 @@ const ContentView = ({
         content?.images?.[1]?.url || content?.images?.[0]?.url || "",
       contentName: content?.name || "",
       playTrack,
-      isActive: !!content,
+      isActive: contentType === "liked-songs" || !!content,
       setIgnoreNextRelease,
     });
 
@@ -784,10 +784,7 @@ const ContentView = ({
   ]);
 
   useEffect(() => {
-    if (
-      tracks.length > 0 &&
-      (contentType === "mix" || contentType === "liked-songs")
-    ) {
+    if (contentType === "mix" || contentType === "liked-songs") {
       const trackUris = tracks
         .filter((track) => track && track.uri)
         .map((track) => track.uri);

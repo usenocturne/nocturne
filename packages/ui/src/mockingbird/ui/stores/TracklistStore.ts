@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction, action } from "mobx";
 import { getThumbnailImageUrl } from "../helpers/ImageSizeHelper";
 import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
+import { normalizeSpotifyContext } from "../../../utils/spotifyContext";
 
 /** @typedef {import("@schema/spotify").SpotifyAlbumGetRequest} SpotifyAlbumGetRequest */
 /** @typedef {import("@schema/spotify").SpotifyAlbumTracksRequest} SpotifyAlbumTracksRequest */
@@ -81,14 +82,21 @@ class TracklistUiState {
   }
 
   initializeTracklist(contextItem) {
-    if (contextItem.uri === this.contextUri) {
+    const normalizedUri =
+      normalizeSpotifyContext(contextItem.uri)?.uri || contextItem.uri;
+    const normalizedContextItem =
+      normalizedUri === contextItem.uri
+        ? contextItem
+        : { ...contextItem, uri: normalizedUri };
+
+    if (normalizedContextItem.uri === this.contextUri) {
       this.updateSelectedItem(this.currentlyPlayingTrackOrFirst, false);
       return;
     }
 
     this.reset();
     this.animateSliding = false;
-    this.contextItem = contextItem;
+    this.contextItem = normalizedContextItem;
 
     if (this.initiallySelectedItem) {
       this.updateSelectedItem(this.initiallySelectedItem, false);
@@ -96,9 +104,9 @@ class TracklistUiState {
     }
 
     if (this.rootStore.savedStore && this.rootStore.savedStore.loadSavedState) {
-      this.rootStore.savedStore.loadSavedState(contextItem.uri);
+      this.rootStore.savedStore.loadSavedState(normalizedContextItem.uri);
     }
-    this.loadInitialItems(contextItem.uri);
+    this.loadInitialItems(normalizedContextItem.uri);
   }
 
   get shouldShowLatestPlayedEpisode() {

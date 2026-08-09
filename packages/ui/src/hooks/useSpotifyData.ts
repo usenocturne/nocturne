@@ -4,6 +4,7 @@ import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useImageLoader } from "./useImageLoader";
 import { getCachedTimezone } from "./useCurrentTime";
+import { normalizeSpotifyPlaylist } from "../utils/spotifyContext";
 import {
   getSpotifySkippedState,
   getAppReadyState,
@@ -679,7 +680,8 @@ export function useSpotifyData(
 
         const DJ_PLAYLIST_ID = "37i9dQZF1EYkqdzj48dyYq";
         const itemsWithCounts = await Promise.all(
-          items.map(async (playlist, index) => {
+          items.map(async (rawPlaylist, index) => {
+            const playlist = normalizeSpotifyPlaylist(rawPlaylist);
             if (playlist.id === DJ_PLAYLIST_ID) {
               return playlist;
             }

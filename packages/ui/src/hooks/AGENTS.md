@@ -63,6 +63,10 @@ This pattern exists in `useNocturned.ts`, `useSpotifyData.ts`, `useSpotifyPlayer
 
 Hardware preset mappings are stored under `nocturne_presets:<bluetooth-address>` via `src/utils/presetStorage.ts`. The helper owns the one-time migration from legacy global `button{n}Id` / `button{n}Type` / `button{n}Image` / `button{n}Name` / `button{n}Tracks` keys and older `nocturne_button_presets:*` keys; do not access those legacy keys directly in hooks or components.
 
+Save a complete main-UI preset with `setButtonMapping` rather than updating its fields independently. Whole-slot replacement prevents an album or playlist from inheriting stale `tracks` from a previous mix or Liked Songs fallback.
+
+Normalize Spotify context identities with `src/utils/spotifyContext.ts` before binding or enriching preset content. In particular, Liked Songs may arrive as a collection URI and older personalized yearly playlists may arrive as `spotify:user:<owner>:playlist:<id>`; neither should be parsed with a fixed segment index.
+
 ## CONVENTIONS
 
 - **Standalone exports alongside hooks**: Large hooks export both `useXxx()` hooks and `getXxxState()`/`subscribeXxxState()` standalone functions for use outside React components

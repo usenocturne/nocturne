@@ -26,7 +26,14 @@ const OLD_MOCKINGBIRD_LEGACY_MIGRATION_KEY =
 type ButtonMappingField = (typeof MAIN_BUTTON_FIELDS)[number];
 type ButtonMappingProperty =
   (typeof MAIN_BUTTON_FIELD_TO_PROPERTY)[ButtonMappingField];
-type ButtonMapping = Partial<Record<ButtonMappingProperty, string>>;
+export type ButtonMappingValues = {
+  id: string;
+  type: string;
+  image: string;
+  name: string;
+  tracks?: string;
+};
+type ButtonMapping = Partial<ButtonMappingValues>;
 type ButtonMappings = Array<ButtonMapping | null>;
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -461,6 +468,23 @@ export const setButtonMappingValue = (
   if (changed) {
     writeButtonMappings(storage, normalizedDeviceId, mappings);
   }
+};
+
+export const setButtonMapping = (
+  buttonNumber: number | string,
+  mapping: ButtonMappingValues,
+  deviceId = getActivePresetDeviceId(),
+) => {
+  const storage = getStorage();
+  if (!storage) return;
+
+  const normalizedDeviceId = normalizePresetDeviceId(deviceId);
+  const mappings = migrateButtonMappings(storage, normalizedDeviceId);
+  const index = getButtonMappingIndex(buttonNumber);
+  if (index === -1) return;
+
+  mappings[index] = { ...mapping };
+  writeButtonMappings(storage, normalizedDeviceId, mappings);
 };
 
 export const getMockingbirdPresetsStorageKey = (

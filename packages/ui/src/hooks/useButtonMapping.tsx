@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
   getActivePresetDeviceId,
-  setButtonMappingValue,
+  setButtonMapping,
 } from "../utils/presetStorage";
+import { buildButtonMapping } from "../utils/buttonMapping";
 
 export function useButtonMapping({
   contentId,
@@ -24,36 +25,21 @@ export function useButtonMapping({
     if (contentType === "mix" || contentType === "liked-songs") {
       trackUrisRef.current = [];
     }
-  }, [contentType]);
+  }, [contentId, contentType]);
 
   const saveButtonMapping = useCallback(
     (buttonNumber) => {
-      if (!contentId || !contentType) return;
+      const mapping = buildButtonMapping({
+        contentId,
+        contentType,
+        contentImage,
+        contentName,
+        trackUris: trackUrisRef.current,
+      });
+      if (!mapping) return;
 
       const deviceId = getActivePresetDeviceId();
-
-      setButtonMappingValue(buttonNumber, "Id", contentId, deviceId);
-      setButtonMappingValue(buttonNumber, "Type", contentType, deviceId);
-      let imageToSave = contentImage;
-      if (contentId === "37i9dQZF1EYkqdzj48dyYq") {
-        imageToSave = "/images/radio-cover/dj.webp";
-      } else if (contentType === "liked-songs" && !imageToSave) {
-        imageToSave = "/images/liked-songs.webp";
-      }
-      setButtonMappingValue(buttonNumber, "Image", imageToSave || "", deviceId);
-      setButtonMappingValue(buttonNumber, "Name", contentName || "", deviceId);
-
-      if (
-        (contentType === "mix" || contentType === "liked-songs") &&
-        trackUrisRef.current.length > 0
-      ) {
-        setButtonMappingValue(
-          buttonNumber,
-          "Tracks",
-          JSON.stringify(trackUrisRef.current),
-          deviceId,
-        );
-      }
+      setButtonMapping(buttonNumber, mapping, deviceId);
 
       setMappingInProgress(false);
     },
@@ -61,9 +47,7 @@ export function useButtonMapping({
   );
 
   const setTrackUris = useCallback((uris) => {
-    if (Array.isArray(uris)) {
-      trackUrisRef.current = uris;
-    }
+    trackUrisRef.current = Array.isArray(uris) ? uris : [];
   }, []);
 
   const handleKeyDown = useCallback(

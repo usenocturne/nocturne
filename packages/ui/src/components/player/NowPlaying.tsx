@@ -24,6 +24,7 @@ import { getProgressSnapshot } from "../../hooks/usePlaybackProgress";
 import ProgressBar from "./ProgressBar";
 import ScrollingText from "../common/ScrollingText";
 import SpotifyImage from "../common/SpotifyImage";
+import { normalizeSpotifyContext } from "../../utils/spotifyContext";
 import {
   HeartIcon,
   HeartIconFilled,
@@ -433,32 +434,10 @@ function NowPlaying({
     albumId,
   } = trackInfo;
 
-  const contextUri = currentPlayback?.context?.uri;
-
-  const bindableContext = useMemo(() => {
-    if (!contextUri) return null;
-
-    if (/^spotify:user:[^:]+:collection$/.test(contextUri)) {
-      return { type: "liked-songs", id: "liked-songs" };
-    }
-
-    const parts = contextUri.split(":");
-    if (parts.length >= 3 && parts[0] === "spotify") {
-      const kind = parts[1];
-      const id = parts[2];
-      if (!id) return null;
-      if (
-        kind === "playlist" ||
-        kind === "album" ||
-        kind === "artist" ||
-        kind === "show"
-      ) {
-        return { type: kind, id };
-      }
-    }
-
-    return null;
-  }, [contextUri]);
+  const bindableContext = useMemo(
+    () => normalizeSpotifyContext(currentPlayback?.context),
+    [currentPlayback?.context?.uri],
+  );
 
   const [playlistDetails, setPlaylistDetails] = useState({
     name: "",
@@ -466,14 +445,17 @@ function NowPlaying({
   });
 
   useEffect(() => {
-    if (bindableContext?.type !== "playlist") {
+    if (bindableContext?.contentType !== "playlist") {
       setPlaylistDetails({ name: "", image: "" });
       return;
     }
     let cancelled = false;
     const fetchPlaylistDetails = async () => {
       try {
-        const data = await getPlaylist(bindableContext.id, "id,name,images");
+        const data = await getPlaylist(
+          bindableContext.contentId,
+          "id,name,images",
+        );
         if (cancelled) return;
         setPlaylistDetails({
           name: data.name || "",
@@ -489,19 +471,19 @@ function NowPlaying({
     return () => {
       cancelled = true;
     };
-  }, [bindableContext?.type, bindableContext?.id, getPlaylist]);
+  }, [bindableContext?.contentType, bindableContext?.contentId, getPlaylist]);
 
   const [artistDetails, setArtistDetails] = useState({ name: "", image: "" });
 
   useEffect(() => {
-    if (bindableContext?.type !== "artist") {
+    if (bindableContext?.contentType !== "artist") {
       setArtistDetails({ name: "", image: "" });
       return;
     }
     let cancelled = false;
     const fetchArtistDetails = async () => {
       try {
-        const data = await getArtist(bindableContext.id);
+        const data = await getArtist(bindableContext.contentId);
         if (cancelled) return;
         setArtistDetails({
           name: data?.name || "",
@@ -517,7 +499,7 @@ function NowPlaying({
     return () => {
       cancelled = true;
     };
-  }, [bindableContext?.type, bindableContext?.id, getArtist]);
+  }, [bindableContext?.contentType, bindableContext?.contentId, getArtist]);
 
   const bindingFields = useMemo(() => {
     if (!bindableContext) {
@@ -529,7 +511,7 @@ function NowPlaying({
       };
     }
 
-    const { type, id } = bindableContext;
+    const { contentType: type, contentId: id } = bindableContext;
 
     if (type === "playlist") {
       return {

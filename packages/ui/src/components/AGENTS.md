@@ -82,6 +82,10 @@ components/
 
 ## ANTI-PATTERNS
 
+Now Playing quick-access binding must use `src/utils/spotifyContext.ts`. Do not add local fixed-position parsing for Spotify context URIs because Liked Songs and personalized yearly playlists have multiple valid identities.
+
+ContentView must keep Liked Songs quick-access binding active while its tracks are loading. Its identity, label, and artwork are static, and playback resolves the live profile-backed collection before falling back to saved track URIs.
+
 - **Don't add new sidebar sections** without updating `Sidebar.jsx`, `Home.jsx`, and `App.jsx`'s `activeSection` logic together — they're tightly coupled.
 - **Don't use `<Route>`.** The router has no routes (see root AGENTS.md § ROUTING). Screen selection is via `App.jsx` state.
 - **Don't put voice UI under `components/voice/`** (dead placeholder). New voice UI lives under `components/common/overlays/voice/`. Mockingbird still owns its own voice UI at `src/mockingbird/ui/components/Listening/`.
