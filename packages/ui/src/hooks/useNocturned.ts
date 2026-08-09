@@ -29,9 +29,7 @@ type BluetoothDevicesListResponse = {
   };
 };
 type BluetoothPairingUiUpdate =
-  | { action: "show"; request: PairingRequest }
-  | { action: "clear" }
-  | null;
+  { action: "show"; request: PairingRequest } | { action: "clear" } | null;
 type BluetoothPresentationStateOptions = {
   showTutorial: boolean;
   pairingRequest: PairingRequest | null;

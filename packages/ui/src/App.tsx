@@ -997,9 +997,7 @@ function AppContent() {
   const handleOpenDeviceSwitcher = useCallback(
     (
       playbackIntentOrDevices:
-        | DeviceSwitcherIntent
-        | BluetoothDevice[]
-        | null = null,
+        DeviceSwitcherIntent | BluetoothDevice[] | null = null,
       devicesArg: BluetoothDevice[] | null = null,
     ) => {
       let playbackIntent: DeviceSwitcherIntent | null = null;

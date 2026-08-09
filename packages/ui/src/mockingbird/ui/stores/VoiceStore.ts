@@ -476,7 +476,7 @@ class VoiceStore {
   /** @param {AudioLevelEvent} data */
   _onMicLevel = action((data) => {
     this.micLevelMovingAverage = data.level || 0;
-    
+
     if (this._captureTimeoutId) {
       this._startCaptureTimeout();
     }
