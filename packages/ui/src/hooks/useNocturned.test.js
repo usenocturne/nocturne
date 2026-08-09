@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import deviceWireSnapshot from "../../test/wire_snapshots/device.json";
 import {
+  completePendingBtReconnectOnAppReady,
   createBluetoothDiscoveryCoordinator,
   getBtReconnectState,
   getWsRequestError,
@@ -127,6 +128,30 @@ describe("Bluetooth reconnect presentation lifecycle", () => {
 
     expect(getBtReconnectState().pending).toBe(true);
     stopBtReconnect();
+  });
+
+  it("accepts cached app readiness before the reconnect timer starts", () => {
+    const originalWindow = globalThis.window;
+    globalThis.window = { dispatchEvent: () => {} };
+
+    try {
+      scheduleInitialBtReconnect("AA:BB:CC:DD:EE:FF");
+
+      expect(completePendingBtReconnectOnAppReady()).toBe(true);
+      expect(getBtReconnectState()).toMatchObject({
+        attempts: 0,
+        inProgress: false,
+        pending: false,
+        exhausted: false,
+      });
+      expect(completePendingBtReconnectOnAppReady()).toBe(false);
+    } finally {
+      if (originalWindow === undefined) {
+        delete globalThis.window;
+      } else {
+        globalThis.window = originalWindow;
+      }
+    }
   });
 });
 

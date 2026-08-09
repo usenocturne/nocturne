@@ -4,6 +4,60 @@
 export type OtaJsonValue = string | number | boolean | null | OtaJsonValue[] | { [key: string]: OtaJsonValue };
 
 /**
+ * Request envelope for `ota.activate` in the `ota` method union.
+ * Inventory: `METHOD_INVENTORY` entry `ota.activate`.
+ */
+export interface OtaActivateMethodMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "ota.activate";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: OtaActivateRequest;
+}
+
+/**
+ * Response envelope for `ota.activate` in the `ota` method response union.
+ * Inventory: `METHOD_INVENTORY` entry `ota.activate`.
+ */
+export interface OtaActivateMethodResponseMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "ota.activate";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: OtaActivateResponse;
+}
+
+/**
+ * Request payload for `ota.activate`.
+ * No payload.
+ * Inventory: `METHOD_INVENTORY` entry `ota.activate` request.
+ */
+export interface OtaActivateRequest {
+}
+
+/**
+ * Response payload for `ota.activate`.
+ * Boolean success response used by daemon-admin methods.
+ * Inventory: `METHOD_INVENTORY` entry `ota.activate` response.
+ */
+export interface OtaActivateResponse {
+  /**
+   * Whether the command succeeded. Inventory field `success` emits as `success`.
+   */
+  success: boolean;
+  /**
+   * Error text when success is false. Inventory field `error` emits as `error`.
+   */
+  error?: string;
+}
+
+/**
  * Discriminated event union for the `ota` inventory family.
  * Inventory: `EVENT_INVENTORY` entries grouped by `Family`.
  */
@@ -13,11 +67,15 @@ export type OtaEvent = never;
  * Discriminated method-request union for the `ota` inventory family.
  * Inventory: `METHOD_INVENTORY` entries grouped by `Family`.
  */
-export type OtaMethod = never;
+export type OtaMethod =
+  | OtaActivateMethodMessage
+;
 
 /**
  * Discriminated method-response union for the `ota` inventory family.
  * Inventory: `METHOD_INVENTORY` response entries grouped by `Family`.
  */
-export type OtaMethodResponse = never;
+export type OtaMethodResponse =
+  | OtaActivateMethodResponseMessage
+;
 

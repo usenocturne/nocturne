@@ -18,6 +18,7 @@ pub use bt_only::*;
 pub use device::*;
 pub use iap2::*;
 pub use media_control::*;
+pub use ota::*;
 pub use phone::*;
 pub use spotify::*;
 pub use voice::*;

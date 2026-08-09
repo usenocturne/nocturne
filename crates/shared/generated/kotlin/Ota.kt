@@ -7,6 +7,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+object OtaActivateRequest
+
+@Serializable
+data class OtaActivateResponse(
+  @SerialName("success") val success: Boolean,
+  @SerialName("error") val error: String? = null,
+)
+
+@Serializable
 enum class OtaErrorCode {
   @SerialName("unknown_update")
   UNKNOWN_UPDATE,
@@ -36,6 +45,12 @@ enum class OtaKind {
   BUILTIN_WEBAPP,
   @SerialName("bandaid")
   BANDAID,
+}
+
+@Serializable
+enum class OtaMethod {
+  @SerialName("ota_activate")
+  OTA_ACTIVATE,
 }
 
 @Serializable

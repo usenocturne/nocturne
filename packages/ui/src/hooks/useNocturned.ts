@@ -29,7 +29,9 @@ type BluetoothDevicesListResponse = {
   };
 };
 type BluetoothPairingUiUpdate =
-  { action: "show"; request: PairingRequest } | { action: "clear" } | null;
+  | { action: "show"; request: PairingRequest }
+  | { action: "clear" }
+  | null;
 type BluetoothPresentationStateOptions = {
   showTutorial: boolean;
   pairingRequest: PairingRequest | null;
@@ -985,6 +987,8 @@ const setupGlobalWebSocket = async () => {
           const pendingPlatform = readyData?.platform || null;
 
           rememberActiveDevicePlatform(pendingPlatform);
+          lastAppReadyAt = Date.now();
+          completePendingBtReconnectOnAppReady();
 
           if (pendingPlatform === "ios" && !appLaunchRequested) {
             appLaunchRequested = true;
@@ -1032,14 +1036,7 @@ const setupGlobalWebSocket = async () => {
             appReady = true;
             appReadyPlatform = pendingPlatform;
             appReadyGeneration += 1;
-            lastAppReadyAt = Date.now();
             emitAppReadyState();
-            if (
-              btReconnectSettleDevice &&
-              lastAppReadyAt >= btReconnectSettleStartedAt
-            ) {
-              completeBtReconnectSuccess();
-            }
           };
 
           syncDeviceTime();
@@ -1376,6 +1373,20 @@ const completeBtReconnectSuccess = () => {
   emitBtReconnectState();
   window.dispatchEvent(new Event("networkBannerHide"));
   window.dispatchEvent(new Event("networkScreenHide"));
+};
+
+export const completePendingBtReconnectOnAppReady = () => {
+  if (
+    !btReconnectPending &&
+    !btReconnectInProgress &&
+    !btReconnectTimer &&
+    !btReconnectSettleDevice
+  ) {
+    return false;
+  }
+
+  completeBtReconnectSuccess();
+  return true;
 };
 
 const failBtReconnectSettle = () => {

@@ -14,6 +14,7 @@ import {
 } from "../hooks/useNocturned";
 import { useSettings } from "./SettingsContext";
 import type { ChildrenProps, WsMessage } from "../types";
+import type { OtaActivateResponse } from "@schema/ota";
 
 // Give up the "Checking…" spinner if the companion never answers (e.g. it's
 // disconnected or has no internet) so the button doesn't hang forever.
@@ -163,6 +164,29 @@ export function persistOtaState(
 
 export function isReloadOnlyKind(kind: string | null): boolean {
   return kind === "daemon" || kind === "builtinWebapp" || kind === "bandaid";
+}
+
+export function requiresDaemonActivation(kind: string | null): boolean {
+  return kind === "daemon" || kind === "bandaid";
+}
+
+export function assertOtaActivationScheduled(
+  response: OtaActivateResponse,
+): void {
+  if (!response.success) {
+    throw new Error(response.error || "The daemon did not schedule activation");
+  }
+}
+
+export async function applyReloadOnlyOta(
+  kind: string | null,
+  requestDaemonActivation: () => Promise<unknown>,
+  reloadKiosk: () => void,
+): Promise<void> {
+  if (requiresDaemonActivation(kind)) {
+    await requestDaemonActivation();
+  }
+  reloadKiosk();
 }
 
 export function shouldAutoInstallUpdate(

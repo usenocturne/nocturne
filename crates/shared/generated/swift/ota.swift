@@ -3,6 +3,28 @@
 
 import Foundation
 
+public struct OtaActivateRequest: Codable, Sendable {
+  public init() {}
+}
+
+public struct OtaActivateResponse: Codable, Sendable {
+  public let success: Bool
+  public let error: String?
+
+  public init(
+    success: Bool,
+    error: String?
+  ) {
+    self.success = success
+    self.error = error
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case success = "success"
+    case error = "error"
+  }
+}
+
 public enum OtaErrorCode: String, Codable, Sendable {
   case unknownUpdate = "unknownUpdate"
   case offsetMismatch = "offsetMismatch"
@@ -19,6 +41,10 @@ public enum OtaKind: String, Codable, Sendable {
   case daemon = "daemon"
   case builtinWebapp = "builtinWebapp"
   case bandaid = "bandaid"
+}
+
+public enum OtaMethod: Codable, Sendable {
+  case otaActivate(OtaActivateRequest)
 }
 
 public enum OtaPhase: String, Codable, Sendable {

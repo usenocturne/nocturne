@@ -583,6 +583,15 @@ pub struct TypedRequest {
 
 pub const METHOD_INVENTORY: &[Method] = &[
     method(
+        "ota.activate",
+        Family::Ota,
+        "ota.activate",
+        &[],
+        EMPTY_PAYLOAD,
+        SUCCESS_RESPONSE,
+        "Schedules activation of a staged daemon payload after the local UI explicitly requests Reload.",
+    ),
+    method(
         "bluetooth.devices.list",
         Family::Bluetooth,
         "bluetooth.devices.list",

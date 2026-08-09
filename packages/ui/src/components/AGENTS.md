@@ -36,7 +36,7 @@ components/
 │   └── QRCodeDisplay.jsx       # QR primitive (qrcode.react)
 ├── settings/
 │   ├── Settings.jsx            # 1154-line settings shell (uses settingsStructure map)
-│   ├── SoftwareUpdate.tsx      # The detailed OTA surface. OTAContext discovers automatically after initial data load, auto-installs only when Automatic Updates is enabled, preserves unapplied component presentation across kiosk reloads, clears a restored image target after the user's restart, and maps component completion to Reload and image completion to Restart.
+│   ├── SoftwareUpdate.tsx      # The detailed OTA surface. OTAContext discovers automatically after initial data load, auto-installs only when Automatic Updates is enabled, preserves unapplied component presentation across kiosk reloads, clears a restored image target after the user's restart, and maps component completion to Reload and image completion to Restart. Daemon and combined bandaid Reload awaits `ota.activate` before clearing state or reloading; builtin webapp Reload never restarts the daemon.
 │   ├── About.jsx               # Version / credits
 │   └── network/BluetoothDevices.jsx  # BT pairing/connect UI (uses useBluetooth)
 ├── tutorial/

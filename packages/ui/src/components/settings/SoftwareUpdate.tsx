@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   AlertCircleIcon,
   CheckCircleIcon,
@@ -10,7 +10,13 @@ import {
   sendNocturneWsRequest,
 } from "../../hooks/useNocturned";
 import { useSettings } from "../../contexts/SettingsContext";
-import { useOTA, isReloadOnlyKind } from "../../contexts/OTAContext";
+import {
+  applyReloadOnlyOta,
+  assertOtaActivationScheduled,
+  isReloadOnlyKind,
+  useOTA,
+} from "../../contexts/OTAContext";
+import type { OtaActivateRequest, OtaActivateResponse } from "@schema/ota";
 
 const PHASE_LABELS: Record<string, string> = {
   downloading: "Downloading update…",
@@ -77,12 +83,14 @@ const UpdateCard: React.FC<{
 );
 
 const ActionButton: React.FC<{
-  onClick: () => void;
+  onClick: () => void | Promise<void>;
   children: React.ReactNode;
-}> = ({ onClick, children }) => (
+  disabled?: boolean;
+}> = ({ onClick, children, disabled = false }) => (
   <button
     onClick={onClick}
-    className="w-full rounded-xl border border-white/10 bg-white/10 p-4 text-center text-white transition-colors duration-200 hover:bg-white/20"
+    disabled={disabled}
+    className="w-full rounded-xl border border-white/10 bg-white/10 p-4 text-center text-white transition-colors duration-200 hover:bg-white/20 disabled:cursor-default disabled:opacity-60"
   >
     <span className="text-[24px] font-[560] tracking-tight">{children}</span>
   </button>
@@ -101,6 +109,9 @@ const StatusRow: React.FC<{
 );
 
 const SoftwareUpdate = () => {
+  const applyPendingRef = useRef(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
   const { version: currentVersion, isLoading: isInfoLoading } =
     useNocturneInfo();
   const { settings } = useSettings();
@@ -135,19 +146,50 @@ const SoftwareUpdate = () => {
     requestInstall(cleanVersion);
   }, [requestInstall, cleanVersion]);
 
-  // Non-image updates activate the daemon automatically when needed, then need
-  // only a kiosk reload. An image update must boot into its newly written slot.
-  const applyUpdate = useCallback(() => {
+  const applyUpdate = useCallback(async () => {
+    if (applyPendingRef.current) return;
+    applyPendingRef.current = true;
+    setIsApplying(true);
+    setApplyError(null);
+
     if (reloadOnly) {
-      clearOtaProgress();
-      window.location.reload();
+      try {
+        await applyReloadOnlyOta(
+          kind,
+          () => {
+            const request: OtaActivateRequest = {};
+            return sendNocturneWsRequest<OtaActivateResponse>(
+              "ota.activate",
+              request,
+            ).then((response) => {
+              assertOtaActivationScheduled(response);
+            });
+          },
+          () => {
+            clearOtaProgress();
+            window.location.reload();
+          },
+        );
+      } catch (err) {
+        console.error("Reload activation request failed:", err);
+        setApplyError(
+          err instanceof Error ? err.message : "Failed to schedule activation",
+        );
+        applyPendingRef.current = false;
+        setIsApplying(false);
+      }
     } else {
       clearOtaProgress();
       sendNocturneWsRequest("device.power.reboot", {}).catch((err) => {
         console.error("Restart request failed:", err);
+        setApplyError(
+          err instanceof Error ? err.message : "Failed to restart the device",
+        );
+        applyPendingRef.current = false;
+        setIsApplying(false);
       });
     }
-  }, [clearOtaProgress, reloadOnly]);
+  }, [clearOtaProgress, kind, reloadOnly]);
 
   if (isInfoLoading && !currentVersion) {
     return (
@@ -228,8 +270,25 @@ const SoftwareUpdate = () => {
               : "Restart to finish applying this update."
           }
         />
-        <ActionButton onClick={applyUpdate}>
-          {reloadOnly ? "Reload" : "Restart"}
+        {applyError && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-xl border border-red-400/20 bg-red-500/10 p-4 text-red-100"
+          >
+            <AlertCircleIcon className="mt-0.5 h-6 w-6 shrink-0" />
+            <span className="text-[18px] font-[520] leading-snug">
+              {applyError}
+            </span>
+          </div>
+        )}
+        <ActionButton onClick={applyUpdate} disabled={isApplying}>
+          {isApplying
+            ? reloadOnly
+              ? "Reloading…"
+              : "Restarting…"
+            : reloadOnly
+              ? "Reload"
+              : "Restart"}
         </ActionButton>
       </div>
     );

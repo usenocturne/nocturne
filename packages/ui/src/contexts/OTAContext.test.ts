@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  applyReloadOnlyOta,
+  assertOtaActivationScheduled,
   canRunAutomaticOtaCheck,
   canDiscoverUpdate,
   INITIAL_OTA_STATE,
@@ -11,6 +13,7 @@ import {
   otaVersionRequestParams,
   persistOtaState,
   reconcileRestoredInstalledOtaState,
+  requiresDaemonActivation,
   reduceOtaLifecycleEvent,
   restorePersistedOtaState,
   shouldAutoInstallUpdate,
@@ -42,6 +45,69 @@ describe("isReloadOnlyKind", () => {
     expect(isReloadOnlyKind("image")).toBe(false);
     expect(isReloadOnlyKind("unknown")).toBe(false);
     expect(isReloadOnlyKind(null)).toBe(false);
+  });
+});
+
+describe("explicit component activation", () => {
+  test("rejects a negative scheduling acknowledgement", () => {
+    expect(() =>
+      assertOtaActivationScheduled({ success: false, error: "timer failed" }),
+    ).toThrow("timer failed");
+    expect(() => assertOtaActivationScheduled({ success: false })).toThrow(
+      "The daemon did not schedule activation",
+    );
+    expect(() => assertOtaActivationScheduled({ success: true })).not.toThrow();
+  });
+
+  test("awaits daemon and bandaid activation before reloading the kiosk", async () => {
+    for (const kind of ["daemon", "bandaid"]) {
+      const calls: string[] = [];
+      let acknowledgeActivation: (() => void) | null = null;
+      const activation = new Promise<void>((resolve) => {
+        acknowledgeActivation = resolve;
+      });
+      const applying = applyReloadOnlyOta(
+        kind,
+        () => {
+          calls.push("activate");
+          return activation;
+        },
+        () => calls.push("reload"),
+      );
+
+      expect(requiresDaemonActivation(kind)).toBe(true);
+      expect(calls).toEqual(["activate"]);
+      acknowledgeActivation?.();
+      await applying;
+      expect(calls).toEqual(["activate", "reload"]);
+    }
+  });
+
+  test("reloads a builtin webapp without restarting the daemon", async () => {
+    const calls: string[] = [];
+    await applyReloadOnlyOta(
+      "builtinWebapp",
+      async () => calls.push("activate"),
+      () => calls.push("reload"),
+    );
+
+    expect(requiresDaemonActivation("builtinWebapp")).toBe(false);
+    expect(calls).toEqual(["reload"]);
+  });
+
+  test("does not clear or reload when daemon activation is rejected", async () => {
+    const calls: string[] = [];
+    await expect(
+      applyReloadOnlyOta(
+        "daemon",
+        async () => {
+          calls.push("activate");
+          throw new Error("scheduler failed");
+        },
+        () => calls.push("reload"),
+      ),
+    ).rejects.toThrow("scheduler failed");
+    expect(calls).toEqual(["activate"]);
   });
 });
 

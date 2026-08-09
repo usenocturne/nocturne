@@ -1174,9 +1174,6 @@ impl OtaActor {
         }
         self.state = OtaState::Idle;
         emit_complete(&self.events_tx, update_id).await;
-        if matches!(kind, OtaKind::Daemon | OtaKind::Bandaid) {
-            schedule_daemon_activation().await;
-        }
     }
 
     async fn handle_write_failed(
@@ -1464,40 +1461,51 @@ async fn emit_complete(events_tx: &OtaEventTx, update_id: String) {
     let _ = events_tx.send(OtaEvent::Complete { update_id }).await;
 }
 
+#[cfg(any(feature = "device", test))]
+fn daemon_activation_args(unit: &str) -> Vec<String> {
+    vec![
+        format!("--unit={unit}"),
+        "--on-active=3s".into(),
+        "--timer-property=AccuracySec=100ms".into(),
+        "--collect".into(),
+        "/usr/bin/systemctl".into(),
+        "restart".into(),
+        "nocturned.service".into(),
+    ]
+}
+
 #[cfg(all(feature = "device", not(test)))]
-async fn schedule_daemon_activation() {
+pub(crate) async fn schedule_daemon_activation() -> Result<(), String> {
     let unit = format!("nocturned-ota-activation-{}", uuid::Uuid::new_v4().simple());
     match tokio::process::Command::new("/usr/bin/systemd-run")
-        .args([
-            format!("--unit={unit}"),
-            "--on-active=3s".into(),
-            "--collect".into(),
-            "/usr/bin/systemctl".into(),
-            "restart".into(),
-            "nocturned.service".into(),
-        ])
+        .args(daemon_activation_args(&unit))
         .output()
         .await
     {
         Ok(output) if output.status.success() => {
-            info!(%unit, "scheduled daemon activation after OTA completion");
+            info!(%unit, "scheduled user-requested daemon activation");
+            Ok(())
         }
         Ok(output) => {
-            error!(
-                %unit,
-                status = %output.status,
-                stderr = %String::from_utf8_lossy(&output.stderr),
-                "failed to schedule daemon activation after OTA completion"
-            );
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            Err(format!(
+                "systemd-run exited with {}{}",
+                output.status,
+                if stderr.is_empty() {
+                    String::new()
+                } else {
+                    format!(": {stderr}")
+                }
+            ))
         }
-        Err(err) => {
-            error!(?err, %unit, "failed to launch daemon activation scheduler");
-        }
+        Err(err) => Err(format!("failed to launch systemd-run: {err}")),
     }
 }
 
 #[cfg(any(not(feature = "device"), test))]
-async fn schedule_daemon_activation() {}
+pub(crate) async fn schedule_daemon_activation() -> Result<(), String> {
+    Ok(())
+}
 
 async fn clear_manifest(persist_dir: &Path) {
     if let Err(err) = manifest::clear(persist_dir).await {
@@ -1704,6 +1712,22 @@ mod tests {
     use super::*;
     use sha2::{Digest, Sha256};
     use tokio::time::{timeout, Duration};
+
+    #[test]
+    fn explicit_daemon_activation_uses_a_precise_delayed_transient_unit() {
+        assert_eq!(
+            daemon_activation_args("nocturned-ota-activation-test"),
+            vec![
+                "--unit=nocturned-ota-activation-test",
+                "--on-active=3s",
+                "--timer-property=AccuracySec=100ms",
+                "--collect",
+                "/usr/bin/systemctl",
+                "restart",
+                "nocturned.service",
+            ]
+        );
+    }
 
     fn fixture() -> (Vec<u8>, String, u32) {
         let bytes = b"nocturne ota actor smoke fixture".to_vec();

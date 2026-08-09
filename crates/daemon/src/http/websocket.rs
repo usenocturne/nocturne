@@ -1324,6 +1324,27 @@ impl WebSocketServer {
                     return Ok(());
                 }
 
+                if method == "ota.activate" {
+                    info!("Received explicit OTA activation request from UI");
+                    match crate::ota::schedule_daemon_activation().await {
+                        Ok(()) => {
+                            self.send_typed_response(
+                                id,
+                                libnocturne::generated::ota::OtaActivateResponse {
+                                    success: true,
+                                    error: None,
+                                },
+                            )
+                            .await;
+                        }
+                        Err(err) => {
+                            warn!(error = %err, "Failed to schedule explicit OTA activation");
+                            self.send_error(id, err).await;
+                        }
+                    }
+                    return Ok(());
+                }
+
                 if method == "reset_boot_counter" {
                     info!("Received reset_boot_counter command, marking active slot successful");
 
