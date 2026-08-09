@@ -410,6 +410,29 @@ describe("notification app icon catalog", () => {
 });
 
 describe("notification bridge lifecycle", () => {
+  test("presents a regular Android Maps alert with Google Maps artwork", () => {
+    const harness = createHarness();
+    harness.controller.handle(
+      event("notification.show", {
+        id: "android:maps-timeline",
+        title: "Your July Timeline",
+        body: "See new travel & visit insights",
+        category: "android.other",
+        app_name: "Maps",
+        app_bundle_id: "com.google.android.apps.maps",
+      }),
+    );
+
+    expect(harness.added).toHaveLength(1);
+    expect(harness.added[0]).toMatchObject({
+      icon: SmartphoneIcon,
+      iconSrc: "/images/notification-apps/google-maps.jpg",
+      appName: "Maps",
+      title: "Your July Timeline",
+      description: "See new travel & visit insights",
+    });
+  });
+
   test("uses the update glyph for connector update notices", () => {
     const harness = createHarness();
     harness.controller.handle(

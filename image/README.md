@@ -93,11 +93,11 @@ just ota                # delta OTA push to a booted device
 
 Image release manifests contain a signed full SWU fallback and a signed delta SWU with an explicit source-version compatibility list. Full SWUs stream zstd-compressed boot and rootfs members directly into the inactive slot. Delta OTAs use zchunk HTTP range requests for changed chunks only. The publisher rejects a release-version mismatch, a missing canonical zchunk asset, an unresolved `nocturne://` reference, or an unsigned production SWU.
 
-The v2 OTA server reads releases from `images/<version>/<kind>/manifest.json` and `images/<version>/<kind>/assets/`. Image and bandaid release commands export OTA-server-ready trees at `build/nocturne-publish/<version>/<kind>/`. `release-bandaid` stops at that export and never writes into `nocturne-ota/images`; the exported version directory is ready for the deployment system to install under the server's `images/` root. The image publisher also copies its release into `../nocturne-ota/images` by default. Set `NOCTURNE_PUBLISH_STAGE` to choose the shared export root. Exporting one kind preserves other kinds at the same version. There is no R2 manifest generation step in this workflow.
+The v2 OTA server reads releases from `images/<version>/<kind>/manifest.json` and `images/<version>/<kind>/assets/`. Image and bandaid release commands export OTA-server-ready trees at `build/nocturne-publish/<version>/<kind>/`. `release-bandaid` stops at that export and never writes into `nocturne-ota/images`; the exported version directory is ready for the deployment system to install under the server's `images/` root. It also writes `bandaid.ext4` beside the bandaid manifest. That 192 MiB partition image can directly replace the same-named entry in a base flashthing ZIP, and carries the release version marker needed to prevent first-boot floor sync from restoring older base-image components. The ext4 stays outside `assets/` and is not an OTA payload. The image publisher also copies its release into `../nocturne-ota/images` by default. Set `NOCTURNE_PUBLISH_STAGE` to choose the shared export root. Exporting one kind preserves other kinds at the same version. There is no R2 manifest generation step in this workflow.
 
 The end-to-end recipe generates one UTC `+YYYYMMDDhhmmss` stamp and uses it for both the build and publish steps. Set `NOCTURNE_BUILD_ID` to reproduce a known build. The version core must match `DISTRO_VERSION`. Both `prod` and `dev` releases remain production-signed; the variant chooses which built image is published. Publishing an existing image version is rejected unless `NOCTURNE_ALLOW_REPLACE=1` is set deliberately.
 
-Image publishing requires `bsdtar`, `openssl`, `python3`, and `rsync`. Component packaging additionally requires `bun`, `zstd`, and `file`.
+Image publishing requires `bsdtar`, `openssl`, `python3`, and `rsync`. Component packaging additionally requires `bun`, `zstd`, and `file`. Building the replaceable bandaid partition requires `mkfs.ext4` from e2fsprogs; on macOS the packager uses the configured container engine when e2fsprogs is not installed through Homebrew.
 
 ```bash
 # Preferred 4.1.0 end-to-end command, run from the monorepo root. The exact
@@ -134,7 +134,7 @@ just package-bandaid ../target/aarch64-unknown-linux-gnu/release/nocturned ../pa
 just publish-component bandaid 4.2.0+20260725192800 build/ota-components/bandaid 4.1.0+20260718120000 stable
 
 # Preferred end-to-end command, run from the monorepo root. It builds both inputs.
-# The finished release is exported under image/build/nocturne-publish/<version>/bandaid/.
+# The OTA release and bandaid.ext4 are exported under image/build/nocturne-publish/<version>/bandaid/.
 NOCTURNE_BUILD_ID=20260725192800 just release-bandaid 4.2.0 4.1.0+20260718120000 stable
 ```
 
@@ -159,6 +159,7 @@ Available recipes:
     lint                                    # Run pre-commit hooks (shellcheck, shfmt, yamllint) across the tree.
     ota *args                               # Delta-OTA from a booted device.
     package-bandaid binary dist output=...  # Package a daemon and UI dist together for an atomic bandaid OTA.
+    package-bandaid-image payload version output=... # Build a flashthing-compatible bandaid.ext4.
     package-daemon binary output=...        # Package one AArch64 daemon binary for a daemon-only OTA.
     package-ui dist output=...              # Package a built UI dist directory for a builtinWebapp OTA.
     pre-commit-install                      # Install the pre-commit git hook so `git commit` runs the lint set.

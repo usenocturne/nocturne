@@ -62,9 +62,11 @@ fi
 just daemon-build
 just ui-build
 
-STAGE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/nocturne-bandaid.XXXXXX")
+WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/nocturne-bandaid.XXXXXX")
+STAGE_DIR=$WORK_DIR/ota
+EXT4_PATH=$WORK_DIR/bandaid.ext4
 cleanup() {
-  rm -rf -- "$STAGE_DIR"
+  rm -rf -- "$WORK_DIR"
 }
 trap cleanup EXIT
 
@@ -72,6 +74,10 @@ just -f "$IMAGE_DIR/Justfile" package-bandaid \
   ../target/aarch64-unknown-linux-gnu/release/nocturned \
   ../packages/ui/dist \
   "$STAGE_DIR"
+just -f "$IMAGE_DIR/Justfile" package-bandaid-image \
+  "$STAGE_DIR" \
+  "$RELEASE_VERSION" \
+  "$EXT4_PATH"
 NOCTURNE_OTA_IMAGES_DIR="$EXPORT_ROOT" just -f "$IMAGE_DIR/Justfile" publish-component \
   bandaid \
   "$RELEASE_VERSION" \
@@ -80,9 +86,11 @@ NOCTURNE_OTA_IMAGES_DIR="$EXPORT_ROOT" just -f "$IMAGE_DIR/Justfile" publish-com
   "$CHANNEL"
 
 MANIFEST_PATH="$EXPORT_DESTINATION/manifest.json"
+BANDAID_IMAGE_PATH="$EXPORT_DESTINATION/bandaid.ext4"
+install -m 0644 "$EXT4_PATH" "$BANDAID_IMAGE_PATH"
 bun -e '
   import { dirname, join } from "node:path";
-  const [manifestPath, version, minimumImageVersion, channel] = Bun.argv.slice(1);
+  const [manifestPath, bandaidImagePath, version, minimumImageVersion, channel] = Bun.argv.slice(1);
   const manifest = await Bun.file(manifestPath).json();
   if (manifest.version !== version || manifest.kind !== "bandaid") {
     throw new Error("Published manifest has the wrong version or kind: " + manifestPath);
@@ -106,5 +114,10 @@ bun -e '
   if (hasher.digest("hex") !== asset.sha256) {
     throw new Error("Published bandaid hash does not match its manifest: " + asset.name);
   }
+  const bandaidImage = Bun.file(bandaidImagePath);
+  if (!(await bandaidImage.exists()) || bandaidImage.size !== 192 * 1024 * 1024) {
+    throw new Error("Published bandaid.ext4 is missing or has the wrong partition size: " + bandaidImagePath);
+  }
   console.log("Exported bandaid " + version + " to " + manifestPath);
-' -- "$MANIFEST_PATH" "$RELEASE_VERSION" "$MINIMUM_IMAGE_VERSION" "$CHANNEL"
+  console.log("Replaceable base-image partition: " + bandaidImagePath);
+' -- "$MANIFEST_PATH" "$BANDAID_IMAGE_PATH" "$RELEASE_VERSION" "$MINIMUM_IMAGE_VERSION" "$CHANNEL"

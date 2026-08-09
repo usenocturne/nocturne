@@ -33,6 +33,11 @@ case "${3:-}" in
     mkdir -p "$6"
     printf 'bandaid payload\n' > "$6/nocturne-bandaid.tar.zst"
     ;;
+  package-bandaid-image)
+    test "$5" = "$NOCTURNE_RELEASE_BANDAID_VERSION"
+    mkdir -p "$(dirname "$6")"
+    truncate -s 201326592 "$6"
+    ;;
   publish-component)
     test "$4" = bandaid
     bun "$NOCTURNE_RELEASE_BANDAID_REPO_ROOT/nocturne-ota/scripts/publish-yocto-version.ts" \
@@ -55,11 +60,15 @@ NOCTURNE_BUILD_ID=$BUILD_ID \
   NOCTURNE_PUBLISH_STAGE=$EXPORT_ROOT \
   NOCTURNE_OTA_IMAGES_DIR=$IMAGES_ROOT \
   NOCTURNE_RELEASE_BANDAID_REPO_ROOT=$REPO_ROOT \
+  NOCTURNE_RELEASE_BANDAID_VERSION=$VERSION \
   PATH="$TEST_ROOT/bin:$PATH" \
   "$RELEASE" "$VERSION_CORE" "$MINIMUM_IMAGE_VERSION" stable > /dev/null
 
 test -f "$EXPORT_ROOT/$VERSION/bandaid/manifest.json"
 test -f "$EXPORT_ROOT/$VERSION/bandaid/assets/nocturne-bandaid.tar.zst"
+test -f "$EXPORT_ROOT/$VERSION/bandaid/bandaid.ext4"
+test "$(wc -c < "$EXPORT_ROOT/$VERSION/bandaid/bandaid.ext4" | tr -d ' ')" = 201326592
+test ! -e "$EXPORT_ROOT/$VERSION/bandaid/assets/bandaid.ext4"
 test ! -e "$IMAGES_ROOT"
 grep -q 'preserve image sibling' "$EXPORT_ROOT/$VERSION/image/manifest.json"
 
@@ -67,6 +76,7 @@ if NOCTURNE_BUILD_ID=$BUILD_ID \
   NOCTURNE_PUBLISH_STAGE=$EXPORT_ROOT \
   NOCTURNE_OTA_IMAGES_DIR=$IMAGES_ROOT \
   NOCTURNE_RELEASE_BANDAID_REPO_ROOT=$REPO_ROOT \
+  NOCTURNE_RELEASE_BANDAID_VERSION=$VERSION \
   PATH="$TEST_ROOT/bin:$PATH" \
   "$RELEASE" "$VERSION_CORE" "$MINIMUM_IMAGE_VERSION" stable > "$TEST_ROOT/collision.log" 2>&1; then
   echo "bandaid release overwrote an existing export" >&2

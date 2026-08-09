@@ -304,6 +304,10 @@ package-ui dist output="build/ota-components/builtinWebapp":
 package-bandaid binary dist output="build/ota-components/bandaid":
   scripts/nocturne-package-component bandaid {{binary}} {{dist}} {{output}}
 
+# Build a flashthing-compatible bandaid.ext4 from a packaged bandaid OTA.
+package-bandaid-image payload version output="build/ota-components/bandaid.ext4":
+  scripts/nocturne-package-bandaid-image {{payload}} {{version}} {{output}}
+
 # Publish a packaged component directory through nocturne-ota's validated publisher.
 publish-component kind version source minimum_image_version channel="stable":
   #!/usr/bin/env bash
@@ -386,6 +390,7 @@ test:
   tests/nocturne-build-id.test.sh
   tests/nocturne-floor-sync.test.sh
   tests/nocturne-install.test.sh
+  tests/nocturne-package-bandaid-image.test.sh
   tests/nocturne-publish.test.sh
   tests/nocturne-release-bandaid.test.sh
   tests/nocturne-release-image.test.sh

@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Build a flashthing-compatible bandaid.ext4 from a packaged bandaid OTA.
+# Usage: nocturne-package-bandaid-image <payload-dir> <release-version> <output>
+
+set -euo pipefail
+umask 022
+
+if [[ $# -ne 3 ]]; then
+  sed -n '2,3p' "$0" | sed 's/^# \?//' >&2
+  exit 2
+fi
+
+PAYLOAD_DIR=$1
+RELEASE_VERSION=$2
+OUTPUT=$3
+PAYLOAD=$PAYLOAD_DIR/nocturne-bandaid.tar.zst
+BANDAID_SIZE_BYTES=$((192 * 1024 * 1024))
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(dirname "$(dirname "$SCRIPT_DIR")")
+
+if [[ ! -f "$PAYLOAD" ]]; then
+  echo "bandaid payload does not exist: $PAYLOAD" >&2
+  exit 1
+fi
+if [[ -z "$RELEASE_VERSION" || "$RELEASE_VERSION" == *[[:space:]/]* ]]; then
+  echo "invalid bandaid release version: $RELEASE_VERSION" >&2
+  exit 2
+fi
+command -v bun > /dev/null 2>&1 || {
+  echo "bun is required to validate the bandaid release version" >&2
+  exit 2
+}
+(
+  cd "$REPO_ROOT"
+  bun -e '
+    import { isValidVersion } from "./nocturne-ota/src/semver.ts";
+    const version = Bun.argv[1];
+    if (!isValidVersion(version)) throw new Error("Invalid bandaid release version: " + version);
+  ' -- "$RELEASE_VERSION"
+)
+if [[ -e "$OUTPUT" ]]; then
+  echo "bandaid image already exists: $OUTPUT" >&2
+  exit 1
+fi
+
+for tool in tar truncate zstd; do
+  command -v "$tool" > /dev/null 2>&1 || {
+    echo "$tool is required to build bandaid.ext4" >&2
+    exit 2
+  }
+done
+
+WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/nocturne-bandaid-image.XXXXXX")
+STAGE_DIR=$WORK_DIR/stage
+mkdir -p -- "$(dirname -- "$OUTPUT")"
+OUTPUT_DIR=$(cd -- "$(dirname -- "$OUTPUT")" && pwd)
+OUTPUT_NAME=$(basename -- "$OUTPUT")
+TEMP_OUTPUT=$OUTPUT_DIR/.${OUTPUT_NAME}.tmp.$$
+
+cleanup() {
+  rm -rf -- "$WORK_DIR"
+  rm -f -- "$TEMP_OUTPUT"
+}
+trap cleanup EXIT
+
+mkdir -p "$STAGE_DIR/nocturne"
+zstd -q -dc "$PAYLOAD" | tar -xf - -C "$STAGE_DIR/nocturne"
+
+for required in daemon/nocturned.current webapps/ui/index.html; do
+  if [[ ! -f "$STAGE_DIR/nocturne/$required" || -L "$STAGE_DIR/nocturne/$required" ]]; then
+    echo "bandaid payload is missing regular file: $required" >&2
+    exit 1
+  fi
+done
+printf '%s\n' "$RELEASE_VERSION" > "$STAGE_DIR/nocturne/.floor-version"
+
+truncate -s "$BANDAID_SIZE_BYTES" "$TEMP_OUTPUT"
+
+MKFS_EXT4=${NOCTURNE_MKFS_EXT4:-}
+if [[ -n "$MKFS_EXT4" ]]; then
+  if [[ ! -x "$MKFS_EXT4" ]]; then
+    echo "NOCTURNE_MKFS_EXT4 is not executable: $MKFS_EXT4" >&2
+    exit 2
+  fi
+elif command -v mkfs.ext4 > /dev/null 2>&1; then
+  MKFS_EXT4=$(command -v mkfs.ext4)
+elif command -v mke2fs > /dev/null 2>&1; then
+  MKFS_EXT4=$(command -v mke2fs)
+else
+  for candidate in /opt/homebrew/opt/e2fsprogs/sbin/mkfs.ext4 /usr/local/opt/e2fsprogs/sbin/mkfs.ext4; do
+    if [[ -x "$candidate" ]]; then
+      MKFS_EXT4=$candidate
+      break
+    fi
+  done
+fi
+
+if [[ -n "$MKFS_EXT4" ]]; then
+  "$MKFS_EXT4" -t ext4 -F -L bandaid -m 0 -O ^has_journal -d "$STAGE_DIR" "$TEMP_OUTPUT"
+else
+  CONTAINER_ENGINE=${KAS_CONTAINER_ENGINE:-docker}
+  command -v "$CONTAINER_ENGINE" > /dev/null 2>&1 || {
+    echo "mkfs.ext4 or a container engine is required to build bandaid.ext4" >&2
+    exit 2
+  }
+  "$CONTAINER_ENGINE" run --rm \
+    -v "$STAGE_DIR:/stage:ro" \
+    -v "$OUTPUT_DIR:/output" \
+    alpine:3.22 \
+    sh -euc "
+      apk add --no-cache e2fsprogs >/dev/null
+      mkfs.ext4 -t ext4 -F -L bandaid -m 0 -O ^has_journal -d /stage \"/output/\$1\"
+    " sh "$(basename -- "$TEMP_OUTPUT")"
+fi
+
+ACTUAL_SIZE=$(wc -c < "$TEMP_OUTPUT" | tr -d '[:space:]')
+if [[ "$ACTUAL_SIZE" != "$BANDAID_SIZE_BYTES" ]]; then
+  echo "generated bandaid image has wrong size: expected $BANDAID_SIZE_BYTES, got $ACTUAL_SIZE" >&2
+  exit 1
+fi
+
+mv -- "$TEMP_OUTPUT" "$OUTPUT"
+echo "packaged flashthing bandaid image at $OUTPUT"
