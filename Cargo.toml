@@ -69,3 +69,4 @@ tar = "0.4"
 [profile.release]
 lto = true
 strip = "symbols"
+panic = "abort"

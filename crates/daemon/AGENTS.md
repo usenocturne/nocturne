@@ -20,6 +20,10 @@ just daemon-build            # cross build --target=aarch64-unknown-linux-gnu --
 just daemon-copy             # build daemon via Yocto + install to nocturne.local
 ```
 
+Release builds use LTO, strip symbols, and abort on panic. Systemd restarts the
+daemon after a crash, so do not introduce panic-recovery code that requires
+stack unwinding without revisiting this profile.
+
 ### Cross-Compilation
 - Target: `aarch64-unknown-linux-gnu` (Car Thing: arm64 kernel + aarch64 userspace)
 - Local: `just daemon-build` → `cross build --target=aarch64-unknown-linux-gnu --release --features device`
