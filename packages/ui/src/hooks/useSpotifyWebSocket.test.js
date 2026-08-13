@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { isSpotifyCommandSessionReady } from "./useSpotifyWebSocket";
+import {
+  getSpotifyImageFetchFallback,
+  isSpotifyCommandSessionReady,
+} from "./useSpotifyWebSocket";
 
 const readyState = (overrides = {}) => ({
   wsConnected: true,
@@ -10,6 +13,22 @@ const readyState = (overrides = {}) => ({
   appHasLifetime: false,
   platform: "ios",
   ...overrides,
+});
+
+describe("Spotify image fetch boundary", () => {
+  it("returns a local fallback for unresolvable local-file artwork", () => {
+    const localImage = "spotify:localfileimage:%2Fprivate%2Ftrack.mp3";
+
+    expect(getSpotifyImageFetchFallback(localImage)).toBe(
+      "/images/not-playing.webp",
+    );
+    expect(getSpotifyImageFetchFallback(`https://${localImage}`)).toBe(
+      "/images/not-playing.webp",
+    );
+    expect(getSpotifyImageFetchFallback("https://i.scdn.co/image/cover")).toBe(
+      null,
+    );
+  });
 });
 
 describe("Spotify command session readiness", () => {

@@ -1,5 +1,9 @@
 export type SpotifyQuickAccessContentType =
-  "playlist" | "album" | "artist" | "show" | "liked-songs";
+  | "playlist"
+  | "album"
+  | "artist"
+  | "show"
+  | "liked-songs";
 
 export type NormalizedSpotifyContext = {
   contentId: string;

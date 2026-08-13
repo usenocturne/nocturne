@@ -52,6 +52,14 @@ type SpotifyCommandReadiness = {
 /** @typedef {import("@schema/spotify").SpotifyImageFetchRequest} SpotifyImageFetchRequest */
 
 const SPOTIFY_IMAGE_FETCH_TIMEOUT_MS = 30000;
+const LOCAL_FILE_IMAGE_FALLBACK = "/images/not-playing.webp";
+
+export const getSpotifyImageFetchFallback = (url: string): string | null =>
+  url.startsWith("spotify:localfileimage:") ||
+  url.startsWith("https://spotify:localfileimage:") ||
+  url.startsWith("http://spotify:localfileimage:")
+    ? LOCAL_FILE_IMAGE_FALLBACK
+    : null;
 
 const generateUUID = () => crypto.randomUUID();
 
@@ -1059,6 +1067,10 @@ export function useSpotifyWebSocket() {
     async (url: string, signal: AbortSignal | null = null) => {
       if (signal?.aborted) {
         throw new Error("Request cancelled");
+      }
+      const localFallback = getSpotifyImageFetchFallback(url);
+      if (localFallback) {
+        return { data: localFallback, content_type: "image/webp" };
       }
 
       const timeoutError = new Error("Spotify image fetch timed out");

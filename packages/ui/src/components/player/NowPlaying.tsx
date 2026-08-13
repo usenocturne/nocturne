@@ -46,6 +46,15 @@ import {
 } from "../common/icons";
 import { generateRandomString } from "../../utils/helpers";
 
+export const getNowPlayingLeadingControl = (
+  itemType: string | undefined,
+  isPhoneMedia: boolean,
+): "speed" | "spacer" | "like" => {
+  if (itemType === "episode") return "speed";
+  if (isPhoneMedia) return "spacer";
+  return "like";
+};
+
 function NowPlaying({
   currentPlayback,
   playbackProgress,
@@ -94,6 +103,10 @@ function NowPlaying({
   const isLocalMedia = currentPlayback?.item?.is_local === true;
   const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
   const isSpotifyPending = currentPlayback?.item?.is_spotify_pending === true;
+  const leadingControl = getNowPlayingLeadingControl(
+    currentPlayback?.item?.type,
+    isPhoneMedia,
+  );
   const isSmartphoneDevice =
     currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
   const contentContainerRef = useRef(null);
@@ -1243,7 +1256,7 @@ function NowPlaying({
             : "translate-y-0 opacity-100"
         }`}
       >
-        {currentPlayback?.item?.type === "episode" ? (
+        {leadingControl === "speed" ? (
           <Menu as="div" className="relative inline-block text-left">
             {({ open }) => (
               <>
@@ -1287,7 +1300,7 @@ function NowPlaying({
               </>
             )}
           </Menu>
-        ) : isLocalMedia || isPhoneMedia ? (
+        ) : leadingControl === "spacer" ? (
           <div className="w-14 h-14"></div>
         ) : (
           <div

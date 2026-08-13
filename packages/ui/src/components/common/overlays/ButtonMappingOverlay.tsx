@@ -4,6 +4,7 @@ import {
   getActivePresetDeviceId,
   getButtonMappingValue,
 } from "../../../utils/presetStorage";
+import { imageDataStringToSource } from "../../../utils/imageSource";
 type ImageCache = Record<string, string>;
 type ImageTypes = Record<string, string | null>;
 
@@ -78,14 +79,7 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
                   const imageData = result.data;
 
                   if (typeof imageData === "string") {
-                    if (
-                      imageData.startsWith("data:") ||
-                      imageData.startsWith("blob:")
-                    ) {
-                      blobUrl = imageData;
-                    } else {
-                      blobUrl = `data:image/jpeg;base64,${imageData}`;
-                    }
+                    blobUrl = imageDataStringToSource(imageData);
                   } else if (imageData instanceof ArrayBuffer) {
                     const blob = new Blob([imageData], { type: "image/jpeg" });
                     blobUrl = URL.createObjectURL(blob);

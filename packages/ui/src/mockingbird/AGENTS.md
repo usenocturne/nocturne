@@ -55,6 +55,10 @@ Nocturne App.jsx
 
 Spotify data enters via two channels only: (1) props passed from Nocturne (`currentPlayback`, `playerControls`, `spotifyData`) and (2) `sendNocturneWsRequest` from `useNocturned`. There is no direct Spotify Web API access from mockingbird.
 
+Spotify local-file artwork URIs are device-private references, not fetchable images. The image proxy returns `/images/not-playing.webp` for `spotify:localfileimage:` and its accidentally HTTP-prefixed forms. Correlated artwork pushed by the phone arrives through the parent player state and then replaces that fallback with its blob URL.
+
+The image proxy must normalize bare image base64 before its local-URL check. JPEG data starts with `/9j/`, which looks like an absolute path but must become a `data:image/jpeg;base64,...` source or Chromium will request the entire payload from the kiosk server.
+
 The parent Nocturne hook is the only owner of initial Spotify library loading, and Mockingbird consumes that `spotifyData` prop rather than issuing a second startup batch. When this skin is enabled, the parent prefetches up to 50 playlists, 20 artists, and 20 shows so the shelf's More categories have inventory without depending on hidden Nocturne section navigation. Its playback polling fallback waits for `app.ready`. A Bluetooth connection can precede the usable companion route during first-time iOS pairing, so it is not an RPC readiness signal.
 
 Artist tracklists request `spotify.artist.top_tracks` with `mockingbird: true`. Companion implementations use this flag to retain or enrich each track's album metadata, which supplies the album subtitle and artwork in the artist view. Keep the flag in the canonical wire schema so daemon request normalization does not remove it. Spotify can still return an album URI with an empty name for releases outside the artist's discography response, so `TracklistStore` backfills only those missing albums through `spotify.album.get`.

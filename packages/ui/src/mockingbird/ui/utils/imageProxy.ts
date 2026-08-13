@@ -2,11 +2,13 @@ import {
   getGlobalWebSocket,
   addGlobalWsListener,
 } from "../../../hooks/useNocturned";
+import { normalizeInlineImageSource } from "../../../utils/imageSource";
 
 const MAX_CACHE_SIZE = 100;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 15000;
 const FETCH_DELAY_MS = 100;
+const LOCAL_FILE_FALLBACK = "/images/not-playing.webp";
 
 /** @typedef {import("@schema/spotify").SpotifyImageFetchRequest} SpotifyImageFetchRequest */
 
@@ -29,6 +31,14 @@ function isLocalUrl(url) {
     url.startsWith("/") ||
     url.startsWith("./") ||
     url.startsWith("../")
+  );
+}
+
+function isSpotifyLocalImageUrl(url) {
+  return (
+    url?.startsWith("spotify:localfileimage:") ||
+    url?.startsWith("https://spotify:localfileimage:") ||
+    url?.startsWith("http://spotify:localfileimage:")
   );
 }
 
@@ -157,7 +167,11 @@ async function processQueue() {
 }
 
 export function resolveImageUrl(url) {
-  if (isLocalUrl(url)) return Promise.resolve(url || "");
+  const normalizedUrl = normalizeInlineImageSource(url);
+  if (isSpotifyLocalImageUrl(url)) {
+    return Promise.resolve(LOCAL_FILE_FALLBACK);
+  }
+  if (isLocalUrl(normalizedUrl)) return Promise.resolve(normalizedUrl || "");
 
   const cached = cache.get(url);
   if (cached && Date.now() - cached.accessedAt < CACHE_TTL_MS) {
@@ -179,6 +193,9 @@ export function resolveImageUrl(url) {
 }
 
 export function getCachedImageUrl(url) {
+  if (isSpotifyLocalImageUrl(url)) return LOCAL_FILE_FALLBACK;
+  const normalizedUrl = normalizeInlineImageSource(url);
+  if (normalizedUrl !== url) return normalizedUrl;
   const cached = cache.get(url);
   if (cached && Date.now() - cached.accessedAt < CACHE_TTL_MS) {
     cached.accessedAt = Date.now();
@@ -198,14 +215,14 @@ export function injectArtwork(imageUrls, base64Data) {
   evictStale();
 
   for (const url of imageUrls) {
-    if (url && !isLocalUrl(url)) {
+    if (url && !isLocalUrl(url) && !isSpotifyLocalImageUrl(url)) {
       cache.set(url, { dataUri, accessedAt: Date.now() });
     }
   }
 }
 
 export function retryImage(url) {
-  if (!url || isLocalUrl(url)) return;
+  if (!url || isLocalUrl(url) || isSpotifyLocalImageUrl(url)) return;
   cache.delete(url);
   pending.delete(url);
   resolveImageUrl(url);

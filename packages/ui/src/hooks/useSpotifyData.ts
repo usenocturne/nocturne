@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useSpotifyPlayerState } from "./useSpotifyPlayerState";
+import {
+  isSpotifyLocalItem,
+  normalizeImageUrl,
+  useSpotifyPlayerState,
+} from "./useSpotifyPlayerState";
 import { useSpotifyPlayerControls } from "./useSpotifyPlayerControls";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useImageLoader } from "./useImageLoader";
@@ -412,16 +416,7 @@ export function useSpotifyData(
       if (!imgs || !Array.isArray(imgs)) return imgs;
       return imgs.map((img) => {
         if (!img?.url) return img;
-        const url = img.url;
-        if (
-          url.startsWith("http://") ||
-          url.startsWith("https://") ||
-          url.startsWith("blob:") ||
-          url.startsWith("/")
-        ) {
-          return img;
-        }
-        return { ...img, url: `https://${url}` };
+        return { ...img, url: normalizeImageUrl(img.url) };
       });
     };
 
@@ -466,7 +461,8 @@ export function useSpotifyData(
 
     if (playerStateData.item.type === "track" || playerStateData.item.album) {
       const currentAlbum =
-        playerStateData.item.is_local || playerStateData.item.is_phone_media
+        isSpotifyLocalItem(playerStateData.item) ||
+        playerStateData.item.is_phone_media
           ? {
               id: `local-${playerStateData.item.uri}`,
               name:

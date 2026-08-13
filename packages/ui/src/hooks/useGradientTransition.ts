@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { extractColorsFromImageUrl } from "../utils/colorExtractor";
+import { normalizeInlineImageSource } from "../utils/imageSource";
 import { useImageLoader } from "./useImageLoader";
 
 const DEFAULT_HEX_COLORS = ["#191414", "#191414", "#191414", "#191414"];
@@ -262,6 +263,21 @@ const initialMeshGradient = generateMeshGradient(DEFAULT_HEX_COLORS);
 const _colorCache = new Map();
 const COLOR_CACHE_TTL = 5 * 60 * 1000;
 
+export const createGradientRequestTracker = () => {
+  const sequences = new Map<string, number>();
+  return {
+    begin(section: string | null) {
+      const key = section || "global";
+      const sequence = (sequences.get(key) || 0) + 1;
+      sequences.set(key, sequence);
+      return { key, sequence };
+    },
+    isCurrent(request: { key: string; sequence: number }) {
+      return sequences.get(request.key) === request.sequence;
+    },
+  };
+};
+
 export function useGradientTransition(activeSection) {
   const { loadImage } = useImageLoader();
   const [currentGradientHexColors, setCurrentGradientHexColors] =
@@ -278,6 +294,7 @@ export function useGradientTransition(activeSection) {
 
   const lastProcessedUrlRef = useRef(null);
   const lastProcessedSectionRef = useRef(null);
+  const requestTrackerRef = useRef(createGradientRequestTracker());
 
   const updateGradientColors = useCallback(
     async (
@@ -305,6 +322,7 @@ export function useGradientTransition(activeSection) {
 
       lastProcessedUrlRef.current = cacheKey;
       lastProcessedSectionRef.current = imageSection || "none";
+      const gradientRequest = requestTrackerRef.current.begin(imageSection);
 
       let newColorsForImageSection;
       let isError = false;
@@ -360,24 +378,26 @@ export function useGradientTransition(activeSection) {
         }
       } else {
         try {
-          const cached = _colorCache.get(imageUrlOrColors);
+          const normalizedImageUrl =
+            normalizeInlineImageSource(imageUrlOrColors);
+          const cached = _colorCache.get(normalizedImageUrl);
           if (cached && Date.now() - cached.timestamp < COLOR_CACHE_TTL) {
             newColorsForImageSection = cached.filteredColors;
           } else {
             const isLocalUrl =
-              imageUrlOrColors.startsWith("/") ||
-              imageUrlOrColors.startsWith("./") ||
-              imageUrlOrColors.startsWith("../") ||
-              imageUrlOrColors.startsWith("blob:") ||
-              imageUrlOrColors.startsWith("data:") ||
-              (!imageUrlOrColors.startsWith("http://") &&
-                !imageUrlOrColors.startsWith("https://"));
+              normalizedImageUrl.startsWith("/") ||
+              normalizedImageUrl.startsWith("./") ||
+              normalizedImageUrl.startsWith("../") ||
+              normalizedImageUrl.startsWith("blob:") ||
+              normalizedImageUrl.startsWith("data:") ||
+              (!normalizedImageUrl.startsWith("http://") &&
+                !normalizedImageUrl.startsWith("https://"));
 
             let extracted;
             if (isLocalUrl) {
-              extracted = await extractColorsFromImageUrl(imageUrlOrColors);
+              extracted = await extractColorsFromImageUrl(normalizedImageUrl);
             } else {
-              const imageResult = await loadImage(imageUrlOrColors, 1, true);
+              const imageResult = await loadImage(normalizedImageUrl, 1, true);
               extracted = imageResult.colors;
             }
 
@@ -386,7 +406,7 @@ export function useGradientTransition(activeSection) {
             }
 
             newColorsForImageSection = filterColors(extracted);
-            _colorCache.set(imageUrlOrColors, {
+            _colorCache.set(normalizedImageUrl, {
               filteredColors: newColorsForImageSection,
               timestamp: Date.now(),
             });
@@ -401,6 +421,10 @@ export function useGradientTransition(activeSection) {
           ];
           isError = true;
         }
+      }
+
+      if (!requestTrackerRef.current.isCurrent(gradientRequest)) {
+        return;
       }
 
       if (imageSection) {

@@ -1,14 +1,22 @@
 import { describe, expect, it } from "bun:test";
 import {
+  attachPushedArtwork,
   createMediaGenerationCorrelator,
   fetchPlaybackStateAfterAppReady,
   getPushedArtworkTargetUri,
+  getDealerArtists,
   isCanonicalSpotifyItem,
   isPendingSpotifyTrackChange,
+  isResolvedSpotifyItem,
+  isSpotifyLocalItem,
   mediaGenerationsCorrelate,
+  normalizeImageUrl,
   normalizeMediaGeneration,
+  reconcilePlaybackItem,
   shouldClearDisplayedMediaForEmptyUpdate,
   shouldIgnoreInactiveForeignMedia,
+  shouldPreserveDealerBlobArtwork,
+  shouldPreservePushedArtwork,
 } from "./useSpotifyPlayerState";
 
 describe("player state startup recovery", () => {
@@ -185,6 +193,246 @@ describe("pushed artwork targeting", () => {
     expect(isCanonicalSpotifyItem(localFile)).toBe(false);
     expect(getPushedArtworkTargetUri(localFile)).toBe(localFile.uri);
   });
+
+  it("targets same-title local artwork at the real local URI", () => {
+    const localFile = {
+      uri: "spotify:local:glaive:album:tiziana:201",
+      name: "tiziana",
+    };
+
+    expect(isSpotifyLocalItem(localFile)).toBe(true);
+    expect(isCanonicalSpotifyItem(localFile)).toBe(false);
+    expect(isResolvedSpotifyItem(localFile)).toBe(true);
+    expect(getPushedArtworkTargetUri(localFile, " Tiziana ")).toBe(
+      localFile.uri,
+    );
+  });
+});
+
+describe("local file playback normalization", () => {
+  it("turns raw JPEG metadata artwork into a browser-safe data URL", () => {
+    const rawArtwork = "/9j/4AAQSkZJRgABAQEAYABgAAD/2Q==";
+
+    expect(normalizeImageUrl(rawArtwork)).toBe(
+      `data:image/jpeg;base64,${rawArtwork}`,
+    );
+  });
+
+  const localImage = "spotify:localfileimage:%2Fvar%2Fmobile%2Ftrack.mp3";
+
+  it("uses the not-playing asset instead of fetching a local image URI", () => {
+    expect(normalizeImageUrl(localImage)).toBe("/images/not-playing.webp");
+    expect(normalizeImageUrl(`https://${localImage}`)).toBe(
+      "/images/not-playing.webp",
+    );
+  });
+
+  it("derives an artist from the local URI when the response name is blank", () => {
+    const item = reconcilePlaybackItem(
+      {
+        uri: "spotify:local:Tyler%2C+The+Creator:album:track:123",
+        artists: [{ id: "", name: "", uri: "" }],
+      },
+      null,
+    );
+
+    expect(item.is_local).toBe(true);
+    expect(item.artists[0].name).toBe("Tyler, The Creator");
+  });
+
+  it("preserves richer artists from the same track across sparse polls", () => {
+    const previous = {
+      uri: "spotify:local:glaive:album:tiziana:201",
+      artists: [{ name: "glaive" }],
+    };
+    const item = reconcilePlaybackItem(
+      {
+        uri: previous.uri,
+        artists: [{ id: "glaive", name: "", uri: "spotify:local:glaive" }],
+      },
+      previous,
+    );
+
+    expect(item.artists).toEqual(previous.artists);
+  });
+
+  it("preserves pending phone metadata when the local URI resolves", () => {
+    const previous = {
+      uri: "spotify:pending:tiziana",
+      name: "tiziana",
+      artists: [{ name: "glaive" }],
+      is_spotify_pending: true,
+    };
+    const item = reconcilePlaybackItem(
+      {
+        uri: "spotify:local:glaive:album:tiziana:201",
+        name: "tiziana",
+        artists: [{ name: "" }],
+      },
+      previous,
+    );
+
+    expect(item.artists).toEqual(previous.artists);
+  });
+
+  it("does not leak artists across local track changes", () => {
+    const item = reconcilePlaybackItem(
+      {
+        uri: "spotify:local:new+artist:album:new+track:456",
+        artists: [{ name: "" }],
+      },
+      {
+        uri: "spotify:local:old+artist:album:old+track:123",
+        artists: [{ name: "Old Artist" }],
+      },
+    );
+
+    expect(item.artists[0].name).toBe("new artist");
+  });
+
+  it("keeps a populated incoming artist list", () => {
+    const artists = [{ id: "new", name: "New Artist" }];
+    const item = reconcilePlaybackItem(
+      { uri: "spotify:local:new:album:track:456", artists },
+      {
+        uri: "spotify:local:new:album:track:456",
+        artists: [{ name: "Old Artist" }],
+      },
+    );
+
+    expect(item.artists).toEqual(artists);
+  });
+
+  it("keeps a more complete same-track artist list", () => {
+    const previous = {
+      uri: "spotify:local:one+and+two:album:track:456",
+      artists: [{ name: "Artist One" }, { name: "Artist Two" }],
+    };
+    const item = reconcilePlaybackItem(
+      {
+        uri: previous.uri,
+        artists: [{ name: "Artist One" }, { name: "" }],
+      },
+      previous,
+    );
+
+    expect(item.artists).toEqual(previous.artists);
+  });
+
+  it("preserves pushed artwork for sparse same-URI local polls", () => {
+    expect(
+      shouldPreservePushedArtwork(
+        {
+          uri: "spotify:local:glaive:album:tiziana:201",
+          name: "tiziana",
+          album: { images: [{ url: "blob:phone-artwork" }] },
+        },
+        {
+          uri: "spotify:local:glaive:album:tiziana:201",
+          name: "",
+        },
+      ),
+    ).toBe(true);
+  });
+
+  it("does not preserve pushed artwork across local URI changes", () => {
+    expect(
+      shouldPreservePushedArtwork(
+        { uri: "spotify:local:old:album:track:1", name: "track" },
+        { uri: "spotify:local:new:album:track:2", name: "track" },
+      ),
+    ).toBe(false);
+  });
+
+  it("does not promote local artwork into a canonical track with the same transitional title", () => {
+    expect(
+      shouldPreserveDealerBlobArtwork(
+        {
+          uri: "spotify:local:artist:album:local-track:1",
+          name: "Canonical Track",
+          is_local: true,
+          album: { images: [{ url: "blob:local-artwork" }] },
+        },
+        {
+          uri: "spotify:track:canonical-track",
+          name: "Canonical Track",
+        },
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps correlated artwork for the same resolved local URI", () => {
+    const localUri = "spotify:local:artist:album:local-track:1";
+    expect(
+      shouldPreserveDealerBlobArtwork(
+        {
+          uri: localUri,
+          name: "Local Track",
+          is_local: true,
+          album: { images: [{ url: "blob:local-artwork" }] },
+        },
+        { uri: localUri, name: "Local Track" },
+      ),
+    ).toBe(true);
+  });
+
+  it("attaches pushed artwork when the local item has no album metadata", () => {
+    expect(
+      attachPushedArtwork(
+        { uri: "spotify:local:glaive:album:tiziana:201" },
+        "blob:phone-artwork",
+      ).album.images,
+    ).toEqual([{ url: "blob:phone-artwork" }]);
+  });
+
+  it("uses scalar Dealer metadata when its artist array is blank", () => {
+    expect(
+      getDealerArtists({
+        artists: [{ id: "glaive", name: "", uri: "spotify:local:glaive" }],
+        artist_name: "glaive",
+      }),
+    ).toEqual([
+      {
+        id: undefined,
+        uri: undefined,
+        name: "glaive",
+        type: "artist",
+      },
+    ]);
+  });
+});
+
+describe("periodic artist reconciliation", () => {
+  it("preserves named artists when a same-URI poll returns no names", () => {
+    const previous = {
+      uri: "spotify:track:current",
+      artists: [
+        { id: "one", name: "Artist One" },
+        { id: "two", name: "Artist Two" },
+      ],
+    };
+    const item = reconcilePlaybackItem(
+      {
+        uri: previous.uri,
+        artists: [{ id: "one", name: "" }],
+      },
+      previous,
+    );
+
+    expect(item.artists).toEqual(previous.artists);
+  });
+
+  it("never carries canonical artists into a different URI", () => {
+    const item = reconcilePlaybackItem(
+      { uri: "spotify:track:new", artists: [] },
+      {
+        uri: "spotify:track:old",
+        artists: [{ name: "Old Artist" }],
+      },
+    );
+
+    expect(item.artists).toEqual([]);
+  });
 });
 
 describe("pushed artwork generation correlation", () => {
@@ -242,6 +490,25 @@ describe("pushed artwork generation correlation", () => {
     expect(correlator.acceptsArtwork({})).toBe(true);
     expect(correlator.acceptsArtwork({ mediaGeneration: 21 })).toBe(false);
   });
+
+  it("suppresses artwork for rejected metadata until the next update", () => {
+    const correlator = createMediaGenerationCorrelator();
+    correlator.recordMetadata({ mediaGeneration: 21 });
+    correlator.rejectCurrentArtwork();
+
+    expect(correlator.acceptsArtwork({ mediaGeneration: 21 })).toBe(false);
+
+    correlator.recordMetadata({ mediaGeneration: 22 });
+    expect(correlator.acceptsArtwork({ mediaGeneration: 22 })).toBe(true);
+  });
+
+  it("suppresses the next legacy artwork after legacy metadata is rejected", () => {
+    const correlator = createMediaGenerationCorrelator();
+    correlator.recordMetadata({});
+    correlator.rejectCurrentArtwork();
+
+    expect(correlator.acceptsArtwork({})).toBe(false);
+  });
 });
 
 describe("inactive phone media precedence", () => {
@@ -257,6 +524,24 @@ describe("inactive phone media precedence", () => {
     expect(
       shouldIgnoreInactiveForeignMedia(playingSpotify, "YouTube", "paused"),
     ).toBe(true);
+  });
+
+  it("protects playing local files and rejects their ignored legacy artwork", () => {
+    const playingLocalFile = {
+      is_playing: true,
+      item: { uri: "spotify:local:Artist:Album:Track:180" },
+    };
+    const correlator = createMediaGenerationCorrelator();
+
+    expect(
+      shouldIgnoreInactiveForeignMedia(playingLocalFile, "YouTube", "stopped"),
+    ).toBe(true);
+
+    correlator.rejectCurrentArtwork();
+    expect(correlator.acceptsArtwork({})).toBe(false);
+
+    correlator.recordMetadata({});
+    expect(correlator.acceptsArtwork({})).toBe(true);
   });
 
   it("still accepts actively playing or loading foreign media", () => {
