@@ -5,10 +5,50 @@ import { useProgressValue } from "./usePlaybackProgress";
 /** @typedef {import("@schema/spotify").SpotifyTrackLyricsRequest} SpotifyTrackLyricsRequest */
 
 const normalizeLyricsKeyPart = (value: unknown) =>
-  typeof value === "string" ? value.trim().toLowerCase() : "";
+  typeof value === "string" || typeof value === "number"
+    ? String(value).trim().toLowerCase()
+    : "";
 
-const getLyricsTrackKey = (item: UiLooseData) => {
+export const isMetadataOnlyLyricsItem = (item: UiLooseData) =>
+  Boolean(
+    item?.is_phone_media ||
+    item?.is_local ||
+    item?.uri?.startsWith("spotify:local:"),
+  );
+
+export const canFetchLyricsForItem = (
+  item: UiLooseData,
+  readiness: {
+    wsConnected: boolean;
+    appReady: boolean;
+    isSpotifyReady: boolean;
+  },
+): boolean =>
+  item?.is_phone_media
+    ? readiness.wsConnected && readiness.appReady
+    : readiness.isSpotifyReady;
+
+export const buildLyricsRequestParams = (item: UiLooseData) => ({
+  ...(isMetadataOnlyLyricsItem(item) ? {} : { contentId: item?.id }),
+  trackName: item?.name,
+  artistName: item?.artists?.[0]?.name,
+});
+
+export const getLyricsTrackKey = (item: UiLooseData) => {
   if (!item) return "";
+  if (item.is_phone_media) {
+    return [
+      "phone",
+      item.id,
+      item.name,
+      item.artists?.[0]?.name,
+      item.phone_media_album_name,
+      item.duration_ms,
+    ]
+      .map(normalizeLyricsKeyPart)
+      .filter(Boolean)
+      .join("|");
+  }
   if (typeof item.uri === "string" && item.uri.trim()) return item.uri.trim();
 
   return [item.id, item.name, item.artists?.[0]?.name]
@@ -16,6 +56,15 @@ const getLyricsTrackKey = (item: UiLooseData) => {
     .filter(Boolean)
     .join("|");
 };
+
+export const isLyricsRequestCurrent = (
+  currentGeneration: number,
+  requestGeneration: number,
+  currentTrackKey: string | null,
+  requestTrackKey: string,
+): boolean =>
+  currentGeneration === requestGeneration &&
+  currentTrackKey === requestTrackKey;
 
 export function useLyrics(currentPlayback) {
   const { progressMs } = useProgressValue();
@@ -28,9 +77,11 @@ export function useLyrics(currentPlayback) {
   const [resumeOnNextLyric, setResumeOnNextLyric] = useState(false);
   const lyricsContainerRef = useRef(null);
   const lyricsTrackKeyRef = useRef<string | null>(null);
+  const lyricsRequestGenerationRef = useRef(0);
   const autoScrollTimeoutRef = useRef(null);
 
-  const { isSpotifyReady, sendSpotifyCommand } = useSpotifyWebSocket();
+  const { isSpotifyReady, wsConnected, appReady, sendSpotifyCommand } =
+    useSpotifyWebSocket();
 
   const isTimeSynced = useMemo(() => {
     if (lyrics.length < 2) return false;
@@ -40,21 +91,46 @@ export function useLyrics(currentPlayback) {
   }, [lyrics]);
 
   const fetchLyrics = useCallback(
-    async (trackId, trackName, artistName, trackKey) => {
-      if (!isSpotifyReady || !trackId) return;
-      const requestKey = trackKey || trackId;
+    async (item, trackKey) => {
+      if (!item) return;
+      const metadataOnly = isMetadataOnlyLyricsItem(item);
+      const canFetchLyrics = canFetchLyricsForItem(item, {
+        wsConnected,
+        appReady,
+        isSpotifyReady,
+      });
+      if (!canFetchLyrics) return;
+      const requestKey = trackKey || getLyricsTrackKey(item);
+      const requestGeneration = ++lyricsRequestGenerationRef.current;
+      const isCurrentRequest = () =>
+        isLyricsRequestCurrent(
+          lyricsRequestGenerationRef.current,
+          requestGeneration,
+          lyricsTrackKeyRef.current,
+          requestKey,
+        );
 
       try {
         setIsLoading(true);
         setError(null);
 
-        void trackName;
-        void artistName;
+        if (metadataOnly) {
+          const trackName = item.name;
+          const artistName = item.artists?.[0]?.name;
+          if (!trackName || !artistName) {
+            setError("No lyrics available");
+            setLyrics([]);
+            return;
+          }
+        } else if (!item.id) {
+          return;
+        }
+
         /** @type {SpotifyTrackLyricsRequest} */
-        const params = { contentId: trackId };
+        const params = buildLyricsRequestParams(item);
         const result = await sendSpotifyCommand("spotify.track.lyrics", params);
 
-        if (lyricsTrackKeyRef.current !== requestKey) return;
+        if (!isCurrentRequest()) return;
 
         if (result && result.lyrics && result.lyrics.lines) {
           setLyrics(result.lyrics.lines);
@@ -63,54 +139,60 @@ export function useLyrics(currentPlayback) {
           setLyrics([]);
         }
       } catch (err) {
-        if (lyricsTrackKeyRef.current !== requestKey) return;
+        if (!isCurrentRequest()) return;
         console.error("Error fetching lyrics:", err);
-        setError(err.message || "Failed to fetch lyrics");
+        setError(err instanceof Error ? err.message : "Failed to fetch lyrics");
         setLyrics([]);
       } finally {
-        if (lyricsTrackKeyRef.current === requestKey) {
+        if (isCurrentRequest()) {
           setIsLoading(false);
         }
       }
     },
-    [isSpotifyReady, sendSpotifyCommand],
+    [appReady, isSpotifyReady, sendSpotifyCommand, wsConnected],
   );
 
   const toggleLyrics = useCallback(async () => {
     const newShowLyrics = !showLyrics;
     setShowLyrics(newShowLyrics);
 
-    if (newShowLyrics && currentPlayback?.item?.id) {
-      const trackKey = getLyricsTrackKey(currentPlayback.item);
-      lyricsTrackKeyRef.current = trackKey;
-      const trackName = currentPlayback.item.name;
-      const artistName = currentPlayback.item.artists?.[0]?.name || "";
-      await fetchLyrics(
-        currentPlayback.item.id,
-        trackName,
-        artistName,
-        trackKey,
-      );
+    if (!newShowLyrics) {
+      lyricsRequestGenerationRef.current += 1;
+      setIsLoading(false);
+      return;
     }
+
+    if (!currentPlayback?.item) return;
+    const trackKey = getLyricsTrackKey(currentPlayback.item);
+    lyricsTrackKeyRef.current = trackKey;
+    setLyrics([]);
+    setError(null);
+    setCurrentLyricIndex(-1);
+    await fetchLyrics(currentPlayback.item, trackKey);
   }, [showLyrics, currentPlayback?.item, fetchLyrics]);
 
   useEffect(() => {
     if (!currentPlayback || currentPlayback?.item?.type === "episode") {
+      lyricsRequestGenerationRef.current += 1;
+      lyricsTrackKeyRef.current = null;
       setShowLyrics(false);
+      setLyrics([]);
+      setError(null);
+      setCurrentLyricIndex(-1);
+      setIsLoading(false);
       return;
     }
 
-    if (
-      showLyrics &&
-      currentPlayback?.item?.id &&
-      getLyricsTrackKey(currentPlayback.item) !== lyricsTrackKeyRef.current
-    ) {
-      const trackKey = getLyricsTrackKey(currentPlayback.item);
-      lyricsTrackKeyRef.current = trackKey;
-      const trackName = currentPlayback.item.name;
-      const artistName = currentPlayback.item.artists?.[0]?.name || "";
-      fetchLyrics(currentPlayback.item.id, trackName, artistName, trackKey);
-    }
+    const trackKey = getLyricsTrackKey(currentPlayback.item);
+    if (!trackKey || trackKey === lyricsTrackKeyRef.current) return;
+
+    lyricsRequestGenerationRef.current += 1;
+    lyricsTrackKeyRef.current = trackKey;
+    setLyrics([]);
+    setError(null);
+    setCurrentLyricIndex(-1);
+    setIsLoading(false);
+    if (showLyrics) fetchLyrics(currentPlayback.item, trackKey);
   }, [showLyrics, currentPlayback?.item, fetchLyrics]);
 
   useEffect(() => {
@@ -266,6 +348,7 @@ export function useLyrics(currentPlayback) {
 
   useEffect(() => {
     return () => {
+      lyricsRequestGenerationRef.current += 1;
       if (autoScrollTimeoutRef.current) {
         clearTimeout(autoScrollTimeoutRef.current);
       }

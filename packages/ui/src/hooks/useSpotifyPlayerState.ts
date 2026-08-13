@@ -1664,9 +1664,11 @@ export function useSpotifyPlayerState() {
         const artist = isNotPlaying
           ? ""
           : media.MediaItemArtist || "Unknown Artist";
+        const phoneMediaAlbumName =
+          media.MediaItemAlbumName || media.MediaItemAlbum || null;
         const albumName = isNotPlaying
           ? "Not Playing"
-          : media.MediaItemAlbumName || title;
+          : phoneMediaAlbumName || title;
         const timing = normalizePhoneMediaTiming(
           media,
           playback,
@@ -1714,6 +1716,7 @@ export function useSpotifyPlayerState() {
             ],
             duration_ms: timing.durationMs,
             is_phone_media: true,
+            phone_media_album_name: phoneMediaAlbumName,
           },
 
           shuffle_state: shuffleState,

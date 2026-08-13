@@ -2440,9 +2440,25 @@ export interface SpotifyTrackLyricsMethodResponseMessage {
  */
 export interface SpotifyTrackLyricsRequest {
   /**
-   * Spotify track id. Inventory field `content_id` emits as `contentId`. Current source key: `id`.
+   * Spotify track id. Omit for a metadata-only LrcLib lookup. Inventory field `content_id` emits as `contentId`. Current source key: `id`.
    */
-  contentId: string;
+  contentId?: string;
+  /**
+   * Track name used for a metadata lyrics fallback. Inventory field `track_name` emits as `trackName`.
+   */
+  trackName?: string;
+  /**
+   * Artist name used for a metadata lyrics fallback. Inventory field `artist_name` emits as `artistName`.
+   */
+  artistName?: string;
+  /**
+   * Legacy album metadata accepted for wire compatibility and ignored by the lyrics lookup. Inventory field `album_name` emits as `albumName`.
+   */
+  albumName?: string;
+  /**
+   * Legacy duration metadata accepted for wire compatibility and ignored by the lyrics lookup. Inventory field `duration_ms` emits as `durationMs`.
+   */
+  durationMs?: number;
 }
 
 /**

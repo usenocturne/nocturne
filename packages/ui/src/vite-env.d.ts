@@ -62,6 +62,7 @@ type UiLooseData = UiLooseIndex &
     MediaItemTitle?: string;
     MediaItemArtist?: string;
     MediaItemAlbumName?: string;
+    MediaItemAlbum?: string;
     MediaItemPlaybackDurationInMilliseconds?: number;
     PlaybackShuffleMode?: number | string;
     PlaybackRepeatMode?: number | string;

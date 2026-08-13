@@ -874,16 +874,32 @@ public struct SpotifyShowGetResponse: Codable, Sendable {
 }
 
 public struct SpotifyTrackLyricsRequest: Codable, Sendable {
-  public let contentId: String
+  public let contentId: String?
+  public let trackName: String?
+  public let artistName: String?
+  public let albumName: String?
+  public let durationMs: UInt64?
 
   public init(
-    contentId: String
+    contentId: String?,
+    trackName: String?,
+    artistName: String?,
+    albumName: String?,
+    durationMs: UInt64?
   ) {
     self.contentId = contentId
+    self.trackName = trackName
+    self.artistName = artistName
+    self.albumName = albumName
+    self.durationMs = durationMs
   }
 
   private enum CodingKeys: String, CodingKey {
     case contentId = "content_id"
+    case trackName = "track_name"
+    case artistName = "artist_name"
+    case albumName = "album_name"
+    case durationMs = "duration_ms"
   }
 }
 

@@ -2085,14 +2085,40 @@ pub const METHOD_INVENTORY: &[Method] = &[
         "spotify.track.lyrics",
         &[],
         payload(
-            &[fs(
-                "content_id",
-                "id",
-                FieldKind::String,
-                true,
-                "Spotify track id.",
-            )],
-            r#"{"content_id":"track123"}"#,
+            &[
+                fs(
+                    "content_id",
+                    "id",
+                    FieldKind::String,
+                    false,
+                    "Spotify track id. Omit for a metadata-only LrcLib lookup.",
+                ),
+                f(
+                    "track_name",
+                    FieldKind::String,
+                    false,
+                    "Track name used for a metadata lyrics fallback.",
+                ),
+                f(
+                    "artist_name",
+                    FieldKind::String,
+                    false,
+                    "Artist name used for a metadata lyrics fallback.",
+                ),
+                f(
+                    "album_name",
+                    FieldKind::String,
+                    false,
+                    "Legacy album metadata accepted for wire compatibility and ignored by the lyrics lookup.",
+                ),
+                f(
+                    "duration_ms",
+                    FieldKind::U64,
+                    false,
+                    "Legacy duration metadata accepted for wire compatibility and ignored by the lyrics lookup.",
+                ),
+            ],
+            r#"{"track_name":"Night Drive","artist_name":"Nocturne"}"#,
             "Lyrics request.",
         ),
         OPAQUE_JSON_PAYLOAD,

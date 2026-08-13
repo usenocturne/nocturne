@@ -237,6 +237,10 @@ fn normalize_music_params(method: &str, params: serde_json::Value) -> serde_json
         "context_uri",
         "device_id",
         "device_ids",
+        "track_name",
+        "artist_name",
+        "album_name",
+        "duration_ms",
         "position_ms",
         "time_range",
         "volume_percent",
@@ -1909,6 +1913,30 @@ mod tests {
 
             assert_eq!(params["content_id"], "spotify-id");
             assert_eq!(params["id"], "spotify-id");
+        }
+    }
+
+    #[test]
+    fn companion_music_request_preserves_legacy_lyrics_metadata() {
+        for platform in [None, Some("ios"), Some("android"), Some("web")] {
+            let (_, params) = companion_music_request(
+                "spotify.track.lyrics",
+                serde_json::json!({
+                    "trackName": "Song",
+                    "artistName": "Artist",
+                    "albumName": "Album",
+                    "durationMs": 203_250,
+                }),
+                platform,
+            )
+            .expect("metadata lyrics request should decode")
+            .expect("metadata lyrics request should be recognized");
+
+            assert!(params["content_id"].is_null());
+            assert_eq!(params["track_name"], "Song");
+            assert_eq!(params["artist_name"], "Artist");
+            assert_eq!(params["album_name"], "Album");
+            assert_eq!(params["duration_ms"], 203_250);
         }
     }
 

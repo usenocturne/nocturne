@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   getSpotifyImageFetchFallback,
+  isMetadataOnlyLyricsRequest,
   isSpotifyCommandSessionReady,
 } from "./useSpotifyWebSocket";
 
@@ -74,5 +75,34 @@ describe("Spotify command session readiness", () => {
         }),
       ),
     ).toBe(true);
+  });
+});
+
+describe("metadata lyrics command", () => {
+  it("allows only metadata-complete lyrics requests without a Spotify id", () => {
+    expect(
+      isMetadataOnlyLyricsRequest("spotify.track.lyrics", {
+        trackName: "Song",
+        artistName: "Artist",
+      }),
+    ).toBe(true);
+    expect(
+      isMetadataOnlyLyricsRequest("spotify.track.lyrics", {
+        contentId: "track-id",
+        trackName: "Song",
+        artistName: "Artist",
+      }),
+    ).toBe(false);
+    expect(
+      isMetadataOnlyLyricsRequest("spotify.track.lyrics", {
+        trackName: "Song",
+      }),
+    ).toBe(false);
+    expect(
+      isMetadataOnlyLyricsRequest("spotify.player.state", {
+        trackName: "Song",
+        artistName: "Artist",
+      }),
+    ).toBe(false);
   });
 });

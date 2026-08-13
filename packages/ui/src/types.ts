@@ -100,6 +100,7 @@ export interface SpotifyTrack {
   duration_ms?: number;
   is_playing?: boolean;
   is_phone_media?: boolean;
+  phone_media_album_name?: string | null;
   linked_from?: { uri?: string; id?: string; [key: string]: unknown };
   [key: string]: unknown;
 }
@@ -408,6 +409,7 @@ export interface SpotifyPlaybackItem {
   artists?: SpotifyArtist[];
   show?: SpotifyShow;
   is_phone_media?: boolean;
+  phone_media_album_name?: string | null;
   [key: string]: unknown;
 }
 

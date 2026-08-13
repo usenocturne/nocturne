@@ -78,6 +78,24 @@ export const isSpotifyCommandSessionReady = ({
   !spotifySkipped &&
   (appSubscribed || appHasLifetime || platform === "web");
 
+const hasNonEmptyStringField = (value: object, keys: string[]) =>
+  keys.some((key) => {
+    const field = Reflect.get(value, key);
+    return typeof field === "string" && field.trim().length > 0;
+  });
+
+export const isMetadataOnlyLyricsRequest = (method: string, params: object) =>
+  method === "spotify.track.lyrics" &&
+  hasNonEmptyStringField(params, ["trackName", "track_name"]) &&
+  hasNonEmptyStringField(params, ["artistName", "artist_name"]) &&
+  !hasNonEmptyStringField(params, [
+    "contentId",
+    "content_id",
+    "trackId",
+    "track_id",
+    "id",
+  ]);
+
 export function useSpotifyWebSocket() {
   const { wsConnected, addMessageListener, removeMessageListener } =
     useNocturned();
@@ -176,7 +194,10 @@ export function useSpotifyWebSocket() {
           return;
         }
 
-        if (getSpotifySkippedState()) {
+        if (
+          getSpotifySkippedState() &&
+          !isMetadataOnlyLyricsRequest(method, params)
+        ) {
           reject(new Error("Spotify authorization was skipped"));
           return;
         }

@@ -471,7 +471,11 @@ object SpotifyShowGetResponse
 
 @Serializable
 data class SpotifyTrackLyricsRequest(
-  @SerialName("content_id") val contentId: String,
+  @SerialName("content_id") val contentId: String? = null,
+  @SerialName("track_name") val trackName: String? = null,
+  @SerialName("artist_name") val artistName: String? = null,
+  @SerialName("album_name") val albumName: String? = null,
+  @SerialName("duration_ms") val durationMs: ULong? = null,
 )
 
 @Serializable

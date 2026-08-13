@@ -71,6 +71,15 @@ export const getNowPlayingProgressPresentation = (
   return { visible: true, timelineKnown };
 };
 
+export const canSeekFromLyrics = (
+  isTimeSynced: boolean,
+  isPhoneMedia: boolean,
+): boolean => isTimeSynced && !isPhoneMedia;
+
+export const canShowLyricsForItem = (
+  item: UiLooseData | null | undefined,
+): boolean => Boolean(item && item.type !== "episode");
+
 function NowPlaying({
   currentPlayback,
   playbackProgress,
@@ -797,16 +806,16 @@ function NowPlaying({
   }, [handleSkipPrevious]);
 
   const handleSwipeUp = useCallback(() => {
-    if (!isPodcast && !isPhoneMedia && !showLyrics) {
+    if (!isPodcast && !showLyrics) {
       toggleLyrics();
     }
-  }, [isPodcast, isPhoneMedia, showLyrics, toggleLyrics]);
+  }, [isPodcast, showLyrics, toggleLyrics]);
 
   const handleSwipeDown = useCallback(() => {
-    if (!isPodcast && !isPhoneMedia && showLyrics) {
+    if (!isPodcast && showLyrics) {
       toggleLyrics();
     }
-  }, [isPodcast, isPhoneMedia, showLyrics, toggleLyrics]);
+  }, [isPodcast, showLyrics, toggleLyrics]);
 
   useGestureControls({
     contentRef: contentContainerRef,
@@ -855,12 +864,6 @@ function NowPlaying({
       phoneVolumeInteractionUntilRef.current = 0;
     }
   }, [isPhoneMedia, isSmartphoneDevice, trackId]);
-
-  useEffect(() => {
-    if (isPhoneMedia && showLyrics) {
-      toggleLyrics();
-    }
-  }, [isPhoneMedia, showLyrics, toggleLyrics]);
 
   const handleToggleLike = useCallback(async () => {
     if (!trackId || isCheckingLike) return;
@@ -1159,7 +1162,7 @@ function NowPlaying({
                               ? "text-white/40"
                               : "text-white/20"
                           : "text-white/80"
-                      } ${isTimeSynced ? "cursor-pointer" : ""} select-none`}
+                      } ${canSeekFromLyrics(isTimeSynced, isPhoneMedia) ? "cursor-pointer" : ""} select-none`}
                       style={{
                         transform: "translateZ(0)",
                         backfaceVisibility: "hidden",
@@ -1169,7 +1172,7 @@ function NowPlaying({
                         boxShadow: "none",
                       }}
                       onClick={
-                        isTimeSynced
+                        canSeekFromLyrics(isTimeSynced, isPhoneMedia)
                           ? () =>
                               handleLyricClick(
                                 parseInt(lyric.startTimeMs) / 1000,
@@ -1177,10 +1180,18 @@ function NowPlaying({
                               )
                           : undefined
                       }
-                      role={isTimeSynced ? "button" : undefined}
-                      tabIndex={isTimeSynced ? 0 : undefined}
+                      role={
+                        canSeekFromLyrics(isTimeSynced, isPhoneMedia)
+                          ? "button"
+                          : undefined
+                      }
+                      tabIndex={
+                        canSeekFromLyrics(isTimeSynced, isPhoneMedia)
+                          ? 0
+                          : undefined
+                      }
                       onKeyDown={
-                        isTimeSynced
+                        canSeekFromLyrics(isTimeSynced, isPhoneMedia)
                           ? (e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
@@ -1415,7 +1426,7 @@ function NowPlaying({
               className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
             >
               <div className="py-1">
-                {!isPodcast && !isLocalMedia && !isPhoneMedia && (
+                {canShowLyricsForItem(currentPlayback?.item) && (
                   <MenuItem onClick={toggleLyrics} disabled={!currentPlayback}>
                     <div
                       className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/50"} font-[560] tracking-tight focus:outline-none outline-none`}

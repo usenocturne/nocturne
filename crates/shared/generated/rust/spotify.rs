@@ -424,7 +424,11 @@ pub struct SpotifyShowGetResponse;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SpotifyTrackLyricsRequest {
-    pub content_id: String,
+    pub content_id: Option<String>,
+    pub track_name: Option<String>,
+    pub artist_name: Option<String>,
+    pub album_name: Option<String>,
+    pub duration_ms: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
