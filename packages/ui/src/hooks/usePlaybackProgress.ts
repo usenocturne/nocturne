@@ -10,6 +10,70 @@ type ProgressResetSignal = {
   timestamp?: number;
   at?: number;
 };
+type PhoneMediaPauseGuard = {
+  floorMs: number;
+  expiresAtMs: number;
+};
+type PhoneMediaPauseResolution = {
+  positionMs: number;
+  guard: PhoneMediaPauseGuard | null;
+  rejectedStaleAnchor: boolean;
+};
+
+const PHONE_MEDIA_PAUSE_GUARD_MS = 3000;
+const PHONE_MEDIA_PAUSE_BACKTRACK_TOLERANCE_MS = 2000;
+
+export const reconcilePhoneMediaPausePosition = ({
+  previousIsPlaying,
+  incomingIsPlaying,
+  expectedPositionMs,
+  incomingPositionMs,
+  nowMs,
+  guard,
+}: {
+  previousIsPlaying: boolean;
+  incomingIsPlaying: boolean;
+  expectedPositionMs: number;
+  incomingPositionMs: number | null;
+  nowMs: number;
+  guard: PhoneMediaPauseGuard | null;
+}): PhoneMediaPauseResolution => {
+  const expected = Math.max(0, expectedPositionMs);
+  if (incomingIsPlaying) {
+    return {
+      positionMs: incomingPositionMs ?? expected,
+      guard: null,
+      rejectedStaleAnchor: false,
+    };
+  }
+
+  const activeGuard = previousIsPlaying
+    ? { floorMs: expected, expiresAtMs: nowMs + PHONE_MEDIA_PAUSE_GUARD_MS }
+    : guard;
+  if (!activeGuard || nowMs > activeGuard.expiresAtMs) {
+    return {
+      positionMs: incomingPositionMs ?? expected,
+      guard: null,
+      rejectedStaleAnchor: false,
+    };
+  }
+
+  const staleFloor =
+    activeGuard.floorMs - PHONE_MEDIA_PAUSE_BACKTRACK_TOLERANCE_MS;
+  if (incomingPositionMs === null || incomingPositionMs < staleFloor) {
+    return {
+      positionMs: activeGuard.floorMs,
+      guard: activeGuard,
+      rejectedStaleAnchor: true,
+    };
+  }
+
+  return {
+    positionMs: incomingPositionMs,
+    guard: null,
+    rejectedStaleAnchor: false,
+  };
+};
 
 let _progressMs = 0;
 let _isPlaying = false;
@@ -26,6 +90,7 @@ let _serverProgressMs = 0;
 let _lastUpdateTime = performance.now();
 let _playbackSpeed = 1;
 let _shuffleOrRepeatJustChanged = false;
+let _phoneMediaPauseGuard: PhoneMediaPauseGuard | null = null;
 
 const updateProgressPercentage = () => {
   _progressPercentage = _duration > 0 ? (_progressMs / _duration) * 100 : 0;
@@ -199,11 +264,25 @@ export function usePlaybackProgress(
     prevShuffleStateRef.current = currentShuffle;
     prevRepeatStateRef.current = currentRepeat;
 
-    const updatedDuration = currentPlayback.item?.duration_ms;
-    if (updatedDuration && updatedDuration > 0) {
-      _duration = updatedDuration;
-    }
+    const rawUpdatedDuration = currentPlayback.item?.duration_ms;
+    const updatedDuration =
+      typeof rawUpdatedDuration === "number" &&
+      Number.isFinite(rawUpdatedDuration) &&
+      rawUpdatedDuration > 0
+        ? rawUpdatedDuration
+        : 0;
 
+    const previousIsPlaying = _isPlaying;
+    const previousPlaybackSpeed = _playbackSpeed;
+    const receiptTimestamp = Date.now();
+    const expectedPreviousPosition = previousIsPlaying
+      ? Math.min(
+          _anchorMs +
+            Math.max(0, receiptTimestamp - _anchorTimestamp) *
+              previousPlaybackSpeed,
+          _duration || Infinity,
+        )
+      : _serverProgressMs;
     _isPlaying = currentPlayback.is_playing || false;
 
     const newPlaybackSpeed = currentPlayback.playback_speed || 1;
@@ -212,10 +291,12 @@ export function usePlaybackProgress(
     }
 
     if (currentPlayback?.item?.id !== trackIdRef.current) {
+      _phoneMediaPauseGuard = null;
+      _duration = updatedDuration;
       _trackId = currentPlayback.item?.id;
       trackIdRef.current = currentPlayback.item?.id;
 
-      const spotifyPosition = currentPlayback.progress_ms || 0;
+      const spotifyPosition = currentPlayback.progress_ms ?? 0;
       const spotifyTimestamp = currentPlayback.timestamp || Date.now();
 
       _anchorMs = spotifyPosition;
@@ -233,51 +314,95 @@ export function usePlaybackProgress(
       _serverProgressMs = currentPosition;
       _progressMs = currentPosition;
       _lastUpdateTime = performance.now();
-    } else if (
-      typeof currentPlayback?.progress_ms === "number" &&
-      currentPlayback.timestamp
-    ) {
-      const spotifyPosition = currentPlayback.progress_ms;
-      const spotifyTimestamp = currentPlayback.timestamp;
+    } else {
+      if (updatedDuration > 0) {
+        _duration = updatedDuration;
+      }
 
-      if (spotifyTimestamp > _anchorTimestamp) {
-        _anchorMs = spotifyPosition;
-        _anchorTimestamp = spotifyTimestamp;
+      const incomingPosition =
+        typeof currentPlayback?.progress_ms === "number"
+          ? currentPlayback.progress_ms
+          : null;
+      const incomingTimestamp =
+        typeof currentPlayback.timestamp === "number" &&
+        currentPlayback.timestamp > 0
+          ? currentPlayback.timestamp
+          : receiptTimestamp;
+      const isPhoneMedia = currentPlayback.item?.is_phone_media === true;
+      const shouldReconcilePhonePause =
+        isPhoneMedia &&
+        !_isPlaying &&
+        (previousIsPlaying || _phoneMediaPauseGuard !== null);
 
-        const curDuration = _duration;
-        const curProgress = _serverProgressMs;
+      if (shouldReconcilePhonePause) {
+        const resolution = reconcilePhoneMediaPausePosition({
+          previousIsPlaying,
+          incomingIsPlaying: _isPlaying,
+          expectedPositionMs: expectedPreviousPosition,
+          incomingPositionMs: incomingPosition,
+          nowMs: receiptTimestamp,
+          guard: _phoneMediaPauseGuard,
+        });
+        _phoneMediaPauseGuard = resolution.guard;
+        _anchorMs = resolution.positionMs;
+        _anchorTimestamp = incomingTimestamp;
+        _serverProgressMs = resolution.positionMs;
+        _progressMs = resolution.positionMs;
+        _lastUpdateTime = performance.now();
+      } else if (
+        typeof currentPlayback?.progress_ms === "number" &&
+        currentPlayback.timestamp
+      ) {
+        const spotifyPosition = currentPlayback.progress_ms;
+        const spotifyTimestamp = currentPlayback.timestamp;
 
-        const now = Date.now();
-        const elapsed = currentPlayback.is_playing
-          ? Math.max(0, now - spotifyTimestamp) * newPlaybackSpeed
-          : 0;
-        const truthPosition = Math.min(
-          spotifyPosition + elapsed,
-          curDuration || Infinity,
-        );
+        if (spotifyTimestamp > _anchorTimestamp) {
+          _anchorMs = spotifyPosition;
+          _anchorTimestamp = spotifyTimestamp;
 
-        const wouldMoveBackwards = truthPosition < curProgress;
-        const backwardsAmount = curProgress - truthPosition;
-        const isSignificantBackwardsJump = backwardsAmount > 2000;
-        const isNearEnd = curDuration > 0 && curProgress > curDuration * 0.98;
-        const isVerySmallBackwardsJump = backwardsAmount < 500;
+          const curDuration = _duration;
+          const curProgress = _serverProgressMs;
 
-        if (
-          wouldMoveBackwards &&
-          isSignificantBackwardsJump &&
-          !_shuffleOrRepeatJustChanged
-        ) {
-          _serverProgressMs = truthPosition;
-          _progressMs = truthPosition;
-          _lastUpdateTime = performance.now();
-        } else if (
-          wouldMoveBackwards &&
-          isNearEnd &&
-          isVerySmallBackwardsJump
-        ) {
-        } else {
-          _serverProgressMs = truthPosition;
+          const now = Date.now();
+          const elapsed = currentPlayback.is_playing
+            ? Math.max(0, now - spotifyTimestamp) * newPlaybackSpeed
+            : 0;
+          const truthPosition = Math.min(
+            spotifyPosition + elapsed,
+            curDuration || Infinity,
+          );
+
+          const wouldMoveBackwards = truthPosition < curProgress;
+          const backwardsAmount = curProgress - truthPosition;
+          const isSignificantBackwardsJump = backwardsAmount > 2000;
+          const isNearEnd = curDuration > 0 && curProgress > curDuration * 0.98;
+          const isVerySmallBackwardsJump = backwardsAmount < 500;
+
+          if (
+            wouldMoveBackwards &&
+            isSignificantBackwardsJump &&
+            !_shuffleOrRepeatJustChanged
+          ) {
+            _serverProgressMs = truthPosition;
+            _progressMs = truthPosition;
+            _lastUpdateTime = performance.now();
+          } else if (
+            wouldMoveBackwards &&
+            isNearEnd &&
+            isVerySmallBackwardsJump
+          ) {
+          } else {
+            _serverProgressMs = truthPosition;
+            if (!currentPlayback.is_playing) {
+              _progressMs = truthPosition;
+              _lastUpdateTime = performance.now();
+            }
+          }
         }
+      }
+
+      if (_isPlaying || !isPhoneMedia) {
+        _phoneMediaPauseGuard = null;
       }
     }
 

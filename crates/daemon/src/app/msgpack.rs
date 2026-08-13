@@ -2556,13 +2556,22 @@ mod tests {
             "media.nowPlaying.update".to_string(),
             serde_json::json!({
                 "MediaItemAttributes": { "MediaItemTitle": "Song" },
-                "PlaybackAttributes": { "PlaybackStatus": "playing" },
+                "PlaybackAttributes": {
+                    "PlaybackStatus": "playing",
+                    "PlaybackElapsedTimeInMilliseconds": 42_500,
+                    "PlaybackRate": 1.25
+                },
                 "mediaGeneration": 7,
             }),
         );
         assert_eq!(topic, "media.now_playing.update");
         assert_eq!(update["media_generation"], 7);
         assert_eq!(update["media_item_attributes"]["MediaItemTitle"], "Song");
+        assert_eq!(
+            update["playback_attributes"]["PlaybackElapsedTimeInMilliseconds"],
+            42_500
+        );
+        assert_eq!(update["playback_attributes"]["PlaybackRate"], 1.25);
 
         let (topic, artwork) = normalize_media_control_event(
             "media.now_playing.artwork".to_string(),

@@ -4,6 +4,7 @@ import {
   createMediaGenerationCorrelator,
   fetchPlaybackStateAfterAppReady,
   getPushedArtworkTargetUri,
+  getPhoneMediaTrackId,
   getDealerArtists,
   isCanonicalSpotifyItem,
   isPendingSpotifyTrackChange,
@@ -12,12 +13,79 @@ import {
   mediaGenerationsCorrelate,
   normalizeImageUrl,
   normalizeMediaGeneration,
+  normalizePhoneMediaTiming,
   reconcilePlaybackItem,
   shouldClearDisplayedMediaForEmptyUpdate,
   shouldIgnoreInactiveForeignMedia,
   shouldPreserveDealerBlobArtwork,
   shouldPreservePushedArtwork,
 } from "./useSpotifyPlayerState";
+
+describe("phone media timing normalization", () => {
+  it("accepts native iAP2 duration and elapsed-time fields", () => {
+    expect(
+      normalizePhoneMediaTiming(
+        { MediaItemDuration: 180_000 },
+        {
+          PlaybackElapsedTimeInMilliseconds: 42_500,
+          PlaybackRate: 1.25,
+        },
+        123_456,
+      ),
+    ).toEqual({
+      durationMs: 180_000,
+      progressMs: 42_500,
+      playbackRate: 1.25,
+      timestamp: 123_456,
+    });
+  });
+
+  it("preserves an exact zero Android position", () => {
+    const timing = normalizePhoneMediaTiming(
+      { MediaItemPlaybackDurationInMilliseconds: 60_000 },
+      { PlaybackElapsedTimeInMilliseconds: 0, PlaybackRate: 1 },
+      123_456,
+    );
+
+    expect(timing.progressMs).toBe(0);
+    expect(timing.durationMs).toBe(60_000);
+  });
+
+  it("normalizes MFi playback speed hundredths", () => {
+    expect(
+      normalizePhoneMediaTiming(
+        { MediaItemDuration: 60_000 },
+        { PlaybackElapsedTime: 1_000, PlaybackSpeed: 150 },
+        123_456,
+      ).playbackRate,
+    ).toBe(1.5);
+  });
+
+  it("does not manufacture progress for an unknown timeline", () => {
+    const timing = normalizePhoneMediaTiming({}, {}, 123_456);
+
+    expect(timing.durationMs).toBe(0);
+    expect(timing.progressMs).toBeNull();
+    expect(timing.playbackRate).toBe(1);
+  });
+
+  it("gives same-title media from different apps distinct progress identities", () => {
+    const youtubeId = getPhoneMediaTrackId(
+      "YouTube",
+      "Episode",
+      "Creator",
+      "Episode",
+    );
+    const musicId = getPhoneMediaTrackId(
+      "YouTube Music",
+      "Episode",
+      "Creator",
+      "Episode",
+    );
+
+    expect(youtubeId).not.toBe(musicId);
+  });
+});
 
 describe("player state startup recovery", () => {
   it("retries empty cold-start responses until playback is available", async () => {

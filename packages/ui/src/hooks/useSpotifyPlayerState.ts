@@ -28,6 +28,13 @@ type MediaGenerationCorrelator = {
   acceptsArtwork: (data: unknown) => boolean;
   current: () => MediaGeneration;
 };
+type PhoneMediaAttributes = Record<string, unknown>;
+type PhoneMediaTiming = {
+  durationMs: number;
+  progressMs: number | null;
+  playbackRate: number;
+  timestamp: number;
+};
 
 /** @typedef {import("@schema/media_control").MediaNowPlayingUpdateEvent} MediaNowPlayingUpdateEvent */
 /** @typedef {import("@schema/media_control").MediaNowPlayingArtworkEvent} MediaNowPlayingArtworkEvent */
@@ -146,6 +153,59 @@ export const fetchPlaybackStateAfterAppReady = async (
 };
 
 export const getActiveDeviceType = () => cachedActiveDeviceType;
+
+const finiteNumber = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+export const normalizePhoneMediaTiming = (
+  media: PhoneMediaAttributes,
+  playback: PhoneMediaAttributes,
+  serverTimestampMs?: unknown,
+): PhoneMediaTiming => {
+  const rawDuration =
+    media.MediaItemPlaybackDurationInMilliseconds ?? media.MediaItemDuration;
+  const parsedDuration = finiteNumber(rawDuration);
+  const durationMs =
+    parsedDuration !== null && parsedDuration > 0 ? parsedDuration : 0;
+
+  const rawProgress =
+    playback.PlaybackElapsedTimeInMilliseconds ?? playback.PlaybackElapsedTime;
+  const parsedProgress = finiteNumber(rawProgress);
+  const unclampedProgress =
+    parsedProgress !== null && parsedProgress >= 0 ? parsedProgress : null;
+  const progressMs =
+    unclampedProgress !== null && durationMs > 0
+      ? Math.min(unclampedProgress, durationMs)
+      : unclampedProgress;
+
+  const normalizedRate = finiteNumber(playback.PlaybackRate);
+  const speedHundredths = finiteNumber(playback.PlaybackSpeed);
+  const fallbackRate = speedHundredths !== null ? speedHundredths / 100 : null;
+  const candidateRate = normalizedRate ?? fallbackRate;
+  const playbackRate =
+    candidateRate !== null && candidateRate > 0 ? candidateRate : 1;
+
+  const parsedTimestamp = finiteNumber(serverTimestampMs);
+  const timestamp =
+    parsedTimestamp !== null && parsedTimestamp > 0
+      ? parsedTimestamp
+      : Date.now();
+
+  return { durationMs, progressMs, playbackRate, timestamp };
+};
+
+export const getPhoneMediaTrackId = (
+  appName: unknown,
+  title: string,
+  artist: string,
+  albumName: string,
+): string =>
+  [
+    typeof appName === "string" ? appName : "unknown-app",
+    title,
+    artist,
+    albumName,
+  ].join(":");
 
 export const normalizeMediaGeneration = (data: unknown): MediaGeneration => {
   if (!data || typeof data !== "object") return null;
@@ -1607,20 +1667,30 @@ export function useSpotifyPlayerState() {
         const albumName = isNotPlaying
           ? "Not Playing"
           : media.MediaItemAlbumName || title;
-        const durationMs = media.MediaItemPlaybackDurationInMilliseconds || 0;
+        const timing = normalizePhoneMediaTiming(
+          media,
+          playback,
+          data.server_timestamp_ms,
+        );
 
         const newTrackUri = `local:media:${title}`;
+        const newTrackId = getPhoneMediaTrackId(
+          playback.PlaybackAppName,
+          title,
+          artist,
+          albumName,
+        );
         const cachedArtworkForTrack = artworkCache.get(newTrackUri);
 
         const transformedState = {
           is_playing: playback.PlaybackStatus === "playing",
-          timestamp: data.server_timestamp_ms || Date.now(),
-          progress_ms: 0,
+          timestamp: timing.timestamp,
+          progress_ms: timing.progressMs,
 
           context: null,
 
           item: {
-            id: `local-media-${title}`,
+            id: `local-media-${newTrackId}`,
             uri: newTrackUri,
             type: "track",
             name: title,
@@ -1642,7 +1712,7 @@ export function useSpotifyPlayerState() {
                 type: "artist",
               },
             ],
-            duration_ms: durationMs,
+            duration_ms: timing.durationMs,
             is_phone_media: true,
           },
 
@@ -1653,7 +1723,7 @@ export function useSpotifyPlayerState() {
 
           currently_playing_type: "track",
 
-          playback_speed: playback.PlaybackRate || 1,
+          playback_speed: timing.playbackRate,
 
           currently_active_application: playback.PlaybackAppName || null,
         };

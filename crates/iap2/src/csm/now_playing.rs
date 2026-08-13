@@ -66,10 +66,9 @@ pub const MEDIA_ITEM_SUBSCRIBE: &[u16] = &[
 /// `PlaybackQueueList*` trio (`0x0E`/`0x0F`/`0x11`) is omitted: those
 /// require companion subscribe-side fields this CSM does not carry, and
 /// iOS silently rejects the entire subscribe when they are listed alone.
-/// `PlaybackPositionMs` (`0x01`, elapsed time) is also omitted: the UI
-/// never consumes elapsed time, so we do not ask the iPhone to stream it.
 pub const PLAYBACK_SUBSCRIBE: &[u16] = &[
     PLAYBACK_STATE,
+    PLAYBACK_POSITION_MS,
     PLAYBACK_QUEUE_INDEX,
     PLAYBACK_QUEUE_COUNT,
     PLAYBACK_SHUFFLE_MODE,
@@ -892,6 +891,12 @@ mod tests {
         let play = frame.find(NOW_PLAYING_PARAM_PLAYBACK).unwrap();
         let play_subs = decode_param_block(play.payload.clone()).unwrap();
         assert_eq!(play_subs.len(), PLAYBACK_SUBSCRIBE.len());
+        assert!(
+            play_subs
+                .iter()
+                .any(|parameter| parameter.id == PLAYBACK_POSITION_MS),
+            "standard Now Playing subscription must request elapsed position"
+        );
     }
 
     #[test]

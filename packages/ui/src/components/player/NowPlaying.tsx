@@ -55,6 +55,22 @@ export const getNowPlayingLeadingControl = (
   return "like";
 };
 
+export const getNowPlayingProgressPresentation = (
+  isPhoneMedia: boolean,
+  durationMs: unknown,
+  progressMs: unknown,
+): { visible: boolean; timelineKnown: boolean } => {
+  const timelineKnown =
+    !isPhoneMedia ||
+    (typeof durationMs === "number" &&
+      Number.isFinite(durationMs) &&
+      durationMs > 0 &&
+      typeof progressMs === "number" &&
+      Number.isFinite(progressMs) &&
+      progressMs >= 0);
+  return { visible: true, timelineKnown };
+};
+
 function NowPlaying({
   currentPlayback,
   playbackProgress,
@@ -103,6 +119,13 @@ function NowPlaying({
   const isLocalMedia = currentPlayback?.item?.is_local === true;
   const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
   const isSpotifyPending = currentPlayback?.item?.is_spotify_pending === true;
+  const progressPresentation = getNowPlayingProgressPresentation(
+    isPhoneMedia,
+    currentPlayback?.item?.duration_ms,
+    currentPlayback?.progress_ms,
+  );
+  const showProgress = progressPresentation.visible;
+  const hasKnownTimeline = progressPresentation.timelineKnown;
   const leadingControl = getNowPlayingLeadingControl(
     currentPlayback?.item?.type,
     isPhoneMedia,
@@ -1187,13 +1210,13 @@ function NowPlaying({
       <div
         className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}
         style={{
-          visibility: isPhoneMedia && !isSpotifyPending ? "hidden" : "visible",
+          visibility: showProgress ? "visible" : "hidden",
         }}
-        aria-hidden={isPhoneMedia && !isSpotifyPending}
+        aria-hidden={!showProgress}
       >
         <ProgressBar
           progress={
-            isSpotifyPending
+            isSpotifyPending || !hasKnownTimeline
               ? null
               : currentPlayback?.item && !isStartingPlayback
                 ? 1
@@ -1221,22 +1244,26 @@ function NowPlaying({
               : "translate-y-0 opacity-100"
           }`}
           style={{
-            visibility:
-              isPhoneMedia && !isSpotifyPending ? "hidden" : "visible",
+            visibility: showProgress ? "visible" : "hidden",
           }}
-          aria-hidden={isPhoneMedia && !isSpotifyPending}
+          aria-hidden={!showProgress}
         >
           <div className="flex justify-between">
             {currentPlayback && currentPlayback.item ? (
               <>
                 <span className="text-white/60 text-[20px]">
                   <PlaybackTimeLabel
-                    isSpotifyPending={isSpotifyPending}
+                    isSpotifyPending={isSpotifyPending || !hasKnownTimeline}
                     isElapsed={true}
                   />
                 </span>
                 <span className="text-white/60 text-[20px]">
-                  {convertTimeToLength(currentPlayback.item.duration_ms, true)}
+                  {hasKnownTimeline
+                    ? convertTimeToLength(
+                        currentPlayback.item.duration_ms,
+                        true,
+                      )
+                    : "--:--"}
                 </span>
               </>
             ) : (
