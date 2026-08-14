@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+ROOT=${NOCTURNE_FACTORY_RESET_ROOT:-}
+
+path() {
+	printf '%s%s' "$ROOT" "$1"
+}
+
+marker=$(path /var/lib/nocturne/factory-reset.pending)
+
+if [ ! -e "$marker" ]; then
+	exit 0
+fi
+
+clear_children() {
+	directory=$1
+	[ -d "$directory" ] || return 0
+
+	find "$directory" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+}
+
+clear_children "$(path /var/lib/bluetooth)"
+clear_children "$(path /var/lib/chromium-kiosk)"
+clear_children "$(path /var/lib/nocturne/state)"
+clear_children "$(path /var/lib/nocturne/transfers)"
+clear_children "$(path /var/nocturne)"
+
+rm -f \
+	"$(path /var/lib/nocturne/known-macos-connectors.json)" \
+	"$(path /var/lib/nocturne/ota-current.json)"
+rm -f "$marker"
+sync

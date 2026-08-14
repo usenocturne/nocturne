@@ -1490,98 +1490,72 @@ impl WebSocketServer {
                 if method == "device.factoryreset" || method == "device.factory_reset" {
                     info!("Received device.factoryreset command, executing factory reset sequence");
 
-                    let result = async {
-                        info!("Step 1/3: Setting firstboot flag with uenv");
-                        let uenv_output = tokio::process::Command::new("uenv")
-                            .arg("set")
-                            .arg("firstboot")
-                            .arg("1")
-                            .output()
-                            .await;
+                    info!("Step 1/3: Staging the factory reset marker");
+                    if let Err(e) = crate::system::factory_reset::stage().await {
+                        warn!("Failed to stage the factory reset marker: {}", e);
+                        self.send_typed_response(
+                            id,
+                            DeviceFactoryResetResponse {
+                                success: false,
+                                error: Some(format!("Failed to stage factory reset: {}", e)),
+                            },
+                        )
+                        .await;
+                        return Ok(());
+                    }
+                    info!("Factory reset marker staged successfully");
 
-                        match uenv_output {
-                            Ok(result) if result.status.success() => {
-                                info!("uenv set firstboot 1 executed successfully");
-                            }
-                            Ok(result) => {
-                                let stderr = String::from_utf8_lossy(&result.stderr).to_string();
-                                warn!("uenv set firstboot 1 failed: {}", stderr);
-                                return DeviceFactoryResetResponse {
-                                    success: false,
-                                    error: Some(format!(
-                                        "Failed to set firstboot flag: {}",
-                                        stderr
-                                    )),
-                                };
-                            }
-                            Err(e) => {
-                                warn!("Failed to execute uenv: {}", e);
-                                return DeviceFactoryResetResponse {
-                                    success: false,
-                                    error: Some(format!("Failed to execute uenv: {}", e)),
-                                };
-                            }
+                    self.send_typed_response(
+                        id,
+                        DeviceFactoryResetResponse {
+                            success: true,
+                            error: None,
+                        },
+                    )
+                    .await;
+
+                    tokio::spawn(async {
+                        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+
+                        info!("Step 2/3: Clearing factory-resettable state");
+                        if let Err(e) = crate::system::factory_reset::apply().await {
+                            warn!("Failed to apply factory reset before reboot: {}", e);
+                        } else {
+                            info!("Factory-resettable state cleared successfully");
                         }
 
-                        info!("Step 2/3: Syncing filesystem");
-                        let sync_output = tokio::process::Command::new("sync").output().await;
-
-                        match sync_output {
+                        info!("Step 3/3: Syncing filesystem and rebooting");
+                        match tokio::process::Command::new("sync").output().await {
                             Ok(result) if result.status.success() => {
                                 info!("sync executed successfully");
                             }
                             Ok(result) => {
-                                let stderr = String::from_utf8_lossy(&result.stderr).to_string();
-                                warn!("sync failed: {}", stderr);
-                                return DeviceFactoryResetResponse {
-                                    success: false,
-                                    error: Some(format!("Failed to sync filesystem: {}", stderr)),
-                                };
+                                warn!(
+                                    "sync failed: {}",
+                                    String::from_utf8_lossy(&result.stderr).trim()
+                                );
                             }
-                            Err(e) => {
-                                warn!("Failed to execute sync: {}", e);
-                                return DeviceFactoryResetResponse {
-                                    success: false,
-                                    error: Some(format!("Failed to execute sync: {}", e)),
-                                };
-                            }
+                            Err(e) => warn!("Failed to execute sync: {}", e),
                         }
 
-                        info!("Step 3/3: Rebooting with shutdown -r now");
-                        let shutdown_output = tokio::process::Command::new("shutdown")
+                        match tokio::process::Command::new("shutdown")
                             .arg("-r")
                             .arg("now")
                             .output()
-                            .await;
-
-                        match shutdown_output {
+                            .await
+                        {
                             Ok(result) if result.status.success() => {
                                 info!("shutdown -r now executed successfully");
-                                DeviceFactoryResetResponse {
-                                    success: true,
-                                    error: None,
-                                }
                             }
                             Ok(result) => {
-                                let stderr = String::from_utf8_lossy(&result.stderr).to_string();
-                                warn!("shutdown -r now failed: {}", stderr);
-                                DeviceFactoryResetResponse {
-                                    success: false,
-                                    error: Some(format!("Failed to reboot: {}", stderr)),
-                                }
+                                warn!(
+                                    "shutdown -r now failed: {}",
+                                    String::from_utf8_lossy(&result.stderr).trim()
+                                );
                             }
-                            Err(e) => {
-                                warn!("Failed to execute shutdown: {}", e);
-                                DeviceFactoryResetResponse {
-                                    success: false,
-                                    error: Some(format!("Failed to execute shutdown: {}", e)),
-                                }
-                            }
+                            Err(e) => warn!("Failed to execute shutdown: {}", e),
                         }
-                    }
-                    .await;
-
-                    self.send_typed_response(id, result).await;
+                    });
 
                     return Ok(());
                 }

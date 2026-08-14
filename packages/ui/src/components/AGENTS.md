@@ -60,6 +60,8 @@ components/
 | Settings row                   | `settings/Settings.jsx` → `settingsStructure` object                                                                                      |
 | Home view section              | `src/pages/home/<Name>Section.jsx` + `src/pages/Home.jsx`                                                                                 |
 
+The main Settings factory-reset action sends one `device.factoryreset` request and lets the daemon own reboot.
+
 ## CONVENTIONS
 
 - **Icons via barrel:** `import { CheckIcon } from "../common/icons";` — never deep-import a single icon file.

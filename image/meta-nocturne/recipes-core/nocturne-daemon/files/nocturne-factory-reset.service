@@ -1,0 +1,14 @@
+[Unit]
+Description=Apply a pending Nocturne factory reset
+DefaultDependencies=no
+RequiresMountsFor=/var/lib/nocturne /var/lib/bluetooth /var/lib/chromium-kiosk /var/nocturne
+After=local-fs.target
+Before=superbird-init.service superbird-bluetooth.service opt-overlay@nocturne.service
+ConditionPathExists=/var/lib/nocturne/factory-reset.pending
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/nocturne-factory-reset
+
+[Install]
+WantedBy=sysinit.target

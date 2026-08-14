@@ -11,7 +11,9 @@ SRC_URI += "file://nocturned.service \
             file://nocturned.conf \
             file://nocturned-rollback \
             file://nocturned-rollback.service \
-            file://nocturned-dev.conf"
+            file://nocturned-dev.conf \
+            file://nocturne-factory-reset \
+            file://nocturne-factory-reset.service"
 
 do_compile[network] = "1"
 CARGO_DISABLE_BITBAKE_VENDORING = "1"
@@ -25,7 +27,7 @@ export BINDGEN_EXTRA_CLANG_ARGS = "--sysroot=${RECIPE_SYSROOT}"
 
 DEPENDS = "dbus libopus swupdate clang-native"
 
-SYSTEMD_SERVICE:${PN} = "nocturned.service"
+SYSTEMD_SERVICE:${PN} = "nocturned.service nocturne-factory-reset.service"
 SYSTEMD_AUTO_ENABLE = "enable"
 
 RDEPENDS:${PN} += "opt-overlay bluez5 alsa-utils nocturne-models"
@@ -44,12 +46,16 @@ do_install() {
     install -d ${D}${libexecdir}
     install -m 0755 ${UNPACKDIR}/nocturned-rollback \
         ${D}${libexecdir}/nocturned-rollback
+    install -m 0755 ${UNPACKDIR}/nocturne-factory-reset \
+        ${D}${libexecdir}/nocturne-factory-reset
 
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${UNPACKDIR}/nocturned.service \
         ${D}${systemd_system_unitdir}/nocturned.service
     install -m 0644 ${UNPACKDIR}/nocturned-rollback.service \
         ${D}${systemd_system_unitdir}/nocturned-rollback.service
+    install -m 0644 ${UNPACKDIR}/nocturne-factory-reset.service \
+        ${D}${systemd_system_unitdir}/nocturne-factory-reset.service
 
     install -d ${D}${nonarch_libdir}/tmpfiles.d
     install -m 0644 ${UNPACKDIR}/nocturned.conf \
@@ -66,8 +72,10 @@ FILES:${PN} = " \
     ${OPT_OVERLAY_TARGET} \
     ${DAEMON_FLOOR_DIR}/nocturned.current \
     ${libexecdir}/nocturned-rollback \
+    ${libexecdir}/nocturne-factory-reset \
     ${systemd_system_unitdir}/nocturned.service \
     ${systemd_system_unitdir}/nocturned-rollback.service \
+    ${systemd_system_unitdir}/nocturne-factory-reset.service \
     ${nonarch_libdir}/tmpfiles.d/nocturned.conf \
 "
 

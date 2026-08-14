@@ -389,6 +389,7 @@ lint:
 test:
   tests/nocturne-build-id.test.sh
   tests/nocturne-floor-sync.test.sh
+  tests/nocturne-factory-reset.test.sh
   tests/nocturne-install.test.sh
   tests/nocturne-package-bandaid-image.test.sh
   tests/nocturne-publish.test.sh

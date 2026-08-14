@@ -332,15 +332,6 @@ export default function Settings({
       await sendNocturneWsRequest("device.factoryreset", {});
       console.log("Factory reset request sent");
       setShowFactoryResetDialog(false);
-
-      setTimeout(async () => {
-        try {
-          await sendNocturneWsRequest("device.power.reboot", {});
-          console.log("Reboot request sent after factory reset");
-        } catch (rebootError) {
-          console.error("Reboot request failed:", rebootError);
-        }
-      }, 1000);
     } catch (error) {
       console.error("Error during factory reset:", error);
       setShowFactoryResetDialog(false);
