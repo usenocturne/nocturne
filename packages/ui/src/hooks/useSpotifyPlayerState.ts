@@ -35,6 +35,11 @@ type PhoneMediaTiming = {
   playbackRate: number;
   timestamp: number;
 };
+type SpotifyPhoneMediaUpdate = {
+  media: PhoneMediaAttributes;
+  playback: PhoneMediaAttributes;
+  timestamp: number;
+};
 
 /** @typedef {import("@schema/media_control").MediaNowPlayingUpdateEvent} MediaNowPlayingUpdateEvent */
 /** @typedef {import("@schema/media_control").MediaNowPlayingArtworkEvent} MediaNowPlayingArtworkEvent */
@@ -50,7 +55,8 @@ let isReceivingNowPlayingUpdatesGlobal = false;
 let isProcessingArtwork = false;
 let artworkCache = new Map<string, string>();
 const MAX_ARTWORK_CACHE_SIZE = 10;
-let pendingSpotifyMediaUpdate: SpotifyPlayback | null = null;
+let pendingSpotifyMediaUpdate: SpotifyPhoneMediaUpdate | null = null;
+let latestSpotifyPhoneMediaUpdate: SpotifyPhoneMediaUpdate | null = null;
 let spotifyFallbackTimeout: ReturnType<typeof setTimeout> | null = null;
 let cachedActiveDeviceType: string | null = null;
 let progressResetSignal: ProgressResetSignal = null;
@@ -59,6 +65,7 @@ let lastDealerEventTimestamp = 0;
 let lastCanonicalDealerStateTimestamp = 0;
 const NOWPLAYING_PRECEDENCE_WINDOW_MS = 30000;
 const DEALER_FRESH_THRESHOLD_MS = 8000;
+const PHONE_ARTWORK_CONTEXT_TTL_MS = 10000;
 const APP_READY_PLAYBACK_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 4000];
 const APP_READY_PLAYBACK_REQUEST_TIMEOUT_MS = 4000;
 const APP_READY_PLAYBACK_OVERALL_TIMEOUT_MS = 12000;
@@ -320,12 +327,17 @@ export const getPushedArtworkTargetUri = (
     normalizedPendingTitle &&
     normalizedItemTitle === normalizedPendingTitle,
   );
+  const isSameCanonicalTrack = Boolean(
+    isCanonicalSpotifyItem(item) &&
+    normalizedPendingTitle &&
+    normalizedItemTitle === normalizedPendingTitle,
+  );
 
-  if (pendingTitle && !isSameLocalTrack) {
+  if (pendingTitle && !isSameLocalTrack && !isSameCanonicalTrack) {
     return `spotify:pending:${pendingTitle}`;
   }
   if (isCanonicalSpotifyItem(item)) {
-    return null;
+    return isSameCanonicalTrack ? item.uri || null : null;
   }
   return item?.uri || null;
 };
@@ -470,12 +482,7 @@ export const shouldPreservePushedArtwork = (
 
   const previousUri = previousItem.uri;
   const incomingUri = incomingItem.uri;
-  if (
-    isSpotifyLocalItem(incomingItem) &&
-    previousUri &&
-    incomingUri &&
-    previousUri === incomingUri
-  ) {
+  if (previousUri && incomingUri && previousUri === incomingUri) {
     return true;
   }
 
@@ -577,6 +584,48 @@ const cleanupArtworkCache = () => {
   }
 };
 
+const getRecentSpotifyPhoneMediaUpdate = () => {
+  if (!latestSpotifyPhoneMediaUpdate) return null;
+  if (
+    Date.now() - latestSpotifyPhoneMediaUpdate.timestamp >
+    PHONE_ARTWORK_CONTEXT_TTL_MS
+  ) {
+    latestSpotifyPhoneMediaUpdate = null;
+    return null;
+  }
+  return latestSpotifyPhoneMediaUpdate;
+};
+
+const promotePendingSpotifyArtwork = (
+  item: SpotifyTrack | null | undefined,
+): string | null => {
+  if (!isCanonicalSpotifyItem(item)) return null;
+
+  const mediaUpdate = getRecentSpotifyPhoneMediaUpdate();
+  const pendingTitle = mediaUpdate?.media.MediaItemTitle;
+  const itemTitle = item?.name;
+  if (
+    !pendingTitle ||
+    !item?.uri ||
+    !itemTitle ||
+    itemTitle.trim().toLowerCase() !== pendingTitle.trim().toLowerCase()
+  ) {
+    return null;
+  }
+
+  const pendingArtworkUri = `spotify:pending:${pendingTitle}`;
+  const pendingArtworkUrl = artworkCache.get(pendingArtworkUri);
+  if (!pendingArtworkUrl) return null;
+
+  artworkCache.set(item.uri, pendingArtworkUrl);
+  if (artworkCache.get(pendingArtworkUri) === pendingArtworkUrl) {
+    artworkCache.delete(pendingArtworkUri);
+  }
+  currentArtworkTrackUri = item.uri;
+  cleanupArtworkCache();
+  return pendingArtworkUrl;
+};
+
 export const subscribeToPhoneVolume = (listener: PhoneVolumeListener) => {
   phoneVolumeListeners.push(listener);
   return () => {
@@ -637,6 +686,8 @@ export function useSpotifyPlayerState() {
     if (reconciledItem !== data.item) {
       data = { ...data, item: reconciledItem };
     }
+
+    promotePendingSpotifyArtwork(data.item as SpotifyTrack | null | undefined);
 
     const currentIsPhoneMedia =
       currentPlaybackRef.current?.item?.is_phone_media;
@@ -1336,10 +1387,18 @@ export function useSpotifyPlayerState() {
         beginNowPlayingUpdateWindow();
         isProcessingArtwork = false;
 
-        if (
-          playback.PlaybackAppName === "Spotify" &&
-          !getSpotifySkippedState()
-        ) {
+        const isSpotifyPhoneMedia =
+          playback.PlaybackAppName === "Spotify" && !getSpotifySkippedState();
+        const spotifyPhoneMediaUpdate = isSpotifyPhoneMedia
+          ? {
+              media,
+              playback,
+              timestamp: Date.now(),
+            }
+          : null;
+        latestSpotifyPhoneMediaUpdate = spotifyPhoneMediaUpdate;
+
+        if (isSpotifyPhoneMedia) {
           const currentItem = currentPlaybackRef.current?.item;
           const incomingTitle = media.MediaItemTitle?.trim();
           const isSameLocalTrack = Boolean(
@@ -1394,11 +1453,7 @@ export function useSpotifyPlayerState() {
             return;
           }
 
-          pendingSpotifyMediaUpdate = {
-            media,
-            playback,
-            timestamp: Date.now(),
-          };
+          pendingSpotifyMediaUpdate = spotifyPhoneMediaUpdate;
 
           if (spotifyFallbackTimeout) {
             clearTimeout(spotifyFallbackTimeout);
@@ -1748,8 +1803,9 @@ export function useSpotifyPlayerState() {
         if (artworkData && artworkData.trim() !== "") {
           const currentItem = currentPlaybackRef.current?.item;
           const hasRealSpotifyData = isCanonicalSpotifyItem(currentItem);
-          const pendingArtworkTitle = pendingSpotifyMediaUpdate
-            ? pendingSpotifyMediaUpdate.media.MediaItemTitle || "Unknown Title"
+          const pendingArtworkUpdate = getRecentSpotifyPhoneMediaUpdate();
+          const pendingArtworkTitle = pendingArtworkUpdate
+            ? pendingArtworkUpdate.media.MediaItemTitle || "Unknown Title"
             : null;
           const pendingArtworkIsTrackChange = isPendingSpotifyTrackChange(
             currentItem,
@@ -1777,13 +1833,22 @@ export function useSpotifyPlayerState() {
               bytes[i] = binaryString.charCodeAt(i);
             }
 
-            const blob = new Blob([bytes], { type: "image/jpeg" });
+            const contentType =
+              data.data?.content_type ?? data.data?.contentType;
+            const blob = new Blob([bytes], {
+              type:
+                typeof contentType === "string" &&
+                contentType.startsWith("image/")
+                  ? contentType
+                  : "image/jpeg",
+            });
             const nextArtworkBlobUrl = URL.createObjectURL(blob);
 
             if (
               hasRealSpotifyData &&
-              pendingSpotifyMediaUpdate &&
-              !pendingArtworkIsTrackChange
+              pendingArtworkUpdate &&
+              !pendingArtworkIsTrackChange &&
+              artworkTargetUri !== currentItem?.uri
             ) {
               const previousPendingArtwork = artworkCache.get(artworkTargetUri);
               if (

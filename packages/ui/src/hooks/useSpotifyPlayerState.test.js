@@ -224,6 +224,16 @@ describe("pushed artwork targeting", () => {
     expect(getPushedArtworkTargetUri(item)).toBeNull();
   });
 
+  it("targets a same-title canonical item for phone artwork", () => {
+    const item = {
+      uri: "spotify:track:current",
+      name: "Current Track",
+    };
+
+    expect(getPushedArtworkTargetUri(item, " current track ")).toBe(item.uri);
+    expect(isPendingSpotifyTrackChange(item, " current track ")).toBe(false);
+  });
+
   it("parks transition artwork under the pending Spotify identity", () => {
     const item = { uri: "spotify:track:old", name: "Old Track" };
 
@@ -399,6 +409,18 @@ describe("local file playback normalization", () => {
           uri: "spotify:local:glaive:album:tiziana:201",
           name: "",
         },
+      ),
+    ).toBe(true);
+  });
+
+  it("preserves pushed artwork for sparse same-URI Spotify polls", () => {
+    expect(
+      shouldPreservePushedArtwork(
+        {
+          uri: "spotify:track:current",
+          album: { images: [{ url: "blob:phone-artwork" }] },
+        },
+        { uri: "spotify:track:current", name: "" },
       ),
     ).toBe(true);
   });
