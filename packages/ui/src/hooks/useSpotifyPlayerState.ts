@@ -26,6 +26,7 @@ type MediaGenerationCorrelator = {
   recordMetadata: (data: unknown) => void;
   rejectCurrentArtwork: () => void;
   acceptsArtwork: (data: unknown) => boolean;
+  acceptsFailure: () => boolean;
   current: () => MediaGeneration;
 };
 type PhoneMediaAttributes = Record<string, unknown>;
@@ -54,6 +55,7 @@ let nowPlayingUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
 let isReceivingNowPlayingUpdatesGlobal = false;
 let isProcessingArtwork = false;
 let artworkCache = new Map<string, string>();
+let artworkDeviceOwners = new Map<string, string | null>();
 const MAX_ARTWORK_CACHE_SIZE = 10;
 let pendingSpotifyMediaUpdate: SpotifyPhoneMediaUpdate | null = null;
 let latestSpotifyPhoneMediaUpdate: SpotifyPhoneMediaUpdate | null = null;
@@ -161,6 +163,13 @@ export const fetchPlaybackStateAfterAppReady = async (
 
 export const getActiveDeviceType = () => cachedActiveDeviceType;
 
+export const normalizeSpotifyDeviceType = (
+  deviceType: unknown,
+): string | null =>
+  typeof deviceType === "string" && deviceType.trim().length > 0
+    ? deviceType.trim().toUpperCase()
+    : null;
+
 const finiteNumber = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
@@ -254,6 +263,9 @@ export const createMediaGenerationCorrelator =
           )
         );
       },
+      acceptsFailure() {
+        return !currentArtworkRejected;
+      },
       current() {
         return metadataGeneration;
       },
@@ -261,6 +273,13 @@ export const createMediaGenerationCorrelator =
   };
 
 const mediaGenerationCorrelator = createMediaGenerationCorrelator();
+
+export const acceptsPhoneMediaArtworkEvent = (
+  correlator: MediaGenerationCorrelator,
+  data: unknown,
+  isFailure: boolean,
+): boolean =>
+  isFailure ? correlator.acceptsFailure() : correlator.acceptsArtwork(data);
 
 export const isCurrentMediaArtwork = (data: unknown): boolean =>
   mediaGenerationCorrelator.acceptsArtwork(data);
@@ -314,6 +333,113 @@ export const shouldIgnoreInactiveForeignMedia = (
   }
 
   return playbackStatus !== "playing" && playbackStatus !== "loading";
+};
+
+export const shouldIgnoreSpotifyPhoneMediaUpdate = (
+  currentPlayback: SpotifyPlayback | null | undefined,
+  playbackAppName: unknown,
+): boolean => {
+  if (
+    playbackAppName !== "Spotify" ||
+    !isResolvedSpotifyItem(currentPlayback?.item)
+  ) {
+    return false;
+  }
+  const normalizedDeviceType = normalizeSpotifyDeviceType(
+    currentPlayback?.device?.type,
+  );
+  return Boolean(
+    normalizedDeviceType &&
+    normalizedDeviceType !== "UNKNOWN" &&
+    normalizedDeviceType !== "SMARTPHONE",
+  );
+};
+
+export const reconcilePlaybackDevice = (
+  incomingPlayback: SpotifyPlayback,
+  previousPlayback: SpotifyPlayback | null | undefined,
+): SpotifyPlayback => {
+  const isSameTrack = Boolean(
+    incomingPlayback.item?.uri &&
+    incomingPlayback.item.uri === previousPlayback?.item?.uri,
+  );
+  if (!isSameTrack || !previousPlayback?.device) return incomingPlayback;
+
+  const incomingDevice = incomingPlayback.device;
+  const incomingDeviceId = incomingDevice?.id?.trim();
+  const previousDeviceId = previousPlayback.device.id?.trim();
+  if (
+    incomingDeviceId &&
+    previousDeviceId &&
+    incomingDeviceId !== previousDeviceId
+  ) {
+    return incomingPlayback;
+  }
+
+  return {
+    ...incomingPlayback,
+    device: {
+      ...previousPlayback.device,
+      ...incomingDevice,
+    },
+  };
+};
+
+type ArtworkDevice = {
+  id?: string | null;
+  type?: string | null;
+} | null;
+
+export const canUsePhonePushedArtwork = (
+  item: SpotifyTrack | null | undefined,
+  device: ArtworkDevice | undefined,
+  ownerDeviceId: string | null | undefined,
+): boolean => {
+  if (!isResolvedSpotifyItem(item)) return true;
+
+  const deviceType = normalizeSpotifyDeviceType(device?.type);
+  if (deviceType && deviceType !== "UNKNOWN" && deviceType !== "SMARTPHONE") {
+    return false;
+  }
+
+  return Boolean(!ownerDeviceId || !device?.id || ownerDeviceId === device.id);
+};
+
+export const reconcilePolledPlaybackTiming = (
+  incomingPlayback: SpotifyPlayback,
+  previousPlayback: SpotifyPlayback | null | undefined,
+  nowMs = Date.now(),
+): SpotifyPlayback => {
+  const isSamePlayingTrack = Boolean(
+    incomingPlayback.is_playing &&
+    previousPlayback?.is_playing &&
+    incomingPlayback.item?.uri &&
+    incomingPlayback.item.uri === previousPlayback.item?.uri,
+  );
+  if (!isSamePlayingTrack || incomingPlayback.progress_ms !== 0) {
+    return incomingPlayback;
+  }
+
+  const previousProgress = finiteNumber(previousPlayback?.progress_ms);
+  const previousTimestamp = finiteNumber(previousPlayback?.timestamp);
+  if (previousProgress === null || previousTimestamp === null) {
+    return incomingPlayback;
+  }
+
+  const estimatedProgress =
+    previousProgress + Math.max(0, nowMs - previousTimestamp);
+  const durationMs = finiteNumber(incomingPlayback.item?.duration_ms) ?? 0;
+  const isNearNaturalRestart =
+    durationMs > 0 && estimatedProgress >= Math.max(0, durationMs - 5000);
+  if (estimatedProgress <= 2000 || isNearNaturalRestart) {
+    return incomingPlayback;
+  }
+
+  return {
+    ...incomingPlayback,
+    progress_ms: Math.min(estimatedProgress, durationMs || Infinity),
+    timestamp: nowMs,
+  };
 };
 
 export const getPushedArtworkTargetUri = (
@@ -580,8 +706,59 @@ const cleanupArtworkCache = () => {
         URL.revokeObjectURL(blobUrl);
       }
       artworkCache.delete(key);
+      artworkDeviceOwners.delete(key);
     });
   }
+};
+
+const discardCachedArtwork = (trackUri: string) => {
+  const artworkUrl = artworkCache.get(trackUri);
+  artworkCache.delete(trackUri);
+  artworkDeviceOwners.delete(trackUri);
+  if (artworkUrl?.startsWith("blob:")) {
+    setTimeout(() => URL.revokeObjectURL(artworkUrl), 100);
+  }
+};
+
+export const getPendingSpotifyArtworkKeys = (
+  cacheKeys: Iterable<string>,
+): string[] =>
+  Array.from(cacheKeys).filter((key) => key.startsWith("spotify:pending:"));
+
+const discardAllPendingSpotifyArtwork = () => {
+  const pendingKeys = getPendingSpotifyArtworkKeys(artworkCache.keys());
+  pendingKeys.forEach(discardCachedArtwork);
+  return pendingKeys;
+};
+
+export const replaceDiscardedPendingArtwork = (
+  playback: SpotifyPlayback | null,
+  album: SpotifyAlbum | null,
+  discardedKeys: readonly string[],
+): { playback: SpotifyPlayback | null; album: SpotifyAlbum | null } => {
+  const itemUri = playback?.item?.uri;
+  if (!itemUri || !discardedKeys.includes(itemUri) || !playback?.item) {
+    return { playback, album };
+  }
+
+  return {
+    playback: {
+      ...playback,
+      item: {
+        ...playback.item,
+        album: {
+          ...playback.item.album,
+          images: [{ url: "/images/not-playing.webp" }],
+        },
+      },
+    },
+    album: album
+      ? {
+          ...album,
+          images: [{ url: "/images/not-playing.webp" }],
+        }
+      : album,
+  };
 };
 
 const getRecentSpotifyPhoneMediaUpdate = () => {
@@ -598,6 +775,7 @@ const getRecentSpotifyPhoneMediaUpdate = () => {
 
 const promotePendingSpotifyArtwork = (
   item: SpotifyTrack | null | undefined,
+  device: ArtworkDevice | undefined,
 ): string | null => {
   if (!isCanonicalSpotifyItem(item)) return null;
 
@@ -616,10 +794,17 @@ const promotePendingSpotifyArtwork = (
   const pendingArtworkUri = `spotify:pending:${pendingTitle}`;
   const pendingArtworkUrl = artworkCache.get(pendingArtworkUri);
   if (!pendingArtworkUrl) return null;
+  const pendingOwnerDeviceId = artworkDeviceOwners.get(pendingArtworkUri);
+  if (!canUsePhonePushedArtwork(item, device, pendingOwnerDeviceId)) {
+    discardCachedArtwork(pendingArtworkUri);
+    return null;
+  }
 
   artworkCache.set(item.uri, pendingArtworkUrl);
+  artworkDeviceOwners.set(item.uri, pendingOwnerDeviceId || device?.id || null);
   if (artworkCache.get(pendingArtworkUri) === pendingArtworkUrl) {
     artworkCache.delete(pendingArtworkUri);
+    artworkDeviceOwners.delete(pendingArtworkUri);
   }
   currentArtworkTrackUri = item.uri;
   cleanupArtworkCache();
@@ -679,6 +864,13 @@ export function useSpotifyPlayerState() {
   const processPlaybackState = useCallback((data: SpotifyPlayback | null) => {
     if (!data) return;
 
+    data = reconcilePlaybackDevice(data, currentPlaybackRef.current);
+
+    const incomingDeviceType = normalizeSpotifyDeviceType(data.device?.type);
+    if (incomingDeviceType) {
+      cachedActiveDeviceType = incomingDeviceType;
+    }
+
     const reconciledItem = reconcilePlaybackItem(
       data.item as SpotifyTrack | null | undefined,
       currentPlaybackRef.current?.item as SpotifyTrack | null | undefined,
@@ -687,7 +879,10 @@ export function useSpotifyPlayerState() {
       data = { ...data, item: reconciledItem };
     }
 
-    promotePendingSpotifyArtwork(data.item as SpotifyTrack | null | undefined);
+    promotePendingSpotifyArtwork(
+      data.item as SpotifyTrack | null | undefined,
+      data.device,
+    );
 
     const currentIsPhoneMedia =
       currentPlaybackRef.current?.item?.is_phone_media;
@@ -749,8 +944,16 @@ export function useSpotifyPlayerState() {
     const currentItem = currentPlaybackRef.current?.item;
     const currentBlobUrl = currentItem?.album?.images?.[0]?.url;
     const hasBlobArtwork = currentBlobUrl?.startsWith("blob:");
+    const currentArtworkOwner = currentItem?.uri
+      ? artworkDeviceOwners.get(currentItem.uri)
+      : null;
     const preservedBlobArtwork =
       hasBlobArtwork &&
+      canUsePhonePushedArtwork(
+        data.item as SpotifyTrack | null | undefined,
+        data.device,
+        currentArtworkOwner,
+      ) &&
       shouldPreservePushedArtwork(
         currentItem as SpotifyTrack | null | undefined,
         data.item as SpotifyTrack | null | undefined,
@@ -760,7 +963,22 @@ export function useSpotifyPlayerState() {
 
     setCurrentPlayback((prevPlayback) => {
       const trackUri = data.item?.uri;
-      const cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+      let cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+      const cachedArtworkOwner = trackUri
+        ? artworkDeviceOwners.get(trackUri)
+        : null;
+      if (
+        trackUri &&
+        cachedArtworkUrl &&
+        !canUsePhonePushedArtwork(
+          data.item as SpotifyTrack | null | undefined,
+          data.device,
+          cachedArtworkOwner,
+        )
+      ) {
+        discardCachedArtwork(trackUri);
+        cachedArtworkUrl = null;
+      }
 
       const prevBlobArtwork = prevPlayback?.item?.album?.images?.[0]?.url;
       const hasPrevBlobArtwork = prevBlobArtwork?.startsWith("blob:");
@@ -772,6 +990,11 @@ export function useSpotifyPlayerState() {
       );
       const shouldPreservePrevBlob =
         hasPrevBlobArtwork &&
+        canUsePhonePushedArtwork(
+          data.item as SpotifyTrack | null | undefined,
+          data.device,
+          prevTrackUri ? artworkDeviceOwners.get(prevTrackUri) : null,
+        ) &&
         shouldPreservePushedArtwork(
           prevPlayback?.item as SpotifyTrack | null | undefined,
           data.item as SpotifyTrack | null | undefined,
@@ -781,11 +1004,18 @@ export function useSpotifyPlayerState() {
       if (shouldPreservePrevBlob && data.item) {
         if (isPendingToLocalTransition && incomingTrackUri) {
           artworkCache.set(incomingTrackUri, prevBlobArtwork);
+          artworkDeviceOwners.set(
+            incomingTrackUri,
+            (prevTrackUri && artworkDeviceOwners.get(prevTrackUri)) ||
+              data.device?.id ||
+              null,
+          );
           if (
             prevTrackUri &&
             artworkCache.get(prevTrackUri) === prevBlobArtwork
           ) {
             artworkCache.delete(prevTrackUri);
+            artworkDeviceOwners.delete(prevTrackUri);
           }
           currentArtworkTrackUri = incomingTrackUri;
           cleanupArtworkCache();
@@ -911,6 +1141,18 @@ export function useSpotifyPlayerState() {
     if (data?.item && data.item.type === "track" && !isEpisode) {
       const trackUri = data.item.uri;
       let cachedArtworkUrl = trackUri ? artworkCache.get(trackUri) : null;
+      if (
+        trackUri &&
+        cachedArtworkUrl &&
+        !canUsePhonePushedArtwork(
+          data.item as SpotifyTrack,
+          data.device,
+          artworkDeviceOwners.get(trackUri),
+        )
+      ) {
+        discardCachedArtwork(trackUri);
+        cachedArtworkUrl = null;
+      }
 
       const artworkImages = preservedBlobArtwork
         ? [{ url: preservedBlobArtwork }]
@@ -997,6 +1239,36 @@ export function useSpotifyPlayerState() {
         localStorage.setItem(`lastPlayedEpisode_${showId}`, data.item.id);
       }
     }
+  }, []);
+
+  const clearPendingSpotifyArtworkContext = useCallback(() => {
+    const discardedKeys = discardAllPendingSpotifyArtwork();
+    if (discardedKeys.length === 0) return;
+    const displayedPlayback = currentPlaybackRef.current;
+    if (
+      !displayedPlayback?.item?.uri ||
+      !discardedKeys.includes(displayedPlayback.item.uri)
+    ) {
+      return;
+    }
+
+    setCurrentPlayback((prevPlayback) => {
+      const nextPlayback = replaceDiscardedPendingArtwork(
+        prevPlayback,
+        null,
+        discardedKeys,
+      ).playback;
+      currentPlaybackRef.current = nextPlayback;
+      return nextPlayback;
+    });
+    setCurrentlyPlayingAlbum(
+      (prevAlbum) =>
+        replaceDiscardedPendingArtwork(
+          displayedPlayback,
+          prevAlbum,
+          discardedKeys,
+        ).album,
+    );
   }, []);
 
   const resetPlaybackState = useCallback(
@@ -1126,8 +1398,9 @@ export function useSpotifyPlayerState() {
           const cluster = payloads[0].cluster;
           const activeDeviceId = cluster.active_device_id;
           if (activeDeviceId && cluster.devices?.[activeDeviceId]) {
-            cachedActiveDeviceType =
-              cluster.devices[activeDeviceId].device_type;
+            cachedActiveDeviceType = normalizeSpotifyDeviceType(
+              cluster.devices[activeDeviceId].device_type,
+            );
           }
         }
 
@@ -1363,6 +1636,28 @@ export function useSpotifyPlayerState() {
 
         if (!media || !playback) return;
 
+        const rejectSpotifyPhoneMediaContext = () => {
+          clearPendingSpotifyArtworkContext();
+          mediaGenerationCorrelator.recordMetadata(data.data);
+          mediaGenerationCorrelator.rejectCurrentArtwork();
+          latestSpotifyPhoneMediaUpdate = null;
+          pendingSpotifyMediaUpdate = null;
+          if (spotifyFallbackTimeout) {
+            clearTimeout(spotifyFallbackTimeout);
+            spotifyFallbackTimeout = null;
+          }
+        };
+
+        if (
+          shouldIgnoreSpotifyPhoneMediaUpdate(
+            currentPlaybackRef.current,
+            playback.PlaybackAppName,
+          )
+        ) {
+          rejectSpotifyPhoneMediaContext();
+          return;
+        }
+
         if (
           shouldIgnoreInactiveForeignMedia(
             currentPlaybackRef.current,
@@ -1380,9 +1675,16 @@ export function useSpotifyPlayerState() {
           playback.PlaybackAppName === "Spotify" &&
           media.MediaItemArtist?.startsWith("Listening on ")
         ) {
+          rejectSpotifyPhoneMediaContext();
           return;
         }
 
+        if (
+          normalizeMediaGeneration(data.data) !==
+          mediaGenerationCorrelator.current()
+        ) {
+          clearPendingSpotifyArtworkContext();
+        }
         mediaGenerationCorrelator.recordMetadata(data.data);
         beginNowPlayingUpdateWindow();
         isProcessingArtwork = false;
@@ -1559,6 +1861,7 @@ export function useSpotifyPlayerState() {
                 Date.now() - lastDealerEventTimestamp <
                   DEALER_FRESH_THRESHOLD_MS;
               if (dealerIsFresh) {
+                clearPendingSpotifyArtworkContext();
                 mediaGenerationCorrelator.rejectCurrentArtwork();
                 pendingSpotifyMediaUpdate = null;
                 if (spotifyFallbackTimeout) {
@@ -1792,7 +2095,13 @@ export function useSpotifyPlayerState() {
         (data.topic === "media.now_playing.artwork" ||
           data.topic === "media.nowPlaying.artwork")
       ) {
-        if (!mediaGenerationCorrelator.acceptsArtwork(data.data)) {
+        if (
+          !acceptsPhoneMediaArtworkEvent(
+            mediaGenerationCorrelator,
+            data.data,
+            false,
+          )
+        ) {
           return;
         }
 
@@ -1802,6 +2111,8 @@ export function useSpotifyPlayerState() {
 
         if (artworkData && artworkData.trim() !== "") {
           const currentItem = currentPlaybackRef.current?.item;
+          const artworkOwnerDeviceId =
+            currentPlaybackRef.current?.device?.id || null;
           const hasRealSpotifyData = isCanonicalSpotifyItem(currentItem);
           const pendingArtworkUpdate = getRecentSpotifyPhoneMediaUpdate();
           const pendingArtworkTitle = pendingArtworkUpdate
@@ -1858,6 +2169,7 @@ export function useSpotifyPlayerState() {
                 URL.revokeObjectURL(previousPendingArtwork);
               }
               artworkCache.set(artworkTargetUri, nextArtworkBlobUrl);
+              artworkDeviceOwners.set(artworkTargetUri, artworkOwnerDeviceId);
               currentArtworkTrackUri = artworkTargetUri;
               cleanupArtworkCache();
               return;
@@ -1879,6 +2191,7 @@ export function useSpotifyPlayerState() {
 
               const newTrackUri = `spotify:pending:${title}`;
               artworkCache.set(newTrackUri, phoneMediaArtworkBlobUrl);
+              artworkDeviceOwners.set(newTrackUri, artworkOwnerDeviceId);
 
               const shuffleState =
                 playback.PlaybackShuffleMode === "albums" ||
@@ -1955,6 +2268,7 @@ export function useSpotifyPlayerState() {
                 }
               }
               artworkCache.set(trackUri, phoneMediaArtworkBlobUrl);
+              artworkDeviceOwners.set(trackUri, artworkOwnerDeviceId);
               currentArtworkTrackUri = trackUri;
               cleanupArtworkCache();
 
@@ -2012,6 +2326,16 @@ export function useSpotifyPlayerState() {
         (data.topic === "media.now_playing.artwork.failed" ||
           data.topic === "media.nowPlaying.artwork.failed")
       ) {
+        if (
+          !acceptsPhoneMediaArtworkEvent(
+            mediaGenerationCorrelator,
+            data.data,
+            true,
+          )
+        ) {
+          return;
+        }
+
         console.log("Artwork file transfer failed, fetching from Spotify API");
 
         pendingSpotifyMediaUpdate = null;
@@ -2053,7 +2377,12 @@ export function useSpotifyPlayerState() {
               setIsReceivingNowPlayingUpdates(false);
               isReceivingNowPlayingUpdatesGlobal = false;
 
-              processPlaybackState(playerData);
+              processPlaybackState(
+                reconcilePolledPlaybackTiming(
+                  playerData,
+                  currentPlaybackRef.current,
+                ),
+              );
             }
           })
           .catch((err) => {
@@ -2087,6 +2416,7 @@ export function useSpotifyPlayerState() {
     beginNowPlayingUpdateWindow,
     getPlayerState,
     markPlayerEvent,
+    clearPendingSpotifyArtworkContext,
   ]);
 
   const refreshPlaybackState = useCallback(
@@ -2117,7 +2447,9 @@ export function useSpotifyPlayerState() {
               nowPlayingTrackLatch = null;
             }
           }
-          processPlaybackState(data);
+          processPlaybackState(
+            reconcilePolledPlaybackTiming(data, currentPlaybackRef.current),
+          );
         }
       } catch (err) {
         console.error("Error refreshing playback state:", err);

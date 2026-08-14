@@ -1,8 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
+  acceptsPhoneMediaArtworkEvent,
   attachPushedArtwork,
+  canUsePhonePushedArtwork,
   createMediaGenerationCorrelator,
   fetchPlaybackStateAfterAppReady,
+  getPendingSpotifyArtworkKeys,
   getPushedArtworkTargetUri,
   getPhoneMediaTrackId,
   getDealerArtists,
@@ -14,12 +17,266 @@ import {
   normalizeImageUrl,
   normalizeMediaGeneration,
   normalizePhoneMediaTiming,
+  normalizeSpotifyDeviceType,
+  reconcilePlaybackDevice,
   reconcilePlaybackItem,
+  reconcilePolledPlaybackTiming,
+  replaceDiscardedPendingArtwork,
   shouldClearDisplayedMediaForEmptyUpdate,
   shouldIgnoreInactiveForeignMedia,
+  shouldIgnoreSpotifyPhoneMediaUpdate,
   shouldPreserveDealerBlobArtwork,
   shouldPreservePushedArtwork,
 } from "./useSpotifyPlayerState";
+
+describe("Spotify phone media source precedence", () => {
+  const canonicalPcPlayback = {
+    is_playing: true,
+    progress_ms: 42_000,
+    timestamp: 100_000,
+    device: { id: "pc", type: "Computer" },
+    item: {
+      uri: "spotify:track:casual",
+      name: "Casual",
+      artists: [{ name: "Chappell Roan" }],
+    },
+  };
+
+  it("ignores connected-phone Spotify mirrors while a PC owns playback", () => {
+    expect(normalizeSpotifyDeviceType(" computer ")).toBe("COMPUTER");
+    expect(
+      shouldIgnoreSpotifyPhoneMediaUpdate(canonicalPcPlayback, "Spotify"),
+    ).toBe(true);
+    expect(
+      shouldIgnoreSpotifyPhoneMediaUpdate(
+        {
+          ...canonicalPcPlayback,
+          item: { uri: "spotify:local:Artist:Album:Track:180" },
+        },
+        "Spotify",
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps smartphone and unresolved cold-start metadata eligible", () => {
+    expect(
+      shouldIgnoreSpotifyPhoneMediaUpdate(
+        {
+          ...canonicalPcPlayback,
+          device: { id: "phone", type: "Smartphone" },
+        },
+        "Spotify",
+      ),
+    ).toBe(false);
+    expect(
+      shouldIgnoreSpotifyPhoneMediaUpdate(
+        {
+          ...canonicalPcPlayback,
+          device: { id: "unknown", type: "UNKNOWN" },
+        },
+        "Spotify",
+      ),
+    ).toBe(false);
+    expect(
+      shouldIgnoreSpotifyPhoneMediaUpdate(
+        {
+          ...canonicalPcPlayback,
+          device: null,
+          item: { uri: "spotify:pending:Casual", is_spotify_pending: true },
+        },
+        "Spotify",
+      ),
+    ).toBe(false);
+    expect(
+      shouldIgnoreSpotifyPhoneMediaUpdate(canonicalPcPlayback, "YouTube"),
+    ).toBe(false);
+  });
+
+  it("preserves known PC ownership across a sparse same-track poll", () => {
+    const sparsePoll = {
+      ...canonicalPcPlayback,
+      device: null,
+    };
+    const reconciled = reconcilePlaybackDevice(sparsePoll, canonicalPcPlayback);
+
+    expect(reconciled.device).toEqual(canonicalPcPlayback.device);
+    expect(shouldIgnoreSpotifyPhoneMediaUpdate(reconciled, "Spotify")).toBe(
+      true,
+    );
+
+    const transferred = {
+      ...sparsePoll,
+      device: { id: "phone", type: "SMARTPHONE" },
+    };
+    expect(
+      reconcilePlaybackDevice(transferred, canonicalPcPlayback).device,
+    ).toEqual(transferred.device);
+  });
+
+  it("rejects tagged and legacy artwork paired with an ignored PC update", () => {
+    const tagged = createMediaGenerationCorrelator();
+    tagged.recordMetadata({ mediaGeneration: 41 });
+    expect(tagged.acceptsFailure()).toBe(true);
+    expect(
+      acceptsPhoneMediaArtworkEvent(tagged, { mediaGeneration: 40 }, false),
+    ).toBe(false);
+    expect(acceptsPhoneMediaArtworkEvent(tagged, {}, true)).toBe(true);
+    tagged.rejectCurrentArtwork();
+    expect(tagged.acceptsArtwork({ mediaGeneration: 41 })).toBe(false);
+    expect(tagged.acceptsFailure()).toBe(false);
+
+    const legacy = createMediaGenerationCorrelator();
+    legacy.recordMetadata({});
+    expect(legacy.acceptsFailure()).toBe(true);
+    legacy.rejectCurrentArtwork();
+    expect(legacy.acceptsArtwork({})).toBe(false);
+    expect(legacy.acceptsFailure()).toBe(false);
+  });
+
+  it("drops every pending cover when its phone context is rejected", () => {
+    const pendingKeys = getPendingSpotifyArtworkKeys([
+      "spotify:pending:Casual",
+      "spotify:track:canonical",
+      "spotify:pending:Another Track",
+    ]);
+    expect(pendingKeys).toEqual([
+      "spotify:pending:Casual",
+      "spotify:pending:Another Track",
+    ]);
+
+    const pendingPlayback = {
+      ...canonicalPcPlayback,
+      item: {
+        ...canonicalPcPlayback.item,
+        uri: "spotify:pending:Casual",
+        album: { images: [{ url: "blob:old-cover" }] },
+      },
+    };
+    const pendingAlbum = {
+      id: "pending-album",
+      images: [{ url: "blob:old-cover" }],
+    };
+    const replaced = replaceDiscardedPendingArtwork(
+      pendingPlayback,
+      pendingAlbum,
+      pendingKeys,
+    );
+    expect(replaced.playback.item.album.images[0].url).toBe(
+      "/images/not-playing.webp",
+    );
+    expect(replaced.album.images[0].url).toBe("/images/not-playing.webp");
+
+    const canonical = replaceDiscardedPendingArtwork(
+      canonicalPcPlayback,
+      pendingAlbum,
+      pendingKeys,
+    );
+    expect(canonical.playback).toBe(canonicalPcPlayback);
+    expect(canonical.album).toBe(pendingAlbum);
+  });
+
+  it("does not let a sparse same-track poll reset advancing progress", () => {
+    const incoming = {
+      ...canonicalPcPlayback,
+      progress_ms: 0,
+      timestamp: 105_000,
+    };
+
+    const reconciled = reconcilePolledPlaybackTiming(
+      incoming,
+      canonicalPcPlayback,
+      105_000,
+    );
+
+    expect(reconciled.progress_ms).toBe(47_000);
+    expect(reconciled.timestamp).toBe(105_000);
+  });
+
+  it("accepts real restarts, pauses, and track changes from polling", () => {
+    const nearEnd = {
+      ...canonicalPcPlayback,
+      progress_ms: 98_000,
+      timestamp: 100_000,
+      item: { ...canonicalPcPlayback.item, duration_ms: 100_000 },
+    };
+    const restarted = {
+      ...nearEnd,
+      progress_ms: 0,
+      timestamp: 102_000,
+    };
+    expect(reconcilePolledPlaybackTiming(restarted, nearEnd, 102_000)).toBe(
+      restarted,
+    );
+
+    const paused = { ...restarted, is_playing: false };
+    expect(reconcilePolledPlaybackTiming(paused, nearEnd, 102_000)).toBe(
+      paused,
+    );
+
+    const changed = {
+      ...restarted,
+      item: { ...restarted.item, uri: "spotify:track:next" },
+    };
+    expect(reconcilePolledPlaybackTiming(changed, nearEnd, 102_000)).toBe(
+      changed,
+    );
+  });
+
+  it("binds pushed Spotify artwork to its active smartphone device", () => {
+    const canonicalItem = { uri: "spotify:track:casual" };
+    const localItem = { uri: "spotify:local:Artist:Album:Track:180" };
+
+    expect(
+      canUsePhonePushedArtwork(
+        canonicalItem,
+        { id: "pc", type: "COMPUTER" },
+        "phone",
+      ),
+    ).toBe(false);
+    expect(
+      canUsePhonePushedArtwork(
+        localItem,
+        { id: "pc", type: "COMPUTER" },
+        "phone",
+      ),
+    ).toBe(false);
+    expect(
+      canUsePhonePushedArtwork(
+        canonicalItem,
+        { id: "phone", type: "SMARTPHONE" },
+        "phone",
+      ),
+    ).toBe(true);
+    expect(
+      canUsePhonePushedArtwork(
+        canonicalItem,
+        { id: "other-phone", type: "SMARTPHONE" },
+        "phone",
+      ),
+    ).toBe(false);
+    expect(
+      canUsePhonePushedArtwork(
+        canonicalItem,
+        { id: "unknown-route", type: "UNKNOWN" },
+        "unknown-route",
+      ),
+    ).toBe(true);
+    expect(
+      canUsePhonePushedArtwork(
+        localItem,
+        { id: "unknown-route", type: " UNKNOWN " },
+        "unknown-route",
+      ),
+    ).toBe(true);
+    expect(
+      canUsePhonePushedArtwork(
+        localItem,
+        { id: "other-route", type: "UNKNOWN" },
+        "unknown-route",
+      ),
+    ).toBe(false);
+  });
+});
 
 describe("phone media timing normalization", () => {
   it("accepts native iAP2 duration and elapsed-time fields", () => {
