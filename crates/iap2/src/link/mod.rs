@@ -440,6 +440,14 @@ impl Link {
 
                 if pkt.header.has_payload() && !pkt.header.control.contains(ControlBits::SYN) {
                     state.handle_inbound_data(pkt, &mut delivered);
+                    if state.should_send_ack_now()
+                        || (!delivered.is_empty() && events_tx.capacity() == 0)
+                    {
+                        // Do not hold the peer's cumulative ACK behind a slow
+                        // session consumer. The link must keep acknowledging
+                        // traffic even while delivery is backpressured.
+                        state.send_standalone_ack(writer, codec).await?;
+                    }
                     for d in delivered.drain(..) {
                         let _ = events_tx
                             .send(Iap2Event::DataReceived {

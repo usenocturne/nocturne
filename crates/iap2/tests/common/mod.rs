@@ -123,8 +123,20 @@ pub fn spawn_link(
     mpsc::Receiver<Iap2Event>,
     JoinHandle<iap2_rs::Result<()>>,
 ) {
+    spawn_link_with_event_capacity(config, 32)
+}
+
+pub fn spawn_link_with_event_capacity(
+    config: LinkConfig,
+    event_capacity: usize,
+) -> (
+    DuplexStream,
+    mpsc::Sender<Iap2Command>,
+    mpsc::Receiver<Iap2Event>,
+    JoinHandle<iap2_rs::Result<()>>,
+) {
     let (us, peer) = tokio::io::duplex(8192);
-    let (events_tx, events_rx) = mpsc::channel::<Iap2Event>(32);
+    let (events_tx, events_rx) = mpsc::channel::<Iap2Event>(event_capacity);
     let (cmd_tx, cmd_rx) = mpsc::channel::<Iap2Command>(32);
     let handle = tokio::spawn(Link::run(us, config, events_tx, cmd_rx));
     (peer, cmd_tx, events_rx, handle)

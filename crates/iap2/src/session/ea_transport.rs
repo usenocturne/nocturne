@@ -268,7 +268,7 @@ mod tests {
         .unwrap();
 
         tokio::time::timeout(std::time::Duration::from_secs(1), async {
-            while link_rx.len() == 0 {
+            while link_rx.is_empty() {
                 tokio::task::yield_now().await;
             }
         })

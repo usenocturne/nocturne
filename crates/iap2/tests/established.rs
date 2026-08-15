@@ -9,11 +9,16 @@ use std::time::Duration;
 
 use bytes::{Bytes, BytesMut};
 use common::{
-    drive_peer_handshake, fast_link_config, read_link, recv_with_timeout, spawn_link, write_link,
-    LspBuilder, PEER_INITIAL_PSN,
+    drive_peer_handshake, fast_link_config, read_link, recv_with_timeout, spawn_link,
+    spawn_link_with_event_capacity, write_link, LspBuilder, PEER_INITIAL_PSN,
 };
 use iap2_rs::{ControlBits, Error, Iap2Command, Iap2Event, LinkCodec, LinkPacket, LINK_HEADER_LEN};
-use tokio::{io::DuplexStream, sync::mpsc, task::JoinHandle};
+use tokio::{
+    io::{AsyncWriteExt, DuplexStream},
+    sync::mpsc,
+    task::JoinHandle,
+};
+use tokio_util::codec::Encoder;
 
 const SESSION_ID: u8 = 1;
 
@@ -173,6 +178,71 @@ async fn inbound_data_delivers_to_events_channel() {
         }
         other => panic!("expected DataReceived, got {:?}", other),
     }
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn inbound_ack_is_not_blocked_by_full_event_channel() {
+    let (mut peer_stream, cmd_tx, mut events_rx, link) =
+        spawn_link_with_event_capacity(fast_link_config(accessory_lsp()), 1);
+    let (mut peer_buf, mut peer_codec, our_initial_psn) =
+        drive_peer_handshake(&mut peer_stream, PeerProposal::default().into_lsp()).await;
+
+    let established = recv_with_timeout(&mut events_rx, Duration::from_secs(2))
+        .await
+        .expect("Established");
+    assert!(matches!(established, Iap2Event::Established(_)));
+
+    let first = LinkPacket::with_payload(
+        ControlBits::ACK,
+        PEER_INITIAL_PSN.wrapping_add(1),
+        our_initial_psn.wrapping_add(1),
+        SESSION_ID,
+        Bytes::from_static(b"one"),
+    );
+    let second = LinkPacket::with_payload(
+        ControlBits::ACK,
+        PEER_INITIAL_PSN.wrapping_add(2),
+        our_initial_psn.wrapping_add(1),
+        SESSION_ID,
+        Bytes::from_static(b"two"),
+    );
+    let mut wire = BytesMut::new();
+    peer_codec
+        .encode(first, &mut wire)
+        .expect("encode first packet");
+    peer_codec
+        .encode(second, &mut wire)
+        .expect("encode second packet");
+    peer_stream.write_all(&wire).await.unwrap();
+    peer_stream.flush().await.unwrap();
+
+    let ack = tokio::time::timeout(
+        Duration::from_secs(2),
+        read_link(&mut peer_stream, &mut peer_buf, &mut peer_codec),
+    )
+    .await
+    .expect("ACK should not wait for the event consumer");
+    assert!(ack.header.control.contains(ControlBits::ACK));
+    assert!(!ack.header.has_payload());
+    assert_eq!(ack.header.ack, PEER_INITIAL_PSN.wrapping_add(2));
+
+    let first_event = recv_with_timeout(&mut events_rx, Duration::from_secs(2))
+        .await
+        .expect("first data event");
+    assert!(matches!(
+        first_event,
+        Iap2Event::DataReceived { payload, .. } if payload.as_ref() == b"one"
+    ));
+    let second_event = recv_with_timeout(&mut events_rx, Duration::from_secs(2))
+        .await
+        .expect("second data event");
+    assert!(matches!(
+        second_event,
+        Iap2Event::DataReceived { payload, .. } if payload.as_ref() == b"two"
+    ));
+
+    cmd_tx.send(Iap2Command::Disconnect).await.unwrap();
+    let _ = tokio::time::timeout(Duration::from_secs(2), link).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
