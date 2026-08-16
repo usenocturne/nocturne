@@ -16,6 +16,7 @@ import {
   normalizeDeviceInfoResponse,
   normalizeDeviceVersionResponse,
   markBtReconnectSocketClosed,
+  normalizePhoneNetworkStatus,
   scheduleInitialBtReconnect,
   shouldAutomaticallyReconnectPlatform,
   stopBtReconnect,
@@ -30,6 +31,15 @@ const deferred = () => {
   });
   return { promise, resolve, reject };
 };
+
+describe("phone network status", () => {
+  it("normalizes explicit phone connectivity states", () => {
+    expect(normalizePhoneNetworkStatus(" CONNECTED ")).toBe("connected");
+    expect(normalizePhoneNetworkStatus("Disconnected")).toBe("disconnected");
+    expect(normalizePhoneNetworkStatus("unknown")).toBeNull();
+    expect(normalizePhoneNetworkStatus(null)).toBeNull();
+  });
+});
 
 describe("Bluetooth pairing presentation", () => {
   it("keeps the disconnected device screen mounted behind a PIN overlay", () => {

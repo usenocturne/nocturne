@@ -16,6 +16,7 @@ type SubscribedState = {
   isAdmin: boolean;
   entitlementsVerified: boolean;
 };
+export type PhoneNetworkStatus = "unknown" | "connected" | "disconnected";
 type BluetoothConnectionSnapshot = {
   connected: boolean;
   devices: Array<
@@ -325,6 +326,8 @@ let spotifyAuthenticated = false;
 const spotifyAuthSubscribers = new Set<Listener<boolean>>();
 let spotifySkipped = false;
 const spotifySkippedSubscribers = new Set<Listener<boolean>>();
+let phoneNetworkStatus: PhoneNetworkStatus = "unknown";
+const phoneNetworkSubscribers = new Set<Listener<PhoneNetworkStatus>>();
 
 let wsReconnectAttempts = 0;
 let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -718,6 +721,50 @@ export const subscribeSpotifySkippedState = (listener: Listener<boolean>) => {
   };
 };
 
+export const normalizePhoneNetworkStatus = (
+  status: unknown,
+): PhoneNetworkStatus | null => {
+  if (typeof status !== "string") return null;
+
+  const normalized = status.trim().toLowerCase();
+  return normalized === "connected" || normalized === "disconnected"
+    ? normalized
+    : null;
+};
+
+export const getPhoneNetworkStatus = () => phoneNetworkStatus;
+
+const emitPhoneNetworkStatus = () => {
+  phoneNetworkSubscribers.forEach((listener) => {
+    try {
+      listener(phoneNetworkStatus);
+    } catch (err) {
+      console.error("Phone network status listener error:", err);
+    }
+  });
+};
+
+const setPhoneNetworkStatus = (status: PhoneNetworkStatus) => {
+  if (phoneNetworkStatus === status) return;
+  phoneNetworkStatus = status;
+  emitPhoneNetworkStatus();
+};
+
+export const subscribePhoneNetworkStatus = (
+  listener: Listener<PhoneNetworkStatus>,
+) => {
+  if (typeof listener !== "function") {
+    return () => {};
+  }
+
+  phoneNetworkSubscribers.add(listener);
+  listener(phoneNetworkStatus);
+
+  return () => {
+    phoneNetworkSubscribers.delete(listener);
+  };
+};
+
 export const subscribeBluetoothConnectionState = (
   listener: Listener<BluetoothConnectionSnapshot>,
 ) => {
@@ -757,6 +804,7 @@ export const cleanupGlobalWebSocket = () => {
   clearBtReconnectWatchdog();
   clearBtReconnectSettle();
   resetBtReconnectCycle();
+  setPhoneNetworkStatus("unknown");
   if (globalWsRef) {
     globalWsRef.close(1000);
     globalWsRef = null;
@@ -950,6 +998,7 @@ const setupGlobalWebSocket = async () => {
       appReady = false;
       appReadyPlatform = null;
       emitAppReadyState();
+      setPhoneNetworkStatus("unknown");
 
       appSubscribed = true;
       appSubscriptionStatus = null;
@@ -985,6 +1034,8 @@ const setupGlobalWebSocket = async () => {
           /** @type {AppReadyEvent | undefined} */
           const readyData = data.data;
           const pendingPlatform = readyData?.platform || null;
+
+          setPhoneNetworkStatus("unknown");
 
           rememberActiveDevicePlatform(pendingPlatform);
           lastAppReadyAt = Date.now();
@@ -1085,9 +1136,15 @@ const setupGlobalWebSocket = async () => {
         if (data && data.type === "event" && data.topic === "network.status") {
           /** @type {NetworkStatusEvent} */
           const statusData = data.data || {};
-          if (statusData.status === "disconnected") {
+          const nextPhoneNetworkStatus = normalizePhoneNetworkStatus(
+            statusData.status,
+          );
+          if (nextPhoneNetworkStatus) {
+            setPhoneNetworkStatus(nextPhoneNetworkStatus);
+          }
+          if (nextPhoneNetworkStatus === "disconnected") {
             window.dispatchEvent(new Event("networkBannerShow"));
-          } else if (statusData.status === "connected") {
+          } else if (nextPhoneNetworkStatus === "connected") {
             window.dispatchEvent(new Event("networkBannerHide"));
           }
         }

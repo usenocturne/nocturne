@@ -175,7 +175,10 @@ function NowPlaying({
     phoneMediaRepeat,
     phoneMediaVolumeUp,
     phoneMediaVolumeDown,
+    usePhoneHidControls,
   } = useSpotifyPlayerControls(currentPlayback);
+  const usePhoneHidControlsForCurrentItem =
+    usePhoneHidControls && Boolean(currentPlayback?.item);
 
   const { isPlaying, duration, updateProgress, triggerRefresh } =
     playbackProgress;
@@ -354,7 +357,7 @@ function NowPlaying({
   }, [isStartingPlayback, currentPlayback?.item]);
 
   const handlePlayPause = async () => {
-    if (isPhoneMedia) {
+    if (isPhoneMedia || usePhoneHidControlsForCurrentItem) {
       if (currentPlayback?.is_playing) {
         await phoneMediaPause();
       } else {
@@ -764,15 +767,20 @@ function NowPlaying({
   );
 
   const handleSkipNext = useCallback(async () => {
-    if (isPhoneMedia) {
+    if (isPhoneMedia || usePhoneHidControlsForCurrentItem) {
       await phoneMediaNext();
     } else {
       await skipToNext();
     }
-  }, [isPhoneMedia, phoneMediaNext, skipToNext]);
+  }, [
+    isPhoneMedia,
+    phoneMediaNext,
+    skipToNext,
+    usePhoneHidControlsForCurrentItem,
+  ]);
 
   const handleSkipPrevious = useCallback(async () => {
-    if (isPhoneMedia) {
+    if (isPhoneMedia || usePhoneHidControlsForCurrentItem) {
       await phoneMediaPrevious();
       return;
     }
@@ -788,6 +796,7 @@ function NowPlaying({
     }
   }, [
     isPhoneMedia,
+    usePhoneHidControlsForCurrentItem,
     phoneMediaPrevious,
     currentPlayback?.item?.type,
     seekToPosition,
@@ -944,7 +953,7 @@ function NowPlaying({
 
   const handleToggleShuffle = useCallback(async () => {
     try {
-      if (isPhoneMedia) {
+      if (isPhoneMedia || usePhoneHidControlsForCurrentItem) {
         await phoneMediaShuffle();
       } else {
         const newShuffleState = !shuffleEnabled;
@@ -957,11 +966,17 @@ function NowPlaying({
         setShuffleEnabled(!shuffleEnabled);
       }
     }
-  }, [isPhoneMedia, phoneMediaShuffle, shuffleEnabled, toggleShuffle]);
+  }, [
+    isPhoneMedia,
+    usePhoneHidControlsForCurrentItem,
+    phoneMediaShuffle,
+    shuffleEnabled,
+    toggleShuffle,
+  ]);
 
   const handleToggleRepeat = useCallback(async () => {
     try {
-      if (isPhoneMedia) {
+      if (isPhoneMedia || usePhoneHidControlsForCurrentItem) {
         await phoneMediaRepeat();
       } else {
         const nextModeMap = { off: "context", context: "track", track: "off" };
@@ -973,7 +988,13 @@ function NowPlaying({
     } catch (error) {
       console.error("Error toggling repeat mode:", error);
     }
-  }, [isPhoneMedia, phoneMediaRepeat, repeatMode, setRepeatModeApi]);
+  }, [
+    isPhoneMedia,
+    usePhoneHidControlsForCurrentItem,
+    phoneMediaRepeat,
+    repeatMode,
+    setRepeatModeApi,
+  ]);
 
   const fetchCurrentPlaybackSpeed = useCallback(async () => {
     try {

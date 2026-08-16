@@ -3,7 +3,11 @@ import React from "react";
 import { flushSync } from "react-dom";
 import { generateRandomString } from "../utils/helpers";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
-import { sendNocturneWsRequest } from "./useNocturned";
+import {
+  getPhoneNetworkStatus,
+  sendNocturneWsRequest,
+  subscribePhoneNetworkStatus,
+} from "./useNocturned";
 import { getActiveDeviceType } from "./useSpotifyPlayerState";
 import type { SpotifyPlayback } from "../types";
 
@@ -13,6 +17,30 @@ import type { SpotifyPlayback } from "../types";
 export const DeviceSwitcherContext = React.createContext({
   openDeviceSwitcher: (playbackIntent = null) => {},
 });
+
+export const shouldUsePhoneHidControls = (
+  currentPlayback: SpotifyPlayback | null | undefined,
+  phoneNetworkStatus: string,
+  activeDeviceType: string | null = null,
+): boolean => {
+  if (phoneNetworkStatus !== "disconnected") return false;
+
+  const playbackDeviceType = currentPlayback?.device?.type;
+  const normalizedPlaybackDeviceType =
+    typeof playbackDeviceType === "string"
+      ? playbackDeviceType.trim().toUpperCase()
+      : null;
+  const normalizedActiveDeviceType =
+    typeof activeDeviceType === "string"
+      ? activeDeviceType.trim().toUpperCase()
+      : null;
+  const effectivePlaybackDeviceType =
+    normalizedPlaybackDeviceType && normalizedPlaybackDeviceType !== "UNKNOWN"
+      ? normalizedPlaybackDeviceType
+      : normalizedActiveDeviceType;
+
+  return effectivePlaybackDeviceType === "SMARTPHONE";
+};
 
 export function useSpotifyPlayerControls(
   currentPlayback: SpotifyPlayback | null = null,
@@ -27,11 +55,21 @@ export function useSpotifyPlayerControls(
   const lastSentVolumeRef = useRef<number | null>(null);
   const volumeRef = useRef(50);
   const { openDeviceSwitcher } = useContext(DeviceSwitcherContext);
+  const [phoneNetworkStatus, setPhoneNetworkStatus] = useState(
+    getPhoneNetworkStatus(),
+  );
+
+  useEffect(() => subscribePhoneNetworkStatus(setPhoneNetworkStatus), []);
 
   const isLocalMedia = currentPlayback?.item?.is_local === true;
   const isPhoneMedia = currentPlayback?.item?.is_phone_media === true;
   const isSmartphoneDevice =
     currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
+  const usePhoneHidControls = shouldUsePhoneHidControls(
+    currentPlayback,
+    phoneNetworkStatus,
+    getActiveDeviceType(),
+  );
 
   const {
     isSpotifyReady,
@@ -122,6 +160,13 @@ export function useSpotifyPlayerControls(
       uris: string[] | null = null,
       deviceId: string | null = null,
     ) => {
+      const isResumePlaybackRequest =
+        !trackUri && !contextUri && !deviceId && (!uris || uris.length === 0);
+
+      if (isResumePlaybackRequest && usePhoneHidControls) {
+        return sendPhoneMediaControl("media.control.play");
+      }
+
       if (!isSpotifyReady) return false;
 
       try {
@@ -139,8 +184,6 @@ export function useSpotifyPlayerControls(
         return true;
       } catch (err) {
         const errorMessage = err?.message || String(err);
-        const isResumePlaybackRequest =
-          !trackUri && !contextUri && !deviceId && (!uris || uris.length === 0);
         const activeDeviceType = getActiveDeviceType();
         const shouldFallbackToPhoneMediaPlay =
           isResumePlaybackRequest &&
@@ -197,10 +240,15 @@ export function useSpotifyPlayerControls(
       getPlayerState,
       isSmartphoneDevice,
       sendPhoneMediaControl,
+      usePhoneHidControls,
     ],
   );
 
   const pausePlayback = useCallback(async () => {
+    if (usePhoneHidControls) {
+      return sendPhoneMediaControl("media.control.pause");
+    }
+
     if (!isSpotifyReady) return false;
 
     try {
@@ -225,9 +273,20 @@ export function useSpotifyPlayerControls(
       console.error("Error pausing playback:", err.message);
       return false;
     }
-  }, [isSpotifyReady, pausePlaybackWS, getPlayerState, openDeviceSwitcher]);
+  }, [
+    isSpotifyReady,
+    pausePlaybackWS,
+    getPlayerState,
+    openDeviceSwitcher,
+    sendPhoneMediaControl,
+    usePhoneHidControls,
+  ]);
 
   const skipToNext = useCallback(async () => {
+    if (usePhoneHidControls) {
+      return sendPhoneMediaControl("media.control.next");
+    }
+
     if (!isSpotifyReady) return false;
 
     try {
@@ -252,9 +311,20 @@ export function useSpotifyPlayerControls(
       console.error("Error skipping to next track:", err.message);
       return false;
     }
-  }, [isSpotifyReady, skipToNextWS, getPlayerState, openDeviceSwitcher]);
+  }, [
+    isSpotifyReady,
+    skipToNextWS,
+    getPlayerState,
+    openDeviceSwitcher,
+    sendPhoneMediaControl,
+    usePhoneHidControls,
+  ]);
 
   const skipToPrevious = useCallback(async () => {
+    if (usePhoneHidControls) {
+      return sendPhoneMediaControl("media.control.previous");
+    }
+
     if (!isSpotifyReady) return false;
 
     try {
@@ -279,7 +349,14 @@ export function useSpotifyPlayerControls(
       console.error("Error skipping to previous track:", err.message);
       return false;
     }
-  }, [isSpotifyReady, skipToPreviousWS, getPlayerState, openDeviceSwitcher]);
+  }, [
+    isSpotifyReady,
+    skipToPreviousWS,
+    getPlayerState,
+    openDeviceSwitcher,
+    sendPhoneMediaControl,
+    usePhoneHidControls,
+  ]);
 
   const seekToPosition = useCallback(
     async (positionMs) => {
@@ -510,6 +587,10 @@ export function useSpotifyPlayerControls(
 
   const toggleShuffle = useCallback(
     async (state) => {
+      if (usePhoneHidControls) {
+        return sendPhoneMediaControl("media.control.shuffle");
+      }
+
       if (!isSpotifyReady) return false;
 
       try {
@@ -520,11 +601,20 @@ export function useSpotifyPlayerControls(
         return false;
       }
     },
-    [isSpotifyReady, toggleShuffleWS],
+    [
+      isSpotifyReady,
+      toggleShuffleWS,
+      sendPhoneMediaControl,
+      usePhoneHidControls,
+    ],
   );
 
   const setRepeatMode = useCallback(
     async (state) => {
+      if (usePhoneHidControls) {
+        return sendPhoneMediaControl("media.control.repeat");
+      }
+
       if (!isSpotifyReady) return false;
 
       try {
@@ -535,7 +625,12 @@ export function useSpotifyPlayerControls(
         return false;
       }
     },
-    [isSpotifyReady, setRepeatModeWS],
+    [
+      isSpotifyReady,
+      setRepeatModeWS,
+      sendPhoneMediaControl,
+      usePhoneHidControls,
+    ],
   );
 
   const playDJMix = useCallback(
@@ -686,5 +781,6 @@ export function useSpotifyPlayerControls(
     phoneMediaRepeat,
     phoneMediaVolumeUp,
     phoneMediaVolumeDown,
+    usePhoneHidControls,
   };
 }
