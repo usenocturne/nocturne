@@ -170,6 +170,29 @@ export const normalizeSpotifyDeviceType = (
     ? deviceType.trim().toUpperCase()
     : null;
 
+const hasNonEmptyText = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+export const isSpotifyPlaybackApp = (appName: unknown): boolean =>
+  typeof appName === "string" && appName.trim().toLowerCase() === "spotify";
+
+export const hasCompleteSpotifyMediaMetadata = (
+  media: PhoneMediaAttributes | null | undefined,
+): boolean =>
+  Boolean(
+    hasNonEmptyText(media?.MediaItemTitle) &&
+    hasNonEmptyText(media?.MediaItemArtist),
+  );
+
+export const isEmptyPhoneMediaUpdate = (
+  media: PhoneMediaAttributes | null | undefined,
+  playback: PhoneMediaAttributes | null | undefined,
+): boolean =>
+  !hasNonEmptyText(media?.MediaItemTitle) &&
+  !hasNonEmptyText(media?.MediaItemArtist) &&
+  typeof playback?.PlaybackStatus === "string" &&
+  playback.PlaybackStatus.trim().toLowerCase() === "stopped";
+
 const finiteNumber = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
@@ -326,8 +349,8 @@ export const shouldIgnoreInactiveForeignMedia = (
     currentPlayback?.is_playing !== true ||
     !isResolvedSpotifyItem(currentPlayback.item) ||
     typeof playbackAppName !== "string" ||
-    playbackAppName.length === 0 ||
-    playbackAppName === "Spotify"
+    playbackAppName.trim().length === 0 ||
+    isSpotifyPlaybackApp(playbackAppName)
   ) {
     return false;
   }
@@ -340,7 +363,7 @@ export const shouldIgnoreSpotifyPhoneMediaUpdate = (
   playbackAppName: unknown,
 ): boolean => {
   if (
-    playbackAppName !== "Spotify" ||
+    !isSpotifyPlaybackApp(playbackAppName) ||
     !isResolvedSpotifyItem(currentPlayback?.item)
   ) {
     return false;
@@ -1636,7 +1659,19 @@ export function useSpotifyPlayerState() {
 
         if (!media || !playback) return;
 
-        const rejectSpotifyPhoneMediaContext = () => {
+        const isSpotifyPlayback = isSpotifyPlaybackApp(
+          playback.PlaybackAppName,
+        );
+        const isSpotifyPhoneMedia =
+          isSpotifyPlayback && !getSpotifySkippedState();
+        const hasCompleteMetadata = hasCompleteSpotifyMediaMetadata(media);
+        const isEmpty = isEmptyPhoneMediaUpdate(media, playback);
+        const incomingMediaGeneration = normalizeMediaGeneration(data.data);
+        const previousMediaGeneration = mediaGenerationCorrelator.current();
+        const mediaGenerationChanged =
+          incomingMediaGeneration !== previousMediaGeneration;
+
+        const rejectPhoneMediaContext = () => {
           clearPendingSpotifyArtworkContext();
           mediaGenerationCorrelator.recordMetadata(data.data);
           mediaGenerationCorrelator.rejectCurrentArtwork();
@@ -1654,7 +1689,22 @@ export function useSpotifyPlayerState() {
             playback.PlaybackAppName,
           )
         ) {
-          rejectSpotifyPhoneMediaContext();
+          rejectPhoneMediaContext();
+          return;
+        }
+
+        if (isEmpty) {
+          rejectPhoneMediaContext();
+          if (
+            shouldClearDisplayedMediaForEmptyUpdate(
+              currentPlaybackRef.current?.item,
+              isEmpty,
+            )
+          ) {
+            currentPlaybackRef.current = null;
+            setCurrentPlayback(null);
+            setCurrentlyPlayingAlbum(null);
+          }
           return;
         }
 
@@ -1672,25 +1722,33 @@ export function useSpotifyPlayerState() {
         markPlayerEvent();
 
         if (
-          playback.PlaybackAppName === "Spotify" &&
+          isSpotifyPlayback &&
           media.MediaItemArtist?.startsWith("Listening on ")
         ) {
-          rejectSpotifyPhoneMediaContext();
+          rejectPhoneMediaContext();
           return;
         }
 
-        if (
-          normalizeMediaGeneration(data.data) !==
-          mediaGenerationCorrelator.current()
-        ) {
+        if (mediaGenerationChanged) {
           clearPendingSpotifyArtworkContext();
         }
         mediaGenerationCorrelator.recordMetadata(data.data);
         beginNowPlayingUpdateWindow();
         isProcessingArtwork = false;
 
-        const isSpotifyPhoneMedia =
-          playback.PlaybackAppName === "Spotify" && !getSpotifySkippedState();
+        if (isSpotifyPlayback && !hasCompleteMetadata) {
+          if (mediaGenerationChanged) {
+            mediaGenerationCorrelator.rejectCurrentArtwork();
+            latestSpotifyPhoneMediaUpdate = null;
+            pendingSpotifyMediaUpdate = null;
+            if (spotifyFallbackTimeout) {
+              clearTimeout(spotifyFallbackTimeout);
+              spotifyFallbackTimeout = null;
+            }
+          }
+          return;
+        }
+
         const spotifyPhoneMediaUpdate = isSpotifyPhoneMedia
           ? {
               media,
@@ -1938,24 +1996,10 @@ export function useSpotifyPlayerState() {
           return;
         }
 
-        const hasTitle =
-          media.MediaItemTitle && media.MediaItemTitle.trim() !== "";
-        const hasArtist =
-          media.MediaItemArtist && media.MediaItemArtist.trim() !== "";
-        const isStopped = playback.PlaybackStatus === "stopped";
-        const isEmpty = !hasTitle && !hasArtist && isStopped;
+        const hasTitle = hasNonEmptyText(media.MediaItemTitle);
+        const hasArtist = hasNonEmptyText(media.MediaItemArtist);
 
-        if (isEmpty) {
-          if (
-            shouldClearDisplayedMediaForEmptyUpdate(
-              currentPlaybackRef.current?.item,
-              isEmpty,
-            )
-          ) {
-            currentPlaybackRef.current = null;
-            setCurrentPlayback(null);
-            setCurrentlyPlayingAlbum(null);
-          }
+        if (!hasTitle && !hasArtist) {
           return;
         }
 

@@ -5,6 +5,7 @@ import {
   canUsePhonePushedArtwork,
   createMediaGenerationCorrelator,
   fetchPlaybackStateAfterAppReady,
+  hasCompleteSpotifyMediaMetadata,
   getPendingSpotifyArtworkKeys,
   getPushedArtworkTargetUri,
   getPhoneMediaTrackId,
@@ -13,6 +14,8 @@ import {
   isPendingSpotifyTrackChange,
   isResolvedSpotifyItem,
   isSpotifyLocalItem,
+  isSpotifyPlaybackApp,
+  isEmptyPhoneMediaUpdate,
   mediaGenerationsCorrelate,
   normalizeImageUrl,
   normalizeMediaGeneration,
@@ -90,6 +93,28 @@ describe("Spotify phone media source precedence", () => {
     expect(
       shouldIgnoreSpotifyPhoneMediaUpdate(canonicalPcPlayback, "YouTube"),
     ).toBe(false);
+  });
+
+  it("does not treat sparse Spotify callbacks as playable metadata", () => {
+    expect(isSpotifyPlaybackApp(" spotify ")).toBe(true);
+    expect(
+      hasCompleteSpotifyMediaMetadata({
+        MediaItemTitle: "Song",
+        MediaItemArtist: "Artist",
+      }),
+    ).toBe(true);
+    expect(hasCompleteSpotifyMediaMetadata({ MediaItemTitle: "Song" })).toBe(
+      false,
+    );
+    expect(isEmptyPhoneMediaUpdate({}, { PlaybackStatus: "playing" })).toBe(
+      false,
+    );
+    expect(
+      isEmptyPhoneMediaUpdate(
+        { MediaItemTitle: null, MediaItemArtist: null },
+        { PlaybackStatus: "Stopped" },
+      ),
+    ).toBe(true);
   });
 
   it("preserves known PC ownership across a sparse same-track poll", () => {
@@ -906,6 +931,9 @@ describe("inactive phone media precedence", () => {
     ).toBe(false);
     expect(
       shouldIgnoreInactiveForeignMedia(playingSpotify, "Spotify", "paused"),
+    ).toBe(false);
+    expect(
+      shouldIgnoreInactiveForeignMedia(playingSpotify, " spotify ", "paused"),
     ).toBe(false);
     expect(
       shouldIgnoreInactiveForeignMedia(
