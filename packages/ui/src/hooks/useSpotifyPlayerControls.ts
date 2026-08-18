@@ -42,6 +42,42 @@ export const shouldUsePhoneHidControls = (
   return effectivePlaybackDeviceType === "SMARTPHONE";
 };
 
+export const getPlaybackLikeTarget = (
+  currentPlayback: SpotifyPlayback | null | undefined,
+): {
+  source: "spotify" | "spotify_local" | "phone_media";
+  reference: string | null;
+  liked: boolean;
+} => {
+  const item = currentPlayback?.item;
+  if (item?.is_phone_media === true) {
+    return {
+      source: "phone_media",
+      reference: item.id || item.uri || null,
+      liked: item.is_liked === true,
+    };
+  }
+  if (
+    item?.is_local === true ||
+    item?.uri?.toLowerCase().startsWith("spotify:local:")
+  ) {
+    return {
+      source: "spotify_local",
+      reference:
+        typeof item.uri === "string" &&
+        item.uri.toLowerCase().startsWith("spotify:local:")
+          ? item.uri
+          : null,
+      liked: false,
+    };
+  }
+  return {
+    source: "spotify",
+    reference: item?.id || null,
+    liked: false,
+  };
+};
+
 export function useSpotifyPlayerControls(
   currentPlayback: SpotifyPlayback | null = null,
 ) {
@@ -145,8 +181,8 @@ export function useSpotifyPlayerControls(
 
   const sendPhoneMediaControl = useCallback(async (method) => {
     try {
-      await sendNocturneWsRequest(method, {});
-      return true;
+      const response = await sendNocturneWsRequest(method, {});
+      return response?.status !== "unsupported";
     } catch (err) {
       console.error(`Error sending phone media control (${method}):`, err);
       return false;
@@ -585,6 +621,44 @@ export function useSpotifyPlayerControls(
     [isSpotifyReady, removeTrack],
   );
 
+  const likeTarget = getPlaybackLikeTarget(currentPlayback);
+  const checkCurrentItemLiked = useCallback(async () => {
+    if (likeTarget.source === "phone_media") return likeTarget.liked;
+    if (!likeTarget.reference) return false;
+    return checkIsTrackLiked(likeTarget.reference);
+  }, [
+    checkIsTrackLiked,
+    likeTarget.liked,
+    likeTarget.reference,
+    likeTarget.source,
+  ]);
+
+  const likeCurrentItem = useCallback(() => {
+    if (likeTarget.source === "phone_media") {
+      return sendPhoneMediaControl("media.control.like");
+    }
+    if (!likeTarget.reference) return Promise.resolve(false);
+    return likeTrack(likeTarget.reference);
+  }, [
+    likeTarget.reference,
+    likeTarget.source,
+    likeTrack,
+    sendPhoneMediaControl,
+  ]);
+
+  const unlikeCurrentItem = useCallback(() => {
+    if (likeTarget.source === "phone_media") {
+      return sendPhoneMediaControl("media.control.unlike");
+    }
+    if (!likeTarget.reference) return Promise.resolve(false);
+    return unlikeTrack(likeTarget.reference);
+  }, [
+    likeTarget.reference,
+    likeTarget.source,
+    sendPhoneMediaControl,
+    unlikeTrack,
+  ]);
+
   const toggleShuffle = useCallback(
     async (state) => {
       if (usePhoneHidControls) {
@@ -767,6 +841,10 @@ export function useSpotifyPlayerControls(
     checkIsTrackLiked,
     likeTrack,
     unlikeTrack,
+    likeTarget,
+    checkCurrentItemLiked,
+    likeCurrentItem,
+    unlikeCurrentItem,
     playDJMix,
     sendDJSignal,
     setPlaybackSpeed,

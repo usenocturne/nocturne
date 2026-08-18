@@ -233,6 +233,21 @@ export const normalizePhoneMediaTiming = (
   return { durationMs, progressMs, playbackRate, timestamp };
 };
 
+export const normalizePhoneMediaLikeState = (
+  media: PhoneMediaAttributes,
+): { liked: boolean; likeSupported: boolean | null } => {
+  const liked =
+    media.MediaItemLiked ?? media.mediaItemLiked ?? media.media_item_liked;
+  const likeSupported =
+    media.MediaItemLikeSupported ??
+    media.mediaItemLikeSupported ??
+    media.media_item_like_supported;
+  return {
+    liked: liked === true,
+    likeSupported: typeof likeSupported === "boolean" ? likeSupported : null,
+  };
+};
+
 export const getPhoneMediaTrackId = (
   appName: unknown,
   title: string,
@@ -2076,6 +2091,7 @@ export function useSpotifyPlayerState() {
           playback,
           data.server_timestamp_ms,
         );
+        const likeState = normalizePhoneMediaLikeState(media);
 
         const newTrackUri = `local:media:${title}`;
         const newTrackId = getPhoneMediaTrackId(
@@ -2118,6 +2134,10 @@ export function useSpotifyPlayerState() {
             ],
             duration_ms: timing.durationMs,
             is_phone_media: true,
+            is_liked: likeState.liked,
+            ...(likeState.likeSupported !== null
+              ? { like_supported: likeState.likeSupported }
+              : {}),
             phone_media_album_name: phoneMediaAlbumName,
           },
 

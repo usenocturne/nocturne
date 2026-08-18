@@ -48,10 +48,9 @@ import { generateRandomString } from "../../utils/helpers";
 
 export const getNowPlayingLeadingControl = (
   itemType: string | undefined,
-  isPhoneMedia: boolean,
+  _isPhoneMedia: boolean,
 ): "speed" | "spacer" | "like" => {
   if (itemType === "episode") return "speed";
-  if (isPhoneMedia) return "spacer";
   return "like";
 };
 
@@ -112,7 +111,7 @@ function NowPlaying({
   const lastWheelEventRef = useRef(0);
   const wheelDeltaAccumulatorRef = useRef(0);
   const containerRef = useRef(null);
-  const currentTrackIdRef = useRef(null);
+  const currentTrackIdRef = useRef<string | null>(null);
   const prevVolumeRef = useRef(null);
   const manualVolumeChangeRef = useRef(false);
   const latestPhoneVolumeRef = useRef(null);
@@ -154,9 +153,10 @@ function NowPlaying({
     skipToNext,
     skipToPrevious,
     seekToPosition,
-    checkIsTrackLiked,
-    likeTrack,
-    unlikeTrack,
+    likeTarget,
+    checkCurrentItemLiked,
+    likeCurrentItem,
+    unlikeCurrentItem,
     sendDJSignal,
     setVolume,
     adjustVolumeByDelta,
@@ -835,35 +835,58 @@ function NowPlaying({
     isActive: true,
   });
 
+  const likeIdentity = `${likeTarget.source}:${
+    likeTarget.reference ||
+    [
+      currentPlayback?.currently_active_application,
+      currentPlayback?.item?.name,
+      currentPlayback?.item?.artists?.map((artist) => artist.name).join(","),
+    ].join(":")
+  }`;
+
   useEffect(() => {
-    if (isLocalMedia || isPhoneMedia) {
-      setIsLiked(false);
-      currentTrackIdRef.current = null;
+    if (likeTarget.source === "phone_media") {
+      currentTrackIdRef.current = likeIdentity;
+      setIsLiked(likeTarget.liked);
+      setIsCheckingLike(false);
       return;
     }
 
-    const checkCurrentTrackLiked = async () => {
-      if (trackId && !isCheckingLike) {
-        setIsCheckingLike(true);
-        try {
-          if (trackId !== currentTrackIdRef.current) {
-            currentTrackIdRef.current = trackId;
-            const liked = await checkIsTrackLiked(trackId);
-            setIsLiked(liked);
-          }
-        } catch (error) {
-          console.error("Error checking if track is liked:", error);
-        } finally {
-          setIsCheckingLike(false);
-        }
-      } else if (!trackId) {
-        setIsLiked(false);
-        currentTrackIdRef.current = null;
-      }
-    };
+    if (!likeTarget.reference) {
+      currentTrackIdRef.current = null;
+      setIsLiked(false);
+      setIsCheckingLike(false);
+      return;
+    }
 
-    checkCurrentTrackLiked();
-  }, [trackId, isCheckingLike, checkIsTrackLiked, isLocalMedia, isPhoneMedia]);
+    if (likeIdentity === currentTrackIdRef.current) return;
+    currentTrackIdRef.current = likeIdentity;
+    let cancelled = false;
+    setIsCheckingLike(true);
+    void checkCurrentItemLiked()
+      .then((liked) => {
+        if (!cancelled) setIsLiked(liked);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setIsLiked(false);
+          console.error("Error checking if track is liked:", error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsCheckingLike(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    checkCurrentItemLiked,
+    likeIdentity,
+    likeTarget.liked,
+    likeTarget.reference,
+    likeTarget.source,
+  ]);
 
   useEffect(() => {
     if (!isPhoneMedia && !isSmartphoneDevice) {
@@ -875,21 +898,37 @@ function NowPlaying({
   }, [isPhoneMedia, isSmartphoneDevice, trackId]);
 
   const handleToggleLike = useCallback(async () => {
-    if (!trackId || isCheckingLike) return;
+    if (
+      isCheckingLike ||
+      (likeTarget.source !== "phone_media" && !likeTarget.reference)
+    ) {
+      return;
+    }
 
+    const previousLiked = isLiked;
+    setIsLiked(!previousLiked);
+    setIsCheckingLike(true);
     try {
-      if (isLiked) {
-        setIsLiked(false);
-        await unlikeTrack(trackId);
-      } else {
-        setIsLiked(true);
-        await likeTrack(trackId);
+      const succeeded = previousLiked
+        ? await unlikeCurrentItem()
+        : await likeCurrentItem();
+      if (!succeeded) {
+        setIsLiked(previousLiked);
       }
     } catch (error) {
-      setIsLiked(!isLiked);
+      setIsLiked(previousLiked);
       console.error("Error toggling track like:", error);
+    } finally {
+      setIsCheckingLike(false);
     }
-  }, [trackId, isCheckingLike, isLiked, unlikeTrack, likeTrack]);
+  }, [
+    isCheckingLike,
+    isLiked,
+    likeCurrentItem,
+    likeTarget.reference,
+    likeTarget.source,
+    unlikeCurrentItem,
+  ]);
 
   const handleScrubbingChange = (scrubbing) => {
     setIsProgressScrubbing(scrubbing);

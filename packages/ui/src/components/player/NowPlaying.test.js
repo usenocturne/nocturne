@@ -27,9 +27,9 @@ describe("Now Playing leading control", () => {
     expect(getNowPlayingLeadingControl("track", false)).toBe("like");
   });
 
-  it("keeps podcast and phone-media controls unchanged", () => {
+  it("keeps podcast speed and shows the heart for phone media", () => {
     expect(getNowPlayingLeadingControl("episode", false)).toBe("speed");
-    expect(getNowPlayingLeadingControl("track", true)).toBe("spacer");
+    expect(getNowPlayingLeadingControl("track", true)).toBe("like");
   });
 });
 

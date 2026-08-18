@@ -19,6 +19,7 @@ import {
   mediaGenerationsCorrelate,
   normalizeImageUrl,
   normalizeMediaGeneration,
+  normalizePhoneMediaLikeState,
   normalizePhoneMediaTiming,
   normalizeSpotifyDeviceType,
   reconcilePlaybackDevice,
@@ -366,6 +367,23 @@ describe("phone media timing normalization", () => {
     );
 
     expect(youtubeId).not.toBe(musicId);
+  });
+});
+
+describe("phone media like-state normalization", () => {
+  it("normalizes canonical like capability and state", () => {
+    expect(
+      normalizePhoneMediaLikeState({
+        MediaItemLikeSupported: true,
+        MediaItemLiked: true,
+      }),
+    ).toEqual({ liked: true, likeSupported: true });
+  });
+
+  it("accepts companion camel case and resets missing liked state", () => {
+    expect(
+      normalizePhoneMediaLikeState({ mediaItemLikeSupported: false }),
+    ).toEqual({ liked: false, likeSupported: false });
   });
 });
 

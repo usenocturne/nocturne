@@ -87,9 +87,10 @@ export function useCarThingSpotifyIntegration(
   const skipToNext = playerControls?.skipToNext;
   const skipToPrevious = playerControls?.skipToPrevious;
   const toggleShuffle = playerControls?.toggleShuffle;
-  const likeTrack = playerControls?.likeTrack;
-  const unlikeTrack = playerControls?.unlikeTrack;
-  const checkIsTrackLiked = playerControls?.checkIsTrackLiked;
+  const likeTarget = playerControls?.likeTarget;
+  const likeCurrentItem = playerControls?.likeCurrentItem;
+  const unlikeCurrentItem = playerControls?.unlikeCurrentItem;
+  const checkCurrentItemLiked = playerControls?.checkCurrentItemLiked;
   const seekToPosition = playerControls?.seekToPosition;
   const setRepeatMode = playerControls?.setRepeatMode;
   const setVolume = playerControls?.setVolume;
@@ -115,6 +116,7 @@ export function useCarThingSpotifyIntegration(
   }, []);
 
   const lastCheckedTrackId = useRef(null);
+  const lastPhoneLikedState = useRef<boolean | null>(null);
   const likeCheckTimeoutRef = useRef(null);
   const lastTrackId = useRef(null);
   const lastSeekPositionRef = useRef(null);
@@ -426,19 +428,31 @@ export function useCarThingSpotifyIntegration(
       }
     }
 
-    if (
-      currentTrackId &&
-      currentTrackId !== lastCheckedTrackId.current &&
-      checkIsTrackLiked
+    const likeIdentity = likeTarget
+      ? `${likeTarget.source}:${likeTarget.reference || currentPlayback.item?.uri || currentTrackId}`
+      : null;
+    if (likeTarget?.source === "phone_media" && likeIdentity) {
+      const trackChanged = likeIdentity !== lastCheckedTrackId.current;
+      const stateChanged = likeTarget.liked !== lastPhoneLikedState.current;
+      lastCheckedTrackId.current = likeIdentity;
+      if (trackChanged || stateChanged) {
+        lastPhoneLikedState.current = likeTarget.liked;
+        npvStore.controlButtonsUiState.isSaved = likeTarget.liked;
+      }
+    } else if (
+      likeIdentity &&
+      likeIdentity !== lastCheckedTrackId.current &&
+      checkCurrentItemLiked
     ) {
-      lastCheckedTrackId.current = currentTrackId;
+      lastCheckedTrackId.current = likeIdentity;
+      lastPhoneLikedState.current = null;
 
       if (likeCheckTimeoutRef.current) {
         clearTimeout(likeCheckTimeoutRef.current);
       }
 
       likeCheckTimeoutRef.current = setTimeout(() => {
-        checkIsTrackLiked(currentTrackId)
+        checkCurrentItemLiked()
           .then((saved) => {
             runInAction(() => {
               npvStore.controlButtonsUiState.isSaved = saved;
@@ -459,7 +473,10 @@ export function useCarThingSpotifyIntegration(
     currentPlayback?.shuffle_state,
     carThingStores,
     getQueue,
-    checkIsTrackLiked,
+    checkCurrentItemLiked,
+    likeTarget?.liked,
+    likeTarget?.reference,
+    likeTarget?.source,
   ]);
 
   useEffect(() => {
@@ -600,22 +617,32 @@ export function useCarThingSpotifyIntegration(
 
     runInAction(() => {
       npvStore.controlButtonsUiState.handleLikeClick = async () => {
-        const currentTrackId = lastTrackId.current;
-        if (currentTrackId && likeTrack) {
-          await likeTrack(currentTrackId);
+        if (likeCurrentItem) {
+          const wasSaved = npvStore.controlButtonsUiState.isSaved;
           runInAction(() => {
             npvStore.controlButtonsUiState.isSaved = true;
           });
+          const succeeded = await likeCurrentItem();
+          if (!succeeded) {
+            runInAction(() => {
+              npvStore.controlButtonsUiState.isSaved = wasSaved;
+            });
+          }
         }
       };
 
       npvStore.controlButtonsUiState.handleUnlikeClick = async () => {
-        const currentTrackId = lastTrackId.current;
-        if (currentTrackId && unlikeTrack) {
-          await unlikeTrack(currentTrackId);
+        if (unlikeCurrentItem) {
+          const wasSaved = npvStore.controlButtonsUiState.isSaved;
           runInAction(() => {
             npvStore.controlButtonsUiState.isSaved = false;
           });
+          const succeeded = await unlikeCurrentItem();
+          if (!succeeded) {
+            runInAction(() => {
+              npvStore.controlButtonsUiState.isSaved = wasSaved;
+            });
+          }
         }
       };
     });
@@ -746,8 +773,8 @@ export function useCarThingSpotifyIntegration(
     skipToNext,
     skipToPrevious,
     toggleShuffle,
-    likeTrack,
-    unlikeTrack,
+    likeCurrentItem,
+    unlikeCurrentItem,
     currentPlayback,
   ]);
 

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { shouldUsePhoneHidControls } from "./useSpotifyPlayerControls";
+import {
+  getPlaybackLikeTarget,
+  shouldUsePhoneHidControls,
+} from "./useSpotifyPlayerControls";
 
 describe("offline Spotify phone controls", () => {
   const phonePlayback = {
@@ -35,5 +38,40 @@ describe("offline Spotify phone controls", () => {
         "SMARTPHONE",
       ),
     ).toBe(false);
+  });
+});
+
+describe("playback like targets", () => {
+  it("uses the complete Spotify local URI", () => {
+    const uri = "spotify:local:Artist:Album:Song:200";
+    expect(
+      getPlaybackLikeTarget({
+        item: { id: "Artist", uri },
+      }),
+    ).toEqual({ source: "spotify_local", reference: uri, liked: false });
+  });
+
+  it("routes phone media independently of Spotify IDs", () => {
+    expect(
+      getPlaybackLikeTarget({
+        item: {
+          id: "local-media-youtube-track",
+          is_phone_media: true,
+          is_liked: true,
+        },
+      }),
+    ).toEqual({
+      source: "phone_media",
+      reference: "local-media-youtube-track",
+      liked: true,
+    });
+  });
+
+  it("preserves canonical Spotify track IDs", () => {
+    expect(getPlaybackLikeTarget({ item: { id: "abc123" } })).toEqual({
+      source: "spotify",
+      reference: "abc123",
+      liked: false,
+    });
   });
 });

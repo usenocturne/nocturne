@@ -99,7 +99,10 @@ export interface SpotifyTrack {
   artists?: SpotifyArtist[];
   duration_ms?: number;
   is_playing?: boolean;
+  is_local?: boolean;
   is_phone_media?: boolean;
+  is_liked?: boolean;
+  like_supported?: boolean;
   phone_media_album_name?: string | null;
   linked_from?: { uri?: string; id?: string; [key: string]: unknown };
   [key: string]: unknown;
@@ -479,9 +482,17 @@ export interface PlayerControls {
   skipToNext?: () => Promise<void> | void;
   skipToPrevious?: () => Promise<void> | void;
   toggleShuffle?: (shuffle?: boolean) => Promise<void> | void;
-  likeTrack?: (trackId: string) => Promise<void> | void;
-  unlikeTrack?: (trackId: string) => Promise<void> | void;
+  likeTrack?: (trackId: string) => Promise<boolean>;
+  unlikeTrack?: (trackId: string) => Promise<boolean>;
   checkIsTrackLiked?: (trackId: string) => Promise<boolean>;
+  likeTarget?: {
+    source: "spotify" | "spotify_local" | "phone_media";
+    reference: string | null;
+    liked: boolean;
+  };
+  likeCurrentItem?: () => Promise<boolean>;
+  unlikeCurrentItem?: () => Promise<boolean>;
+  checkCurrentItemLiked?: () => Promise<boolean>;
   seekToPosition?: (positionMs: number) => Promise<void> | void;
   setRepeatMode?: (mode: string) => Promise<void> | void;
   setVolume?: (volumePercent: number) => Promise<void> | void;
