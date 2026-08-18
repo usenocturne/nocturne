@@ -19,6 +19,14 @@ enum class MediaControlEvent {
 }
 
 @Serializable
+object MediaControlLikeRequest
+
+@Serializable
+data class MediaControlLikeResponse(
+  @SerialName("status") val status: String,
+)
+
+@Serializable
 enum class MediaControlMethod {
   @SerialName("media_control_play")
   MEDIA_CONTROL_PLAY,
@@ -32,6 +40,10 @@ enum class MediaControlMethod {
   MEDIA_CONTROL_SHUFFLE,
   @SerialName("media_control_repeat")
   MEDIA_CONTROL_REPEAT,
+  @SerialName("media_control_like")
+  MEDIA_CONTROL_LIKE,
+  @SerialName("media_control_unlike")
+  MEDIA_CONTROL_UNLIKE,
   @SerialName("media_control_volume_up")
   MEDIA_CONTROL_VOLUME_UP,
   @SerialName("media_control_volume_down")
@@ -83,6 +95,14 @@ object MediaControlShuffleRequest
 
 @Serializable
 data class MediaControlShuffleResponse(
+  @SerialName("status") val status: String,
+)
+
+@Serializable
+object MediaControlUnlikeRequest
+
+@Serializable
+data class MediaControlUnlikeResponse(
   @SerialName("status") val status: String,
 )
 

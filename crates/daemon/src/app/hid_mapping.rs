@@ -12,6 +12,8 @@ pub fn method_to_hid_command(method: &str) -> Option<HidCommand> {
         }
         "media.control.shuffle" => Some(HidCommand::Pulse(report_bit::SHUFFLE)),
         "media.control.repeat" => Some(HidCommand::Pulse(report_bit::REPEAT)),
+        "media.control.like" => Some(HidCommand::Pulse(report_bit::PROMOTE)),
+        "media.control.unlike" => Some(HidCommand::Pulse(report_bit::DEMOTE)),
         "media.control.volumeUp" | "media.control.volume_up" => {
             Some(HidCommand::Pulse(report_bit::VOLUME_UP))
         }
@@ -19,5 +21,24 @@ pub fn method_to_hid_command(method: &str) -> Option<HidCommand> {
             Some(HidCommand::Pulse(report_bit::VOLUME_DOWN))
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_like_feedback_to_distinct_high_byte_hid_controls() {
+        assert_eq!(
+            method_to_hid_command("media.control.like"),
+            Some(HidCommand::Pulse(report_bit::PROMOTE))
+        );
+        assert_eq!(
+            method_to_hid_command("media.control.unlike"),
+            Some(HidCommand::Pulse(report_bit::DEMOTE))
+        );
+        assert_ne!(report_bit::PROMOTE, report_bit::SHUFFLE);
+        assert_ne!(report_bit::DEMOTE, report_bit::REPEAT);
     }
 }

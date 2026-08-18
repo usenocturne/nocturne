@@ -1,7 +1,7 @@
 //! Typed CSMs for the iAP2 HID surface.
 //!
 //! Bridgething uses HID over iAP2 as the **outbound transport** for media
-//! intents (play/pause/next/prev/volume/mute/shuffle/repeat) when the
+//! intents (play/pause/next/prev/volume/mute/shuffle/repeat/promote/demote) when the
 //! companion has not claimed `NowPlayingPlayback` authority - i.e. the iPhone
 //! is the sole playback driver. iOS treats Consumer Control page (`0x0C`)
 //! usages as system media keys and routes them to whichever app holds the
@@ -54,9 +54,9 @@ pub const VENDOR_ID: u16 = 0x1D6B;
 /// param is present and well-formed, not the value.
 pub const PRODUCT_ID: u16 = 0xB31D;
 
-/// USB-HID 1.11 descriptor for bridgething's outbound transport device.
-/// Six Consumer Control usages packed into a single byte with two bits
-/// of constant padding; no Report ID.
+/// USB-HID descriptor for bridgething's outbound transport device.
+/// Ten Consumer Control usages packed into two bytes with six bits of
+/// constant padding; no Report ID.
 ///
 /// | Bit  | Usage               | Code |
 /// | ---- | ------------------- | ---- |
@@ -66,7 +66,11 @@ pub const PRODUCT_ID: u16 = 0xB31D;
 /// | 0x08 | Volume Increment    | 0xE9 |
 /// | 0x10 | Volume Decrement    | 0xEA |
 /// | 0x20 | Mute                | 0xE2 |
-/// | 0x40..0x80 | constant padding (no actuation) |
+/// | 0x0040 | Random Play         | 0xB9 |
+/// | 0x0080 | Repeat              | 0xBC |
+/// | 0x0100 | Promote             | 0x025B |
+/// | 0x0200 | Demote              | 0x025C |
+/// | 0x0400..0x8000 | constant padding (no actuation) |
 pub const TRANSPORT_DESCRIPTOR: &[u8] = &[
     0x05, 0x0C, // Usage Page (Consumer)
     0x09, 0x01, // Usage (Consumer Control)
@@ -74,33 +78,37 @@ pub const TRANSPORT_DESCRIPTOR: &[u8] = &[
     0x15, 0x00, //   Logical Minimum (0)
     0x25, 0x01, //   Logical Maximum (1)
     0x75, 0x01, //   Report Size (1)
-    0x95, 0x06, //   Report Count (6)
+    0x95, 0x0A, //   Report Count (10)
     0x09, 0xCD, //   Usage (Play/Pause)
     0x09, 0xB5, //   Usage (Scan Next Track)
     0x09, 0xB6, //   Usage (Scan Previous Track)
     0x09, 0xE9, //   Usage (Volume Increment)
     0x09, 0xEA, //   Usage (Volume Decrement)
     0x09, 0xE2, //   Usage (Mute)
+    0x09, 0xB9, //   Usage (Random Play)
+    0x09, 0xBC, //   Usage (Repeat)
+    0x0A, 0x5B, 0x02, //   Usage (Promote)
+    0x0A, 0x5C, 0x02, //   Usage (Demote)
     0x81, 0x02, //   Input (Data,Var,Abs)
-    0x75, 0x02, //   Report Size (2)
+    0x75, 0x06, //   Report Size (6)
     0x95, 0x01, //   Report Count (1)
     0x81, 0x03, //   Input (Const,Var,Abs) - padding
     0xC0, // End Collection
 ];
 
-/// Bit positions inside the single-byte HID report payload, a bitmap of
+/// Bit positions inside the two-byte HID report payload, a bitmap of
 /// currently-held buttons. Multiple bits set in one report is legal.
 pub mod report_bit {
-    pub const PLAY_PAUSE: u8 = 0x01;
-    pub const NEXT: u8 = 0x02;
-    pub const PREV: u8 = 0x04;
-    pub const VOLUME_UP: u8 = 0x08;
-    pub const VOLUME_DOWN: u8 = 0x10;
-    pub const MUTE: u8 = 0x20;
-    /// Bits 0x40 / 0x80 fall inside the descriptor's 2-bit constant
-    /// padding field and never actuate on iOS regardless of mask value.
-    pub const SHUFFLE: u8 = 0x40;
-    pub const REPEAT: u8 = 0x80;
+    pub const PLAY_PAUSE: u16 = 0x0001;
+    pub const NEXT: u16 = 0x0002;
+    pub const PREV: u16 = 0x0004;
+    pub const VOLUME_UP: u16 = 0x0008;
+    pub const VOLUME_DOWN: u16 = 0x0010;
+    pub const MUTE: u16 = 0x0020;
+    pub const SHUFFLE: u16 = 0x0040;
+    pub const REPEAT: u16 = 0x0080;
+    pub const PROMOTE: u16 = 0x0100;
+    pub const DEMOTE: u16 = 0x0200;
 }
 
 /// `0x6800` accessory -> iPhone. Declares a virtual HID device; later
@@ -124,7 +132,7 @@ pub struct StartHID {
 
 /// `0x6802` accessory -> iPhone. One report per state change. The first
 /// byte of `report` must be the Report ID byte declared in the descriptor;
-/// the remaining bytes are the report payload (one byte for the transport
+/// the remaining bytes are the report payload (two bytes for the transport
 /// descriptor).
 #[derive(Csm, Debug, Clone, PartialEq, Eq)]
 #[csm(id = 0x6802)]
@@ -173,24 +181,13 @@ pub struct HIDComponentUpdate {
 }
 
 /// Build an [`AccessoryHIDReport`] for the iap2-rs transport
-/// component. Payload is the single byte `[mask]`, any combination of
+/// component. Payload is the little-endian two-byte mask, any combination of
 /// [`report_bit`] flags; the all-zero mask is a release frame. No
 /// leading Report ID byte (the descriptor declares none).
-pub fn transport_report(mask: u8) -> AccessoryHIDReport {
+pub fn transport_report(mask: u16) -> AccessoryHIDReport {
     AccessoryHIDReport {
         component_id: TRANSPORT_COMPONENT_ID,
-        report: match mask {
-            0x00 => Bytes::from_static(&[0x00]),
-            0x01 => Bytes::from_static(&[0x01]),
-            0x02 => Bytes::from_static(&[0x02]),
-            0x04 => Bytes::from_static(&[0x04]),
-            0x08 => Bytes::from_static(&[0x08]),
-            0x10 => Bytes::from_static(&[0x10]),
-            0x20 => Bytes::from_static(&[0x20]),
-            0x40 => Bytes::from_static(&[0x40]),
-            0x80 => Bytes::from_static(&[0x80]),
-            _ => Bytes::copy_from_slice(&[mask]),
-        },
+        report: Bytes::copy_from_slice(&mask.to_le_bytes()),
     }
 }
 
@@ -219,7 +216,7 @@ mod tests {
         assert_eq!(frame.msg_id, 0x6802);
         let decoded: AccessoryHIDReport = frame.try_into().expect("decode");
         assert_eq!(decoded, original);
-        assert_eq!(decoded.report.as_ref(), &[0x01]);
+        assert_eq!(decoded.report.as_ref(), &[0x01, 0x00]);
     }
 
     #[test]
@@ -236,7 +233,19 @@ mod tests {
     #[test]
     fn release_frame_is_zero_mask() {
         let release = transport_report(0);
-        assert_eq!(release.report.as_ref(), &[0x00]);
+        assert_eq!(release.report.as_ref(), &[0x00, 0x00]);
+    }
+
+    #[test]
+    fn high_byte_controls_encode_in_the_second_report_byte() {
+        assert_eq!(
+            transport_report(report_bit::PROMOTE).report.as_ref(),
+            &[0x00, 0x01]
+        );
+        assert_eq!(
+            transport_report(report_bit::DEMOTE).report.as_ref(),
+            &[0x00, 0x02]
+        );
     }
 
     #[test]

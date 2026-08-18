@@ -10,6 +10,24 @@ public enum MediaControlEvent: Codable, Sendable {
   case phoneVolumeUpdate(PhoneVolumeUpdateEvent)
 }
 
+public struct MediaControlLikeRequest: Codable, Sendable {
+  public init() {}
+}
+
+public struct MediaControlLikeResponse: Codable, Sendable {
+  public let status: String
+
+  public init(
+    status: String
+  ) {
+    self.status = status
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case status = "status"
+  }
+}
+
 public enum MediaControlMethod: Codable, Sendable {
   case mediaControlPlay(MediaControlPlayRequest)
   case mediaControlPause(MediaControlPauseRequest)
@@ -17,6 +35,8 @@ public enum MediaControlMethod: Codable, Sendable {
   case mediaControlPrevious(MediaControlPreviousRequest)
   case mediaControlShuffle(MediaControlShuffleRequest)
   case mediaControlRepeat(MediaControlRepeatRequest)
+  case mediaControlLike(MediaControlLikeRequest)
+  case mediaControlUnlike(MediaControlUnlikeRequest)
   case mediaControlVolumeUp(MediaControlVolumeUpRequest)
   case mediaControlVolumeDown(MediaControlVolumeDownRequest)
 }
@@ -116,6 +136,24 @@ public struct MediaControlShuffleRequest: Codable, Sendable {
 }
 
 public struct MediaControlShuffleResponse: Codable, Sendable {
+  public let status: String
+
+  public init(
+    status: String
+  ) {
+    self.status = status
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case status = "status"
+  }
+}
+
+public struct MediaControlUnlikeRequest: Codable, Sendable {
+  public init() {}
+}
+
+public struct MediaControlUnlikeResponse: Codable, Sendable {
   public let status: String
 
   public init(

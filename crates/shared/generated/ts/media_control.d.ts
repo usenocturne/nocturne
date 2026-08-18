@@ -15,6 +15,56 @@ export type MediaControlEvent =
 ;
 
 /**
+ * Request envelope for `media.control.like` in the `media_control` method union.
+ * Inventory: `METHOD_INVENTORY` entry `media.control.like`.
+ */
+export interface MediaControlLikeMethodMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "media.control.like";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: MediaControlLikeRequest;
+}
+
+/**
+ * Response envelope for `media.control.like` in the `media_control` method response union.
+ * Inventory: `METHOD_INVENTORY` entry `media.control.like`.
+ */
+export interface MediaControlLikeMethodResponseMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "media.control.like";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: MediaControlLikeResponse;
+}
+
+/**
+ * Request payload for `media.control.like`.
+ * No payload.
+ * Inventory: `METHOD_INVENTORY` entry `media.control.like` request.
+ */
+export interface MediaControlLikeRequest {
+}
+
+/**
+ * Response payload for `media.control.like`.
+ * Simple status response.
+ * Inventory: `METHOD_INVENTORY` entry `media.control.like` response.
+ */
+export interface MediaControlLikeResponse {
+  /**
+   * Operation status string. Inventory field `status` emits as `status`.
+   */
+  status: string;
+}
+
+/**
  * Discriminated method-request union for the `media_control` inventory family.
  * Inventory: `METHOD_INVENTORY` entries grouped by `Family`.
  */
@@ -25,6 +75,8 @@ export type MediaControlMethod =
   | MediaControlPreviousMethodMessage
   | MediaControlShuffleMethodMessage
   | MediaControlRepeatMethodMessage
+  | MediaControlLikeMethodMessage
+  | MediaControlUnlikeMethodMessage
   | MediaControlVolumeUpMethodMessage
   | MediaControlVolumeDownMethodMessage
 ;
@@ -40,6 +92,8 @@ export type MediaControlMethodResponse =
   | MediaControlPreviousMethodResponseMessage
   | MediaControlShuffleMethodResponseMessage
   | MediaControlRepeatMethodResponseMessage
+  | MediaControlLikeMethodResponseMessage
+  | MediaControlUnlikeMethodResponseMessage
   | MediaControlVolumeUpMethodResponseMessage
   | MediaControlVolumeDownMethodResponseMessage
 ;
@@ -338,6 +392,56 @@ export interface MediaControlShuffleRequest {
  * Inventory: `METHOD_INVENTORY` entry `media.control.shuffle` response.
  */
 export interface MediaControlShuffleResponse {
+  /**
+   * Operation status string. Inventory field `status` emits as `status`.
+   */
+  status: string;
+}
+
+/**
+ * Request envelope for `media.control.unlike` in the `media_control` method union.
+ * Inventory: `METHOD_INVENTORY` entry `media.control.unlike`.
+ */
+export interface MediaControlUnlikeMethodMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "media.control.unlike";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: MediaControlUnlikeRequest;
+}
+
+/**
+ * Response envelope for `media.control.unlike` in the `media_control` method response union.
+ * Inventory: `METHOD_INVENTORY` entry `media.control.unlike`.
+ */
+export interface MediaControlUnlikeMethodResponseMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "media.control.unlike";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: MediaControlUnlikeResponse;
+}
+
+/**
+ * Request payload for `media.control.unlike`.
+ * No payload.
+ * Inventory: `METHOD_INVENTORY` entry `media.control.unlike` request.
+ */
+export interface MediaControlUnlikeRequest {
+}
+
+/**
+ * Response payload for `media.control.unlike`.
+ * Simple status response.
+ * Inventory: `METHOD_INVENTORY` entry `media.control.unlike` response.
+ */
+export interface MediaControlUnlikeResponse {
   /**
    * Operation status string. Inventory field `status` emits as `status`.
    */

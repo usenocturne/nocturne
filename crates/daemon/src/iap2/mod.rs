@@ -24,10 +24,10 @@ use libnocturne::generated::bt_only::{AudioRecordingStartedEvent, AudioRecording
 use libnocturne::generated::device::{DeviceLaunchAppRequest, DeviceLaunchAppResponse};
 use libnocturne::generated::iap2 as nocturne_iap2;
 use libnocturne::generated::media_control::{
-    MediaControlNextResponse, MediaControlPauseResponse, MediaControlPlayResponse,
-    MediaControlPreviousResponse, MediaControlRepeatResponse, MediaControlShuffleResponse,
-    MediaControlVolumeDownResponse, MediaControlVolumeUpResponse, MediaNowPlayingArtworkEvent,
-    MediaNowPlayingUpdateEvent,
+    MediaControlLikeResponse, MediaControlNextResponse, MediaControlPauseResponse,
+    MediaControlPlayResponse, MediaControlPreviousResponse, MediaControlRepeatResponse,
+    MediaControlShuffleResponse, MediaControlUnlikeResponse, MediaControlVolumeDownResponse,
+    MediaControlVolumeUpResponse, MediaNowPlayingArtworkEvent, MediaNowPlayingUpdateEvent,
 };
 use libnocturne::generated::phone::{
     PhoneCallAcceptResponse, PhoneCallDeclineResponse, PhoneCallsGetResponse,
@@ -75,6 +75,8 @@ struct NowPlayingState {
     artist: Option<String>,
     album: Option<String>,
     duration_ms: Option<u64>,
+    like_supported: Option<bool>,
+    liked: Option<bool>,
     status: Option<String>,
     elapsed_ms: Option<u64>,
     playback_rate: Option<f64>,
@@ -111,6 +113,14 @@ impl NowPlayingState {
         if let Some(duration) = self.duration_ms {
             media_json["MediaItemPlaybackDurationInMilliseconds"] = serde_json::json!(duration);
             media_json["MediaItemDuration"] = serde_json::json!(duration);
+            has_media = true;
+        }
+        if let Some(like_supported) = self.like_supported {
+            media_json["MediaItemLikeSupported"] = serde_json::json!(like_supported);
+            has_media = true;
+        }
+        if let Some(liked) = self.liked {
+            media_json["MediaItemLiked"] = serde_json::json!(liked);
             has_media = true;
         }
         if has_media {
@@ -195,6 +205,8 @@ impl NowPlayingState {
             self.artist = None;
             self.album = None;
             self.duration_ms = None;
+            self.like_supported = None;
+            self.liked = None;
             self.elapsed_ms = None;
         }
 
@@ -213,6 +225,12 @@ impl NowPlayingState {
             }
             if let Some(duration) = media.duration_ms {
                 self.duration_ms = Some(u64::from(duration));
+            }
+            if let Some(like_supported) = media.like_supported {
+                self.like_supported = Some(like_supported);
+            }
+            if let Some(liked) = media.liked {
+                self.liked = Some(liked);
             }
         }
 
@@ -1321,6 +1339,10 @@ fn media_control_response_payload(method: &str) -> Option<serde_json::Value> {
         "media.control.repeat" => {
             Some(media_control_payload(MediaControlRepeatResponse { status }))
         }
+        "media.control.like" => Some(media_control_payload(MediaControlLikeResponse { status })),
+        "media.control.unlike" => {
+            Some(media_control_payload(MediaControlUnlikeResponse { status }))
+        }
         "media.control.volumeUp" | "media.control.volume_up" => {
             Some(media_control_payload(MediaControlVolumeUpResponse {
                 status,
@@ -1388,6 +1410,34 @@ mod tests {
         );
         assert_eq!(event["playback_attributes"]["PlaybackRate"], 1.25);
         assert_eq!(event["playback_attributes"]["PlaybackStatus"], "playing");
+    }
+
+    #[test]
+    fn now_playing_state_emits_and_resets_like_metadata() {
+        let mut state = NowPlayingState::default();
+        let mut first = media_update(1, "Liked", 180_000, 42_500, PlaybackState::Playing, 100);
+        let first_media = first.media_item.as_mut().expect("media item");
+        first_media.like_supported = Some(true);
+        first_media.liked = Some(true);
+        state.apply_update(first);
+
+        let event = media_control_payload(state.to_event());
+        assert_eq!(
+            event["media_item_attributes"]["MediaItemLikeSupported"],
+            true
+        );
+        assert_eq!(event["media_item_attributes"]["MediaItemLiked"], true);
+
+        state.apply_update(NowPlayingUpdate {
+            media_item: Some(MediaItemAttributes {
+                persistent_id: Some(2),
+                title: Some("Next".to_string()),
+                ..Default::default()
+            }),
+            playback: None,
+        });
+        assert_eq!(state.like_supported, None);
+        assert_eq!(state.liked, None);
     }
 
     #[test]

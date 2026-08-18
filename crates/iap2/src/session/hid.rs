@@ -43,9 +43,9 @@ const INTER_TAP_DELAY: Duration = Duration::from_millis(60);
 pub enum HidCommand {
     /// Single press+release pulse with `mask` held during the press frame. `mask` is any combination
     /// of [`super::super::csm::hid::report_bit`] flags; the all-zero mask is a no-op.
-    Pulse(u8),
+    Pulse(u16),
     /// `count` sequential pulses of `mask`, separated by [`INTER_TAP_DELAY`].
-    Sequence { mask: u8, count: u8 },
+    Sequence { mask: u16, count: u8 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -184,7 +184,7 @@ impl HidFlow {
 
     async fn send_pulse(
         &self,
-        mask: u8,
+        mask: u16,
         link_command_tx: &mpsc::Sender<Iap2Command>,
     ) -> Result<()> {
         tracing::trace!(mask, "iap2 hid: pulse");

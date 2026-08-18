@@ -13,6 +13,14 @@ pub enum MediaControlEvent {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct MediaControlLikeRequest;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct MediaControlLikeResponse {
+    pub status: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "method", content = "data")]
 pub enum MediaControlMethod {
     MediaControlPlay(MediaControlPlayRequest),
@@ -21,6 +29,8 @@ pub enum MediaControlMethod {
     MediaControlPrevious(MediaControlPreviousRequest),
     MediaControlShuffle(MediaControlShuffleRequest),
     MediaControlRepeat(MediaControlRepeatRequest),
+    MediaControlLike(MediaControlLikeRequest),
+    MediaControlUnlike(MediaControlUnlikeRequest),
     MediaControlVolumeUp(MediaControlVolumeUpRequest),
     MediaControlVolumeDown(MediaControlVolumeDownRequest),
 }
@@ -70,6 +80,14 @@ pub struct MediaControlShuffleRequest;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct MediaControlShuffleResponse {
+    pub status: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct MediaControlUnlikeRequest;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct MediaControlUnlikeResponse {
     pub status: String,
 }
 

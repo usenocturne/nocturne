@@ -58,6 +58,7 @@ pub const MEDIA_ITEM_SUBSCRIBE: &[u16] = &[
     MEDIA_ITEM_ALBUM_TRACK_COUNT,
     MEDIA_ITEM_ARTIST,
     MEDIA_ITEM_ALBUM_ARTIST,
+    MEDIA_ITEM_LIKE_SUPPORTED,
     MEDIA_ITEM_LIKED,
     MEDIA_ITEM_ARTWORK_ID,
 ];
@@ -897,6 +898,12 @@ mod tests {
                 .any(|parameter| parameter.id == PLAYBACK_POSITION_MS),
             "standard Now Playing subscription must request elapsed position"
         );
+    }
+
+    #[test]
+    fn media_subscription_requests_like_capability_and_state() {
+        assert!(MEDIA_ITEM_SUBSCRIBE.contains(&MEDIA_ITEM_LIKE_SUPPORTED));
+        assert!(MEDIA_ITEM_SUBSCRIBE.contains(&MEDIA_ITEM_LIKED));
     }
 
     #[test]

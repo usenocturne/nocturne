@@ -21,10 +21,11 @@ use libnocturne::generated::device::{
     SubscriptionUpdatedEvent,
 };
 use libnocturne::generated::media_control::{
-    MediaControlNextResponse, MediaControlPauseResponse, MediaControlPlayResponse,
-    MediaControlPreviousResponse, MediaControlRepeatResponse, MediaControlShuffleResponse,
-    MediaControlVolumeDownResponse, MediaControlVolumeUpResponse, MediaNowPlayingArtworkEvent,
-    MediaNowPlayingArtworkFailedEvent, MediaNowPlayingUpdateEvent, PhoneVolumeUpdateEvent,
+    MediaControlLikeResponse, MediaControlNextResponse, MediaControlPauseResponse,
+    MediaControlPlayResponse, MediaControlPreviousResponse, MediaControlRepeatResponse,
+    MediaControlShuffleResponse, MediaControlUnlikeResponse, MediaControlVolumeDownResponse,
+    MediaControlVolumeUpResponse, MediaNowPlayingArtworkEvent, MediaNowPlayingArtworkFailedEvent,
+    MediaNowPlayingUpdateEvent, PhoneVolumeUpdateEvent,
 };
 use libnocturne::generated::voice::{
     AiResponseEvent, AiStateEvent, AiToolExecutedEvent, VoiceTranscriptionEvent,
@@ -421,6 +422,10 @@ fn media_control_response_payload(method: &str) -> Option<serde_json::Value> {
         "media.control.repeat" => {
             Some(media_control_payload(MediaControlRepeatResponse { status }))
         }
+        "media.control.like" => Some(media_control_payload(MediaControlLikeResponse { status })),
+        "media.control.unlike" => {
+            Some(media_control_payload(MediaControlUnlikeResponse { status }))
+        }
         "media.control.volumeUp" | "media.control.volume_up" => {
             Some(media_control_payload(MediaControlVolumeUpResponse {
                 status,
@@ -451,17 +456,18 @@ fn normalize_media_control_event(
 ) -> (String, serde_json::Value) {
     match topic.as_str() {
         "media.nowPlaying.update" | "media.now_playing.update" => {
+            let playback_attributes = data
+                .get("playback_attributes")
+                .or_else(|| data.get("playbackAttributes"))
+                .or_else(|| data.get("PlaybackAttributes"))
+                .cloned();
             let event = MediaNowPlayingUpdateEvent {
                 media_item_attributes: data
                     .get("media_item_attributes")
                     .or_else(|| data.get("mediaItemAttributes"))
                     .or_else(|| data.get("MediaItemAttributes"))
                     .cloned(),
-                playback_attributes: data
-                    .get("playback_attributes")
-                    .or_else(|| data.get("playbackAttributes"))
-                    .or_else(|| data.get("PlaybackAttributes"))
-                    .cloned(),
+                playback_attributes,
                 media_generation: media_generation(&data),
             };
             (
@@ -2559,7 +2565,8 @@ mod tests {
                 "PlaybackAttributes": {
                     "PlaybackStatus": "playing",
                     "PlaybackElapsedTimeInMilliseconds": 42_500,
-                    "PlaybackRate": 1.25
+                    "PlaybackRate": 1.25,
+                    "PlaybackAppName": "YouTube Music"
                 },
                 "mediaGeneration": 7,
             }),
@@ -2572,6 +2579,10 @@ mod tests {
             42_500
         );
         assert_eq!(update["playback_attributes"]["PlaybackRate"], 1.25);
+        assert_eq!(
+            update["playback_attributes"]["PlaybackAppName"],
+            "YouTube Music"
+        );
 
         let (topic, artwork) = normalize_media_control_event(
             "media.now_playing.artwork".to_string(),
@@ -2592,7 +2603,9 @@ mod tests {
             "media.nowPlaying.update".to_string(),
             serde_json::json!({
                 "mediaItemAttributes": { "MediaItemTitle": "Legacy" },
-                "playbackAttributes": { "PlaybackStatus": "paused" },
+                "playbackAttributes": {
+                    "PlaybackStatus": "paused"
+                },
             }),
         );
         assert!(update.get("media_generation").is_none());

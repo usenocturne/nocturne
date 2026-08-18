@@ -1063,7 +1063,7 @@ export interface SpotifyMeTracksContainsMethodResponseMessage {
  */
 export interface SpotifyMeTracksContainsRequest {
   /**
-   * Spotify track ids. Inventory field `ids` emits as `ids`.
+   * Spotify track ids or complete spotify:local: URIs. Inventory field `ids` emits as `ids`.
    */
   ids: string[];
 }
@@ -1143,7 +1143,7 @@ export interface SpotifyMeTracksRemoveMethodResponseMessage {
  */
 export interface SpotifyMeTracksRemoveRequest {
   /**
-   * Spotify track ids. Inventory field `ids` emits as `ids`.
+   * Spotify track ids or complete spotify:local: URIs. Inventory field `ids` emits as `ids`.
    */
   ids: string[];
 }
@@ -1217,7 +1217,7 @@ export interface SpotifyMeTracksSaveMethodResponseMessage {
  */
 export interface SpotifyMeTracksSaveRequest {
   /**
-   * Spotify track ids. Inventory field `ids` emits as `ids`.
+   * Spotify track ids or complete spotify:local: URIs. Inventory field `ids` emits as `ids`.
    */
   ids: string[];
 }
