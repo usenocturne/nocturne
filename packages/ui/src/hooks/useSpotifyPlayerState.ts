@@ -480,6 +480,44 @@ export const reconcilePolledPlaybackTiming = (
   };
 };
 
+export const reconcileSpotifyLocalMediaTiming = (
+  previousPlayback: SpotifyPlayback,
+  incomingIsPlaying: boolean,
+  nowMs = Date.now(),
+): Pick<SpotifyPlayback, "is_playing" | "progress_ms" | "timestamp"> => {
+  const previousIsPlaying = previousPlayback.is_playing === true;
+  const previousProgress = finiteNumber(previousPlayback.progress_ms);
+  const previousTimestamp = finiteNumber(previousPlayback.timestamp);
+
+  if (
+    previousIsPlaying === incomingIsPlaying ||
+    previousProgress === null ||
+    previousTimestamp === null
+  ) {
+    return {
+      is_playing: incomingIsPlaying,
+      progress_ms: previousPlayback.progress_ms,
+      timestamp: previousPlayback.timestamp,
+    };
+  }
+
+  const playbackRate = finiteNumber(previousPlayback.playback_speed) ?? 1;
+  const elapsed = previousIsPlaying
+    ? Math.max(0, nowMs - previousTimestamp) * playbackRate
+    : 0;
+  const durationMs = finiteNumber(previousPlayback.item?.duration_ms);
+  const progressMs =
+    durationMs !== null && durationMs > 0
+      ? Math.min(previousProgress + elapsed, durationMs)
+      : previousProgress + elapsed;
+
+  return {
+    is_playing: incomingIsPlaying,
+    progress_ms: progressMs,
+    timestamp: nowMs,
+  };
+};
+
 export const getPushedArtworkTargetUri = (
   item: SpotifyTrack | null | undefined,
   pendingTitle: string | null = null,
@@ -1792,6 +1830,9 @@ export function useSpotifyPlayerState() {
               spotifyFallbackTimeout = null;
             }
 
+            const incomingIsPlaying = playback.PlaybackStatus === "playing";
+            const mediaUpdateTimestamp = Date.now();
+
             setCurrentPlayback((prevPlayback) => {
               if (!prevPlayback?.item) return prevPlayback;
               const artistName = media.MediaItemArtist?.trim();
@@ -1800,10 +1841,14 @@ export function useSpotifyPlayerState() {
               const durationMs =
                 media.MediaItemDuration ||
                 media.MediaItemPlaybackDurationInMilliseconds;
+              const timing = reconcileSpotifyLocalMediaTiming(
+                prevPlayback,
+                incomingIsPlaying,
+                mediaUpdateTimestamp,
+              );
               const updatedPlayback = {
                 ...prevPlayback,
-                is_playing: playback.PlaybackStatus === "playing",
-                timestamp: Date.now(),
+                ...timing,
                 item: {
                   ...prevPlayback.item,
                   ...(artistName && !hasNamedArtist

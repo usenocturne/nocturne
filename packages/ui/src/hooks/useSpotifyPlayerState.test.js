@@ -25,6 +25,7 @@ import {
   reconcilePlaybackDevice,
   reconcilePlaybackItem,
   reconcilePolledPlaybackTiming,
+  reconcileSpotifyLocalMediaTiming,
   replaceDiscardedPendingArtwork,
   shouldClearDisplayedMediaForEmptyUpdate,
   shouldIgnoreInactiveForeignMedia,
@@ -246,6 +247,63 @@ describe("Spotify phone media source precedence", () => {
     expect(reconcilePolledPlaybackTiming(changed, nearEnd, 102_000)).toBe(
       changed,
     );
+  });
+
+  it("does not refresh a stale local-file anchor from same-track iAP2 metadata", () => {
+    const localPlayback = {
+      is_playing: true,
+      progress_ms: 13_000,
+      timestamp: 100_000,
+      playback_speed: 1,
+      item: {
+        uri: "spotify:local:Artist:Album:Track:180",
+        name: "Track",
+        duration_ms: 180_000,
+        is_local: true,
+      },
+    };
+
+    expect(
+      reconcileSpotifyLocalMediaTiming(localPlayback, true, 107_000),
+    ).toEqual({
+      is_playing: true,
+      progress_ms: 13_000,
+      timestamp: 100_000,
+    });
+  });
+
+  it("reanchors local-file timing at the live position when playback changes", () => {
+    const playing = {
+      is_playing: true,
+      progress_ms: 13_000,
+      timestamp: 100_000,
+      playback_speed: 1,
+      item: {
+        uri: "spotify:local:Artist:Album:Track:180",
+        name: "Track",
+        duration_ms: 180_000,
+        is_local: true,
+      },
+    };
+
+    const paused = reconcileSpotifyLocalMediaTiming(playing, false, 107_000);
+    expect(paused).toEqual({
+      is_playing: false,
+      progress_ms: 20_000,
+      timestamp: 107_000,
+    });
+
+    expect(
+      reconcileSpotifyLocalMediaTiming(
+        { ...playing, ...paused },
+        true,
+        110_000,
+      ),
+    ).toEqual({
+      is_playing: true,
+      progress_ms: 20_000,
+      timestamp: 110_000,
+    });
   });
 
   it("binds pushed Spotify artwork to its active smartphone device", () => {
