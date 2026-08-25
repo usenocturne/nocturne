@@ -8,7 +8,7 @@ export default {
           "var(--font-inter)",
           "var(--font-noto-sans-sc)",
           "var(--font-noto-sans-tc)",
-          "var(--font-noto-serif-jp)",
+          "var(--font-noto-sans-jp)",
           "var(--font-noto-sans-kr)",
           "var(--font-noto-naskh-ar)",
           "var(--font-noto-sans-bn)",

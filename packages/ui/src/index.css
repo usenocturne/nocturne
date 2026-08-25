@@ -6,8 +6,8 @@
   --font-inter: Inter, sans-serif;
   --font-noto-sans-sc: "Noto Sans SC", sans-serif;
   --font-noto-sans-tc: "Noto Sans TC", sans-serif;
-  --font-noto-serif-jp: "Noto Serif JP", serif;
-  --font-noto-sans-kr: "Noto Serif KR", serif;
+  --font-noto-sans-jp: "Noto Sans JP", sans-serif;
+  --font-noto-sans-kr: "Noto Sans KR", sans-serif;
   --font-noto-naskh-ar: "Noto Naskh Arabic", serif;
   --font-noto-sans-bn: "Noto Sans Bengali", sans-serif;
   --font-noto-sans-dv: "Noto Sans Devanagari", sans-serif;
@@ -23,7 +23,7 @@ body {
     var(--font-inter),
     var(--font-noto-sans-sc),
     var(--font-noto-sans-tc),
-    var(--font-noto-serif-jp),
+    var(--font-noto-sans-jp),
     var(--font-noto-sans-kr),
     var(--font-noto-naskh-ar),
     var(--font-noto-sans-bn),
@@ -45,7 +45,7 @@ body {
 .nocturne-font-stack {
   font-family:
     var(--font-inter), var(--font-noto-sans-sc), var(--font-noto-sans-tc),
-    var(--font-noto-serif-jp), var(--font-noto-sans-kr),
+    var(--font-noto-sans-jp), var(--font-noto-sans-kr),
     var(--font-noto-naskh-ar), var(--font-noto-sans-bn),
     var(--font-noto-sans-dv), var(--font-noto-sans-he),
     var(--font-noto-sans-ta), var(--font-noto-sans-th),

@@ -29,8 +29,8 @@ SRC_URI = " \
     file://NotoSansTA-VF.ttf \
     file://NotoSansTC-VF.ttf \
     file://NotoSansTH-VF.ttf \
-    file://NotoSerifJP-VF.ttf \
-    file://NotoSerifKR-VF.ttf \
+    file://NotoSansJP-VF.ttf \
+    file://NotoSansKR-VF.ttf \
     file://05-nocturne-ro-cachedir.conf \
     file://75-nocturne-circular.conf \
 "
