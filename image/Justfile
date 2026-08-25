@@ -196,18 +196,20 @@ shell target=default:
   fi
 
 # macOS only: mirror deploy artifacts (images, .swu, flashthing zips) out of the
-# build volume onto the Mac disk at build_dir/tmp/deploy, where `just flash`
-# looks. Plain file copies (no flock), so virtiofs handles them fine. Run
-# automatically by `just build`; also useful standalone.
+# build volume, then remove source tree so Docker volume does not retain a second copy.
 [macos]
 pull-deploy:
   #!/usr/bin/env bash
   set -euo pipefail
   mkdir -p "{{build_dir}}/tmp/deploy"
   docker run --rm -v {{build_vol}}:/build -v "{{build_dir}}/tmp/deploy":/out alpine sh -c '
-    if [ ! -d /build/build/tmp/deploy ]; then echo "no deploy dir in volume {{build_vol}} yet"; exit 0; fi
+    set -eu
+    deploy=/build/build/tmp/deploy
+    if [ ! -d "$deploy" ]; then echo "no deploy dir in volume {{build_vol}} yet"; exit 0; fi
+    if [ -z "$(find "$deploy" -mindepth 1 -print -quit)" ]; then echo "no deploy artifacts in volume {{build_vol}}"; exit 0; fi
     apk add --no-cache rsync >/dev/null 2>&1
-    rsync -a --delete /build/build/tmp/deploy/ /out/
+    rsync -a --delete "$deploy"/ /out/
+    rm -rf "$deploy"
     echo "mirrored $(find /out -type f | wc -l | tr -d " ") files"'
   echo "deploy artifacts on disk at {{build_dir}}/tmp/deploy"
 
