@@ -195,8 +195,9 @@ shell target=default:
     kas-container shell "kas/{{target}}.yml"
   fi
 
-# macOS only: mirror deploy artifacts (images, .swu, flashthing zips) out of the
-# build volume, then remove source tree so Docker volume does not retain a second copy.
+# macOS only: mirror deploy artifacts out of the build volume, then remove only
+# the images directory. The IPK feed and other deploy metadata stay in Docker
+# so BitBake can continue incremental builds.
 [macos]
 pull-deploy:
   #!/usr/bin/env bash
@@ -209,8 +210,12 @@ pull-deploy:
     if [ -z "$(find "$deploy" -mindepth 1 -print -quit)" ]; then echo "no deploy artifacts in volume {{build_vol}}"; exit 0; fi
     apk add --no-cache rsync >/dev/null 2>&1
     rsync -a --delete "$deploy"/ /out/
-    rm -rf "$deploy"
-    echo "mirrored $(find /out -type f | wc -l | tr -d " ") files"'
+    rm -rf "$deploy/images"
+    echo "mirrored $(find /out -type f | wc -l | tr -d " ") files and removed deploy images"'
+  runtime_args="{{macos_runtime_args}} -v {{monorepo_dir}}:{{monorepo_mount}}"
+  kas-container --runtime-args "$runtime_args" --repo-ro shell -c \
+    'bitbake -c clean nocturne-dev-image nocturne-prod-image' \
+    kas/nocturne-local.yml
   echo "deploy artifacts on disk at {{build_dir}}/tmp/deploy"
 
 # macOS only: lift the freshly-built nocturned binary out of the build volume
