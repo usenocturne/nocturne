@@ -195,8 +195,8 @@ shell target=default:
     kas-container shell "kas/{{target}}.yml"
   fi
 
-# macOS only: mirror deploy artifacts out of the build volume, then remove only
-# the images directory. The IPK feed and other deploy metadata stay in Docker
+# macOS only: mirror deploy artifacts out of the build volume, then prune only
+# disposable final outputs. The IPK feed and image-input artifacts stay in Docker
 # so BitBake can continue incremental builds.
 [macos]
 pull-deploy:
@@ -210,8 +210,17 @@ pull-deploy:
     if [ -z "$(find "$deploy" -mindepth 1 -print -quit)" ]; then echo "no deploy artifacts in volume {{build_vol}}"; exit 0; fi
     apk add --no-cache rsync >/dev/null 2>&1
     rsync -a --delete "$deploy"/ /out/
-    rm -rf "$deploy/images"
-    echo "mirrored $(find /out -type f | wc -l | tr -d " ") files and removed deploy images"'
+    find "$deploy" -type f \( \
+      -name "*.wic" -o \
+      -name "*.wic.*" -o \
+      -name "*.ext4" -o \
+      -name "*.squashfs" -o \
+      -name "*.swu" -o \
+      -iname "*flashthing*.zip" -o \
+      -name "*.manifest" -o \
+      -name "*.testdata.json" \
+    \) -delete
+    echo "mirrored $(find /out -type f | wc -l | tr -d " ") files and pruned disposable image outputs"'
   runtime_args="{{macos_runtime_args}} -v {{monorepo_dir}}:{{monorepo_mount}}"
   kas-container --runtime-args "$runtime_args" --repo-ro shell -c \
     'bitbake -c clean nocturne-dev-image nocturne-prod-image' \
