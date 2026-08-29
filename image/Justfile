@@ -223,7 +223,7 @@ pull-deploy:
     echo "mirrored $(find /out -type f | wc -l | tr -d " ") files and pruned disposable image outputs"'
   runtime_args="{{macos_runtime_args}} -v {{monorepo_dir}}:{{monorepo_mount}}"
   kas-container --runtime-args "$runtime_args" --repo-ro shell -c \
-    'bitbake -c clean nocturne-dev-image nocturne-prod-image' \
+    'bitbake -c clean nocturne-dev-image nocturne-prod-image nocturne-bandaid' \
     kas/nocturne-local.yml
   echo "deploy artifacts on disk at {{build_dir}}/tmp/deploy"
 
