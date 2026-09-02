@@ -116,6 +116,55 @@ describe("Bluetooth pairing presentation", () => {
       }),
     ).toBeNull();
   });
+
+  it("uses the legacy pincode when the canonical pin is explicitly null", () => {
+    expect(
+      getBluetoothPairingUiUpdate("bluetooth.agent", {
+        event: "request_pin_code",
+        pin: null,
+        pincode: "0000",
+      }),
+    ).toEqual({
+      action: "show",
+      request: {
+        pairingKey: "0000",
+        address: undefined,
+        name: undefined,
+      },
+    });
+  });
+
+  it("uses the canonical pin for Windows and Pi confirmation events", () => {
+    expect(
+      getBluetoothPairingUiUpdate("bluetooth.agent", {
+        type: "bluetooth_pin",
+        pin: "663389",
+        pincode: null,
+        address: "E8:48:B8:C8:20:00",
+        name: "Windows Connector",
+      }),
+    ).toEqual({
+      action: "show",
+      request: {
+        pairingKey: "663389",
+        address: "E8:48:B8:C8:20:00",
+        name: "Windows Connector",
+      },
+    });
+  });
+
+  it("falls back to a non-empty legacy PIN", () => {
+    expect(
+      getBluetoothPairingUiUpdate("bluetooth.agent", {
+        event: "request_pin_code",
+        pin: "",
+        pincode: "0000",
+      }),
+    ).toMatchObject({
+      action: "show",
+      request: { pairingKey: "0000" },
+    });
+  });
 });
 
 describe("Bluetooth reconnect presentation lifecycle", () => {

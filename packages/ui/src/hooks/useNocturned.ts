@@ -243,7 +243,10 @@ export const getBluetoothPairingUiUpdate = (
     }
 
     if (event.type === "bluetooth_pin" || event.event === "request_pin_code") {
-      const pin = firstDefined(event.pin, event.pincode);
+      const pin = [event.pin, event.pincode].find(
+        (candidate): candidate is string =>
+          typeof candidate === "string" && candidate.length > 0,
+      );
       return {
         action: "show",
         request: {
