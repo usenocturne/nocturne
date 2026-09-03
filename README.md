@@ -57,9 +57,9 @@ Nocturne supports Bluetooth without tethering. An internet connection is still r
 </details>
 
 <details>
-<summary><img src="https://usenocturne.com/favicon.ico" height="14" style="vertical-align: middle;"> Standalone (WiFi, Raspberry Pi, macOS 15.0+)</summary>
+<summary><img src="https://usenocturne.com/favicon.ico" height="14" style="vertical-align: middle;"> Standalone (WiFi, Raspberry Pi, macOS 15.0+, Windows 10+)</summary>
 
-Nocturne Connector turns a Raspberry Pi into a Wi-Fi bridge for your Car Thing, so you can use Nocturne without being connected to your phone. The Connector source lives under [nocturne-connector](https://github.com/usenocturne/nocturne-connector). See [Connector → Building](https://github.com/usenocturne/nocturne-connector#building) for build instructions, or grab a prebuilt image from [Releases](https://github.com/usenocturne/nocturne-connector/releases/latest).
+Nocturne Connector turns a Raspberry Pi or Windows machine into a Wi-Fi bridge for your Car Thing, so you can use Nocturne without being connected to your phone. The Connector source lives under [nocturne-connector](https://github.com/usenocturne/nocturne-connector). See [Connector → Building](https://github.com/usenocturne/nocturne-connector#building) for build instructions, or grab a prebuilt image from [Releases](https://github.com/usenocturne/nocturne-connector/releases/latest).
 
 Nocturne Companion for Mac functions in the same way as the mobile app, but does not require Nocturne Lifetime or Nocturne+. Nocturne Companion for Mac can be downloaded [here.](https://github.com/usenocturne/nocturne-connector/releases/latest)
 
