@@ -52,6 +52,7 @@ pub type OtaEventTx = mpsc::Sender<OtaEvent>;
 pub struct OtaPullAuthorization {
     pub resume_from_offset: u32,
     pub transfer_window_size: u32,
+    pub pull_required: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -508,9 +509,49 @@ impl OtaActor {
             return;
         }
 
-        if let OtaState::Writing { update_id, .. } = &self.state {
-            let _ = ack.send(Err(OtaBeginRejected {
-                reason: format!("ota write of {update_id} in progress; wait or cancel first"),
+        if let OtaState::Writing {
+            kind,
+            update_id,
+            expected_size,
+            expected_sha256,
+            source: active_source,
+            ..
+        } = &mut self.state
+        {
+            let rejection = if !active_source.same_peer(&source) {
+                Some("ota in progress, pinned to a different companion".to_string())
+            } else if update_id != &req.update_id {
+                Some(format!("ota write of {update_id} in progress"))
+            } else if kind != &req.kind {
+                Some(format!(
+                    "ota {} was begun as {kind:?}, not {:?}",
+                    req.update_id, req.kind
+                ))
+            } else if *expected_size != u64::from(req.expected_size) {
+                Some(format!(
+                    "ota package size {} does not match expected size {expected_size}",
+                    req.expected_size
+                ))
+            } else if !req.expected_sha256.eq_ignore_ascii_case(expected_sha256) {
+                Some("ota package hash does not match active write".to_string())
+            } else {
+                None
+            };
+
+            if let Some(reason) = rejection {
+                let _ = ack.send(Err(OtaBeginRejected { reason }));
+                return;
+            }
+
+            *active_source = source;
+            debug!(
+                update_id = %req.update_id,
+                ?kind,
+                ?active_source,
+                "rebound active OTA write to replacement companion route",
+            );
+            let _ = ack.send(Ok(OtaBeginAck {
+                resume_from_offset: req.expected_size,
             }));
             return;
         }
@@ -762,6 +803,7 @@ impl OtaActor {
             target_version,
             prior_transfer_window_size,
             active_source,
+            writing,
         ) = match &self.state {
             OtaState::Streaming {
                 kind,
@@ -779,8 +821,27 @@ impl OtaActor {
                 target_version.clone(),
                 *transfer_window_size,
                 source.clone(),
+                false,
             ),
-            OtaState::Streaming { update_id, .. } => {
+            OtaState::Writing {
+                kind,
+                update_id,
+                expected_size,
+                expected_sha256,
+                target_version,
+                transfer_window_size,
+                source,
+                ..
+            } if update_id == &ready.update_id => (
+                *kind,
+                *expected_size,
+                expected_sha256.clone(),
+                target_version.clone(),
+                *transfer_window_size,
+                source.clone(),
+                true,
+            ),
+            OtaState::Streaming { update_id, .. } | OtaState::Writing { update_id, .. } => {
                 return Err(format!(
                     "active OTA is {update_id}, not {}",
                     ready.update_id
@@ -811,6 +872,8 @@ impl OtaActor {
                     ready.version
                 ));
             }
+        } else if writing {
+            return Err("active OTA write is missing its authorized target version".into());
         }
         let actual_resume_offset = self
             .transfers
@@ -852,18 +915,36 @@ impl OtaActor {
             .await
             .map_err(|err| format!("failed to persist OTA target version: {err}"))?;
 
-        if let OtaState::Streaming {
-            target_version,
-            transfer_window_size: active_window,
-            ..
-        } = &mut self.state
-        {
-            *target_version = Some(ready.version.clone());
-            *active_window = Some(transfer_window_size);
+        match &mut self.state {
+            OtaState::Streaming {
+                target_version,
+                transfer_window_size: active_window,
+                ..
+            } => {
+                *target_version = Some(ready.version.clone());
+                *active_window = Some(transfer_window_size);
+            }
+            OtaState::Writing {
+                transfer_window_size: active_window,
+                ..
+            } => {
+                *active_window = Some(transfer_window_size);
+            }
+            OtaState::Idle => {}
+        }
+        if writing && matches!(kind, OtaKind::Image) {
+            self.delta_source
+                .activate(
+                    ready.update_id.clone(),
+                    active_source.peer,
+                    active_source.route.clone(),
+                )
+                .await;
         }
         Ok(OtaPullAuthorization {
             resume_from_offset,
             transfer_window_size,
+            pull_required: !writing,
         })
     }
 
@@ -2334,12 +2415,74 @@ mod tests {
             .expect("a stale client offset should not reject a durable partial");
         assert_eq!(authorization.resume_from_offset, first.len() as u32);
         assert_eq!(authorization.transfer_window_size, 1800);
+        assert!(authorization.pull_required);
         assert_eq!(
             tokio::fs::read(root.path().join("transfers").join(format!("{sha}.partial")))
                 .await
                 .unwrap(),
             first
         );
+    }
+
+    #[tokio::test]
+    async fn package_ready_on_rebound_write_authorizes_without_second_payload_pull() {
+        let root = tempfile::TempDir::new().unwrap();
+        let (bytes, sha, size) = fixture();
+        let source = OtaSource::new(None, Some("replacement-route".into()));
+        let write_id = uuid::Uuid::new_v4();
+        let mut actor = actor_with_state(
+            &root,
+            OtaState::Writing {
+                kind: OtaKind::Image,
+                update_id: sha.clone(),
+                expected_size: u64::from(size),
+                expected_sha256: sha.clone(),
+                target_version: Some("4.2.0".into()),
+                transfer_window_size: Some(1800),
+                source: source.clone(),
+                write_id,
+                target_slot: None,
+            },
+        );
+        actor
+            .transfers
+            .begin(&sha, u64::from(size), &sha)
+            .await
+            .unwrap();
+        actor
+            .transfers
+            .write_chunk(&sha, 0, &bytes, true)
+            .await
+            .unwrap();
+
+        let authorization = actor
+            .authorize_pull(
+                &OtaPackageReady {
+                    update_id: sha.clone(),
+                    version: "4.2.0".into(),
+                    size,
+                    expected_sha256: sha,
+                    resume_from_offset: 0,
+                    max_transfer_chunk_size: Some(131_072),
+                    supports_chunked_transfer_response: Some(true),
+                    transfer_data_encoding: Some("msgpack_binary".into()),
+                },
+                131_072,
+                &source,
+            )
+            .await
+            .expect("matching package_ready should authorize the rebound Writing route");
+
+        assert_eq!(authorization.resume_from_offset, size);
+        assert_eq!(authorization.transfer_window_size, 131_072);
+        assert!(!authorization.pull_required);
+        assert!(matches!(
+            actor.state,
+            OtaState::Writing {
+                write_id: active_write_id,
+                ..
+            } if active_write_id == write_id
+        ));
     }
 
     #[tokio::test]
@@ -2754,9 +2897,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn begin_during_writing_is_rejected() {
+    async fn begin_during_writing_rebinds_matching_update_without_replacing_writer() {
         let root = tempfile::TempDir::new().unwrap();
         let (_bytes, sha, size) = fixture();
+        let write_id = uuid::Uuid::new_v4();
+        let peer: Address = "00:11:22:33:44:55".parse().unwrap();
         let mut actor = actor_with_state(
             &root,
             OtaState::Writing {
@@ -2766,11 +2911,12 @@ mod tests {
                 expected_sha256: sha.clone(),
                 target_version: Some("4.2.0".into()),
                 transfer_window_size: Some(1800),
-                source: test_source(),
-                write_id: uuid::Uuid::new_v4(),
+                source: OtaSource::new(Some(peer), Some("old-route".into())),
+                write_id,
                 target_slot: None,
             },
         );
+        let replacement = OtaSource::new(Some(peer), Some("new-route".into()));
         let (ack, rx) = oneshot::channel();
         actor
             .handle_begin(
@@ -2781,20 +2927,112 @@ mod tests {
                     expected_sha256: sha,
                     expected_size: size,
                 },
-                test_source(),
+                replacement.clone(),
                 ack,
             )
             .await;
 
-        let err = rx
+        let ack = rx
             .await
             .unwrap()
-            .expect_err("second begin should be rejected during Writing");
-        assert!(
-            err.reason.contains("write"),
-            "rejection reason should mention 'write', got: {}",
-            err.reason
-        );
+            .expect("same update and peer should rebind during Writing");
+        assert_eq!(ack.resume_from_offset, size);
+        assert!(matches!(
+            actor.state,
+            OtaState::Writing {
+                source,
+                write_id: active_write_id,
+                ..
+            } if source == replacement && active_write_id == write_id
+        ));
+    }
+
+    #[tokio::test]
+    async fn begin_during_writing_rejects_different_peer_update_or_metadata() {
+        let root = tempfile::TempDir::new().unwrap();
+        let (_bytes, sha, size) = fixture();
+        let peer: Address = "00:11:22:33:44:55".parse().unwrap();
+        let other_peer: Address = "00:11:22:33:44:56".parse().unwrap();
+        let active_source = OtaSource::new(Some(peer), Some("old-route".into()));
+
+        let cases = [
+            (
+                OtaBegin {
+                    kind: OtaKind::Bandaid,
+                    update_id: sha.clone(),
+                    update_url_base: None,
+                    expected_sha256: sha.clone(),
+                    expected_size: size,
+                },
+                OtaSource::new(Some(other_peer), Some("new-route".into())),
+            ),
+            (
+                OtaBegin {
+                    kind: OtaKind::Bandaid,
+                    update_id: "different-update".into(),
+                    update_url_base: None,
+                    expected_sha256: sha.clone(),
+                    expected_size: size,
+                },
+                OtaSource::new(Some(peer), Some("new-route".into())),
+            ),
+            (
+                OtaBegin {
+                    kind: OtaKind::Image,
+                    update_id: sha.clone(),
+                    update_url_base: None,
+                    expected_sha256: sha.clone(),
+                    expected_size: size,
+                },
+                OtaSource::new(Some(peer), Some("new-route".into())),
+            ),
+            (
+                OtaBegin {
+                    kind: OtaKind::Bandaid,
+                    update_id: sha.clone(),
+                    update_url_base: None,
+                    expected_sha256: "b".repeat(64),
+                    expected_size: size,
+                },
+                OtaSource::new(Some(peer), Some("new-route".into())),
+            ),
+            (
+                OtaBegin {
+                    kind: OtaKind::Bandaid,
+                    update_id: sha.clone(),
+                    update_url_base: None,
+                    expected_sha256: sha.clone(),
+                    expected_size: size + 1,
+                },
+                OtaSource::new(Some(peer), Some("new-route".into())),
+            ),
+        ];
+
+        for (request, source) in cases {
+            let mut actor = actor_with_state(
+                &root,
+                OtaState::Writing {
+                    kind: OtaKind::Bandaid,
+                    update_id: sha.clone(),
+                    expected_size: u64::from(size),
+                    expected_sha256: sha.clone(),
+                    target_version: Some("4.2.0".into()),
+                    transfer_window_size: Some(1800),
+                    source: active_source.clone(),
+                    write_id: uuid::Uuid::new_v4(),
+                    target_slot: None,
+                },
+            );
+            let (ack, rx) = oneshot::channel();
+            actor.handle_begin(request, source, ack).await;
+            rx.await
+                .unwrap()
+                .expect_err("mismatched Writing rebind must be rejected");
+            assert!(matches!(
+                actor.state,
+                OtaState::Writing { ref source, .. } if source == &active_source
+            ));
+        }
     }
 
     #[tokio::test]

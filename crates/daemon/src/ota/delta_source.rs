@@ -218,7 +218,7 @@ enum BrokerCmd {
     SendAssetRangeAbandon(OtaAssetRangeAbandon),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct ActiveOta {
     update_id: String,
     peer: Option<Address>,
@@ -228,6 +228,7 @@ struct ActiveOta {
 struct InflightRange {
     chunk_tx: mpsc::Sender<OtaAssetRangeChunk>,
     reply_tx: Option<oneshot::Sender<Result<OtaAssetRangeReply, String>>>,
+    request: Option<OtaAssetRange>,
 }
 
 struct BrokerActor {
@@ -247,12 +248,48 @@ impl BrokerActor {
                     peer,
                     route,
                 } => {
-                    tracing::info!(%update_id, ?peer, ?route, "ota delta source activated");
-                    self.active = Some(ActiveOta {
+                    let next = ActiveOta {
                         update_id,
                         peer,
                         route,
+                    };
+                    let replay = self.active.as_ref().is_some_and(|active| {
+                        active.update_id == next.update_id && active != &next
                     });
+                    if self
+                        .active
+                        .as_ref()
+                        .is_some_and(|active| active.update_id != next.update_id)
+                    {
+                        self.inflight.clear();
+                    }
+                    tracing::info!(
+                        update_id = %next.update_id,
+                        peer = ?next.peer,
+                        route = ?next.route,
+                        "ota delta source activated",
+                    );
+                    self.active = Some(next.clone());
+                    if replay {
+                        let requests: Vec<_> = self
+                            .inflight
+                            .iter()
+                            .filter_map(|(request_id, inflight)| {
+                                inflight.request.clone().map(|req| (*request_id, req))
+                            })
+                            .collect();
+                        for (request_id, req) in requests {
+                            let _ = self
+                                .events_tx
+                                .send(OtaEvent::AssetRange {
+                                    peer: next.peer,
+                                    route: next.route.clone(),
+                                    request_id,
+                                    req,
+                                })
+                                .await;
+                        }
+                    }
                 }
                 BrokerCmd::Deactivate => {
                     if let Some(active) = self.active.take() {
@@ -274,6 +311,7 @@ impl BrokerActor {
                                 InflightRange {
                                     chunk_tx,
                                     reply_tx: Some(asset_reply_tx),
+                                    request: None,
                                 },
                             );
                             Ok(active.update_id.clone())
@@ -319,6 +357,9 @@ impl BrokerActor {
                     self.inflight.remove(&request_id);
                 }
                 BrokerCmd::SendAssetRange { request_id, req } => {
+                    if let Some(inflight) = self.inflight.get_mut(&request_id) {
+                        inflight.request = Some(req.clone());
+                    }
                     let peer = self.active.as_ref().and_then(|active| active.peer);
                     let route = self.active.as_ref().and_then(|active| active.route.clone());
                     let _ = self
@@ -845,6 +886,9 @@ where
                                 "companion chunk channel closed mid-stream for request {request_id}"
                             )
                         })?;
+                    if (chunk.part_index as usize) < data_part_index {
+                        continue;
+                    }
                     if chunk.part_index as usize != data_part_index {
                         return Err(format!(
                             "companion chunk part_index out of order for request {request_id}: got {}, expected {data_part_index}",
@@ -863,21 +907,31 @@ where
                     let expected_offset = source_start
                         .checked_add(produced_offset)
                         .ok_or_else(|| format!("range offset overflow for request {request_id}"))?;
-                    if chunk.offset != expected_offset {
+                    let expected_offset_u64 = u64::from(expected_offset);
+                    let chunk_start = u64::from(chunk.offset);
+                    let chunk_end = chunk_start
+                        .checked_add(chunk.bytes.len() as u64)
+                        .ok_or_else(|| format!("range offset overflow for request {request_id}"))?;
+                    if chunk_end <= expected_offset_u64 {
+                        continue;
+                    }
+                    if chunk_start > expected_offset_u64 {
                         return Err(format!(
                             "companion chunk offset out of order for request {request_id}: got {}, expected {expected_offset}",
                             chunk.offset,
                         ));
                     }
-
-                    let chunk_len = chunk.bytes.len() as u64;
+                    let duplicate_prefix = usize::try_from(expected_offset_u64 - chunk_start)
+                        .map_err(|_| format!("range offset overflow for request {request_id}"))?;
+                    let bytes = &chunk.bytes[duplicate_prefix..];
+                    let chunk_len = bytes.len() as u64;
                     produced += chunk_len;
                     if produced > part_total {
                         return Err(format!(
                             "companion sent more bytes than declared for request {request_id}"
                         ));
                     }
-                    write_data_frames(stream, &chunk.bytes).await?;
+                    write_data_frames(stream, bytes).await?;
 
                     total_produced += chunk_len;
                     emit_asset_transfer_progress(
@@ -1175,6 +1229,77 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn stream_plan_accepts_replayed_prefix_after_route_rebind() {
+        use tokio::io::AsyncReadExt;
+
+        let source = noop_source();
+        let request_id = Uuid::new_v4();
+        let reply = range_reply(
+            vec![RangePart {
+                start: 100,
+                length: 4,
+            }],
+            200,
+        );
+        let plan = ResponsePlan::from_reply(&reply).unwrap();
+        let (chunk_tx, chunk_rx) = mpsc::channel(4);
+        for chunk in [
+            OtaAssetRangeChunk {
+                request_id,
+                part_index: 0,
+                offset: 100,
+                bytes: vec![1, 2],
+                last: false,
+            },
+            OtaAssetRangeChunk {
+                request_id,
+                part_index: 0,
+                offset: 100,
+                bytes: vec![1, 2],
+                last: false,
+            },
+            OtaAssetRangeChunk {
+                request_id,
+                part_index: 0,
+                offset: 102,
+                bytes: vec![3, 4],
+                last: true,
+            },
+        ] {
+            chunk_tx.send(chunk).await.unwrap();
+        }
+
+        let (mut writer, mut reader) = tokio::io::duplex(1_024);
+        stream_plan(
+            &source,
+            &mut writer,
+            request_id,
+            "system.img.zck",
+            plan,
+            chunk_rx,
+        )
+        .await
+        .expect("replayed bytes before the current offset should be ignored");
+        drop(writer);
+
+        let mut framed = Vec::new();
+        reader.read_to_end(&mut framed).await.unwrap();
+        let mut cursor = 0usize;
+        let mut payload = Vec::new();
+        while cursor < framed.len() {
+            let kind = framed[cursor];
+            let length =
+                u32::from_be_bytes(framed[cursor + 1..cursor + 5].try_into().unwrap()) as usize;
+            cursor += 5;
+            if kind == FRAME_DATA {
+                payload.extend_from_slice(&framed[cursor..cursor + length]);
+            }
+            cursor += length;
+        }
+        assert_eq!(payload, vec![1, 2, 3, 4]);
+    }
+
+    #[tokio::test]
     async fn stream_plan_requires_last_on_final_chunk() {
         let source = noop_source();
         let request_id = Uuid::new_v4();
@@ -1312,6 +1437,54 @@ mod tests {
             } => {
                 assert_eq!(event_peer, Some(peer));
                 assert_eq!(event_route.as_deref(), Some(route.as_str()));
+            }
+            event => panic!("unexpected event: {event:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn activating_replacement_route_replays_inflight_range_request() {
+        let (source, mut events_rx) = spawn_broker_with_events();
+        let peer = "00:11:22:33:44:55".parse().unwrap();
+        source
+            .activate("active".into(), Some(peer), Some("spp:old".into()))
+            .await;
+        let request_id = Uuid::new_v4();
+        let (chunk_tx, _chunk_rx) = mpsc::channel(4);
+        let _range = source
+            .begin_range_active(request_id, chunk_tx)
+            .await
+            .unwrap();
+        let request = OtaAssetRange {
+            update_id: "active".into(),
+            asset: "system.img.zck".into(),
+            ranges: vec![RangeSpec {
+                start: 128,
+                length: 256,
+            }],
+        };
+        source.send_asset_range(request_id, request.clone()).await;
+
+        let initial = events_rx.recv().await.unwrap();
+        assert!(matches!(
+            initial,
+            OtaEvent::AssetRange { route: Some(route), .. } if route == "spp:old"
+        ));
+
+        source
+            .activate("active".into(), Some(peer), Some("spp:new".into()))
+            .await;
+        match events_rx.recv().await.unwrap() {
+            OtaEvent::AssetRange {
+                peer: event_peer,
+                route,
+                request_id: replayed_id,
+                req,
+            } => {
+                assert_eq!(event_peer, Some(peer));
+                assert_eq!(route.as_deref(), Some("spp:new"));
+                assert_eq!(replayed_id, request_id);
+                assert_eq!(req, request);
             }
             event => panic!("unexpected event: {event:?}"),
         }

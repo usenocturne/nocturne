@@ -1450,6 +1450,9 @@ impl MsgPackProtocolHandler {
                     "ota.package_ready",
                 )
                 .await;
+                if !authorization.pull_required {
+                    return Ok(None);
+                }
                 let session_route = Arc::clone(&self.session_route);
                 let pending_calls = Arc::clone(&self.pending_calls);
                 let cmd_tx = cmd_tx.clone();
@@ -3083,6 +3086,7 @@ mod tests {
                 ack.send(Ok(crate::ota::OtaPullAuthorization {
                     resume_from_offset: 4,
                     transfer_window_size: OTA_LEGACY_PULL_SIZE as u32,
+                    pull_required: true,
                 }))
                 .unwrap();
             }
@@ -3105,6 +3109,49 @@ mod tests {
                 ack.send(Ok(())).unwrap();
             }
             other => panic!("expected final resumed chunk, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn ota_package_ready_during_rebound_write_does_not_start_second_pull() {
+        let (cmd_tx, mut cmd_rx) = tokio::sync::mpsc::channel(1);
+        let mut handler = MsgPackProtocolHandler::new(None);
+        handler.set_ota_cmd_tx(cmd_tx);
+
+        let task = tokio::spawn(async move {
+            handler
+                .handle_msgpack_message(MsgPackMessage::Event {
+                    topic: "ota.package_ready".to_string(),
+                    data: serde_json::json!({
+                        "updateId": "update-1",
+                        "version": "4.2.0+20260725010101",
+                        "size": 4,
+                        "expectedSha256": "a".repeat(64),
+                        "resumeFromOffset": 4,
+                    }),
+                })
+                .await
+        });
+
+        match cmd_rx.recv().await.expect("expected OTA authorization") {
+            crate::ota::Command::AuthorizePull { ack, .. } => {
+                ack.send(Ok(crate::ota::OtaPullAuthorization {
+                    resume_from_offset: 4,
+                    transfer_window_size: OTA_LEGACY_PULL_SIZE as u32,
+                    pull_required: false,
+                }))
+                .unwrap();
+            }
+            other => panic!("expected OTA authorization, got {other:?}"),
+        }
+
+        assert!(task
+            .await
+            .unwrap()
+            .expect("handler should succeed")
+            .is_none());
+        if let Ok(Some(command)) = timeout(Duration::from_millis(25), cmd_rx.recv()).await {
+            panic!("Writing rebound enqueued an unexpected command: {command:?}");
         }
     }
 
