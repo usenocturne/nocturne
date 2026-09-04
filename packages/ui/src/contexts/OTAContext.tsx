@@ -22,7 +22,7 @@ const CHECK_TIMEOUT_MS = 20000;
 const AUTO_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const AUTO_CHECK_RETRY_MS = 5 * 60 * 1000;
 const INSTALL_START_TIMEOUT_MS = 60 * 1000;
-const INSTALL_RETRY_MS = 5 * 60 * 1000;
+export const INSTALL_RETRY_MS = 5 * 60 * 1000;
 const ACTIVE_RECOVERY_TIMEOUT_MS = 60 * 1000;
 const PERSISTED_OTA_STATE_KEY = "nocturne_ota_state_v2";
 const INTERNAL_UPDATE_ID_RE = /^[0-9a-f]{24,}$/i;
@@ -203,6 +203,51 @@ export function shouldAutoInstallUpdate(
   );
 }
 
+export function shouldStartAutomaticInstall(
+  autoUpdateEnabled: boolean,
+  update: AvailableUpdate | null,
+  installRetryPending: boolean,
+): boolean {
+  return (
+    !installRetryPending && shouldAutoInstallUpdate(autoUpdateEnabled, update)
+  );
+}
+
+export interface InstallRetryState {
+  pending: boolean;
+  generation: number;
+}
+
+export function reduceInstallRetryEvent(
+  state: InstallRetryState,
+  topic: string,
+): InstallRetryState {
+  if (topic === "ota.error") {
+    return state.pending
+      ? state
+      : { pending: true, generation: state.generation + 1 };
+  }
+  if (topic === "ota.begin" || topic === "ota.complete") {
+    return state.pending ? { ...state, pending: false } : state;
+  }
+  return state;
+}
+
+type InstallRetryTimer = ReturnType<typeof setTimeout>;
+
+export function scheduleInstallRetry(
+  retry: () => void,
+  schedule: (callback: () => void, delayMs: number) => InstallRetryTimer = (
+    callback,
+    delayMs,
+  ) => window.setTimeout(callback, delayMs),
+  cancel: (timer: InstallRetryTimer) => void = (timer) =>
+    window.clearTimeout(timer),
+): () => void {
+  const timer = schedule(retry, INSTALL_RETRY_MS);
+  return () => cancel(timer);
+}
+
 export function isMatchingOtaCompletion(
   expectedUpdateId: string | null,
   completedUpdateId: string | null,
@@ -380,6 +425,57 @@ function displayVersion(value: unknown): string | null {
   const version = value.trim();
   if (!version || INTERNAL_UPDATE_ID_RE.test(version)) return null;
   return version;
+}
+
+type OtaCheckResult = Pick<OTAState, "available" | "lastCheckResult" | "error">;
+
+function normalizeOtaCheckResult(
+  data: Record<string, unknown>,
+  fallbackChannel: string,
+): OtaCheckResult {
+  const available = data.available === true;
+  const requiresReflash = data.requiresReflash === true;
+  const reportedError =
+    typeof data.error === "string" && data.error.trim() !== ""
+      ? data.error.trim()
+      : null;
+  const checkedVersion = displayVersion(data.version);
+  const checkedKind =
+    typeof data.kind === "string" && OTA_KINDS.has(data.kind)
+      ? data.kind
+      : null;
+  const checkError =
+    reportedError ??
+    (available && (!checkedVersion || !checkedKind)
+      ? "The update service returned incomplete release metadata."
+      : null);
+
+  return {
+    available:
+      available && !checkError
+        ? {
+            version: checkedVersion,
+            kind: checkedKind,
+            channel:
+              typeof data.channel === "string" ? data.channel : fallbackChannel,
+            requiresReflash,
+          }
+        : null,
+    lastCheckResult: checkError ? null : available ? "available" : "upToDate",
+    error: checkError ? { code: "checkFailed", msg: checkError } : null,
+  };
+}
+
+export function reduceOtaCheckResult(
+  state: OTAState,
+  data: Record<string, unknown>,
+  fallbackChannel: string,
+): OTAState {
+  return {
+    ...state,
+    isChecking: false,
+    ...normalizeOtaCheckResult(data, fallbackChannel),
+  };
 }
 
 export function normalizeCurrentVersion(value: unknown): string | undefined {
@@ -583,10 +679,7 @@ export function OTAProvider({ children, initialDataLoaded }: OTAProviderProps) {
     (message: string) => {
       clearInstallTimeout();
       installRequestedRef.current = null;
-      setInstallRetry((prev) => ({
-        pending: true,
-        generation: prev.generation + 1,
-      }));
+      setInstallRetry((prev) => reduceInstallRetryEvent(prev, "ota.error"));
       setOtaState((prev) => ({
         ...prev,
         isInstallPending: false,
@@ -633,49 +726,17 @@ export function OTAProvider({ children, initialDataLoaded }: OTAProviderProps) {
 
       if (topic === "ota.check_result") {
         clearCheckTimeout();
-        const available = data.available === true;
-        const requiresReflash = data.requiresReflash === true;
-        const reportedError =
-          typeof data.error === "string" && data.error.trim() !== ""
-            ? data.error.trim()
-            : null;
-        const checkedVersion = displayVersion(data.version);
-        const checkedKind =
-          typeof data.kind === "string" && OTA_KINDS.has(data.kind)
-            ? data.kind
-            : null;
-        const checkError =
-          reportedError ??
-          (available && (!checkedVersion || !checkedKind)
-            ? "The update service returned incomplete release metadata."
-            : null);
+        const checkResult = normalizeOtaCheckResult(data, channelRef.current);
         scheduledCheckPendingRef.current = false;
         setCheckRetry((prev) =>
-          checkError
+          checkResult.error
             ? { pending: true, generation: prev.generation + 1 }
             : { ...prev, pending: false },
         );
         setOtaState((prev) => ({
           ...prev,
           isChecking: false,
-          available:
-            available && !checkError
-              ? {
-                  version: checkedVersion,
-                  kind: checkedKind,
-                  channel:
-                    typeof data.channel === "string"
-                      ? data.channel
-                      : channelRef.current,
-                  requiresReflash,
-                }
-              : null,
-          lastCheckResult: checkError
-            ? null
-            : available
-              ? "available"
-              : "upToDate",
-          error: checkError ? { code: "checkFailed", msg: checkError } : null,
+          ...checkResult,
         }));
         return;
       }
@@ -725,7 +786,7 @@ export function OTAProvider({ children, initialDataLoaded }: OTAProviderProps) {
       ) {
         clearInstallTimeout();
         installRequestedRef.current = null;
-        setInstallRetry((prev) => ({ ...prev, pending: false }));
+        setInstallRetry((prev) => reduceInstallRetryEvent(prev, topic));
       }
       setOtaState((prev) => reduceOtaLifecycleEvent(prev, topic, data));
     },
@@ -846,8 +907,11 @@ export function OTAProvider({ children, initialDataLoaded }: OTAProviderProps) {
       otaState.isActive ||
       otaState.isComplete ||
       otaState.isInstallPending ||
-      installRetry.pending ||
-      !shouldAutoInstallUpdate(autoUpdateEnabled, otaState.available)
+      !shouldStartAutomaticInstall(
+        autoUpdateEnabled,
+        otaState.available,
+        installRetry.pending,
+      )
     ) {
       return;
     }
@@ -984,10 +1048,7 @@ export function OTAProvider({ children, initialDataLoaded }: OTAProviderProps) {
     if (!wsConnected && otaState.isInstallPending) {
       clearInstallTimeout();
       installRequestedRef.current = null;
-      setInstallRetry((prev) => ({
-        pending: true,
-        generation: prev.generation + 1,
-      }));
+      setInstallRetry((prev) => reduceInstallRetryEvent(prev, "ota.error"));
       setOtaState((prev) => ({ ...prev, isInstallPending: false }));
       return;
     }
@@ -1082,11 +1143,10 @@ export function OTAProvider({ children, initialDataLoaded }: OTAProviderProps) {
     ) {
       return;
     }
-    const timer = window.setTimeout(() => {
+    return scheduleInstallRetry(() => {
       setInstallRetry((prev) => ({ ...prev, pending: false }));
       startInstall(normalizeCurrentVersion(currentVersion));
-    }, INSTALL_RETRY_MS);
-    return () => window.clearTimeout(timer);
+    });
   }, [
     appReadyState.ready,
     autoUpdateEnabled,

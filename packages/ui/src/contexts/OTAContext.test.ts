@@ -5,6 +5,7 @@ import {
   canRunAutomaticOtaCheck,
   canDiscoverUpdate,
   INITIAL_OTA_STATE,
+  INSTALL_RETRY_MS,
   installedVersionForOtaKind,
   installRequestParams,
   isMatchingOtaCompletion,
@@ -13,12 +14,16 @@ import {
   otaVersionRequestParams,
   persistOtaState,
   reconcileRestoredInstalledOtaState,
+  reduceInstallRetryEvent,
+  reduceOtaCheckResult,
   requiresDaemonActivation,
   reduceOtaLifecycleEvent,
   restorePersistedOtaState,
+  scheduleInstallRetry,
   shouldAutoInstallUpdate,
   shouldClearRestoredImageOtaState,
   shouldDeferDiscoveryForReconciledOtaState,
+  shouldStartAutomaticInstall,
   shouldTriggerDiscoveryForAppReady,
 } from "./OTAContext";
 
@@ -144,6 +149,100 @@ describe("shouldAutoInstallUpdate", () => {
     expect(shouldAutoInstallUpdate(true, { ...update, kind: "unknown" })).toBe(
       false,
     );
+  });
+});
+
+describe("automatic install retry", () => {
+  const available = {
+    version: "4.2.0+20260726060000",
+    kind: "image",
+    channel: "stable",
+    requiresReflash: false,
+  };
+
+  test("keeps repeated terminal errors and check results behind one retry gate", () => {
+    let state = reduceOtaCheckResult(
+      INITIAL_OTA_STATE,
+      {
+        available: true,
+        version: available.version,
+        kind: available.kind,
+        channel: available.channel,
+      },
+      "stable",
+    );
+    let retry = { pending: false, generation: 0 };
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      state = reduceOtaLifecycleEvent(
+        { ...state, isInstallPending: true },
+        "ota.error",
+        {
+          code: "abandoned",
+          msg: "The companion abandoned the update",
+        },
+      );
+      retry = reduceInstallRetryEvent(retry, "ota.error");
+      state = reduceOtaCheckResult(
+        state,
+        {
+          available: true,
+          version: available.version,
+          kind: available.kind,
+          channel: available.channel,
+        },
+        "stable",
+      );
+      retry = reduceInstallRetryEvent(retry, "ota.check_result");
+
+      expect(state.available).toEqual(available);
+      expect(
+        shouldStartAutomaticInstall(true, state.available, retry.pending),
+      ).toBe(false);
+    }
+
+    expect(retry).toEqual({ pending: true, generation: 1 });
+  });
+
+  test("keeps at most one delayed retry and manual policy remains explicit", () => {
+    const scheduled = new Map<number, () => void>();
+    const delays: number[] = [];
+    let nextTimer = 0;
+    let retries = 0;
+    const schedule = (callback: () => void, delayMs: number) => {
+      nextTimer += 1;
+      scheduled.set(nextTimer, callback);
+      delays.push(delayMs);
+      return nextTimer;
+    };
+    const cancel = (timer: ReturnType<typeof setTimeout>) => {
+      scheduled.delete(Number(timer));
+    };
+
+    const cancelFirst = scheduleInstallRetry(
+      () => {
+        retries += 1;
+      },
+      schedule,
+      cancel,
+    );
+    expect(retries).toBe(0);
+    expect(delays).toEqual([INSTALL_RETRY_MS]);
+
+    cancelFirst();
+    scheduleInstallRetry(
+      () => {
+        retries += 1;
+      },
+      schedule,
+      cancel,
+    );
+    expect(scheduled.size).toBe(1);
+    scheduled.values().next().value?.();
+    expect(retries).toBe(1);
+
+    expect(shouldStartAutomaticInstall(false, available, false)).toBe(false);
+    expect(shouldStartAutomaticInstall(true, available, false)).toBe(true);
   });
 });
 
