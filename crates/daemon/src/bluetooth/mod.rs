@@ -1342,6 +1342,7 @@ impl BluetoothDaemon {
                             }
                             AdapterEvent::DeviceRemoved(address) => {
                                 info!("Device removed: {}", address);
+                                pairing::pairing_finished(&address.to_string());
                                 if let Some(ws) = &websocket_server {
                                     ws.broadcast_event(
                                         "bluetooth.device".to_string(),
@@ -1395,6 +1396,9 @@ impl BluetoothDaemon {
                         }
                         DeviceEvent::PropertyChanged(DeviceProperty::Connected(connected)) => {
                             info!("Device {} connected status changed: {}", address, connected);
+                            if !connected {
+                                pairing::pairing_finished(&address.to_string());
+                            }
                             if let Some(ws) = &websocket_server {
                                 ws.broadcast_event(
                                     "bluetooth.device".to_string(),
@@ -1448,6 +1452,10 @@ impl BluetoothDaemon {
                 Instant::now(),
             )
         };
+        if paired {
+            pairing::pairing_finished(&object_address.to_string());
+            pairing::pairing_finished(&canonical_address.to_string());
+        }
         if !paired {
             connection_inputs
                 .known_macos_connectors

@@ -73,3 +73,5 @@ just lint                   # Linux host clippy, non-Linux aarch64 cross clippy,
 | `nocturne-site` | private, separate | Marketing site; ships independently to Cloudflare Pages. Does not affect device firmware. |
 | `nocturne-api` | private, separate | Cloudflare Workers; ships independently. Remote service the device talks to over HTTPS. |
 | `nocturne-ota` | private, separate | OTA distribution server / R2 bucket. Remote service the device fetches SWUs from. |
+
+- **Matching-code pairing**: Car Thing displays the Bluetooth stack's six-digit comparison code; confirmation happens on the peer, with no Car Thing accept/decline buttons or code entry. Windows accepts only authenticated `ConfirmPinMatch`. Legacy PIN/passkey entry fails explicitly instead of using `0000`. Pending display events use an optional `request_id` and the local `bluetooth.pairing.pending` recovery method.

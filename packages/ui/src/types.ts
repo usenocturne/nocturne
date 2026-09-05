@@ -221,6 +221,7 @@ export interface BluetoothConnectionState {
 }
 
 export interface PairingRequest {
+  requestId?: string;
   pairingKey?: string;
   pin?: string;
   device?: BluetoothDevice | string;

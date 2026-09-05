@@ -6,6 +6,7 @@ import {
   getBtReconnectState,
   getWsRequestError,
   getBluetoothPairingUiUpdate,
+  applyBluetoothPairingUiUpdate,
   getBluetoothPresentationState,
   hasConnectedMacosConnector,
   isConnectResponsePending,
@@ -493,6 +494,98 @@ describe("WebSocket request errors", () => {
       getWsRequestError(
         { type: "response", id: "call-action" },
         { status: "ok" },
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("Bluetooth pairing challenge identity", () => {
+  it("preserves a leading zero and the confirmation challenge identity", () => {
+    expect(
+      getBluetoothPairingUiUpdate("bluetooth.agent", {
+        type: "bluetooth_pin",
+        pin: "012345",
+        request_id: "challenge-1",
+      }),
+    ).toMatchObject({
+      action: "show",
+      request: {
+        pairingKey: "012345",
+        requestId: "challenge-1",
+      },
+    });
+  });
+
+  it("ignores cancellation of an older pairing request", () => {
+    const current = { requestId: "new", pairingKey: "123456" };
+    expect(
+      applyBluetoothPairingUiUpdate(
+        current,
+        getBluetoothPairingUiUpdate("bluetooth.agent", {
+          event: "cancel",
+          request_id: "old",
+        }),
+      ),
+    ).toBe(current);
+    expect(
+      applyBluetoothPairingUiUpdate(
+        current,
+        getBluetoothPairingUiUpdate("bluetooth.agent", {
+          event: "cancel",
+          request_id: "new",
+        }),
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("Bluetooth pairing peer isolation", () => {
+  const current = {
+    requestId: "windows",
+    address: "AA:BB:CC:DD:EE:FF",
+    pairingKey: "123456",
+  };
+  for (const [topic, event] of [
+    ["bluetooth.pairing", "paired"],
+    ["bluetooth.connection", "connection_established"],
+  ]) {
+    it(`${topic} from an unrelated peer cannot dismiss the displayed code`, () => {
+      expect(
+        applyBluetoothPairingUiUpdate(
+          current,
+          getBluetoothPairingUiUpdate(topic, {
+            event,
+            device: "00:11:22:33:44:55",
+          }),
+        ),
+      ).toBe(current);
+      expect(
+        applyBluetoothPairingUiUpdate(
+          current,
+          getBluetoothPairingUiUpdate(topic, {
+            event,
+            device: "aa:bb:cc:dd:ee:ff",
+          }),
+        ),
+      ).toBeNull();
+    });
+  }
+  it("keeps compatibility with historical prompts and success events lacking identity", () => {
+    expect(
+      applyBluetoothPairingUiUpdate(
+        { pairingKey: "123456" },
+        getBluetoothPairingUiUpdate("bluetooth.pairing", {
+          event: "paired",
+          device: "AA:BB:CC:DD:EE:FF",
+        }),
+      ),
+    ).toBeNull();
+    expect(
+      applyBluetoothPairingUiUpdate(
+        current,
+        getBluetoothPairingUiUpdate("bluetooth.pairing", {
+          type: "pairing_succeeded",
+        }),
       ),
     ).toBeNull();
   });

@@ -50,9 +50,13 @@ export interface BluetoothAgentEvent {
    */
   uuid?: string;
   /**
-   * Auto-accept result. Inventory field `accepted` emits as `accepted`.
+   * Agent authorization result. Inventory field `accepted` emits as `accepted`.
    */
   accepted?: boolean;
+  /**
+   * Pairing challenge identifier for scoped user decisions and cancellation. Inventory field `request_id` emits as `requestId`.
+   */
+  requestId?: string;
 }
 
 /**
@@ -500,6 +504,7 @@ export type BluetoothMethod =
   | BluetoothDeviceConnectMethodMessage
   | BluetoothDeviceDisconnectMethodMessage
   | BluetoothDeviceUnpairMethodMessage
+  | BluetoothPairingPendingMethodMessage
   | BluetoothDiscoverableMethodMessage
 ;
 
@@ -512,6 +517,7 @@ export type BluetoothMethodResponse =
   | BluetoothDeviceConnectMethodResponseMessage
   | BluetoothDeviceDisconnectMethodResponseMessage
   | BluetoothDeviceUnpairMethodResponseMessage
+  | BluetoothPairingPendingMethodResponseMessage
   | BluetoothDiscoverableMethodResponseMessage
 ;
 
@@ -583,5 +589,64 @@ export interface BluetoothPairingEventMessage {
    * Payload carried by this inventory variant.
    */
   data: BluetoothPairingEvent;
+}
+
+/**
+ * Request envelope for `bluetooth.pairing.pending` in the `bluetooth` method union.
+ * Inventory: `METHOD_INVENTORY` entry `bluetooth.pairing.pending`.
+ */
+export interface BluetoothPairingPendingMethodMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "bluetooth.pairing.pending";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: BluetoothPairingPendingRequest;
+}
+
+/**
+ * Response envelope for `bluetooth.pairing.pending` in the `bluetooth` method response union.
+ * Inventory: `METHOD_INVENTORY` entry `bluetooth.pairing.pending`.
+ */
+export interface BluetoothPairingPendingMethodResponseMessage {
+  /**
+   * Discriminator from the inventory `method` tag.
+   */
+  method: "bluetooth.pairing.pending";
+  /**
+   * Payload carried by this inventory variant.
+   */
+  data: BluetoothPairingPendingResponse;
+}
+
+/**
+ * Request payload for `bluetooth.pairing.pending`.
+ * No payload.
+ * Inventory: `METHOD_INVENTORY` entry `bluetooth.pairing.pending` request.
+ */
+export interface BluetoothPairingPendingRequest {
+}
+
+/**
+ * Response payload for `bluetooth.pairing.pending`.
+ * Pending local pairing challenge.
+ * Inventory: `METHOD_INVENTORY` entry `bluetooth.pairing.pending` response.
+ */
+export interface BluetoothPairingPendingResponse {
+  /**
+   * Current Bluetooth agent challenge, if any. Inventory field `request` emits as `request`.
+   */
+  request?: BluetoothPairingPendingResponseRequest;
+}
+
+/**
+ * Opaque object shape for `request` nested under `BluetoothPairingPendingResponse`.
+ * Current Bluetooth agent challenge, if any.
+ * Inventory: field `request` in `METHOD_INVENTORY` entry `bluetooth.pairing.pending` response.
+ */
+export interface BluetoothPairingPendingResponseRequest {
+  [key: string]: BluetoothJsonValue;
 }
 

@@ -70,6 +70,7 @@ fn bluetooth_wire_snapshots_round_trip() {
                 entered: Some(3),
                 uuid: Some("00001101-0000-1000-8000-00805f9b34fb".to_string()),
                 accepted: Some(true),
+                request_id: None,
             }),
         },
         "bluetooth.connection": {

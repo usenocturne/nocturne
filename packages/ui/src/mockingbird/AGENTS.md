@@ -142,3 +142,5 @@ daemon → WebSocket event → useNocturned → VoiceStore (mockingbird)
 - **Don't import mockingbird stores from main Nocturne code** — the only bridge is `window.carThingRootStore` and props passed through `UIShell`
 - **Don't call the Spotify Web API directly** — go through `sendNocturneWsRequest` (daemon) or props bridged from Nocturne's hooks
 - **Don't instantiate additional RootStores** — the singleton in `contexts/CarThingStore.jsx` is intentional (and stamps `window.carThingRootStore`)
+
+- **Pairing code verification:** Both skins display the fresh matching code and direct the user to confirm on the other device. The Car Thing has no pairing buttons or code-entry fields. Preserve discovery owners, ignore stale cancellation scoped by `request_id`, and recover pending prompts through `bluetooth.pairing.pending` on socket reconnect. Historical prompts without request ids remain display-only.

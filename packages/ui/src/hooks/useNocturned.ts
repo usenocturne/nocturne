@@ -31,7 +31,7 @@ type BluetoothDevicesListResponse = {
 };
 type BluetoothPairingUiUpdate =
   | { action: "show"; request: PairingRequest }
-  | { action: "clear" }
+  | { action: "clear"; requestId?: string; address?: string }
   | null;
 type BluetoothPresentationStateOptions = {
   showTutorial: boolean;
@@ -239,7 +239,12 @@ export const getBluetoothPairingUiUpdate = (
 
   if (topic === "bluetooth.agent") {
     if (event.event === "cancel" || event.event === "release") {
-      return { action: "clear" };
+      return {
+        action: "clear",
+        ...(typeof event.request_id === "string"
+          ? { requestId: event.request_id }
+          : {}),
+      };
     }
 
     if (event.type === "bluetooth_pin" || event.event === "request_pin_code") {
@@ -251,6 +256,10 @@ export const getBluetoothPairingUiUpdate = (
         action: "show",
         request: {
           pairingKey: typeof pin === "string" ? pin : "",
+          ...(typeof event.request_id === "string" &&
+          event.request_id.length > 0
+            ? { requestId: event.request_id }
+            : {}),
           address:
             typeof event.address === "string" ? event.address : undefined,
           name: typeof event.name === "string" ? event.name : undefined,
@@ -260,13 +269,35 @@ export const getBluetoothPairingUiUpdate = (
   }
 
   if (
-    topic === "bluetooth.pairing" &&
-    (event.type === "pairing_succeeded" || event.event === "paired")
+    (topic === "bluetooth.pairing" &&
+      (event.type === "pairing_succeeded" || event.event === "paired")) ||
+    (topic === "bluetooth.connection" &&
+      event.event === "connection_established")
   ) {
-    return { action: "clear" };
+    const address = [event.address, event.device].find(
+      (value): value is string => typeof value === "string" && value.length > 0,
+    );
+    return { action: "clear", ...(address ? { address } : {}) };
   }
 
   return null;
+};
+
+export const applyBluetoothPairingUiUpdate = (
+  current: PairingRequest | null,
+  update: BluetoothPairingUiUpdate,
+): PairingRequest | null => {
+  if (update?.action === "show") return update.request;
+  if (
+    update?.action === "clear" &&
+    (!update.requestId || update.requestId === current?.requestId) &&
+    (!current?.requestId ||
+      !current.address ||
+      !update.address ||
+      update.address.toUpperCase() === current.address.toUpperCase())
+  )
+    return null;
+  return current;
 };
 
 export const getBluetoothPresentationState = ({
@@ -2312,7 +2343,10 @@ export const useBluetooth = () => {
   const { wsConnected, apiRequest, addMessageListener, removeMessageListener } =
     useNocturned();
 
-  const [pairingRequest, setPairingRequest] = useState(null);
+  const [pairingRequest, setPairingRequest] = useState<PairingRequest | null>(
+    null,
+  );
+  const pairingRevision = useRef(0);
   const [connectedDevices, setConnectedDevices] = useState<UiContentItem[]>([]);
   const [activeSessionDevices, setActiveSessionDevices] = useState<
     UiContentItem[]
@@ -2709,10 +2743,11 @@ export const useBluetooth = () => {
         const ev = data.data || {};
         const pairingUiUpdate = getBluetoothPairingUiUpdate(topic, ev);
 
-        if (pairingUiUpdate?.action === "show") {
-          setPairingRequest(pairingUiUpdate.request);
-        } else if (pairingUiUpdate?.action === "clear") {
-          setPairingRequest(null);
+        if (pairingUiUpdate) {
+          pairingRevision.current += 1;
+          setPairingRequest((current) =>
+            applyBluetoothPairingUiUpdate(current, pairingUiUpdate),
+          );
         }
 
         if (topic === "bluetooth.agent") {
@@ -2726,7 +2761,6 @@ export const useBluetooth = () => {
             const address = connectionEvent.device;
             localStorage.setItem("lastConnectedBluetoothDevice", address);
 
-            setPairingRequest(null);
             setIsConnecting(false);
 
             setConnectedDevices((prev) => {
@@ -2854,6 +2888,31 @@ export const useBluetooth = () => {
       cleanup();
     };
   }, [addMessageListener, removeMessageListener, handleWsMessage, cleanup]);
+
+  useEffect(() => {
+    if (!wsConnected) {
+      pairingRevision.current += 1;
+      setPairingRequest(null);
+      return;
+    }
+    let cancelled = false;
+    const revision = pairingRevision.current;
+    sendNocturneWsRequest<{ request?: unknown }>("bluetooth.pairing.pending")
+      .then((response) => {
+        if (cancelled || revision !== pairingRevision.current) return;
+        const update = getBluetoothPairingUiUpdate(
+          "bluetooth.agent",
+          response?.request,
+        );
+        setPairingRequest(update?.action === "show" ? update.request : null);
+      })
+      .catch((error) => {
+        console.warn("Could not restore pending Bluetooth pairing:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [wsConnected]);
 
   return {
     devices,

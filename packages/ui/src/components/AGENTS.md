@@ -98,3 +98,5 @@ ContentView must keep Liked Songs quick-access binding active while its tracks a
 - **Don't put voice UI under `components/voice/`** (dead placeholder). New voice UI lives under `components/common/overlays/voice/`. Mockingbird still owns its own voice UI at `src/mockingbird/ui/components/Listening/`.
 - **Don't import from `src/mockingbird/`** (except the one allowed `LazyBTPairing` dynamic import in `App.jsx`). That skin is isolated.
 - **Don't split `NowPlaying.jsx` / `ContentView.jsx` / `Settings.jsx` opportunistically** — the large sizes are intentional due to tightly coupled state/gesture/nav logic. Propose an RFC before refactoring.
+
+- **Pairing code verification:** Both skins display the fresh matching code and direct the user to confirm on the other device. The Car Thing has no pairing buttons or code-entry fields. Preserve discovery owners, ignore stale cancellation scoped by `request_id`, and recover pending prompts through `bluetooth.pairing.pending` on socket reconnect. Historical prompts without request ids remain display-only.

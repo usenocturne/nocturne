@@ -197,3 +197,5 @@ bun run lint-check    # Prettier --check (CI)
 - **`@tailwindcss/postcss` v4 is a devDep but the runtime is Tailwind 3.** The v4 package is vestigial/unused — don't migrate to v4 without a coordinated plan (mockingbird SCSS modules + Headless UI will need adjustments).
 - **`react-transition-group@4.4.5` is pinned** for React 19 compat via `mockingbird/ui/components/CSSTransitionCompat.jsx`. Don't upgrade.
 - **Build targets modern Chrome.** Vite defaults apply — no `@vitejs/plugin-legacy`, no dev-time esbuild downgrade, no manual polyfills. PostCSS is just Tailwind + autoprefixer.
+
+- **Pairing code verification:** Both skins display the fresh matching code and direct the user to confirm on the other device. The Car Thing has no pairing buttons or code-entry fields. Preserve discovery owners, ignore stale cancellation scoped by `request_id`, and recover pending prompts through `bluetooth.pairing.pending` on socket reconnect. Historical prompts without request ids remain display-only.

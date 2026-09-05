@@ -1010,6 +1010,14 @@ impl WebSocketServer {
                     }
                 }
 
+                if method == "bluetooth.pairing.pending" {
+                    let request = crate::bluetooth::pairing::pending_request()
+                        .map(serde_json::to_value)
+                        .transpose()?;
+                    self.send_typed_response(id, BluetoothPairingPendingResponse { request })
+                        .await;
+                    return Ok(());
+                }
                 if method == "bluetooth.discoverable" {
                     let request = Self::decode_params::<BluetoothDiscoverableRequest>(params)
                         .unwrap_or(BluetoothDiscoverableRequest { discoverable: true });

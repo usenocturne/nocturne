@@ -227,3 +227,7 @@ Unzip `resources.zip` locally (gitignored — too large to track) for reverse-en
 
 - This repo is **private** (closed source for legal reasons).
 - The firmware build (`nocturne-image` repo) bakes this daemon into the rootfs via Buildroot. Buildroot fetches the daemon source via `dl/` — local source isn't pulled in from this checkout.
+
+### Matching-code Bluetooth pairing
+
+The Car Thing advertises `DisplayYesNo` and displays the stack-generated six-digit comparison code. The peer owns user confirmation; neither Car Thing UI skin shows acceptance or rejection buttons. Never restore fixed PIN/passkey responses, PIN entry, or a legacy fallback: legacy PIN and passkey-entry callbacks are rejected. The Windows Connector requires authenticated numeric comparison. Pending display events carry `request_id`, recover through the local `bluetooth.pairing.pending` method, and clear on matching-device completion, disconnection/removal, cancellation, release, or timeout. Do not log pairing codes or clear a new display from an old unpaired snapshot.

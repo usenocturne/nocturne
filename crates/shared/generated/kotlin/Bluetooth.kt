@@ -19,6 +19,7 @@ data class BluetoothAgentEvent(
   @SerialName("entered") val entered: UShort? = null,
   @SerialName("uuid") val uuid: String? = null,
   @SerialName("accepted") val accepted: Boolean? = null,
+  @SerialName("request_id") val requestId: String? = null,
 )
 
 @Serializable
@@ -123,6 +124,8 @@ enum class BluetoothMethod {
   BLUETOOTH_DEVICE_DISCONNECT,
   @SerialName("bluetooth_device_unpair")
   BLUETOOTH_DEVICE_UNPAIR,
+  @SerialName("bluetooth_pairing_pending")
+  BLUETOOTH_PAIRING_PENDING,
   @SerialName("bluetooth_discoverable")
   BLUETOOTH_DISCOVERABLE,
 }
@@ -139,5 +142,13 @@ data class BluetoothPairingEvent(
   @SerialName("event") val event: String? = null,
   @SerialName("type") val type: String? = null,
   @SerialName("device") val device: String,
+)
+
+@Serializable
+object BluetoothPairingPendingRequest
+
+@Serializable
+data class BluetoothPairingPendingResponse(
+  @SerialName("request") val request: Value? = null,
 )
 

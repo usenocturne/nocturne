@@ -16,6 +16,7 @@ pub struct BluetoothAgentEvent {
     pub entered: Option<u16>,
     pub uuid: Option<String>,
     pub accepted: Option<bool>,
+    pub request_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -112,6 +113,7 @@ pub enum BluetoothMethod {
     BluetoothDeviceConnect(BluetoothDeviceConnectRequest),
     BluetoothDeviceDisconnect(BluetoothDeviceDisconnectRequest),
     BluetoothDeviceUnpair(BluetoothDeviceUnpairRequest),
+    BluetoothPairingPending(BluetoothPairingPendingRequest),
     BluetoothDiscoverable(BluetoothDiscoverableRequest),
 }
 
@@ -127,4 +129,12 @@ pub struct BluetoothPairingEvent {
     pub event: Option<String>,
     pub r#type: Option<String>,
     pub device: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct BluetoothPairingPendingRequest;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct BluetoothPairingPendingResponse {
+    pub request: Option<serde_json::Value>,
 }

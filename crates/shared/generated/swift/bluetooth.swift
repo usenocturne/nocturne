@@ -15,6 +15,7 @@ public struct BluetoothAgentEvent: Codable, Sendable {
   public let entered: UInt16?
   public let uuid: String?
   public let accepted: Bool?
+  public let requestId: String?
 
   public init(
     event: String?,
@@ -27,7 +28,8 @@ public struct BluetoothAgentEvent: Codable, Sendable {
     passkey: UInt32?,
     entered: UInt16?,
     uuid: String?,
-    accepted: Bool?
+    accepted: Bool?,
+    requestId: String?
   ) {
     self.event = event
     self.device = device
@@ -40,6 +42,7 @@ public struct BluetoothAgentEvent: Codable, Sendable {
     self.entered = entered
     self.uuid = uuid
     self.accepted = accepted
+    self.requestId = requestId
   }
 
   private enum CodingKeys: String, CodingKey {
@@ -54,6 +57,7 @@ public struct BluetoothAgentEvent: Codable, Sendable {
     case entered = "entered"
     case uuid = "uuid"
     case accepted = "accepted"
+    case requestId = "request_id"
   }
 }
 
@@ -295,6 +299,7 @@ public enum BluetoothMethod: Codable, Sendable {
   case bluetoothDeviceConnect(BluetoothDeviceConnectRequest)
   case bluetoothDeviceDisconnect(BluetoothDeviceDisconnectRequest)
   case bluetoothDeviceUnpair(BluetoothDeviceUnpairRequest)
+  case bluetoothPairingPending(BluetoothPairingPendingRequest)
   case bluetoothDiscoverable(BluetoothDiscoverableRequest)
 }
 
@@ -339,6 +344,24 @@ public struct BluetoothPairingEvent: Codable, Sendable {
     case event = "event"
     case type = "type"
     case device = "device"
+  }
+}
+
+public struct BluetoothPairingPendingRequest: Codable, Sendable {
+  public init() {}
+}
+
+public struct BluetoothPairingPendingResponse: Codable, Sendable {
+  public let request: Value?
+
+  public init(
+    request: Value?
+  ) {
+    self.request = request
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case request = "request"
   }
 }
 
