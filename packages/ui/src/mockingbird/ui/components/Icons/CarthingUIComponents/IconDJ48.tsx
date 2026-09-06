@@ -1,4 +1,5 @@
-const IconDJ48 = ({ className, ...props }: UiComponentProps) => (
+import type { MockIconProps } from "../IconProps";
+const IconDJ48 = ({ className, ...props }: MockIconProps) => (
   <svg
     width="48"
     height="48"

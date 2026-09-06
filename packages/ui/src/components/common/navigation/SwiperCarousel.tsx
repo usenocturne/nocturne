@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { ReactNode } from "react";
+import type { ReactNode, Key } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper";
 import "swiper/css";
@@ -8,17 +8,18 @@ import {
   setDragging,
   TRANSITION_DURATION_MS,
 } from "../../../hooks/useSwiperNavigation";
+
 interface SwiperCarouselProps<T> {
   items: T[];
   renderItem: (item: T, index: number, isActive: boolean) => ReactNode;
   activeSection: string;
   currentlyPlayingId?: string | null;
   onItemSelect: (index: number) => void;
-  keyExtractor: (item: T) => string;
+  keyExtractor: (item: T, index: number) => Key;
   getItemId?: (item: T) => string | null | undefined;
 }
 
-export default function SwiperCarousel({
+export default function SwiperCarousel<T>({
   items,
   renderItem,
   activeSection,
@@ -26,7 +27,7 @@ export default function SwiperCarousel({
   onItemSelect,
   keyExtractor,
   getItemId,
-}: SwiperCarouselProps<UiContentItem>) {
+}: SwiperCarouselProps<T>) {
   const swiperRef = useRef<SwiperInstance | null>(null);
 
   const playingItemIndex =
@@ -80,7 +81,7 @@ export default function SwiperCarousel({
       style={{ overflow: "visible" }}
     >
       {items.map((item, index) => (
-        <SwiperSlide key={keyExtractor(item)}>
+        <SwiperSlide key={keyExtractor(item, index)}>
           {renderItem(item, index, index === selectedIndex)}
         </SwiperSlide>
       ))}

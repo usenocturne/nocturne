@@ -3,7 +3,7 @@ import styles from "./PresetPlaceholder.module.scss";
 import Type from "../../../CarthingUIComponents/Type/Type";
 import classNames from "classnames";
 
-const PresetPlaceholder = ({ isFocused }: UiComponentProps) => {
+const PresetPlaceholder = ({ isFocused }: { isFocused?: boolean }) => {
   return (
     <div className={styles.presetPlaceholder}>
       <Type

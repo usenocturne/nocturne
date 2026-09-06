@@ -233,7 +233,7 @@ export function reduceInstallRetryEvent(
   return state;
 }
 
-type InstallRetryTimer = ReturnType<typeof setTimeout>;
+type InstallRetryTimer = ReturnType<Window["setTimeout"]>;
 
 export function scheduleInstallRetry(
   retry: () => void,

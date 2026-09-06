@@ -1,7 +1,14 @@
+import type { SectionProps, PlayingStateMap, LibraryData } from "./contracts";
 import React, { useMemo } from "react";
 import SwiperCarousel from "../../components/common/navigation/SwiperCarousel";
 import SpotifyImage from "../../components/common/SpotifyImage";
 import { AlertCircleIcon } from "../../components/common/icons";
+
+interface LibrarySectionProps extends SectionProps {
+  userPlaylists: LibraryData["userPlaylists"];
+  likedSongs: LibraryData["likedSongs"];
+  playingStateMap: PlayingStateMap;
+}
 
 const CARD_SIZE_STYLE = { width: 280, height: 280 };
 
@@ -13,7 +20,7 @@ function LibrarySection({
   activeSection,
   playingStateMap,
   onCardClick,
-}: UiComponentProps) {
+}: LibrarySectionProps) {
   const filteredPlaylists = useMemo(
     () =>
       isLoading.userPlaylists
@@ -43,7 +50,7 @@ function LibrarySection({
     );
   }
 
-  const handleItemSelect = (index) => {
+  const handleItemSelect = (index: number) => {
     if (index === 0) {
       onCardClick("liked", "liked-songs");
       return;
@@ -51,7 +58,7 @@ function LibrarySection({
     const adjustedIndex = index - 1;
     if (adjustedIndex >= 0 && adjustedIndex < filteredPlaylists.length) {
       const playlist = filteredPlaylists[adjustedIndex];
-      onCardClick(playlist.id, "playlist");
+      playlist.id && onCardClick(playlist.id, "playlist");
     }
   };
 
@@ -70,7 +77,7 @@ function LibrarySection({
                 onClick={() => onCardClick("liked", "liked-songs")}
               >
                 <img
-                  src={item.images[0].url}
+                  src={item.images?.[0]?.url ?? "/images/liked-songs.webp"}
                   alt="Liked Songs"
                   className="w-full h-full object-cover rounded-[12px]"
                 />
@@ -95,7 +102,7 @@ function LibrarySection({
                     Now Playing
                   </>
                 ) : (
-                  `${item.tracks.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
+                  `${(item.tracks?.total ?? 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Songs`
                 )}
               </h4>
             </div>
@@ -110,9 +117,11 @@ function LibrarySection({
             <div
               style={CARD_SIZE_STYLE}
               className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-              onClick={() => onCardClick(playlist.id, "playlist")}
+              onClick={() =>
+                playlist.id && onCardClick(playlist.id, "playlist")
+              }
             >
-              {playlist?.images?.length > 0 ? (
+              {(playlist.images?.length ?? 0) > 0 ? (
                 <SpotifyImage
                   images={playlist.images}
                   preferredSizeIndex={1}
@@ -151,7 +160,7 @@ function LibrarySection({
           </div>
         );
       }}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item, index) => item.id ?? item.uri ?? index}
       getItemId={(item) => item.id}
       activeSection={activeSection}
       onItemSelect={handleItemSelect}

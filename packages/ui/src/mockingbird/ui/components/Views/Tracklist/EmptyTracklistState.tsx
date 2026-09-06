@@ -1,6 +1,6 @@
 import styles from "./Tracklist.module.scss";
 
-const getTextBasedOnUri = (uri) => {
+const getTextBasedOnUri = (uri: string) => {
   if (!uri) return "";
 
   if (uri.includes("playlist:")) {
@@ -16,7 +16,7 @@ const getTextBasedOnUri = (uri) => {
   return "";
 };
 
-const EmptyTracklistState = ({ contextUri }: UiComponentProps) => {
+const EmptyTracklistState = ({ contextUri }: { contextUri: string }) => {
   return (
     <div className={styles.emptyBody} data-testid="empty-body">
       <p>{getTextBasedOnUri(contextUri)}</p>

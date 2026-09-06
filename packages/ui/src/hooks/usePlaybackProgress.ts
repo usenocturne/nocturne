@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { consumeProgressResetSignal } from "./useSpotifyPlayerState";
-import type { PlaybackProgress, SpotifyPlayback } from "../types";
+import type {
+  PlaybackProgress,
+  SpotifyPlaybackState as SpotifyPlayback,
+} from "../types";
 
-type ProgressSnapshot = PlaybackProgress;
+type ProgressSnapshot = Omit<
+  PlaybackProgress,
+  "updateProgress" | "triggerRefresh"
+>;
 type ProgressSubscriber = (snapshot: ProgressSnapshot) => void;
 type ProgressResetSignal = {
   position?: number;
@@ -170,7 +176,9 @@ const ensureAnimationLoop = () => {
 
 export function subscribeProgress(listener: ProgressSubscriber) {
   _subscribers.add(listener);
-  return () => _subscribers.delete(listener);
+  return () => {
+    _subscribers.delete(listener);
+  };
 }
 
 export function getProgressSnapshot(): ProgressSnapshot {
@@ -285,7 +293,13 @@ export function usePlaybackProgress(
       : _serverProgressMs;
     _isPlaying = currentPlayback.is_playing || false;
 
-    const newPlaybackSpeed = currentPlayback.playback_speed || 1;
+    const rawPlaybackSpeed = currentPlayback.playback_speed;
+    const newPlaybackSpeed =
+      typeof rawPlaybackSpeed === "number" &&
+      Number.isFinite(rawPlaybackSpeed) &&
+      rawPlaybackSpeed > 0
+        ? rawPlaybackSpeed
+        : 1;
     if (newPlaybackSpeed !== _playbackSpeed) {
       _playbackSpeed = newPlaybackSpeed;
     }
@@ -293,8 +307,8 @@ export function usePlaybackProgress(
     if (currentPlayback?.item?.id !== trackIdRef.current) {
       _phoneMediaPauseGuard = null;
       _duration = updatedDuration;
-      _trackId = currentPlayback.item?.id;
-      trackIdRef.current = currentPlayback.item?.id;
+      _trackId = currentPlayback.item?.id ?? null;
+      trackIdRef.current = currentPlayback.item?.id ?? null;
 
       const spotifyPosition = currentPlayback.progress_ms ?? 0;
       const spotifyTimestamp = currentPlayback.timestamp || Date.now();

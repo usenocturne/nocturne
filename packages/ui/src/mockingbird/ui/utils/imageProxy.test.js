@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { getCachedImageUrl, resolveImageUrl } from "./imageProxy";
+import {
+  clearImageCache,
+  getCachedImageUrl,
+  resolveImageUrl,
+} from "./imageProxy";
 
 describe("Mockingbird local file artwork", () => {
   it("renders raw JPEG metadata as a data URL", async () => {
@@ -24,4 +28,11 @@ describe("Mockingbird local file artwork", () => {
     );
     expect(getCachedImageUrl(localFileImage)).toBe("/images/not-playing.webp");
   });
+});
+
+it("clearing the image cache settles queued artwork requests", async () => {
+  const first = resolveImageUrl("https://images.example.test/first");
+  const queued = resolveImageUrl("https://images.example.test/queued");
+  clearImageCache();
+  expect(await Promise.all([first, queued])).toEqual([null, null]);
 });

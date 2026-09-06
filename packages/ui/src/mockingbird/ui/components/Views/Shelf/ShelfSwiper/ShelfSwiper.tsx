@@ -1,3 +1,5 @@
+import type { Swiper as SwiperInstance } from "swiper";
+import type { ShelfItem } from "../../../../stores/ShelfModels";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { action, autorun, runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
@@ -22,23 +24,23 @@ const SWIPER_SLIDES_PER_VIEW =
   3 +
   (SWIPER_WIDTH - THREE_ARTWORK_WIDTH) / (ARTWORK_WIDTH + SWIPER_SPACE_BETWEEN);
 
-const getKey = (item) => {
+const getKey = (item: ShelfItem) => {
   return `${item.identifier}-${item.category}`;
 };
 
 let dragging = false;
-const setDraggingFlag = (value) => {
+const setDraggingFlag = (value: boolean) => {
   dragging = value;
 };
 
 const ShelfSwiper = () => {
   const { shelfStore } = useCarThingStore();
   const uiState = shelfStore.shelfController.swiperUiState;
-  const swiperRef = useRef(null);
+  const swiperRef = useRef<SwiperInstance | null>(null);
   const [localDragging, setLocalDragging] = useState(false);
 
   useEffect(() => {
-    const setAnimate = (isAnimated) => {
+    const setAnimate = (isAnimated: boolean) => {
       runInAction(() => {
         uiState.animateSliding = isAnimated;
       });
@@ -95,7 +97,7 @@ const ShelfSwiper = () => {
           swiperRef.current?.slideTo(uiState.selectedItemIndex);
         }
       }}
-      onActiveIndexChange={action((swiper) => {
+      onActiveIndexChange={action((swiper: SwiperInstance) => {
         if (swiper.activeIndex !== uiState.selectedItemIndex) {
           uiState.handleDraggedToIndex(swiper.activeIndex);
         }

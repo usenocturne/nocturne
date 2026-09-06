@@ -1,3 +1,11 @@
+import type {
+  SpotifyArtist,
+  SpotifyPlaylist,
+  SpotifyPaging,
+} from "../../../types";
+import type { RawTrack } from "./TracklistModels";
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable, action } from "mobx";
 import {
   getActivePresetDeviceId,
@@ -14,8 +22,8 @@ import { normalizeSpotifyContext } from "../../../utils/spotifyContext";
 export const PRESET_NUMBERS = [1, 2, 3, 4];
 
 export class PresetsUiState {
-  declare tempPreset: UiLooseData | null;
-  declare middlewareActions: UiLooseData;
+  declare tempPreset: PresetData | null;
+  declare middlewareActions: MiddlewareActions;
   presetsDataStore;
   presetsUbiLogger;
   overlayController;
@@ -30,20 +38,20 @@ export class PresetsUiState {
   selectedPresetNumber = 1;
   isShowingPresets = false;
   isAnimatingOut = false;
-  presetsTimeout = null;
-  currentlyPlayingContextUri = null;
+  presetsTimeout: ReturnType<typeof setTimeout> | null = null;
+  currentlyPlayingContextUri: string | null = null;
 
   constructor(
-    presetsDataStore,
-    presetsUbiLogger,
-    overlayController,
-    playerStore,
-    shelfStore,
-    queueStore,
-    viewStore,
-    npvStore,
-    interappActions: UiLooseData,
-    tracklistStore,
+    presetsDataStore: RootStore["presetsDataStore"],
+    presetsUbiLogger: RootStore["ubiLogger"]["presetsUbiLogger"],
+    overlayController: RootStore["overlayController"],
+    playerStore: RootStore["playerStore"],
+    shelfStore: RootStore["shelfStore"],
+    queueStore: RootStore["queueStore"],
+    viewStore: RootStore["viewStore"],
+    npvStore: RootStore["npvStore"],
+    interappActions: InterappActions,
+    tracklistStore: RootStore["tracklistStore"],
   ) {
     this.presetsDataStore = presetsDataStore;
     this.presetsUbiLogger = presetsUbiLogger;
@@ -74,12 +82,18 @@ export class PresetsUiState {
     return this.isShowingPresets && !this.isAnimatingOut;
   }
 
-  get presets() {
-    return PRESET_NUMBERS.map((number) => {
+  get presets(): PresetSlot[] {
+    return PRESET_NUMBERS.map((number): PresetSlot => {
       const preset = this.presetsDataStore.getPreset(number);
 
       if (preset) {
-        return { ...preset, slot_index: number, type: "preset" };
+        return {
+          ...preset,
+          slot_index: number,
+          type: this.presetsDataStore.isUnavailable(number)
+            ? "unavailable"
+            : "preset",
+        };
       }
 
       return { slot_index: number, type: "placeholder" };
@@ -90,7 +104,7 @@ export class PresetsUiState {
     return this.playerStore.isPlayingSpotify;
   }
 
-  showNowPlaying(contextUri) {
+  showNowPlaying(contextUri: string) {
     if (!this.isPlaying) return false;
 
     const normalizedContextUri =
@@ -117,21 +131,21 @@ export class PresetsUiState {
     return normalizedPlayerContextUri === normalizedContextUri;
   }
 
-  handlePresetButtonPress(presetNumber) {
+  handlePresetButtonPress(presetNumber: number) {
     this.presetsUbiLogger?.logPresetButtonPressed?.(presetNumber);
     this.selectedPresetNumber = presetNumber;
     this.showPresets();
     this.loadPreset(presetNumber);
   }
 
-  handlePresetButtonLongPress(presetNumber) {
+  handlePresetButtonLongPress(presetNumber: number) {
     this.presetsUbiLogger?.logPresetButtonLongPressed?.(presetNumber);
     this.selectedPresetNumber = presetNumber;
     this.showPresets();
     this.saveCurrentContextToPreset(presetNumber);
   }
 
-  handleTapOnPreset(presetNumber) {
+  handleTapOnPreset(presetNumber: number) {
     this.presetsUbiLogger?.logPresetCardTapped?.(presetNumber);
     this.loadPreset(presetNumber);
   }
@@ -156,7 +170,7 @@ export class PresetsUiState {
     this.hidePresets();
   }
 
-  loadPreset(presetNumber) {
+  loadPreset(presetNumber: number) {
     this.presetsDataStore.syncActiveDeviceFromStorage();
     const preset = this.presetsDataStore.getPreset(presetNumber);
 
@@ -173,7 +187,7 @@ export class PresetsUiState {
     this.playPresetContext(preset);
   }
 
-  async saveCurrentContextToPreset(presetNumber) {
+  async saveCurrentContextToPreset(presetNumber: number) {
     this.presetsDataStore.syncActiveDeviceFromStorage();
     const currentUri = this.getCurrentSaveableUri();
 
@@ -249,7 +263,7 @@ export class PresetsUiState {
       : albumUri || trackUri;
   }
 
-  async getContextData(uri) {
+  async getContextData(uri: string): Promise<PresetData> {
     const rootStore = window.carThingRootStore;
     const currentPlayback = rootStore?.currentPlayback;
     const npvUiState = rootStore?.npvStore?.playingInfoUiState;
@@ -278,14 +292,16 @@ export class PresetsUiState {
         const artistId = uri.replace("spotify:artist:", "");
         const { sendNocturneWsRequest } =
           await import("../../../hooks/useNocturned");
-        const result = await sendNocturneWsRequest(
+        const result = await sendNocturneWsRequest<SpotifyArtist>(
           "spotify.artist.get",
           /** @type {SpotifyArtistGetRequest} */ { contentId: artistId },
           { timeoutMs: 5000 },
         );
         if (result?.images?.[0]?.url) contextImage = result.images[0].url;
         if (result?.name) contextName = result.name;
-      } catch {}
+      } catch (error) {
+        console.warn("Failed to refresh preset artist metadata:", error);
+      }
     } else if (uri.includes("spotify:playlist:")) {
       const playlistId = uri.replace("spotify:playlist:", "");
       if (playlistId === "37i9dQZF1EYkqdzj48dyYq") {
@@ -301,7 +317,7 @@ export class PresetsUiState {
       try {
         const { sendNocturneWsRequest } =
           await import("../../../hooks/useNocturned");
-        const result = await sendNocturneWsRequest(
+        const result = await sendNocturneWsRequest<SpotifyPlaylist>(
           "spotify.playlist.get",
           /** @type {SpotifyPlaylistGetRequest} */ {
             contentId: playlistId,
@@ -311,7 +327,9 @@ export class PresetsUiState {
         );
         if (result?.images?.[0]?.url) contextImage = result.images[0].url;
         if (result?.name) contextName = result.name;
-      } catch {}
+      } catch (error) {
+        console.warn("Failed to refresh preset playlist metadata:", error);
+      }
     } else if (uri.includes("spotify:album:")) {
       if (!viewedContextItem) {
         contextName =
@@ -368,11 +386,11 @@ export class PresetsUiState {
     this.overlayController?.showModal?.("saving_preset_failed");
   }
 
-  playTTS(audioType) {
+  playTTS(audioType: string) {
     console.log(`Playing TTS: ${audioType}`);
   }
 
-  async playPresetContext(preset) {
+  async playPresetContext(preset: PresetData) {
     const normalizedContext = normalizeSpotifyContext(preset.context_uri);
     const presetUri = normalizedContext?.uri || preset.context_uri;
     this.currentlyPlayingContextUri = null;
@@ -395,7 +413,7 @@ export class PresetsUiState {
         const { sendNocturneWsRequest } =
           await import("../../../hooks/useNocturned");
         try {
-          const profile = await sendNocturneWsRequest(
+          const profile = await sendNocturneWsRequest<{ id?: string }>(
             "spotify.me.profile",
             {},
             { timeoutMs: 5000 },
@@ -404,14 +422,17 @@ export class PresetsUiState {
           if (userId) {
             await playTrack(null, `spotify:user:${userId}:collection`);
           } else {
-            const result = await sendNocturneWsRequest(
+            const result = await sendNocturneWsRequest<SpotifyPaging<RawTrack>>(
               "spotify.me.tracks",
               /** @type {SpotifyMeTracksRequest} */ { limit: 50 },
               { timeoutMs: 8000 },
             );
             const trackUris = (result?.items || [])
               .map((i) => i.track?.uri)
-              .filter(Boolean);
+              .filter(
+                (uri): uri is string =>
+                  typeof uri === "string" && uri.length > 0,
+              );
             if (trackUris.length > 0) {
               await playTrack(trackUris[0], null, trackUris);
             }
@@ -482,9 +503,9 @@ export class PresetsUiState {
 }
 
 export class PresetsDataStore {
-  declare middlewareActions: UiLooseData;
-  presets = {};
-  unavailablePresets = new Set();
+  declare middlewareActions: MiddlewareActions;
+  presets: Record<string, PresetData> = {};
+  unavailablePresets = new Set<number>();
   activeDeviceId = getActivePresetDeviceId();
 
   constructor() {
@@ -492,7 +513,7 @@ export class PresetsDataStore {
     this.loadPresetsFromStorage();
   }
 
-  setActiveDeviceId(deviceId) {
+  setActiveDeviceId(deviceId: string | null | undefined) {
     const nextDeviceId = normalizePresetDeviceId(deviceId);
     if (nextDeviceId === this.activeDeviceId) return;
 
@@ -508,15 +529,20 @@ export class PresetsDataStore {
     return getMockingbirdPresetsStorageKey(this.activeDeviceId);
   }
 
-  getPreset(presetNumber) {
+  getPreset(presetNumber: number): PresetData | undefined {
     return this.presets[presetNumber];
   }
 
-  isUnavailable(presetNumber) {
+  isUnavailable(presetNumber: number) {
     return this.unavailablePresets.has(presetNumber);
   }
 
-  async savePreset(uri, slotIndex, source, tempPresetData) {
+  async savePreset(
+    uri: string,
+    slotIndex: number,
+    source: string,
+    tempPresetData: PresetData | null | undefined,
+  ) {
     try {
       this.syncActiveDeviceFromStorage();
 
@@ -543,7 +569,7 @@ export class PresetsDataStore {
 
       const stored = localStorage.getItem(this.storageKey);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed: Record<string, PresetData> = JSON.parse(stored);
         this.presets =
           parsed && typeof parsed === "object" && !Array.isArray(parsed)
             ? parsed
@@ -590,7 +616,7 @@ export class PresetsDataStore {
         if (uri.includes("spotify:playlist:")) {
           const playlistId = uri.replace("spotify:playlist:", "");
           try {
-            const result = await sendNocturneWsRequest(
+            const result = await sendNocturneWsRequest<SpotifyPlaylist>(
               "spotify.playlist.get",
               /** @type {SpotifyPlaylistGetRequest} */ {
                 contentId: playlistId,
@@ -606,13 +632,17 @@ export class PresetsDataStore {
               };
               if (result.name) this.presets[slotIndex].name = result.name;
             }
-          } catch {}
+          } catch (error) {
+            console.warn("Failed to refresh preset artwork:", error);
+          }
         }
       }
       if (deviceId === this.activeDeviceId) {
         this.savePresetsToStorage(deviceId);
       }
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to load the preset artwork bridge:", error);
+    }
   }
 
   savePresetsToStorage(deviceId = this.activeDeviceId) {
@@ -639,12 +669,12 @@ export class PresetsDataStore {
 }
 
 export class PresetsController {
-  declare middlewareActions: UiLooseData;
+  declare middlewareActions: MiddlewareActions;
   rootStore;
   interappActions;
   presetsUiState;
 
-  constructor(rootStore: UiLooseData, interappActions: UiLooseData) {
+  constructor(rootStore: RootStore, interappActions: InterappActions) {
     this.rootStore = rootStore;
     this.interappActions = interappActions;
     this.presetsUiState = new PresetsUiState(
@@ -684,3 +714,14 @@ export class PresetsController {
 }
 
 export default PresetsController;
+
+export interface PresetData {
+  context_uri: string;
+  slot_index?: number;
+  name: string;
+  description: string;
+  image_url: string;
+}
+export type PresetSlot =
+  | (PresetData & { type: "preset" | "unavailable"; slot_index: number })
+  | { type: "placeholder"; slot_index: number };

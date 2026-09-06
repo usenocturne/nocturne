@@ -20,12 +20,36 @@ import type {
   SpotifyAlbum,
   SpotifyArtist,
   SpotifyPlaylist,
-  SpotifyShow,
+  SpotifyShowEntry,
   SpotifyTrack,
-  SpotifyPlayback,
+  SpotifyPlaybackState as SpotifyPlayback,
+  SpotifyImage,
+  SpotifyPaging,
   UnknownRecord,
 } from "../types";
+import { getErrorMessage } from "../utils/helpers";
+import type { SpotifyTrackEntry } from "./spotifyResponses";
 
+export interface LikedSongsCollection extends SpotifyPlaylist {
+  tracks: SpotifyPaging<SpotifyTrackEntry> & { total: number };
+}
+export interface RadioMix extends SpotifyPlaylist {
+  trackCount: number;
+  sortOrder: number;
+  tracks: { total: number };
+}
+const COLLECTION_SECTIONS = ["playlists", "artists", "liked", "shows"] as const;
+type CollectionSection = (typeof COLLECTION_SECTIONS)[number];
+const isCollectionSection = (section: string): section is CollectionSection =>
+  COLLECTION_SECTIONS.some((candidate) => candidate === section);
+const SECTION_MAP: Record<string, CollectionSection | undefined> = {
+  library: "playlists",
+  playlists: "playlists",
+  artists: "artists",
+  liked: "liked",
+  shows: "shows",
+  podcasts: "shows",
+};
 type InitialDataLoadListener = (loaded: boolean) => void;
 type LoadingMap = {
   recentAlbums: boolean;
@@ -66,7 +90,7 @@ const INITIAL_DATA_RETRY_DELAYS_MS = Array.from(
   { length: MAX_RETRIES + 1 },
   (_, attempt) => (attempt === 0 ? 0 : RETRY_DELAY * 2 ** (attempt - 1)),
 );
-const createFallbackRadioMixes = () => [
+const createFallbackRadioMixes = (): RadioMix[] => [
   {
     id: "top-mix",
     name: "Your Top Mix",
@@ -250,14 +274,14 @@ export function useSpotifyData(
   const [recentAlbums, setRecentAlbums] = useState<SpotifyAlbum[]>([]);
   const [userPlaylists, setUserPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [topArtists, setTopArtists] = useState<SpotifyArtist[]>([]);
-  const [likedSongs, setLikedSongs] = useState<SpotifyPlaylist>({
+  const [likedSongs, setLikedSongs] = useState<LikedSongsCollection>({
     name: "Liked Songs",
     tracks: { total: 0 },
     images: [{ url: "/images/liked-songs.webp" }],
     type: "liked-songs",
   });
-  const [radioMixes, setRadioMixes] = useState<SpotifyPlaylist[]>([]);
-  const [userShows, setUserShows] = useState<SpotifyShow[]>([]);
+  const [radioMixes, setRadioMixes] = useState<RadioMix[]>([]);
+  const [userShows, setUserShows] = useState<SpotifyShowEntry[]>([]);
   const [spotifyUserId, setSpotifyUserId] = useState<string | null>(null);
 
   const [nextTokens, setNextTokens] = useState<NextTokens>({
@@ -383,7 +407,7 @@ export function useSpotifyData(
   );
 
   useEffect(() => {
-    const handleSkippedChange = (isSkipped) => {
+    const handleSkippedChange = (isSkipped: boolean) => {
       if (isSkipped && !initialDataLoaded) {
         setInitialDataLoaded(true);
         initialDataLoadComplete = true;
@@ -409,78 +433,83 @@ export function useSpotifyData(
     };
   }, [initialDataLoaded]);
 
-  const extractAlbumFromPlayerState = useCallback((playerStateData) => {
-    if (!playerStateData?.item) return null;
+  const extractAlbumFromPlayerState = useCallback(
+    (playerStateData: SpotifyPlayback | null | undefined) => {
+      if (!playerStateData?.item) return null;
 
-    const normalizeImgs = (imgs) => {
-      if (!imgs || !Array.isArray(imgs)) return imgs;
-      return imgs.map((img) => {
-        if (!img?.url) return img;
-        return { ...img, url: normalizeImageUrl(img.url) };
-      });
-    };
+      const normalizeImgs = (
+        imgs: SpotifyImage[] | null | undefined,
+      ): SpotifyImage[] | undefined => {
+        if (!imgs || !Array.isArray(imgs)) return imgs ?? undefined;
+        return imgs.map((img) => {
+          if (!img?.url) return img;
+          return { ...img, url: normalizeImageUrl(img.url) ?? undefined };
+        });
+      };
 
-    const itemUri = playerStateData.item.uri || "";
-    const contextUri =
-      typeof playerStateData.context?.uri === "string"
-        ? playerStateData.context.uri
-        : "";
-    const isEpisode =
-      playerStateData.item.type === "episode" ||
-      itemUri.startsWith("spotify:episode:") ||
-      contextUri.startsWith("spotify:episode:") ||
-      contextUri.startsWith("spotify:show:");
+      const itemUri = playerStateData.item.uri || "";
+      const contextUri =
+        typeof playerStateData.context?.uri === "string"
+          ? playerStateData.context.uri
+          : "";
+      const isEpisode =
+        playerStateData.item.type === "episode" ||
+        itemUri.startsWith("spotify:episode:") ||
+        contextUri.startsWith("spotify:episode:") ||
+        contextUri.startsWith("spotify:show:");
 
-    if (isEpisode) {
-      if (playerStateData.item.show) {
+      if (isEpisode) {
+        if (playerStateData.item.show) {
+          return {
+            ...playerStateData.item.show,
+            images: normalizeImgs(playerStateData.item.show.images),
+            type: "show",
+          };
+        }
+        const showUri = contextUri.startsWith("spotify:show:")
+          ? contextUri
+          : contextUri.startsWith("spotify:episode:")
+            ? contextUri
+            : itemUri;
+        const showId = showUri ? showUri.split(":")[2] || "" : "";
+        const albumLikeName = playerStateData.item.album?.name;
+        const albumLikeImages = normalizeImgs(
+          playerStateData.item.album?.images || [],
+        );
         return {
-          ...playerStateData.item.show,
-          images: normalizeImgs(playerStateData.item.show.images),
+          id: showId,
+          uri: showUri,
+          name: albumLikeName || "Unknown Show",
+          publisher: albumLikeName,
+          images: albumLikeImages,
           type: "show",
         };
       }
-      const showUri = contextUri.startsWith("spotify:show:")
-        ? contextUri
-        : contextUri.startsWith("spotify:episode:")
-          ? contextUri
-          : itemUri;
-      const showId = showUri ? showUri.split(":")[2] || "" : "";
-      const albumLikeName = playerStateData.item.album?.name;
-      const albumLikeImages = normalizeImgs(
-        playerStateData.item.album?.images || [],
-      );
-      return {
-        id: showId,
-        uri: showUri,
-        name: albumLikeName || "Unknown Show",
-        publisher: albumLikeName,
-        images: albumLikeImages,
-        type: "show",
-      };
-    }
 
-    if (playerStateData.item.type === "track" || playerStateData.item.album) {
-      const currentAlbum =
-        isSpotifyLocalItem(playerStateData.item) ||
-        playerStateData.item.is_phone_media
-          ? {
-              id: `local-${playerStateData.item.uri}`,
-              name:
-                playerStateData.item.album?.name || playerStateData.item.name,
-              images: [{ url: "/images/not-playing.webp" }],
-              artists: playerStateData.item.artists,
-              type: "local-track",
-              uri: playerStateData.item.uri,
-            }
-          : {
-              ...playerStateData.item.album,
-              images: normalizeImgs(playerStateData.item.album?.images),
-            };
-      return currentAlbum;
-    }
+      if (playerStateData.item.type === "track" || playerStateData.item.album) {
+        const currentAlbum =
+          isSpotifyLocalItem(playerStateData.item) ||
+          playerStateData.item.is_phone_media
+            ? {
+                id: `local-${playerStateData.item.uri}`,
+                name:
+                  playerStateData.item.album?.name || playerStateData.item.name,
+                images: [{ url: "/images/not-playing.webp" }],
+                artists: playerStateData.item.artists,
+                type: "local-track",
+                uri: playerStateData.item.uri,
+              }
+            : {
+                ...playerStateData.item.album,
+                images: normalizeImgs(playerStateData.item.album?.images),
+              };
+        return currentAlbum;
+      }
 
-    return null;
-  }, []);
+      return null;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (currentlyPlayingAlbum?.id) {
@@ -552,7 +581,7 @@ export function useSpotifyData(
           throw new Error("Invalid recently played response");
         }
         throwIfInitialLoadCancelled(signal);
-        const uniqueAlbums = [];
+        const uniqueAlbums: SpotifyAlbum[] = [];
         const albumIds = new Set();
 
         if (data.albums && Array.isArray(data.albums)) {
@@ -620,7 +649,7 @@ export function useSpotifyData(
           throw err;
         }
         console.error("Error fetching recently played:", err);
-        setErrors((prev) => ({ ...prev, recentAlbums: err.message }));
+        setErrors((prev) => ({ ...prev, recentAlbums: getErrorMessage(err) }));
         throw err;
       } finally {
         if (
@@ -780,7 +809,7 @@ export function useSpotifyData(
           throw err;
         }
         console.error("Error fetching user playlists:", err);
-        setErrors((prev) => ({ ...prev, userPlaylists: err.message }));
+        setErrors((prev) => ({ ...prev, userPlaylists: getErrorMessage(err) }));
         throw err;
       } finally {
         if (
@@ -862,7 +891,7 @@ export function useSpotifyData(
           if (data.next && newLength < 50) {
             setNextTokens((prevTokens) => ({
               ...prevTokens,
-              topArtists: data.next,
+              topArtists: data.next ?? null,
             }));
           } else {
             setNextTokens((prevTokens) => ({
@@ -875,8 +904,11 @@ export function useSpotifyData(
           setItemCounts((prev) => ({ ...prev, topArtists: items.length }));
 
           if (data.next && items.length < 50) {
-            setNextTokens((prev) => ({ ...prev, topArtists: data.next }));
-          } else if (items.length === 5 && data.total > 5) {
+            setNextTokens((prev) => ({
+              ...prev,
+              topArtists: data.next ?? null,
+            }));
+          } else if (items.length === 5 && (data.total ?? 0) > 5) {
             setNextTokens((prev) => ({ ...prev, topArtists: "has-more" }));
           }
         }
@@ -893,7 +925,7 @@ export function useSpotifyData(
           throw err;
         }
         console.error("Error fetching top artists:", err);
-        setErrors((prev) => ({ ...prev, topArtists: err.message }));
+        setErrors((prev) => ({ ...prev, topArtists: getErrorMessage(err) }));
         throw err;
       } finally {
         if (
@@ -982,8 +1014,12 @@ export function useSpotifyData(
         }));
 
         if (data.next && newItemsLength < 50) {
-          setNextTokens((prev) => ({ ...prev, likedSongs: data.next }));
-        } else if (!isLoadMore && newItemsLength === 5 && data.total > 5) {
+          setNextTokens((prev) => ({ ...prev, likedSongs: data.next ?? null }));
+        } else if (
+          !isLoadMore &&
+          newItemsLength === 5 &&
+          (data.total ?? 0) > 5
+        ) {
           setNextTokens((prev) => ({ ...prev, likedSongs: "has-more" }));
         } else {
           setNextTokens((prev) => ({ ...prev, likedSongs: null }));
@@ -1001,7 +1037,7 @@ export function useSpotifyData(
           throw err;
         }
         console.error("Error fetching liked songs:", err);
-        setErrors((prev) => ({ ...prev, likedSongs: err.message }));
+        setErrors((prev) => ({ ...prev, likedSongs: getErrorMessage(err) }));
         throw err;
       } finally {
         if (
@@ -1079,7 +1115,10 @@ export function useSpotifyData(
           }));
 
           if (data.next && newLength < 50) {
-            setNextTokens((prev) => ({ ...prev, userShows: data.next }));
+            setNextTokens((prev) => ({
+              ...prev,
+              userShows: data.next ?? null,
+            }));
           } else {
             setNextTokens((prev) => ({ ...prev, userShows: null }));
           }
@@ -1088,8 +1127,11 @@ export function useSpotifyData(
           setItemCounts((prev) => ({ ...prev, userShows: items.length }));
 
           if (data.next && items.length < 50) {
-            setNextTokens((prev) => ({ ...prev, userShows: data.next }));
-          } else if (items.length === 5 && data.total > 5) {
+            setNextTokens((prev) => ({
+              ...prev,
+              userShows: data.next ?? null,
+            }));
+          } else if (items.length === 5 && (data.total ?? 0) > 5) {
             setNextTokens((prev) => ({ ...prev, userShows: "has-more" }));
           }
         }
@@ -1106,7 +1148,7 @@ export function useSpotifyData(
           throw err;
         }
         console.error("Error fetching user shows:", err);
-        setErrors((prev) => ({ ...prev, userShows: err.message }));
+        setErrors((prev) => ({ ...prev, userShows: getErrorMessage(err) }));
         throw err;
       } finally {
         if (
@@ -1159,7 +1201,7 @@ export function useSpotifyData(
                 name !== "DJ"
               );
             })
-            .map((item, index) => {
+            .map<RadioMix>((item, index) => {
               const imageUrl = item.image_url || "";
 
               let type = "spotify-radio";
@@ -1193,6 +1235,7 @@ export function useSpotifyData(
                 if (mix.uri && mix.trackCount === 0) {
                   try {
                     const playlistId = mix.uri.split(":").pop();
+                    if (!playlistId) return mix;
                     const playlistInfo = await getPlaylist(
                       playlistId,
                       "tracks.total",
@@ -1238,7 +1281,7 @@ export function useSpotifyData(
           throw err;
         }
         console.error("Error fetching radio mixes:", err);
-        setErrors((prev) => ({ ...prev, radioMixes: err.message }));
+        setErrors((prev) => ({ ...prev, radioMixes: getErrorMessage(err) }));
         const fallbackMixes = createFallbackRadioMixes();
         setRadioMixes(fallbackMixes);
         return fallbackMixes;
@@ -1257,7 +1300,7 @@ export function useSpotifyData(
   );
 
   const loadMoreForSection = useCallback(
-    async (section) => {
+    async (section: string) => {
       if (!checkSpotifyReady()) return;
 
       if (section === "recents") {
@@ -1319,8 +1362,8 @@ export function useSpotifyData(
   );
 
   const handleSectionAccess = useCallback(
-    async (section) => {
-      Object.keys(sectionTimeoutRefs.current).forEach((key) => {
+    async (section: string) => {
+      COLLECTION_SECTIONS.forEach((key) => {
         if (key !== section && sectionTimeoutRefs.current[key]) {
           clearTimeout(sectionTimeoutRefs.current[key]);
           sectionTimeoutRefs.current[key] = null;
@@ -1356,17 +1399,11 @@ export function useSpotifyData(
         setSectionsAccessed((prev) => new Set([...prev, section]));
       }
 
+      if (!isCollectionSection(section)) return;
       const shouldLoad = shouldStartLoading();
       if (shouldLoad) {
         const loadMore = async () => {
-          const sectionMap = {
-            library: "playlists",
-            playlists: "playlists",
-            artists: "artists",
-            liked: "liked",
-            shows: "shows",
-            podcasts: "shows",
-          };
+          const sectionMap = SECTION_MAP;
 
           const currentMappedSection = sectionMap[activeSection];
           if (currentMappedSection !== section) {
@@ -1374,7 +1411,7 @@ export function useSpotifyData(
           }
 
           const result = await loadMoreForSection(section);
-          if (result && result.length > 0) {
+          if (Array.isArray(result) && result.length > 0) {
             const currentOffset =
               section === "playlists"
                 ? lastOffsets.userPlaylists
@@ -1425,14 +1462,7 @@ export function useSpotifyData(
   useEffect(() => {
     if (!activeSection || !initialDataLoaded) return;
 
-    const sectionMap = {
-      library: "playlists",
-      playlists: "playlists",
-      artists: "artists",
-      liked: "liked",
-      shows: "shows",
-      podcasts: "shows",
-    };
+    const sectionMap = SECTION_MAP;
 
     const mappedSection = sectionMap[activeSection];
     if (mappedSection) {
@@ -1668,7 +1698,7 @@ export function useSpotifyData(
       if (slowRetryTimeoutRef.current) {
         clearTimeout(slowRetryTimeoutRef.current);
       }
-      Object.keys(sectionTimeoutRefs.current).forEach((key) => {
+      COLLECTION_SECTIONS.forEach((key) => {
         if (sectionTimeoutRefs.current[key]) {
           clearTimeout(sectionTimeoutRefs.current[key]);
         }
@@ -1831,3 +1861,5 @@ export function useSpotifyData(
     refreshUserShows: fetchUserShows,
   };
 }
+
+export type SpotifyDataHook = ReturnType<typeof useSpotifyData>;

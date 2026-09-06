@@ -66,8 +66,8 @@ The guide to flash Nocturne to your Car Thing is on the [main Nocturne GitHub pa
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/usenocturne/nocturne-ui.git
-cd nocturne-ui
+git clone https://github.com/usenocturne/nocturne.git
+cd nocturne/packages/ui
 ```
 
 2. Install dependencies:
@@ -84,36 +84,15 @@ bun dev
 
 ### Displaying your local changes on the Car Thing
 
-After setting up your local server, you may follow these steps to see your changes on your Car Thing.
+Build the bundle from the monorepo root, then use the image helper to copy it to the running kiosk:
 
-1. You need to use a computer or Raspberry Pi as a host device for your Car Thing.
-2. SSH into the Car Thing.
-   ```
-   ssh root@172.16.42.2
-   # The login password is "nocturne".
-   ```
-3. Remount the rootfs as read/write.
-   ```
-   mount -o remount,rw /
-   ```
-4. Edit `/etc/supervisord.conf`.
-   ```
-   vi /etc/supervisord.conf
-   ```
-5. Find the `[program:chromium]` section and move to the `command=` line. Jump to the end of that line by using arrow keys to go over it, and type `$`.
-6. Enter insert mode with `i` and replace the URL at the end of the `command=` line to point to your local server's IP address.
-   ```bash
-   --app=http://localhost:80
-   # turns into
-   --app=http://your.local.ip.address:port
-   ```
-7. Remount the rootfs as read-only, sync changes, and restart Chromium.
-   ```
-   mount -o remount,ro /
-   sync
-   supervisorctl reread
-   supervisorctl restart chromium
-   ```
+```bash
+just ui-build
+just -f image/Justfile push-webapp ../packages/ui/dist ui
+ssh root@nocturne.local 'systemctl restart chromium-kiosk.service'
+```
+
+The daemon serves the installed bundle from `/opt/nocturne/webapps/ui`. The image uses systemd; no rootfs remount or supervisor configuration is needed.
 
 ## Contributing
 
@@ -151,7 +130,7 @@ This software was made possible only through the following individuals and open 
 ## Related
 
 - [nocturne](https://github.com/usenocturne/nocturne)
-- [nocturned](https://github.com/usenocturne/nocturned) - Local daemon for real-time web/host communication
+- [nocturned](../../crates/daemon) - In-tree daemon for real-time web/host communication
 
 ## License
 

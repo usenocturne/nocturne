@@ -1,3 +1,10 @@
+import type { LibraryData, OpenContent } from "./home/contracts";
+import type {
+  ActiveSection,
+  SpotifyAlbum,
+  SpotifyPlaybackState,
+  StateSetter,
+} from "../types";
 import {
   lazy,
   Suspense,
@@ -7,13 +14,11 @@ import {
   useState,
 } from "react";
 import Sidebar from "../components/common/navigation/Sidebar";
-
 import { useSpotifyPlayerControls } from "../hooks/useSpotifyPlayerControls";
 import {
   getSpotifySkippedState,
   subscribeSpotifySkippedState,
 } from "../hooks/useNocturned";
-
 import RecentsSection from "./home/RecentsSection";
 
 const Settings = lazy(() => import("../components/settings/Settings"));
@@ -24,6 +29,27 @@ const LibrarySection = lazy(() => import("./home/LibrarySection"));
 const ArtistsSection = lazy(() => import("./home/ArtistsSection"));
 const RadioSection = lazy(() => import("./home/RadioSection"));
 const PodcastsSection = lazy(() => import("./home/PodcastsSection"));
+
+interface HomeProps extends Pick<
+  LibraryData,
+  | "recentAlbums"
+  | "userPlaylists"
+  | "likedSongs"
+  | "topArtists"
+  | "radioMixes"
+  | "userShows"
+  | "isLoading"
+  | "refreshData"
+> {
+  accessToken?: string | null;
+  activeSection: ActiveSection;
+  setActiveSection: StateSetter<ActiveSection>;
+  currentPlayback: SpotifyPlaybackState | null;
+  currentlyPlayingAlbum?: SpotifyAlbum | null;
+  refreshPlaybackState: () => void;
+  onOpenContent: OpenContent;
+  onNavigateToNowPlaying: () => void;
+}
 
 const DJ_PLAYLIST_URI = "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
 
@@ -56,7 +82,7 @@ export default function Home({
   refreshPlaybackState,
   onOpenContent,
   onNavigateToNowPlaying,
-}: UiComponentProps) {
+}: HomeProps) {
   const { playDJMix } = useSpotifyPlayerControls(currentPlayback);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [isSpotifySkipped, setIsSpotifySkipped] = useState(() =>
@@ -79,7 +105,7 @@ export default function Home({
   };
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (activeSection === "recents") {
           setActiveSection("nowPlaying");
@@ -124,7 +150,7 @@ export default function Home({
   }, [playbackContextUri, playbackContextIsNull, playbackItemArtists]);
 
   const handlePlayDJMix = useCallback(
-    (deviceId) => {
+    (deviceId?: string | null) => {
       if (playbackContextUri === DJ_PLAYLIST_URI) {
         setActiveSection("nowPlaying");
         return;

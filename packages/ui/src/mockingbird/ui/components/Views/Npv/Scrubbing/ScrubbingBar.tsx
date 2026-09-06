@@ -1,8 +1,9 @@
+import type { PlaybackViewProps } from "../../../../contexts/CarThingStore";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
 import styles from "./ScrubbingBar.module.scss";
 
-const ScrubbingBar = ({ playbackProgress }: UiComponentProps) => {
+const ScrubbingBar = ({ playbackProgress }: PlaybackViewProps) => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.scrubbingUiState;
   const { colorChannels } = uiState;

@@ -6,7 +6,13 @@ import Start from "./Start";
 import LearnVoice from "./LearnVoice";
 import LearnTactile from "./LearnTactile";
 
-const Onboarding = ({ onComplete, dataReady }: UiComponentProps) => {
+const Onboarding = ({
+  onComplete,
+  dataReady,
+}: {
+  onComplete?: () => void;
+  dataReady?: boolean;
+}) => {
   const { onboardingStore } = useCarThingStore();
   const onCompleteRef = useRef(onComplete);
 

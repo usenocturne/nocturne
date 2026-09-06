@@ -1,15 +1,42 @@
+import type { SpotifyTrack, SpotifyShow, SpotifyDevice } from "../../../types";
+import type { RootStore } from "./RootStore";
+import type {
+  InterappActions,
+  MiddlewareActions,
+  MiddlewareSocket,
+} from "./StoreContracts";
 import { makeAutoObservable } from "mobx";
 import { getNpvImageUrl } from "../helpers/ImageSizeHelper";
 
+export type PlayerItem = SpotifyTrack & { show?: SpotifyShow; uid?: string };
+type PlayerState = {
+  context_uri: string;
+  is_playing: boolean;
+  progress_ms: number;
+  track: PlayerItem | null;
+  device: SpotifyDevice | null;
+  currently_active_application: string | null;
+};
+
 class PlayerStore {
-  declare state: UiLooseData;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare state: PlayerState;
+  declare socket: MiddlewareSocket;
+  declare contextTitle: string | undefined;
+  declare currentTrackUri: string | undefined;
+  declare currentTrackUid: string | undefined;
+  declare currentTrackPosition: number | undefined;
+  declare onContextChange:
+    | ((callback: (uri: string) => void) => () => void)
+    | undefined;
+  declare skipToIndex: (index: number, uid?: string) => void;
+  declare setPlaying: (playing: boolean) => void;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    rootStore: UiLooseData,
-    interappActions: UiLooseData,
-    socket: UiLooseData,
+    rootStore: RootStore,
+    interappActions: InterappActions,
+    socket: MiddlewareSocket,
   ) {
     this.rootStore = rootStore;
     this.interappActions = interappActions;
@@ -24,7 +51,7 @@ class PlayerStore {
     this.state = this.getInitialState();
   }
 
-  getInitialState() {
+  getInitialState(): PlayerState {
     return {
       context_uri: "",
       is_playing: false,
@@ -39,7 +66,7 @@ class PlayerStore {
     return this.state.context_uri || "";
   }
 
-  get currentTrack() {
+  get currentTrack(): PlayerItem {
     return this.state.track || {};
   }
 
@@ -101,7 +128,7 @@ class PlayerStore {
     return true;
   }
 
-  setContextUri(contextUri) {
+  setContextUri(contextUri: string) {
     this.state.context_uri = contextUri;
   }
 
@@ -117,7 +144,7 @@ class PlayerStore {
     );
   }
 
-  onTrackChange(callback) {
+  onTrackChange(callback: () => void) {
     return () => {};
   }
 

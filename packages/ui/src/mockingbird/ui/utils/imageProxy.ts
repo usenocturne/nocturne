@@ -12,18 +12,19 @@ const LOCAL_FILE_FALLBACK = "/images/not-playing.webp";
 
 /** @typedef {import("@schema/spotify").SpotifyImageFetchRequest} SpotifyImageFetchRequest */
 
-const cache = new Map();
+const cache = new Map<string, { dataUri: string; accessedAt: number }>();
 
-const pending = new Map();
+const pending = new Map<string, Promise<string | null>>();
 
-const queue = [];
+const queue: Array<{ url: string; resolve: (value: string | null) => void }> =
+  [];
 let processing = false;
 
 function generateUUID() {
   return crypto.randomUUID();
 }
 
-function isLocalUrl(url) {
+function isLocalUrl(url: string | null | undefined) {
   if (!url) return true;
   return (
     url.startsWith("data:") ||
@@ -34,7 +35,7 @@ function isLocalUrl(url) {
   );
 }
 
-function isSpotifyLocalImageUrl(url) {
+function isSpotifyLocalImageUrl(url: string | null | undefined) {
   return (
     url?.startsWith("spotify:localfileimage:") ||
     url?.startsWith("https://spotify:localfileimage:") ||
@@ -50,7 +51,7 @@ function evictStale() {
     }
   }
   while (cache.size > MAX_CACHE_SIZE) {
-    let oldestKey = null;
+    let oldestKey: string | null = null;
     let oldestTime = Infinity;
     for (const [key, entry] of cache) {
       if (entry.accessedAt < oldestTime) {
@@ -62,8 +63,8 @@ function evictStale() {
   }
 }
 
-function fetchSingleImage(url) {
-  return new Promise((resolve) => {
+function fetchSingleImage(url: string): Promise<string | null> {
+  return new Promise<string | null>((resolve) => {
     const ws = getGlobalWebSocket();
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       console.warn("[ImageProxy] WS not open");
@@ -73,14 +74,21 @@ function fetchSingleImage(url) {
 
     const id = generateUUID();
     let settled = false;
-    let timeoutId;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
     const unsubscribe = addGlobalWsListener(id, {
       onMessage: (data) => {
         if (data.id !== id) return;
         if (settled) return;
 
-        if (data.result?.cancelled) return;
+        const payload = data.result;
+        if (
+          payload &&
+          typeof payload === "object" &&
+          "cancelled" in payload &&
+          payload.cancelled
+        )
+          return;
 
         settled = true;
         clearTimeout(timeoutId);
@@ -92,9 +100,14 @@ function fetchSingleImage(url) {
           return;
         }
 
-        const r = data.result || data;
-        const base64 = r?.data ?? r?.result?.data;
-        if (!base64) {
+        const r = payload && typeof payload === "object" ? payload : data;
+        const nested = "result" in r ? r.result : undefined;
+        const base64 =
+          ("data" in r ? r.data : undefined) ??
+          (nested && typeof nested === "object" && "data" in nested
+            ? nested.data
+            : undefined);
+        if (typeof base64 !== "string" || !base64) {
           console.warn(
             "[ImageProxy] no base64 in response for",
             url,
@@ -145,12 +158,15 @@ async function processQueue() {
   processing = true;
 
   while (queue.length > 0) {
-    const { url, resolve } = queue.shift();
+    const job = queue.shift();
+    if (!job) break;
+    const { url, resolve } = job;
 
     const cached = cache.get(url);
     if (cached && Date.now() - cached.accessedAt < CACHE_TTL_MS) {
       cached.accessedAt = Date.now();
       resolve(cached.dataUri);
+      pending.delete(url);
       continue;
     }
 
@@ -166,7 +182,10 @@ async function processQueue() {
   processing = false;
 }
 
-export function resolveImageUrl(url) {
+export function resolveImageUrl(
+  url: string | null | undefined,
+): Promise<string | null> {
+  if (!url) return Promise.resolve("");
   const normalizedUrl = normalizeInlineImageSource(url);
   if (isSpotifyLocalImageUrl(url)) {
     return Promise.resolve(LOCAL_FILE_FALLBACK);
@@ -179,11 +198,10 @@ export function resolveImageUrl(url) {
     return Promise.resolve(cached.dataUri);
   }
 
-  if (pending.has(url)) {
-    return pending.get(url);
-  }
+  const inFlight = pending.get(url);
+  if (inFlight) return inFlight;
 
-  const promise = new Promise((resolve) => {
+  const promise = new Promise<string | null>((resolve) => {
     queue.push({ url, resolve });
     processQueue();
   });
@@ -192,10 +210,13 @@ export function resolveImageUrl(url) {
   return promise;
 }
 
-export function getCachedImageUrl(url) {
+export function getCachedImageUrl(
+  url: string | null | undefined,
+): string | null {
+  if (!url) return null;
   if (isSpotifyLocalImageUrl(url)) return LOCAL_FILE_FALLBACK;
   const normalizedUrl = normalizeInlineImageSource(url);
-  if (normalizedUrl !== url) return normalizedUrl;
+  if (normalizedUrl !== url) return normalizedUrl ?? null;
   const cached = cache.get(url);
   if (cached && Date.now() - cached.accessedAt < CACHE_TTL_MS) {
     cached.accessedAt = Date.now();
@@ -204,11 +225,11 @@ export function getCachedImageUrl(url) {
   return null;
 }
 
-export function preloadImage(url) {
+export function preloadImage(url: string | null | undefined) {
   resolveImageUrl(url);
 }
 
-export function injectArtwork(imageUrls, base64Data) {
+export function injectArtwork(imageUrls: string[], base64Data: string) {
   if (!base64Data || !imageUrls || imageUrls.length === 0) return;
 
   const dataUri = `data:image/jpeg;base64,${base64Data}`;
@@ -221,7 +242,7 @@ export function injectArtwork(imageUrls, base64Data) {
   }
 }
 
-export function retryImage(url) {
+export function retryImage(url: string | null | undefined) {
   if (!url || isLocalUrl(url) || isSpotifyLocalImageUrl(url)) return;
   cache.delete(url);
   pending.delete(url);
@@ -231,5 +252,5 @@ export function retryImage(url) {
 export function clearImageCache() {
   cache.clear();
   pending.clear();
-  queue.length = 0;
+  for (const job of queue.splice(0)) job.resolve(null);
 }

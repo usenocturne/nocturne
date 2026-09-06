@@ -1,10 +1,13 @@
+import type { PersistentStorage } from "./StoreContracts";
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareSocket } from "./StoreContracts";
 import { makeAutoObservable, reaction } from "mobx";
 import { addGlobalWsListener } from "../../../hooks/useNocturned";
 import type { WsMessage } from "../../../types";
 
 export const WIND_NOISE_ALERT_DISABLED_KEY = "wind_noise_alert_disabled";
 
-const readStoredBoolean = (storage: UiLooseData, key: string) => {
+const readStoredBoolean = (storage: PersistentStorage, key: string) => {
   const stored = storage.getItem(key);
   if (stored === null) return false;
 
@@ -34,7 +37,7 @@ export const windLevelFromMessage = (message: WsMessage) => {
 };
 
 export default class WindLevelStore {
-  declare rootStore: UiLooseData;
+  declare rootStore: RootStore;
   declare _wsCleanup: () => void;
   currentWindLevel = 0;
   windAlertOnThreshold = 3;
@@ -42,9 +45,9 @@ export default class WindLevelStore {
   alertDisabled: boolean;
 
   constructor(
-    rootStore: UiLooseData,
-    _socket: UiLooseData,
-    _interappActions: UiLooseData,
+    rootStore: RootStore,
+    _socket: MiddlewareSocket,
+    _interappActions: InterappActions,
   ) {
     this.rootStore = rootStore;
     this.alertDisabled = readStoredBoolean(

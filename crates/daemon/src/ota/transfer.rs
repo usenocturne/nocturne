@@ -205,8 +205,6 @@ pub fn spawn_reaper(
     cancel: CancellationToken,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        sweep_stale(&transfers_dir).await;
-
         let mut interval = tokio::time::interval(REAPER_INTERVAL);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {

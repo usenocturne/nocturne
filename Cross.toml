@@ -1,3 +1,6 @@
+[build.env]
+passthrough = ["TS_RS_EXPORT_DIR"]
+
 [target.armv7-unknown-linux-gnueabihf]
 pre-build = [
     "dpkg --add-architecture $CROSS_DEB_ARCH",

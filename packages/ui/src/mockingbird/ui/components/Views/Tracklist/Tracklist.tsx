@@ -13,7 +13,7 @@ const Tracklist = () => {
   const { tracklistStore } = useCarThingStore();
   const uiState = tracklistStore.tracklistUiState;
 
-  const getGradientBackground = (rgbChannels) => {
+  const getGradientBackground = (rgbChannels: number[]) => {
     return `linear-gradient(180deg, rgba(0, 0, 0, ${
       uiState.isSelectingFirst ? "0.8" : "1"
     }) 0%, rgba(0, 0, 0, 1) 100%), rgb(${rgbChannels.join(",")})`;

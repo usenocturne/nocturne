@@ -1,14 +1,27 @@
+export type QueueSwipeAxis = "horizontal" | "vertical" | null;
+interface SwipeCoordinates {
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+}
+
 export const QUEUE_SWIPE_MAX_OFFSET = 88;
 export const QUEUE_SWIPE_COMMIT_OFFSET = 64;
 export const QUEUE_SWIPE_DIRECTION_LOCK_PX = 10;
 const DIRECTION_DOMINANCE_RATIO = 1.25;
 const POST_COMMIT_RESISTANCE = 0.5;
 
-export const hasQueueSwipeMoved = ({ startX, startY, currentX, currentY }) =>
+export const hasQueueSwipeMoved = ({
+  startX,
+  startY,
+  currentX,
+  currentY,
+}: SwipeCoordinates) =>
   Math.max(Math.abs(currentX - startX), Math.abs(currentY - startY)) >=
   QUEUE_SWIPE_DIRECTION_LOCK_PX;
 
-export const getQueueSwipeVisualOffset = (rawOffset) => {
+export const getQueueSwipeVisualOffset = (rawOffset: number) => {
   const distance = Math.max(0, -rawOffset);
   if (distance === 0) return 0;
   if (distance <= QUEUE_SWIPE_COMMIT_OFFSET) return -distance;
@@ -25,7 +38,7 @@ export const measureQueueSwipe = ({
   currentX,
   currentY,
   lockedAxis = null,
-}) => {
+}: SwipeCoordinates & { lockedAxis?: QueueSwipeAxis }) => {
   const deltaX = currentX - startX;
   const deltaY = currentY - startY;
   let axis = lockedAxis;
@@ -47,10 +60,10 @@ export const measureQueueSwipe = ({
   return { axis, rawOffset, offset };
 };
 
-export const shouldCommitQueueSwipe = (offset) =>
+export const shouldCommitQueueSwipe = (offset: number) =>
   offset <= -QUEUE_SWIPE_COMMIT_OFFSET;
 
-export const getQueueSwipePresentation = (offset) => {
+export const getQueueSwipePresentation = (offset: number) => {
   const reveal = Math.min(QUEUE_SWIPE_MAX_OFFSET, Math.max(0, -offset));
   const progress = reveal / QUEUE_SWIPE_MAX_OFFSET;
 
@@ -64,5 +77,12 @@ export const getQueueSwipePresentation = (offset) => {
   };
 };
 
-export const requestQueueAdd = (sendSpotifyCommand, uri, signal) =>
-  sendSpotifyCommand("spotify.player.queue.add", { uri }, signal);
+export const requestQueueAdd = (
+  sendSpotifyCommand: (
+    method: string,
+    params: { uri: string },
+    signal?: AbortSignal,
+  ) => Promise<unknown>,
+  uri: string,
+  signal?: AbortSignal,
+) => sendSpotifyCommand("spotify.player.queue.add", { uri }, signal);

@@ -1,3 +1,5 @@
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable, ObservableMap, runInAction } from "mobx";
 import { extractColorsFromImage } from "../utils/colorExtractor";
 import { resolveImageUrl } from "../utils/imageProxy";
@@ -8,14 +10,14 @@ export const ImageScale = {
 };
 
 class ImageStore {
-  declare colors: ObservableMap;
-  declare images: ObservableMap;
-  declare pendingColors: ObservableMap;
-  declare requestedColors: ObservableMap;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, interappActions: UiLooseData) {
+  declare colors: ObservableMap<string, number[]>;
+  declare images: ObservableMap<string, string>;
+  declare pendingColors: ObservableMap<string, string>;
+  declare requestedColors: ObservableMap<string, string>;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, interappActions: InterappActions) {
     this.rootStore = rootStore;
     this.interappActions = interappActions;
 
@@ -30,11 +32,11 @@ class ImageStore {
     this.requestedColors = new ObservableMap();
   }
 
-  getImage(url, scale = ImageScale.BIG) {
+  getImage(url: string | null | undefined, scale = ImageScale.BIG) {
     return url || "";
   }
 
-  getBackgroundColor(imageUrl) {
+  getBackgroundColor(imageUrl: string) {
     const color = this.colors.get(imageUrl);
     if (color) {
       return Array.isArray(color) ? `rgb(${color.join(",")})` : color;
@@ -42,10 +44,10 @@ class ImageStore {
     return "#1a1a1a";
   }
 
-  preloadImage(url, scale = ImageScale.BIG) {
+  preloadImage(url: string | null | undefined, scale = ImageScale.BIG) {
     if (!url) return Promise.resolve("");
 
-    return new Promise((resolve) => {
+    return new Promise<string>((resolve) => {
       const img = new Image();
       img.onload = () => resolve(url);
       img.onerror = () => resolve(url);
@@ -54,15 +56,15 @@ class ImageStore {
     });
   }
 
-  setColorRequested(imageUrl) {
+  setColorRequested(imageUrl: string) {
     this.requestedColors.set(imageUrl, "requested");
   }
 
-  setColorPending(imageUrl) {
+  setColorPending(imageUrl: string) {
     this.pendingColors.set(imageUrl, "pending");
   }
 
-  shouldCalculateColor(imageUrl) {
+  shouldCalculateColor(imageUrl: string) {
     return (
       imageUrl &&
       !this.colors.has(imageUrl) &&
@@ -70,7 +72,7 @@ class ImageStore {
     );
   }
 
-  async loadColor(imageUrl) {
+  async loadColor(imageUrl: string) {
     if (!imageUrl) {
       return;
     }
@@ -85,12 +87,12 @@ class ImageStore {
         }
         const colors = await extractColorsFromImage(resolvedUrl);
 
-        let backgroundColor = colors[1];
-
-        if (backgroundColor && backgroundColor.startsWith("#")) {
-          const r = parseInt(backgroundColor.slice(1, 3), 16);
-          const g = parseInt(backgroundColor.slice(3, 5), 16);
-          const b = parseInt(backgroundColor.slice(5, 7), 16);
+        const extractedColor = colors[1];
+        let backgroundColor: number[];
+        if (extractedColor && extractedColor.startsWith("#")) {
+          const r = parseInt(extractedColor.slice(1, 3), 16);
+          const g = parseInt(extractedColor.slice(3, 5), 16);
+          const b = parseInt(extractedColor.slice(5, 7), 16);
           backgroundColor = [r, g, b];
         } else {
           backgroundColor = [26, 26, 26];
@@ -124,7 +126,7 @@ class ImageStore {
     }
   }
 
-  hashCode(str) {
+  hashCode(str: string) {
     let hash = 0;
     if (str.length === 0) return hash;
     for (let i = 0; i < str.length; i++) {
@@ -135,12 +137,12 @@ class ImageStore {
     return hash;
   }
 
-  hslToRgb(h, s, l) {
+  hslToRgb(h: number, s: number, l: number) {
     let r, g, b;
     if (s === 0) {
       r = g = b = l;
     } else {
-      const hue2rgb = (p, q, t) => {
+      const hue2rgb = (p: number, q: number, t: number) => {
         if (t < 0) t += 1;
         if (t > 1) t -= 1;
         if (t < 1 / 6) return p + (q - p) * 6 * t;

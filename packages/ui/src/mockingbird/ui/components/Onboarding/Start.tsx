@@ -4,7 +4,7 @@ import { useCarThingStore } from "../../contexts/CarThingStore";
 import { TTS } from "../../stores/OnboardingStore";
 import styles from "./Start.module.scss";
 
-const Start = ({ dataReady }: UiComponentProps) => {
+const Start = ({ dataReady }: { dataReady?: boolean }) => {
   const { onboardingStore } = useCarThingStore();
 
   useEffect(() => {

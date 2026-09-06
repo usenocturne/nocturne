@@ -1,3 +1,4 @@
+import type VoiceStore from "../../stores/VoiceStore";
 import React, { Component } from "react";
 import { reaction } from "mobx";
 import { transitionDurationMs } from "../../styles/Variables";
@@ -12,8 +13,11 @@ const animationStates = {
   ERROR_TO_LISTENING: "error_to_listening",
 };
 
-class Jellyfish extends Component {
-  renderCanvasRequestId = undefined;
+class Jellyfish extends Component<
+  { voiceStore: VoiceStore },
+  { disappearing: boolean; animationState: string }
+> {
+  renderCanvasRequestId: number | undefined = undefined;
 
   SIXTY_FPS_UPDATE_INTERVAL_MS = 1000 / 60;
 
@@ -22,14 +26,14 @@ class Jellyfish extends Component {
   H = 156;
   cx = this.W / 2;
   cy = this.listeningRadius + 6;
-  canvasRef = undefined;
+  canvasRef = React.createRef<HTMLCanvasElement>();
   listeningRotationSpeed = 0.02;
   thinkingSpeed = 0.18;
   thinkingTravel = 8;
   phase = 5;
 
   transitionStart = 0;
-  transitionTimeoutId = undefined;
+  transitionTimeoutId: number | undefined = undefined;
   waves = [
     {
       thinking: {
@@ -95,20 +99,20 @@ class Jellyfish extends Component {
 
   recordingLevel = 0;
   thinking = false;
-  error = undefined;
+  error: VoiceStore["error"] | undefined = undefined;
   micPan = 0;
 
-  thinkingDisposer = undefined;
-  errorDisposer = undefined;
-  micPanDisposer = undefined;
+  thinkingDisposer: (() => void) | undefined = undefined;
+  errorDisposer: (() => void) | undefined = undefined;
+  micPanDisposer: (() => void) | undefined = undefined;
 
-  constructor(props) {
+  constructor(props: { voiceStore: VoiceStore }) {
     super(props);
     this.state = {
       disappearing: false,
       animationState: animationStates.LISTENING,
     };
-    this.canvasRef = React.createRef();
+    this.canvasRef = React.createRef<HTMLCanvasElement>();
   }
 
   componentDidMount() {
@@ -151,7 +155,7 @@ class Jellyfish extends Component {
     ].includes(this.state.animationState);
   }
 
-  maybeUpdateState(t) {
+  maybeUpdateState(t: number) {
     if (
       this.state.animationState === animationStates.LISTENING &&
       this.thinking
@@ -185,18 +189,18 @@ class Jellyfish extends Component {
     }
   }
 
-  startTransitionTimeout(animationState) {
+  startTransitionTimeout(animationState: string) {
     window.clearTimeout(this.transitionTimeoutId);
     this.transitionTimeoutId = window.setTimeout(() => {
       this.setState({ animationState });
     }, transitionDurationMs);
   }
 
-  easeOutExpo(x) {
+  easeOutExpo(x: number) {
     return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
   }
 
-  getTransitionPercentage(t) {
+  getTransitionPercentage(t: number) {
     if (this.isCurrentlyTransitioning()) {
       const dt = t - this.transitionStart;
       return dt / (transitionDurationMs / this.SIXTY_FPS_UPDATE_INTERVAL_MS);
@@ -205,11 +209,11 @@ class Jellyfish extends Component {
     return 0;
   }
 
-  transition(a, b, t) {
+  transition(a: number, b: number, t: number) {
     return a + this.easeOutExpo(this.getTransitionPercentage(t)) * (b - a);
   }
 
-  getListeningRadius({ wave, degree }) {
+  getListeningRadius({ wave, degree }: { wave: Wave; degree: number }) {
     const adjustedPhase = this.phase * wave.listening.phaseMultiplier;
 
     const adjustedAmplitude =
@@ -224,7 +228,13 @@ class Jellyfish extends Component {
     );
   }
 
-  warpedRadius(degree, radius, frequency, phase, amplitude) {
+  warpedRadius(
+    degree: number,
+    radius: number,
+    frequency: number,
+    phase: number,
+    amplitude: number,
+  ) {
     const x = (degree - 100) / radius;
     return (
       radius -
@@ -233,11 +243,11 @@ class Jellyfish extends Component {
     );
   }
 
-  getActivation(x) {
+  getActivation(x: number) {
     return Math.pow(20 / (20 + Math.pow(x * 2.8, 4)), 2);
   }
 
-  getThinkingRadius({ wave, t }) {
+  getThinkingRadius({ wave, t }: { wave: Wave; t: number }) {
     const tick = t * this.thinkingSpeed;
     const radiusOffset =
       tick % (2 * this.thinkingTravel) < this.thinkingTravel
@@ -247,7 +257,7 @@ class Jellyfish extends Component {
     return wave.thinking.radius + radiusOffset;
   }
 
-  getRadius(args) {
+  getRadius(args: { wave: Wave; t: number; degree: number }) {
     const { wave, t } = args;
     switch (this.state.animationState) {
       case animationStates.LISTENING_TO_THINKING:
@@ -285,7 +295,7 @@ class Jellyfish extends Component {
     }
   }
 
-  getLineWidth({ wave, t }) {
+  getLineWidth({ wave, t }: { wave: Wave; t: number }) {
     switch (this.state.animationState) {
       case animationStates.LISTENING_TO_THINKING:
         return this.transition(
@@ -322,8 +332,8 @@ class Jellyfish extends Component {
     }
   }
 
-  getColor({ wave, t }) {
-    const getIntermediateColor = (c1, c2) => {
+  getColor({ wave, t }: { wave: Wave; t: number }) {
+    const getIntermediateColor = (c1: string, c2: string) => {
       const rgbaExtractor = /([\d.]+)/g;
 
       const c1Parsed = (c1.match(rgbaExtractor) || []).map(parseFloat);
@@ -357,10 +367,12 @@ class Jellyfish extends Component {
 
   startAnimation() {
     const current = this.canvasRef.current;
+    if (!current) return;
     const ctx = current.getContext("2d", { alpha: true });
+    if (!ctx) return;
     ctx.globalCompositeOperation = "destination-over";
 
-    const renderCanvas = (timestamp) => {
+    const renderCanvas = (timestamp: number) => {
       if (!current) {
         return;
       }
@@ -407,19 +419,19 @@ class Jellyfish extends Component {
     this.renderCanvasRequestId = requestAnimationFrame(renderCanvas);
   }
 
-  radians(d) {
+  radians(d: number) {
     return (d * Math.PI) / 180;
   }
 
-  getX(c, d, r) {
+  getX(c: number, d: number, r: number) {
     return c + r * Math.cos(this.radians(d));
   }
 
-  getY(c, d, r) {
+  getY(c: number, d: number, r: number) {
     return c + r * Math.sin(this.radians(d));
   }
 
-  getOffset(direction) {
+  getOffset(direction: number) {
     return 54 * direction + 48;
   }
 
@@ -429,3 +441,5 @@ class Jellyfish extends Component {
 }
 
 export default Jellyfish;
+
+type Wave = Jellyfish["waves"][number];

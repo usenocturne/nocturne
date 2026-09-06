@@ -6,7 +6,7 @@ Everything that ships inside a Nocturne SWU lives here. The mobile app, Connecto
 
 | Path | Component | When to touch | Per-component agent guide |
 |---|---|---|---|
-| `image/` | Yocto / Buildroot recipes for the SWU firmware image (kernel, rootfs, partition layout, OTA recipes). | Anything that changes what's on the disk that isn't the daemon binary or the UI bundle. | (none yet) |
+| `image/` | Yocto / Buildroot recipes for the SWU firmware image (kernel, rootfs, partition layout, OTA recipes). | Anything that changes what's on the disk that isn't the daemon binary or the UI bundle. | [`image/AGENTS.md`](image/AGENTS.md) |
 | `crates/daemon/` | The `nocturned` Rust daemon binary. iAP2 / RFCOMM, OTA orchestration, embedded HTTP server, WS to UI. | Daemon code, OTA flow, mobile-app wire protocol. | [`crates/daemon/AGENTS.md`](crates/daemon/AGENTS.md) |
 | `crates/shared/` | The canonical wire schema and the codegen consumers (ts-rs + typeshare). | Any wire-protocol change. Refresh bindings with `just codegen`. | (see daemon AGENTS) |
 | `crates/iap2/`, `crates/iap2-macros/`, `crates/iap2-mfi/` | iAP2 link/session layer + Identification CSM derive + MFi chip driver. Vendored fork of bridgething's iAP2. | iAP2 protocol changes only. | (see daemon AGENTS) |
@@ -75,3 +75,11 @@ just lint                   # Linux host clippy, non-Linux aarch64 cross clippy,
 | `nocturne-ota` | private, separate | OTA distribution server / R2 bucket. Remote service the device fetches SWUs from. |
 
 - **Matching-code pairing**: Car Thing displays the Bluetooth stack's six-digit comparison code; confirmation happens on the peer, with no Car Thing accept/decline buttons or code entry. Windows accepts only authenticated `ConfirmPinMatch`. Legacy PIN/passkey entry fails explicitly instead of using `0000`. Pending display events use an optional `request_id` and the local `bluetooth.pairing.pending` recovery method.
+
+- **Workspace verification:** UI CI also watches the root package manifest, lockfile, and generated TypeScript contracts; it runs formatting and behavioral tests before building with the pinned Bun runtime. Connector builds belong to the separate Connector repository. Host daemon builds require Linux; use `cross` on macOS.
+
+- **Shared frame decoding:** A partial 16-byte header must remain pending without advancing decoder state. Validate advertised lengths with checked platform-sized arithmetic before consuming bytes. Keep the JSON/MessagePack fragmentation and invalid-header regressions in `crates/shared/tests/protocol_fragmentation_test.rs`. The Spotify wire fixture includes the existing nullable metadata-only lyrics fields; fixture corrections must not change generated serialization.
+
+- **Shared frame memory limit:** Encoded and decompressed shared gateway frame payloads are capped at 16 MiB, above the current 2 MB companion envelope ceiling. Both complete-buffer and incremental decoders reject larger advertised lengths before waiting for a body, and gzip reads stop after one byte beyond the cap. Oversize and gzip-integrity errors are fatal transport errors; normal JSON and MessagePack wire shapes are unchanged.
+
+- **Portable workspace tests:** `just test` and `just test-emulator` run through `tools/test-workspace`. Linux tests the workspace natively; other hosts test shared/codegen natively and runtime crates through aarch64 cross testing. The runner redirects ts-rs test exports to a fresh temporary directory, passed through Cross, so tests never reformat checked-in bindings. This does not change `just codegen` output.

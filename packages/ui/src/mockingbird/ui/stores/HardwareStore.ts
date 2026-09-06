@@ -1,3 +1,5 @@
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable } from "mobx";
 import { addGlobalWsListener } from "../../../hooks/useNocturned";
 import type { WsMessage } from "../../../types";
@@ -20,15 +22,15 @@ export const ambientLightFromMessage = (message: WsMessage) => {
 };
 
 class HardwareStore {
-  declare _handleAmbientLight: UiLooseData;
+  declare _handleAmbientLight: (event: Event) => void;
   declare ambientLightValue: number;
   declare dialPressed: boolean;
   declare rebooting: boolean;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   declare _wsCleanup: () => void;
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     this.dialPressed = false;
     this.rebooting = false;
@@ -40,8 +42,15 @@ class HardwareStore {
     });
 
     this._handleAmbientLight = (e) => {
-      if (typeof e.detail?.value === "number") {
-        this.ambientLightValue = e.detail.value;
+      if (!(e instanceof CustomEvent)) return;
+      const detail: unknown = e.detail;
+      if (
+        detail &&
+        typeof detail === "object" &&
+        "value" in detail &&
+        typeof detail.value === "number"
+      ) {
+        this.ambientLightValue = detail.value;
       }
     };
     window.addEventListener("ambientLightUpdate", this._handleAmbientLight);
@@ -53,15 +62,15 @@ class HardwareStore {
     });
   }
 
-  setDialPressed(dialPressed) {
+  setDialPressed(dialPressed: boolean) {
     this.dialPressed = dialPressed;
   }
 
-  setRebooting(rebooting) {
+  setRebooting(rebooting: boolean) {
     this.rebooting = rebooting;
   }
 
-  setAmbientLightValue(value) {
+  setAmbientLightValue(value: number) {
     this.ambientLightValue = value;
   }
 
@@ -98,7 +107,6 @@ class HardwareStore {
       /** @type {import("@schema/device").DeviceFactoryResetRequest} */
       const request = {};
       await sendNocturneWsRequest("device.factoryreset", request);
-      setTimeout(() => this.reboot(), 2000);
     } catch (e) {
       console.error("Factory reset failed:", e);
     }

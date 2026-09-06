@@ -1,3 +1,4 @@
+import type { MouseEvent, MouseEventHandler, ReactNode } from "react";
 import { useState } from "react";
 import classNames from "classnames";
 import styles from "./Controls.module.scss";
@@ -8,7 +9,13 @@ const ControlButton = ({
   onClick,
   fullSize = false,
   isDisabled = false,
-}: UiComponentProps) => {
+}: {
+  id?: string;
+  children?: ReactNode;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  fullSize?: boolean;
+  isDisabled?: boolean;
+}) => {
   const [touchDown, setTouchDown] = useState(false);
 
   const handlePointerDown = () => {
@@ -25,7 +32,7 @@ const ControlButton = ({
     setTouchDown(false);
   };
 
-  const handleClick = (e) => {
+  const handleClick = (e: MouseEvent<HTMLDivElement>) => {
     if (!isDisabled && onClick) {
       onClick(e);
     }

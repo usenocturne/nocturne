@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type {
   ActiveSection,
+  GradientInput,
   GradientState,
   UpdateGradientColors,
 } from "../types";
@@ -8,7 +9,7 @@ import type {
 export function useGradientState(
   activeSection: ActiveSection | null = null,
 ): [GradientState, UpdateGradientColors] {
-  const [imageURL, setImageURL] = useState<string | null>(null);
+  const [imageURL, setImageURL] = useState<GradientInput>(null);
   const [section, setSection] = useState<string | null>(activeSection);
   const gradientState = useMemo(
     () => ({
@@ -19,7 +20,7 @@ export function useGradientState(
   );
 
   const setGradientState = useCallback(
-    (newImageURL: string | null = null, newSection: string | null = null) => {
+    (newImageURL: GradientInput = null, newSection: string | null = null) => {
       setImageURL(newImageURL);
       setSection(newSection);
     },

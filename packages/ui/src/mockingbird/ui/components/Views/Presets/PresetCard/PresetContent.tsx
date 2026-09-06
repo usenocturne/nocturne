@@ -1,3 +1,4 @@
+import type { PresetData } from "../../../../stores/PresetsStore";
 import { observer } from "mobx-react-lite";
 import LazyImage from "../../Npv/PlayingInfo/LazyImage/LazyImage";
 import styles from "./PresetContent.module.scss";
@@ -6,7 +7,7 @@ import NowPlaying from "../../../CarthingUIComponents/NowPlaying/NowPlaying";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import classNames from "classnames";
 
-const PresetContent = ({ preset }: UiComponentProps) => {
+const PresetContent = ({ preset }: { preset: PresetData }) => {
   const { presetsController } = useCarThingStore();
   const uiState = presetsController.presetsUiState;
   const isFocused = uiState.selectedPresetNumber === preset.slot_index;

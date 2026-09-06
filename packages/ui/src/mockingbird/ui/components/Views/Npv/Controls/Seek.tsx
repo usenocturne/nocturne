@@ -7,7 +7,7 @@ import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
 import { SkipDirection } from "./Controls";
 
-const Seek = ({ direction }: UiComponentProps) => {
+const Seek = ({ direction }: { direction: string }) => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.controlButtonsUiState;
 

@@ -1,3 +1,4 @@
+import type PhoneConnectionStore from "../../../stores/PhoneConnectionStore";
 import PhoneForgetConfirm from "./PhoneForgetConfirm";
 import { useCarThingStore } from "../../../contexts/CarThingStore";
 import { PhoneConnectionModalView } from "../../../stores/PhoneConnectionStore";
@@ -19,95 +20,103 @@ const IconCheck = () => (
 
 const Spinner = () => <div className={styles.spinnerBig} />;
 
-const ModalContent = observer(({ modalView, phoneConnectionStore }) => {
-  switch (modalView) {
-    case PhoneConnectionModalView.ADD_NEW_PHONE:
-      return (
-        <>
-          <div className={styles.title}>Pairing mode</div>
-          <div className={styles.description}>
-            Go to Bluetooth in your phone's settings and connect to your Car
-            Thing.
-          </div>
-        </>
-      );
-    case PhoneConnectionModalView.ADD_NEW_PAIRING:
-      return (
-        <>
-          <div className={styles.title}>Pairing...</div>
-          <div className={styles.description}>
-            Confirm that you see the code below on your phone.
-          </div>
-          <div className={styles.pairingCode}>------</div>
-        </>
-      );
-    case PhoneConnectionModalView.FORGET_PHONE_CONFIRM:
-      return <PhoneForgetConfirm />;
-    case PhoneConnectionModalView.FORGET_PHONE_PROGRESS:
-      return (
-        <>
-          <Spinner />
-          <div className={styles.subtitle}>
-            <p>Forgetting</p>
-            <p>{phoneConnectionStore.phoneToConnectOrForget?.name}...</p>
-          </div>
-        </>
-      );
-    case PhoneConnectionModalView.FORGET_PHONE_FAILURE:
-      return (
-        <>
-          <div className={styles.title}>Couldn't forget phone</div>
-          <div className={styles.description}>
-            <p>Car Thing is having trouble forgetting your phone.</p>
-          </div>
-        </>
-      );
-    case PhoneConnectionModalView.FORGET_PHONE_SUCCESS:
-      return (
-        <>
-          <IconCheck />
-          <div className={styles.subtitle}>
-            <p>{phoneConnectionStore.phoneToConnectOrForget?.name}</p>
-            <p> is forgotten</p>
-          </div>
-        </>
-      );
-    case PhoneConnectionModalView.SELECT_PHONE_PROGRESS:
-      return (
-        <>
-          <Spinner />
-          <div className={styles.subtitle}>
-            <p>Connecting to</p>
-            <p>{phoneConnectionStore.phoneToConnectOrForget?.name}...</p>
-          </div>
-        </>
-      );
-    case PhoneConnectionModalView.PHONE_SWITCH_SUCCESS:
-      return (
-        <>
-          <IconCheck />
-          <div className={styles.subtitle}>
-            <p>Connected to</p>
-            <p>{phoneConnectionStore.phoneToConnectOrForget?.name}</p>
-          </div>
-        </>
-      );
-    case PhoneConnectionModalView.SELECT_PHONE_FAILURE:
-      return (
-        <>
-          <div className={styles.title}>Couldn't connect to phone</div>
-          <div className={styles.description}>
-            <p>
-              Car Thing is having trouble connecting to your phone. Make sure
-              your phone is turned on, Bluetooth is on and in range.
-            </p>
-          </div>
-        </>
-      );
-    default:
-      return null;
-  }
-});
+const ModalContent = observer(
+  ({
+    modalView,
+    phoneConnectionStore,
+  }: {
+    modalView?: string;
+    phoneConnectionStore: PhoneConnectionStore;
+  }) => {
+    switch (modalView) {
+      case PhoneConnectionModalView.ADD_NEW_PHONE:
+        return (
+          <>
+            <div className={styles.title}>Pairing mode</div>
+            <div className={styles.description}>
+              Go to Bluetooth in your phone's settings and connect to your Car
+              Thing.
+            </div>
+          </>
+        );
+      case PhoneConnectionModalView.ADD_NEW_PAIRING:
+        return (
+          <>
+            <div className={styles.title}>Pairing...</div>
+            <div className={styles.description}>
+              Confirm that you see the code below on your phone.
+            </div>
+            <div className={styles.pairingCode}>------</div>
+          </>
+        );
+      case PhoneConnectionModalView.FORGET_PHONE_CONFIRM:
+        return <PhoneForgetConfirm />;
+      case PhoneConnectionModalView.FORGET_PHONE_PROGRESS:
+        return (
+          <>
+            <Spinner />
+            <div className={styles.subtitle}>
+              <p>Forgetting</p>
+              <p>{phoneConnectionStore.phoneToConnectOrForget?.name}...</p>
+            </div>
+          </>
+        );
+      case PhoneConnectionModalView.FORGET_PHONE_FAILURE:
+        return (
+          <>
+            <div className={styles.title}>Couldn't forget phone</div>
+            <div className={styles.description}>
+              <p>Car Thing is having trouble forgetting your phone.</p>
+            </div>
+          </>
+        );
+      case PhoneConnectionModalView.FORGET_PHONE_SUCCESS:
+        return (
+          <>
+            <IconCheck />
+            <div className={styles.subtitle}>
+              <p>{phoneConnectionStore.phoneToConnectOrForget?.name}</p>
+              <p> is forgotten</p>
+            </div>
+          </>
+        );
+      case PhoneConnectionModalView.SELECT_PHONE_PROGRESS:
+        return (
+          <>
+            <Spinner />
+            <div className={styles.subtitle}>
+              <p>Connecting to</p>
+              <p>{phoneConnectionStore.phoneToConnectOrForget?.name}...</p>
+            </div>
+          </>
+        );
+      case PhoneConnectionModalView.PHONE_SWITCH_SUCCESS:
+        return (
+          <>
+            <IconCheck />
+            <div className={styles.subtitle}>
+              <p>Connected to</p>
+              <p>{phoneConnectionStore.phoneToConnectOrForget?.name}</p>
+            </div>
+          </>
+        );
+      case PhoneConnectionModalView.SELECT_PHONE_FAILURE:
+        return (
+          <>
+            <div className={styles.title}>Couldn't connect to phone</div>
+            <div className={styles.description}>
+              <p>
+                Car Thing is having trouble connecting to your phone. Make sure
+                your phone is turned on, Bluetooth is on and in range.
+              </p>
+            </div>
+          </>
+        );
+      default:
+        return null;
+    }
+  },
+);
 
 const ANIM_DURATION = 300;
 

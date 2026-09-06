@@ -1,6 +1,30 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
 import { useProgressValue } from "./usePlaybackProgress";
+import type { SpotifyPlaybackItem, SpotifyPlaybackState } from "../types";
+
+export interface LyricLine {
+  startTimeMs: string;
+  words: string;
+}
+export const normalizeLyricLines = (value: unknown): LyricLine[] =>
+  Array.isArray(value)
+    ? value.flatMap((line: unknown) => {
+        if (
+          !line ||
+          typeof line !== "object" ||
+          !("words" in line) ||
+          typeof line.words !== "string" ||
+          !("startTimeMs" in line) ||
+          (typeof line.startTimeMs !== "string" &&
+            typeof line.startTimeMs !== "number")
+        )
+          return [];
+        return [
+          { ...line, startTimeMs: String(line.startTimeMs), words: line.words },
+        ];
+      })
+    : [];
 
 /** @typedef {import("@schema/spotify").SpotifyTrackLyricsRequest} SpotifyTrackLyricsRequest */
 
@@ -9,7 +33,9 @@ const normalizeLyricsKeyPart = (value: unknown) =>
     ? String(value).trim().toLowerCase()
     : "";
 
-export const isMetadataOnlyLyricsItem = (item: UiLooseData) =>
+export const isMetadataOnlyLyricsItem = (
+  item: SpotifyPlaybackItem | null | undefined,
+) =>
   Boolean(
     item?.is_phone_media ||
     item?.is_local ||
@@ -17,7 +43,7 @@ export const isMetadataOnlyLyricsItem = (item: UiLooseData) =>
   );
 
 export const canFetchLyricsForItem = (
-  item: UiLooseData,
+  item: SpotifyPlaybackItem | null | undefined,
   readiness: {
     wsConnected: boolean;
     appReady: boolean;
@@ -28,13 +54,17 @@ export const canFetchLyricsForItem = (
     ? readiness.wsConnected && readiness.appReady
     : readiness.isSpotifyReady;
 
-export const buildLyricsRequestParams = (item: UiLooseData) => ({
+export const buildLyricsRequestParams = (
+  item: SpotifyPlaybackItem | null | undefined,
+) => ({
   ...(isMetadataOnlyLyricsItem(item) ? {} : { contentId: item?.id }),
   trackName: item?.name,
   artistName: item?.artists?.[0]?.name,
 });
 
-export const getLyricsTrackKey = (item: UiLooseData) => {
+export const getLyricsTrackKey = (
+  item: SpotifyPlaybackItem | null | undefined,
+) => {
   if (!item) return "";
   if (item.is_phone_media) {
     return [
@@ -66,19 +96,23 @@ export const isLyricsRequestCurrent = (
   currentGeneration === requestGeneration &&
   currentTrackKey === requestTrackKey;
 
-export function useLyrics(currentPlayback) {
+export function useLyrics(
+  currentPlayback: SpotifyPlaybackState | null | undefined,
+) {
   const { progressMs } = useProgressValue();
   const [showLyrics, setShowLyrics] = useState(false);
-  const [lyrics, setLyrics] = useState<UiContentItem[]>([]);
+  const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [autoScrollSuspended, setAutoScrollSuspended] = useState(false);
   const [resumeOnNextLyric, setResumeOnNextLyric] = useState(false);
-  const lyricsContainerRef = useRef(null);
+  const lyricsContainerRef = useRef<HTMLDivElement | null>(null);
   const lyricsTrackKeyRef = useRef<string | null>(null);
   const lyricsRequestGenerationRef = useRef(0);
-  const autoScrollTimeoutRef = useRef(null);
+  const autoScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const { isSpotifyReady, wsConnected, appReady, sendSpotifyCommand } =
     useSpotifyWebSocket();
@@ -91,7 +125,7 @@ export function useLyrics(currentPlayback) {
   }, [lyrics]);
 
   const fetchLyrics = useCallback(
-    async (item, trackKey) => {
+    async (item: SpotifyPlaybackItem | null | undefined, trackKey?: string) => {
       if (!item) return;
       const metadataOnly = isMetadataOnlyLyricsItem(item);
       const canFetchLyrics = canFetchLyricsForItem(item, {
@@ -133,7 +167,7 @@ export function useLyrics(currentPlayback) {
         if (!isCurrentRequest()) return;
 
         if (result && result.lyrics && result.lyrics.lines) {
-          setLyrics(result.lyrics.lines);
+          setLyrics(normalizeLyricLines(result.lyrics.lines));
         } else {
           setError("No lyrics available");
           setLyrics([]);
@@ -241,8 +275,8 @@ export function useLyrics(currentPlayback) {
         ) {
           const container = lyricsContainerRef.current;
           const lyricElements = container.children;
-          if (lyricElements[newIndex]) {
-            const lyricElement = lyricElements[newIndex];
+          const lyricElement = lyricElements[newIndex];
+          if (lyricElement instanceof HTMLElement) {
             const containerHeight = container.clientHeight;
             const lyricTop = lyricElement.offsetTop;
             const lyricHeight = lyricElement.offsetHeight;
@@ -265,7 +299,7 @@ export function useLyrics(currentPlayback) {
     isTimeSynced,
   ]);
 
-  const suspendAutoScroll = useCallback((durationMs) => {
+  const suspendAutoScroll = useCallback((durationMs?: number) => {
     setAutoScrollSuspended(true);
     setResumeOnNextLyric(false);
 
@@ -298,7 +332,7 @@ export function useLyrics(currentPlayback) {
     if (!container) return;
 
     let isUserScrolling = false;
-    let scrollTimeout;
+    let scrollTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const handleScroll = () => {
       if (!isUserScrolling) return;

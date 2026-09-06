@@ -127,6 +127,7 @@ const MAX_REASSEMBLED_MESSAGE: usize = MAX_INBOUND_BUFFER;
 const MAX_PENDING_MESSAGE_BYTES: usize = MAX_REASSEMBLED_MESSAGE;
 const PENDING_MESSAGE_TTL: Duration = Duration::from_secs(120);
 const MAX_PENDING_MESSAGES: usize = 8;
+const MAX_CHUNKS: usize = 1000;
 
 fn media_control_payload<T: serde::Serialize>(payload: T) -> serde_json::Value {
     let mut value =
@@ -655,11 +656,6 @@ async fn call_method_static(
     let message_id = uuid::Uuid::new_v4().to_string();
     let (tx, rx) = tokio::sync::oneshot::channel();
 
-    {
-        let mut calls = pending_calls.lock().await;
-        calls.insert(message_id.clone(), tx);
-    }
-
     let message = MsgPackMessage::Call {
         id: message_id.clone(),
         method: method.to_string(),
@@ -669,6 +665,11 @@ async fn call_method_static(
         crate::error::NocturnedError::Config(format!("Failed to serialize message: {err}"))
     })?;
     let chunks = MsgPackProtocolHandler::create_chunks(&serialized)?;
+    {
+        let mut calls = pending_calls.lock().await;
+        calls.insert(message_id.clone(), tx);
+    }
+
     let route = {
         let route = session_route.lock().await;
         route.clone()
@@ -1082,7 +1083,7 @@ fn parse_one_chunk_envelope(data: &[u8]) -> ChunkEnvelopeParse {
     ]);
     let payload_len = u16::from_be_bytes([data[offset + 8], data[offset + 9]]) as usize;
 
-    if total == 0 || index >= total || total > 1000 {
+    if total == 0 || index >= total || usize::from(total) > MAX_CHUNKS {
         return ChunkEnvelopeParse::Invalid;
     }
 
@@ -1529,6 +1530,11 @@ impl MsgPackProtocolHandler {
     /// Format: [1 byte: id_len][id_len bytes: message_id][2 bytes: index BE][2 bytes: total BE][4 bytes: checksum BE][2 bytes: payload_len BE][payload]
     pub fn create_chunks(data: &[u8]) -> Result<Vec<Bytes>> {
         let total_chunks = data.len().div_ceil(CHUNK_SIZE).max(1);
+        if total_chunks > MAX_CHUNKS {
+            return Err(crate::error::NocturnedError::Config(format!(
+                "outbound message requires {total_chunks} chunks; maximum is {MAX_CHUNKS}"
+            )));
+        }
         let message_id = uuid::Uuid::new_v4().to_string().to_ascii_uppercase();
         let mut chunks = Vec::new();
 
@@ -2538,16 +2544,50 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use super::{
-        advertised_ota_pull_window, attach_phone_source, create_audio_data_event,
-        create_audio_recording_started_event, create_audio_recording_stopped_event,
-        normalize_app_ready_event, normalize_entitlement_update_event,
-        normalize_media_control_event, normalize_transfer_result_binary, normalize_voice_event,
-        parse_one_chunk_envelope, parse_ota_package_ready, pull_ota_chunks_inner, rmpv_to_json,
-        transfer_result_bytes, AppSessionRoute, ChunkEnvelopeParse, MsgPackMessage,
-        MsgPackProtocolHandler, MAX_INBOUND_BUFFER, MAX_PENDING_MESSAGE_BYTES,
-        MAX_REASSEMBLED_MESSAGE, OTA_LEGACY_PULL_SIZE, OTA_MAX_PULL_WINDOW_SIZE,
+        advertised_ota_pull_window, attach_phone_source, call_method_static,
+        create_audio_data_event, create_audio_recording_started_event,
+        create_audio_recording_stopped_event, normalize_app_ready_event,
+        normalize_entitlement_update_event, normalize_media_control_event,
+        normalize_transfer_result_binary, normalize_voice_event, parse_one_chunk_envelope,
+        parse_ota_package_ready, pull_ota_chunks_inner, rmpv_to_json, transfer_result_bytes,
+        AppSessionRoute, ChunkEnvelopeParse, MsgPackMessage, MsgPackProtocolHandler, CHUNK_SIZE,
+        MAX_CHUNKS, MAX_INBOUND_BUFFER, MAX_PENDING_MESSAGE_BYTES, MAX_REASSEMBLED_MESSAGE,
+        OTA_LEGACY_PULL_SIZE, OTA_MAX_PULL_WINDOW_SIZE,
     };
     use crate::app::AppMessagePriority;
+
+    #[test]
+    fn outbound_envelopes_accept_the_peer_chunk_limit() {
+        let payload = vec![0x5a; CHUNK_SIZE * MAX_CHUNKS];
+        let chunks = MsgPackProtocolHandler::create_chunks(&payload).unwrap();
+        assert_eq!(chunks.len(), MAX_CHUNKS);
+        assert!(matches!(
+            parse_one_chunk_envelope(chunks.last().unwrap()),
+            ChunkEnvelopeParse::Complete {
+                index: 999,
+                total: 1000,
+                ..
+            }
+        ));
+    }
+
+    #[tokio::test]
+    async fn oversized_outbound_call_sends_no_partial_frame_or_pending_call() {
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let session = Arc::new(Mutex::new(Some(AppSessionRoute { tx, session_id: 1 })));
+        let pending = Arc::new(Mutex::new(HashMap::new()));
+        let result = call_method_static(
+            &session,
+            &pending,
+            "oversized.test",
+            serde_json::json!({"data": "x".repeat(CHUNK_SIZE * MAX_CHUNKS)}),
+            AppMessagePriority::Normal,
+        )
+        .await;
+        assert!(result.unwrap_err().to_string().contains("maximum is 1000"));
+        assert!(rx.try_recv().is_err());
+        assert!(pending.lock().await.is_empty());
+    }
 
     fn decode_single_chunk_call(message: &crate::app::AppMessage) -> MsgPackMessage {
         match parse_one_chunk_envelope(&message.data) {

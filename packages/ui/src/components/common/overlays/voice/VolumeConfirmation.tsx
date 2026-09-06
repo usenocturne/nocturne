@@ -1,6 +1,10 @@
 import { VolumeLoudIcon, VolumeOffIcon } from "../../../common/icons";
 
-const VolumeConfirmation = ({ volumeTarget }: UiComponentProps) => {
+interface VolumeConfirmationProps {
+  volumeTarget?: number | null;
+}
+
+const VolumeConfirmation = ({ volumeTarget }: VolumeConfirmationProps) => {
   const pct = Math.max(0, Math.min(100, Math.round(Number(volumeTarget) || 0)));
 
   return (

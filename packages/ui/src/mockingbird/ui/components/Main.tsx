@@ -12,7 +12,6 @@ import styles from "../styles/Main.module.scss";
 const Main = () => {
   const {
     npvStore,
-    shelfStore,
     overlayController,
     viewStore,
     presetsController,
@@ -31,17 +30,9 @@ const Main = () => {
     }
   };
 
-  const handleClick = () => {
-    shelfStore.shelfController?.voiceMuteBannerUiState?.dismissVoiceBanner?.();
-  };
-
   return (
     <div className={styles.carThingContainer}>
-      <div
-        className={styles.carThingDevice}
-        onPointerDown={handlePointerDown}
-        onClick={handleClick}
-      >
+      <div className={styles.carThingDevice} onPointerDown={handlePointerDown}>
         <Views playbackProgress={playbackProgress} onSeek={onSeek} />
         {presetsController?.presetsUiState?.isShowingPresets && (
           <div

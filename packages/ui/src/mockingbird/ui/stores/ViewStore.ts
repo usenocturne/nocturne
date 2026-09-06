@@ -1,3 +1,5 @@
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable } from "mobx";
 import { transitionDurationMs } from "../styles/Variables";
 
@@ -26,13 +28,13 @@ const INITIAL_VIEW_STACK = [{ view: View.CONTENT_SHELF }, { view: View.NPV }];
 export const DEFAULT_TIMEOUT_TO_NPV = 30000;
 
 class ViewStore {
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  viewStack: Array<{ view: string; state?: unknown }> = INITIAL_VIEW_STACK;
-  rootStore: UiLooseData;
-  timeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  viewStack: Array<{ view: string; state?: ViewState }> = INITIAL_VIEW_STACK;
+  rootStore: RootStore;
+  timeoutId: number | undefined = undefined;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     makeAutoObservable(this, {
       rootStore: false,
       timeoutId: false,
@@ -119,7 +121,7 @@ class ViewStore {
     return this.appView === AppView.ONBOARDING;
   }
 
-  showView(view: string, state?: unknown) {
+  showView(view: string, state?: ViewState) {
     if (this.currentView === view) {
       if (state) {
         this.viewStack.pop();
@@ -130,17 +132,17 @@ class ViewStore {
     }
   }
 
-  showContentShelf(state?: unknown) {
+  showContentShelf(state?: ViewState) {
     this.resetNpvTimeout();
     this.showView(View.CONTENT_SHELF, state);
   }
 
-  showTracklist(state?: unknown) {
+  showTracklist(state?: ViewState) {
     this.resetNpvTimeout();
     this.showView(View.TRACKLIST, state);
   }
 
-  showQueue(state?: unknown) {
+  showQueue(state?: ViewState) {
     this.resetNpvTimeout();
     if (this.isNpv && this.viewUnderCurrentView === View.QUEUE) {
       this.back();
@@ -149,7 +151,7 @@ class ViewStore {
     }
   }
 
-  showNpv(state) {
+  showNpv(state?: ViewState) {
     if (
       this.isTracklist &&
       this.viewUnderCurrentView === View.NPV &&
@@ -162,7 +164,7 @@ class ViewStore {
     }
   }
 
-  backToContentShelf(backToNpvDelayMs) {
+  backToContentShelf(backToNpvDelayMs?: number) {
     this.resetNpvTimeout(backToNpvDelayMs);
     if (this.isContentShelf) {
       return;
@@ -215,7 +217,9 @@ class ViewStore {
     }
   }
 
-  maybeDoBackSideEffect(popedViewStackItem) {
+  maybeDoBackSideEffect(
+    popedViewStackItem: { view: string; state?: ViewState } | undefined,
+  ) {
     const { tracklistStore } = this.rootStore;
     if (
       popedViewStackItem?.view === View.NPV &&
@@ -252,3 +256,5 @@ class ViewStore {
 }
 
 export default ViewStore;
+
+type ViewState = { type: string; value: string };

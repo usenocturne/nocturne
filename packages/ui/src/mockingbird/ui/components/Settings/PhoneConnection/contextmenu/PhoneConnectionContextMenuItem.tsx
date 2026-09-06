@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import classNames from "classnames";
 import { useState } from "react";
 import pointerListenersMaker from "../../../../helpers/PointerListeners";
@@ -17,7 +18,7 @@ const IconX = () => (
   </svg>
 );
 
-const iconMapping = {
+const iconMapping: Record<string, ReactNode> = {
   Connect: <IconBluetooth />,
   Forget: <IconX />,
 };
@@ -26,7 +27,11 @@ const PhoneConnectionContextMenuItem = ({
   item,
   isActive = false,
   dialPressed = false,
-}: UiComponentProps) => {
+}: {
+  item: string;
+  isActive?: boolean;
+  dialPressed?: boolean;
+}) => {
   const [pressedMenuItem, setPressedMenuItem] = useState(false);
   const { phoneConnectionStore } = useCarThingStore();
 

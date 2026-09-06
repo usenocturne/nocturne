@@ -36,7 +36,7 @@ describe("normalizeSpotifyContext", () => {
     ["spotify:album:album-id", "album", "album-id"],
     ["spotify:artist:artist-id", "artist", "artist-id"],
     ["spotify:show:show-id", "show", "show-id"],
-  ])("keeps canonical %s contexts", (uri, contentType, contentId) => {
+  ] as const)("keeps canonical %s contexts", (uri, contentType, contentId) => {
     expect(normalizeSpotifyContext(uri)).toEqual({
       contentId,
       contentType,

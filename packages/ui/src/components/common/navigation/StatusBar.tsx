@@ -8,16 +8,10 @@ import {
 import { useBluetooth } from "../../../hooks/useNocturned";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
 import { useSettings } from "../../../contexts/SettingsContext";
-import type { BluetoothDevice } from "../../../types";
 
 export default function StatusBar() {
   const [batteryPercentage, setBatteryPercentage] = useState(80);
-  const { lastConnectedDevice, connectedDevices, devices } =
-    useBluetooth() as unknown as {
-      lastConnectedDevice: BluetoothDevice | null;
-      connectedDevices: BluetoothDevice[];
-      devices: BluetoothDevice[];
-    };
+  const { lastConnectedDevice, connectedDevices, devices } = useBluetooth();
   const { currentTime, isFourDigits } = useCurrentTime();
   const { settings, isMicLocked } = useSettings();
   const effectiveMicMuted = !!isMicLocked || (settings?.micMuted ?? false);

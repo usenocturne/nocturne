@@ -1,25 +1,5 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { voiceReducer, getInitialState } from "./VoiceContext";
-
-beforeAll(() => {
-  const values = new Map<string, string>();
-  globalThis.localStorage = {
-    getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => values.set(key, String(value)),
-    removeItem: (key: string) => values.delete(key),
-    clear: () => values.clear(),
-    key: (index: number) => [...values.keys()][index] ?? null,
-    get length() {
-      return values.size;
-    },
-  } as Storage;
-  globalThis.WebSocket = class extends EventTarget {
-    static OPEN = 1;
-    readyState = 0;
-    send() {}
-    close() {}
-  } as unknown as typeof WebSocket;
-});
 
 describe("voiceReducer session binding from ai.state", () => {
   test("pre-transcript thinking binds the session on an open turn", () => {

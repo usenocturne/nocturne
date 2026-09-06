@@ -53,7 +53,7 @@ const TIPS = [
   },
 ];
 
-const TipsOnDemandError = ({ onConfirm }: UiComponentProps) => {
+const TipsOnDemandError = ({ onConfirm }: { onConfirm: () => void }) => {
   const [pressed, setPressed] = useState(false);
 
   return (

@@ -1,5 +1,7 @@
-const IconPhoneDecline = () => (
+import type { FixedIconProps } from "../IconProps";
+const IconPhoneDecline = (props: FixedIconProps) => (
   <svg
+    {...props}
     width="78"
     height="32"
     viewBox="0 0 78 32"

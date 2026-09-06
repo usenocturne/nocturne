@@ -1,8 +1,14 @@
+import type { SectionProps, PlayingStateMap, LibraryData } from "./contracts";
 import React from "react";
 import SwiperCarousel from "../../components/common/navigation/SwiperCarousel";
 import SpotifyImage from "../../components/common/SpotifyImage";
 import { AlertCircleIcon } from "../../components/common/icons";
 import { formatFollowerCount } from "../../utils/helpers";
+
+interface ArtistsSectionProps extends SectionProps {
+  topArtists: LibraryData["topArtists"];
+  playingStateMap: PlayingStateMap;
+}
 
 const CARD_SIZE_STYLE = { width: 280, height: 280 };
 
@@ -13,7 +19,7 @@ function ArtistsSection({
   activeSection,
   playingStateMap,
   onCardClick,
-}: UiComponentProps) {
+}: ArtistsSectionProps) {
   if (isSpotifySkipped) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-full text-white/50 text-2xl text-center">
@@ -29,7 +35,7 @@ function ArtistsSection({
     return (
       <div className="flex gap-10 p-2">
         {Array(5)
-          .fill()
+          .fill(undefined)
           .map((_, index) => (
             <div key={`loading-artist-${index}`} className="flex-shrink-0">
               <div className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)] bg-white/10 animate-pulse w-[280px] h-[280px]"></div>
@@ -49,10 +55,10 @@ function ArtistsSection({
     );
   }
 
-  const handleItemSelect = (index) => {
+  const handleItemSelect = (index: number) => {
     if (index !== -1 && topArtists[index]) {
       const artist = topArtists[index];
-      onCardClick(artist.id, "artist");
+      artist.id && onCardClick(artist.id, "artist");
     }
   };
 
@@ -67,9 +73,9 @@ function ArtistsSection({
           <div
             style={CARD_SIZE_STYLE}
             className="mt-10 aspect-square rounded-full drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-            onClick={() => onCardClick(artist.id, "artist")}
+            onClick={() => artist.id && onCardClick(artist.id, "artist")}
           >
-            {artist.images?.length > 0 ? (
+            {(artist.images?.length ?? 0) > 0 ? (
               <SpotifyImage
                 images={artist.images}
                 preferredSizeIndex={1}
@@ -83,7 +89,7 @@ function ArtistsSection({
           </div>
           <h4
             className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-            onClick={() => onCardClick(artist.id, "artist")}
+            onClick={() => artist.id && onCardClick(artist.id, "artist")}
           >
             {artist.name}
           </h4>
@@ -108,7 +114,7 @@ function ArtistsSection({
           </h4>
         </div>
       )}
-      keyExtractor={(artist) => artist.id}
+      keyExtractor={(artist, index) => artist.id ?? artist.uri ?? index}
       getItemId={(artist) => artist.id}
       activeSection={activeSection}
       onItemSelect={handleItemSelect}

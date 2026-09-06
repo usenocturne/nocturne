@@ -1,8 +1,12 @@
 import { useEffect, useRef, useCallback } from "react";
-import type { SpotifyPlayback, UpdateGradientColors } from "../../types";
+import type {
+  SpotifyPlaybackState as SpotifyPlayback,
+  UpdateGradientColors,
+} from "../../types";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGestureControls } from "../../hooks/useGestureControls";
+
 interface LockViewProps {
   onClose: () => void;
   currentPlayback: SpotifyPlayback | null;
@@ -118,8 +122,7 @@ export default function LockView({
   useEffect(() => {
     if (currentPlayback?.item && updateGradientColors) {
       let imageUrl: string | null = null;
-      // Boundary: playback item may be a daemon-enriched track or episode payload.
-      const item = currentPlayback.item as unknown as UiLooseData;
+      const item = currentPlayback.item;
 
       if (item.type === "episode") {
         const candidate = item.show?.images?.[0]?.url || item.images?.[0]?.url;

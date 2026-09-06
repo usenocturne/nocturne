@@ -5,21 +5,32 @@ import {
 } from "../utils/presetStorage";
 import { buildButtonMapping } from "../utils/buttonMapping";
 
+interface ButtonMappingOptions {
+  contentId?: string | null;
+  contentType?: string | null;
+  contentImage?: string | null;
+  contentName?: string | null;
+  playTrack?: unknown;
+  isActive?: boolean;
+  setIgnoreNextRelease?: (ignore: boolean) => void;
+}
+
 export function useButtonMapping({
   contentId,
   contentType,
   contentImage,
   contentName,
-  playTrack,
   isActive = false,
   setIgnoreNextRelease,
-}: UiComponentProps) {
+}: ButtonMappingOptions) {
   const [mappingInProgress, setMappingInProgress] = useState(false);
   const [showMappingOverlay, setShowMappingOverlay] = useState(false);
-  const [activeButton, setActiveButton] = useState(null);
-  const longPressTimers = useRef({});
+  const [activeButton, setActiveButton] = useState<string | null>(null);
+  const longPressTimers = useRef<
+    Record<string, ReturnType<typeof setTimeout> | null>
+  >({});
   const isMappingRef = useRef(false);
-  const trackUrisRef = useRef([]);
+  const trackUrisRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (contentType === "mix" || contentType === "liked-songs") {
@@ -28,7 +39,7 @@ export function useButtonMapping({
   }, [contentId, contentType]);
 
   const saveButtonMapping = useCallback(
-    (buttonNumber) => {
+    (buttonNumber: string) => {
       const mapping = buildButtonMapping({
         contentId,
         contentType,
@@ -46,12 +57,14 @@ export function useButtonMapping({
     [contentId, contentType, contentImage, contentName],
   );
 
-  const setTrackUris = useCallback((uris) => {
-    trackUrisRef.current = Array.isArray(uris) ? uris : [];
+  const setTrackUris = useCallback((uris: unknown) => {
+    trackUrisRef.current = Array.isArray(uris)
+      ? uris.filter((uri): uri is string => typeof uri === "string")
+      : [];
   }, []);
 
   const handleKeyDown = useCallback(
-    (e) => {
+    (e: KeyboardEvent) => {
       if (!isActive) return;
 
       const validButtons = ["1", "2", "3", "4"];
@@ -67,7 +80,7 @@ export function useButtonMapping({
           isMappingRef.current = true;
 
           if (setIgnoreNextRelease) {
-            setIgnoreNextRelease();
+            setIgnoreNextRelease(true);
           }
 
           saveButtonMapping(buttonNumber);
@@ -91,7 +104,7 @@ export function useButtonMapping({
   );
 
   const handleKeyUp = useCallback(
-    (e) => {
+    (e: KeyboardEvent) => {
       if (!isActive) return;
 
       const validButtons = ["1", "2", "3", "4"];

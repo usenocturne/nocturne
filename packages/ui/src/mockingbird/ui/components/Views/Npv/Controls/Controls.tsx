@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Spacer from "./Spacer";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
@@ -41,7 +42,7 @@ const Controls = () => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.controlButtonsUiState;
 
-  const setToComp = {
+  const setToComp: Record<string, ReactNode> = {
     ["music"]: (
       <>
         <Shuffle />

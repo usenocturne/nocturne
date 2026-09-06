@@ -6,7 +6,9 @@ import {
 import { useSubscription } from "../../hooks/useSubscription";
 
 export default function About() {
-  const [deviceInfo, setDeviceInfo] = useState(null);
+  const [deviceInfo, setDeviceInfo] = useState<ReturnType<
+    typeof normalizeDeviceInfoResponse
+  > | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { isSubscribed, subscriptionStatus } = useSubscription();
 

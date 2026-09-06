@@ -37,7 +37,8 @@ export default function VoicePill({
       return;
     }
 
-    const words = aiResponse.split(/\s+/).filter((w) => w.length > 0);
+    const response = aiResponse;
+    const words = response.split(/\s+/).filter((w) => w.length > 0);
     if (words.length === 0) {
       onStreamComplete?.();
       return;
@@ -58,7 +59,7 @@ export default function VoicePill({
         lastTick = now;
         if (cursor >= words.length) {
           setStreamingActive(false);
-          lastStreamedResponseRef.current = aiResponse;
+          lastStreamedResponseRef.current = response;
           onStreamComplete?.();
           return;
         }

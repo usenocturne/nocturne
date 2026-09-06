@@ -1,3 +1,6 @@
+import type { BluetoothDevice } from "../../../types";
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable, runInAction } from "mobx";
 import {
   acquireBluetoothDiscovery,
@@ -8,15 +11,15 @@ import {
 const DISCOVERY_OWNER = Symbol("mockingbird-bluetooth-discovery");
 
 class BluetoothStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  bluetoothDeviceList: UiLooseData[] = [];
-  currentDevice = null;
-  localDevice = null;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  bluetoothDeviceList: MockBluetoothDevice[] = [];
+  currentDevice: MockBluetoothDevice | null = null;
+  localDevice: { name?: string } | null = null;
   pin = "";
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
@@ -25,14 +28,16 @@ class BluetoothStore {
     try {
       /** @type {import("@schema/bluetooth").BluetoothDevicesListRequest} */
       const request = {};
-      const resp = await sendNocturneWsRequest(
-        "bluetooth.devices.list",
-        request,
-        { timeoutMs: 5000 },
-      );
+      const resp = await sendNocturneWsRequest<{
+        payload?: BluetoothDevice[];
+        result?: { payload?: BluetoothDevice[] };
+      }>("bluetooth.devices.list", request, { timeoutMs: 5000 });
       /** @type {import("@schema/bluetooth").BluetoothDevicesListResponse | undefined} */
       const typedResp = resp?.payload ? resp : resp?.result;
-      const list = (typedResp && typedResp.payload) || [];
+      const list = ((typedResp && typedResp.payload) || []).filter(
+        (device): device is MockBluetoothDevice =>
+          typeof device.address === "string",
+      );
       runInAction(() => {
         this.bluetoothDeviceList = list;
         const connected = list.find((d) => d.connected);
@@ -57,7 +62,7 @@ class BluetoothStore {
     }
   }
 
-  async connectDevice(address) {
+  async connectDevice(address: string) {
     try {
       runInAction(() => {
         this.currentDevice = this.bluetoothDeviceList.find(
@@ -82,7 +87,7 @@ class BluetoothStore {
     }
   }
 
-  async disconnectDevice(address) {
+  async disconnectDevice(address: string) {
     try {
       /** @type {import("@schema/bluetooth").BluetoothDeviceDisconnectRequest} */
       const request = { address };
@@ -100,7 +105,7 @@ class BluetoothStore {
     }
   }
 
-  async forgetDevice(address) {
+  async forgetDevice(address: string) {
     try {
       /** @type {import("@schema/bluetooth").BluetoothDeviceUnpairRequest} */
       const request = { address };
@@ -136,12 +141,12 @@ class BluetoothStore {
     }
   }
 
-  isDeviceConnected(address) {
+  isDeviceConnected(address: string | undefined) {
     const device = this.bluetoothDeviceList.find((d) => d.address === address);
     return device?.connected || false;
   }
 
-  getDeviceName(device) {
+  getDeviceName(device: Partial<MockBluetoothDevice> | null | undefined) {
     return (
       device?.device_info?.name ||
       device?.name ||
@@ -153,3 +158,9 @@ class BluetoothStore {
 }
 
 export default BluetoothStore;
+
+export type MockBluetoothDevice = BluetoothDevice & {
+  address: string;
+  alias?: string;
+  device_info?: { name?: string };
+};

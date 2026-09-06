@@ -1,16 +1,26 @@
-import { Component } from "react";
+import { Component, type ReactNode } from "react";
 
-class DelayedRender extends Component {
-  timeoutId;
+type DelayedRenderProps = {
+  showing?: boolean;
+  showDelay?: number;
+  hideDelay?: number;
+  children?: ReactNode;
+};
 
-  constructor(props) {
+class DelayedRender extends Component<
+  DelayedRenderProps,
+  { showing?: boolean }
+> {
+  timeoutId: number | undefined;
+
+  constructor(props: DelayedRenderProps) {
     super(props);
     this.state = {
       showing: props.showing,
     };
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps: DelayedRenderProps) {
     this.maybeUpdateState(prevProps, this.props);
   }
 
@@ -18,7 +28,10 @@ class DelayedRender extends Component {
     window.clearTimeout(this.timeoutId);
   }
 
-  maybeUpdateState(prevProps, currentProps) {
+  maybeUpdateState(
+    prevProps: DelayedRenderProps,
+    currentProps: DelayedRenderProps,
+  ) {
     if (!prevProps.showing && currentProps.showing) {
       window.clearTimeout(this.timeoutId);
       if (!this.props.showDelay) {

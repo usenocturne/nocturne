@@ -1,3 +1,4 @@
+import type { Swiper as SwiperInstance } from "swiper";
 import { useCarThingStore } from "../../../contexts/CarThingStore";
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
@@ -22,7 +23,7 @@ const OFFSET_AFTER = DEVICE_HEIGHT - HEADER_HEIGHT - ITEM_HEIGHT;
 
 const MainMenu = () => {
   const { settingsStore } = useCarThingStore();
-  const [swiper, setSwiper] = useState(null);
+  const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
 
   useEffect(() => {
     const effect = () => {

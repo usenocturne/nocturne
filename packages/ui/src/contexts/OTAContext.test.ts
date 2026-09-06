@@ -67,9 +67,9 @@ describe("explicit component activation", () => {
   test("awaits daemon and bandaid activation before reloading the kiosk", async () => {
     for (const kind of ["daemon", "bandaid"]) {
       const calls: string[] = [];
-      let acknowledgeActivation: (() => void) | null = null;
+      const acknowledgement: { resolve?: () => void } = {};
       const activation = new Promise<void>((resolve) => {
-        acknowledgeActivation = resolve;
+        acknowledgement.resolve = resolve;
       });
       const applying = applyReloadOnlyOta(
         kind,
@@ -82,7 +82,7 @@ describe("explicit component activation", () => {
 
       expect(requiresDaemonActivation(kind)).toBe(true);
       expect(calls).toEqual(["activate"]);
-      acknowledgeActivation?.();
+      acknowledgement.resolve?.();
       await applying;
       expect(calls).toEqual(["activate", "reload"]);
     }
@@ -215,8 +215,8 @@ describe("automatic install retry", () => {
       delays.push(delayMs);
       return nextTimer;
     };
-    const cancel = (timer: ReturnType<typeof setTimeout>) => {
-      scheduled.delete(Number(timer));
+    const cancel = (timer: number) => {
+      scheduled.delete(timer);
     };
 
     const cancelFirst = scheduleInstallRetry(

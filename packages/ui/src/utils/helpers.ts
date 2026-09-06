@@ -20,3 +20,6 @@ export const formatFollowerCount = (count: number): string => {
   }
   return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
+
+export const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);

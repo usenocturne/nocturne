@@ -1,3 +1,5 @@
+import type { PersistentStorage } from "./StoreContracts";
+import type { RootStore } from "./RootStore";
 import { makeAutoObservable } from "mobx";
 
 export const NIGHT_MODE_USER_ENABLED_KEY = "night_mode_user_enabled";
@@ -5,7 +7,7 @@ export const NIGHT_MODE_USER_ENABLED_KEY = "night_mode_user_enabled";
 const NIGHT_MODE_STRENGTH = 30;
 const NIGHT_MODE_SLOPE = 1.4;
 
-const readStoredBoolean = (storage: UiLooseData, key: string) => {
+const readStoredBoolean = (storage: PersistentStorage, key: string) => {
   const stored = storage.getItem(key);
   if (stored === null) return false;
 
@@ -21,10 +23,10 @@ const roundToTwoDecimals = (value: number) =>
   Math.round((value + Number.EPSILON) * 100) / 100;
 
 export default class NightModeController {
-  declare rootStore: UiLooseData;
+  declare rootStore: RootStore;
   userEnabled: boolean;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     this.userEnabled = readStoredBoolean(
       rootStore.persistentStorage,

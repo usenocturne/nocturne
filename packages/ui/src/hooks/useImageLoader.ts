@@ -33,8 +33,6 @@ type CacheEntry = {
 type FailureEntry = {
   error: unknown;
   timestamp: number;
-  extractColors?: boolean;
-  fetchImageFn?: ImageFetchFn;
 };
 type QueueItem = {
   url: string;
@@ -94,14 +92,18 @@ export class ImageLoadQueue {
   urlListeners = new Map<string, Set<QueueListener>>();
   cache = new Map<string, CacheEntry>();
   cacheTtlMs = 5 * 60 * 1000;
+  maxCacheEntries = 64;
+  maxCacheBytes = 32 * 1024 * 1024;
   imageFetchDelayMs = 150;
   maxConcurrent = 2;
   interLaunchDelayMs = 60;
   activeWorkers = 0;
 
-  addListener(callback: QueueListener): () => boolean {
+  addListener(callback: QueueListener): () => void {
     this.listeners.add(callback);
-    return () => this.listeners.delete(callback);
+    return () => {
+      this.listeners.delete(callback);
+    };
   }
 
   addUrlListener(
@@ -112,11 +114,8 @@ export class ImageLoadQueue {
       return () => {};
     }
 
-    if (!this.urlListeners.has(url)) {
-      this.urlListeners.set(url, new Set());
-    }
-
-    const listeners = this.urlListeners.get(url);
+    const listeners = this.urlListeners.get(url) ?? new Set<QueueListener>();
+    this.urlListeners.set(url, listeners);
     listeners.add(callback);
 
     return () => {
@@ -201,6 +200,8 @@ export class ImageLoadQueue {
     }
 
     entry.timestamp = now;
+    this.cache.delete(url);
+    this.cache.set(url, entry);
     return entry;
   }
 
@@ -218,7 +219,34 @@ export class ImageLoadQueue {
       colorPromise: null,
     };
 
+    this.cache.delete(url);
     this.cache.set(url, entry);
+    this.pruneCache();
+  }
+
+  private pruneCache(): void {
+    const now = Date.now();
+    let bytes = 0;
+    const sizeOf = (entry: CacheEntry) =>
+      typeof entry.data === "string"
+        ? entry.data.length * 2
+        : (entry.data?.byteLength ?? 0);
+    for (const [url, entry] of this.cache) {
+      if (now - entry.timestamp > this.cacheTtlMs) {
+        this.cache.delete(url);
+      } else {
+        bytes += sizeOf(entry);
+      }
+    }
+    for (const [url, entry] of this.cache) {
+      if (
+        this.cache.size <= this.maxCacheEntries &&
+        bytes <= this.maxCacheBytes
+      )
+        break;
+      this.cache.delete(url);
+      bytes -= sizeOf(entry);
+    }
   }
 
   handleCacheHit(
@@ -227,7 +255,7 @@ export class ImageLoadQueue {
     listener: ImageRequestListener,
     requireColors: boolean,
   ): boolean {
-    if (!requireColors) {
+    if (!requireColors || !entry.data) {
       listener.resolve({ data: entry.data, colors: entry.colors ?? null });
       return true;
     }
@@ -303,13 +331,15 @@ export class ImageLoadQueue {
         const failureMessage =
           failure?.error instanceof Error
             ? failure.error.message
-            : failure?.error || `Image previously failed to load: ${url}`;
+            : String(
+                failure?.error ?? `Image previously failed to load: ${url}`,
+              );
         reject(new Error(failureMessage));
         return;
       }
 
-      if (this.activeRequests.has(url)) {
-        const active = this.activeRequests.get(url);
+      const active = this.activeRequests.get(url);
+      if (active) {
         active.listeners.push(listener);
         if (extractColors && !active.extractColors) {
           active.extractColors = true;
@@ -460,7 +490,7 @@ export class ImageLoadQueue {
       const failureMessage =
         failure?.error instanceof Error
           ? failure.error.message
-          : failure?.error || `Image failed to load: ${url}`;
+          : String(failure?.error ?? `Image failed to load: ${url}`);
       listeners.forEach(({ reject }) => reject(new Error(failureMessage)));
       return;
     }
@@ -484,6 +514,12 @@ export class ImageLoadQueue {
     );
 
     try {
+      if (
+        this.activeRequests.get(url) !== activeRequest ||
+        abortController.signal.aborted
+      ) {
+        return;
+      }
       const result = await fetchImageFn(url, abortController.signal);
       if (this.activeRequests.get(url) !== activeRequest) return;
       const shouldExtractColors =
@@ -616,22 +652,10 @@ export class ImageLoadQueue {
     });
 
     if (isSpotifyReady && this.failedImages.size > 0) {
-      const failedUrls = Array.from(this.failedImages.keys());
-      failedUrls.forEach((url) => {
-        const meta = this.failedImages.get(url);
-        if (meta) {
-          this.failedImages.delete(url);
-          this.retryCount.delete(url);
-          this.queue.unshift({
-            url,
-            priority: 100,
-            extractColors: meta.extractColors || false,
-            fetchImageFn: meta.fetchImageFn,
-            isSpotifyReady: true,
-            listeners: [],
-          });
-        }
-      });
+      for (const url of this.failedImages.keys()) {
+        this.retryCount.delete(url);
+      }
+      this.failedImages.clear();
     }
 
     if (isSpotifyReady && this.queue.length > 0) {

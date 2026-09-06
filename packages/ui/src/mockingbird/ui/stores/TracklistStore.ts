@@ -1,3 +1,25 @@
+import type { MouseEvent } from "react";
+import type {
+  SpotifyAlbum,
+  SpotifyArtist,
+  SpotifyPlaylist,
+  PlayerControls,
+} from "../../../types";
+import { getErrorMessage } from "../../../utils/helpers";
+import type PlayerStore from "./PlayerStore";
+import type QueueStore from "./QueueStore";
+import {
+  pageItems,
+  pageTotal,
+  pageNext,
+  type PageResult,
+  type RawTrack,
+  type RawEpisode,
+  type TracklistItem,
+  type TracklistContext,
+} from "./TracklistModels";
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable, runInAction, action } from "mobx";
 import { getThumbnailImageUrl } from "../helpers/ImageSizeHelper";
 import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
@@ -12,11 +34,13 @@ import { normalizeSpotifyContext } from "../../../utils/spotifyContext";
 /** @typedef {import("@schema/spotify").SpotifyPlaylistTracksRequest} SpotifyPlaylistTracksRequest */
 /** @typedef {import("@schema/spotify").SpotifyShowEpisodesRequest} SpotifyShowEpisodesRequest */
 
+type AbortFlag = { abort: boolean };
+
 const INITIAL_FETCH_SIZE = 30;
 const BACKGROUND_FETCH_SIZE = 50;
 const BACKGROUND_FETCH_DELAY = 300;
 
-export const isSupportedUriType = (uri) => {
+export const isSupportedUriType = (uri: string | null | undefined) => {
   if (!uri) return false;
 
   return !(
@@ -28,24 +52,26 @@ export const isSupportedUriType = (uri) => {
 };
 
 class TracklistUiState {
-  declare contextType: UiLooseData;
-  declare contextUri: UiLooseData;
-  declare selectedItemIndex: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  rootStore;
-  contextItem = { uri: "", title: "" };
-  selectedItem = undefined;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  rootStore: RootStore;
+  declare playTrack: PlayerControls["playTrack"];
+  declare addToQueue: ((uri: string) => void) | undefined;
+  declare likeAlbumOrPlaylist:
+    | ((uri: string, liked: boolean) => void)
+    | undefined;
+  contextItem: TracklistContext = { uri: "", title: "" };
+  selectedItem: TracklistItem | undefined = undefined;
   animateSliding = false;
   showAddToQueueSuccess = false;
-  confirmationTimeoutId = undefined;
-  tracksData: UiLooseData[] = [];
+  confirmationTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
+  tracksData: TracklistItem[] = [];
   totalTracksInContext = 0;
   _isLoading = false;
   _loadingMore = false;
-  _bgLoadAbort = null;
+  _bgLoadAbort: AbortFlag | null = null;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     makeAutoObservable(this, {
       rootStore: false,
       animateSliding: false,
@@ -81,7 +107,7 @@ class TracklistUiState {
     this._loadingMore = false;
   }
 
-  initializeTracklist(contextItem) {
+  initializeTracklist(contextItem: TracklistContext) {
     const normalizedUri =
       normalizeSpotifyContext(contextItem.uri)?.uri || contextItem.uri;
     const normalizedContextItem =
@@ -135,7 +161,7 @@ class TracklistUiState {
     return this.tracksList[0];
   }
 
-  async loadInitialItems(uri) {
+  async loadInitialItems(uri: string) {
     if (this.isStationUri(uri)) {
       return;
     }
@@ -144,7 +170,7 @@ class TracklistUiState {
 
     try {
       if (this.isCollectionUri(uri)) {
-        await this.loadLikedSongs(uri);
+        await this.loadLikedSongs();
       } else if (this.isShowUri(uri)) {
         await this.loadPodcastEpisodes(uri);
       } else if (this.isAlbumUri(uri)) {
@@ -164,10 +190,10 @@ class TracklistUiState {
     });
   }
 
-  _parseAlbumItems(items) {
+  _parseAlbumItems(items: RawTrack[]): TracklistItem[] {
     return (Array.isArray(items) ? items : []).map((track) => ({
-      uri: track.uri,
-      title: track.name,
+      uri: track.uri ?? "",
+      title: track.name ?? "",
       subtitle: track.artists?.map((artist) => artist.name).join(", ") || "",
       image_id: null,
       metadata: {
@@ -180,7 +206,7 @@ class TracklistUiState {
     }));
   }
 
-  async loadAlbumTracks(albumUri) {
+  async loadAlbumTracks(albumUri: string) {
     const albumId = albumUri.replace("spotify:album:", "");
 
     if (this._bgLoadAbort) {
@@ -196,14 +222,18 @@ class TracklistUiState {
         limit: INITIAL_FETCH_SIZE,
         offset: 0,
       };
-      const data = await sendNocturneWsRequest("spotify.album.tracks", params, {
-        timeoutMs: 8000,
-      });
+      const data = await sendNocturneWsRequest<PageResult<RawTrack>>(
+        "spotify.album.tracks",
+        params,
+        {
+          timeoutMs: 8000,
+        },
+      );
 
       if (abortToken.abort) return;
 
-      const items = data?.items || data || [];
-      const total = data?.total || items.length;
+      const items = pageItems(data);
+      const total = pageTotal(data) || items.length;
       const parsed = this._parseAlbumItems(items);
 
       runInAction(() => {
@@ -219,7 +249,12 @@ class TracklistUiState {
     }
   }
 
-  async _backgroundLoadAlbum(albumId, loadedCount, total, abortToken) {
+  async _backgroundLoadAlbum(
+    albumId: string,
+    loadedCount: number,
+    total: number,
+    abortToken: AbortFlag,
+  ) {
     runInAction(() => {
       this._loadingMore = true;
     });
@@ -236,7 +271,7 @@ class TracklistUiState {
           limit: BACKGROUND_FETCH_SIZE,
           offset,
         };
-        const data = await sendNocturneWsRequest(
+        const data = await sendNocturneWsRequest<PageResult<RawTrack>>(
           "spotify.album.tracks",
           params,
           {
@@ -246,7 +281,7 @@ class TracklistUiState {
 
         if (abortToken.abort) break;
 
-        const items = data?.items || data || [];
+        const items = pageItems(data);
         if (items.length === 0) break;
 
         const parsed = this._parseAlbumItems(items);
@@ -258,9 +293,12 @@ class TracklistUiState {
         });
 
         offset += items.length;
-        if (!data?.next && items.length < BACKGROUND_FETCH_SIZE) break;
+        if (!pageNext(data) && items.length < BACKGROUND_FETCH_SIZE) break;
       } catch (error) {
-        console.warn("Background album load error, stopping:", error?.message);
+        console.warn(
+          "Background album load error, stopping:",
+          getErrorMessage(error),
+        );
         break;
       }
     }
@@ -270,7 +308,7 @@ class TracklistUiState {
     });
   }
 
-  _parseLikedSongItems(items) {
+  _parseLikedSongItems(items: RawTrack[]): TracklistItem[] {
     return (Array.isArray(items) ? items : [])
       .filter((item) => item.track || item.uri)
       .map((rawItem) => {
@@ -280,8 +318,8 @@ class TracklistUiState {
           track.album?.image_url ||
           getThumbnailImageUrl(track.album?.images);
         return {
-          uri: track.uri,
-          title: track.name,
+          uri: track.uri ?? "",
+          title: track.name ?? "",
           subtitle:
             track.artists?.map((artist) => artist.name).join(", ") || "",
           image_id: trackImage || "",
@@ -308,14 +346,18 @@ class TracklistUiState {
         limit: INITIAL_FETCH_SIZE,
         offset: 0,
       };
-      const data = await sendNocturneWsRequest("spotify.me.tracks", params, {
-        timeoutMs: 10000,
-      });
+      const data = await sendNocturneWsRequest<PageResult<RawTrack>>(
+        "spotify.me.tracks",
+        params,
+        {
+          timeoutMs: 10000,
+        },
+      );
 
       if (abortToken.abort) return;
 
-      const items = data?.items || data || [];
-      const total = data?.total || 0;
+      const items = pageItems(data);
+      const total = pageTotal(data) || 0;
       const parsed = this._parseLikedSongItems(items);
 
       runInAction(() => {
@@ -331,7 +373,11 @@ class TracklistUiState {
     }
   }
 
-  async _backgroundLoadLikedSongs(loadedCount, total, abortToken) {
+  async _backgroundLoadLikedSongs(
+    loadedCount: number,
+    total: number,
+    abortToken: AbortFlag,
+  ) {
     runInAction(() => {
       this._loadingMore = true;
     });
@@ -347,13 +393,17 @@ class TracklistUiState {
           limit: BACKGROUND_FETCH_SIZE,
           offset,
         };
-        const data = await sendNocturneWsRequest("spotify.me.tracks", params, {
-          timeoutMs: 10000,
-        });
+        const data = await sendNocturneWsRequest<PageResult<RawTrack>>(
+          "spotify.me.tracks",
+          params,
+          {
+            timeoutMs: 10000,
+          },
+        );
 
         if (abortToken.abort) break;
 
-        const items = data?.items || data || [];
+        const items = pageItems(data);
         if (items.length === 0) break;
 
         const parsed = this._parseLikedSongItems(items);
@@ -365,11 +415,11 @@ class TracklistUiState {
         });
 
         offset += items.length;
-        if (!data?.next && items.length < BACKGROUND_FETCH_SIZE) break;
+        if (!pageNext(data) && items.length < BACKGROUND_FETCH_SIZE) break;
       } catch (error) {
         console.warn(
           "Background liked songs load error, stopping:",
-          error?.message,
+          getErrorMessage(error),
         );
         break;
       }
@@ -380,7 +430,10 @@ class TracklistUiState {
     });
   }
 
-  _parsePlaylistItems(items, playlistImage) {
+  _parsePlaylistItems(
+    items: RawTrack[],
+    playlistImage: string | null,
+  ): TracklistItem[] {
     return (Array.isArray(items) ? items : [])
       .filter((item) => item.track || item.uri)
       .map((rawItem) => {
@@ -390,8 +443,8 @@ class TracklistUiState {
           track.album?.image_url ||
           getThumbnailImageUrl(track.album?.images);
         return {
-          uri: track.uri,
-          title: track.name,
+          uri: track.uri ?? "",
+          title: track.name ?? "",
           subtitle:
             track.artists?.map((artist) => artist.name).join(", ") || "",
           image_id: trackImage || playlistImage,
@@ -405,7 +458,7 @@ class TracklistUiState {
       });
   }
 
-  async loadPlaylistTracks(playlistUri) {
+  async loadPlaylistTracks(playlistUri: string) {
     const playlistId = playlistUri.replace("spotify:playlist:", "");
 
     if (this._bgLoadAbort) {
@@ -416,7 +469,7 @@ class TracklistUiState {
 
     try {
       const [data, playlistInfo] = await Promise.allSettled([
-        sendNocturneWsRequest(
+        sendNocturneWsRequest<PageResult<RawTrack>>(
           "spotify.playlist.tracks",
           /** @type {SpotifyPlaylistTracksRequest} */ {
             contentId: playlistId,
@@ -426,7 +479,7 @@ class TracklistUiState {
           },
           { timeoutMs: 8000 },
         ),
-        sendNocturneWsRequest(
+        sendNocturneWsRequest<SpotifyPlaylist & { image_url?: string }>(
           "spotify.playlist.get",
           /** @type {SpotifyPlaylistGetRequest} */ { contentId: playlistId },
           { timeoutMs: 5000 },
@@ -438,8 +491,8 @@ class TracklistUiState {
       const result = data.status === "fulfilled" ? data.value : null;
       const info =
         playlistInfo.status === "fulfilled" ? playlistInfo.value : null;
-      const items = result?.items || result || [];
-      const total = result?.total || 0;
+      const items = pageItems(result);
+      const total = pageTotal(result) || 0;
       const playlistImage =
         info?.image_url || getThumbnailImageUrl(info?.images) || null;
 
@@ -465,11 +518,11 @@ class TracklistUiState {
   }
 
   async _backgroundLoadPlaylist(
-    playlistId,
-    loadedCount,
-    total,
-    playlistImage,
-    abortToken,
+    playlistId: string,
+    loadedCount: number,
+    total: number,
+    playlistImage: string | null,
+    abortToken: AbortFlag,
   ) {
     runInAction(() => {
       this._loadingMore = true;
@@ -488,7 +541,7 @@ class TracklistUiState {
           offset,
           mockingbird: true,
         };
-        const data = await sendNocturneWsRequest(
+        const data = await sendNocturneWsRequest<PageResult<RawTrack>>(
           "spotify.playlist.tracks",
           params,
           {
@@ -498,7 +551,7 @@ class TracklistUiState {
 
         if (abortToken.abort) break;
 
-        const items = data?.items || data || [];
+        const items = pageItems(data);
         if (items.length === 0) break;
 
         const parsed = this._parsePlaylistItems(items, playlistImage);
@@ -510,11 +563,11 @@ class TracklistUiState {
         });
 
         offset += items.length;
-        if (!data?.next && items.length < BACKGROUND_FETCH_SIZE) break;
+        if (!pageNext(data) && items.length < BACKGROUND_FETCH_SIZE) break;
       } catch (error) {
         console.warn(
           "Background playlist load error, stopping:",
-          error?.message,
+          getErrorMessage(error),
         );
         break;
       }
@@ -525,12 +578,12 @@ class TracklistUiState {
     });
   }
 
-  async loadArtistTopTracks(artistUri) {
+  async loadArtistTopTracks(artistUri: string) {
     const artistId = artistUri.replace("spotify:artist:", "");
 
     try {
       const [tracksResult, artistResult] = await Promise.allSettled([
-        sendNocturneWsRequest(
+        sendNocturneWsRequest<{ tracks?: RawTrack[] } | RawTrack[]>(
           "spotify.artist.top_tracks",
           /** @type {SpotifyArtistTopTracksRequest} */ {
             contentId: artistId,
@@ -538,7 +591,7 @@ class TracklistUiState {
           },
           { timeoutMs: 8000 },
         ),
-        sendNocturneWsRequest(
+        sendNocturneWsRequest<SpotifyArtist & { image_url?: string }>(
           "spotify.artist.get",
           /** @type {SpotifyArtistGetRequest} */ { contentId: artistId },
           { timeoutMs: 8000 },
@@ -549,31 +602,39 @@ class TracklistUiState {
         tracksResult.status === "fulfilled" ? tracksResult.value : null;
       const artistInfo =
         artistResult.status === "fulfilled" ? artistResult.value : null;
-      const tracks = data?.tracks || data || [];
+      const tracks = Array.isArray(data) ? data : data?.tracks || [];
       const artistImage =
         artistInfo?.image_url || getThumbnailImageUrl(artistInfo?.images);
       const tracksArr = Array.isArray(tracks) ? tracks : [];
       const missingAlbumEntries = tracksArr
         .map((track) => track.album)
         .filter(
-          (album) =>
+          (album): album is SpotifyAlbum & { uri: string } =>
             !album?.name?.trim() &&
             typeof album?.uri === "string" &&
             album.uri.startsWith("spotify:album:"),
         )
-        .map((album) => [album.uri, album.uri.replace("spotify:album:", "")]);
+        .map((album): [string, string] => [
+          album.uri,
+          album.uri.replace("spotify:album:", ""),
+        ]);
       const uniqueMissingAlbums = [...new Map(missingAlbumEntries).entries()];
       const albumResults = await Promise.allSettled(
         uniqueMissingAlbums.map(async ([uri, contentId]) => {
-          const album = await sendNocturneWsRequest(
+          const album = await sendNocturneWsRequest<
+            SpotifyAlbum & { image_url?: string }
+          >(
             "spotify.album.get",
             /** @type {SpotifyAlbumGetRequest} */ { contentId },
             { timeoutMs: 5000 },
           );
-          return [uri, album];
+          return [uri, album] as const;
         }),
       );
-      const albumFallbacks = new Map();
+      const albumFallbacks = new Map<
+        string,
+        SpotifyAlbum & { image_url?: string }
+      >();
 
       albumResults.forEach((result, index) => {
         if (result.status === "fulfilled") {
@@ -589,7 +650,7 @@ class TracklistUiState {
 
       runInAction(() => {
         this.tracksData = tracksArr.map((track) => {
-          const fallbackAlbum = albumFallbacks.get(track.album?.uri);
+          const fallbackAlbum = albumFallbacks.get(track.album?.uri ?? "");
           const albumImage =
             track.album?.image_url ||
             getThumbnailImageUrl(track.album?.images) ||
@@ -598,8 +659,8 @@ class TracklistUiState {
           const albumName =
             track.album?.name?.trim() || fallbackAlbum?.name || "";
           return {
-            uri: track.uri,
-            title: track.name,
+            uri: track.uri ?? "",
+            title: track.name ?? "",
             subtitle: albumName,
             image_id: albumImage || artistImage,
             metadata: {
@@ -616,10 +677,10 @@ class TracklistUiState {
     }
   }
 
-  _parseEpisodeItems(items) {
+  _parseEpisodeItems(items: RawEpisode[]): TracklistItem[] {
     return (Array.isArray(items) ? items : []).map((episode) => ({
-      uri: episode.uri,
-      title: episode.name,
+      uri: episode.uri ?? "",
+      title: episode.name ?? "",
       subtitle: episode.description
         ? episode.description.substring(0, 100) + "..."
         : episode.release_date || "",
@@ -634,7 +695,7 @@ class TracklistUiState {
     }));
   }
 
-  async loadPodcastEpisodes(showUri) {
+  async loadPodcastEpisodes(showUri: string) {
     const showId = showUri.replace("spotify:show:", "");
 
     if (this._bgLoadAbort) {
@@ -650,7 +711,7 @@ class TracklistUiState {
         limit: INITIAL_FETCH_SIZE,
         offset: 0,
       };
-      const data = await sendNocturneWsRequest(
+      const data = await sendNocturneWsRequest<PageResult<RawEpisode>>(
         "spotify.show.episodes",
         params,
         {
@@ -660,8 +721,8 @@ class TracklistUiState {
 
       if (abortToken.abort) return;
 
-      const items = data?.items || data || [];
-      const total = data?.total || 0;
+      const items = pageItems(data);
+      const total = pageTotal(data) || 0;
       const parsed = this._parseEpisodeItems(items);
 
       runInAction(() => {
@@ -677,7 +738,12 @@ class TracklistUiState {
     }
   }
 
-  async _backgroundLoadEpisodes(showId, loadedCount, total, abortToken) {
+  async _backgroundLoadEpisodes(
+    showId: string,
+    loadedCount: number,
+    total: number,
+    abortToken: AbortFlag,
+  ) {
     runInAction(() => {
       this._loadingMore = true;
     });
@@ -694,7 +760,7 @@ class TracklistUiState {
           limit: BACKGROUND_FETCH_SIZE,
           offset,
         };
-        const data = await sendNocturneWsRequest(
+        const data = await sendNocturneWsRequest<PageResult<RawEpisode>>(
           "spotify.show.episodes",
           params,
           {
@@ -704,7 +770,7 @@ class TracklistUiState {
 
         if (abortToken.abort) break;
 
-        const items = data?.items || data || [];
+        const items = pageItems(data);
         if (items.length === 0) break;
 
         const parsed = this._parseEpisodeItems(items);
@@ -716,11 +782,11 @@ class TracklistUiState {
         });
 
         offset += items.length;
-        if (!data?.next && items.length < BACKGROUND_FETCH_SIZE) break;
+        if (!pageNext(data) && items.length < BACKGROUND_FETCH_SIZE) break;
       } catch (error) {
         console.warn(
           "Background episode load error, stopping:",
-          error?.message,
+          getErrorMessage(error),
         );
         break;
       }
@@ -821,7 +887,7 @@ class TracklistUiState {
     return !!this.tracksList.find((item) => item.uri === currentTrack.uri);
   }
 
-  isStationAndNotCurrentlyPlaying(contextUri) {
+  isStationAndNotCurrentlyPlaying(contextUri: string) {
     return (
       this.isStationUri(contextUri) &&
       contextUri !==
@@ -857,7 +923,7 @@ class TracklistUiState {
     });
   }
 
-  handleSupportedTracklists(contextItem) {
+  handleSupportedTracklists(contextItem: TracklistContext) {
     const { overlayController, viewStore } = this.rootStore;
     const contextUri = contextItem.uri;
 
@@ -987,39 +1053,41 @@ class TracklistUiState {
     return this.tracksList[0];
   }
 
-  getIndexOfItem(item) {
+  getIndexOfItem(item: TracklistItem | undefined) {
     if (!item) return -1;
     return this.tracksList.findIndex((trackItem) => trackItem.uri === item.uri);
   }
 
-  updateSelectedItem(item, animate = true) {
+  updateSelectedItem(item: TracklistItem | undefined, animate = true) {
     if (!item) return;
 
     this.selectedItem = item;
     this.animateSliding = animate;
   }
 
-  handleDraggedToIndex = action((newIndex) => {
+  handleDraggedToIndex = action((newIndex: number) => {
     if (newIndex >= 0 && newIndex < this.tracksList.length) {
       this.updateSelectedItem(this.tracksList[newIndex], false);
     }
   });
 
-  handleItemSelected = action((item, logId) => {
-    if (!item) return;
+  handleItemSelected = action(
+    (item: TracklistItem | undefined, logId?: number | string) => {
+      if (!item) return;
 
-    this.updateSelectedItem(item, false);
+      this.updateSelectedItem(item, false);
 
-    if (this.playTrack) {
-      this.playTrack(item.uri, this.contextUri);
+      if (this.playTrack) {
+        this.playTrack(item.uri, this.contextUri);
 
-      if (this.rootStore.viewStore && this.rootStore.viewStore.showNpv) {
-        setTimeout(() => {
-          this.rootStore.viewStore.showNpv();
-        }, 100);
+        if (this.rootStore.viewStore && this.rootStore.viewStore.showNpv) {
+          setTimeout(() => {
+            this.rootStore.viewStore.showNpv();
+          }, 100);
+        }
       }
-    }
-  });
+    },
+  );
 
   handleTrackChange() {
     if (this.browsingCurrentContext && this.currentTrackInTracklist) {
@@ -1036,13 +1104,13 @@ class TracklistUiState {
     }
   }
 
-  onPlayerStoreUriUpdated(uri) {
+  onPlayerStoreUriUpdated(uri: string) {
     if (this.contextUri === uri && this.currentTrackInTracklist) {
       this.handleTrackChange();
     }
   }
 
-  setShouldShowAddToQueueBanner(show) {
+  setShouldShowAddToQueueBanner(show: boolean) {
     this.showAddToQueueSuccess = show;
 
     if (show) {
@@ -1055,7 +1123,7 @@ class TracklistUiState {
     }
   }
 
-  clickAddToQueue = action((event, item) => {
+  clickAddToQueue = action((event: MouseEvent, item: TracklistItem) => {
     event.stopPropagation();
 
     if (this.addToQueue) {
@@ -1066,9 +1134,9 @@ class TracklistUiState {
 
   logContextImpression() {}
 
-  logContextItemImpression(item) {}
+  logContextItemImpression(item: TracklistItem) {}
 
-  logTrackRowClicked(item) {
+  logTrackRowClicked(item: TracklistItem) {
     return Date.now();
   }
 
@@ -1089,7 +1157,7 @@ class TracklistUiState {
     );
   }
 
-  setIsSaved = action((isSaved) => {
+  setIsSaved = action((isSaved: boolean) => {
     if (this.contextType === "album" || this.contextType === "playlist") {
       if (this.likeAlbumOrPlaylist) {
         this.likeAlbumOrPlaylist(this.contextUri, isSaved);
@@ -1102,59 +1170,59 @@ class TracklistUiState {
     }
   });
 
-  isCollectionUri(uri) {
+  isCollectionUri(uri: string | null | undefined) {
     return uri && uri.includes(":collection");
   }
 
-  titleBasedOnType(playerStore, queueStore) {
+  titleBasedOnType(playerStore: PlayerStore, queueStore: QueueStore) {
     if (!playerStore) return "Unknown";
 
     return (
       playerStore.contextTitle ||
-      playerStore.currentTrack?.album ||
+      playerStore.currentTrack?.album?.name ||
       "Unknown Context"
     );
   }
 
-  isTrackOrEpisode(uri) {
+  isTrackOrEpisode(uri: string | null | undefined) {
     return uri && (uri.includes("track:") || uri.includes("episode:"));
   }
 
-  isShowUri(uri) {
+  isShowUri(uri: string | null | undefined) {
     return uri && uri.includes("show:");
   }
 
-  isTrackUri(uri) {
+  isTrackUri(uri: string | null | undefined) {
     return uri && uri.includes("track:");
   }
 
-  isSearchUri(uri) {
+  isSearchUri(uri: string | null | undefined) {
     return uri && uri.includes("search:");
   }
 
-  isStationUri(uri) {
+  isStationUri(uri: string | null | undefined) {
     return uri && uri.includes("station:");
   }
 
-  isAlbumUri(uri) {
+  isAlbumUri(uri: string | null | undefined) {
     return uri && uri.includes("album:");
   }
 
-  isPlaylistUri(uri) {
+  isPlaylistUri(uri: string | null | undefined) {
     return uri && uri.includes("playlist:");
   }
 
-  isArtistUri(uri) {
+  isArtistUri(uri: string | null | undefined) {
     return uri && uri.includes("artist:");
   }
 }
 
 export class TracklistStore {
   declare tracklistUiState: TracklistUiState;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     this.tracklistUiState = new TracklistUiState(rootStore);
     makeAutoObservable(this, { rootStore: false });

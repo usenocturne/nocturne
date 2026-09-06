@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+export TS_RS_EXPORT_DIR
+TS_RS_EXPORT_DIR="$(mktemp -d /tmp/nocturne-test-bindings.XXXXXX)"
+trap 'rm -rf "$TS_RS_EXPORT_DIR"' EXIT
+
+if [[ "$(uname -s)" == "Linux" ]]; then
+  cargo test --workspace "$@"
+else
+  cargo test -p libnocturne -p nocturne-codegen "$@"
+  cross test --workspace --exclude nocturne-codegen \
+    --target=aarch64-unknown-linux-gnu --features device "$@"
+fi

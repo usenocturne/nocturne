@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useProgressValue } from "../../hooks/usePlaybackProgress";
 
+interface ProgressBarProps {
+  progress: number | null;
+  durationMs: number;
+  onSeek: (positionMs: number) => boolean | void | Promise<boolean | void>;
+  onScrubbingChange: (scrubbing: boolean) => void;
+  updateProgress?: (positionMs: number) => void;
+  disabled?: boolean;
+  scrubOnWheel?: boolean;
+}
+
 const SCRUB_SETTLE_TIMEOUT_MS = 350;
 const SCRUB_IDLE_TIMEOUT_MS = 3000;
 
@@ -12,14 +22,16 @@ const ProgressBar = ({
   updateProgress,
   disabled = false,
   scrubOnWheel = false,
-}: UiComponentProps) => {
+}: ProgressBarProps) => {
   const { progressMs, progressPercentage } = useProgressValue();
   const [isScrubbing, setIsScrubbing] = useState(false);
-  const [scrubbingProgress, setScrubbingProgress] = useState(null);
-  const containerRef = useRef(null);
-  const scrubTimeoutRef = useRef(null);
+  const [scrubbingProgress, setScrubbingProgress] = useState<number | null>(
+    null,
+  );
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrubTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasScrubbedRef = useRef(false);
-  const scrubbingProgressRef = useRef(null);
+  const scrubbingProgressRef = useRef<number | null>(null);
   const commitQueueRef = useRef(Promise.resolve());
   const durationMsRef = useRef(durationMs);
   const onSeekRef = useRef(onSeek);
@@ -98,7 +110,7 @@ const ProgressBar = ({
   useEffect(() => {
     if (!isScrubbing) return;
 
-    const handleWheel = (event) => {
+    const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       event.stopPropagation();
       const delta = event.deltaX;
@@ -128,7 +140,7 @@ const ProgressBar = ({
   useEffect(() => {
     if (!scrubOnWheel || isScrubbing || disabled || isProgressUnknown) return;
 
-    const handleWheelToActivate = (event) => {
+    const handleWheelToActivate = (event: WheelEvent) => {
       event.preventDefault();
       event.stopPropagation();
 
@@ -167,7 +179,7 @@ const ProgressBar = ({
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Enter" && isScrubbing) {
         event.preventDefault();
         event.stopPropagation();
@@ -233,7 +245,7 @@ const ProgressBar = ({
   );
 };
 
-const formatTime = (ms) => {
+const formatTime = (ms: number) => {
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;

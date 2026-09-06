@@ -1,17 +1,30 @@
+import type PlayerStore from "./PlayerStore";
+import type ImageStore from "./ImageStore";
+import type ViewStore from "./ViewStore";
+import type HardwareStore from "./HardwareStore";
+import type { QueueLogger } from "./UbiLogger";
+import type { RootStore } from "./RootStore";
+import type {
+  InterappActions,
+  MiddlewareActions,
+  MiddlewareSocket,
+} from "./StoreContracts";
 import { makeAutoObservable, get } from "mobx";
 
 export class QueueItem {
-  declare artist_name: UiLooseData;
-  declare identifier: UiLooseData;
-  declare image_uri: UiLooseData;
-  declare name: UiLooseData;
-  declare provider: UiLooseData;
-  declare queue_index: UiLooseData;
-  declare uid: UiLooseData;
-  declare uri: UiLooseData;
-  declare rootStore: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(data) {
+  declare explicit: boolean | undefined;
+  declare artist_name: string;
+  declare identifier: string;
+  declare image_uri: string;
+  declare name: string;
+  declare provider: string;
+  declare queue_index: number;
+  declare uid: string;
+  declare uri: string;
+  declare rootStore: RootStore;
+  declare middlewareActions: MiddlewareActions;
+  constructor(data: QueueItemData) {
+    this.explicit = data.explicit;
     this.queue_index = data.queue_index;
     this.uid = data.uid;
     this.uri = data.uri;
@@ -25,9 +38,8 @@ export class QueueItem {
 }
 
 export class QueueUiState {
-  declare selectedItemIndex: UiLooseData;
-  declare rootStore: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare middlewareActions: MiddlewareActions;
   playerStore;
   queueStore;
   imageStore;
@@ -36,16 +48,16 @@ export class QueueUiState {
   interappActions;
   queueUbiLogger;
   animateSliding = false;
-  selectedItem = undefined;
+  selectedItem: QueueItem | undefined = undefined;
 
   constructor(
-    playerStore,
-    queueStore,
-    imageStore,
-    viewStore,
-    hardwareStore,
-    queueUbiLogger,
-    interappActions: UiLooseData,
+    playerStore: PlayerStore,
+    queueStore: QueueStore,
+    imageStore: ImageStore,
+    viewStore: ViewStore,
+    hardwareStore: HardwareStore,
+    queueUbiLogger: QueueLogger,
+    interappActions: InterappActions,
   ) {
     this.playerStore = playerStore;
     this.queueStore = queueStore;
@@ -189,7 +201,7 @@ export class QueueUiState {
     }
   }
 
-  handleDraggedToIndex(index) {
+  handleDraggedToIndex(index: number) {
     const userDraggedToItem = this.queue.find(
       (_, itemIndex) => index === itemIndex,
     );
@@ -199,16 +211,16 @@ export class QueueUiState {
     }
   }
 
-  updateSelectedItem(item, withAnimation = true) {
+  updateSelectedItem(item: QueueItem | undefined, withAnimation = true) {
     this.animateSliding = withAnimation;
     this.selectedItem = item;
   }
 
-  playItem(queueItem) {
+  playItem(queueItem: QueueItem) {
     this.playerStore.skipToIndex(queueItem.queue_index, queueItem.uid);
   }
 
-  handleItemClicked(item) {
+  handleItemClicked(item: QueueItem) {
     this.queueUbiLogger?.logTrackRowClicked?.(item.queue_index, item.uri);
     this.playItem(item);
     this.selectedItem = undefined;
@@ -256,9 +268,9 @@ export class QueueUiState {
 }
 
 class QueueStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   current = {
     image_uri: "",
     uid: "",
@@ -266,18 +278,23 @@ class QueueStore {
     provider: "",
   };
 
-  next: UiLooseData[] = [];
-  queueUiState;
-  queueUpdateCurrentCallback = null;
+  next: QueueItem[] = [];
+  queueUiState: QueueUiState;
+  declare playerStore: PlayerStore;
+  declare imageStore: ImageStore;
+  declare viewStore: ViewStore;
+  declare hardwareStore: HardwareStore;
+  declare queueUbiLogger: QueueLogger;
+  queueUpdateCurrentCallback: (() => void) | null = null;
 
   constructor(
-    socket: UiLooseData,
-    playerStore,
-    imageStore,
-    viewStore,
-    hardwareStore,
-    ubiLogger,
-    interappActions: UiLooseData,
+    socket: MiddlewareSocket,
+    playerStore: PlayerStore,
+    imageStore: ImageStore,
+    viewStore: ViewStore,
+    hardwareStore: HardwareStore,
+    ubiLogger: QueueLogger,
+    interappActions: InterappActions,
   ) {
     this.playerStore = playerStore;
     this.imageStore = imageStore;
@@ -306,7 +323,12 @@ class QueueStore {
     });
   }
 
-  updateCurrent(imageUri, uid, uri, provider = "") {
+  updateCurrent(
+    imageUri: string | undefined,
+    uid: string | undefined,
+    uri: string | undefined,
+    provider = "",
+  ) {
     this.current = {
       image_uri: imageUri || "",
       uid: uid || "",
@@ -318,15 +340,15 @@ class QueueStore {
     }
   }
 
-  updateQueue(queueData) {
+  updateQueue(queueData: QueueItemData[]) {
     this.next = queueData.map((item) => new QueueItem(item));
   }
 
-  onQueueUpdateCurrent(callback) {
+  onQueueUpdateCurrent(callback: () => void) {
     this.queueUpdateCurrentCallback = callback;
   }
 
-  isNewCurrent(selectedItem) {
+  isNewCurrent(selectedItem: QueueItem | undefined) {
     return this.current.uri === selectedItem?.uri;
   }
 
@@ -343,3 +365,15 @@ class QueueStore {
 }
 
 export default QueueStore;
+
+export type QueueItemData = Pick<
+  QueueItem,
+  | "queue_index"
+  | "uid"
+  | "uri"
+  | "name"
+  | "artist_name"
+  | "image_uri"
+  | "provider"
+  | "identifier"
+> & { explicit?: boolean };

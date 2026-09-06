@@ -10,7 +10,7 @@ import SkipButton from "./SkipButton";
 import Jellyfish from "../Listening/Jellyfish";
 import styles from "./LearnVoiceStep.module.scss";
 
-const firstLetterUpperCase = (s) =>
+const firstLetterUpperCase = (s: string) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
 const STEP_CONFIG = {
@@ -44,7 +44,13 @@ const STEP_CONFIG = {
   },
 };
 
-const LearnVoiceStep = ({ stepId, exiting }: UiComponentProps) => {
+const LearnVoiceStep = ({
+  stepId,
+  exiting,
+}: {
+  stepId: number;
+  exiting?: boolean;
+}) => {
   const { onboardingStore, voiceStore, shelfStore } = useCarThingStore();
   const [show, setShow] = useState(false);
   const [contentClass, setContentClass] = useState(styles.contentEnter);
@@ -63,7 +69,7 @@ const LearnVoiceStep = ({ stepId, exiting }: UiComponentProps) => {
     if (!config) return;
 
     cancelledRef.current = false;
-    let advanceTimeoutId;
+    let advanceTimeoutId: number | undefined;
 
     voiceStore.resetVoiceSessionState();
     onboardingStore.setWakewordTriggered(false);

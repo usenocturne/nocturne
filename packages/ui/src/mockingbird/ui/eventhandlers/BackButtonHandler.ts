@@ -1,6 +1,12 @@
+import { View } from "../stores/ViewStore";
+import type HardwareEvents from "../helpers/HardwareEvents";
+import type { RootStore } from "../stores/RootStore";
 import { action } from "mobx";
 
-const reactToBackButton = (hardwareEvents, rootStore) => {
+const reactToBackButton = (
+  hardwareEvents: HardwareEvents,
+  rootStore: RootStore,
+) => {
   const {
     viewStore,
     npvStore,
@@ -34,13 +40,13 @@ const reactToBackButton = (hardwareEvents, rootStore) => {
     }
 
     switch (viewStore.currentView) {
-      case "CONTENT_SHELF":
+      case View.CONTENT_SHELF:
         if (shelfStore.shelfController) {
           shelfStore.shelfController.handleBackButton();
         }
         break;
 
-      case "NPV":
+      case View.NPV:
         if (npvStore.npvController) {
           npvStore.npvController.handleBackButton();
         } else {

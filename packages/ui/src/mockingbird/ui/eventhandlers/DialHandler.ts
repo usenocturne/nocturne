@@ -1,16 +1,18 @@
+import type HardwareEvents from "../helpers/HardwareEvents";
+import type { RootStore } from "../stores/RootStore";
 import { action } from "mobx";
 
 export const isDialEnabled = (
-  appView,
-  isSettings,
-  onboardingButtonEnabled,
-  isPhoneCall,
+  appView: string,
+  isSettings: boolean,
+  onboardingButtonEnabled: boolean,
+  isPhoneCall?: boolean,
 ) =>
   (appView === "MAIN" && !isPhoneCall) ||
   isSettings ||
   (appView === "ONBOARDING" && onboardingButtonEnabled);
 
-const reactToDial = (hardwareEvents, rootStore) => {
+const reactToDial = (hardwareEvents: HardwareEvents, rootStore: RootStore) => {
   const {
     viewStore,
     npvStore,

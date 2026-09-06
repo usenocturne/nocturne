@@ -1,24 +1,34 @@
+import type { TouchEvent } from "react";
+import type { PlaybackProgress } from "../../../../../../types";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
 import { useState, useCallback, useEffect, useRef } from "react";
 import styles from "./ScrubbingBackdrop.module.scss";
 import { SCRUB_SETTLE_TIMEOUT_MS } from "./scrubbingConstants";
 
-const formatTime = (ms) => {
+const formatTime = (ms: number) => {
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
+const ScrubbingBackdrop = ({
+  playbackProgress,
+  onSeek,
+}: {
+  playbackProgress?: PlaybackProgress;
+  onSeek?: (positionMs: number) => void | boolean | Promise<void | boolean>;
+}) => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.scrubbingUiState;
-  const [scrubbingProgress, setScrubbingProgress] = useState(null);
+  const [scrubbingProgress, setScrubbingProgress] = useState<number | null>(
+    null,
+  );
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
-  const timeoutRef = useRef(null);
-  const scrubbingProgressRef = useRef(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrubbingProgressRef = useRef<number | null>(null);
   const hasPendingSeekRef = useRef(false);
   const commitQueueRef = useRef(Promise.resolve());
   const onSeekRef = useRef(onSeek);
@@ -39,7 +49,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
     const progress = scrubbingProgressRef.current;
     const duration = playbackProgress?.duration;
     const seek = onSeekRef.current;
-    if (progress === null || !duration || !seek) {
+    if (!playbackProgress || progress === null || !duration || !seek) {
       uiState.stopScrubbing();
       setScrubbingProgress(null);
       scrubbingProgressRef.current = null;
@@ -94,7 +104,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
   }, [uiState]);
 
   const handleHardwareDial = useCallback(
-    (direction) => {
+    (direction: "left" | "right") => {
       if (!playbackProgress?.duration) return;
       if (!uiState.isScrubbing) {
         uiState.startScrubbing();
@@ -133,7 +143,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
   );
 
   const handleTouchMove = useCallback(
-    (e) => {
+    (e: TouchEvent<HTMLDivElement>) => {
       if (!playbackProgress?.duration) return;
       uiState.resetScrubbingViewTimer();
       const x = e.touches[0].clientX;
@@ -174,7 +184,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
   useEffect(() => {
     if (!uiState.isScrubbing) return;
 
-    const handleWheel = (event) => {
+    const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       event.stopPropagation();
       const delta = event.deltaX;
@@ -202,7 +212,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
       });
     };
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
         event.preventDefault();
         event.stopPropagation();
@@ -222,7 +232,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
 
       if (typeof window !== "undefined") {
-        window.scrubbingCommit = null;
+        window.scrubbingCommit = undefined;
       }
     };
   }, [
@@ -239,7 +249,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
     window.scrubbingHardwareDialHandler = handleHardwareDial;
     return () => {
       if (window.scrubbingHardwareDialHandler === handleHardwareDial) {
-        window.scrubbingHardwareDialHandler = null;
+        window.scrubbingHardwareDialHandler = undefined;
       }
     };
   }, [handleHardwareDial]);
@@ -254,7 +264,7 @@ const ScrubbingBackdrop = ({ playbackProgress, onSeek }: UiComponentProps) => {
         typeof window !== "undefined" &&
         window.scrubbingCommit === commitScrub
       ) {
-        window.scrubbingCommit = null;
+        window.scrubbingCommit = undefined;
       }
     };
   }, [commitScrub, uiState.isScrubbing]);

@@ -1,9 +1,10 @@
+import type { ShelfItem } from "../../../../stores/ShelfModels";
 import classNames from "classnames";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import Type from "../../../CarthingUIComponents/Type/Type";
 import styles from "./ShelfSwiperItem.module.scss";
 
-export const TITLES = {
+export const TITLES: Record<string, string | undefined> = {
   playlists: "You don't have any playlists",
   podcasts: "You haven't followed any podcasts",
   artists: "You haven't followed any artists",
@@ -11,7 +12,7 @@ export const TITLES = {
   voice: "No voice results",
 };
 
-const VOICE_TIPS = {
+const VOICE_TIPS: Record<string, string | undefined> = {
   playlists: '"Hey Spotify, like this playlist" or tap the heart icon.',
   podcasts: '"Hey Spotify, follow this podcast" or tap the heart icon.',
   artists: '"Hey Spotify, follow this artist" or tap the heart icon.',
@@ -19,7 +20,13 @@ const VOICE_TIPS = {
   voice: 'Tap the mic button or say "Hey Spotify".',
 };
 
-const InlineTipItem = ({ item, isActive }: UiComponentProps) => {
+const InlineTipItem = ({
+  item,
+  isActive,
+}: {
+  item: ShelfItem;
+  isActive?: boolean;
+}) => {
   const { shelfStore } = useCarThingStore();
   const uiState = shelfStore.shelfController.shelfSwiperItemUiState;
   const categoryTitle = uiState.getcategoryItemTitle(item.category);

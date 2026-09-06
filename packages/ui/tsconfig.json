@@ -16,8 +16,9 @@
     "jsx": "react-jsx",
     "paths": {
       "@schema/*": ["../../crates/shared/generated/ts/*"]
-    }
+    },
+    "types": ["bun"]
   },
-  "include": ["src/vite-env.d.ts", "src/types.ts"],
+  "include": ["src"],
   "references": []
 }

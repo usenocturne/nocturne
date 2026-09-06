@@ -1,4 +1,30 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  type RefObject,
+} from "react";
+
+interface NavigationOptions {
+  containerRef: RefObject<HTMLElement | null>;
+  activeSection?: string;
+  enableScrollTracking?: boolean;
+  enableWheelNavigation?: boolean;
+  enableKeyboardNavigation?: boolean;
+  enableItemSelection?: boolean;
+  enableEscapeKey?: boolean;
+  itemWidth?: number;
+  itemGap?: number;
+  items?: HTMLElement[];
+  currentlyPlayingId?: string | null;
+  onEscape?: () => void;
+  onItemSelect?: (index: number, item: HTMLElement | null) => void;
+  onItemFocus?: (index: number, item: HTMLElement) => void;
+  onEnterKey?: (() => void) | null;
+  inactivityTimeout?: number;
+  vertical?: boolean;
+}
 
 export function useNavigation({
   containerRef,
@@ -18,28 +44,30 @@ export function useNavigation({
   onEnterKey = null,
   inactivityTimeout = 3000,
   vertical = false,
-}) {
+}: NavigationOptions) {
   const [selectedIndex, _setSelectedIndex] = useState(-1);
   const selectedIndexRef = useRef(selectedIndex);
 
-  const setSelectedIndex = (index) => {
+  const setSelectedIndex = (index: number) => {
     selectedIndexRef.current = index;
     _setSelectedIndex(index);
   };
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const lastActivityRef = useRef(Date.now());
-  const inactivityTimeoutRef = useRef(null);
-  const scrollTimeoutRef = useRef(null);
+  const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasScrolledToPlayingRef = useRef(false);
   const isActiveRef = useRef(true);
   const itemsRef = useRef(items);
   const wheelDeltaAccumulator = useRef(0);
   const lastWheelTime = useRef(0);
-  const wheelAnimationFrame = useRef(null);
+  const wheelAnimationFrame = useRef<number | null>(null);
   const isWheelScrolling = useRef(false);
-  const wheelThrottleRef = useRef(null);
+  const wheelThrottleRef = useRef<number | null>(null);
   const isRapidScrollingRef = useRef(false);
-  const wheelDebounceRef = useRef(null);
+  const wheelDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     itemsRef.current = items;
@@ -62,7 +90,7 @@ export function useNavigation({
     }
   }, [activeSection]);
 
-  const previousPlayingIdRef = useRef(null);
+  const previousPlayingIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (
       currentlyPlayingId &&
@@ -74,7 +102,7 @@ export function useNavigation({
   }, [currentlyPlayingId]);
 
   const scrollItemIntoView = useCallback(
-    (item) => {
+    (item: HTMLElement | null | undefined) => {
       if (!item || !containerRef.current) return;
 
       const container = containerRef.current;
@@ -124,10 +152,10 @@ export function useNavigation({
     if (!containerRef.current) return [];
 
     return Array.from(
-      containerRef.current.querySelectorAll("[data-track-index]"),
+      containerRef.current.querySelectorAll<HTMLElement>("[data-track-index]"),
     ).sort((a, b) => {
-      const indexA = parseInt(a.getAttribute("data-track-index"), 10);
-      const indexB = parseInt(b.getAttribute("data-track-index"), 10);
+      const indexA = parseInt(a.getAttribute("data-track-index") ?? "0", 10);
+      const indexB = parseInt(b.getAttribute("data-track-index") ?? "0", 10);
       return indexA - indexB;
     });
   }, [containerRef]);
@@ -172,7 +200,7 @@ export function useNavigation({
   }, [containerRef, handleScroll, enableScrollTracking]);
 
   const handleWheel = useCallback(
-    (e) => {
+    (e: WheelEvent) => {
       if (
         !isActiveRef.current ||
         !containerRef.current ||
@@ -365,7 +393,7 @@ export function useNavigation({
   );
 
   const handleKeyDown = useCallback(
-    (e) => {
+    (e: KeyboardEvent) => {
       if (!isActiveRef.current) return;
 
       if (enableEscapeKey && e.key === "Escape") {
@@ -585,7 +613,7 @@ export function useNavigation({
   ]);
 
   const selectItem = useCallback(
-    (index) => {
+    (index: number) => {
       const items = vertical ? getTrackItems() : itemsRef.current;
       if (index < 0 || index >= items.length) return;
 
@@ -616,7 +644,7 @@ export function useNavigation({
   );
 
   const scrollToPosition = useCallback(
-    (position) => {
+    (position: number) => {
       if (!containerRef.current) return;
 
       if (vertical) {
@@ -635,7 +663,7 @@ export function useNavigation({
   );
 
   const scrollByAmount = useCallback(
-    (amount) => {
+    (amount: number) => {
       if (!containerRef.current) return;
 
       if (vertical) {
@@ -676,6 +704,11 @@ export function useNavigation({
   }, [selectItem, vertical, getTrackItems]);
 
   const cleanup = useCallback(() => {
+    if (wheelDebounceRef.current) {
+      clearTimeout(wheelDebounceRef.current);
+      wheelDebounceRef.current = null;
+    }
+
     if (inactivityTimeoutRef.current) {
       clearTimeout(inactivityTimeoutRef.current);
       inactivityTimeoutRef.current = null;

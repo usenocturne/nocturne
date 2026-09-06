@@ -1,8 +1,16 @@
+import type { ComponentProps } from "react";
+import type { NowPlayingItem } from "../../../../../stores/NpvModels";
 import classNames from "classnames";
 import { useCarThingStore } from "../../../../../contexts/CarThingStore";
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
-import { cloneElement, createRef, useEffect, useState } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useRef,
+  useEffect,
+  useState,
+} from "react";
 import CSSTransition from "../../../../CSSTransitionCompat";
 import { TransitionGroup } from "react-transition-group";
 import { transitionDurationMs } from "../../../../../styles/Variables";
@@ -25,14 +33,19 @@ const SwipeDirection = {
 const PlayingInfoTitles = ({
   tracks,
   getAnimationClassNames,
-}: UiComponentProps) => {
+}: {
+  tracks: NowPlayingItem[];
+  getAnimationClassNames: () => ComponentProps<
+    typeof CSSTransition
+  >["classNames"];
+}) => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.playingInfoUiState;
 
   const [showTitle, setShowTitle] = useState(true);
   const [titleSize, setTitleSize] = useState(TitleSize.BIG);
   const [refTitle, setRefTitle] = useState("");
-  const npvTitleRef = createRef();
+  const npvTitleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const effect = () => {
@@ -61,6 +74,11 @@ const PlayingInfoTitles = ({
       className={styles.texts}
       enter={uiState.swipeHandler.swipeDirection !== SwipeDirection.NONE}
       childFactory={(child) => {
+        if (
+          !isValidElement<ComponentProps<typeof CSSTransition>>(child) ||
+          child.type !== CSSTransition
+        )
+          return child;
         return cloneElement(child, {
           timeout: transitionDurationMs,
           exit: uiState.swipeHandler.swipeDirection !== SwipeDirection.NONE,

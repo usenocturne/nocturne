@@ -1,3 +1,15 @@
+import type {
+  SpotifyDataState,
+  SpotifyPlaybackState,
+  PlayerControls,
+} from "../../../types";
+import type { ErrorHandler } from "./stubs";
+import type {
+  InterappActions,
+  MiddlewareActions,
+  MiddlewareSocket,
+  PersistentStorage,
+} from "./StoreContracts";
 import PlayerStore from "./PlayerStore";
 import ImageStore from "./ImageStore";
 import ViewStore from "./ViewStore";
@@ -46,8 +58,9 @@ import {
 import { reaction, extendObservable } from "mobx";
 
 export class RootStore {
-  declare rootStore: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare spotifyData: SpotifyDataState | null | undefined;
+  declare currentPlayback: SpotifyPlaybackState | null | undefined;
+  declare spotifyControls: PlayerControls | undefined;
   versionStatusStore;
   bluetoothStore;
   childItemStore;
@@ -96,11 +109,11 @@ export class RootStore {
   persistentStorage;
 
   constructor(
-    interappActions: UiLooseData,
-    middlewareActions: UiLooseData,
-    persistentStorage,
-    socket: UiLooseData,
-    errorHandler,
+    interappActions: InterappActions,
+    middlewareActions: MiddlewareActions,
+    persistentStorage: PersistentStorage,
+    socket: MiddlewareSocket,
+    errorHandler: ErrorHandler,
   ) {
     this.persistentStorage = persistentStorage;
 
@@ -162,7 +175,6 @@ export class RootStore {
 
     this.tipsStore = new TipsStore(interappActions, errorHandler);
     this.presetsDataStore = new PresetsDataStore();
-    this.presetsController = new PresetsController(this, interappActions);
     this.podcastSpeedStore = new PodcastSpeedStore(
       this,
       interappActions,

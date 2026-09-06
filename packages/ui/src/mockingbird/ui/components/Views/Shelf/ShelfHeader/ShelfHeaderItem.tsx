@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   forwardRef,
   useEffect,
@@ -11,7 +12,7 @@ import { observer } from "mobx-react-lite";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import styles from "./ShelfHeaderItem.module.scss";
 
-const ShelfHeaderItem = forwardRef(
+const ShelfHeaderItem = forwardRef<ShelfHeaderItemHandle, ShelfHeaderItemProps>(
   (
     {
       id,
@@ -29,8 +30,8 @@ const ShelfHeaderItem = forwardRef(
     const { shelfStore } = useCarThingStore();
     const uiState = shelfStore.shelfController.headerUiState;
 
-    const containerRef = useRef(null);
-    const titleTextRef = useRef(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const titleTextRef = useRef<HTMLDivElement>(null);
 
     const [shouldAnimate, setShouldAnimate] = useState(false);
 
@@ -90,3 +91,19 @@ const ShelfHeaderItem = forwardRef(
 ShelfHeaderItem.displayName = "ShelfHeaderItem";
 
 export default observer(ShelfHeaderItem);
+
+export interface ShelfHeaderItemHandle {
+  titleContainerRef: HTMLDivElement | null;
+  titleTextRef: HTMLDivElement | null;
+}
+export interface ShelfHeaderItemProps {
+  id: string;
+  icon?: { active: ReactNode; inactive: ReactNode };
+  iconMargin?: number;
+  marginRight?: number;
+  title: string;
+  visible?: boolean;
+  active?: boolean;
+  onlyIcon?: boolean;
+  translateLeft?: number;
+}

@@ -1,5 +1,7 @@
-const IconWind32 = () => (
+import type { FixedIconProps } from "../IconProps";
+const IconWind32 = (props: FixedIconProps) => (
   <svg
+    {...props}
     width="32"
     height="32"
     viewBox="0 0 32 32"

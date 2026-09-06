@@ -1,9 +1,6 @@
 # NOCTURNE-UI — CAR THING WEB FRONTEND
 
-**Generated:** 2026-05-05
-**Commit:** 643cfe2
-**Branch:** main
-**Related repos** (separate sibling checkouts, NOT subdirs of this one): `nocturned` (the daemon this UI talks to over WS :5000), `nocturne-image` (Buildroot firmware that bakes this UI's `dist/` into the kiosk).
+This guide covers `packages/ui` in the Nocturne monorepo. The daemon lives in `crates/daemon`; Yocto image recipes live in `image`.
 
 ## OVERVIEW
 
@@ -15,14 +12,14 @@ Vite + React 19 SPA served by Chromium kiosk on the Spotify Car Thing (800×480,
 - React 19.2 + react-router-dom 7 + MobX 6 (mockingbird only)
 - Tailwind CSS 3 + SCSS modules (mockingbird only) + `@headlessui/react`
 - TypeScript (`.ts` / `.tsx`)
-- `bun` as package manager (`bun.lockb`, NOT `package-lock.json`)
+- `bun` as package manager (the root workspace `bun.lock`)
 
 ## STRUCTURE
 
 ```
-nocturne-ui/
+packages/ui/
 ├── index.html            # Single root div, loads src/main.tsx
-├── vite.config.js        # Minimal Vite config — just the React SWC plugin
+├── vite.config.ts        # Minimal Vite config — just the React SWC plugin
 ├── postcss.config.js     # Tailwind + autoprefixer
 ├── tailwind.config.js    # 12-language font-family stack (Inter + Noto variants), resolved from system-installed fonts
 ├── eslint.config.js      # Flat config, JS only, no TS
@@ -42,7 +39,7 @@ nocturne-ui/
 ## APP FLOW
 
 ```
-main.jsx
+main.tsx
  └─ <App />
      └─ SettingsProvider → OTAProvider → NotificationProvider → VoiceProvider → DeviceSwitcherContext
          └─ <Router>  (BrowserRouter, see "Routing" below)
@@ -64,7 +61,7 @@ The splash, provider state, notification bridge, Recents, and shared shell stay 
 
 ## ROUTING
 
-**`BrowserRouter` is wrapped but no `<Route>` is declared anywhere.** It exists solely so descendants can call `useNavigate()`/`useNavigate` hooks from `react-router-dom`. Screen selection is an internal state machine driven by `App.jsx` props (`activeSection`, `viewingContent`, screen-visibility booleans) — don't add `<Route path=...>` expecting it to do anything.
+**`BrowserRouter` is wrapped but no `<Route>` is declared anywhere.** It exists solely so descendants can call `useNavigate()`/`useNavigate` hooks from `react-router-dom`. Screen selection is an internal state machine driven by `App.tsx` props (`activeSection`, `viewingContent`, screen-visibility booleans) — don't add `<Route path=...>` expecting it to do anything.
 
 ## WHERE TO LOOK
 
@@ -157,7 +154,7 @@ Library startup follows the same readiness boundary. `useSpotifyData.ts` must no
 - **Device info casing:** `device.info` arrives with canonical snake_case metadata fields. Pass responses through `normalizeDeviceInfoResponse` before UI code reads camelCase properties such as `serialNumber`.
 - **Image loading:** remote artwork goes through `SpotifyImage` / `useImageLoader`. Direct `<img src=spotify-cdn>` URLs bypass the daemon image proxy and flash on bad networks. The local notification app artwork rendered by `NotificationBanner` is the only direct `<img>` exception.
 - **Notification app icons:** resolve ANCS bundle identifiers and Android package names only through `NotificationAppIcons.tsx`. Keep the artwork local and offline, use platform-specific artwork when Apple and Android apps differ, and preserve `SmartphoneIcon` as the fallback for unknown or variant identifiers. Refresh the checked-in App Store JPEG and Google Play PNG assets with `bun run icons:update`.
-- **Global cross-UI handles:** `window.carThingRootStore` (mockingbird's MobX root), `window.testShelf`, etc. set by mockingbird for debugging and used sparingly by `App.jsx` for cross-UI toggles. Not a general-purpose globals pattern.
+- **Global cross-UI handles:** `window.carThingRootStore` (mockingbird's MobX root), `window.testShelf`, etc. set by mockingbird for debugging and used sparingly by `App.tsx` for cross-UI toggles. Not a general-purpose globals pattern.
 - **Native phone presentation settings:** `SettingsContext` owns `nativePhoneCallsEnabled` and `nativeNotificationsEnabled`. Effective presentation requires `entitlementsVerified === true`, then either `isAdmin === true` or `subscribed === true` with normalized status `active`, `past_due`, or `trialing`. Missing verification, unknown status, pre-auth compatibility access, and lifetime-only access fail closed. Only known `ios` and `android` app platforms count as direct phone sessions. Unknown, Pi connector, and macOS connector sessions stay locked. Locking changes only effective presentation, never the saved preference.
 - **Headless UI:** modals/switches use `@headlessui/react` — do not roll your own focus traps.
 - **Tailwind font stack:** `className="nocturne-font-stack"` or Tailwind `font-sans` — falls through 12 language variants via CSS vars defined in `src/index.css`'s `:root` block. Those vars resolve to **system-installed** font families (no `@font-face` loading from `public/fonts/`). Don't inline `font-family`.
@@ -166,25 +163,25 @@ Library startup follows the same readiness boundary. `useSpotifyData.ts` must no
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
-- **Don't add `<Route>` declarations** — the Router is a shell for `useNavigate` only (see ROUTING above). App routing is a state machine in `App.jsx`.
+- **Don't add `<Route>` declarations** — the Router is a shell for `useNavigate` only (see ROUTING above). App routing is a state machine in `App.tsx`.
 - **Target is the kiosk's latest Chrome.** Modern JS/CSS is fine — no legacy plugin, no polyfills, no inset shorthand fix. Don't reintroduce Chrome 69 workarounds (manual `globalThis`/`Promise.allSettled`/`crypto.randomUUID` fallbacks, `top/right/bottom/left` instead of `inset:`, `@vitejs/plugin-legacy`).
-- **Don't import mockingbird code from main Nocturne UI** (except `UIShell.jsx` and the already-lazy `BTPairing` overlay in `App.jsx`). The skin is isolated and uses MobX — importing leaks into the Nocturne bundle.
+- **Don't import mockingbird code from main Nocturne UI** (except `UIShell.jsx` and the already-lazy `BTPairing` overlay in `App.tsx`). The skin is isolated and uses MobX — importing leaks into the Nocturne bundle.
 - **Don't call Spotify Web API directly.** All Spotify data flows through `useSpotifyData`/`useSpotifyWebSocket` → daemon WebSocket. OAuth is handled daemon-side.
-- **Don't add a TypeScript file** without team discussion. The project is all-JS by design; `@types/react*` is pinned only for editor hints.
+- **Production source is TypeScript.** Preserve strict shared contracts; do not add type suppressions to work around the remaining source typing backlog.
 - **Don't add a new state store** when a hook with module-level state will do. Context is used sparingly — for settings, notifications, OTA, and the voice-assistant overlay (`VoiceContext`). Do not add a new Context for a hook with module-level state; see the 4 singleton hooks in `src/hooks/`.
 - **`src/components/voice/icons/` remains an empty legacy placeholder.** New main-UI voice UI lives in `src/components/common/overlays/voice/` (aligning with the overlays convention). Mockingbird still owns its own voice UI at `src/mockingbird/ui/components/Listening/` — the two are independent.
 
 ## COMMANDS
 
 ```bash
-bun install           # Install deps (uses bun.lockb)
+bun install           # Install workspace deps (root bun.lock)
 bun dev               # Vite dev server
 bun run build         # Production build → dist/
 bun run icons:update  # Refresh checked-in artwork from the App Store and Google Play catalogs
-bun run typecheck     # Strict-check shared UI contract declarations (see note below)
+bun run typecheck     # Strict-check all src TypeScript, including source-resident tests
 bun run preview       # Serve the built bundle
 bun run lint          # Prettier --write
-bun run lint-check    # Prettier --check (CI)
+bun run lint-check    # Full source typecheck + Prettier --check (CI)
 ```
 
 **Deploy to Car Thing:** run `just ui-build` from the repository root, then `just -f image/Justfile push-webapp ../packages/ui/dist ui`. Restart the live kiosk with `ssh root@nocturne.local 'systemctl restart chromium-kiosk.service'` when an immediate reload is needed.
@@ -192,9 +189,9 @@ bun run lint-check    # Prettier --check (CI)
 ## NOTES
 
 - **Automated tests are intentionally narrow.** `bun test` covers pure state-boundary regressions. Rendering and hardware integration still require manual QA.
-- **Typecheck scope is limited.** `bun run typecheck` strictly checks `src/vite-env.d.ts` and `src/types.ts`. Extending it to all of `src/` currently exposes a large legacy typing backlog, so production source coverage still relies on the Vite build until that migration is completed without suppressions or weaker compiler settings.
+- **Typecheck covers all source.** `bun run typecheck` strictly checks the complete `src/` TypeScript tree and its TypeScript tests. `lint-check` also runs this gate. Use concrete props, method responses, models, refs, and callback signatures; never restore loose object/array/function intersection aliases or narrow the compiler include to hide errors. Missing Bun and transition-group test/API declarations are development-only dependencies pinned to the existing runtime versions.
 - **Font binaries do not ship in the UI bundle.** The Yocto `nocturne-fonts` package installs them system-wide, and Chromium resolves Inter, Noto, and `Circular Sp UI v3 T` through fontconfig. Mockingbird's non-Latin Circular files rely on the image's scan-time family mapping, so validate font changes against the image package rather than only the Vite bundle.
-- **`@tailwindcss/postcss` v4 is a devDep but the runtime is Tailwind 3.** The v4 package is vestigial/unused — don't migrate to v4 without a coordinated plan (mockingbird SCSS modules + Headless UI will need adjustments).
+- **The app uses Tailwind 3 through `postcss.config.js`.** Do not reinstall the unused Tailwind 4 PostCSS plugin or migrate without a coordinated plan for Mockingbird SCSS and Headless UI.
 - **`react-transition-group@4.4.5` is pinned** for React 19 compat via `mockingbird/ui/components/CSSTransitionCompat.jsx`. Don't upgrade.
 - **Build targets modern Chrome.** Vite defaults apply — no `@vitejs/plugin-legacy`, no dev-time esbuild downgrade, no manual polyfills. PostCSS is just Tailwind + autoprefixer.
 

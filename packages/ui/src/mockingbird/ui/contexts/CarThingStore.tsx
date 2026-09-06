@@ -1,3 +1,16 @@
+import type { ReactNode } from "react";
+import type {
+  SpotifyPlaybackState,
+  PlayerControls,
+  SpotifyDataState,
+  PlaybackProgress,
+} from "../../../types";
+import type { SharedPhoneDisplaySettings } from "../stores/StoreContracts";
+import type {
+  InterappActions,
+  MiddlewareActions,
+  MiddlewareSocket,
+} from "../stores/StoreContracts";
 import React, {
   createContext,
   useContext,
@@ -14,17 +27,17 @@ import {
 } from "../../../hooks/useNocturned";
 import { getActivePresetDeviceId } from "../../../utils/presetStorage";
 
-const mockInterappActions = {
+const mockInterappActions: InterappActions = {
   getTts: (fileName) => console.log("Playing TTS:", fileName),
 };
 
-const mockMiddlewareActions = {
+const mockMiddlewareActions: MiddlewareActions = {
   onboardingGet: () => console.log("Getting onboarding status"),
   onboardingFinished: () => console.log("Onboarding finished"),
   voiceMute: (mute, force) => console.log("Voice mute:", mute),
 };
 
-const mockSocket = {
+const mockSocket: MiddlewareSocket = {
   addSocketEventListener: (callback) => {},
 };
 
@@ -39,7 +52,11 @@ const rootStore = new RootStore(
   mockErrorHandler,
 );
 
-const CarThingStoreContext = createContext(rootStore);
+type ContextValue = Omit<RootStore, "resetAppState" | "fetchAppState"> & {
+  playbackProgress?: PlaybackProgress;
+  onSeek?: PlayerControls["seekToPosition"];
+};
+const CarThingStoreContext = createContext<ContextValue>(rootStore);
 
 export const CarThingStoreProvider = ({
   children,
@@ -49,7 +66,7 @@ export const CarThingStoreProvider = ({
   currentPlayback,
   playerControls,
   sharedPhoneDisplaySettings,
-}: UiComponentProps) => {
+}: CarThingStoreProviderProps) => {
   useCarThingSpotifyIntegration(rootStore, currentPlayback, playerControls);
 
   useLayoutEffect(() => {
@@ -88,7 +105,11 @@ export const CarThingStoreProvider = ({
       rootStore.spotifyData = spotifyData;
     });
 
-    if (spotifyData?.recentAlbums?.length > 0 && rootStore.shelfStore) {
+    if (
+      spotifyData?.recentAlbums &&
+      spotifyData.recentAlbums.length > 0 &&
+      rootStore.shelfStore
+    ) {
       rootStore.shelfStore.seedRecentAlbums(spotifyData.recentAlbums);
     }
   }, [spotifyData]);
@@ -144,3 +165,18 @@ export const useCarThingStore = () => {
   }
   return context;
 };
+
+export interface CarThingStoreProviderProps {
+  children?: ReactNode;
+  playbackProgress?: PlaybackProgress;
+  onSeek?: PlayerControls["seekToPosition"];
+  spotifyData?: SpotifyDataState;
+  currentPlayback?: SpotifyPlaybackState | null;
+  playerControls?: PlayerControls;
+  sharedPhoneDisplaySettings?: SharedPhoneDisplaySettings;
+}
+
+export type PlaybackViewProps = Pick<
+  CarThingStoreProviderProps,
+  "playbackProgress" | "onSeek"
+>;

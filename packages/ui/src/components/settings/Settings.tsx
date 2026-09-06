@@ -1,3 +1,10 @@
+import type { ComponentType } from "react";
+import type {
+  ActiveSection,
+  IconProps,
+  SettingsState,
+  StateSetter,
+} from "../../types";
 import React, { useState, useEffect, useRef } from "react";
 import { Switch } from "@headlessui/react";
 import {
@@ -27,7 +34,42 @@ import {
 } from "../../hooks/useNocturned";
 import { useSubscription } from "../../hooks/useSubscription";
 
-const settingsStructure = {
+type SettingAction = "factoryReset" | "signOut" | "openDonation";
+interface SettingBase {
+  id: string;
+  title?: string;
+  icon?: ComponentType<IconProps>;
+  description?: string;
+  subpage?: { component: ComponentType };
+}
+type SettingItem = SettingBase &
+  (
+    | {
+        type: "toggle";
+        storageKey: keyof SettingsState & string;
+        defaultValue?: boolean;
+        invert?: boolean;
+        requiresDirectPhone?: boolean;
+      }
+    | { type: "navigate"; icon: ComponentType<IconProps>; items: SettingItem[] }
+    | { type: "action"; action: SettingAction }
+    | { type: "sponsors"; message?: string; names?: string[] }
+    | { type: "info" }
+    | { type: "custom"; component?: ComponentType }
+  );
+interface SettingsSection {
+  title: string;
+  icon: ComponentType<IconProps>;
+  type?: "parent" | "custom";
+  component?: ComponentType;
+  items?: SettingItem[];
+}
+interface SettingsProps {
+  onOpenDonationModal: () => void;
+  setActiveSection: StateSetter<ActiveSection>;
+}
+
+const settingsStructure: Record<string, SettingsSection> = {
   support: {
     title: "Support Nocturne",
     icon: SettingsSupportIcon,
@@ -266,13 +308,13 @@ const settingsStructure = {
 export default function Settings({
   onOpenDonationModal,
   setActiveSection,
-}: UiComponentProps) {
+}: SettingsProps) {
   const [versionInfo, setVersionInfo] = useState("Loading versions...");
-  const [activeParent, setActiveParent] = useState(null);
-  const [activeSubItem, setActiveSubItem] = useState(null);
+  const [activeParent, setActiveParent] = useState<string | null>(null);
+  const [activeSubItem, setActiveSubItem] = useState<SettingItem | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const shouldExitToRecents = useRef(false);
-  const scrollContainerRef = useRef(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const {
     settings,
     updateSetting,
@@ -310,7 +352,7 @@ export default function Settings({
     }, 1000);
   }, []);
 
-  const handleToggle = (key) => {
+  const handleToggle = (key: keyof SettingsState & string) => {
     if (
       key === "mockingbirdUiEnabled" &&
       appPlatform !== "web" &&
@@ -352,7 +394,7 @@ export default function Settings({
     }
   };
 
-  const handleAction = (action) => {
+  const handleAction = (action: SettingAction) => {
     switch (action) {
       case "factoryReset":
         setShowFactoryResetDialog(true);
@@ -366,7 +408,11 @@ export default function Settings({
     }
   };
 
-  const navigateTo = (page, subItem = null) => {
+  const navigateTo = (
+    page: string | null,
+    subItem: SettingItem | null = null,
+  ) => {
+    if (!page) return;
     if (isAnimating) return;
     setIsAnimating(true);
     shouldExitToRecents.current = false;
@@ -497,7 +543,7 @@ export default function Settings({
     }
   };
 
-  const renderSettingItem = (item) => {
+  const renderSettingItem = (item: SettingItem) => {
     if (item.subpage) {
       const SubpageComponent = item.subpage.component;
       return <SubpageComponent key={item.id} />;
@@ -561,7 +607,7 @@ export default function Settings({
           >
             <div className="flex items-center">
               <Switch
-                checked={displayedValue}
+                checked={Boolean(displayedValue)}
                 onChange={() =>
                   !isToggleDisabled && handleToggle(item.storageKey)
                 }
@@ -622,7 +668,7 @@ export default function Settings({
               </p>
             ) : (
               <div className="space-y-2">
-                {item.names.map((name, index) => (
+                {(item.names ?? []).map((name, index) => (
                   <p
                     key={`${item.id}-${index}`}
                     className="text-[28px] font-[560] text-white/60 tracking-tight"
@@ -654,7 +700,7 @@ export default function Settings({
   };
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (isAnimating) return;
 
       if (e.key === "Escape") {
@@ -780,7 +826,9 @@ export default function Settings({
                       >
                         <div className="flex items-center">
                           <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
-                            <subItem.icon className="w-7 h-7 text-white" />
+                            {subItem.icon && (
+                              <subItem.icon className="w-7 h-7 text-white" />
+                            )}
                           </div>
                           <span className="text-[32px] ml-4 font-[580] text-white tracking-tight">
                             {subItem.title}

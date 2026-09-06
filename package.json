@@ -2,7 +2,7 @@
   "name": "@usenocturne/monorepo",
   "version": "0.0.0",
   "private": true,
-  "description": "Nocturne firmware monorepo - image, daemon, device UI, and Wi-Fi connector.",
+  "description": "Nocturne firmware monorepo - image, daemon, and device UI.",
   "workspaces": [
     "packages/*"
   ],

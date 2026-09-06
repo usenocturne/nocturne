@@ -1,121 +1,90 @@
+import type { VoiceShelfItem } from "../stores/ShelfModels";
+
 const MAX_VOICE_ITEMS = 12;
 
-/**
- * Normalizes the REAL flattened search response shape emitted by
- * SpotifyService.transformSearchResponse after T1 enrichment.
- *
- * Input:  { tracks?, artists?, albums?, playlists? }
- *   each item: { name, artist?, uri, image_url }
- *
- * Output: VoiceItem[] = [{ uri, title, subtitle, image_url, kind }]
- *   kind ∈ "track" | "artist" | "album" | "playlist"
- */
-export function normalizeSpotifySearchResult(result) {
-  if (!result || typeof result !== "object") return [];
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function records(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+function text(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
 
-  const items = [];
-  const seenUris = new Set();
-
-  function addItem(item) {
-    if (!item.uri || seenUris.has(item.uri)) return;
-    seenUris.add(item.uri);
-    items.push(item);
-  }
-
-  // Artists first (matches user "artist icon" intuition)
-  for (const a of result.artists ?? []) {
-    if (items.length >= MAX_VOICE_ITEMS) break;
-    addItem({
-      uri: a.uri ?? "",
-      title: a.name ?? "",
-      subtitle: "Artist",
-      image_url: a.image_url ?? "",
-      kind: "artist",
-    });
-  }
-
-  // Albums
-  for (const a of result.albums ?? []) {
-    if (items.length >= MAX_VOICE_ITEMS) break;
-    addItem({
-      uri: a.uri ?? "",
-      title: a.name ?? "",
-      subtitle: a.artist ?? "Album",
-      image_url: a.image_url ?? "",
-      kind: "album",
-    });
-  }
-
-  // Tracks
-  for (const t of result.tracks ?? []) {
-    if (items.length >= MAX_VOICE_ITEMS) break;
-    addItem({
-      uri: t.uri ?? "",
-      title: t.name ?? "",
-      subtitle: t.artist ?? "",
-      image_url: t.image_url ?? "",
-      kind: "track",
-    });
-  }
-
-  // Playlists
-  for (const p of result.playlists ?? []) {
-    if (items.length >= MAX_VOICE_ITEMS) break;
-    addItem({
-      uri: p.uri ?? "",
-      title: p.name ?? "",
-      subtitle: "Playlist",
-      image_url: p.image_url ?? "",
+export function normalizeSpotifySearchResult(
+  result: unknown,
+): VoiceShelfItem[] {
+  if (!isRecord(result)) return [];
+  const items: VoiceShelfItem[] = [];
+  const seenUris = new Set<string>();
+  const categories: Array<{
+    field: string;
+    kind: VoiceShelfItem["kind"];
+    subtitle: string;
+    artist: boolean;
+  }> = [
+    { field: "artists", kind: "artist", subtitle: "Artist", artist: false },
+    { field: "albums", kind: "album", subtitle: "Album", artist: true },
+    { field: "tracks", kind: "track", subtitle: "", artist: true },
+    {
+      field: "playlists",
       kind: "playlist",
-    });
+      subtitle: "Playlist",
+      artist: false,
+    },
+  ];
+  for (const category of categories) {
+    for (const item of records(result[category.field])) {
+      if (items.length >= MAX_VOICE_ITEMS) return items;
+      const uri = text(item.uri);
+      if (!uri || seenUris.has(uri)) continue;
+      seenUris.add(uri);
+      items.push({
+        uri,
+        title: text(item.name),
+        subtitle: category.artist
+          ? text(item.artist, category.subtitle)
+          : category.subtitle,
+        image_url: text(item.image_url),
+        kind: category.kind,
+      });
+    }
   }
-
   return items;
 }
 
-export function isEmptyVoiceResult(result) {
-  if (!result || typeof result !== "object") return true;
-  return (
-    (!result.tracks || result.tracks.length === 0) &&
-    (!result.artists || result.artists.length === 0) &&
-    (!result.albums || result.albums.length === 0) &&
-    (!result.playlists || result.playlists.length === 0)
+export function isEmptyVoiceResult(result: unknown): boolean {
+  if (!isRecord(result)) return true;
+  return ["tracks", "artists", "albums", "playlists"].every(
+    (key) => records(result[key]).length === 0,
   );
 }
 
-/**
- * Normalizes spotify_get_recently_played result into VoiceItem[].
- * Input: { albums: [{ uri, id, name, images:[{url,height,width}], artists:[{name,uri,id}] }] }
- */
-export function normalizeRecentlyPlayedResult(result) {
-  if (!result || typeof result !== "object") return [];
-  const items = [];
-  const seenUris = new Set();
-  for (const a of result.albums ?? []) {
+export function normalizeRecentlyPlayedResult(
+  result: unknown,
+): VoiceShelfItem[] {
+  if (!isRecord(result)) return [];
+  const items: VoiceShelfItem[] = [];
+  const seenUris = new Set<string>();
+  for (const album of records(result.albums)) {
     if (items.length >= MAX_VOICE_ITEMS) break;
-    const uri = a.uri ?? "";
+    const uri = text(album.uri);
     if (!uri || seenUris.has(uri)) continue;
     seenUris.add(uri);
-    const firstArtist =
-      Array.isArray(a.artists) && a.artists.length > 0
-        ? (a.artists[0]?.name ?? "")
-        : "";
-    const firstImage =
-      Array.isArray(a.images) && a.images.length > 0
-        ? (a.images[0]?.url ?? "")
-        : "";
+    const firstArtist = records(album.artists)[0];
+    const firstImage = records(album.images)[0];
     items.push({
       uri,
-      title: a.name ?? "",
-      subtitle: firstArtist || "Album",
-      image_url: firstImage,
+      title: text(album.name),
+      subtitle: text(firstArtist?.name) || "Album",
+      image_url: text(firstImage?.url),
       kind: "album",
     });
   }
   return items;
 }
 
-export function isEmptyRecentlyPlayedResult(result) {
-  if (!result || typeof result !== "object") return true;
-  return !result.albums || result.albums.length === 0;
+export function isEmptyRecentlyPlayedResult(result: unknown): boolean {
+  return !isRecord(result) || records(result.albums).length === 0;
 }

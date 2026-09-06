@@ -10,16 +10,28 @@ import BluetoothDevices from "../settings/network/BluetoothDevices";
 import GradientBackground from "../common/GradientBackground";
 import { useDeviceInfo } from "../../hooks/useNocturned";
 
+interface NetworkScreenProps {
+  isConnectionLost?: boolean;
+  onConnectionRestored?: () => void;
+}
+interface NetworkOption {
+  id: string;
+  title: string;
+  icon: typeof BluetoothIcon;
+  subpage: { type: string; component: typeof BluetoothDevices };
+}
+
 const NetworkScreen = ({
   isConnectionLost = true,
   onConnectionRestored,
-}: UiComponentProps) => {
+}: NetworkScreenProps) => {
   const { deviceInfo } = useDeviceInfo();
   const [showMain, setShowMain] = React.useState(true);
   const [showParent, setShowParent] = React.useState(false);
   const [showSubpage, setShowSubpage] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
-  const [activeSubItem, setActiveSubItem] = React.useState(null);
+  const [activeSubItem, setActiveSubItem] =
+    React.useState<NetworkOption | null>(null);
 
   const [mainClasses, setMainClasses] = React.useState(
     "translate-x-0 opacity-100",
@@ -39,7 +51,7 @@ const NetworkScreen = ({
     updateGradientColors(null, "auth");
   }, [updateGradientColors]);
 
-  const networkOptions = [
+  const networkOptions: NetworkOption[] = [
     {
       id: "bluetooth",
       title: "Bluetooth",
@@ -58,15 +70,16 @@ const NetworkScreen = ({
     const bluetoothOption = networkOptions.find(
       (opt) => opt.id === "bluetooth",
     );
-    setActiveSubItem(bluetoothOption);
+    setActiveSubItem(bluetoothOption ?? null);
 
     setMainClasses("-translate-x-full opacity-0");
     setSubpageClasses("translate-x-0 opacity-100");
 
     setTimeout(() => {
-      if (document.querySelector(".settings-scroll-container")) {
-        document.querySelector(".settings-scroll-container").scrollTop = 0;
-      }
+      const container = document.querySelector<HTMLElement>(
+        ".settings-scroll-container",
+      );
+      if (container) container.scrollTop = 0;
     }, ANIMATION_DURATION / 3);
 
     setTimeout(() => {
@@ -76,7 +89,7 @@ const NetworkScreen = ({
     }, ANIMATION_DURATION);
   };
 
-  const navigateToSubpage = (item) => {
+  const navigateToSubpage = (item: NetworkOption) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
@@ -85,9 +98,10 @@ const NetworkScreen = ({
     setSubpageClasses("translate-x-0 opacity-100");
 
     setTimeout(() => {
-      if (document.querySelector(".settings-scroll-container")) {
-        document.querySelector(".settings-scroll-container").scrollTop = 0;
-      }
+      const container = document.querySelector<HTMLElement>(
+        ".settings-scroll-container",
+      );
+      if (container) container.scrollTop = 0;
     }, ANIMATION_DURATION / 3);
 
     setTimeout(() => {
@@ -106,9 +120,10 @@ const NetworkScreen = ({
       setMainClasses("translate-x-0 opacity-100");
 
       setTimeout(() => {
-        if (document.querySelector(".settings-scroll-container")) {
-          document.querySelector(".settings-scroll-container").scrollTop = 0;
-        }
+        const container = document.querySelector<HTMLElement>(
+          ".settings-scroll-container",
+        );
+        if (container) container.scrollTop = 0;
       }, ANIMATION_DURATION / 3);
 
       setTimeout(() => {
@@ -122,9 +137,10 @@ const NetworkScreen = ({
       setMainClasses("translate-x-0 opacity-100");
 
       setTimeout(() => {
-        if (document.querySelector(".settings-scroll-container")) {
-          document.querySelector(".settings-scroll-container").scrollTop = 0;
-        }
+        const container = document.querySelector<HTMLElement>(
+          ".settings-scroll-container",
+        );
+        if (container) container.scrollTop = 0;
       }, ANIMATION_DURATION / 3);
 
       setTimeout(() => {
@@ -136,7 +152,7 @@ const NetworkScreen = ({
   };
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (isAnimating) return;
       if (e.key === "Escape") {
         if (showSubpage || showParent) {

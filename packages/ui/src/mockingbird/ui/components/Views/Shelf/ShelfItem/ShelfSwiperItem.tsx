@@ -1,3 +1,4 @@
+import type { ShelfItem } from "../../../../stores/ShelfModels";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import MoreItem from "./MoreItem";
 import ContextItem from "./ContextItem";
@@ -7,7 +8,13 @@ import styles from "./ShelfSwiperItem.module.scss";
 
 export const ARTWORK_WIDTH = 240;
 
-const ShelfSwiperItem = ({ item, isActive }: UiComponentProps) => {
+const ShelfSwiperItem = ({
+  item,
+  isActive,
+}: {
+  item: ShelfItem;
+  isActive?: boolean;
+}) => {
   const { shelfStore } = useCarThingStore();
   const uiState = shelfStore.shelfController.shelfSwiperItemUiState;
 

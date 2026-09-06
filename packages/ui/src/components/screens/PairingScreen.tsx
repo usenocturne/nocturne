@@ -3,7 +3,11 @@ import { useGradientState } from "../../hooks/useGradientState";
 import { NocturneIcon } from "../common/icons";
 import GradientBackground from "../common/GradientBackground";
 
-const PairingScreen = ({ pin }: UiComponentProps) => {
+interface PairingScreenProps {
+  pin?: string;
+}
+
+const PairingScreen = ({ pin }: PairingScreenProps) => {
   const [gradientState, updateGradientColors] = useGradientState();
 
   useEffect(() => {

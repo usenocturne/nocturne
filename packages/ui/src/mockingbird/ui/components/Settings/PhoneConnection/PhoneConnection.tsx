@@ -1,3 +1,4 @@
+import type { Swiper as SwiperInstance } from "swiper";
 import { useCarThingStore } from "../../../contexts/CarThingStore";
 import { useEffect, useState, useRef } from "react";
 import styles from "./PhoneConnection.module.scss";
@@ -34,7 +35,7 @@ const PhoneConnection = () => {
   const { settingsStore, bluetoothStore, hardwareStore, phoneConnectionStore } =
     useCarThingStore();
 
-  const [swiper, setSwiper] = useState(null);
+  const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [pressedAddMoreItem, setPressedAddMoreItem] = useState(false);
 
   const menuShowing =

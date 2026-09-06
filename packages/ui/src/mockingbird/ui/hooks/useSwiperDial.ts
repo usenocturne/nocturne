@@ -1,15 +1,20 @@
+import type { Swiper } from "swiper";
 import { autorun, runInAction } from "mobx";
 import { useEffect, useRef } from "react";
 import { easingFunction, transitionDurationMs } from "../styles/Variables";
 
 let dragging = false;
 
-const setDragging = (value) => (dragging = value);
+const setDragging = (value: boolean) => (dragging = value);
 
-export const useSwiperDial = (args) => {
-  const swiperRef = useRef();
+export const useSwiperDial = (args: {
+  selectedItemIndex?: number;
+  animateSliding?: boolean;
+  setAnimateSliding?: (animated: boolean) => void;
+}) => {
+  const swiperRef = useRef<Swiper | null>(null);
   useEffect(() => {
-    const setAnimate = (isAnimated) => {
+    const setAnimate = (isAnimated: boolean) => {
       if (args.setAnimateSliding) {
         args.setAnimateSliding(isAnimated);
       }

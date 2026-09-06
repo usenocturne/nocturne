@@ -1,7 +1,7 @@
 use crate::error::Result;
 use std::path::PathBuf;
 use tokio::fs;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 const CACHE_DIR: &str = "/var/cache/nocturned/images";
 
@@ -37,24 +37,13 @@ impl ImageCache {
     }
 
     fn get_cache_path(&self, url: &str) -> PathBuf {
-        // For Spotify CDN URLs like:
-        // https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/daily/1/ab6761610000e5eb523b45e1db5e220a25302aba/en
-        // Extract the ID before /en (or other locale codes)
-
-        let image_id = if url.contains("spotifycdn.com") {
-            let parts: Vec<&str> = url.rsplit('/').collect();
-            if parts.len() >= 2 {
-                let last_part = parts[0];
-                if last_part.len() <= 3 {
-                    parts[1]
-                } else {
-                    last_part
-                }
-            } else {
-                parts.first().unwrap_or(&url)
-            }
+        let mut parts = url.rsplit('/');
+        let last_part = parts.next().unwrap_or(url);
+        let image_id = if url.contains("spotifycdn.com") && last_part.len() <= 3 {
+            // Spotify's localized artwork URLs end in an image ID and a locale.
+            parts.next().unwrap_or(last_part)
         } else {
-            url.rsplit('/').next().unwrap_or(url)
+            last_part
         };
 
         self.cache_dir.join(image_id)
@@ -63,15 +52,14 @@ impl ImageCache {
     pub async fn get(&self, url: &str) -> Option<String> {
         let cache_path = self.get_cache_path(url);
 
-        if !cache_path.exists() {
-            debug!("Cache miss for URL: {}", url);
-            return None;
-        }
-
         match fs::read_to_string(&cache_path).await {
             Ok(base64_data) => {
                 debug!("Cache hit for URL: {}", url);
                 Some(base64_data)
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                debug!("Cache miss for URL: {}", url);
+                None
             }
             Err(e) => {
                 warn!("Failed to read cached image for {}: {}", url, e);
@@ -88,23 +76,43 @@ impl ImageCache {
         debug!("Cached image for URL: {} at {:?}", url, cache_path);
         Ok(())
     }
+}
 
-    #[allow(dead_code)]
-    pub async fn clear(&self) -> Result<()> {
-        info!("Clearing image cache");
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        let mut entries = fs::read_dir(&self.cache_dir).await?;
-        let mut count = 0;
-
-        while let Some(entry) = entries.next_entry().await? {
-            if let Err(e) = fs::remove_file(entry.path()).await {
-                error!("Failed to remove cache file {:?}: {}", entry.path(), e);
-            } else {
-                count += 1;
-            }
+    #[tokio::test]
+    async fn reads_existing_cache_entries_and_replaces_artwork() {
+        let root = tempfile::tempdir().unwrap();
+        let cache = ImageCache::with_dir(root.path().to_path_buf());
+        let urls = [
+            "https://pickasso.spotifycdn.com/image/artwork/en",
+            "https://pickasso.spotifycdn.com/image/artwork",
+            "https://i.scdn.co/image/artwork",
+        ];
+        fs::write(root.path().join("artwork"), "original")
+            .await
+            .unwrap();
+        for url in urls {
+            assert_eq!(cache.get(url).await.as_deref(), Some("original"));
         }
+        cache.put(urls[0], "replacement".into()).await.unwrap();
+        assert_eq!(cache.get(urls[1]).await.as_deref(), Some("replacement"));
+    }
 
-        info!("Cleared {} cached images", count);
-        Ok(())
+    #[tokio::test]
+    async fn missing_or_invalid_cached_artwork_is_a_miss() {
+        let root = tempfile::tempdir().unwrap();
+        let cache = ImageCache::with_dir(root.path().to_path_buf());
+        let url = "https://i.scdn.co/image/artwork";
+        assert!(cache.get(url).await.is_none());
+        fs::write(root.path().join("artwork"), [0xff])
+            .await
+            .unwrap();
+        assert!(cache.get(url).await.is_none());
+        fs::remove_file(root.path().join("artwork")).await.unwrap();
+        fs::create_dir(root.path().join("artwork")).await.unwrap();
+        assert!(cache.get(url).await.is_none());
     }
 }

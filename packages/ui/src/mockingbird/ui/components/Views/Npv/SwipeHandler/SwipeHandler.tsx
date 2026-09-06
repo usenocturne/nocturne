@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import type { SwipeEventData } from "react-swipeable";
+import type { PlayerItem } from "../../../../stores/PlayerStore";
 import { runInAction } from "mobx";
 import { useSwipeable } from "react-swipeable";
 
@@ -12,12 +15,15 @@ export class SwipeHandlerClass {
   playerStore;
   npvUbiLogger;
 
-  constructor(playerStore, npvUbiLogger = null) {
+  constructor(
+    playerStore: SwipePlayer,
+    npvUbiLogger: SwipeLogger | null = null,
+  ) {
     this.playerStore = playerStore;
     this.npvUbiLogger = npvUbiLogger;
   }
 
-  setSwipeDirection(direction) {
+  setSwipeDirection(direction: string) {
     this.swipeDirection = direction;
   }
 
@@ -52,9 +58,9 @@ export class SwipeHandlerClass {
       });
     }
     this.setSwipeDirection(SwipeDirection.RIGHT);
-    if (this.playerStore.skipPrev || this.playerStore.skipPrevForce) {
-      (this.playerStore.skipPrevForce || this.playerStore.skipPrev)();
-    }
+    const previous =
+      this.playerStore.skipPrevForce || this.playerStore.skipPrev;
+    previous?.();
   };
 }
 
@@ -65,7 +71,14 @@ const SwipeHandler = ({
   onSwipeUp,
   onSwipeDown,
   disabled,
-}: UiComponentProps) => {
+}: {
+  children?: ReactNode;
+  disabled?: boolean;
+  onSwipeLeft?: (event: SwipeEventData) => void;
+  onSwipeRight?: (event: SwipeEventData) => void;
+  onSwipeUp?: (event: SwipeEventData) => void;
+  onSwipeDown?: (event: SwipeEventData) => void;
+}) => {
   const swipeHandlers = useSwipeable({
     onSwipedLeft: !disabled ? onSwipeLeft : undefined,
     onSwipedRight: !disabled ? onSwipeRight : undefined,
@@ -77,3 +90,23 @@ const SwipeHandler = ({
 };
 
 export default SwipeHandler;
+
+interface SwipePlayer {
+  currentTrack: PlayerItem;
+  currentTrackPosition?: number;
+  skipNext?: () => void;
+  skipPrev?: () => void;
+  skipPrevForce?: () => void;
+}
+interface SwipeLogger {
+  logSwipeSkipNext(
+    uri: string | undefined,
+    positionMs: number,
+    durationMs: number,
+  ): void;
+  logSwipeSkipPrevious(
+    uri: string | undefined,
+    positionMs: number,
+    durationMs: number,
+  ): void;
+}

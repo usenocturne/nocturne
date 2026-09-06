@@ -1,3 +1,4 @@
+import type { RootStore } from "./RootStore";
 import { makeAutoObservable } from "mobx";
 
 export const WIND_NOISE_ALERT_DISMISSED_KEY = "wind_noise_alert_dismissed-date";
@@ -5,10 +6,10 @@ export const WIND_NOISE_ALERT_DISMISSED_KEY = "wind_noise_alert_dismissed-date";
 const DISMISS_TIME_HOURS = 24;
 
 class AirVentInterferenceUiState {
-  declare rootStore: UiLooseData;
+  declare rootStore: RootStore;
   airVentContainerScrollStep = 0;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
@@ -57,14 +58,14 @@ class AirVentInterferenceUiState {
 }
 
 class WindAlertBannerUiState {
-  declare rootStore: UiLooseData;
+  declare rootStore: RootStore;
   isUiActive = false;
   showingAlert = false;
   dismissed: boolean;
   declare _thresholdCleanup: () => void;
   declare _recoveryCleanup: () => void;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     this.dismissed = this.getStoredDismissedStatus();
     makeAutoObservable(this, {
@@ -162,11 +163,11 @@ class WindAlertBannerUiState {
 }
 
 export default class AirVentInterferenceController {
-  declare rootStore: UiLooseData;
+  declare rootStore: RootStore;
   airVentInterferenceUiState: AirVentInterferenceUiState;
   windAlertBannerUiState: WindAlertBannerUiState;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     this.airVentInterferenceUiState = new AirVentInterferenceUiState(rootStore);
     this.windAlertBannerUiState = new WindAlertBannerUiState(rootStore);

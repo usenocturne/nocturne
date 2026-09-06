@@ -1,3 +1,4 @@
+import type { ShelfItem } from "../../../../stores/ShelfModels";
 import { useState } from "react";
 import classNames from "classnames";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
@@ -5,13 +6,19 @@ import { IconMicOn64, IconMicOff64 } from "../../../Icons/CarthingUIComponents";
 import Type from "../../../CarthingUIComponents/Type/Type";
 import styles from "./ShelfSwiperItem.module.scss";
 
-const pointerListenersMaker = (setTouchDown) => ({
+const pointerListenersMaker = (setTouchDown: (pressed: boolean) => void) => ({
   onPointerDown: () => setTouchDown(true),
   onPointerUp: () => setTouchDown(false),
   onPointerLeave: () => setTouchDown(false),
 });
 
-const DefaultVoiceItem = ({ item, isActive }: UiComponentProps) => {
+const DefaultVoiceItem = ({
+  item,
+  isActive,
+}: {
+  item: ShelfItem;
+  isActive?: boolean;
+}) => {
   const { shelfStore } = useCarThingStore();
   const uiState = shelfStore.shelfController.shelfSwiperItemUiState;
   const { category } = item;

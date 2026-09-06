@@ -1,6 +1,7 @@
+import type { MockIconProps } from "../IconProps";
 import React from "react";
 
-const IconVolume48 = ({ className, style, ...props }: UiComponentProps) => {
+const IconVolume48 = ({ className, style, ...props }: MockIconProps) => {
   return (
     <svg
       width="48"

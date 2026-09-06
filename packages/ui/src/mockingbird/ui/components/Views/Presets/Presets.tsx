@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import styles from "./Presets.module.scss";
-import { useSwipeable } from "react-swipeable";
+import { useSwipeable, type SwipeEventData } from "react-swipeable";
 import { observer } from "mobx-react-lite";
 import { useCarThingStore } from "../../../contexts/CarThingStore";
 import { PRESET_NUMBERS } from "../../../stores/PresetsStore";
@@ -17,7 +17,7 @@ const Presets = () => {
     uiState.logPresetsImpression();
   }, [uiState]);
 
-  const swipeUpHandler = (event) => {
+  const swipeUpHandler = (event: SwipeEventData) => {
     if (event.absY > SWIPE_TO_DISAPPEAR_LIMIT_PX) {
       uiState.handleSwipeUp();
     }

@@ -45,6 +45,7 @@ type VoicePhase =
   | "closing";
 
 interface VoicePayload extends UnknownRecord {
+  intent?: string | null;
   action?: string;
   args?: UnknownRecord;
   code?: string;
@@ -294,7 +295,7 @@ export function voiceReducer(
       return {
         ...state,
         phase: "error",
-        error: payload.code,
+        error: payload.code ?? null,
         friendlyError: payload.message || "",
       };
     }
@@ -469,7 +470,7 @@ export function VoiceProvider({
     return true;
   };
 
-  const sendVoiceCommand = (method: string, params: UnknownRecord = {}) => {
+  const sendVoiceCommand = (method: string, params: object = {}) => {
     return sendNocturneWsRequest(method, params);
   };
 
@@ -562,7 +563,7 @@ export function VoiceProvider({
           type: "TOOL_EXECUTED",
           payload: {
             intent,
-            action: args.action,
+            action: typeof args.action === "string" ? args.action : undefined,
             noIcon: intent ? NO_ICON_INTENTS.has(intent) : false,
           },
         });
@@ -570,7 +571,7 @@ export function VoiceProvider({
         if (intent === VOLUME_INTENT) {
           dispatch({
             type: "SET_VOLUME",
-            payload: args.volume_percent ?? args.volume ?? 0,
+            payload: Number(args.volume_percent ?? args.volume ?? 0) || 0,
           });
         }
 

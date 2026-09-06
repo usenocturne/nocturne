@@ -1,7 +1,13 @@
 import { memo, useMemo } from "react";
 import { useProgressValue } from "../../hooks/usePlaybackProgress";
 
-const formatTime = (ms, elapsed) => {
+interface PlaybackTimeLabelProps {
+  isSpotifyPending?: boolean;
+  isElapsed?: boolean;
+  durationMs?: number | null;
+}
+
+const formatTime = (ms: number, elapsed: boolean) => {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -23,7 +29,7 @@ const PlaybackTimeLabel = ({
   isSpotifyPending,
   isElapsed = true,
   durationMs,
-}: UiComponentProps) => {
+}: PlaybackTimeLabelProps) => {
   const { progressMs } = useProgressValue();
   const value = useMemo(() => {
     if (isSpotifyPending) return "--:--";

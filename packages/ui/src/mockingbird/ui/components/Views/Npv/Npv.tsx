@@ -1,3 +1,4 @@
+import type { PlaybackViewProps } from "../../../contexts/CarThingStore";
 import classnames from "classnames";
 import { observer } from "mobx-react-lite";
 import { useSettings } from "../../../../../contexts/SettingsContext";
@@ -17,11 +18,11 @@ import OtherMedia from "./OtherMedia/OtherMedia";
 import Volume from "./Volume/Volume";
 import styles from "./Npv.module.scss";
 
-const getBackgroundColorFromChannels = (rgbChannels) => {
+const getBackgroundColorFromChannels = (rgbChannels: number[]) => {
   return `rgb(${rgbChannels.join(",")})`;
 };
 
-const Npv = ({ playbackProgress, onSeek }: UiComponentProps) => {
+const Npv = ({ playbackProgress, onSeek }: PlaybackViewProps) => {
   const carThingStores = useCarThingStore();
   const { npvStore, overlayController, ubiLogger, bannerStore, queueStore } =
     carThingStores;
@@ -68,10 +69,10 @@ const Npv = ({ playbackProgress, onSeek }: UiComponentProps) => {
 
   const lastWheelEventRef = useRef(0);
   const wheelDeltaAccumulatorRef = useRef(0);
-  const npvContainerRef = useRef(null);
+  const npvContainerRef = useRef<HTMLDivElement>(null);
 
   const handleWheel = useCallback(
-    (e) => {
+    (e: WheelEvent) => {
       if (!showPlayingInfo || overlayController.anyOverlayIsShowing) return;
       if (npvStore.scrubbingUiState.isScrubbing) return;
 

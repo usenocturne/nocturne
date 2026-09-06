@@ -20,8 +20,8 @@ type SpotifyContextInput =
   | undefined;
 
 type SpotifyPlaylistInput = {
-  id?: unknown;
-  uri?: unknown;
+  id?: string;
+  uri?: string;
 };
 
 const CANONICAL_CONTEXT_TYPES = new Set<SpotifyQuickAccessContentType>([

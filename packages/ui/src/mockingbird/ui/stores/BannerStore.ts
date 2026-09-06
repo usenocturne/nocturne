@@ -1,14 +1,16 @@
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable } from "mobx";
 
 class BannerStore {
-  declare _handleNetworkHide: UiLooseData;
-  declare _handleNetworkShow: UiLooseData;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare _handleNetworkHide: () => void;
+  declare _handleNetworkShow: () => void;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   _showNoNetwork = false;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
 

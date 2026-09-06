@@ -5,7 +5,7 @@ const UI_LICENSE_FILEPATH = "license/ui-license.txt";
 const MW_LICENSE_FILEPATH = "license/mw-license.txt";
 const OS_LICENSE_FILEPATH = "license/os-license.txt";
 
-async function fetchTextFile(path) {
+async function fetchTextFile(path: string) {
   try {
     const resp = await fetch(path);
     if (!resp.ok) return "";
@@ -13,7 +13,8 @@ async function fetchTextFile(path) {
 
     if (contentType.includes("text/html")) return "";
     return await resp.text();
-  } catch {
+  } catch (error) {
+    console.warn(`Failed to load license text ${path}:`, error);
     return "";
   }
 }

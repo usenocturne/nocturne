@@ -1,4 +1,31 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { getErrorMessage } from "../utils/helpers";
+import type { WsResponse } from "../types";
+import {
+  dispatchSpotifyRequest,
+  waitForSpotifySocket,
+  withSpotifyImageDeadline,
+  type PendingSpotifyRequest,
+} from "./spotifyRequestLifecycle";
+import {
+  normalizeSpotifyDevices,
+  type SpotifyMethodResponses,
+} from "./spotifyResponses";
+
+type PlayParams = {
+  context_uri?: string;
+  uris?: string[];
+  offset?: { uri: string } | { position: number };
+  device_id?: string;
+};
+export type PageParams = {
+  fields?: string;
+  limit?: number;
+  offset?: number;
+  before?: number;
+  after?: number;
+  time_range?: string;
+};
 import {
   useNocturned,
   getGlobalWebSocket,
@@ -13,10 +40,7 @@ import {
   getSpotifySkippedState,
   subscribeSpotifySkippedState,
 } from "./useNocturned";
-type PendingRequest = {
-  resolve: (value: UiLooseData | PromiseLike<UiLooseData>) => void;
-  reject: (reason?: unknown) => void;
-};
+
 type SpotifyCommandReadiness = {
   wsConnected: boolean;
   appReady: boolean;
@@ -61,8 +85,6 @@ export const getSpotifyImageFetchFallback = (url: string): string | null =>
     ? LOCAL_FILE_IMAGE_FALLBACK
     : null;
 
-const generateUUID = () => crypto.randomUUID();
-
 export const isSpotifyCommandSessionReady = ({
   wsConnected,
   appReady,
@@ -101,7 +123,7 @@ export function useSpotifyWebSocket() {
     useNocturned();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pendingRequestsRef = useRef(new Map<string, PendingRequest>());
+  const pendingRequestsRef = useRef(new Map<string, PendingSpotifyRequest>());
   const listenerIdRef = useRef<string | null>(null);
   const [deviceConnected, setDeviceConnected] = useState(() => {
     const state = getBluetoothConnectionState();
@@ -182,183 +204,60 @@ export function useSpotifyWebSocket() {
     };
   }, []);
 
-  const sendSpotifyCommand = useCallback(
-    (
-      method: string,
-      params: object = {},
-      signal: AbortSignal | null = null,
-    ) => {
-      return new Promise<UiLooseData>((resolve, reject) => {
-        if (signal?.aborted) {
-          reject(new Error("Request cancelled"));
-          return;
-        }
-
-        if (
-          getSpotifySkippedState() &&
-          !isMetadataOnlyLyricsRequest(method, params)
-        ) {
-          reject(new Error("Spotify authorization was skipped"));
-          return;
-        }
-
-        if (!getAppReadyState().ready) {
-          reject(new Error("App session not ready"));
-          return;
-        }
-
-        const subState = getAppSubscribedState();
-        if (
-          !subState.subscribed &&
-          !subState.hasLifetime &&
-          getAppReadyState().platform !== "web"
-        ) {
-          reject(new Error("Subscription required"));
-          return;
-        }
-
-        const globalWs = getGlobalWebSocket();
-
-        if (!globalWs) {
-          reject(new Error("WebSocket not available"));
-          return;
-        }
-
-        if (globalWs.readyState === WebSocket.CONNECTING) {
-          const timeoutId = setTimeout(() => {
-            reject(new Error("WebSocket connection timeout"));
-          }, 10000);
-
-          const resolveWithCleanup = (
-            value: UiLooseData | PromiseLike<UiLooseData>,
-          ) => {
-            clearTimeout(timeoutId);
-            resolve(value);
-          };
-
-          const rejectWithCleanup = (reason?: unknown) => {
-            clearTimeout(timeoutId);
-            reject(reason);
-          };
-
-          const waitForConnection = () => {
-            if (signal?.aborted) {
-              rejectWithCleanup(new Error("Request cancelled"));
-              return;
-            }
-
-            const ws = getGlobalWebSocket();
-            if (!ws) {
-              rejectWithCleanup(
-                new Error("WebSocket disconnected while waiting"),
-              );
-              return;
-            }
-
-            if (ws.readyState === WebSocket.OPEN) {
-              sendMessage(
-                ws,
-                method,
-                params,
-                resolveWithCleanup,
-                rejectWithCleanup,
-                signal,
-              );
-            } else if (
-              ws.readyState === WebSocket.CLOSED ||
-              ws.readyState === WebSocket.CLOSING
-            ) {
-              rejectWithCleanup(new Error("WebSocket closed while waiting"));
-            } else {
-              setTimeout(waitForConnection, 100);
-            }
-          };
-
-          waitForConnection();
-          return;
-        }
-
-        if (
-          globalWs.readyState === WebSocket.CLOSED ||
-          globalWs.readyState === WebSocket.CLOSING
-        ) {
-          reject(new Error("WebSocket is closed"));
-          return;
-        }
-
-        sendMessage(globalWs, method, params, resolve, reject, signal);
-      });
-    },
-    [wsConnected, deviceConnected],
-  );
-
-  const sendMessage = (
-    ws: WebSocket,
+  function requestSpotify<M extends keyof SpotifyMethodResponses>(
+    method: M,
+    params?: object,
+    signal?: AbortSignal | null,
+  ): Promise<SpotifyMethodResponses[M]>;
+  function requestSpotify<T = unknown>(
     method: string,
-    params: object,
-    resolve: (value: UiLooseData | PromiseLike<UiLooseData>) => void,
-    reject: (reason?: unknown) => void,
-    signal: AbortSignal | null,
-  ) => {
-    const messageId = generateUUID();
-    const message = {
-      type: "request",
-      id: messageId,
+    params?: object,
+    signal?: AbortSignal | null,
+  ): Promise<T>;
+  async function requestSpotify(
+    method: string,
+    params: object = {},
+    signal: AbortSignal | null = null,
+  ): Promise<unknown> {
+    if (signal?.aborted) throw new Error("Request cancelled");
+    if (
+      getSpotifySkippedState() &&
+      !isMetadataOnlyLyricsRequest(method, params)
+    )
+      throw new Error("Spotify authorization was skipped");
+    if (!getAppReadyState().ready) throw new Error("App session not ready");
+    const subState = getAppSubscribedState();
+    if (
+      !subState.subscribed &&
+      !subState.hasLifetime &&
+      getAppReadyState().platform !== "web"
+    )
+      throw new Error("Subscription required");
+    const socket = getGlobalWebSocket();
+    if (!socket) throw new Error("WebSocket not available");
+    const readySocket =
+      socket.readyState === WebSocket.CONNECTING
+        ? await waitForSpotifySocket(getGlobalWebSocket, signal)
+        : socket;
+    if (
+      readySocket.readyState === WebSocket.CLOSED ||
+      readySocket.readyState === WebSocket.CLOSING
+    )
+      throw new Error("WebSocket is closed");
+    return dispatchSpotifyRequest(
+      readySocket,
+      pendingRequestsRef.current,
       method,
       params,
-    };
+      signal,
+    );
+  }
+  const sendSpotifyCommand = useCallback(requestSpotify, [
+    wsConnected,
+    deviceConnected,
+  ]);
 
-    const timeoutId = setTimeout(() => {
-      if (pendingRequestsRef.current.has(messageId)) {
-        pendingRequestsRef.current.delete(messageId);
-        reject(new Error("Request timeout"));
-      }
-    }, 30000);
-
-    const abortHandler = () => {
-      if (pendingRequestsRef.current.has(messageId)) {
-        clearTimeout(timeoutId);
-        pendingRequestsRef.current.delete(messageId);
-        reject(new Error("Request cancelled"));
-      }
-    };
-
-    if (signal) {
-      signal.addEventListener("abort", abortHandler);
-    }
-
-    pendingRequestsRef.current.set(messageId, {
-      resolve: (value) => {
-        clearTimeout(timeoutId);
-        if (signal) {
-          signal.removeEventListener("abort", abortHandler);
-        }
-        resolve(value);
-      },
-      reject: (reason) => {
-        clearTimeout(timeoutId);
-        if (signal) {
-          signal.removeEventListener("abort", abortHandler);
-        }
-        reject(reason);
-      },
-    });
-
-    try {
-      ws.send(JSON.stringify(message));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`WebSocket send failed: ${message}`);
-      clearTimeout(timeoutId);
-      if (signal) {
-        signal.removeEventListener("abort", abortHandler);
-      }
-      reject(err);
-      pendingRequestsRef.current.delete(messageId);
-    }
-  };
-
-  const handleSpotifyResponse = useCallback((data) => {
+  const handleSpotifyResponse = useCallback((data: WsResponse) => {
     if ((data.type === "response" || data.type === "error") && data.id) {
       const messageId = data.id;
       const pendingRequest = pendingRequestsRef.current.get(messageId);
@@ -371,12 +270,17 @@ export function useSpotifyWebSocket() {
             new Error(
               typeof data.error === "string"
                 ? data.error
-                : data.error.message || "Spotify command failed",
+                : getErrorMessage(data.error) || "Spotify command failed",
             ),
           );
         } else {
           let result = data.result;
-          if (result && typeof result === "object" && result.result) {
+          if (
+            result &&
+            typeof result === "object" &&
+            "result" in result &&
+            result.result
+          ) {
             result = result.result;
           }
           pendingRequest.resolve(result);
@@ -422,7 +326,7 @@ export function useSpotifyWebSocket() {
         return result;
       } catch (err) {
         if (!signal?.aborted) {
-          setError(err.message);
+          setError(getErrorMessage(err));
         }
         throw err;
       } finally {
@@ -433,13 +337,18 @@ export function useSpotifyWebSocket() {
   );
 
   const playTrack = useCallback(
-    async (trackUri, contextUri = null, uris = null, deviceId = null) => {
+    async (
+      trackUri: string | null,
+      contextUri: string | null = null,
+      uris: string[] | null = null,
+      deviceId: string | null = null,
+    ) => {
       try {
         setIsLoading(true);
         setError(null);
 
         /** @type {SpotifyPlayerPlayRequest} */
-        const params = {};
+        const params: PlayParams = {};
         if (contextUri) {
           params.context_uri = contextUri;
           if (trackUri) {
@@ -457,7 +366,7 @@ export function useSpotifyWebSocket() {
         const result = await sendSpotifyCommand("spotify.player.play", params);
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -467,13 +376,17 @@ export function useSpotifyWebSocket() {
   );
 
   const playTrackAtPosition = useCallback(
-    async (contextUri, position, deviceId = null) => {
+    async (
+      contextUri: string,
+      position: number,
+      deviceId: string | null = null,
+    ) => {
       try {
         setIsLoading(true);
         setError(null);
 
         /** @type {SpotifyPlayerPlayRequest} */
-        const params = {
+        const params: PlayParams = {
           context_uri: contextUri,
           offset: { position },
         };
@@ -482,10 +395,10 @@ export function useSpotifyWebSocket() {
           params.device_id = deviceId;
         }
 
-        const result = await sendSpotifyCommand("spotify.player.play", params);
-        return result;
+        await sendSpotifyCommand("spotify.player.play", params);
+        return true;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -501,7 +414,7 @@ export function useSpotifyWebSocket() {
       const result = await sendSpotifyCommand("spotify.player.pause");
       return result;
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err));
       throw err;
     } finally {
       setIsLoading(false);
@@ -515,7 +428,7 @@ export function useSpotifyWebSocket() {
       const result = await sendSpotifyCommand("spotify.player.next");
       return result;
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err));
       throw err;
     } finally {
       setIsLoading(false);
@@ -529,7 +442,7 @@ export function useSpotifyWebSocket() {
       const result = await sendSpotifyCommand("spotify.player.previous");
       return result;
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err));
       throw err;
     } finally {
       setIsLoading(false);
@@ -537,7 +450,7 @@ export function useSpotifyWebSocket() {
   }, [sendSpotifyCommand]);
 
   const seekToPosition = useCallback(
-    async (positionMs) => {
+    async (positionMs: number) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -548,7 +461,7 @@ export function useSpotifyWebSocket() {
         const result = await sendSpotifyCommand("spotify.player.seek", params);
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -558,7 +471,7 @@ export function useSpotifyWebSocket() {
   );
 
   const setVolume = useCallback(
-    async (volumePercent) => {
+    async (volumePercent: number) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -572,7 +485,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -582,7 +495,7 @@ export function useSpotifyWebSocket() {
   );
 
   const toggleShuffle = useCallback(
-    async (state) => {
+    async (state: boolean) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -594,7 +507,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -604,7 +517,7 @@ export function useSpotifyWebSocket() {
   );
 
   const setRepeatMode = useCallback(
-    async (state) => {
+    async (state: "off" | "track" | "context") => {
       try {
         setIsLoading(true);
         setError(null);
@@ -618,7 +531,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -628,7 +541,7 @@ export function useSpotifyWebSocket() {
   );
 
   const transferPlayback = useCallback(
-    async (deviceId, shouldPlay = false) => {
+    async (deviceId: string, shouldPlay = false) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -643,7 +556,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -657,13 +570,9 @@ export function useSpotifyWebSocket() {
       setIsLoading(true);
       setError(null);
       const result = await sendSpotifyCommand("spotify.devices");
-      if (result && result.devices && typeof result.devices === "object") {
-        const devicesArray = Object.values(result.devices);
-        return { devices: devicesArray };
-      }
-      return result;
+      return { devices: normalizeSpotifyDevices(result) };
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err));
       throw err;
     } finally {
       setIsLoading(false);
@@ -671,7 +580,10 @@ export function useSpotifyWebSocket() {
   }, [sendSpotifyCommand]);
 
   const getUserPlaylists = useCallback(
-    async (params = { limit: 5 }, signal: AbortSignal | null = null) => {
+    async (
+      params: PageParams = { limit: 5 },
+      signal: AbortSignal | null = null,
+    ) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -684,7 +596,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -694,7 +606,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getUserTopTracks = useCallback(
-    async (params = { limit: 5, time_range: "medium_term" }) => {
+    async (params: PageParams = { limit: 5, time_range: "medium_term" }) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -706,7 +618,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -716,7 +628,10 @@ export function useSpotifyWebSocket() {
   );
 
   const getUserTopArtists = useCallback(
-    async (params = { limit: 5 }, signal: AbortSignal | null = null) => {
+    async (
+      params: PageParams = { limit: 5 },
+      signal: AbortSignal | null = null,
+    ) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -729,7 +644,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -750,7 +665,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -760,7 +675,10 @@ export function useSpotifyWebSocket() {
   );
 
   const getUserTracks = useCallback(
-    async (params = { limit: 5 }, signal: AbortSignal | null = null) => {
+    async (
+      params: PageParams = { limit: 5 },
+      signal: AbortSignal | null = null,
+    ) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -771,7 +689,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -781,7 +699,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getRecentlyPlayed = useCallback(
-    async (params = {}, signal: AbortSignal | null = null) => {
+    async (params: PageParams = {}, signal: AbortSignal | null = null) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -795,7 +713,7 @@ export function useSpotifyWebSocket() {
 
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -805,7 +723,7 @@ export function useSpotifyWebSocket() {
   );
 
   const checkIsTrackSaved = useCallback(
-    async (trackId) => {
+    async (trackId: string) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -817,12 +735,12 @@ export function useSpotifyWebSocket() {
           "spotify.me.tracks.contains",
           params,
         );
-        if (result && result.results) {
+        if (!Array.isArray(result) && result?.results) {
           return result.results;
         }
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -832,7 +750,7 @@ export function useSpotifyWebSocket() {
   );
 
   const saveTrack = useCallback(
-    async (trackId) => {
+    async (trackId: string) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -846,7 +764,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -856,7 +774,7 @@ export function useSpotifyWebSocket() {
   );
 
   const removeTrack = useCallback(
-    async (trackId) => {
+    async (trackId: string) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -870,7 +788,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -880,7 +798,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getArtist = useCallback(
-    async (artistId) => {
+    async (artistId: string) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -889,7 +807,7 @@ export function useSpotifyWebSocket() {
         const result = await sendSpotifyCommand("spotify.artist.get", params);
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -899,7 +817,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getArtistTopTracks = useCallback(
-    async (artistId) => {
+    async (artistId: string) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -911,7 +829,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -921,7 +839,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getAlbum = useCallback(
-    async (albumId) => {
+    async (albumId: string) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -930,7 +848,7 @@ export function useSpotifyWebSocket() {
         const result = await sendSpotifyCommand("spotify.album.get", params);
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -940,7 +858,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getAlbumTracks = useCallback(
-    async (albumId, params = {}) => {
+    async (albumId: string, params: PageParams = {}) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -956,7 +874,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -966,12 +884,18 @@ export function useSpotifyWebSocket() {
   );
 
   const getPlaylist = useCallback(
-    async (playlistId, fields = null, signal: AbortSignal | null = null) => {
+    async (
+      playlistId: string,
+      fields: string | null = null,
+      signal: AbortSignal | null = null,
+    ) => {
       try {
         setIsLoading(true);
         setError(null);
         /** @type {SpotifyPlaylistGetRequest} */
-        const params = { contentId: playlistId };
+        const params: { contentId: string; fields?: string } = {
+          contentId: playlistId,
+        };
         if (fields) {
           params.fields = fields;
         }
@@ -982,7 +906,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -992,7 +916,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getPlaylistTracks = useCallback(
-    async (playlistId, params = {}) => {
+    async (playlistId: string, params: PageParams = {}) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -1008,7 +932,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -1018,7 +942,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getShow = useCallback(
-    async (showId) => {
+    async (showId: string) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -1027,7 +951,7 @@ export function useSpotifyWebSocket() {
         const result = await sendSpotifyCommand("spotify.show.get", params);
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -1037,7 +961,7 @@ export function useSpotifyWebSocket() {
   );
 
   const getShowEpisodes = useCallback(
-    async (showId, params = { limit: 5 }) => {
+    async (showId: string, params: PageParams = { limit: 5 }) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -1052,7 +976,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -1062,7 +986,10 @@ export function useSpotifyWebSocket() {
   );
 
   const getUserShows = useCallback(
-    async (params = { limit: 5 }, signal: AbortSignal | null = null) => {
+    async (
+      params: PageParams = { limit: 5 },
+      signal: AbortSignal | null = null,
+    ) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -1075,7 +1002,7 @@ export function useSpotifyWebSocket() {
         );
         return result;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         throw err;
       } finally {
         setIsLoading(false);
@@ -1094,47 +1021,12 @@ export function useSpotifyWebSocket() {
         return { data: localFallback, content_type: "image/webp" };
       }
 
-      const timeoutError = new Error("Spotify image fetch timed out");
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-      /** @type {SpotifyImageFetchRequest} */
-      const params = { url };
-      const fetchPromise = sendSpotifyCommand(
-        "spotify.image.fetch",
-        params,
+      return withSpotifyImageDeadline(
+        (requestSignal) =>
+          sendSpotifyCommand("spotify.image.fetch", { url }, requestSignal),
         signal,
+        SPOTIFY_IMAGE_FETCH_TIMEOUT_MS,
       );
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(timeoutError);
-        }, SPOTIFY_IMAGE_FETCH_TIMEOUT_MS);
-      });
-
-      const abortPromise = signal
-        ? new Promise<never>((_, reject) => {
-            const abortHandler = () => {
-              reject(new Error("Request cancelled"));
-            };
-            signal.addEventListener("abort", abortHandler, { once: true });
-          })
-        : null;
-
-      try {
-        const promises = abortPromise
-          ? [fetchPromise, timeoutPromise, abortPromise]
-          : [fetchPromise, timeoutPromise];
-        const result = await Promise.race(promises);
-        return result;
-      } catch (err) {
-        if (err === timeoutError) {
-          fetchPromise.catch(() => {});
-        }
-        throw err;
-      } finally {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
-      }
     },
     [sendSpotifyCommand],
   );

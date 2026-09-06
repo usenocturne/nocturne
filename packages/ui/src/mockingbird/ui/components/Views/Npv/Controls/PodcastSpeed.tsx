@@ -14,7 +14,7 @@ import ControlButton from "./ControlButton";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
 
-const getSpeedIcon = (podcastSpeed) => {
+const getSpeedIcon = (podcastSpeed: number) => {
   switch (podcastSpeed) {
     case 0.5:
       return <IconPlaybackSpeed0Point5X48 />;

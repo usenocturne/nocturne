@@ -39,7 +39,12 @@ import {
   SAVE_TO_COLLECTION_EPISODE,
 } from "./constants";
 
-const VoiceConfirmation = ({ intent, action }: UiComponentProps) => {
+interface VoiceConfirmationProps {
+  intent: string | null;
+  action?: string | null;
+}
+
+const VoiceConfirmation = ({ intent, action }: VoiceConfirmationProps) => {
   switch (intent) {
     case THUMBS_UP_INTENT:
     case FOLLOW_INTENT:

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import styles from "./Banner.module.scss";
 import Type from "../Type/Type";
 import { transitionDurationMs } from "../../../styles/Variables";
@@ -17,7 +18,13 @@ const Banner = ({
   infoText,
   colorStyle = "information",
   children,
-}: UiComponentProps) => {
+}: {
+  show?: boolean;
+  icon?: ReactNode;
+  infoText?: ReactNode;
+  colorStyle?: "information" | "confirmation" | "unavailable";
+  children?: ReactNode;
+}) => {
   return (
     <CSSTransition
       in={show}

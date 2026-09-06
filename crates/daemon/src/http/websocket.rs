@@ -4,7 +4,7 @@ use crate::hardware::ImageCache;
 use crate::ota::slots;
 use crate::system::ab;
 use bytes::Bytes;
-use futures::{SinkExt, StreamExt};
+use futures::{Sink, SinkExt, StreamExt};
 use libnocturne::generated::bluetooth::*;
 use libnocturne::generated::device::*;
 use libnocturne::generated::media_control::MediaNowPlayingUpdateEvent;
@@ -15,11 +15,16 @@ use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
+
+const CLIENT_QUEUE_CAPACITY: usize = 64;
+const SOCKET_WRITE_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -48,9 +53,45 @@ pub enum WebSocketMessage {
 
 pub struct WebSocketConnection {
     id: String,
-    #[allow(dead_code)]
     addr: SocketAddr,
-    tx: mpsc::UnboundedSender<WebSocketMessage>,
+    tx: mpsc::Sender<WebSocketMessage>,
+    disconnect: CancellationToken,
+}
+
+impl WebSocketConnection {
+    fn enqueue(&self, message: WebSocketMessage) {
+        if self.disconnect.is_cancelled() {
+            return;
+        }
+        if let Err(error) = self.tx.try_send(message) {
+            warn!(connection_id = %self.id, address = %self.addr, %error,
+                "Disconnecting WebSocket client whose outbound queue cannot accept a message");
+            self.disconnect.cancel();
+        }
+    }
+}
+
+async fn send_websocket_message<S>(
+    sender: &mut S,
+    message: Message,
+    disconnect: &CancellationToken,
+    write_timeout: Duration,
+) -> Result<()>
+where
+    S: Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    tokio::select! {
+        biased;
+        _ = disconnect.cancelled() => Err(std::io::Error::new(
+            std::io::ErrorKind::ConnectionAborted, "WebSocket client disconnected after queue overflow"
+        ).into()),
+        result = tokio::time::timeout(write_timeout, sender.send(message)) => {
+            result.map_err(|_| std::io::Error::new(
+                std::io::ErrorKind::TimedOut, "WebSocket write timed out"
+            ))??;
+            Ok(())
+        }
+    }
 }
 
 fn playback_active_from_now_playing(data: &serde_json::Value) -> Option<bool> {
@@ -582,12 +623,7 @@ impl WebSocketServer {
             };
 
             for conn in connections.values() {
-                if let Err(e) = conn.tx.send(response.clone()) {
-                    warn!(
-                        "Failed to send cancelled response to WebSocket connection {}: {}",
-                        conn.id, e
-                    );
-                }
+                conn.enqueue(response.clone());
             }
 
             debug!(
@@ -622,12 +658,14 @@ impl WebSocketServer {
             connection_id, addr
         );
 
-        let (tx, rx) = mpsc::unbounded_channel();
+        let (tx, rx) = mpsc::channel(CLIENT_QUEUE_CAPACITY);
+        let disconnect = CancellationToken::new();
 
         let connection = WebSocketConnection {
             id: connection_id.clone(),
             addr,
             tx,
+            disconnect: disconnect.clone(),
         };
 
         {
@@ -642,7 +680,7 @@ impl WebSocketServer {
             );
             let connections = self.connections.read().await;
             if let Some(conn) = connections.get(&connection_id) {
-                let _ = conn.tx.send(WebSocketMessage::Event {
+                conn.enqueue(WebSocketMessage::Event {
                     topic: "app.ready".to_string(),
                     data: active_app.data,
                     server_timestamp_ms: None,
@@ -657,7 +695,7 @@ impl WebSocketServer {
             );
             let connections = self.connections.read().await;
             if let Some(conn) = connections.get(&connection_id) {
-                let _ = conn.tx.send(WebSocketMessage::Event {
+                conn.enqueue(WebSocketMessage::Event {
                     topic: "voice.wakeword.state".to_string(),
                     data: serde_json::to_value(VoiceWakewordStateEvent { muted })
                         .expect("generated voice wakeword state event should serialize"),
@@ -667,7 +705,7 @@ impl WebSocketServer {
         }
 
         let result = self
-            .handle_websocket_messages(ws_stream, connection_id.clone(), rx)
+            .handle_websocket_messages(ws_stream, connection_id.clone(), rx, disconnect)
             .await;
 
         {
@@ -686,12 +724,15 @@ impl WebSocketServer {
         &self,
         ws_stream: WebSocketStream<TcpStream>,
         connection_id: String,
-        mut outbound_rx: mpsc::UnboundedReceiver<WebSocketMessage>,
+        mut outbound_rx: mpsc::Receiver<WebSocketMessage>,
+        disconnect: CancellationToken,
     ) -> Result<()> {
         let (mut ws_sender, mut ws_receiver) = ws_stream.split();
 
         loop {
             tokio::select! {
+                biased;
+                _ = disconnect.cancelled() => break,
                 msg = ws_receiver.next() => {
                     match msg {
                         Some(Ok(Message::Text(text))) => {
@@ -701,9 +742,8 @@ impl WebSocketServer {
                                     id: "unknown".to_string(),
                                     error: e.to_string(),
                                 };
-                                if let Ok(json) = serde_json::to_string(&error_msg) {
-                                    let _ = ws_sender.send(Message::Text(json)).await;
-                                }
+                                let json = serde_json::to_string(&error_msg)?;
+                                send_websocket_message(&mut ws_sender, Message::Text(json), &disconnect, SOCKET_WRITE_TIMEOUT).await?;
                             }
                         }
                         Some(Ok(Message::Close(_))) => {
@@ -724,12 +764,8 @@ impl WebSocketServer {
                 outbound_msg = outbound_rx.recv() => {
                     match outbound_msg {
                         Some(msg) => {
-                            if let Ok(json) = serde_json::to_string(&msg) {
-                                if let Err(e) = ws_sender.send(Message::Text(json)).await {
-                                    warn!("Failed to send WebSocket message: {}", e);
-                                    break;
-                                }
-                            }
+                            let json = serde_json::to_string(&msg)?;
+                            send_websocket_message(&mut ws_sender, Message::Text(json), &disconnect, SOCKET_WRITE_TIMEOUT).await?;
                         }
                         None => break,
                     }
@@ -1181,7 +1217,7 @@ impl WebSocketServer {
                             let msg = WebSocketMessage::Error { id, error: e };
                             let connections = self.connections.read().await;
                             for connection in connections.values() {
-                                let _ = connection.tx.send(msg.clone());
+                                connection.enqueue(msg.clone());
                             }
                         }
                     }
@@ -1375,7 +1411,7 @@ impl WebSocketServer {
 
                     let connections = self.connections.read().await;
                     for connection in connections.values() {
-                        let _ = connection.tx.send(response.clone());
+                        connection.enqueue(response.clone());
                     }
 
                     return Ok(());
@@ -1758,12 +1794,7 @@ impl WebSocketServer {
         let connections = self.connections.read().await;
 
         for conn in connections.values() {
-            if let Err(e) = conn.tx.send(event.clone()) {
-                warn!(
-                    "Failed to send event to WebSocket connection {}: {}",
-                    conn.id, e
-                );
-            }
+            conn.enqueue(event.clone());
         }
     }
 
@@ -1775,12 +1806,7 @@ impl WebSocketServer {
 
         let connections = self.connections.read().await;
         for conn in connections.values() {
-            if let Err(e) = conn.tx.send(response.clone()) {
-                warn!(
-                    "Failed to send response to WebSocket connection {}: {}",
-                    conn.id, e
-                );
-            }
+            conn.enqueue(response.clone());
         }
     }
 
@@ -1792,12 +1818,7 @@ impl WebSocketServer {
 
         let connections = self.connections.read().await;
         for conn in connections.values() {
-            if let Err(e) = conn.tx.send(error_msg.clone()) {
-                warn!(
-                    "Failed to send error to WebSocket connection {}: {}",
-                    conn.id, e
-                );
-            }
+            conn.enqueue(error_msg.clone());
         }
     }
 }
@@ -1805,6 +1826,102 @@ impl WebSocketServer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn full_client_queue_disconnects_only_the_slow_client_and_preserves_order() {
+        let (app_tx, _app_rx) = mpsc::unbounded_channel();
+        let server = WebSocketServer::new(
+            app_tx,
+            0,
+            Arc::new(Mutex::new(ImageCache::with_dir(std::env::temp_dir()))),
+        );
+        let (slow_tx, mut slow_rx) = mpsc::channel(2);
+        let (fast_tx, mut fast_rx) = mpsc::channel(2);
+        let slow_disconnect = CancellationToken::new();
+        let fast_disconnect = CancellationToken::new();
+        for (id, tx, disconnect) in [
+            ("slow", slow_tx, slow_disconnect.clone()),
+            ("fast", fast_tx, fast_disconnect.clone()),
+        ] {
+            server.connections.write().await.insert(
+                id.into(),
+                WebSocketConnection {
+                    id: id.into(),
+                    addr: "127.0.0.1:1234".parse().unwrap(),
+                    tx,
+                    disconnect,
+                },
+            );
+        }
+        for id in 0..4 {
+            server
+                .send_response(id.to_string(), serde_json::json!({"sequence": id}))
+                .await;
+            let WebSocketMessage::Response { id: received, .. } = fast_rx.recv().await.unwrap()
+            else {
+                panic!("expected ordered response");
+            };
+            assert_eq!(received, id.to_string());
+        }
+        assert!(slow_disconnect.is_cancelled());
+        assert!(!fast_disconnect.is_cancelled());
+        for expected in ["0", "1"] {
+            let WebSocketMessage::Response { id, .. } = slow_rx.try_recv().unwrap() else {
+                panic!("expected queued response");
+            };
+            assert_eq!(id, expected);
+        }
+        assert!(slow_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn stalled_socket_write_times_out() {
+        let (transport, _unread_peer) = tokio::io::duplex(64);
+        let mut socket = WebSocketStream::from_raw_socket(
+            transport,
+            tokio_tungstenite::tungstenite::protocol::Role::Server,
+            None,
+        )
+        .await;
+        let error = send_websocket_message(
+            &mut socket,
+            Message::Text("x".repeat(16 * 1024)),
+            &CancellationToken::new(),
+            Duration::from_millis(20),
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, crate::error::NocturnedError::Io(error)
+            if error.kind() == std::io::ErrorKind::TimedOut));
+    }
+
+    #[tokio::test]
+    async fn queue_disconnect_interrupts_a_stalled_socket_write() {
+        let (transport, _unread_peer) = tokio::io::duplex(64);
+        let mut socket = WebSocketStream::from_raw_socket(
+            transport,
+            tokio_tungstenite::tungstenite::protocol::Role::Server,
+            None,
+        )
+        .await;
+        let disconnect = CancellationToken::new();
+        let cancel = disconnect.clone();
+        let cancel_task = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+            cancel.cancel();
+        });
+        let error = send_websocket_message(
+            &mut socket,
+            Message::Text("x".repeat(16 * 1024)),
+            &disconnect,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap_err();
+        cancel_task.await.unwrap();
+        assert!(matches!(error, crate::error::NocturnedError::Io(error)
+            if error.kind() == std::io::ErrorKind::ConnectionAborted));
+    }
 
     const LEGACY_CONNECTOR_METHODS: [(&str, &str); 6] = [
         ("spotify.artist.topTracks", "spotify.artist.top_tracks"),

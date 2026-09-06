@@ -1,10 +1,19 @@
+import type { SectionProps, PlayingStateMap, LibraryData } from "./contracts";
+import type { SpotifyPlaylist } from "../../types";
 import React, { useMemo } from "react";
 import SwiperCarousel from "../../components/common/navigation/SwiperCarousel";
 import SpotifyImage from "../../components/common/SpotifyImage";
 import { AlertCircleIcon } from "../../components/common/icons";
 
+interface RadioSectionProps extends SectionProps {
+  radioMixes: LibraryData["radioMixes"];
+  playingStateMap: PlayingStateMap;
+  onPlayDJMix: (deviceId?: string | null) => void;
+  currentPlaybackDeviceId?: string | null;
+}
+
 const CARD_SIZE_STYLE = { width: 280, height: 280 };
-const DJ_ITEM = { id: "dj-playlist", type: "dj", name: "DJ" };
+const DJ_ITEM: SpotifyPlaylist = { id: "dj-playlist", type: "dj", name: "DJ" };
 
 function RadioSection({
   isSpotifySkipped,
@@ -15,7 +24,7 @@ function RadioSection({
   onPlayDJMix,
   onCardClick,
   currentPlaybackDeviceId,
-}: UiComponentProps) {
+}: RadioSectionProps) {
   const radioItems = useMemo(() => {
     const availableMixes = isLoading.radioMixes ? [] : radioMixes;
     return [DJ_ITEM, ...availableMixes];
@@ -32,11 +41,11 @@ function RadioSection({
     );
   }
 
-  const isPlayingMix = (mix) => {
+  const isPlayingMix = (mix: SpotifyPlaylist) => {
     if (mix && mix.uri) {
       return playingStateMap.mixUri === mix.uri;
     }
-    if (mix.id.startsWith("spotify-")) {
+    if (mix.id?.startsWith("spotify-")) {
       const spotifyMix = radioMixes.find(
         (m) => m.id === mix.id && m.type === "spotify-radio",
       );
@@ -52,7 +61,7 @@ function RadioSection({
     onPlayDJMix(currentPlaybackDeviceId);
   };
 
-  const handleItemSelect = (index) => {
+  const handleItemSelect = (index: number) => {
     if (index === 0) {
       handleDJClick();
       return;
@@ -60,7 +69,7 @@ function RadioSection({
     const adjustedIndex = index - 1;
     if (adjustedIndex >= 0 && adjustedIndex < radioMixes.length) {
       const mix = radioMixes[adjustedIndex];
-      onCardClick(mix.id, "mix");
+      mix.id && onCardClick(mix.id, "mix");
     }
   };
 
@@ -117,7 +126,7 @@ function RadioSection({
             <div
               style={CARD_SIZE_STYLE}
               className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-              onClick={() => onCardClick(mix.id, "mix")}
+              onClick={() => mix.id && onCardClick(mix.id, "mix")}
             >
               {mix.type === "static" && mix.images?.[0]?.url ? (
                 <img
@@ -125,7 +134,7 @@ function RadioSection({
                   alt={`${mix.name} Cover`}
                   className="w-full h-full object-cover rounded-[12px]"
                 />
-              ) : mix.images?.length > 0 ? (
+              ) : (mix.images?.length ?? 0) > 0 ? (
                 <SpotifyImage
                   images={mix.images}
                   preferredSizeIndex={0}
@@ -139,7 +148,7 @@ function RadioSection({
             </div>
             <h4
               className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-              onClick={() => onCardClick(mix.id, "mix")}
+              onClick={() => mix.id && onCardClick(mix.id, "mix")}
             >
               {mix.name}
             </h4>
@@ -157,13 +166,13 @@ function RadioSection({
                   Now Playing
                 </>
               ) : (
-                `${mix.tracks?.total || mix.trackCount || (mix.tracks ? mix.tracks.length : 0)} Tracks`
+                `${mix.tracks?.total || mix.trackCount || (Array.isArray(mix.tracks) ? mix.tracks.length : 0)} Tracks`
               )}
             </h4>
           </div>
         );
       }}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item, index) => item.id ?? item.uri ?? index}
       getItemId={(item) => item.id}
       activeSection={activeSection}
       onItemSelect={handleItemSelect}

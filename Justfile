@@ -49,19 +49,9 @@ ui-build:
 ui-lint:
     cd packages/ui && bun run lint-check
 
-# ---- Connector (Pi OS + Bun web UI) ------------------------------------
-
-connector-dev:
-    cd packages/connector && bun install && bun run dev
-
-connector-build:
-    cd packages/connector && bun install && bun run build
-
 # ---- Image (Yocto) -----------------------------------------------------
 
-# Kick off the SWU image build. Long-running. Yocto's EXTERNALSRC points at
-# `crates/daemon/` and `packages/ui/dist/`, so make sure those are built
-# first if you want fresh contents.
+# Build the SWU image. Yocto compiles the daemon and UI inside the container.
 image-build:
     cd image && just build
 
@@ -96,10 +86,10 @@ codegen-snapshot-review:
 # ---- Workspace lint / test --------------------------------------------
 
 test:
-    cargo test --workspace
+    tools/test-workspace
 
 test-emulator:
-    cargo test --workspace --features iap2-rs/emulator
+    tools/test-workspace --features iap2-rs/emulator
 
 lint:
     @if [ "$(uname -s)" = "Linux" ]; then \

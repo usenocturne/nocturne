@@ -7,7 +7,7 @@ import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
 import ControlButton from "./ControlButton";
 
-const PreviousOrNext = ({ direction }: UiComponentProps) => {
+const PreviousOrNext = ({ direction }: { direction: string }) => {
   const { npvStore, playerStore } = useCarThingStore();
   const uiState = npvStore.controlButtonsUiState;
 

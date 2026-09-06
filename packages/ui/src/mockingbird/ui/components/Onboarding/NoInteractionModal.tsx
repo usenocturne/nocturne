@@ -3,7 +3,7 @@ import { useCarThingStore } from "../../contexts/CarThingStore";
 import { NoInteractionModalOption } from "../../stores/OnboardingStore";
 import styles from "./NoInteractionModal.module.scss";
 
-const NoInteractionModal = ({ visible }: UiComponentProps) => {
+const NoInteractionModal = ({ visible }: { visible?: boolean }) => {
   const { onboardingStore } = useCarThingStore();
 
   const continueSelected =

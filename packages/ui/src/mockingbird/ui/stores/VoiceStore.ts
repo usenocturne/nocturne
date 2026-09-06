@@ -1,3 +1,16 @@
+import {
+  isVoicePayload,
+  type VoicePayload,
+  type VoiceSessionState,
+  type VoiceResultHandler,
+} from "./VoiceModels";
+import type { VoiceShelfItem } from "./ShelfModels";
+import type { RootStore } from "./RootStore";
+import type {
+  InterappActions,
+  MiddlewareActions,
+  MiddlewareSocket,
+} from "./StoreContracts";
 import { makeAutoObservable, action } from "mobx";
 import {
   addGlobalWsListener,
@@ -66,9 +79,12 @@ const TERMINAL_TOOLS = new Set([
   "spotify_unfollow",
 ]);
 
-const NO_ICON_INTENTS = new Set([PLAY_INTENT]);
+const NO_ICON_INTENTS = new Set<string>([PLAY_INTENT]);
 
-export const VOICE_RESULT_TOOL_HANDLERS = {
+export const VOICE_RESULT_TOOL_HANDLERS: Record<
+  string,
+  VoiceResultHandler | undefined
+> = {
   spotify_search: {
     normalize: normalizeSpotifySearchResult,
     isEmpty: isEmptyVoiceResult,
@@ -81,7 +97,7 @@ export const VOICE_RESULT_TOOL_HANDLERS = {
 export const MINIMUM_THINKING_TIME_FOR_SEARCH_RESULT = 2000;
 export const PLAY_TIMEOUT_TO_NPV = 10000;
 
-function coerceBool(v) {
+function coerceBool(v: unknown) {
   if (v === true) return true;
   if (v === false) return false;
   if (typeof v === "string") {
@@ -93,7 +109,7 @@ function coerceBool(v) {
   return null;
 }
 
-function deriveSimpleIntent(tool, args) {
+function deriveSimpleIntent(tool: string, args: Record<string, unknown>) {
   if (tool === "spotify_shuffle") {
     const b = coerceBool(args?.state);
     if (b === true) return SHUFFLE_ON_INTENT;
@@ -129,7 +145,7 @@ function deriveSimpleIntent(tool, args) {
     if (!allFollowable) return null;
     return tool === "spotify_follow" ? FOLLOW_INTENT : UNFOLLOW_INTENT;
   }
-  const directMap = {
+  const directMap: Record<string, string | undefined> = {
     spotify_save_track: ADD_TO_COLLECTION_INTENT,
     spotify_play: PLAY_INTENT,
     spotify_pause: STOP_INTENT,
@@ -142,14 +158,14 @@ function deriveSimpleIntent(tool, args) {
   return directMap[tool] || null;
 }
 
-function deriveVoiceResultIntent(toolsExecutedThisSession) {
+function deriveVoiceResultIntent(toolsExecutedThisSession: Set<string>) {
   if (toolsExecutedThisSession.has("spotify_play")) {
     return PLAY_INTENT;
   }
   return SHOW_INTENT;
 }
 
-const getInitialVoiceSessionState = () => ({
+const getInitialVoiceSessionState = (): VoiceSessionState => ({
   asr: {
     transcript: "",
     isFinal: false,
@@ -166,34 +182,37 @@ const getInitialVoiceSessionState = () => ({
 });
 
 class VoiceStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   state = getInitialVoiceSessionState();
   micLevelMovingAverage = 0;
   isMicMuted = localStorage.getItem("mockingbird_mic_muted") === "true";
   isMicLocked = false;
-  microphoneLevelsSlidingWindow: UiLooseData[] = [];
-  currentSessionId = null;
-  _wsCleanup = null;
-  _appReadyCleanup = null;
-  _captureTimeoutId = null;
-  _aiTimeoutId = null;
-  _closeTimeoutId = null;
-  _micLevelIntervalId = null;
+  microphoneLevelsSlidingWindow: number[] = [];
+  currentSessionId: string | null = null;
+  _wsCleanup: (() => void) | null = null;
+  _appReadyCleanup: (() => void) | null = null;
+  _captureTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  _aiTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  _closeTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  _micLevelIntervalId: ReturnType<typeof setInterval> | null = null;
   _terminalAutoCloseActive = false;
-  _rejectedSessionIds = new Set();
-  _toolsExecutedThisSession = new Set();
-  _pendingVoicePopulation = null;
+  _rejectedSessionIds = new Set<string>();
+  _toolsExecutedThisSession = new Set<string>();
+  _pendingVoicePopulation: {
+    voiceItems: VoiceShelfItem[];
+    toolArguments: Record<string, unknown>;
+  } | null = null;
   _aiSawExecutingTool = false;
-  _voiceResultNavigateTimeoutId = null;
-  _voiceResultResetTimeoutId = null;
+  _voiceResultNavigateTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  _voiceResultResetTimeoutId: ReturnType<typeof setTimeout> | null = null;
   _pendingSessionRejection = false;
 
   constructor(
-    rootStore: UiLooseData,
-    socket: UiLooseData,
-    middlewareActions: UiLooseData,
+    rootStore: RootStore,
+    socket: MiddlewareSocket,
+    middlewareActions: MiddlewareActions,
   ) {
     this.rootStore = rootStore;
     makeAutoObservable(this, {
@@ -227,8 +246,12 @@ class VoiceStore {
       onMessage: action((event) => {
         if (event.type !== "event") return;
         const { topic, data } = event;
-        if (topic === "voice.wakeword") this.onWakeWord();
-        else if (topic === "voice.wakeword.state") this._onWakeWordState(data);
+        if (topic === "voice.wakeword") {
+          this.onWakeWord();
+          return;
+        }
+        if (!isVoicePayload(data)) return;
+        if (topic === "voice.wakeword.state") this._onWakeWordState(data);
         else if (topic === "voice.transcription") this.onTranscription(data);
         else if (topic === "ai.state") this.onAIState(data);
         else if (topic === "ai.response") this.onAIResponse(data);
@@ -303,7 +326,7 @@ class VoiceStore {
   });
 
   /** @param {VoiceWakewordStateEvent} data */
-  _onWakeWordState = action((data) => {
+  _onWakeWordState = action((data: VoicePayload) => {
     const muted = !!data?.muted;
     if (this.isMicMuted === muted) return;
     this.isMicMuted = muted;
@@ -311,7 +334,7 @@ class VoiceStore {
   });
 
   /** @param {VoiceTranscriptionEvent & {session_id?: string, sessionId?: string}} data */
-  onTranscription = action((data) => {
+  onTranscription = action((data: VoicePayload) => {
     if (this._handleLateArrivalAfterDismissal(data)) return;
     if (this._isStaleEvent(data, "transcription")) return;
     const sessionId = data.session_id || data.sessionId;
@@ -335,7 +358,7 @@ class VoiceStore {
   });
 
   /** @param {AiStateEvent & {session_id?: string, sessionId?: string}} data */
-  onAIState = action((data) => {
+  onAIState = action((data: VoicePayload) => {
     if (this._handleLateArrivalAfterDismissal(data)) return;
     const sessionId = data.session_id || data.sessionId;
     if (
@@ -404,7 +427,7 @@ class VoiceStore {
   });
 
   /** @param {AiResponseEvent & {session_id?: string, sessionId?: string}} data */
-  onAIResponse = action((data) => {
+  onAIResponse = action((data: VoicePayload) => {
     if (this._handleLateArrivalAfterDismissal(data)) return;
     if (this._isStaleEvent(data, "ai")) return;
     const text = data.message || data.text || data.response;
@@ -422,7 +445,7 @@ class VoiceStore {
   });
 
   /** @param {AiToolExecutedEvent & {tool?: string, tool_arguments?: object}} data */
-  onToolExecuted = action((data) => {
+  onToolExecuted = action((data: VoicePayload) => {
     if (this._handleLateArrivalAfterDismissal(data)) return;
     if (this._isStaleEvent(data, "ai")) return;
 
@@ -456,25 +479,31 @@ class VoiceStore {
     }
   });
 
-  _handleVoiceResultTool = action((data, handler, toolArguments) => {
-    const result = data.result;
-    const isOnboarding = this.rootStore.viewStore.isOnboarding;
+  _handleVoiceResultTool = action(
+    (
+      data: VoicePayload,
+      handler: VoiceResultHandler,
+      toolArguments: Record<string, unknown>,
+    ) => {
+      const result = data.result;
+      const isOnboarding = this.rootStore.viewStore.isOnboarding;
 
-    if (handler.isEmpty(result)) {
-      this._discardPendingVoicePopulation();
-      this.state.friendlyError = "Sorry, I couldn't find anything.";
-      if (!isOnboarding) {
-        this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
+      if (handler.isEmpty(result)) {
+        this._discardPendingVoicePopulation();
+        this.state.friendlyError = "Sorry, I couldn't find anything.";
+        if (!isOnboarding) {
+          this._scheduleClose(TERMINAL_CONFIRMATION_CLOSE_MS);
+        }
+        return;
       }
-      return;
-    }
 
-    const voiceItems = handler.normalize(result);
-    this._pendingVoicePopulation = { voiceItems, toolArguments };
-  });
+      const voiceItems = handler.normalize(result);
+      this._pendingVoicePopulation = { voiceItems, toolArguments };
+    },
+  );
 
   /** @param {AudioLevelEvent} data */
-  _onMicLevel = action((data) => {
+  _onMicLevel = action((data: VoicePayload) => {
     this.micLevelMovingAverage = data.level || 0;
 
     if (this._captureTimeoutId) {
@@ -545,7 +574,7 @@ class VoiceStore {
     this.micLevelMovingAverage = 0;
   });
 
-  goToVoiceResult = action((intent) => {
+  goToVoiceResult = action((intent: string) => {
     if (this.rootStore.shelfStore.voiceItems.length === 0) return;
     const isOnNpv = this.rootStore.viewStore.isNpv;
 
@@ -604,7 +633,7 @@ class VoiceStore {
     );
   });
 
-  _isStaleEvent(data, channel) {
+  _isStaleEvent(data: VoicePayload, channel: string) {
     const sessionId = data.session_id || data.sessionId;
     if (!sessionId) return false;
     if (this._rejectedSessionIds.has(sessionId)) return true;
@@ -623,12 +652,12 @@ class VoiceStore {
     this._rejectedSessionIds.add(this.currentSessionId);
     if (this._rejectedSessionIds.size > 20) {
       const first = this._rejectedSessionIds.values().next().value;
-      this._rejectedSessionIds.delete(first);
+      if (first !== undefined) this._rejectedSessionIds.delete(first);
     }
     this.currentSessionId = null;
   }
 
-  _handleLateArrivalAfterDismissal(data) {
+  _handleLateArrivalAfterDismissal(data: VoicePayload) {
     if (!this._pendingSessionRejection) return false;
     const sid = data?.session_id || data?.sessionId;
     if (!sid) return false;
@@ -636,7 +665,7 @@ class VoiceStore {
       this._rejectedSessionIds.add(sid);
       if (this._rejectedSessionIds.size > 20) {
         const first = this._rejectedSessionIds.values().next().value;
-        this._rejectedSessionIds.delete(first);
+        if (first !== undefined) this._rejectedSessionIds.delete(first);
       }
     }
     this._pendingSessionRejection = false;

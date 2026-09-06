@@ -1,12 +1,14 @@
-import React, { useEffect, useState, useRef, memo } from "react";
-import { useSpotifyWebSocket } from "../../../hooks/useSpotifyWebSocket";
+import { useEffect, useState, memo } from "react";
+import SpotifyImage from "../SpotifyImage";
 import {
   getActivePresetDeviceId,
   getButtonMappingValue,
 } from "../../../utils/presetStorage";
-import { imageDataStringToSource } from "../../../utils/imageSource";
-type ImageCache = Record<string, string>;
-type ImageTypes = Record<string, string | null>;
+
+type PresetArtwork = {
+  image: string | null;
+  type: string | null;
+};
 
 interface ButtonMappingOverlayProps {
   show: boolean;
@@ -17,165 +19,37 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
   show,
   activeButton: externalActiveButton,
 }: ButtonMappingOverlayProps) {
-  const [preloadedImages, setPreloadedImages] = useState<ImageCache>({});
-  const [imageTypes, setImageTypes] = useState<ImageTypes>({});
+  const [artwork, setArtwork] = useState<PresetArtwork[]>([]);
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [internalActiveButton, setInternalActiveButton] = useState<
     string | number | null | undefined
   >(null);
-  const preloadImagesCacheRef = useRef<ImageCache>({});
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const blobUrlsRef = useRef<string[]>([]);
-  const abortControllersRef = useRef(new Map<string, AbortController>());
-
-  const { fetchImage, isSpotifyReady } = useSpotifyWebSocket();
 
   useEffect(() => {
-    const preloadImages = async () => {
-      const images: ImageCache = {};
-      const types: ImageTypes = {};
-      let hasChanged = false;
+    if (!show) return;
+
+    const refresh = () => {
       const deviceId = getActivePresetDeviceId();
-
-      const promises = [1, 2, 3, 4].map(async (buttonNum) => {
-        const imageUrl = getButtonMappingValue(buttonNum, "Image", deviceId);
-        const contentType = getButtonMappingValue(buttonNum, "Type", deviceId);
-        const cacheKey = `${deviceId}:${buttonNum}`;
-
-        if (imageUrl) {
-          const isLocalImage =
-            imageUrl.startsWith("/images/") || imageUrl.startsWith("images/");
-
-          if (
-            !preloadImagesCacheRef.current[cacheKey] ||
-            preloadImagesCacheRef.current[cacheKey] !== imageUrl
-          ) {
-            if (isLocalImage) {
-              const img = new Image();
-              img.src = imageUrl;
-              preloadImagesCacheRef.current[cacheKey] = imageUrl;
-              preloadImagesCacheRef.current[`${cacheKey}:data`] = imageUrl;
-              hasChanged = true;
-              images[buttonNum] = imageUrl;
-              types[buttonNum] = contentType;
-            } else {
-              if (!isSpotifyReady) {
-                return;
-              }
-              try {
-                const abortController = new AbortController();
-                abortControllersRef.current.set(imageUrl, abortController);
-
-                const result = await fetchImage(
-                  imageUrl,
-                  abortController.signal,
-                );
-
-                abortControllersRef.current.delete(imageUrl);
-
-                if (result && result.data) {
-                  let blobUrl: string;
-                  const imageData = result.data;
-
-                  if (typeof imageData === "string") {
-                    blobUrl = imageDataStringToSource(imageData);
-                  } else if (imageData instanceof ArrayBuffer) {
-                    const blob = new Blob([imageData], { type: "image/jpeg" });
-                    blobUrl = URL.createObjectURL(blob);
-                    blobUrlsRef.current.push(blobUrl);
-                  } else if (imageData instanceof Uint8Array) {
-                    const bytes = imageData.buffer.slice(
-                      imageData.byteOffset,
-                      imageData.byteOffset + imageData.byteLength,
-                    ) as ArrayBuffer;
-                    const blob = new Blob([bytes], { type: "image/jpeg" });
-                    blobUrl = URL.createObjectURL(blob);
-                    blobUrlsRef.current.push(blobUrl);
-                  } else {
-                    blobUrl = String(imageData);
-                  }
-
-                  const img = new Image();
-                  img.src = blobUrl;
-
-                  preloadImagesCacheRef.current[cacheKey] = imageUrl;
-                  preloadImagesCacheRef.current[`${cacheKey}:data`] = blobUrl;
-                  hasChanged = true;
-                  images[buttonNum] = blobUrl;
-                  types[buttonNum] = contentType;
-                }
-              } catch (error) {
-                if (
-                  error instanceof Error &&
-                  error.message === "Request cancelled"
-                ) {
-                  return;
-                }
-                console.error(
-                  `Failed to fetch image for button ${buttonNum}:`,
-                  error,
-                );
-              }
-            }
-          } else {
-            const cachedData =
-              preloadImagesCacheRef.current[`${cacheKey}:data`];
-            if (cachedData) {
-              images[buttonNum] = cachedData;
-              types[buttonNum] = contentType;
-            }
-          }
-        }
-      });
-
-      await Promise.all(promises);
-
-      const typeKeys = new Set([
-        ...Object.keys(types),
-        ...Object.keys(imageTypes),
-      ]);
-      const typesChanged = Array.from(typeKeys).some(
-        (key) => types[key] !== imageTypes[key],
+      const next = [1, 2, 3, 4].map((button) => ({
+        image: getButtonMappingValue(button, "Image", deviceId),
+        type: getButtonMappingValue(button, "Type", deviceId),
+      }));
+      setArtwork((previous) =>
+        next.every(
+          (entry, index) =>
+            entry.image === previous[index]?.image &&
+            entry.type === previous[index]?.type,
+        )
+          ? previous
+          : next,
       );
-
-      if (
-        hasChanged ||
-        Object.keys(images).length !== Object.keys(preloadedImages).length ||
-        typesChanged
-      ) {
-        setPreloadedImages(images);
-        setImageTypes(types);
-      }
     };
 
-    preloadImages();
-
-    if (show) {
-      timerRef.current = setInterval(preloadImages, 1000);
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [show, preloadedImages, imageTypes, fetchImage, isSpotifyReady]);
-
-  useEffect(() => {
-    return () => {
-      abortControllersRef.current.forEach((controller) => {
-        controller.abort();
-      });
-      abortControllersRef.current.clear();
-
-      blobUrlsRef.current.forEach((url) => {
-        URL.revokeObjectURL(url);
-      });
-      blobUrlsRef.current = [];
-    };
-  }, []);
+    refresh();
+    const timer = setInterval(refresh, 1000);
+    return () => clearInterval(timer);
+  }, [show]);
 
   useEffect(() => {
     if (show) {
@@ -215,14 +89,11 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
           }
         >
           {[1, 2, 3, 4].map((buttonNum, index) => {
-            const image = preloadedImages[buttonNum];
-            const contentType = imageTypes[buttonNum];
+            const image = artwork[index]?.image;
+            const contentType = artwork[index]?.type;
             const isArtist = contentType === "artist";
             const isActive = String(buttonNum) === String(internalActiveButton);
-            let marginClass = "";
-            if (index === 1) marginClass = "ml-[40px]";
-            if (index === 2) marginClass = "ml-[40px]";
-            if (index === 3) marginClass = "ml-[40px]";
+            const marginClass = index > 0 ? "ml-[40px]" : "";
 
             return (
               <div key={buttonNum} className={`relative ${marginClass}`}>
@@ -242,8 +113,9 @@ const ButtonMappingOverlay = memo(function ButtonMappingOverlay({
                   </div>
                   {image && (
                     <div className="aspect-square w-full p-1 transition-all duration-300">
-                      <img
-                        src={image}
+                      <SpotifyImage
+                        images={image}
+                        priority={10}
                         alt={`Button ${buttonNum} mapping`}
                         className={`w-full h-full object-cover shadow-lg max-w-[152px] max-h-[152px] ${
                           isArtist ? "rounded-full" : "rounded-lg"

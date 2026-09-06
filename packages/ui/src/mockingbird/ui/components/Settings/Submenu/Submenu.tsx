@@ -1,3 +1,5 @@
+import type { Swiper } from "swiper";
+import type { SettingsMenuItem } from "../../../stores/SettingsStore";
 import { useCarThingStore } from "../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
@@ -19,8 +21,8 @@ const SWIPER_HEIGHT = DEVICE_HEIGHT - HEADER_HEIGHT;
 const SLIDES_PER_VIEW = SWIPER_HEIGHT / ITEM_HEIGHT;
 const OFFSET_AFTER = DEVICE_HEIGHT - HEADER_HEIGHT - ITEM_HEIGHT;
 
-const Submenu = ({ view }: UiComponentProps) => {
-  const [swiper, setSwiper] = useState(null);
+const Submenu = ({ view }: { view: SettingsMenuItem }) => {
+  const [swiper, setSwiper] = useState<Swiper | null>(null);
   const { settingsStore } = useCarThingStore();
 
   useEffect(() => {

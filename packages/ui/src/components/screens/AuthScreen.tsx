@@ -7,13 +7,21 @@ import QRCodeDisplay from "./QRCodeDisplay";
 import BluetoothDevices from "../settings/network/BluetoothDevices";
 import { useBluetooth } from "../../hooks/useNocturned";
 
+interface AuthScreenProps {
+  isLoading?: boolean;
+  error?: string | null;
+  statusMessage?: string | null;
+  subscriptionRequired?: boolean;
+  openBluetoothPairing?: boolean;
+}
+
 const AuthScreen = ({
   isLoading = false,
   error = null,
   statusMessage = null,
   subscriptionRequired = false,
   openBluetoothPairing = false,
-}: UiComponentProps) => {
+}: AuthScreenProps) => {
   const [gradientState, updateGradientColors] = useGradientState();
   const { startDiscovery, stopDiscovery } = useBluetooth();
 
@@ -28,7 +36,7 @@ const AuthScreen = ({
   );
 
   const ANIMATION_DURATION = 300;
-  const holdTimerRef = useRef(null);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef(false);
 
   useEffect(() => {
@@ -75,7 +83,7 @@ const AuthScreen = ({
   };
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.key || e.key.toLowerCase() !== "m") return;
       if (longPressTriggeredRef.current) return;
 
@@ -87,7 +95,7 @@ const AuthScreen = ({
       }
     };
 
-    const handleKeyUp = (e) => {
+    const handleKeyUp = (e: KeyboardEvent) => {
       if (!e.key || e.key.toLowerCase() !== "m") return;
 
       if (holdTimerRef.current) {
@@ -107,7 +115,7 @@ const AuthScreen = ({
       }
     };
 
-    const handleEscape = (e) => {
+    const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && showSubpage && !isAnimating) {
         navigateBack();
       }

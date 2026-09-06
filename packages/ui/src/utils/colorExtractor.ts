@@ -9,31 +9,25 @@ const FALLBACK_COLORS: ColorPalette = [
   "#1A1A1A",
 ];
 
-export function extractColorsFromImageUrl(
+export async function extractColorsFromImageUrl(
   imageUrl: string,
   fetchImageFn?: (
     imageUrl: string,
   ) => Promise<ImageFetchResult | null | undefined>,
 ): Promise<ColorPalette> {
-  return new Promise(async (resolve) => {
-    if (!fetchImageFn) {
-      resolve(extractColorsFromImage(imageUrl));
-      return;
-    }
+  if (!fetchImageFn) {
+    return extractColorsFromImage(imageUrl);
+  }
 
-    try {
-      const result = await fetchImageFn(imageUrl);
-      if (result && result.data) {
-        const colors = await extractColorsFromImageData(result.data);
-        resolve(colors);
-      } else {
-        resolve(FALLBACK_COLORS);
-      }
-    } catch (error) {
-      console.error("Error extracting colors from websocket image:", error);
-      resolve(FALLBACK_COLORS);
-    }
-  });
+  try {
+    const result = await fetchImageFn(imageUrl);
+    return result?.data
+      ? await extractColorsFromImageData(result.data)
+      : FALLBACK_COLORS;
+  } catch (error) {
+    console.error("Error extracting colors from websocket image:", error);
+    return FALLBACK_COLORS;
+  }
 }
 
 export function extractColorsFromImage(

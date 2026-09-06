@@ -1,7 +1,15 @@
+import type { SectionProps, LibraryData } from "./contracts";
+import type { SpotifyAlbum } from "../../types";
 import React from "react";
 import SwiperCarousel from "../../components/common/navigation/SwiperCarousel";
 import SpotifyImage from "../../components/common/SpotifyImage";
 import { AlertCircleIcon } from "../../components/common/icons";
+
+interface RecentsSectionProps extends SectionProps {
+  recentAlbums: LibraryData["recentAlbums"];
+  currentlyPlayingAlbumId?: string;
+  onNavigateToNowPlaying: () => void;
+}
 
 const CARD_SIZE_STYLE = { width: 280, height: 280 };
 
@@ -13,13 +21,13 @@ function RecentsSection({
   currentlyPlayingAlbumId,
   onCardClick,
   onNavigateToNowPlaying,
-}: UiComponentProps) {
-  const isEpisodeDerivedShow = (album) =>
+}: RecentsSectionProps) {
+  const isEpisodeDerivedShow = (album: SpotifyAlbum) =>
     album?.type === "show" &&
     typeof album?.uri === "string" &&
     album.uri.startsWith("spotify:episode:");
 
-  const openAlbum = (album) => {
+  const openAlbum = (album: SpotifyAlbum) => {
     if (!album || album.type === "local-track") return;
     if (isEpisodeDerivedShow(album)) {
       if (typeof onNavigateToNowPlaying === "function") {
@@ -27,7 +35,8 @@ function RecentsSection({
       }
       return;
     }
-    onCardClick(album.id, album.type === "show" ? "show" : "album");
+    if (album.id)
+      onCardClick(album.id, album.type === "show" ? "show" : "album");
   };
   if (isSpotifySkipped) {
     return (
@@ -44,7 +53,7 @@ function RecentsSection({
     return (
       <div className="flex gap-10 p-2">
         {Array(5)
-          .fill()
+          .fill(undefined)
           .map((_, index) => (
             <div key={`loading-${index}`} className="flex-shrink-0">
               <div
@@ -67,7 +76,7 @@ function RecentsSection({
     );
   }
 
-  const handleItemSelect = (index) => {
+  const handleItemSelect = (index: number) => {
     if (index !== -1 && recentAlbums[index]) {
       const album = recentAlbums[index];
       openAlbum(album);
@@ -114,7 +123,7 @@ function RecentsSection({
           </h4>
 
           {album.type === "show"
-            ? album.publisher && (
+            ? typeof album.publisher === "string" && (
                 <h4 className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]">
                   {album.publisher}
                 </h4>
@@ -122,14 +131,17 @@ function RecentsSection({
             : album.artists?.[0] && (
                 <h4
                   className="text-[32px] font-[560] text-white/60 truncate tracking-tight max-w-[280px]"
-                  onClick={() => onCardClick(album.artists[0].id, "artist")}
+                  onClick={() => {
+                    const id = album.artists?.[0]?.id;
+                    if (id) onCardClick(id, "artist");
+                  }}
                 >
-                  {album.artists.map((artist) => artist.name).join(", ")}
+                  {album.artists?.map((artist) => artist.name).join(", ")}
                 </h4>
               )}
         </div>
       )}
-      keyExtractor={(album) => album.id}
+      keyExtractor={(album, index) => album.id ?? album.uri ?? index}
       getItemId={(album) => album.id}
       activeSection={activeSection}
       currentlyPlayingId={currentlyPlayingAlbumId}

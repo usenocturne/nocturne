@@ -1,7 +1,9 @@
+import type { ComponentProps } from "react";
+import type { NowPlayingItem } from "../../../../stores/NpvModels";
 import LazyImage from "./LazyImage/LazyImage";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import { observer } from "mobx-react-lite";
-import { cloneElement, useEffect, useRef } from "react";
+import { cloneElement, isValidElement, useEffect, useRef } from "react";
 import CSSTransition from "../../../CSSTransitionCompat";
 import { TransitionGroup } from "react-transition-group";
 import { transitionDurationMs } from "../../../../styles/Variables";
@@ -13,7 +15,15 @@ const SwipeDirection = {
   RIGHT: "RIGHT",
 };
 
-const Artwork = ({ tracks, getAnimationClassNames }: UiComponentProps) => {
+const Artwork = ({
+  tracks,
+  getAnimationClassNames,
+}: {
+  tracks: NowPlayingItem[];
+  getAnimationClassNames: () => ComponentProps<
+    typeof CSSTransition
+  >["classNames"];
+}) => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.playingInfoUiState;
   const lastImageUri = useRef(uiState.currentItem.image_uri);
@@ -35,6 +45,11 @@ const Artwork = ({ tracks, getAnimationClassNames }: UiComponentProps) => {
         className={styles.artworkTransitionGroup}
         enter={doAnimate}
         childFactory={(child) => {
+          if (
+            !isValidElement<ComponentProps<typeof CSSTransition>>(child) ||
+            child.type !== CSSTransition
+          )
+            return child;
           return cloneElement(child, {
             timeout: transitionDurationMs,
             exit: doAnimate,

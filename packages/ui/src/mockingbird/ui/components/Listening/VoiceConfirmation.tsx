@@ -42,7 +42,13 @@ import {
   SAVE_TO_COLLECTION_PODCAST_ACTION,
 } from "./VoiceConfirmationActions";
 
-const VoiceConfirmation = ({ intent, action }: UiComponentProps) => {
+const VoiceConfirmation = ({
+  intent,
+  action,
+}: {
+  intent: string;
+  action?: string;
+}) => {
   switch (intent) {
     case THUMBS_UP_INTENT:
     case FOLLOW_INTENT:

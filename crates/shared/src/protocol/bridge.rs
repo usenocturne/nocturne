@@ -1,4 +1,4 @@
-use std::io::{Cursor, Read};
+use std::io::Read;
 
 use flate2::read::GzDecoder;
 use tokio_util::{
@@ -18,6 +18,9 @@ use crate::{
     },
     Priority,
 };
+
+// Headroom above the companions' 2 MB chunk-envelope limit, bounded for device memory.
+pub const MAX_FRAME_PAYLOAD_LEN: usize = 16 * 1024 * 1024;
 
 pub fn parse_nocturne_frame(
     src: &mut Bytes,
@@ -40,19 +43,21 @@ pub fn parse_nocturne_frame(
     let compression: Compression = header[3].into();
     let encoding: Encoding = header[4].into();
     let priority = Priority::from_byte(header[5]);
-    let length = u64::from_be_bytes(header[8..16].try_into().expect("16-byte slice")) as usize;
+    let total_length = frame_length(u64::from_be_bytes(
+        header[8..16].try_into().expect("16-byte slice"),
+    ))?;
+    let length = total_length - HEADER_LEN;
 
-    if src.len() < HEADER_LEN + length {
+    if src.len() < total_length {
         return Ok(None);
     }
 
     src.advance(HEADER_LEN);
     let body = src.split_to(length);
 
-    let mut decompressed: Vec<u8> = Vec::new();
+    let decompressed;
     let payload: &[u8] = if compression == Compression::Gzip {
-        let mut decoder = GzDecoder::new(Cursor::new(&body[..]));
-        decoder.read_to_end(&mut decompressed)?;
+        decompressed = decompress_payload(&body)?;
         &decompressed
     } else {
         &body
@@ -82,6 +87,41 @@ pub fn parse_nocturne_frame(
     Ok(Some(PrioritizedFrame { priority, msg }))
 }
 
+fn frame_length(payload_length: u64) -> Result<usize, EndecError> {
+    if payload_length > MAX_FRAME_PAYLOAD_LEN as u64 {
+        return Err(payload_too_large());
+    }
+    usize::try_from(payload_length)
+        .ok()
+        .and_then(|length| HEADER_LEN.checked_add(length))
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "frame length overflows usize",
+            )
+            .into()
+        })
+}
+
+fn payload_too_large() -> EndecError {
+    std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        "frame payload exceeds 16 MiB",
+    )
+    .into()
+}
+
+fn decompress_payload(body: &[u8]) -> Result<Vec<u8>, EndecError> {
+    let mut decompressed = Vec::new();
+    GzDecoder::new(body)
+        .take(MAX_FRAME_PAYLOAD_LEN as u64 + 1)
+        .read_to_end(&mut decompressed)?;
+    if decompressed.len() > MAX_FRAME_PAYLOAD_LEN {
+        return Err(payload_too_large());
+    }
+    Ok(decompressed)
+}
+
 #[derive(Debug, Default)]
 pub struct NocturneEndec {
     state: Option<EndecState>,
@@ -101,7 +141,6 @@ impl Decoder for NocturneEndec {
         if state.packet == 0 {
             if src.len() < HEADER_LEN {
                 tracing::trace!(target: "libnocturne::protocol::bridge::decoder", "not enough bytes for header (need {}, have {})", HEADER_LEN, src.len());
-                state.packet += 1;
                 return Ok(None);
             }
 
@@ -123,7 +162,7 @@ impl Decoder for NocturneEndec {
             state.encoding = src[4].into();
             state.priority = Priority::from_byte(src[5]);
             state.length = u64::from_be_bytes(src[8..16].try_into().unwrap());
-            state.total_length = HEADER_LEN + state.length as usize;
+            state.total_length = frame_length(state.length)?;
             tracing::trace!(target: "libnocturne::protocol::bridge::decoder", "message length {}, compression {:?}, encoding {:?}, priority {:?}", state.length, state.compression, state.encoding, state.priority);
         }
 
@@ -136,11 +175,10 @@ impl Decoder for NocturneEndec {
         src.advance(HEADER_LEN);
         let body = src.split_to(state.length as usize);
 
-        let mut decompressed: Vec<u8> = Vec::new();
+        let decompressed;
         let payload: &[u8] = if state.compression == Compression::Gzip {
             tracing::trace!(target: "libnocturne::protocol::bridge::decoder", "decompressing gzip data");
-            let mut decoder = GzDecoder::new(Cursor::new(&body[..]));
-            decoder.read_to_end(&mut decompressed)?;
+            decompressed = decompress_payload(&body)?;
             tracing::trace!(target: "libnocturne::protocol::bridge::decoder", "decompressed {} bytes", decompressed.len());
             &decompressed
         } else {
@@ -218,6 +256,7 @@ pub fn encode_nocturne_frame(
     tracing::trace!(target: "libnocturne::protocol::bridge::encode", "serializing message");
     let packed = rmp_serde::to_vec_named(msg).map_err(EndecError::RmpSerialization)?;
     let len = packed.len() as u64;
+    frame_length(len)?;
     tracing::trace!(target: "libnocturne::protocol::bridge::encode", "serialized to {len} bytes, priority {priority:?}");
 
     dst.put_u16(MAGIC);

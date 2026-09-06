@@ -43,7 +43,7 @@ export function IconPlaybackSpeed0Point5x(props: EncoreIconProps) {
     Icon,
     Object.assign({}, props, {
       autoMirror: autoMirror,
-      viewBox: "0 0 ".concat(closestSize.size, " ").concat(closestSize.size),
+      viewBox: `0 0 ${closestSize.size} ${closestSize.size}`,
       dangerouslySetInnerHTML: {
         __html: ""
           .concat(titleTag(props.title, props.titleId))

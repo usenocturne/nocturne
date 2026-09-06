@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import type { SpotifyPlaybackState } from "../../types";
+import type { CarThingStoreProviderProps } from "./contexts/CarThingStore";
 import React, {
   useState,
   useEffect,
@@ -32,14 +35,18 @@ function useCurrentAppReadyState() {
   return state;
 }
 
-function usePlaybackPolling(parentPlayback, appReady) {
-  const [localPlayback, setLocalPlayback] = useState(null);
-  const pollingRef = useRef(null);
+function usePlaybackPolling(
+  parentPlayback: SpotifyPlaybackState | null | undefined,
+  appReady: boolean,
+) {
+  const [localPlayback, setLocalPlayback] =
+    useState<SpotifyPlaybackState | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoppedRef = useRef(false);
 
   const poll = useCallback(async () => {
     try {
-      const data = await sendNocturneWsRequest(
+      const data = await sendNocturneWsRequest<SpotifyPlaybackState>(
         "spotify.player.state",
         {},
         { timeoutMs: 5000 },
@@ -141,31 +148,33 @@ function SplashOverlay() {
   );
 }
 
-const NightModeApplication = observer(({ children }: UiComponentProps) => {
-  const opacity = useCarThingStore().nightModeController.appOpacity;
+const NightModeApplication = observer(
+  ({ children }: { children?: ReactNode }) => {
+    const opacity = useCarThingStore().nightModeController.appOpacity;
 
-  useLayoutEffect(() => {
-    document.documentElement.style.setProperty(
-      "--mockingbird-night-opacity",
-      String(opacity),
-    );
-  }, [opacity]);
-
-  useLayoutEffect(() => {
-    document.documentElement.classList.add("mockingbird-night-mode-active");
-
-    return () => {
-      document.documentElement.classList.remove(
-        "mockingbird-night-mode-active",
-      );
-      document.documentElement.style.removeProperty(
+    useLayoutEffect(() => {
+      document.documentElement.style.setProperty(
         "--mockingbird-night-opacity",
+        String(opacity),
       );
-    };
-  }, []);
+    }, [opacity]);
 
-  return children;
-});
+    useLayoutEffect(() => {
+      document.documentElement.classList.add("mockingbird-night-mode-active");
+
+      return () => {
+        document.documentElement.classList.remove(
+          "mockingbird-night-mode-active",
+        );
+        document.documentElement.style.removeProperty(
+          "--mockingbird-night-opacity",
+        );
+      };
+    }, []);
+
+    return children;
+  },
+);
 
 export default function MockingbirdShell({
   currentPlayback: parentPlayback,
@@ -175,7 +184,7 @@ export default function MockingbirdShell({
   systemScreen,
   onTutorialComplete,
   sharedPhoneDisplaySettings,
-}: UiComponentProps) {
+}: MockingbirdShellProps) {
   const appReadyState = useCurrentAppReadyState();
   const currentPlayback = usePlaybackPolling(
     parentPlayback,
@@ -254,4 +263,12 @@ export default function MockingbirdShell({
       </div>
     </NightModeApplication>
   );
+}
+
+export interface MockingbirdShellProps extends Omit<
+  CarThingStoreProviderProps,
+  "children" | "onSeek"
+> {
+  systemScreen?: string | null;
+  onTutorialComplete?: () => void;
 }

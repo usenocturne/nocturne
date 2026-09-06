@@ -21,7 +21,7 @@ const SETTING_STORAGE_KEYS: Partial<Record<keyof SettingsState, string>> = {
 };
 
 const getStorageKey = (key: keyof SettingsState | string) =>
-  SETTING_STORAGE_KEYS[key] || key;
+  SETTING_STORAGE_KEYS[key] || String(key);
 
 const getDefaultSettingValue = (
   key: keyof SettingsState,
@@ -119,7 +119,7 @@ export function SettingsProvider({ children }: ChildrenProps) {
     Object.entries(settings).forEach(([key, value]) => {
       const storageKey = getStorageKey(key);
       if (localStorage.getItem(storageKey) === null) {
-        localStorage.setItem(storageKey, value.toString());
+        localStorage.setItem(storageKey, String(value));
       }
     });
   }, []);
@@ -142,7 +142,13 @@ export function SettingsProvider({ children }: ChildrenProps) {
         if (data?.type !== "event" || data?.topic !== "voice.wakeword.state") {
           return;
         }
-        const muted = !!data.data?.muted;
+        const payload = data.data;
+        const muted = Boolean(
+          payload &&
+          typeof payload === "object" &&
+          "muted" in payload &&
+          payload.muted,
+        );
         setSettings((prev) => {
           if (prev.micMuted === muted) return prev;
           localStorage.setItem(getStorageKey("micMuted"), String(muted));

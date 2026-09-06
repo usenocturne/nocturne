@@ -5,7 +5,7 @@ import LearnVoiceStep from "./LearnVoiceStep";
 
 const EXIT_DURATION = 1300;
 
-const LearnVoice = ({ dataReady }: UiComponentProps) => {
+const LearnVoice = ({ dataReady }: { dataReady?: boolean }) => {
   const { onboardingStore } = useCarThingStore();
   const targetStep = onboardingStore.learnVoiceStep;
 
@@ -42,7 +42,6 @@ const LearnVoice = ({ dataReady }: UiComponentProps) => {
         key={renderedStep}
         stepId={renderedStep}
         exiting={exiting}
-        dataReady={dataReady}
       />
     </div>
   );

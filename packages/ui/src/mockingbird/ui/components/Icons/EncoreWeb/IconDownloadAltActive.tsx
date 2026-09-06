@@ -1,9 +1,7 @@
+import type { MockIconProps } from "../IconProps";
 import React from "react";
 
-const IconDownloadAltActive = ({
-  className,
-  iconSize = 24,
-}: UiComponentProps) => (
+const IconDownloadAltActive = ({ className, iconSize = 24 }: MockIconProps) => (
   <svg
     width={iconSize}
     height={iconSize}

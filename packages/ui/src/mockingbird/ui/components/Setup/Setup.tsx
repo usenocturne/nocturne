@@ -3,7 +3,7 @@ import ConnectionLost from "./ConnectionLost";
 import LoginRequired from "../Modals/LoginRequired";
 import SubscriptionRequired from "../Modals/SubscriptionRequired";
 
-const Setup = ({ systemScreen }: UiComponentProps) => {
+const Setup = ({ systemScreen }: { systemScreen?: string | null }) => {
   if (systemScreen === "auth") {
     return <LoginRequired />;
   }

@@ -1,6 +1,6 @@
 import styles from "./SetupHelp.module.scss";
 
-const SetupHelp = ({ onBackToStart }: UiComponentProps) => {
+const SetupHelp = ({ onBackToStart }: { onBackToStart: () => void }) => {
   return (
     <div className={styles.screen}>
       <div className={styles.content}>

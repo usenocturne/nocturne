@@ -4,7 +4,7 @@ import Type from "../../../CarthingUIComponents/Type/Type";
 import classNames from "classnames";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 
-const PresetNumberIndicator = ({ presetNumber }: UiComponentProps) => {
+const PresetNumberIndicator = ({ presetNumber }: { presetNumber: number }) => {
   const { presetsController } = useCarThingStore();
   const uiState = presetsController.presetsUiState;
 

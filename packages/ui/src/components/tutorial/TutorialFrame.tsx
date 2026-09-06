@@ -1,6 +1,10 @@
 import React from "react";
 
-const TutorialFrame = ({ currentScreen }: UiComponentProps) => {
+interface TutorialFrameProps {
+  currentScreen: number;
+}
+
+const TutorialFrame = ({ currentScreen }: TutorialFrameProps) => {
   return (
     <>
       <style>
@@ -210,7 +214,6 @@ const TutorialFrame = ({ currentScreen }: UiComponentProps) => {
         {currentScreen === 8 && (
           <foreignObject x="190" y="680" width="1100" height="120">
             <div
-              xmlns="http://www.w3.org/1999/xhtml"
               style={{
                 borderRadius: "15px",
                 backgroundColor: "white",
@@ -258,12 +261,14 @@ const TutorialFrame = ({ currentScreen }: UiComponentProps) => {
           </>
         )}
 
-        {[
-          [182.383, "1", 0],
-          [515.383, "2", 1],
-          [851.383, "3", 2],
-          [1184.38, "4", 3],
-        ].map(([x, key, index]) => (
+        {(
+          [
+            [182.383, "1", 0],
+            [515.383, "2", 1],
+            [851.383, "3", 2],
+            [1184.38, "4", 3],
+          ] satisfies Array<[number, string, number]>
+        ).map(([x, key, index]) => (
           <g key={key} style={{ transform: `translate(${x}px, 6.02734px)` }}>
             <rect
               width="138.829"

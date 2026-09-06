@@ -8,10 +8,17 @@ import {
 import type {
   SpotifyAlbum,
   SpotifyImage,
-  SpotifyPlayback,
+  SpotifyPlaybackState as SpotifyPlayback,
   SpotifyTrack,
+  WsMessage,
 } from "../types";
 import { normalizeInlineImageSource } from "../utils/imageSource";
+import { getErrorMessage } from "../utils/helpers";
+import {
+  normalizeDealerCluster,
+  normalizePhoneMediaAttributes,
+  type PhoneMediaAttributes as NormalizedPhoneMediaAttributes,
+} from "./mediaPayload";
 
 type PhoneVolumeListener = (volumePercent: number) => void;
 type AlbumChangeEvent = {
@@ -19,7 +26,12 @@ type AlbumChangeEvent = {
   trackUri?: string | null;
   timestamp: number;
 } | null;
-type ProgressResetSignal = { at: number; progressMs: number } | null;
+type ProgressResetSignal = {
+  at?: number;
+  progressMs?: number;
+  position?: number;
+  timestamp?: number;
+} | null;
 type NowPlayingTrackLatch = { title: string; timestamp: number };
 type MediaGeneration = number | null;
 type MediaGenerationCorrelator = {
@@ -37,8 +49,8 @@ type PhoneMediaTiming = {
   timestamp: number;
 };
 type SpotifyPhoneMediaUpdate = {
-  media: PhoneMediaAttributes;
-  playback: PhoneMediaAttributes;
+  media: NormalizedPhoneMediaAttributes;
+  playback: NormalizedPhoneMediaAttributes;
   timestamp: number;
 };
 
@@ -338,7 +350,7 @@ export const isSpotifyLocalItem = (
 
 export const isCanonicalSpotifyItem = (
   item: SpotifyTrack | null | undefined,
-): boolean =>
+): item is SpotifyTrack & { uri: string } =>
   Boolean(
     item?.uri?.startsWith("spotify:") &&
     !item.is_spotify_pending &&
@@ -348,7 +360,7 @@ export const isCanonicalSpotifyItem = (
 
 export const isResolvedSpotifyItem = (
   item: SpotifyTrack | null | undefined,
-): boolean =>
+): item is SpotifyTrack & { uri: string } =>
   Boolean(
     item?.uri?.startsWith("spotify:") &&
     !item.is_spotify_pending &&
@@ -569,12 +581,16 @@ export const isSpotifyLocalImageUrl = (
     url?.startsWith("http://spotify:localfileimage:"),
   );
 
-export const normalizeImageUrl = (url: string | null | undefined) => {
+export function normalizeImageUrl(url: string): string;
+export function normalizeImageUrl(
+  url: string | null | undefined,
+): string | null | undefined;
+export function normalizeImageUrl(url: string | null | undefined) {
   if (!url) return url;
   if (isSpotifyLocalImageUrl(url)) {
     return "/images/not-playing.webp";
   }
-  const inlineSource = normalizeInlineImageSource(url);
+  const inlineSource = normalizeInlineImageSource(url) ?? url;
   if (inlineSource !== url) {
     return inlineSource;
   }
@@ -588,7 +604,7 @@ export const normalizeImageUrl = (url: string | null | undefined) => {
     return url;
   }
   return `https://${url}`;
-};
+}
 
 const getNamedArtists = (artists: SpotifyTrack["artists"]) =>
   Array.isArray(artists)
@@ -708,7 +724,7 @@ export const shouldPreserveDealerBlobArtwork = (
 ): boolean =>
   Boolean(
     previousItem?.album?.images?.[0]?.url?.startsWith("blob:") &&
-    shouldPreservePushedArtwork(previousItem, incomingItem as SpotifyTrack),
+    shouldPreservePushedArtwork(previousItem, incomingItem),
   );
 
 export const attachPushedArtwork = (
@@ -762,10 +778,10 @@ export const getDealerArtists = (
 };
 
 const normalizeImageArray = (images: SpotifyImage[] | null | undefined) => {
-  if (!images || !Array.isArray(images)) return images;
+  if (!images || !Array.isArray(images)) return images ?? undefined;
   return images.map((img) => ({
     ...img,
-    url: normalizeImageUrl(img.url),
+    url: normalizeImageUrl(img.url) ?? undefined,
   }));
 };
 
@@ -1031,7 +1047,7 @@ export function useSpotifyPlayerState() {
         currentArtworkOwner,
       ) &&
       shouldPreservePushedArtwork(
-        currentItem as SpotifyTrack | null | undefined,
+        currentItem,
         data.item as SpotifyTrack | null | undefined,
       )
         ? currentBlobUrl
@@ -1077,7 +1093,7 @@ export function useSpotifyPlayerState() {
         );
 
       let itemWithArtwork = data.item;
-      if (shouldPreservePrevBlob && data.item) {
+      if (shouldPreservePrevBlob && data.item && prevBlobArtwork) {
         if (isPendingToLocalTransition && incomingTrackUri) {
           artworkCache.set(incomingTrackUri, prevBlobArtwork);
           artworkDeviceOwners.set(
@@ -1139,8 +1155,8 @@ export function useSpotifyPlayerState() {
         const showPublisher =
           existingShow?.publisher || existingShow?.name || albumLikeName;
         const rawShowImages =
-          existingShow?.images?.length > 0
-            ? existingShow.images
+          (existingShow?.images?.length ?? 0) > 0
+            ? existingShow?.images
             : albumLikeImages;
         const normalizedShowImages = normalizeImageArray(rawShowImages) || [];
 
@@ -1148,8 +1164,8 @@ export function useSpotifyPlayerState() {
           ...itemWithArtwork,
           type: "episode",
           images:
-            itemWithArtwork?.images?.length > 0
-              ? itemWithArtwork.images
+            (itemWithArtwork?.images?.length ?? 0) > 0
+              ? itemWithArtwork?.images
               : normalizedShowImages,
           show: {
             id: showId,
@@ -1185,7 +1201,7 @@ export function useSpotifyPlayerState() {
         };
       }
 
-      const prevDuration = currentPlaybackRef.current?.item?.duration_ms;
+      const prevDuration = currentPlaybackRef.current?.item?.duration_ms ?? 0;
       const incomingDuration = itemWithArtwork?.duration_ms;
       const isSameTrack =
         itemWithArtwork?.id === currentPlaybackRef.current?.item?.id ||
@@ -1263,7 +1279,7 @@ export function useSpotifyPlayerState() {
         lastPlayedAlbumIdRef.current = currentAlbum.id;
         setAlbumChangeEvent({
           album: currentAlbum,
-          timestamp: new Date().toISOString(),
+          timestamp: Date.now(),
         });
       }
     } else if (isEpisode && data?.item) {
@@ -1418,7 +1434,7 @@ export function useSpotifyPlayerState() {
           !controller.signal.aborted &&
           startupWarmupGenerationRef.current === generation
         ) {
-          setError(err.message);
+          setError(getErrorMessage(err));
           console.error(
             "Failed to fetch player state after app became ready:",
             err,
@@ -1458,7 +1474,7 @@ export function useSpotifyPlayerState() {
   useEffect(() => {
     if (!isSpotifyReady) return;
 
-    const handlePlayerStateChanged = (data) => {
+    const handlePlayerStateChanged = (data: WsMessage) => {
       if (
         data.type === "event" &&
         (data.topic === "spotify.player.device_state_changed" ||
@@ -1468,7 +1484,10 @@ export function useSpotifyPlayerState() {
       ) {
         markPlayerEvent();
         lastDealerEventTimestamp = Date.now();
-        const payloads = data.data?.payloads || [];
+        const normalizedCluster = normalizeDealerCluster(data.data);
+        const payloads = normalizedCluster
+          ? [{ cluster: normalizedCluster }]
+          : [];
 
         if (payloads.length > 0 && payloads[0]?.cluster) {
           const cluster = payloads[0].cluster;
@@ -1513,12 +1532,11 @@ export function useSpotifyPlayerState() {
             isSpotifyLocalImageUrl(playerState.track?.metadata?.image_url);
 
           const transformedState = {
-            is_playing:
-              playerState.is_paused === false || playerState.is_paused === 0,
+            is_playing: playerState.is_paused === false,
             timestamp:
               parseInt(playerState.timestamp) ||
-              data.phone_timestamp_ms ||
-              data.server_timestamp_ms ||
+              finiteNumber(data.phone_timestamp_ms) ||
+              finiteNumber(data.server_timestamp_ms) ||
               Date.now(),
             progress_ms: parseInt(playerState.position_as_of_timestamp) || 0,
 
@@ -1567,7 +1585,7 @@ export function useSpotifyPlayerState() {
                       playerState.track.metadata.title ||
                       (currentPlaybackRef.current?.item?.uri ===
                       playerState.track.uri
-                        ? currentPlaybackRef.current.item.name
+                        ? currentPlaybackRef.current?.item?.name
                         : undefined),
                     album:
                       playerState.track.metadata.album_uri ||
@@ -1600,7 +1618,7 @@ export function useSpotifyPlayerState() {
                           ? { images: [{ url: prevBlobUrl }] }
                           : currentPlaybackRef.current?.item?.uri ===
                               playerState.track.uri
-                            ? currentPlaybackRef.current.item.album
+                            ? currentPlaybackRef.current?.item?.album
                             : {},
                     artists:
                       playerState.track.metadata.is_narration === "true" ||
@@ -1619,17 +1637,12 @@ export function useSpotifyPlayerState() {
                   }
               : null,
 
-            shuffle_state:
-              playerState.options?.shuffling_context === true ||
-              playerState.options?.shuffling_context === 1,
-            repeat_state:
-              playerState.options?.repeating_track === true ||
-              playerState.options?.repeating_track === 1
-                ? "track"
-                : playerState.options?.repeating_context === true ||
-                    playerState.options?.repeating_context === 1
-                  ? "context"
-                  : "off",
+            shuffle_state: playerState.options.shuffling_context,
+            repeat_state: playerState.options.repeating_track
+              ? "track"
+              : playerState.options.repeating_context
+                ? "context"
+                : "off",
 
             device:
               payloads[0]?.cluster?.devices &&
@@ -1695,20 +1708,26 @@ export function useSpotifyPlayerState() {
     /**
      * @param {{ type?: string, topic?: string, data?: MediaNowPlayingUpdateEvent | MediaNowPlayingArtworkEvent | MediaNowPlayingArtworkFailedEvent | PhoneVolumeUpdateEvent, server_timestamp_ms?: number }} data
      */
-    const handlePhoneMediaEvent = (data) => {
+    const handlePhoneMediaEvent = (data: WsMessage) => {
+      const body =
+        data.data && typeof data.data === "object"
+          ? (data.data as Record<string, unknown>)
+          : {};
       if (
         data.type === "event" &&
         (data.topic === "media.now_playing.update" ||
           data.topic === "media.nowPlaying.update")
       ) {
-        const media =
-          data.data?.media_item_attributes ??
-          data.data?.mediaItemAttributes ??
-          data.data?.MediaItemAttributes;
-        const playback =
-          data.data?.playback_attributes ??
-          data.data?.playbackAttributes ??
-          data.data?.PlaybackAttributes;
+        const media = normalizePhoneMediaAttributes(
+          body.media_item_attributes ??
+            body.mediaItemAttributes ??
+            body.MediaItemAttributes,
+        );
+        const playback = normalizePhoneMediaAttributes(
+          body.playback_attributes ??
+            body.playbackAttributes ??
+            body.PlaybackAttributes,
+        );
 
         if (!media || !playback) return;
 
@@ -1815,9 +1834,7 @@ export function useSpotifyPlayerState() {
           const currentItem = currentPlaybackRef.current?.item;
           const incomingTitle = media.MediaItemTitle?.trim();
           const isSameLocalTrack = Boolean(
-            isSpotifyLocalItem(
-              currentItem as SpotifyTrack | null | undefined,
-            ) &&
+            isSpotifyLocalItem(currentItem) &&
             incomingTitle &&
             currentItem?.name?.trim().toLowerCase() ===
               incomingTitle.toLowerCase(),
@@ -1881,9 +1898,7 @@ export function useSpotifyPlayerState() {
 
           const commitSpotifyPendingPlaceholder = () => {
             const currentItem = currentPlaybackRef.current?.item;
-            const hasRealSpotifyData = isResolvedSpotifyItem(
-              currentItem as SpotifyTrack | null | undefined,
-            );
+            const hasRealSpotifyData = isResolvedSpotifyItem(currentItem);
 
             if (pendingSpotifyMediaUpdate && !hasRealSpotifyData) {
               const { media: pendingMedia, playback: pendingPlayback } =
@@ -1953,9 +1968,7 @@ export function useSpotifyPlayerState() {
             spotifyFallbackTimeout = null;
           }, 10000);
 
-          const hasRealSpotifyData = isResolvedSpotifyItem(
-            currentItem as SpotifyTrack | null | undefined,
-          );
+          const hasRealSpotifyData = isResolvedSpotifyItem(currentItem);
 
           if (currentItem?.is_phone_media) {
             clearTimeout(spotifyFallbackTimeout);
@@ -1990,7 +2003,7 @@ export function useSpotifyPlayerState() {
               }
             }
 
-            const title = incomingTitle || currentItem.name;
+            const title = incomingTitle || currentItem?.name;
             const artist = media.MediaItemArtist;
             const isPlaying = playback.PlaybackStatus === "playing";
 
@@ -2216,9 +2229,9 @@ export function useSpotifyPlayerState() {
 
         beginNowPlayingUpdateWindow();
 
-        const artworkData = data.data?.data;
+        const artworkData = body.data;
 
-        if (artworkData && artworkData.trim() !== "") {
+        if (typeof artworkData === "string" && artworkData.trim() !== "") {
           const currentItem = currentPlaybackRef.current?.item;
           const artworkOwnerDeviceId =
             currentPlaybackRef.current?.device?.id || null;
@@ -2253,8 +2266,7 @@ export function useSpotifyPlayerState() {
               bytes[i] = binaryString.charCodeAt(i);
             }
 
-            const contentType =
-              data.data?.content_type ?? data.data?.contentType;
+            const contentType = body.content_type ?? body.contentType;
             const blob = new Blob([bytes], {
               type:
                 typeof contentType === "string" &&
@@ -2368,6 +2380,7 @@ export function useSpotifyPlayerState() {
             }
 
             const trackUri = artworkTargetUri;
+            const attachedArtworkUrl = phoneMediaArtworkBlobUrl;
 
             if (trackUri) {
               if (artworkCache.has(trackUri)) {
@@ -2387,7 +2400,7 @@ export function useSpotifyPlayerState() {
                     ...prevPlayback,
                     item: attachPushedArtwork(
                       prevPlayback.item,
-                      phoneMediaArtworkBlobUrl,
+                      attachedArtworkUrl,
                     ),
                   };
                   currentPlaybackRef.current = updatedPlayback;
@@ -2405,7 +2418,7 @@ export function useSpotifyPlayerState() {
                 ) {
                   return {
                     ...prevAlbum,
-                    images: [{ url: phoneMediaArtworkBlobUrl }],
+                    images: [{ url: attachedArtworkUrl }],
                   };
                 }
                 return prevAlbum;
@@ -2505,7 +2518,7 @@ export function useSpotifyPlayerState() {
         data.topic === "phone.volume.update"
       ) {
         const volumePercent = normalizePhoneVolumePercent(
-          data.data?.volume_percent ?? data.data?.volumePercent,
+          body.volume_percent ?? body.volumePercent,
         );
         if (volumePercent !== null) {
           notifyPhoneVolumeListeners(volumePercent);
@@ -2562,7 +2575,7 @@ export function useSpotifyPlayerState() {
         }
       } catch (err) {
         console.error("Error refreshing playback state:", err);
-        setError(err.message);
+        setError(getErrorMessage(err));
       }
     },
     [
@@ -2585,3 +2598,5 @@ export function useSpotifyPlayerState() {
     playerEventSequence,
   };
 }
+
+export type SpotifyPlayerStateHook = ReturnType<typeof useSpotifyPlayerState>;

@@ -3,22 +3,27 @@ import TutorialFrame from "./TutorialFrame";
 import NocturneIcon from "../common/icons/NocturneIcon";
 import { useNavigation } from "../../hooks/useNavigation";
 
+interface TutorialProps {
+  onComplete: () => void;
+  onStepChange?: (step: number) => void;
+}
+
 const TUTORIAL_HOLD_MS = 800;
 
-const Tutorial = ({ onComplete, onStepChange }: UiComponentProps) => {
+const Tutorial = ({ onComplete, onStepChange }: TutorialProps) => {
   const [currentScreen, setCurrentScreen] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isContentVisible, setIsContentVisible] = useState(true);
   const [isFrameVisible, setIsFrameVisible] = useState(false);
-  const tutorialContainerRef = useRef(null);
-  const holdTimerRef = useRef(null);
-  const skipComboTimerRef = useRef(null);
+  const tutorialContainerRef = useRef<HTMLDivElement>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipComboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipComboArmedRef = useRef(false);
   const skipComboKeysRef = useRef({ escape: false, four: false });
   const onCompleteRef = useRef(onComplete);
   const isHoldingButton = useRef(false);
   const buttonLockRef = useRef(false);
-  const lastPressedKey = useRef(null);
+  const lastPressedKey = useRef<string | null>(null);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -126,7 +131,7 @@ const Tutorial = ({ onComplete, onStepChange }: UiComponentProps) => {
     onCompleteRef.current();
   }, []);
 
-  const handleScreenTransition = (nextScreen) => {
+  const handleScreenTransition = (nextScreen: number) => {
     const currentHeader = screens[currentScreen].header;
     const nextHeader = screens[nextScreen].header;
     const headerChanging = currentHeader !== nextHeader;
@@ -164,7 +169,7 @@ const Tutorial = ({ onComplete, onStepChange }: UiComponentProps) => {
 
   useEffect(() => {
     const validPresetButtons = ["1", "2", "3", "4"];
-    const isEscapeKey = (key) => key === "Escape" || key === "Esc";
+    const isEscapeKey = (key: string) => key === "Escape" || key === "Esc";
 
     const clearHoldTimer = () => {
       if (holdTimerRef.current) {
@@ -186,13 +191,13 @@ const Tutorial = ({ onComplete, onStepChange }: UiComponentProps) => {
       skipComboKeysRef.current = { escape: false, four: false };
     };
 
-    const suppressShortcutEvent = (event) => {
+    const suppressShortcutEvent = (event: KeyboardEvent) => {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
     };
 
-    const updateSkipCombo = (event, isPressed) => {
+    const updateSkipCombo = (event: KeyboardEvent, isPressed: boolean) => {
       if (isEscapeKey(event.key)) {
         skipComboKeysRef.current.escape = isPressed;
       } else if (event.key === "4") {
@@ -240,7 +245,7 @@ const Tutorial = ({ onComplete, onStepChange }: UiComponentProps) => {
       return true;
     };
 
-    const onKeyDown = (e) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       if (updateSkipCombo(e, true)) return;
 
       if (buttonLockRef.current) return;
@@ -312,7 +317,7 @@ const Tutorial = ({ onComplete, onStepChange }: UiComponentProps) => {
       }
     };
 
-    const onKeyUp = (e) => {
+    const onKeyUp = (e: KeyboardEvent) => {
       const validPresetButtons = ["1", "2", "3", "4"];
       const skipComboWasActive =
         skipComboTimerRef.current !== null ||
@@ -374,7 +379,7 @@ const Tutorial = ({ onComplete, onStepChange }: UiComponentProps) => {
   }, [completeTutorial, currentScreen]);
 
   useEffect(() => {
-    const handleWheel = (event) => {
+    const handleWheel = (event: WheelEvent) => {
       if (
         screens[currentScreen].continueType === "scroll" &&
         event.deltaX > 0

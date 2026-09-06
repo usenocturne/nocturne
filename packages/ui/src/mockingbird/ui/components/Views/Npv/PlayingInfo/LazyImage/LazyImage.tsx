@@ -1,3 +1,4 @@
+import type { MouseEventHandler, ReactNode } from "react";
 import classNames from "classnames";
 import Placeholder from "./Placeholder/Placeholder";
 import { observer } from "mobx-react-lite";
@@ -8,7 +9,7 @@ import {
   getCachedImageUrl,
 } from "../../../../../utils/imageProxy";
 
-export const getImageBorderRadius = (uri, size) => {
+export const getImageBorderRadius = (uri: string, size: number) => {
   const podcastSize = size >= 240 ? "16px" : "8px";
 
   if (uri.includes("artist")) {
@@ -20,7 +21,7 @@ export const getImageBorderRadius = (uri, size) => {
   return "";
 };
 
-const getOuterBorderRadius = (uri, size) => {
+const getOuterBorderRadius = (uri: string, size: number) => {
   const podcastSize = size === 240 ? "24px" : "16px";
 
   if (uri.includes("artist")) {
@@ -43,7 +44,7 @@ const LazyImage = ({
   longPressing,
   innerBorder,
   isActive: outerBorder,
-}: UiComponentProps) => {
+}: LazyImageProps) => {
   const [resolvedSrc, setResolvedSrc] = useState(() =>
     getCachedImageUrl(imageId),
   );
@@ -90,7 +91,7 @@ const LazyImage = ({
     return "";
   };
 
-  const getImageTag = (image, imgSize) => {
+  const getImageTag = (image: string, imgSize: number) => {
     const imageBorderRadius = getImageBorderRadius(uri, size);
     return (
       <img
@@ -104,13 +105,13 @@ const LazyImage = ({
           [styles.image]: true,
           [styles.shaded]: longPressing,
         })}
-        src={image || imageId}
+        src={image || imageId || undefined}
         alt=""
       />
     );
   };
 
-  const getImageTemplate = (image) => {
+  const getImageTemplate = (image: string) => {
     const showInnerBorder =
       innerBorder && (uri.includes("track") || uri.includes("episode"));
     const innerBorderColor = showInnerBorder ? "black" : undefined;
@@ -137,7 +138,7 @@ const LazyImage = ({
     );
   };
 
-  const wrapComponent = (component) => {
+  const wrapComponent = (component: ReactNode) => {
     const outerBorderRadius = getOuterBorderRadius(uri, size);
     return (
       <div className={styles.imageCenter} style={{ height: `${size}px` }}>
@@ -173,3 +174,16 @@ const LazyImage = ({
 };
 
 export default observer(LazyImage);
+
+export interface LazyImageProps {
+  imageId?: string | null;
+  uri: string;
+  size: number;
+  scale?: number;
+  shouldLoad?: boolean;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  dataTestId?: string;
+  longPressing?: boolean;
+  innerBorder?: boolean;
+  isActive?: boolean;
+}

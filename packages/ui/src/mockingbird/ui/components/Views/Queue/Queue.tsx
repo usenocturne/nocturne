@@ -12,7 +12,7 @@ const Queue = () => {
   const { queueStore } = useCarThingStore();
   const uiState = queueStore.queueUiState;
 
-  const getGradientBackground = (rgbChannels) => {
+  const getGradientBackground = (rgbChannels: number[]) => {
     return `linear-gradient(180deg, rgba(0, 0, 0, ${
       uiState.showGradientBackground ? "0.8" : "1"
     }) 0%, rgba(0, 0, 0, 1) 100%), rgb(${rgbChannels.join(",")})`;

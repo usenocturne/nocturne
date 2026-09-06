@@ -1,12 +1,20 @@
 import { memo } from "react";
 
+interface VolumeOverlayProps {
+  visible: boolean;
+  animation: string;
+  displayVolume: number | null;
+  suppressFillTransition: boolean;
+  volumeIcon: import("react").ReactNode;
+}
+
 const VolumeOverlay = ({
   visible,
   animation,
   displayVolume,
   suppressFillTransition,
   volumeIcon,
-}: UiComponentProps) => {
+}: VolumeOverlayProps) => {
   const className = !visible
     ? "fixed top-[4.5rem] pointer-events-none hidden"
     : animation === "showing"

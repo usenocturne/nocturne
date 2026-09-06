@@ -19,7 +19,7 @@ const Shuffle = () => {
 
   const handleClick = () => {
     if (isDJPlaylist) {
-      spotifyControls.sendDJSignal(currentPlayback?.device?.id);
+      spotifyControls?.sendDJSignal?.(currentPlayback?.device?.id);
     } else {
       if (uiState.isShuffled) {
         uiState.handleUnshuffleClick();

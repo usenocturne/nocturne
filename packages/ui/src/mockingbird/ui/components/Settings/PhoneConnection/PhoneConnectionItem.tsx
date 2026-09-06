@@ -6,8 +6,14 @@ import classNames from "classnames";
 import pointerListenersMaker from "../../../helpers/PointerListeners";
 import { action } from "mobx";
 
-const IconMore = () => (
-  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+const IconMore = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    width="32"
+    height="32"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
     <path d="M4.5 13.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm15 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-7.5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
   </svg>
 );
@@ -18,7 +24,13 @@ const PhoneConnectionItem = ({
   isActive,
   isConnected,
   isConnecting,
-}: UiComponentProps) => {
+}: {
+  phoneName: string;
+  phoneAddress: string;
+  isActive?: boolean;
+  isConnected?: boolean;
+  isConnecting?: boolean;
+}) => {
   const { hardwareStore, phoneConnectionStore } = useCarThingStore();
   const [pressedPhoneItem, setPressedPhoneItem] = useState(false);
 

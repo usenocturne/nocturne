@@ -6,15 +6,18 @@ import styles from "./AmbientBackdrop.module.scss";
 const AmbientBackdrop = ({
   imageId,
   getBackgroundStyleAttribute,
-}: UiComponentProps) => {
-  const backdropRef = useRef(null);
+}: {
+  imageId?: string;
+  getBackgroundStyleAttribute: (colors: number[]) => string;
+}) => {
+  const backdropRef = useRef<HTMLDivElement>(null);
   const { imageStore } = useCarThingStore();
 
   if (imageId && imageId.trim()) {
     imageStore.loadColor(imageId);
   }
 
-  const currentColor = imageStore.colors.get(imageId);
+  const currentColor = imageStore.colors.get(imageId ?? "");
   let background = "rgb(26, 26, 26)";
 
   if (currentColor) {

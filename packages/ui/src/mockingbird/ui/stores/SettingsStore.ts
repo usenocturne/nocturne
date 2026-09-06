@@ -1,3 +1,6 @@
+import type { SharedPhoneDisplaySettings } from "./StoreContracts";
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable, runInAction } from "mobx";
 import {
   normalizeDeviceInfoResponse,
@@ -51,7 +54,7 @@ export const AnimationType = {
 const DIRECT_PHONE_REQUIRED_MESSAGE =
   "Connect a phone directly to change this setting.";
 
-type SettingsMenuItem = {
+export type SettingsMenuItem = {
   id: string;
   label: string;
   index: number;
@@ -66,7 +69,7 @@ type SettingsMenuItem = {
   disabled?: boolean | (() => boolean);
   disabledOffline?: boolean;
   disabledMessage?: string;
-  [key: string]: unknown;
+  animationType?: number;
 };
 
 class SettingsStore {
@@ -77,22 +80,34 @@ class SettingsStore {
   declare notificationsView: SettingsMenuItem;
   declare airVentInterferenceView: SettingsMenuItem;
   declare displayAndBrightnessView: SettingsMenuItem;
-  declare displayAndBrightnessUiState: UiLooseData;
+  declare displayAndBrightnessUiState: {
+    readonly isNightMode: boolean;
+    handleDialPress(): void;
+    handleClickToggle(): void;
+    logImpression(): void;
+  };
+  declare submenuUiState: ReturnType<SettingsStore["_createSubmenuUiState"]>;
+  declare unavailableSettingsBannerUiState: UnavailableBannerState;
   declare settings: SettingsMenuItem;
   declare viewStack: SettingsMenuItem[];
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   factoryResetConfirmationIsActive = true;
-  aboutInfo = null;
+  aboutInfo: {
+    serialNumber?: string;
+    version?: string;
+    device?: string;
+  } | null = null;
   tipsEnabled = localStorage.getItem("tipsEnabled") !== "false";
   phoneCallsEnabled = true;
   notificationsEnabled = true;
   phonePresentationLocked = false;
   phonePresentationLockedMessage = DIRECT_PHONE_REQUIRED_MESSAGE;
-  sharedSettingsUpdater: ((key: string, value: boolean) => void) | null = null;
+  sharedSettingsUpdater: SharedPhoneDisplaySettings["updateSetting"] | null =
+    null;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
 
     this.licenseView = {
@@ -345,7 +360,7 @@ class SettingsStore {
   _createSubmenuUiState() {
     const store = this;
     return {
-      isToggleOn(item) {
+      isToggleOn(item: SettingsMenuItem) {
         if (item.id === OptionsMenuItemId.PHONE_CALLS_TOGGLE) {
           return store.phoneCallsEnabled && !store.phonePresentationLocked;
         }
@@ -358,7 +373,7 @@ class SettingsStore {
         return false;
       },
 
-      getKeyValue(item) {
+      getKeyValue(item: SettingsMenuItem) {
         const info = store.aboutInfo;
         if (!info) return "...";
 
@@ -382,15 +397,15 @@ class SettingsStore {
         }
       },
 
-      handleSubmenuItemClicked(item) {
+      handleSubmenuItemClicked(item: SettingsMenuItem) {
         this.handleSubmenuItemSelected(item);
       },
 
-      handleSubmenuItemDialPressed(item) {
+      handleSubmenuItemDialPressed(item: SettingsMenuItem) {
         this.handleSubmenuItemSelected(item);
       },
 
-      handleSubmenuItemSelected(item) {
+      handleSubmenuItemSelected(item: SettingsMenuItem) {
         if (store.isSettingItemDisabled(item)) {
           store.unavailableSettingsBannerUiState.showUnavailableBanner(
             store.getSettingDisabledMessage(item),
@@ -407,20 +422,20 @@ class SettingsStore {
         }
       },
 
-      showUnavailableBanner(message) {
+      showUnavailableBanner(message?: string) {
         store.unavailableSettingsBannerUiState.showUnavailableBanner(message);
       },
     };
   }
 
   _createBannerUiState() {
-    const uiState = makeAutoObservable(
+    const uiState = makeAutoObservable<UnavailableBannerState>(
       {
         shouldShowAlert: false,
         message: "This setting is unavailable in Mockingbird UI mode.",
         _timeoutId: null,
 
-        showUnavailableBanner(message) {
+        showUnavailableBanner(message?: string) {
           if (this._timeoutId) {
             clearTimeout(this._timeoutId);
           }
@@ -503,11 +518,11 @@ class SettingsStore {
       : undefined;
   }
 
-  isMainMenuItemDisabled(disabledOffline) {
+  isMainMenuItemDisabled(disabledOffline: boolean | undefined) {
     return disabledOffline === true;
   }
 
-  gotoView(view) {
+  gotoView(view: SettingsMenuItem) {
     if (view.type === "parent") {
       this.viewStack.push(view);
     }
@@ -660,7 +675,7 @@ class SettingsStore {
     }
   }
 
-  handleMainMenuItemSelected(row) {
+  handleMainMenuItemSelected(row: SettingsMenuItem) {
     const disabled = this.isMainMenuItemDisabled(row.disabledOffline);
     if (disabled) {
       this.unavailableSettingsBannerUiState.showUnavailableBanner();
@@ -675,13 +690,13 @@ class SettingsStore {
     }
   }
 
-  handleSettingSetNewIndex(index) {
+  handleSettingSetNewIndex(index: number) {
     this.currentView.index = index;
   }
 
   handleSettingsButtonLongPress() {}
 
-  setFactoryResetConfirmationIsActive(isActive) {
+  setFactoryResetConfirmationIsActive(isActive: boolean) {
     this.factoryResetConfirmationIsActive = isActive;
   }
 
@@ -694,7 +709,9 @@ class SettingsStore {
     localStorage.setItem("tipsEnabled", this.tipsEnabled.toString());
   }
 
-  syncSharedPhoneDisplaySettings(settings) {
+  syncSharedPhoneDisplaySettings(
+    settings: SharedPhoneDisplaySettings | undefined,
+  ) {
     if (!settings) return;
     this.phoneCallsEnabled = settings.phoneCallsEnabled !== false;
     this.notificationsEnabled = settings.notificationsEnabled !== false;
@@ -710,7 +727,7 @@ class SettingsStore {
         : null;
   }
 
-  getSettingDisabledMessage(item) {
+  getSettingDisabledMessage(item: SettingsMenuItem) {
     if (
       item.id === OptionsMenuItemId.PHONE_CALLS_TOGGLE ||
       item.id === OptionsMenuItemId.NOTIFICATIONS_TOGGLE
@@ -720,13 +737,13 @@ class SettingsStore {
     return item.disabledMessage;
   }
 
-  isSettingItemDisabled(item) {
+  isSettingItemDisabled(item: SettingsMenuItem) {
     const disabled =
       typeof item.disabled === "function" ? item.disabled() : item.disabled;
     return disabled === true || item.disabledOffline === true;
   }
 
-  togglePhoneDisplaySetting(itemId) {
+  togglePhoneDisplaySetting(itemId: string) {
     if (this.phonePresentationLocked) {
       this.unavailableSettingsBannerUiState.showUnavailableBanner(
         this.phonePresentationLockedMessage,
@@ -768,13 +785,6 @@ class SettingsStore {
       /** @type {import("@schema/device").DeviceFactoryResetRequest} */
       const request = {};
       await sendNocturneWsRequest("device.factoryreset", request);
-      setTimeout(() => {
-        /** @type {import("@schema/device").DevicePowerRebootRequest} */
-        const rebootRequest = {};
-        sendNocturneWsRequest("device.power.reboot", rebootRequest).catch(
-          () => {},
-        );
-      }, 2000);
     } catch (e) {
       console.error("Factory reset failed:", e);
     }
@@ -801,10 +811,10 @@ class SettingsStore {
     }
   }
 
-  filterOutNonVisible(items) {
-    const visibleItems = [];
+  filterOutNonVisible(items: SettingsMenuItem[]): SettingsMenuItem[] {
+    const visibleItems: SettingsMenuItem[] = [];
     items.forEach((item) => {
-      if (item.visible()) {
+      if (item.visible?.() !== false) {
         const i = { ...item };
         visibleItems.push(i);
         if (i.rows) {
@@ -830,3 +840,12 @@ class SettingsStore {
 }
 
 export default SettingsStore;
+
+interface UnavailableBannerState {
+  shouldShowAlert: boolean;
+  message: string;
+  _timeoutId: ReturnType<typeof setTimeout> | null;
+  showUnavailableBanner(message?: string): void;
+  hideUnavailableBanner(): void;
+  logImpression(): void;
+}

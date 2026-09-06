@@ -1,4 +1,5 @@
-const normalizeUrl = (url) => {
+import type { SpotifyImage } from "../../../types";
+const normalizeUrl = (url: string | null | undefined) => {
   if (!url) return url;
   if (
     url.startsWith("http://") ||
@@ -11,7 +12,10 @@ const normalizeUrl = (url) => {
   return `https://${url}`;
 };
 
-export const getOptimalImageUrl = (images, displaySize) => {
+export const getOptimalImageUrl = (
+  images: SpotifyImage[] | null | undefined,
+  displaySize: number,
+) => {
   if (!images || !Array.isArray(images) || images.length === 0) {
     return null;
   }
@@ -19,7 +23,10 @@ export const getOptimalImageUrl = (images, displaySize) => {
   const needsLargeImage = displaySize > 100;
 
   if (needsLargeImage) {
-    const target = images.find((img) => img.width >= 240 && img.width <= 320);
+    const target = images.find(
+      (img) =>
+        typeof img.width === "number" && img.width >= 240 && img.width <= 320,
+    );
     return normalizeUrl(
       target?.url || images[images.length - 1]?.url || images[0]?.url,
     );
@@ -28,12 +35,19 @@ export const getOptimalImageUrl = (images, displaySize) => {
   }
 };
 
-export const getShelfImageUrl = (images) => getOptimalImageUrl(images, 248);
+export const getShelfImageUrl = (images: SpotifyImage[] | null | undefined) =>
+  getOptimalImageUrl(images, 248);
 
-export const getNpvImageUrl = (images) => getOptimalImageUrl(images, 248);
+export const getNpvImageUrl = (images: SpotifyImage[] | null | undefined) =>
+  getOptimalImageUrl(images, 248);
 
-export const getThumbnailImageUrl = (images) => getOptimalImageUrl(images, 96);
+export const getThumbnailImageUrl = (
+  images: SpotifyImage[] | null | undefined,
+) => getOptimalImageUrl(images, 96);
 
-export const getPresetImageUrl = (images) => getOptimalImageUrl(images, 168);
+export const getPresetImageUrl = (images: SpotifyImage[] | null | undefined) =>
+  getOptimalImageUrl(images, 168);
 
-export const getGradientImageUrl = (images) => getOptimalImageUrl(images, 150);
+export const getGradientImageUrl = (
+  images: SpotifyImage[] | null | undefined,
+) => getOptimalImageUrl(images, 150);

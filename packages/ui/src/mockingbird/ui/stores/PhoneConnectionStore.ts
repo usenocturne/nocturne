@@ -1,3 +1,6 @@
+import type { MockBluetoothDevice } from "./BluetoothStore";
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable, runInAction } from "mobx";
 
 export const PhoneConnectionModalView = {
@@ -13,16 +16,16 @@ export const PhoneConnectionModalView = {
 };
 
 class PhoneConnectionStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  phoneConnectionModal = undefined;
-  phoneToConnectOrForget = null;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  phoneConnectionModal: string | undefined = undefined;
+  phoneToConnectOrForget: MockBluetoothDevice | null = null;
   forgetConfirmationIsActive = true;
-  phoneConnectionContextMenuUiState;
-  _dismissTimeout = null;
+  phoneConnectionContextMenuUiState: PhoneConnectionContextMenuUiState;
+  _dismissTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(rootStore: UiLooseData) {
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     this.phoneConnectionContextMenuUiState =
       new PhoneConnectionContextMenuUiState(this);
@@ -32,7 +35,7 @@ class PhoneConnectionStore {
     });
   }
 
-  getPhoneConnectionDisplayStatus(device) {
+  getPhoneConnectionDisplayStatus(device: MockBluetoothDevice) {
     const { bluetoothStore } = this.rootStore;
     const isConnected = bluetoothStore.isDeviceConnected(device.address);
     if (isConnected) return "Connected";
@@ -45,7 +48,7 @@ class PhoneConnectionStore {
     return "Not connected";
   }
 
-  handleSelectPhoneClick(device) {
+  handleSelectPhoneClick(device: MockBluetoothDevice) {
     const { bluetoothStore } = this.rootStore;
     const isConnected = bluetoothStore.isDeviceConnected(device.address);
     if (isConnected) return;
@@ -67,7 +70,7 @@ class PhoneConnectionStore {
     }
   }
 
-  async _connectToDevice(address) {
+  async _connectToDevice(address: string) {
     const { bluetoothStore } = this.rootStore;
     const success = await bluetoothStore.connectDevice(address);
     runInAction(() => {
@@ -99,7 +102,7 @@ class PhoneConnectionStore {
     this._forgetDevice(this.phoneToConnectOrForget.address);
   }
 
-  async _forgetDevice(address) {
+  async _forgetDevice(address: string) {
     const { bluetoothStore } = this.rootStore;
     const success = await bluetoothStore.forgetDevice(address);
     runInAction(() => {
@@ -115,7 +118,7 @@ class PhoneConnectionStore {
     });
   }
 
-  setForgetConfirmationIsActive(isActive) {
+  setForgetConfirmationIsActive(isActive: boolean) {
     this.forgetConfirmationIsActive = isActive;
   }
 
@@ -131,7 +134,7 @@ class PhoneConnectionStore {
     bluetoothStore.stopDiscovery();
   }
 
-  _autoDismiss(ms) {
+  _autoDismiss(ms: number) {
     if (this._dismissTimeout) clearTimeout(this._dismissTimeout);
     this._dismissTimeout = setTimeout(() => {
       runInAction(() => {
@@ -149,9 +152,10 @@ class PhoneConnectionStore {
 }
 
 class PhoneConnectionContextMenuUiState {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare phoneConnectionStore: PhoneConnectionStore;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   phoneMenuShowing = false;
   selectedItemIndex = 0;
   phoneName = "";
@@ -160,7 +164,7 @@ class PhoneConnectionContextMenuUiState {
   displayConnectionStatus = "";
   isDialPressed = false;
 
-  constructor(phoneConnectionStore) {
+  constructor(phoneConnectionStore: PhoneConnectionStore) {
     this.phoneConnectionStore = phoneConnectionStore;
     makeAutoObservable(this, {
       phoneConnectionStore: false,
@@ -178,11 +182,11 @@ class PhoneConnectionContextMenuUiState {
     return this.menuItems[this.selectedItemIndex];
   }
 
-  isActive(index) {
+  isActive(index: number) {
     return this.selectedItemIndex === index;
   }
 
-  handleContextMenuClick(device) {
+  handleContextMenuClick(device: MockBluetoothDevice) {
     const { rootStore } = this.phoneConnectionStore;
     const { bluetoothStore } = rootStore;
     const connected = bluetoothStore.isDeviceConnected(device.address);
@@ -194,15 +198,15 @@ class PhoneConnectionContextMenuUiState {
     this.phoneMenuShowing = true;
   }
 
-  handleActionMenuItemClick(item) {
+  handleActionMenuItemClick(item: string | undefined) {
     this._executeAction(item);
   }
 
-  handleActionMenuItemDialPress(item) {
+  handleActionMenuItemDialPress(item: string | undefined) {
     this._executeAction(item);
   }
 
-  _executeAction(item) {
+  _executeAction(item: string | undefined) {
     const store = this.phoneConnectionStore;
     const device = { name: this.phoneName, address: this.phoneAddress };
 
@@ -221,7 +225,7 @@ class PhoneConnectionContextMenuUiState {
     }
   }
 
-  setNewMenuIndex(index) {
+  setNewMenuIndex(index: number) {
     if (index >= 0 && index < this.menuItems.length) {
       this.selectedItemIndex = index;
     }

@@ -1,6 +1,10 @@
+import type { MockIconProps } from "../../../../../../Icons/IconProps";
 import React from "react";
 
-const findClosestSize = (iconList, requestedSize = 24) => {
+const findClosestSize = (
+  iconList: { size: number; svgContent: string }[],
+  requestedSize = 24,
+) => {
   return (
     iconList.find((icon) => icon.size >= requestedSize) ||
     iconList[iconList.length - 1]
@@ -17,7 +21,7 @@ const Icon = ({
   desc,
   descId,
   ...props
-}: UiComponentProps) => (
+}: MockIconProps) => (
   <svg
     viewBox={viewBox}
     {...props}
@@ -25,7 +29,7 @@ const Icon = ({
   />
 );
 
-export function IconRadio(props) {
+export function IconRadio(props: MockIconProps) {
   var _props$autoMirror;
 
   var iconList = [
@@ -42,7 +46,7 @@ export function IconRadio(props) {
   ];
   var closestSize = findClosestSize(iconList, props.iconSize || 24);
 
-  var titleTag = function titleTag(title, titleId) {
+  var titleTag = function titleTag(title?: string, titleId?: string) {
     return title
       ? "<title "
           .concat(titleId ? 'id="'.concat(titleId, '"') : "", ">")
@@ -50,7 +54,7 @@ export function IconRadio(props) {
       : "";
   };
 
-  var descTag = function descTag(desc, descId) {
+  var descTag = function descTag(desc?: string, descId?: string) {
     return desc
       ? "<desc "
           .concat(descId ? 'id="'.concat(descId, '"') : "", ">")
@@ -67,7 +71,7 @@ export function IconRadio(props) {
     Icon,
     Object.assign({}, props, {
       autoMirror: autoMirror,
-      viewBox: "0 0 ".concat(closestSize.size, " ").concat(closestSize.size),
+      viewBox: `0 0 ${closestSize.size} ${closestSize.size}`,
       dangerouslySetInnerHTML: {
         __html: ""
           .concat(titleTag(props.title, props.titleId))

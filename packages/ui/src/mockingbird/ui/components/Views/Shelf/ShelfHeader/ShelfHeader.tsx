@@ -1,3 +1,7 @@
+import type {
+  ShelfHeaderItemHandle,
+  ShelfHeaderItemProps,
+} from "./ShelfHeaderItem";
 import { useEffect, useState } from "react";
 import {
   HOME_IDENTIFIER,
@@ -17,7 +21,10 @@ import ShelfHeaderItem from "./ShelfHeaderItem";
 import { observer } from "mobx-react-lite";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 
-export const CATEGORY_ICONS = {
+export const CATEGORY_ICONS: Record<
+  string,
+  { components: ShelfHeaderItemProps["icon"]; iconMargin: number } | undefined
+> = {
   [HOME_IDENTIFIER]: {
     components: {
       active: <IconHomeActive32 />,
@@ -42,7 +49,9 @@ export const CATEGORY_ICONS = {
 };
 
 const ShelfHeader = () => {
-  const [titleRefs, setTitleRefs] = useState<UiContentItem[]>([]);
+  const [titleRefs, setTitleRefs] = useState<
+    Array<ShelfHeaderItemHandle | null>
+  >([]);
   const { shelfStore } = useCarThingStore();
   const uiState = shelfStore.shelfController.headerUiState;
   const numberOfMainCategories = uiState.mainCategoriesCount;
@@ -51,7 +60,7 @@ const ShelfHeader = () => {
     setTitleRefs([]);
   }, [uiState.mainCategoriesCount]);
 
-  const addTitleRef = (index, ref) => {
+  const addTitleRef = (index: number, ref: ShelfHeaderItemHandle | null) => {
     setTitleRefs((existingRefs) => {
       const titleRef = existingRefs[index];
       if (!titleRef) {
@@ -63,14 +72,14 @@ const ShelfHeader = () => {
     });
   };
 
-  const getTitleTranslateLeft = (index) => {
+  const getTitleTranslateLeft = (index: number) => {
     return (
       titleRefs
         .slice(0, index)
         .reduce(
           (sum, titleRef) =>
-            titleRef.titleTextRef
-              ? sum + titleRef.titleTextRef.offsetWidth
+            titleRef?.titleTextRef
+              ? sum + titleRef?.titleTextRef.offsetWidth
               : sum,
           0,
         ) +

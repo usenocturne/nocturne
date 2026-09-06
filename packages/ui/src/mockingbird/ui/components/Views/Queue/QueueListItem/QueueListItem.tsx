@@ -1,3 +1,4 @@
+import type { QueueItem } from "../../../../stores/QueueStore";
 import classNames from "classnames";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
@@ -7,7 +8,13 @@ import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import LazyImage from "../../Npv/PlayingInfo/LazyImage/LazyImage";
 import Type from "../../../CarthingUIComponents/Type/Type";
 
-const QueueListItem = ({ item, isActive = false }: UiComponentProps) => {
+const QueueListItem = ({
+  item,
+  isActive = false,
+}: {
+  item: QueueItem;
+  isActive?: boolean;
+}) => {
   const [pressed, setPressed] = useState(false);
   const { queueStore } = useCarThingStore();
   const uiState = queueStore.queueUiState;

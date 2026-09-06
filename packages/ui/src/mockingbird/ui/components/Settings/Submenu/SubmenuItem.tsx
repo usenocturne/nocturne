@@ -1,3 +1,4 @@
+import type { SettingsMenuItem } from "../../../stores/SettingsStore";
 import classNames from "classnames";
 import { useCarThingStore } from "../../../contexts/CarThingStore";
 import { useState } from "react";
@@ -5,7 +6,15 @@ import pointerListenersMaker from "../../../helpers/PointerListeners";
 import styles from "./SubmenuItem.module.scss";
 import { observer } from "mobx-react-lite";
 
-const OnOrOff = ({ id, isToggleOn, active }: UiComponentProps) => (
+const OnOrOff = ({
+  id,
+  isToggleOn,
+  active,
+}: {
+  id: string;
+  isToggleOn: boolean;
+  active?: boolean;
+}) => (
   <div
     className={classNames(
       styles.onOffToggle,
@@ -17,7 +26,13 @@ const OnOrOff = ({ id, isToggleOn, active }: UiComponentProps) => (
   </div>
 );
 
-const SubmenuItem = ({ item, active }: UiComponentProps) => {
+const SubmenuItem = ({
+  item,
+  active,
+}: {
+  item: SettingsMenuItem;
+  active?: boolean;
+}) => {
   const { label, disabledOffline, type, id } = item;
   const [pressed, setPressed] = useState(false);
   const { hardwareStore, settingsStore } = useCarThingStore();

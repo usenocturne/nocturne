@@ -53,7 +53,7 @@ const calculateHue = (hex: string) => {
 
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
-  let h;
+  let h = 0;
 
   if (max === min) {
     h = 0;
@@ -164,7 +164,7 @@ const createEnhancedDarkGradient = (
   ];
 };
 
-const filterColors = (colors) => {
+const filterColors = (colors: string[]) => {
   if (!colors || colors.length === 0) return colors;
 
   const brightnessLimitedColors = colors.map((color) =>
@@ -216,7 +216,9 @@ const filterColors = (colors) => {
   }
 
   while (result.length < 4 && withBrightness.length > 0) {
-    const nextColor = withBrightness.shift().color;
+    const next = withBrightness.shift();
+    if (!next) break;
+    const nextColor = next.color;
     if (!result.includes(nextColor)) {
       result.push(nextColor);
     }
@@ -278,11 +280,13 @@ export const createGradientRequestTracker = () => {
   };
 };
 
-export function useGradientTransition(activeSection) {
+export function useGradientTransition(activeSection: string | null) {
   const { loadImage } = useImageLoader();
   const [currentGradientHexColors, setCurrentGradientHexColors] =
     useState(DEFAULT_HEX_COLORS);
-  const [sectionGradients, setSectionGradients] = useState({
+  const [sectionGradients, setSectionGradients] = useState<
+    Record<string, string[] | null>
+  >({
     recents: null,
     library: null,
     artists: null,
@@ -292,8 +296,8 @@ export function useGradientTransition(activeSection) {
   });
   const [gradientTransitionDurationMs] = useState(3000);
 
-  const lastProcessedUrlRef = useRef(null);
-  const lastProcessedSectionRef = useRef(null);
+  const lastProcessedUrlRef = useRef<string | null>(null);
+  const lastProcessedSectionRef = useRef<string | null>(null);
   const requestTrackerRef = useRef(createGradientRequestTracker());
 
   const updateGradientColors = useCallback(
@@ -380,6 +384,7 @@ export function useGradientTransition(activeSection) {
         try {
           const normalizedImageUrl =
             normalizeInlineImageSource(imageUrlOrColors);
+          if (!normalizedImageUrl) throw new Error("Image URL is empty");
           const cached = _colorCache.get(normalizedImageUrl);
           if (cached && Date.now() - cached.timestamp < COLOR_CACHE_TTL) {
             newColorsForImageSection = cached.filteredColors;
@@ -466,7 +471,7 @@ export function useGradientTransition(activeSection) {
           !imageSection ||
           imageSection === activeSection ||
           imageSection === "nowPlaying" ||
-          (activeSection === "nowPlaying" && imageSection) ||
+          (activeSection === "nowPlaying" && !!imageSection) ||
           ["album", "playlist", "artist", "mix", "liked-songs"].includes(
             imageSection,
           );

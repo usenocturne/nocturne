@@ -39,9 +39,7 @@ import UIShell, { MockingbirdPhoneCallOverlay } from "./mockingbird/UIShell";
 import { useSubscription } from "./hooks/useSubscription";
 import type {
   ActiveSection,
-  BluetoothDevice,
   ContentType,
-  PairingRequest,
   SpotifyPlayback,
   UnknownRecord,
   ViewingContent,
@@ -65,23 +63,6 @@ type GlobalButtonMappingOptions = {
   currentPlayback: SpotifyPlayback | null;
   spotifyUserId?: string | null;
 };
-
-interface BluetoothHookState {
-  devices: BluetoothDevice[];
-  pairingRequest: PairingRequest | null;
-  isConnecting: boolean;
-  showTetheringScreen: boolean;
-  lastConnectedDevice: BluetoothDevice | null;
-  connectedDevices: BluetoothDevice[];
-  activeSessionDevices: BluetoothDevice[];
-  isReconnectPending: boolean;
-  hasFetchedInitialDevices: boolean;
-  acceptPairing: () => Promise<void>;
-  denyPairing: () => Promise<void>;
-  disconnectDevice: (address: string) => void | Promise<void>;
-  enableNetworking: () => void | Promise<void>;
-  stopRetrying: () => void;
-}
 
 interface DeviceSwitcherIntent {
   trackUriToPlay?: string | null;
@@ -297,11 +278,9 @@ function useGlobalButtonMapping({
 
             if (!uris?.length) {
               try {
-                const likedTracks = await sendNocturneWsRequest(
-                  "spotify.me.tracks",
-                  { limit: 50 },
-                  { timeoutMs: 8000 },
-                );
+                const likedTracks = await sendNocturneWsRequest<{
+                  items?: Array<{ track?: { uri?: string } }>;
+                }>("spotify.me.tracks", { limit: 50 }, { timeoutMs: 8000 });
                 uris = Array.isArray(likedTracks?.items)
                   ? likedTracks.items
                       .map((item) => item?.track?.uri)
@@ -455,7 +434,7 @@ function AppContent() {
   const [playbackIntentOnDeviceSwitch, setPlaybackIntentOnDeviceSwitch] =
     useState<DeviceSwitcherIntent | null>(null);
   const [prefetchedDevices, setPrefetchedDevices] = useState<
-    BluetoothDevice[] | null
+    import("./types").SpotifyDevice[] | null
   >(null);
   const [displaySleepOverlayVisible, setDisplaySleepOverlayVisible] =
     useState(false);
@@ -580,20 +559,14 @@ function AppContent() {
   const {
     devices,
     pairingRequest,
-    isConnecting,
-    showTetheringScreen,
     lastConnectedDevice,
     connectedDevices,
     activeSessionDevices,
     isReconnectPending,
     hasFetchedInitialDevices,
-    acceptPairing,
-    denyPairing,
     disconnectDevice,
-    enableNetworking,
     stopRetrying,
-    // Boundary cast while the daemon hook exports its typed Bluetooth facade.
-  } = useBluetooth() as unknown as BluetoothHookState;
+  } = useBluetooth();
 
   const { addMessageListener, removeMessageListener, wsConnected } =
     useNocturned();
@@ -759,7 +732,7 @@ function AppContent() {
     setIsAuthCheckInProgress(true);
 
     const attemptRequest = () => {
-      sendNocturneWsRequest<UiLooseData>(
+      sendNocturneWsRequest<Record<string, unknown>>(
         "spotify.auth.getStatus",
         {},
         { timeoutMs: 5000 },
@@ -998,12 +971,12 @@ function AppContent() {
     (
       playbackIntentOrDevices:
         | DeviceSwitcherIntent
-        | BluetoothDevice[]
+        | import("./types").SpotifyDevice[]
         | null = null,
-      devicesArg: BluetoothDevice[] | null = null,
+      devicesArg: import("./types").SpotifyDevice[] | null = null,
     ) => {
       let playbackIntent: DeviceSwitcherIntent | null = null;
-      let devicesList: BluetoothDevice[] | null = null;
+      let devicesList: import("./types").SpotifyDevice[] | null = null;
 
       if (Array.isArray(playbackIntentOrDevices)) {
         devicesList = playbackIntentOrDevices;
@@ -1179,12 +1152,6 @@ function AppContent() {
     showAuthScreen,
   ]);
 
-  useEffect(() => {
-    if (showTetheringScreen) {
-      enableNetworking();
-    }
-  }, [showTetheringScreen, enableNetworking]);
-
   const markDisplayAwake = useCallback(() => {
     displaySleepingRef.current = false;
     displaySleepRequestedRef.current = false;
@@ -1352,14 +1319,22 @@ function AppContent() {
     }
   }, [isMockingbirdEnabled, wakeDisplay]);
 
-  useEffect(() => () => wakeDisplay(), [wakeDisplay]);
+  useEffect(
+    () => () => {
+      void wakeDisplay();
+    },
+    [wakeDisplay],
+  );
 
   useEffect(() => {
     if (!wsConnected || isMockingbirdEnabled) return;
 
     let cancelled = false;
 
-    sendNocturneWsRequest(
+    sendNocturneWsRequest<{
+      sleeping?: boolean;
+      result?: { sleeping?: boolean };
+    }>(
       "device.display.get",
       {},
       { timeoutMs: DISPLAY_SLEEP_REQUEST_TIMEOUT_MS },
@@ -1395,7 +1370,7 @@ function AppContent() {
   useEffect(() => {
     if (isMockingbirdEnabled) return;
 
-    const stopWakeEvent = (event) => {
+    const stopWakeEvent = (event: Event) => {
       if (event.cancelable) {
         event.preventDefault();
       }
@@ -1405,13 +1380,17 @@ function AppContent() {
       }
     };
 
-    const handleWakeInput = (event) => {
+    const handleWakeInput = (event: Event) => {
       const isSleeping =
         displaySleepingRef.current || displaySleepRequestedRef.current;
 
       if (isSleeping) {
         stopWakeEvent(event);
-        if (event.type === "keydown" && event.key?.toLowerCase() === "m") {
+        if (
+          event instanceof KeyboardEvent &&
+          event.type === "keydown" &&
+          event.key.toLowerCase() === "m"
+        ) {
           ignoreWakeLockButtonReleaseRef.current = true;
         }
         wakeDisplay();
@@ -1423,15 +1402,16 @@ function AppContent() {
       }
     };
 
-    const events = [
-      ["touchstart", document, { capture: true, passive: false }],
-      ["pointerdown", document, { capture: true }],
-      ["mousedown", document, { capture: true }],
-      ["click", document, { capture: true }],
-      ["wheel", document, { capture: true, passive: false }],
-      ["keydown", window, { capture: true }],
-      ["keyup", window, { capture: true }],
-    ];
+    const events: Array<[string, Document | Window, AddEventListenerOptions]> =
+      [
+        ["touchstart", document, { capture: true, passive: false }],
+        ["pointerdown", document, { capture: true }],
+        ["mousedown", document, { capture: true }],
+        ["click", document, { capture: true }],
+        ["wheel", document, { capture: true, passive: false }],
+        ["keydown", window, { capture: true }],
+        ["keyup", window, { capture: true }],
+      ];
 
     events.forEach(([event, target, options]) => {
       target.addEventListener(event, handleWakeInput, options);
@@ -1553,13 +1533,14 @@ function AppContent() {
       schedule();
     };
 
-    const events = [
-      ["pointerdown", document, { capture: true, passive: true }],
-      ["touchstart", document, { capture: true, passive: true }],
-      ["click", document, { capture: true, passive: true }],
-      ["wheel", document, { capture: true, passive: true }],
-      ["keydown", window, { capture: true }],
-    ];
+    const events: Array<[string, Document | Window, AddEventListenerOptions]> =
+      [
+        ["pointerdown", document, { capture: true, passive: true }],
+        ["touchstart", document, { capture: true, passive: true }],
+        ["click", document, { capture: true, passive: true }],
+        ["wheel", document, { capture: true, passive: true }],
+        ["keydown", window, { capture: true }],
+      ];
 
     schedule();
 
@@ -1627,13 +1608,14 @@ function AppContent() {
       schedule();
     };
 
-    const events = [
-      ["pointerdown", document, { capture: true, passive: true }],
-      ["touchstart", document, { capture: true, passive: true }],
-      ["click", document, { capture: true, passive: true }],
-      ["wheel", document, { capture: true, passive: true }],
-      ["keydown", window, { capture: true }],
-    ];
+    const events: Array<[string, Document | Window, AddEventListenerOptions]> =
+      [
+        ["pointerdown", document, { capture: true, passive: true }],
+        ["touchstart", document, { capture: true, passive: true }],
+        ["click", document, { capture: true, passive: true }],
+        ["wheel", document, { capture: true, passive: true }],
+        ["keydown", window, { capture: true }],
+      ];
 
     schedule();
 
@@ -1724,10 +1706,7 @@ function AppContent() {
         return;
       }
 
-      if (isMockingbirdEnabled) {
-        window.carThingRootStore?.uiState?.toggleSettings();
-        return;
-      }
+      if (isMockingbirdEnabled) return;
 
       if (activeSectionRef.current === "lock") {
         idleLockActiveRef.current = false;
@@ -1857,7 +1836,7 @@ function AppContent() {
     getBluetoothPresentationState({
       showTutorial,
       pairingRequest,
-      showTetheringScreen,
+      showTetheringScreen: false,
       hasActiveSession: hasActiveBluetoothSession,
       hasFetchedInitialDevices,
       isReconnectPending,
@@ -1905,7 +1884,6 @@ function AppContent() {
   const voiceSuppressed =
     isSystemScreen ||
     showSubscriptionScreen ||
-    showTetheringScreen ||
     !!pairingRequest ||
     isMockingbird ||
     isSubscribed === false ||
@@ -1928,7 +1906,6 @@ function AppContent() {
     content = (
       <LazyNetworkScreen
         isConnectionLost={true}
-        deviceName={lastConnectedDevice?.name}
         onConnectionRestored={handleConnectionRestored}
       />
     );
@@ -1974,7 +1951,6 @@ function AppContent() {
         radioMixes={radioMixes}
         updateGradientColors={updateGradientColors}
         setIgnoreNextRelease={setIgnoreNextRelease}
-        playbackProgress={playbackProgress}
         refreshPlaybackState={refreshPlaybackState}
         spotifyUserId={spotifyUserId}
       />
@@ -1992,12 +1968,10 @@ function AppContent() {
         userShows={userShows}
         currentPlayback={currentPlayback}
         currentlyPlayingAlbum={currentlyPlayingAlbum}
-        playbackProgress={playbackProgress}
         isLoading={isLoading}
         refreshData={refreshData}
         refreshPlaybackState={refreshPlaybackState}
         onOpenContent={handleOpenContent}
-        onOpenDeviceSwitcher={handleOpenDeviceSwitcher}
         onNavigateToNowPlaying={handleNavigateToNowPlaying}
       />
     );
@@ -2060,9 +2034,6 @@ function AppContent() {
                       <React.Suspense fallback={null}>
                         <LazyPairingScreen
                           pin={pairingRequest.pairingKey ?? ""}
-                          isConnecting={isConnecting}
-                          onAccept={acceptPairing}
-                          onReject={denyPairing}
                         />
                       </React.Suspense>
                     )

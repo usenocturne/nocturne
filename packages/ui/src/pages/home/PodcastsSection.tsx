@@ -1,7 +1,12 @@
+import type { SectionProps, LibraryData } from "./contracts";
 import React from "react";
 import SwiperCarousel from "../../components/common/navigation/SwiperCarousel";
 import SpotifyImage from "../../components/common/SpotifyImage";
 import { AlertCircleIcon } from "../../components/common/icons";
+
+interface PodcastsSectionProps extends SectionProps {
+  userShows: LibraryData["userShows"];
+}
 
 const CARD_SIZE_STYLE = { width: 280, height: 280 };
 
@@ -11,7 +16,7 @@ function PodcastsSection({
   userShows,
   activeSection,
   onCardClick,
-}: UiComponentProps) {
+}: PodcastsSectionProps) {
   if (isSpotifySkipped) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-full text-white/50 text-2xl text-center">
@@ -27,7 +32,7 @@ function PodcastsSection({
     return (
       <div className="flex gap-10 p-2">
         {Array(5)
-          .fill()
+          .fill(undefined)
           .map((_, index) => (
             <div key={`loading-${index}`} className="flex-shrink-0">
               <div
@@ -50,10 +55,11 @@ function PodcastsSection({
     );
   }
 
-  const handleItemSelect = (index) => {
+  const handleItemSelect = (index: number) => {
     if (index !== -1 && userShows[index]) {
-      const show = userShows[index].show;
-      onCardClick(show.id, "show");
+      const entry = userShows[index];
+      const show = entry.show ?? entry;
+      show.id && onCardClick(show.id, "show");
     }
   };
 
@@ -61,7 +67,7 @@ function PodcastsSection({
     <SwiperCarousel
       items={userShows}
       renderItem={(item, index, isActive) => {
-        const show = item.show;
+        const show = item.show ?? item;
         return (
           <div
             data-id={show.id}
@@ -70,9 +76,9 @@ function PodcastsSection({
             <div
               style={CARD_SIZE_STYLE}
               className="mt-10 aspect-square rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-              onClick={() => onCardClick(show.id, "show")}
+              onClick={() => show.id && onCardClick(show.id, "show")}
             >
-              {show.images?.length > 0 ? (
+              {(show.images?.length ?? 0) > 0 ? (
                 <SpotifyImage
                   images={show.images}
                   preferredSizeIndex={1}
@@ -86,7 +92,7 @@ function PodcastsSection({
             </div>
             <h4
               className="mt-2 text-[36px] font-[580] text-white truncate tracking-tight max-w-[280px]"
-              onClick={() => onCardClick(show.id, "show")}
+              onClick={() => show.id && onCardClick(show.id, "show")}
             >
               {show.name}
             </h4>
@@ -96,8 +102,10 @@ function PodcastsSection({
           </div>
         );
       }}
-      keyExtractor={(item) => item.show.id}
-      getItemId={(item) => item.show.id}
+      keyExtractor={(item, index) =>
+        (item.show ?? item).id ?? (item.show ?? item).uri ?? index
+      }
+      getItemId={(item) => (item.show ?? item).id}
       activeSection={activeSection}
       onItemSelect={handleItemSelect}
     />

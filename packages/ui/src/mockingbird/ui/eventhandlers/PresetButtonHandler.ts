@@ -1,18 +1,22 @@
+import type HardwareEvents from "../helpers/HardwareEvents";
+import type { RootStore } from "../stores/RootStore";
 import { action } from "mobx";
 
-const reactToPresetButtons = (hardwareEvents, rootStore) => {
-  const { presetsController, settingsStore } = rootStore;
+const reactToPresetButtons = (
+  hardwareEvents: HardwareEvents,
+  rootStore: RootStore,
+) => {
+  const { presetsController } = rootStore;
 
-  const handlePresetButtonPress = (presetNumber) => {
+  const handlePresetButtonPress = (presetNumber: number) => {
     if (!presetsController.isPresetButtonsEnabled) {
       return;
     }
 
-    settingsStore?.handlePresetButtonPressed?.();
     presetsController.presetsUiState.handlePresetButtonPress(presetNumber);
   };
 
-  const handlePresetButtonLongPress = (presetNumber) => {
+  const handlePresetButtonLongPress = (presetNumber: number) => {
     if (!presetsController.isPresetButtonsEnabled) {
       return;
     }

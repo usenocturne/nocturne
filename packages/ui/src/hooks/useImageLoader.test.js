@@ -146,3 +146,94 @@ describe("image loader cancellation", () => {
     ]);
   });
 });
+
+describe("image loader resource lifetime", () => {
+  it("does not start a fetch after its final consumer cancels during the launch delay", async () => {
+    const queue = new ImageLoadQueue();
+    queue.imageFetchDelayMs = 20;
+    queue.updateQueueReadyState(true);
+    let calls = 0;
+    const request = queue.loadImage(
+      "fixture",
+      0,
+      false,
+      async () => {
+        calls++;
+        return { data: "unused" };
+      },
+      true,
+    );
+    const outcome = Promise.allSettled([request]);
+    request.cancel();
+    await outcome;
+    await Bun.sleep(40);
+    expect(calls).toBe(0);
+  });
+
+  it("retries a failed URL with the live consumer's fetcher after readiness returns", async () => {
+    const queue = new ImageLoadQueue();
+    queue.imageFetchDelayMs = 0;
+    queue.maxRetries = 0;
+    queue.maxExtendedRetries = 0;
+    queue.updateQueueReadyState(true);
+    await expect(
+      queue.loadImage(
+        "fixture",
+        0,
+        false,
+        async () => {
+          throw new Error("Image not found");
+        },
+        true,
+      ),
+    ).rejects.toThrow("Image not found");
+    queue.updateQueueReadyState(false);
+    queue.updateQueueReadyState(true);
+    await expect(
+      queue.loadImage(
+        "fixture",
+        0,
+        false,
+        async () => ({ data: "restored" }),
+        true,
+      ),
+    ).resolves.toMatchObject({ data: "restored" });
+  });
+
+  it("evicts least-recently-used image data without changing loaded results", async () => {
+    const queue = new ImageLoadQueue();
+    queue.imageFetchDelayMs = 0;
+    queue.maxCacheEntries = 2;
+    queue.updateQueueReadyState(true);
+    const calls = [];
+    const fetchImage = async (url) => {
+      calls.push(url);
+      return { data: url };
+    };
+    const load = (url) => queue.loadImage(url, 0, false, fetchImage, true);
+    await load("one");
+    await load("two");
+    await load("one");
+    await load("three");
+    await expect(load("two")).resolves.toMatchObject({ data: "two" });
+    expect(calls).toEqual(["one", "two", "three", "two"]);
+  });
+
+  it("serves images above the cache byte budget without retaining them", async () => {
+    const queue = new ImageLoadQueue();
+    queue.imageFetchDelayMs = 0;
+    queue.maxCacheBytes = 2;
+    queue.updateQueueReadyState(true);
+    let calls = 0;
+    const fetchImage = async () => {
+      calls++;
+      return { data: new Uint8Array([1, 2, 3]) };
+    };
+    for (let i = 0; i < 2; i++) {
+      await expect(
+        queue.loadImage("large", 0, false, fetchImage, true),
+      ).resolves.toMatchObject({ data: new Uint8Array([1, 2, 3]) });
+    }
+    expect(calls).toBe(2);
+  });
+});

@@ -1,3 +1,4 @@
+import type { PlaybackViewProps } from "../../contexts/CarThingStore";
 import styles from "../../styles/Views.module.scss";
 import classNames from "classnames";
 import { View } from "../../stores/ViewStore";
@@ -10,7 +11,7 @@ import Shelf from "./Shelf/Shelf";
 import Tracklist from "./Tracklist";
 import Queue from "./Queue/Queue";
 
-const Views = ({ playbackProgress, onSeek }: UiComponentProps) => {
+const Views = ({ playbackProgress, onSeek }: PlaybackViewProps) => {
   const { viewStore } = useCarThingStore();
 
   const tracklistOverNpv =

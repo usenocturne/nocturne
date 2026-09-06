@@ -8,7 +8,12 @@ const BannerButton = ({
   text,
   colors = "information",
   onClick,
-}: UiComponentProps) => {
+}: {
+  withDivider?: boolean;
+  text: string;
+  colors?: string;
+  onClick: () => void;
+}) => {
   const [buttonPressed, setButtonPressed] = useState(false);
 
   return (

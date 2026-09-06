@@ -1,22 +1,35 @@
-import { useCallback, useState, useContext, useRef, useEffect } from "react";
+import {
+  useCallback,
+  useState,
+  useContext,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import React from "react";
 import { flushSync } from "react-dom";
-import { generateRandomString } from "../utils/helpers";
+import { generateRandomString, getErrorMessage } from "../utils/helpers";
 import { useSpotifyWebSocket } from "./useSpotifyWebSocket";
+import { createDeferredSpotifyRefresh } from "./spotifyRequestLifecycle";
 import {
   getPhoneNetworkStatus,
   sendNocturneWsRequest,
   subscribePhoneNetworkStatus,
 } from "./useNocturned";
 import { getActiveDeviceType } from "./useSpotifyPlayerState";
-import type { SpotifyPlayback } from "../types";
+import type { SpotifyPlaybackState as SpotifyPlayback } from "../types";
 
 /** @typedef {import("@schema/spotify").SpotifyDjSignalRequest} SpotifyDjSignalRequest */
 /** @typedef {import("@schema/spotify").SpotifyPlayerSpeedRequest} SpotifyPlayerSpeedRequest */
 
-export const DeviceSwitcherContext = React.createContext({
-  openDeviceSwitcher: (playbackIntent = null) => {},
-});
+export interface PlaybackIntent {
+  trackUriToPlay?: string | null;
+  contextUriToPlay?: string | null;
+  urisToPlay?: string[] | null;
+}
+export const DeviceSwitcherContext = React.createContext<{
+  openDeviceSwitcher: (playbackIntent?: PlaybackIntent | null) => void;
+}>({ openDeviceSwitcher: () => {} });
 
 export const shouldUsePhoneHidControls = (
   currentPlayback: SpotifyPlayback | null | undefined,
@@ -84,7 +97,9 @@ export function useSpotifyPlayerControls(
   const [volume, setVolumeState] = useState(50);
   const [isAdjustingVolume, setIsAdjustingVolume] = useState(false);
   const volumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const volumeQueueRef = useRef<number[]>([]);
+  const volumeQueueRef = useRef<Array<{ volume: number; direction: string }>>(
+    [],
+  );
   const isVolumeProcessingRef = useRef(false);
   const lastVolumeUpdateTimeRef = useRef(0);
   const lastManualVolumeChangeRef = useRef(0);
@@ -128,6 +143,23 @@ export function useSpotifyPlayerControls(
     sendSpotifyCommand,
   } = useSpotifyWebSocket();
 
+  const deferredRefresh = useMemo(
+    () =>
+      createDeferredSpotifyRefresh(
+        (signal) => getPlayerState(signal),
+        (error) =>
+          console.error(
+            "Error fetching player state after play:",
+            getErrorMessage(error),
+          ),
+      ),
+    [getPlayerState],
+  );
+  useEffect(() => {
+    deferredRefresh.activate();
+    return () => deferredRefresh.dispose();
+  }, [deferredRefresh]);
+
   useEffect(() => {
     return () => {
       if (volumeTimeoutRef.current) {
@@ -141,7 +173,7 @@ export function useSpotifyPlayerControls(
     const currentDeviceId = currentPlayback?.device?.id;
     if (currentDeviceId !== prevDeviceIdRef.current) {
       lastSentVolumeRef.current = null;
-      prevDeviceIdRef.current = currentDeviceId;
+      prevDeviceIdRef.current = currentDeviceId ?? null;
     }
   }, [currentPlayback?.device?.id]);
 
@@ -179,7 +211,7 @@ export function useSpotifyPlayerControls(
     [isAdjustingVolume, isPhoneMedia, isSmartphoneDevice],
   );
 
-  const sendPhoneMediaControl = useCallback(async (method) => {
+  const sendPhoneMediaControl = useCallback(async (method: string) => {
     try {
       const response = await sendNocturneWsRequest(method, {});
       return response?.status !== "unsupported";
@@ -196,6 +228,7 @@ export function useSpotifyPlayerControls(
       uris: string[] | null = null,
       deviceId: string | null = null,
     ) => {
+      const refreshGeneration = deferredRefresh.generation;
       const isResumePlaybackRequest =
         !trackUri && !contextUri && !deviceId && (!uris || uris.length === 0);
 
@@ -207,19 +240,10 @@ export function useSpotifyPlayerControls(
 
       try {
         const result = await playTrackWS(trackUri, contextUri, uris, deviceId);
-        setTimeout(async () => {
-          try {
-            await getPlayerState();
-          } catch (err) {
-            console.error(
-              "Error fetching player state after play:",
-              err.message,
-            );
-          }
-        }, 100);
+        deferredRefresh.schedule(refreshGeneration);
         return true;
       } catch (err) {
-        const errorMessage = err?.message || String(err);
+        const errorMessage = getErrorMessage(err);
         const activeDeviceType = getActiveDeviceType();
         const shouldFallbackToPhoneMediaPlay =
           isResumePlaybackRequest &&
@@ -235,16 +259,7 @@ export function useSpotifyPlayerControls(
             await sendPhoneMediaControl("media.control.play");
 
           if (fallbackSucceeded) {
-            setTimeout(async () => {
-              try {
-                await getPlayerState();
-              } catch (refreshErr) {
-                console.error(
-                  "Error fetching player state after phone media play fallback:",
-                  refreshErr.message,
-                );
-              }
-            }, 300);
+            deferredRefresh.schedule(refreshGeneration, 300);
             return true;
           }
         }
@@ -273,7 +288,7 @@ export function useSpotifyPlayerControls(
       isSpotifyReady,
       playTrackWS,
       openDeviceSwitcher,
-      getPlayerState,
+      deferredRefresh,
       isSmartphoneDevice,
       sendPhoneMediaControl,
       usePhoneHidControls,
@@ -295,18 +310,18 @@ export function useSpotifyPlayerControls(
         } catch (err) {
           console.error(
             "Error fetching player state after pause:",
-            err.message,
+            getErrorMessage(err),
           );
         }
       }, 100);
       return true;
     } catch (err) {
-      if (err.message.includes("No playback devices available")) {
+      if (getErrorMessage(err).includes("No playback devices available")) {
         if (openDeviceSwitcher) {
           openDeviceSwitcher({});
         }
       }
-      console.error("Error pausing playback:", err.message);
+      console.error("Error pausing playback:", getErrorMessage(err));
       return false;
     }
   }, [
@@ -333,18 +348,18 @@ export function useSpotifyPlayerControls(
         } catch (err) {
           console.error(
             "Error fetching player state after skip next:",
-            err.message,
+            getErrorMessage(err),
           );
         }
       }, 100);
       return true;
     } catch (err) {
-      if (err.message.includes("No playback devices available")) {
+      if (getErrorMessage(err).includes("No playback devices available")) {
         if (openDeviceSwitcher) {
           openDeviceSwitcher({});
         }
       }
-      console.error("Error skipping to next track:", err.message);
+      console.error("Error skipping to next track:", getErrorMessage(err));
       return false;
     }
   }, [
@@ -371,18 +386,18 @@ export function useSpotifyPlayerControls(
         } catch (err) {
           console.error(
             "Error fetching player state after skip previous:",
-            err.message,
+            getErrorMessage(err),
           );
         }
       }, 100);
       return true;
     } catch (err) {
-      if (err.message.includes("No playback devices available")) {
+      if (getErrorMessage(err).includes("No playback devices available")) {
         if (openDeviceSwitcher) {
           openDeviceSwitcher({});
         }
       }
-      console.error("Error skipping to previous track:", err.message);
+      console.error("Error skipping to previous track:", getErrorMessage(err));
       return false;
     }
   }, [
@@ -395,19 +410,19 @@ export function useSpotifyPlayerControls(
   ]);
 
   const seekToPosition = useCallback(
-    async (positionMs) => {
+    async (positionMs: number) => {
       if (!isSpotifyReady) return false;
 
       try {
         await seekToPositionWS(positionMs);
         return true;
       } catch (err) {
-        if (err.message.includes("No playback devices available")) {
+        if (getErrorMessage(err).includes("No playback devices available")) {
           if (openDeviceSwitcher) {
             openDeviceSwitcher({});
           }
         }
-        console.error("Error seeking to position:", err.message);
+        console.error("Error seeking to position:", getErrorMessage(err));
         return false;
       }
     },
@@ -426,6 +441,10 @@ export function useSpotifyPlayerControls(
     isVolumeProcessingRef.current = true;
 
     const latest = volumeQueueRef.current.pop();
+    if (!latest) {
+      isVolumeProcessingRef.current = false;
+      return;
+    }
     const latestVolume = latest.volume;
     const direction = latest.direction;
     volumeQueueRef.current = [];
@@ -439,7 +458,7 @@ export function useSpotifyPlayerControls(
         await setVolumeWS(latestVolume);
         lastVolumeUpdateTimeRef.current = Date.now();
       } catch (err) {
-        console.error("Error setting volume:", err.message);
+        console.error("Error setting volume:", getErrorMessage(err));
 
         try {
           if (direction === "up") {
@@ -451,7 +470,7 @@ export function useSpotifyPlayerControls(
           console.error("Error with phone media volume fallback:", fallbackErr);
         }
 
-        if (err.message.includes("NO_ACTIVE_DEVICE")) {
+        if (getErrorMessage(err).includes("NO_ACTIVE_DEVICE")) {
           if (openDeviceSwitcher) {
             openDeviceSwitcher();
           }
@@ -479,7 +498,7 @@ export function useSpotifyPlayerControls(
   }, [isSpotifyReady, setVolumeWS, openDeviceSwitcher]);
 
   const setVolume = useCallback(
-    async (volumePercent) => {
+    async (volumePercent: number) => {
       if (!isSpotifyReady) return false;
 
       if (isPhoneMedia) {
@@ -528,7 +547,7 @@ export function useSpotifyPlayerControls(
   );
 
   const adjustVolumeByDelta = useCallback(
-    async (delta) => {
+    async (delta: number) => {
       if (!isSpotifyReady) return false;
       if (isPhoneMedia) return false;
 
@@ -576,7 +595,7 @@ export function useSpotifyPlayerControls(
   );
 
   const checkIsTrackLiked = useCallback(
-    async (trackId) => {
+    async (trackId: string) => {
       if (!isSpotifyReady || !trackId) return false;
 
       try {
@@ -584,7 +603,10 @@ export function useSpotifyPlayerControls(
         const arr = Array.isArray(result) ? result : result?.results;
         return arr?.[0] === true || arr?.[0] === 1;
       } catch (err) {
-        console.error("Error checking if track is liked:", err.message);
+        console.error(
+          "Error checking if track is liked:",
+          getErrorMessage(err),
+        );
         return false;
       }
     },
@@ -592,14 +614,14 @@ export function useSpotifyPlayerControls(
   );
 
   const likeTrack = useCallback(
-    async (trackId) => {
+    async (trackId: string) => {
       if (!isSpotifyReady || !trackId) return false;
 
       try {
         await saveTrack(trackId);
         return true;
       } catch (err) {
-        console.error("Error liking track:", err.message);
+        console.error("Error liking track:", getErrorMessage(err));
         return false;
       }
     },
@@ -607,14 +629,14 @@ export function useSpotifyPlayerControls(
   );
 
   const unlikeTrack = useCallback(
-    async (trackId) => {
+    async (trackId: string) => {
       if (!isSpotifyReady || !trackId) return false;
 
       try {
         await removeTrack(trackId);
         return true;
       } catch (err) {
-        console.error("Error unliking track:", err.message);
+        console.error("Error unliking track:", getErrorMessage(err));
         return false;
       }
     },
@@ -660,7 +682,7 @@ export function useSpotifyPlayerControls(
   ]);
 
   const toggleShuffle = useCallback(
-    async (state) => {
+    async (state: boolean) => {
       if (usePhoneHidControls) {
         return sendPhoneMediaControl("media.control.shuffle");
       }
@@ -671,7 +693,7 @@ export function useSpotifyPlayerControls(
         await toggleShuffleWS(state);
         return true;
       } catch (err) {
-        console.error("Error toggling shuffle:", err.message);
+        console.error("Error toggling shuffle:", getErrorMessage(err));
         return false;
       }
     },
@@ -684,7 +706,9 @@ export function useSpotifyPlayerControls(
   );
 
   const setRepeatMode = useCallback(
-    async (state) => {
+    async (state: string) => {
+      if (state !== "off" && state !== "track" && state !== "context")
+        throw new Error("Invalid repeat mode");
       if (usePhoneHidControls) {
         return sendPhoneMediaControl("media.control.repeat");
       }
@@ -695,7 +719,7 @@ export function useSpotifyPlayerControls(
         await setRepeatModeWS(state);
         return true;
       } catch (err) {
-        console.error("Error setting repeat mode:", err.message);
+        console.error("Error setting repeat mode:", getErrorMessage(err));
         return false;
       }
     },
@@ -724,7 +748,7 @@ export function useSpotifyPlayerControls(
   );
 
   const sendDJSignal = useCallback(
-    async (deviceId = null) => {
+    async (deviceId: string | null = null) => {
       if (!isSpotifyReady) return false;
 
       try {
@@ -757,7 +781,7 @@ export function useSpotifyPlayerControls(
   }, [isSpotifyReady, currentPlayback]);
 
   const setPlaybackSpeed = useCallback(
-    async (speed) => {
+    async (speed: number) => {
       if (!isSpotifyReady) return false;
 
       try {
@@ -862,3 +886,7 @@ export function useSpotifyPlayerControls(
     usePhoneHidControls,
   };
 }
+
+export type SpotifyPlayerControlsHook = ReturnType<
+  typeof useSpotifyPlayerControls
+>;

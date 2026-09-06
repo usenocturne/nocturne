@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { sendNocturneWsRequest, subscribeAppReadyState } from "./useNocturned";
 
-let cachedTimezone = null;
+let cachedTimezone: string | null = null;
 
 export const getCachedTimezone = () => cachedTimezone;
 
@@ -31,8 +31,11 @@ export function useCurrentTime() {
       if (cachedTimezone) return;
 
       try {
-        const data = await sendNocturneWsRequest("device.timezone.get", {});
-        if (data && data.identifier) {
+        const data = await sendNocturneWsRequest<{ identifier?: string }>(
+          "device.timezone.get",
+          {},
+        );
+        if (data && typeof data.identifier === "string") {
           cachedTimezone = data.identifier;
         }
       } catch (error) {
@@ -44,14 +47,17 @@ export function useCurrentTime() {
   }, [appReady]);
 
   useEffect(() => {
-    let retryTimeout = null;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const updateTime = async () => {
       if (!appReady) return;
 
       try {
-        const data = await sendNocturneWsRequest("device.time.get", {});
-        if (data && data.time) {
+        const data = await sendNocturneWsRequest<{ time?: string }>(
+          "device.time.get",
+          {},
+        );
+        if (data && typeof data.time === "string") {
           const timeString = data.time;
           const [hours24, minutes] = timeString.split(":");
 

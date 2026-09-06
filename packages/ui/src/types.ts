@@ -56,6 +56,7 @@ export interface SpotifyImage {
 }
 
 export interface SpotifyArtist {
+  followers?: { total?: number };
   id?: string;
   uri?: string;
   name?: string;
@@ -78,6 +79,8 @@ export interface SpotifyAlbum {
 }
 
 export interface SpotifyEpisode {
+  release_date?: string;
+  explicit?: boolean;
   id?: string;
   uri?: string;
   name?: string;
@@ -90,6 +93,7 @@ export interface SpotifyEpisode {
 }
 
 export interface SpotifyTrack {
+  explicit?: boolean;
   id?: string;
   uri?: string;
   name?: string;
@@ -109,6 +113,8 @@ export interface SpotifyTrack {
 }
 
 export interface SpotifyPlaylist {
+  description?: string;
+  trackCount?: number;
   id?: string;
   uri?: string;
   name?: string;
@@ -149,6 +155,8 @@ export type SpotifyContent =
   | SpotifyEpisode;
 
 export interface SpotifyDevice {
+  device_id?: string;
+  device_type?: string;
   id?: string | null;
   name?: string;
   type?: string;
@@ -162,7 +170,7 @@ export interface SpotifyDevice {
 }
 
 export interface SpotifyPlayback {
-  item?: SpotifyTrack | SpotifyEpisode | null;
+  item?: SpotifyPlaybackItem | null;
   is_playing?: boolean;
   progress_ms?: number | null;
   device?: SpotifyDevice | null;
@@ -183,13 +191,15 @@ export interface PlaybackProgress {
   triggerRefresh: () => void;
 }
 
+export type GradientInput = string | string[] | null;
+
 export interface GradientState {
-  imageURL: string | null;
+  imageURL: GradientInput;
   section: string | null;
 }
 
 export type UpdateGradientColors = (
-  imageURL?: string | null,
+  imageURL?: GradientInput,
   section?: string | null,
 ) => void;
 
@@ -200,6 +210,8 @@ export interface ViewingContent {
 }
 
 export interface BluetoothDevice {
+  alias?: string;
+  device_info?: { name?: string };
   address?: string;
   name?: string;
   paired?: boolean;
@@ -368,7 +380,7 @@ export interface UpdateCommands {
   post?: string[];
 }
 
-/** OTA release/update descriptor surfaced by useUpdateCheck. */
+/** OTA release/update descriptor used by update presentation. */
 export interface UpdateInfo {
   hasUpdate?: boolean;
   canUpdate?: boolean;
@@ -403,6 +415,13 @@ export interface ProgressResetSignal {
 
 /** Permissive now-playing item: a Spotify track or episode as surfaced by the host app. */
 export interface SpotifyPlaybackItem {
+  is_local?: boolean;
+  is_spotify_pending?: boolean;
+  is_liked?: boolean;
+  like_supported?: boolean;
+  release_date?: string;
+  explicit?: boolean;
+  linked_from?: { uri?: string; id?: string; [key: string]: unknown };
   uri?: string;
   id?: string;
   name?: string;
@@ -419,6 +438,8 @@ export interface SpotifyPlaybackItem {
 
 /** Playback snapshot bridged from Nocturne's player state into the CarThing stores. */
 export interface SpotifyPlaybackState {
+  actions?: { disallows?: Partial<Record<string, boolean>> };
+  playback_speed?: number;
   item?: SpotifyPlaybackItem | null;
   is_playing?: boolean;
   progress_ms?: number | null;
@@ -433,7 +454,8 @@ export interface SpotifyPlaybackState {
 }
 
 /** A saved show as surfaced in `SpotifyDataState`, either wrapped or flattened. */
-export interface SpotifyShowEntry {
+export interface SpotifyShowEntry extends SpotifyShow {
+  added_at?: string;
   show?: SpotifyShow;
   id?: string;
   uri?: string;
@@ -472,36 +494,34 @@ export interface SpotifyDataState {
 }
 
 /** Spotify player controls bridged from Nocturne's hooks into the CarThing stores. */
-export interface PlayerControls {
-  playTrack?: (
-    uri?: string | null,
-    contextUri?: string | null,
-    uris?: readonly string[] | null,
-  ) => Promise<void> | void;
-  playDJMix?: (deviceId?: string | null) => Promise<void> | void;
-  pausePlayback?: () => Promise<void> | void;
-  skipToNext?: () => Promise<void> | void;
-  skipToPrevious?: () => Promise<void> | void;
-  toggleShuffle?: (shuffle?: boolean) => Promise<void> | void;
-  likeTrack?: (trackId: string) => Promise<boolean>;
-  unlikeTrack?: (trackId: string) => Promise<boolean>;
-  checkIsTrackLiked?: (trackId: string) => Promise<boolean>;
-  likeTarget?: {
-    source: "spotify" | "spotify_local" | "phone_media";
-    reference: string | null;
-    liked: boolean;
-  };
-  likeCurrentItem?: () => Promise<boolean>;
-  unlikeCurrentItem?: () => Promise<boolean>;
-  checkCurrentItemLiked?: () => Promise<boolean>;
-  seekToPosition?: (positionMs: number) => Promise<void> | void;
-  setRepeatMode?: (mode: string) => Promise<void> | void;
-  setVolume?: (volumePercent: number) => Promise<void> | void;
-  volume?: number;
-  phoneMediaPlay?: () => void;
-  phoneMediaPause?: () => void;
-  phoneMediaNext?: () => void;
-  phoneMediaPrevious?: () => void;
-  phoneMediaVolumeUp?: () => void;
-  phoneMediaVolumeDown?: () => void;
-}
+export type PlayerControls = Partial<
+  Pick<
+    ReturnType<
+      typeof import("./hooks/useSpotifyPlayerControls").useSpotifyPlayerControls
+    >,
+    | "playTrack"
+    | "playDJMix"
+    | "sendDJSignal"
+    | "pausePlayback"
+    | "skipToNext"
+    | "skipToPrevious"
+    | "toggleShuffle"
+    | "likeTrack"
+    | "unlikeTrack"
+    | "checkIsTrackLiked"
+    | "likeTarget"
+    | "likeCurrentItem"
+    | "unlikeCurrentItem"
+    | "checkCurrentItemLiked"
+    | "seekToPosition"
+    | "setRepeatMode"
+    | "setVolume"
+    | "volume"
+    | "phoneMediaPlay"
+    | "phoneMediaPause"
+    | "phoneMediaNext"
+    | "phoneMediaPrevious"
+    | "phoneMediaVolumeUp"
+    | "phoneMediaVolumeDown"
+  >
+>;

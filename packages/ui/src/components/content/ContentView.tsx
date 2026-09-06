@@ -1,3 +1,17 @@
+import type { PointerEvent as ReactPointerEvent } from "react";
+import type {
+  ContentType,
+  SpotifyArtist,
+  SpotifyImage as Artwork,
+  SpotifyPlaylist,
+  SpotifyShow,
+  SpotifyTrack,
+  SpotifyPlaybackState,
+  StateSetter,
+  UpdateGradientColors,
+} from "../../types";
+import type { QueueSwipeAxis } from "./queueSwipe";
+import { getErrorMessage } from "../../utils/helpers";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
@@ -23,6 +37,55 @@ import {
   shouldCommitQueueSwipe,
 } from "./queueSwipe";
 
+interface ContentMetadata {
+  id?: string;
+  uri?: string;
+  name?: string;
+  type?: string;
+  images?: Artwork[];
+  artists?: SpotifyArtist[];
+  tracks?: { total?: number; length?: number };
+  trackCount?: number;
+  total_tracks?: number;
+  total_episodes?: number;
+  followers?: { total?: number };
+  publisher?: string;
+  description?: string;
+}
+interface ContentTrack extends SpotifyTrack {
+  release_date?: string;
+  show?: SpotifyShow;
+}
+type QueueStatus = "idle" | "dragging" | "pending" | "success" | "error";
+interface QueueState {
+  rowKey: string | null;
+  offset: number;
+  status: QueueStatus;
+}
+interface QueueGesture {
+  rowKey: string;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  axis: QueueSwipeAxis;
+  moved: boolean;
+  rawOffset: number;
+  offset: number;
+}
+interface ContentViewProps {
+  contentId: string;
+  contentType?: ContentType;
+  onClose?: () => void;
+  currentlyPlayingTrackUri?: string | null;
+  currentPlayback?: SpotifyPlaybackState | null;
+  radioMixes?: SpotifyPlaylist[];
+  updateGradientColors?: UpdateGradientColors;
+  setIgnoreNextRelease?: StateSetter<boolean>;
+  onNavigateToNowPlaying?: () => void;
+  refreshPlaybackState?: (force?: boolean) => void;
+  spotifyUserId?: string | null;
+}
+
 const LOAD_MORE_CONTENT_TYPES = new Set([
   "playlist",
   "show",
@@ -31,13 +94,13 @@ const LOAD_MORE_CONTENT_TYPES = new Set([
   "album",
 ]);
 
-const FORMATTED_DATE_OPTIONS = {
+const FORMATTED_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   year: "numeric",
   month: "long",
   day: "numeric",
 };
 
-const formattedDates = new Map();
+const formattedDates = new Map<string, string>();
 
 const ROW_TRANSITION_STYLE = { transition: "transform 0.2s ease-out" };
 const TRACK_INDEX_STYLE = {
@@ -46,7 +109,7 @@ const TRACK_INDEX_STYLE = {
   fontWeight: "580",
 };
 
-const IDLE_QUEUE_SWIPE_STATE = {
+const IDLE_QUEUE_SWIPE_STATE: QueueState = {
   rowKey: null,
   offset: 0,
   status: "idle",
@@ -56,7 +119,7 @@ const QUEUE_SUCCESS_FEEDBACK_DURATION_MS = 1000;
 const QUEUE_ERROR_FEEDBACK_DURATION_MS = 1400;
 const QUEUE_CLICK_SUPPRESSION_MS = 500;
 
-const getFormattedReleaseDate = (releaseDate) => {
+const getFormattedReleaseDate = (releaseDate?: string) => {
   if (!releaseDate) {
     return "No release date available";
   }
@@ -83,24 +146,29 @@ const ContentView = ({
   onNavigateToNowPlaying,
   refreshPlaybackState,
   spotifyUserId,
-}: UiComponentProps) => {
-  const [content, setContent] = useState(null);
-  const [tracks, setTracks] = useState<UiContentItem[]>([]);
+}: ContentViewProps) => {
+  const [content, setContent] = useState<ContentMetadata | null>(null);
+  const [tracks, setTracks] = useState<ContentTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [selectedTrackIndex, setSelectedTrackIndex] = useState(-1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [nextUrl, setNextUrl] = useState(null);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [hasMoreTracks, setHasMoreTracks] = useState(false);
   const [queueSwipeState, setQueueSwipeState] = useState(
     IDLE_QUEUE_SWIPE_STATE,
   );
-  const tracksContainerRef = useRef(null);
-  const queueGestureRef = useRef(null);
-  const queueRequestAbortRef = useRef(null);
-  const queueFeedbackTimerRef = useRef(null);
-  const queueMoveFrameRef = useRef(null);
-  const suppressedTrackClickRef = useRef({ rowKey: null, until: 0 });
+  const tracksContainerRef = useRef<HTMLDivElement>(null);
+  const queueGestureRef = useRef<QueueGesture | null>(null);
+  const queueRequestAbortRef = useRef<AbortController | null>(null);
+  const queueFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const queueMoveFrameRef = useRef<number | null>(null);
+  const suppressedTrackClickRef = useRef<{
+    rowKey: string | null;
+    until: number;
+  }>({ rowKey: null, until: 0 });
   const navigate = useNavigate();
 
   const { playTrack, error: playbackError } =
@@ -125,10 +193,13 @@ const ContentView = ({
   } = useSpotifyWebSocket();
 
   const [isLazyLoading, setIsLazyLoading] = useState(false);
-  const autoLoadTimerRef = useRef(null);
-  const loadMoreSentinelRef = useRef(null);
+  const autoLoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreInFlightRef = useRef(false);
-  const scrollTrackingRef = useRef({ scrollTop: 0, frameId: null });
+  const scrollTrackingRef = useRef<{
+    scrollTop: number;
+    frameId: number | null;
+  }>({ scrollTop: 0, frameId: null });
 
   const tracksLengthRef = useRef(0);
   const isFetchingRef = useRef(false);
@@ -173,7 +244,7 @@ const ContentView = ({
   );
 
   const handleColorsExtracted = useCallback(
-    (colors) => {
+    (colors: string[]) => {
       if (colors && updateGradientColors) {
         updateGradientColors(colors, contentType);
       }
@@ -190,7 +261,7 @@ const ContentView = ({
   }, [onClose, navigate]);
 
   const handleTrackSelect = useCallback(
-    (index) => {
+    (index: number) => {
       if (index >= 0 && index < tracks.length) {
         const track = tracks[index];
         if (track) {
@@ -269,7 +340,7 @@ const ContentView = ({
   );
 
   const showQueueFeedback = useCallback(
-    (rowKey, status) => {
+    (rowKey: string, status: QueueStatus) => {
       clearQueueFeedbackTimer();
       setQueueSwipeState({
         rowKey,
@@ -292,7 +363,7 @@ const ContentView = ({
   );
 
   const addTrackToQueue = useCallback(
-    async (track, rowKey) => {
+    async (track: ContentTrack, rowKey: string) => {
       if (!track?.uri || queueRequestAbortRef.current) return;
 
       const abortController = new AbortController();
@@ -327,7 +398,11 @@ const ContentView = ({
   );
 
   const handleQueuePointerDown = useCallback(
-    (event, rowKey, track) => {
+    (
+      event: ReactPointerEvent<HTMLDivElement>,
+      rowKey: string,
+      track: ContentTrack,
+    ) => {
       if (
         !track?.uri ||
         queueRequestAbortRef.current ||
@@ -355,58 +430,65 @@ const ContentView = ({
     [clearQueueFeedbackTimer],
   );
 
-  const handleQueuePointerMove = useCallback((event, rowKey) => {
-    const gesture = queueGestureRef.current;
-    if (
-      !gesture ||
-      gesture.rowKey !== rowKey ||
-      gesture.pointerId !== event.pointerId
-    )
-      return;
+  const handleQueuePointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>, rowKey: string) => {
+      const gesture = queueGestureRef.current;
+      if (
+        !gesture ||
+        gesture.rowKey !== rowKey ||
+        gesture.pointerId !== event.pointerId
+      )
+        return;
 
-    const measurement = measureQueueSwipe({
-      startX: gesture.startX,
-      startY: gesture.startY,
-      currentX: event.clientX,
-      currentY: event.clientY,
-      lockedAxis: gesture.axis,
-    });
-
-    gesture.axis = measurement.axis;
-    gesture.moved =
-      gesture.moved ||
-      hasQueueSwipeMoved({
+      const measurement = measureQueueSwipe({
         startX: gesture.startX,
         startY: gesture.startY,
         currentX: event.clientX,
         currentY: event.clientY,
+        lockedAxis: gesture.axis,
       });
-    gesture.rawOffset = measurement.rawOffset;
-    gesture.offset = measurement.offset;
 
-    if (measurement.axis === "horizontal") {
-      if (event.cancelable) event.preventDefault();
-      suppressedTrackClickRef.current = {
-        rowKey,
-        until: Date.now() + QUEUE_CLICK_SUPPRESSION_MS,
-      };
-      if (queueMoveFrameRef.current === null) {
-        queueMoveFrameRef.current = requestAnimationFrame(() => {
-          queueMoveFrameRef.current = null;
-          const activeGesture = queueGestureRef.current;
-          if (!activeGesture || activeGesture.axis !== "horizontal") return;
-          setQueueSwipeState({
-            rowKey: activeGesture.rowKey,
-            offset: activeGesture.offset,
-            status: "dragging",
-          });
+      gesture.axis = measurement.axis;
+      gesture.moved =
+        gesture.moved ||
+        hasQueueSwipeMoved({
+          startX: gesture.startX,
+          startY: gesture.startY,
+          currentX: event.clientX,
+          currentY: event.clientY,
         });
+      gesture.rawOffset = measurement.rawOffset;
+      gesture.offset = measurement.offset;
+
+      if (measurement.axis === "horizontal") {
+        if (event.cancelable) event.preventDefault();
+        suppressedTrackClickRef.current = {
+          rowKey,
+          until: Date.now() + QUEUE_CLICK_SUPPRESSION_MS,
+        };
+        if (queueMoveFrameRef.current === null) {
+          queueMoveFrameRef.current = requestAnimationFrame(() => {
+            queueMoveFrameRef.current = null;
+            const activeGesture = queueGestureRef.current;
+            if (!activeGesture || activeGesture.axis !== "horizontal") return;
+            setQueueSwipeState({
+              rowKey: activeGesture.rowKey,
+              offset: activeGesture.offset,
+              status: "dragging",
+            });
+          });
+        }
       }
-    }
-  }, []);
+    },
+    [],
+  );
 
   const handleQueuePointerUp = useCallback(
-    (event, rowKey, track) => {
+    (
+      event: ReactPointerEvent<HTMLDivElement>,
+      rowKey: string,
+      track: ContentTrack,
+    ) => {
       const gesture = queueGestureRef.current;
       if (
         !gesture ||
@@ -454,7 +536,7 @@ const ContentView = ({
   );
 
   const handleQueuePointerCancel = useCallback(
-    (event, rowKey) => {
+    (event: ReactPointerEvent<HTMLDivElement>, rowKey: string) => {
       if (
         queueGestureRef.current?.rowKey !== rowKey ||
         queueGestureRef.current.pointerId !== event.pointerId
@@ -465,7 +547,11 @@ const ContentView = ({
     [resetQueueSwipe],
   );
 
-  const handleTrackRowClick = (track, index, rowKey) => {
+  const handleTrackRowClick = (
+    track: ContentTrack,
+    index: number,
+    rowKey: string,
+  ) => {
     const suppressedClick = suppressedTrackClickRef.current;
     if (
       suppressedClick.rowKey === rowKey &&
@@ -502,7 +588,9 @@ const ContentView = ({
           });
 
           const rawItems = data.items || [];
-          const newTracks = rawItems.map((item) => item.track).filter(Boolean);
+          const newTracks = rawItems
+            .map((item) => item.track)
+            .filter((track) => track != null);
 
           if (rawItems.length === 0) {
             setNextUrl(null);
@@ -516,7 +604,7 @@ const ContentView = ({
 
           setTracks((prevTracks) => [...prevTracks, ...newTracks]);
           setNextUrl(hasMore ? "has-more" : null);
-          setHasMoreTracks(hasMore);
+          setHasMoreTracks(Boolean(hasMore));
         } catch (error) {
           console.error("WebSocket load more liked songs failed:", error);
           throw error;
@@ -529,7 +617,7 @@ const ContentView = ({
           if (contentType === "mix") {
             const foundMix = radioMixes.find((m) => m.id === contentId);
             if (foundMix && foundMix.uri) {
-              playlistId = foundMix.uri.split(":").pop();
+              playlistId = foundMix.uri.split(":").pop() ?? contentId;
             }
           }
 
@@ -547,7 +635,9 @@ const ContentView = ({
             return;
           }
 
-          const newTracks = rawItems.map((item) => item.track);
+          const newTracks = rawItems
+            .map((item) => item.track)
+            .filter((track) => track != null);
           const newOffset = (data.offset || offset) + rawItems.length;
           const totalTracks = content?.tracks?.total || 0;
           const hasMore =
@@ -555,7 +645,7 @@ const ContentView = ({
 
           setTracks((prevTracks) => [...prevTracks, ...newTracks]);
           setNextUrl(hasMore ? data.next || "has-more" : null);
-          setHasMoreTracks(hasMore);
+          setHasMoreTracks(Boolean(hasMore));
         } catch (error) {
           console.error("WebSocket load more tracks failed:", error);
           throw error;
@@ -594,7 +684,7 @@ const ContentView = ({
           const newOffset = offset + newEpisodes.length;
           const hasMore = newOffset < totalEpisodes && newOffset < 50;
           setNextUrl(hasMore ? "has-more" : null);
-          setHasMoreTracks(hasMore);
+          setHasMoreTracks(Boolean(hasMore));
         } catch (error) {
           console.error("WebSocket load more episodes failed:", error);
           throw error;
@@ -622,7 +712,7 @@ const ContentView = ({
 
           setTracks((prevTracks) => [...prevTracks, ...rawItems]);
           setNextUrl(hasMore ? data.next || "has-more" : null);
-          setHasMoreTracks(hasMore);
+          setHasMoreTracks(Boolean(hasMore));
         } catch (error) {
           console.error("WebSocket load more album tracks failed:", error);
           throw error;
@@ -822,8 +912,8 @@ const ContentView = ({
           autoLoadTimerRef.current = null;
         }
 
-        let contentData;
-        let tracksData = [];
+        let contentData: ContentMetadata;
+        let tracksData: ContentTrack[] = [];
 
         switch (contentType) {
           case "album": {
@@ -842,11 +932,11 @@ const ContentView = ({
               const hasMore = currentOffset + currentItems < totalTracks;
 
               setNextUrl(hasMore ? tracksResponse.next || "has-more" : null);
-              setHasMoreTracks(hasMore);
+              setHasMoreTracks(Boolean(hasMore));
             } catch (error) {
               console.error("WebSocket album fetch failed:", error);
               throw new Error(
-                `Failed to fetch album via WebSocket: ${error.message}`,
+                `Failed to fetch album via WebSocket: ${getErrorMessage(error)}`,
               );
             }
             break;
@@ -865,7 +955,9 @@ const ContentView = ({
 
               contentData = playlistInfo;
               tracksData = Array.isArray(tracksResponse.items)
-                ? tracksResponse.items.map((item) => item.track).filter(Boolean)
+                ? tracksResponse.items
+                    .map((item) => item.track)
+                    .filter((track) => track != null)
                 : [];
 
               const currentOffset = tracksResponse.offset || 0;
@@ -874,11 +966,11 @@ const ContentView = ({
               const hasMore = currentOffset + currentItems < totalTracks;
 
               setNextUrl(hasMore ? tracksResponse.next || "has-more" : null);
-              setHasMoreTracks(hasMore);
+              setHasMoreTracks(Boolean(hasMore));
             } catch (error) {
               console.error("WebSocket playlist fetch failed:", error);
               throw new Error(
-                `Failed to fetch playlist via WebSocket: ${error.message}`,
+                `Failed to fetch playlist via WebSocket: ${getErrorMessage(error)}`,
               );
             }
             break;
@@ -902,7 +994,7 @@ const ContentView = ({
             } catch (error) {
               console.error("WebSocket artist fetch failed:", error);
               throw new Error(
-                `Failed to fetch artist via WebSocket: ${error.message}`,
+                `Failed to fetch artist via WebSocket: ${getErrorMessage(error)}`,
               );
             }
             break;
@@ -921,7 +1013,9 @@ const ContentView = ({
                 tracks: { total: tracksResponse.total || 0 },
               };
               tracksData = Array.isArray(tracksResponse.items)
-                ? tracksResponse.items.map((item) => item.track).filter(Boolean)
+                ? tracksResponse.items
+                    .map((item) => item.track)
+                    .filter((track) => track != null)
                 : Array.isArray(tracksResponse.tracks)
                   ? tracksResponse.tracks
                   : [];
@@ -931,12 +1025,12 @@ const ContentView = ({
               const totalTracks = tracksResponse.total || 0;
               const hasMore = currentOffset + currentItems < totalTracks;
 
-              setHasMoreTracks(hasMore);
+              setHasMoreTracks(Boolean(hasMore));
               setNextUrl(hasMore ? "has-more" : null);
             } catch (error) {
               console.error("WebSocket liked songs fetch failed:", error);
               throw new Error(
-                `Failed to fetch liked songs via WebSocket: ${error.message}`,
+                `Failed to fetch liked songs via WebSocket: ${getErrorMessage(error)}`,
               );
             }
             break;
@@ -963,12 +1057,12 @@ const ContentView = ({
                 currentItems < 50;
 
               setNextUrl(hasMore ? "has-more" : null);
-              setHasMoreTracks(hasMore);
+              setHasMoreTracks(Boolean(hasMore));
               tracksLengthRef.current = tracksData.length;
             } catch (error) {
               console.error("WebSocket show fetch failed:", error);
               throw new Error(
-                `Failed to fetch show via WebSocket: ${error.message}`,
+                `Failed to fetch show via WebSocket: ${getErrorMessage(error)}`,
               );
             }
             break;
@@ -982,7 +1076,7 @@ const ContentView = ({
         setTracks(tracksData);
       } catch (err) {
         console.error(`Error fetching ${contentType} data:`, err);
-        setError(err.message);
+        setError(getErrorMessage(err));
       } finally {
         isFetchingRef.current = false;
         setIsLoading(false);
@@ -1035,8 +1129,11 @@ const ContentView = ({
             const imageUrl =
               contentData.images[1]?.url || contentData.images[0].url;
 
-            if (foundMix.type === "static" && imageUrl.startsWith("/images/")) {
-              extractColorsFromImage(imageUrl).then((colors) => {
+            if (
+              foundMix.type === "static" &&
+              imageUrl?.startsWith("/images/")
+            ) {
+              extractColorsFromImage(imageUrl).then((colors: string[]) => {
                 if (colors && updateGradientColors) {
                   updateGradientColors(colors, contentType);
                 }
@@ -1048,7 +1145,7 @@ const ContentView = ({
 
           if (foundMix.uri && foundMix.uri.includes("playlist:")) {
             try {
-              const playlistId = foundMix.uri.split(":").pop();
+              const playlistId = foundMix.uri.split(":").pop() ?? contentId;
               const [playlistInfo, tracksResponse] = await Promise.all([
                 getPlaylist(playlistId, "images,name,tracks.total"),
                 getPlaylistTracks(playlistId, {
@@ -1059,7 +1156,9 @@ const ContentView = ({
               ]);
 
               const tracksData = Array.isArray(tracksResponse.items)
-                ? tracksResponse.items.map((item) => item.track).filter(Boolean)
+                ? tracksResponse.items
+                    .map((item) => item.track)
+                    .filter((track) => track != null)
                 : [];
               const currentOffset = tracksResponse.offset || 0;
               const currentItems = tracksResponse.items?.length || 0;
@@ -1073,7 +1172,7 @@ const ContentView = ({
               });
               setTracks(tracksData);
               setNextUrl(hasMore ? tracksResponse.next || "has-more" : null);
-              setHasMoreTracks(hasMore);
+              setHasMoreTracks(Boolean(hasMore));
             } catch (error) {
               console.error("Failed to fetch mix tracks:", error);
               setContent(contentData);
@@ -1091,10 +1190,10 @@ const ContentView = ({
                   );
                 }
 
-                if (result && result.tracks) {
-                  const tracksData = Array.isArray(result.tracks)
-                    ? result.tracks
-                    : [];
+                if (result) {
+                  const tracksData = Array.isArray(result)
+                    ? result
+                    : (result.tracks ?? []);
                   setContent({
                     ...contentData,
                     tracks: { total: tracksData.length },
@@ -1126,7 +1225,7 @@ const ContentView = ({
         }
       } catch (err) {
         console.error(`Error fetching mix data:`, err);
-        setError(err.message);
+        setError(getErrorMessage(err));
       } finally {
         setIsLoading(false);
       }
@@ -1144,7 +1243,7 @@ const ContentView = ({
     sendSpotifyCommand,
   ]);
 
-  const handleTrackPlay = async (track, index) => {
+  const handleTrackPlay = async (track: ContentTrack, index: number) => {
     if (!track || !track.uri) {
       console.warn("Attempted to play an invalid track:", track);
       return;
@@ -1157,10 +1256,11 @@ const ContentView = ({
       return;
     }
 
-    let contextUri = null;
-    let uris = null;
+    let contextUri: string | null = null;
+    let uris: string[] | null = null;
     let success = false;
-    let originalPlayerState = null;
+    let originalPlayerState: Awaited<ReturnType<typeof getPlayerState>> | null =
+      null;
 
     try {
       originalPlayerState = await getPlayerState();
@@ -1198,7 +1298,11 @@ const ContentView = ({
           contextUri = currentMix.uri;
           success = await playTrack(track.uri, contextUri);
         } else {
-          uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+          uris = tracks
+            .map((track) => track.uri)
+            .filter(
+              (uri): uri is string => typeof uri === "string" && uri.length > 0,
+            );
           const startIndex = index || 0;
           uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
           success = await playTrack(track.uri, null, uris);
@@ -1209,7 +1313,11 @@ const ContentView = ({
           const likedSongsContextUri = `spotify:user:${spotifyUserId}:collection`;
           success = await playTrack(track.uri, likedSongsContextUri, null);
         } else {
-          uris = tracks.filter((t) => t && t.uri).map((t) => t.uri);
+          uris = tracks
+            .map((track) => track.uri)
+            .filter(
+              (uri): uri is string => typeof uri === "string" && uri.length > 0,
+            );
           const startIndex = index || 0;
           uris = uris.slice(startIndex).concat(uris.slice(0, startIndex));
           success = await playTrack(track.uri, null, uris);
@@ -1235,8 +1343,13 @@ const ContentView = ({
               await toggleShuffle(originalPlayerState.shuffle_state);
             }
 
-            if (originalPlayerState.repeat_state !== undefined) {
-              await setRepeatMode(originalPlayerState.repeat_state);
+            const repeat = originalPlayerState.repeat_state;
+            if (
+              repeat === "off" ||
+              repeat === "context" ||
+              repeat === "track"
+            ) {
+              await setRepeatMode(repeat);
             }
           } catch (error) {
             console.warn("Could not restore player settings:", error);
@@ -1274,7 +1387,7 @@ const ContentView = ({
           style={{ height: "calc(100vh - 5rem)" }}
         >
           {Array(5)
-            .fill()
+            .fill(undefined)
             .map((_, i) => (
               <div key={i} className="flex items-start mb-4">
                 <div className="w-6 h-8 bg-white/10 animate-pulse rounded mr-12" />
@@ -1329,7 +1442,7 @@ const ContentView = ({
     return content.images[1]?.url || content.images[0].url;
   };
 
-  const formatNumber = (num) => {
+  const formatNumber = (num: number) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
@@ -1377,11 +1490,13 @@ const ContentView = ({
               className={imageStyle}
               onLoad={(e) => {
                 if (contentType === "mix" && content.type === "static") {
-                  extractColorsFromImage(e.target.src).then((colors) => {
-                    if (colors && updateGradientColors) {
-                      updateGradientColors(colors, contentType);
-                    }
-                  });
+                  extractColorsFromImage(e.currentTarget.src).then(
+                    (colors: string[]) => {
+                      if (colors && updateGradientColors) {
+                        updateGradientColors(colors, contentType);
+                      }
+                    },
+                  );
                 }
               }}
             />
@@ -1620,18 +1735,18 @@ const ContentView = ({
                       </p>
                     ) : (
                       track.artists &&
-                      track.artists.map((artist, artistIndex) => (
+                      track.artists?.map((artist, artistIndex, artists) => (
                         <p
                           key={artist?.id || `artist-${artistIndex}`}
                           className={`text-white/60 truncate tracking-tight ${
-                            artistIndex < track.artists.length - 1 ? "mr-2" : ""
+                            artistIndex < artists.length - 1 ? "mr-2" : ""
                           }`}
                           style={{ fontSize: "28px", fontWeight: "560" }}
                         >
                           {artist?.name === null && artist?.type
                             ? artist.type
                             : artist?.name || "Unknown Artist"}
-                          {artistIndex < track.artists.length - 1 && ","}
+                          {artistIndex < artists.length - 1 && ","}
                         </p>
                       ))
                     )}

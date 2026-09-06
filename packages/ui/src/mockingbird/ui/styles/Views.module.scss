@@ -8,6 +8,7 @@
 }
 
 .view {
+  pointer-events: none;
   position: absolute;
   top: 0;
   transform: perspective(800px) translate3d(0, 530px, -160px);
@@ -25,6 +26,7 @@
 }
 
 .current {
+  pointer-events: auto;
   transition-delay: 100ms;
   transform: translateY(0);
   filter: brightness(1);

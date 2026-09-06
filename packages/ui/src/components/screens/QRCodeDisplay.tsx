@@ -1,36 +1,16 @@
-import React, { useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
+
+interface QRCodeDisplayProps {
+  verificationUri?: string | null;
+  isLoading?: boolean;
+  error?: string | null;
+}
 
 const QRCodeDisplay = ({
   verificationUri,
   isLoading,
   error,
-  onRefreshNeeded,
-}: UiComponentProps) => {
-  const refreshIntervalRef = useRef(null);
-  const lastVerificationUriRef = useRef(verificationUri);
-
-  useEffect(() => {
-    refreshIntervalRef.current = setInterval(() => {
-      if (!verificationUri || verificationUri.trim() === "") {
-        if (onRefreshNeeded) {
-          onRefreshNeeded();
-        }
-      }
-    }, 10000);
-
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-        refreshIntervalRef.current = null;
-      }
-    };
-  }, [verificationUri, onRefreshNeeded]);
-
-  useEffect(() => {
-    lastVerificationUriRef.current = verificationUri;
-  }, [verificationUri]);
-
+}: QRCodeDisplayProps) => {
   if (isLoading) {
     return (
       <div className="animate-pulse bg-white/10 w-[260px] h-[260px] rounded-xl" />

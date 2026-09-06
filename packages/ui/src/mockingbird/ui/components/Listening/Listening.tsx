@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import type VoiceStore from "../../stores/VoiceStore";
 import classnames from "classnames";
 import { observer } from "mobx-react-lite";
 import styles from "./Listening.module.scss";
@@ -9,10 +11,10 @@ import Type from "../CarthingUIComponents/Type/Type";
 import AutoSizingText from "./AutoSizingText";
 import { VOLUME_INTENT } from "./VoiceConfirmationIntents";
 
-const firstLetterUpperCase = (s) =>
+const firstLetterUpperCase = (s: string) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
-const INTENT_TO_CONFIRMATION_TEXT = {
+const INTENT_TO_CONFIRMATION_TEXT: Record<string, string | undefined> = {
   ADD_TO_COLLECTION: "Saved",
   THUMBS_UP: "Saved",
   FOLLOW: "Following",
@@ -34,7 +36,7 @@ const INTENT_TO_CONFIRMATION_TEXT = {
   ADD_TO_QUEUE: "Added to queue",
 };
 
-const ACTION_TO_CONFIRMATION_TEXT = {
+const ACTION_TO_CONFIRMATION_TEXT: Record<string, string | undefined> = {
   SAVE_TO_COLLECTION_PODCAST: "Added",
 };
 
@@ -54,8 +56,8 @@ export function Listening({
   listening,
   aiResponse,
   voiceStore,
-}: UiComponentProps) {
-  let content = null;
+}: ListeningProps) {
+  let content: ReactNode = null;
   let showJellyfish = true;
 
   if (errorUiTitle) {
@@ -165,28 +167,17 @@ const ListeningContainer = () => {
     }
   };
 
-  const {
-    showingVoiceConfirmation,
-    intent,
-    errorUiTitle,
-    errorUiSubtitle,
-    isError,
-    listening,
-  } = voiceStore;
+  const { showingVoiceConfirmation, intent, isError, listening } = voiceStore;
   const { transcript, isFinal } = voiceStore.state.asr;
   const error = voiceStore.state.error;
   const friendlyError = voiceStore.state.friendlyError;
-  const confirmationText = voiceStore.state.confirmationText || null;
   const action = voiceStore.state.action;
   const aiResponse = voiceStore.state.aiResponse;
 
   return (
     <Listening
       maybeTryAgain={maybeTryAgain}
-      errorUiTitle={errorUiTitle}
-      errorUiSubtitle={errorUiSubtitle}
       error={error}
-      confirmationText={confirmationText}
       friendlyError={friendlyError}
       showingVoiceConfirmation={showingVoiceConfirmation}
       intent={intent}
@@ -202,3 +193,21 @@ const ListeningContainer = () => {
 };
 
 export default observer(ListeningContainer);
+
+interface ListeningProps {
+  maybeTryAgain?: () => void;
+  errorUiTitle?: string;
+  errorUiSubtitle?: string;
+  error?: string | null;
+  confirmationText?: { title?: string; subtitle?: string } | null;
+  friendlyError?: string;
+  showingVoiceConfirmation?: boolean;
+  intent: string;
+  action?: string;
+  transcript?: string;
+  isFinal?: boolean;
+  isError?: boolean;
+  listening?: boolean;
+  aiResponse?: string;
+  voiceStore: VoiceStore;
+}

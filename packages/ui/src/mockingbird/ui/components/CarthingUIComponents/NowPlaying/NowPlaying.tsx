@@ -6,7 +6,10 @@ import Type from "../Type/Type";
 const NowPlaying = ({
   playing = true,
   textName = "mestroBook",
-}: UiComponentProps) => {
+}: {
+  playing?: boolean;
+  textName?: string;
+}) => {
   return (
     <div className={styles.nowPlayingWrapper}>
       <div className={styles.bars} data-testid="equaliser">

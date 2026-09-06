@@ -1,13 +1,14 @@
+import type { ReactNode, MouseEvent } from "react";
 import { observer } from "mobx-react-lite";
 import { useCarThingStore } from "../../contexts/CarThingStore";
 import { IconX } from "../Icons/EncoreWeb/IconX";
 import styles from "./LegacyModal.module.scss";
 
-const LegacyModal = ({ children }: UiComponentProps) => {
+const LegacyModal = ({ children }: { children?: ReactNode }) => {
   const { overlayController } = useCarThingStore();
   const uiState = overlayController.overlayUiState;
 
-  const handleModalOnClick = (e) => {
+  const handleModalOnClick = (e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };

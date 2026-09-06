@@ -1,3 +1,18 @@
+import type {
+  PlayingInfoState,
+  VolumeUiState,
+  ScrubbingUiState,
+  ControlButtonsState,
+} from "./NpvModels";
+import type { OverlayController } from "./StoreContracts";
+import type { ShelfItem } from "./ShelfModels";
+import type { TracklistItem } from "./TracklistModels";
+import type { RootStore } from "./RootStore";
+import type {
+  InterappActions,
+  MiddlewareActions,
+  MiddlewareSocket,
+} from "./StoreContracts";
 import { makeAutoObservable, reaction, runInAction } from "mobx";
 import { SwipeHandlerClass } from "../components/Views/Npv/SwipeHandler/SwipeHandler";
 import {
@@ -6,16 +21,16 @@ import {
 } from "../components/Views/Npv/Scrubbing/scrubbingConstants";
 
 export class NpvStore {
-  declare carThingStores: UiLooseData;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare carThingStores: RootStore;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   tipsUiState = {
     dismissVisibleTip: () => {},
     tipToShow: null,
   };
 
-  playingInfoUiState = {
+  playingInfoUiState: PlayingInfoState = {
     currentItem: {
       uid: "",
       uri: "",
@@ -62,8 +77,8 @@ export class NpvStore {
     onRepeatOnce: false,
   };
 
-  volumeUiState = {
-    volumeTimeoutId: null,
+  volumeUiState: VolumeUiState = {
+    volumeTimeoutId: undefined,
     carMode: null,
     isPlayingSpotify: true,
     displayVolume: 0.5,
@@ -72,7 +87,7 @@ export class NpvStore {
     get colorChannels() {
       return (
         this.parentStore?.carThingStores?.imageStore?.colors?.get(
-          this.parentStore?.playingInfoUiState?.currentItem?.image_uri,
+          this.parentStore?.playingInfoUiState?.currentItem?.image_uri ?? "",
         ) || [0, 0, 0]
       );
     },
@@ -92,7 +107,7 @@ export class NpvStore {
     },
   };
 
-  controlButtonsUiState = {
+  controlButtonsUiState: ControlButtonsState = {
     controlButtonSet: "music",
     showOtherMediaControls: false,
     showPodcastControls: false,
@@ -118,13 +133,13 @@ export class NpvStore {
     handlePodcastSpeedClick: () => {},
   };
 
-  scrubbingUiState = {
+  scrubbingUiState: ScrubbingUiState = {
     isScrubbing: false,
     isScrubbingEnabled: true,
     get colorChannels() {
       return (
         this.parentStore?.carThingStores?.imageStore?.colors?.get(
-          this.parentStore?.playingInfoUiState?.currentItem?.image_uri,
+          this.parentStore?.playingInfoUiState?.currentItem?.image_uri ?? "",
         ) || [0, 0, 0]
       );
     },
@@ -201,7 +216,7 @@ export class NpvStore {
         if (playerStore?.state?.is_playing) {
           playerStore.pause?.();
         } else {
-          playerStore.play?.();
+          playerStore?.play();
         }
       } else {
         npvStore.scrubbingUiState.stopScrubbing();
@@ -259,7 +274,7 @@ export class NpvStore {
     },
   };
 
-  constructor(rootStore: UiLooseData, middlewareActions: UiLooseData) {
+  constructor(rootStore: RootStore, middlewareActions: MiddlewareActions) {
     this.rootStore = rootStore;
     this.carThingStores = rootStore;
     makeAutoObservable(this, { rootStore: false });
@@ -291,12 +306,13 @@ export class NpvStore {
   }
 
   initializeSwipeHandler() {
+    const rootStore = this.rootStore;
     const playerStoreInterface = {
       get currentTrack() {
-        return this.rootStore?.playerStore?.currentTrack || {};
+        return rootStore.playerStore.currentTrack;
       },
       get currentTrackPosition() {
-        return this.rootStore?.playerStore?.state?.progress_ms || 0;
+        return rootStore.playerStore.state.progress_ms;
       },
       skipNext: () => {
         if (window.carThingSkipNext) {
@@ -310,8 +326,6 @@ export class NpvStore {
       },
     };
 
-    playerStoreInterface.rootStore = this.rootStore;
-
     const swipeHandler = new SwipeHandlerClass(playerStoreInterface);
 
     this.playingInfoUiState.swipeHandler = swipeHandler;
@@ -319,13 +333,13 @@ export class NpvStore {
 }
 
 export class BluetoothStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    rootStore: UiLooseData,
-    socket: UiLooseData,
-    middlewareActions: UiLooseData,
+    rootStore: RootStore,
+    socket: MiddlewareSocket,
+    middlewareActions: MiddlewareActions,
   ) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
@@ -334,10 +348,10 @@ export class BluetoothStore {
 
 export class RemoteControlStore {
   declare interappConnected: boolean;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, socket: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, socket: MiddlewareSocket) {
     this.rootStore = rootStore;
     this.interappConnected = true;
     makeAutoObservable(this, { rootStore: false });
@@ -347,10 +361,10 @@ export class RemoteControlStore {
 export class OtaStore {
   declare criticalUpdate: boolean;
   declare updateSuccess: boolean;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, socket: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, socket: MiddlewareSocket) {
     this.rootStore = rootStore;
     this.criticalUpdate = false;
     this.updateSuccess = false;
@@ -359,13 +373,13 @@ export class OtaStore {
 }
 
 export class SettingsStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    rootStore: UiLooseData,
-    middlewareActions: UiLooseData,
-    socket: UiLooseData,
+    rootStore: RootStore,
+    middlewareActions: MiddlewareActions,
+    socket: MiddlewareSocket,
   ) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
@@ -379,10 +393,10 @@ export class SettingsStore {
 export class SessionStateStore {
   declare isLoggedIn: boolean;
   declare phoneHasNetwork: boolean;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, socket: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, socket: MiddlewareSocket) {
     this.rootStore = rootStore;
     this.isLoggedIn = true;
     this.phoneHasNetwork = true;
@@ -394,10 +408,10 @@ export class SessionStateStore {
 
 export class TracklistStore {
   declare tracklistUiState: TracklistUiState;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     this.tracklistUiState = new TracklistUiState(rootStore);
     makeAutoObservable(this, { rootStore: false });
@@ -409,10 +423,10 @@ export class TracklistStore {
 }
 
 export class TracklistUiState {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
@@ -423,20 +437,20 @@ export class TracklistUiState {
 }
 
 export class TimerStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
 }
 
 export class DevOptionsStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
@@ -444,10 +458,10 @@ export class DevOptionsStore {
 
 export class HardwareStore {
   declare rebooting: boolean;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(socket: UiLooseData, middlewareActions: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(socket: MiddlewareSocket, middlewareActions: MiddlewareActions) {
     this.rebooting = false;
     makeAutoObservable(this);
   }
@@ -456,10 +470,10 @@ export class HardwareStore {
 export class SetupStore {
   declare hasStatusMessage: boolean;
   declare shouldShowSetup: boolean;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, socket: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, socket: MiddlewareSocket) {
     this.rootStore = rootStore;
     this.hasStatusMessage = true;
     this.shouldShowSetup = false;
@@ -468,24 +482,24 @@ export class SetupStore {
 }
 
 export class PhoneConnectionStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, middlewareActions: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, middlewareActions: MiddlewareActions) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
 }
 
 export class PermissionsStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    overlayController,
-    socket: UiLooseData,
-    interappActions: UiLooseData,
-    errorHandler,
+    overlayController: OverlayController,
+    socket: MiddlewareSocket,
+    interappActions: InterappActions,
+    errorHandler: ErrorHandler,
   ) {
     makeAutoObservable(this);
   }
@@ -493,13 +507,13 @@ export class PermissionsStore {
 
 export class RemoteConfigStore {
   declare messageReceived: boolean;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    rootStore: UiLooseData,
-    socket: UiLooseData,
-    middlewareActions: UiLooseData,
+    rootStore: RootStore,
+    socket: MiddlewareSocket,
+    middlewareActions: MiddlewareActions,
   ) {
     this.rootStore = rootStore;
     this.messageReceived = true;
@@ -510,13 +524,15 @@ export class RemoteConfigStore {
 }
 
 export class VolumeStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare localVolume: number | undefined;
+  declare receivedVolume: number | undefined;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    rootStore: UiLooseData,
-    socket: UiLooseData,
-    interappActions: UiLooseData,
+    rootStore: RootStore,
+    socket: MiddlewareSocket,
+    interappActions: InterappActions,
   ) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
@@ -527,20 +543,23 @@ export class VolumeStore {
 }
 
 export class RadioStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData) {
+  declare currentRadioTracks: TracklistItem[] | undefined;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
 }
 
 export class ChildItemStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, interappActions: UiLooseData) {
+  declare isError: ((uri: string) => boolean) | undefined;
+  declare getTotal: ((uri: string) => number) | undefined;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, interappActions: InterappActions) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
@@ -549,11 +568,11 @@ export class ChildItemStore {
 }
 
 export class HomeItemsStore {
-  declare items: UiLooseData[];
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, interappActions: UiLooseData) {
+  declare items: ShelfItem[];
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, interappActions: InterappActions) {
     this.rootStore = rootStore;
     this.items = [];
     makeAutoObservable(this, { rootStore: false });
@@ -567,13 +586,13 @@ export class HomeItemsStore {
 }
 
 export class PodcastSpeedStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    rootStore: UiLooseData,
-    interappActions: UiLooseData,
-    socket: UiLooseData,
+    rootStore: RootStore,
+    interappActions: InterappActions,
+    socket: MiddlewareSocket,
   ) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
@@ -581,10 +600,18 @@ export class PodcastSpeedStore {
 }
 
 export class PodcastStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(interappActions: UiLooseData, remoteConfigStore, errorHandler) {
+  declare isError: ((uri: string) => boolean) | undefined;
+  declare getTotalNumberOfItems: ((uri: string) => number) | undefined;
+  declare shouldShowLatestPlayedEpisode: ((uri: string) => boolean) | undefined;
+  declare getLatestPlayedUri: ((uri: string) => string) | undefined;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(
+    interappActions: InterappActions,
+    remoteConfigStore: RootStore["remoteConfigStore"],
+    errorHandler: ErrorHandler,
+  ) {
     makeAutoObservable(this);
   }
 
@@ -592,24 +619,31 @@ export class PodcastStore {
 }
 
 export class SavedStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(playerStore, interappActions: UiLooseData, errorHandler) {
+  declare isSaved: ((uri: string) => boolean) | undefined;
+  declare setSaved: ((uri: string, saved: boolean) => void) | undefined;
+  declare loadSavedState: ((uri: string) => void) | undefined;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(
+    playerStore: RootStore["playerStore"],
+    interappActions: InterappActions,
+    errorHandler: ErrorHandler,
+  ) {
     makeAutoObservable(this);
   }
 }
 
 export class PresetsDataStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    interappActions: UiLooseData,
-    errorHandler,
-    imageStore,
-    remoteConfigStore,
-    versionStatusStore,
+    interappActions: InterappActions,
+    errorHandler: ErrorHandler,
+    imageStore: RootStore["imageStore"],
+    remoteConfigStore: RootStore["remoteConfigStore"],
+    versionStatusStore: RootStore["versionStatusStore"],
   ) {
     makeAutoObservable(this);
   }
@@ -619,10 +653,10 @@ export class PresetsDataStore {
 }
 
 export class TipsStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(interappActions: UiLooseData, errorHandler) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(interappActions: InterappActions, errorHandler: ErrorHandler) {
     makeAutoObservable(this);
   }
 
@@ -631,20 +665,20 @@ export class TipsStore {
 
 export class VersionStatusStore {
   declare serial: string;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(socket: UiLooseData, middlewareActions: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(socket: MiddlewareSocket, middlewareActions: MiddlewareActions) {
     this.serial = "STUB-SERIAL-123";
     makeAutoObservable(this);
   }
 }
 
 export class ErrorHandler {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  logUnexpectedError(error, message) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  logUnexpectedError(error: unknown, message: string) {
     console.error(message, error);
   }
 }
@@ -654,10 +688,14 @@ export class UbiLogger {
   declare presetsUbiLogger: PresetsUbiLogger;
   declare queueUbiLogger: QueueUbiLogger;
   declare settingsUbiLogger: SettingsUbiLogger;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(interappActions: UiLooseData, remoteConfigStore, hardwareStore) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(
+    interappActions: InterappActions,
+    remoteConfigStore: RootStore["remoteConfigStore"],
+    hardwareStore: RootStore["hardwareStore"],
+  ) {
     this.onboardingUbiLogger = new OnboardingUbiLogger();
     this.settingsUbiLogger = new SettingsUbiLogger();
     this.queueUbiLogger = new QueueUbiLogger();
@@ -668,9 +706,9 @@ export class UbiLogger {
 }
 
 export class OnboardingUbiLogger {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   logStartClicked() {}
   logNoInteractionContinueButtonDialPress() {}
   logNoInteractionEndButtonDialPress() {}
@@ -678,9 +716,9 @@ export class OnboardingUbiLogger {
 }
 
 export class SettingsUbiLogger {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   logSettingsButtonHide() {}
   logSettingsButtonShow() {}
   logMainMenuBackButton() {}
@@ -691,22 +729,26 @@ export class QueueUbiLogger {}
 export class PresetsUbiLogger {}
 
 export class SwipeDownHandleUiState {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(overlayController, presetsController, presetsUbiLogger) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(
+    overlayController: OverlayController,
+    presetsController: RootStore["presetsController"],
+    presetsUbiLogger: RootStore["ubiLogger"]["presetsUbiLogger"],
+  ) {
     makeAutoObservable(this);
   }
 }
 
 export class PhoneCallController {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    rootStore: UiLooseData,
-    socket: UiLooseData,
-    middlewareActions: UiLooseData,
+    rootStore: RootStore,
+    socket: MiddlewareSocket,
+    middlewareActions: MiddlewareActions,
   ) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
@@ -717,10 +759,10 @@ export class PhoneCallController {
 
 export class PresetsController {
   declare presetsUiState: PresetsUiState;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, interappActions: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, interappActions: InterappActions) {
     this.rootStore = rootStore;
     this.presetsUiState = new PresetsUiState();
     makeAutoObservable(this, { rootStore: false });
@@ -730,35 +772,38 @@ export class PresetsController {
 }
 
 export class PresetsUiState {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   reset() {}
   highlightPreset() {}
 }
 
 export class PromoController {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, middlewareActions: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, middlewareActions: MiddlewareActions) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
 }
 
 export class DisconnectedLogger {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(rootStore: UiLooseData, middlewareActions: UiLooseData) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(rootStore: RootStore, middlewareActions: MiddlewareActions) {
     this.rootStore = rootStore;
     makeAutoObservable(this, { rootStore: false });
   }
 }
 
-export function createOverlayController(rootStore: UiLooseData, ubiLogger) {
-  const controller = makeAutoObservable({
+export function createOverlayController(
+  rootStore: RootStore,
+  ubiLogger: RootStore["ubiLogger"],
+): OverlayController {
+  const controller = makeAutoObservable<OverlayController>({
     isSettingsShowing: false,
     currentOverlay: undefined,
 
@@ -856,7 +901,7 @@ export function createOverlayController(rootStore: UiLooseData, ubiLogger) {
 
     get overlayUiState() {
       const self = this;
-      const isDismissibleFor = (overlay) => {
+      const isDismissibleFor = (overlay: string | undefined) => {
         switch (overlay) {
           case "non_supported_type":
           case "standby":
@@ -902,18 +947,18 @@ export function createOverlayController(rootStore: UiLooseData, ubiLogger) {
 
 export class MockPersistentStorage {
   declare seeded: boolean;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor() {
     this.seeded = true;
   }
 
-  getItem(key) {
+  getItem(key: string) {
     return localStorage.getItem(key);
   }
 
-  setItem(key, value) {
+  setItem(key: string, value: string) {
     localStorage.setItem(key, value);
   }
 }

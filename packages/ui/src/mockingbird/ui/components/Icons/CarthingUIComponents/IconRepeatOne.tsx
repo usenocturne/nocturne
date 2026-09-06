@@ -1,12 +1,16 @@
+import type { MockIconProps } from "../IconProps";
 import React from "react";
 
-const findClosestGlyphAvailable = (iconList, size) => {
+const findClosestGlyphAvailable = (
+  iconList: { size: number; svgContent: string }[],
+  size: number,
+) => {
   return (
     iconList.find((icon) => icon.size >= size) || iconList[iconList.length - 1]
   );
 };
 
-export function IconRepeatOnce(props) {
+export function IconRepeatOnce(props: MockIconProps) {
   const {
     autoMirror = false,
     iconSize = 24,
@@ -32,13 +36,13 @@ export function IconRepeatOnce(props) {
 
   const closestSize = findClosestGlyphAvailable(iconList, iconSize);
 
-  const titleTag = (title, titleId) => {
+  const titleTag = (title: string | undefined, titleId: string | undefined) => {
     return title
       ? `<title ${titleId ? `id="${titleId}"` : ""}>${title}</title>`
       : "";
   };
 
-  const descTag = (desc, descId) => {
+  const descTag = (desc: string | undefined, descId: string | undefined) => {
     return desc ? `<desc ${descId ? `id="${descId}"` : ""}>${desc}</desc>` : "";
   };
 

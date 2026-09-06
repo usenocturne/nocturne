@@ -1,6 +1,7 @@
+import type { MockIconProps } from "../IconProps";
 import IconShuffle from "./IconShuffle";
 
-const IconShuffleActive = ({ className, iconSize }: UiComponentProps) => {
+const IconShuffleActive = ({ className, iconSize }: MockIconProps) => {
   return (
     <div style={{ width: `${iconSize}px` }}>
       <IconShuffle className={className} iconSize={iconSize} />

@@ -1,3 +1,4 @@
+import type { LazyImageProps } from "../LazyImage";
 import { IconPlaylist } from "./icons/IconPlaylist";
 import { IconTrack } from "./icons/IconTrack";
 import { IconAlbum } from "./icons/IconAlbum";
@@ -17,7 +18,7 @@ const Placeholder = ({
   onClick,
   scale = 5,
   isActive,
-}: UiComponentProps) => {
+}: Pick<LazyImageProps, "uri" | "size" | "onClick" | "scale" | "isActive">) => {
   const { npvStore } = useCarThingStore();
   const uiState = npvStore.controlButtonsUiState;
   const iconSize = 30;
@@ -56,7 +57,7 @@ const Placeholder = ({
   return (
     <div
       className={classNames(styles.placeholder, {
-        [styles.otherMedia]: !uiState.isPlayingSpotify,
+        [styles.otherMedia]: uiState.showOtherMediaControls,
       })}
       style={{
         width: `${size}px`,

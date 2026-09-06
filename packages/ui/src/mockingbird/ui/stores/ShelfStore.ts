@@ -1,3 +1,12 @@
+import type { SpotifyAlbum, SpotifyDataState } from "../../../types";
+import type { PlayerItem } from "./PlayerStore";
+import type {
+  ShelfItem,
+  ShelfContextItem,
+  VoiceShelfItem,
+} from "./ShelfModels";
+import type { RootStore } from "./RootStore";
+import type { InterappActions, MiddlewareActions } from "./StoreContracts";
 import { makeAutoObservable, runInAction, action } from "mobx";
 import {
   getShelfImageUrl,
@@ -8,7 +17,10 @@ export const HOME_IDENTIFIER = "featured";
 export const VOICE_IDENTIFIER = "voice";
 export const YOUR_LIBRARY = "your-library";
 
-export function getVoiceShelfItemType(voiceItem, index) {
+export function getVoiceShelfItemType(
+  voiceItem: VoiceShelfItem,
+  index: number,
+): ShelfContextItem {
   return {
     type: "CONTEXT_ITEM",
     identifier: `voice-${voiceItem.kind}-${voiceItem.uri}`,
@@ -22,7 +34,7 @@ export function getVoiceShelfItemType(voiceItem, index) {
   };
 }
 
-function routeVoiceItem(rootStore: UiLooseData, item) {
+function routeVoiceItem(rootStore: RootStore, item: ShelfContextItem) {
   const uri = item.uri || "";
   if (uri.startsWith("spotify:track:")) {
     rootStore.spotifyControls?.playTrack?.(uri);
@@ -45,18 +57,18 @@ function routeVoiceItem(rootStore: UiLooseData, item) {
 const MAX_RECENT_ALBUMS = 10;
 
 class ShelfStore {
-  declare categories: UiLooseData[];
+  declare categories: unknown[];
   declare loading: boolean;
   declare shelfController: ShelfController;
-  declare voiceCategoryId: UiLooseData | undefined;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  recentAlbums: UiLooseData[] = [];
-  voiceItems: UiLooseData[] = [];
+  declare voiceCategoryId: string | undefined;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  recentAlbums: SpotifyAlbum[] = [];
+  voiceItems: VoiceShelfItem[] = [];
   _recentAlbumsInitialized = false;
 
-  constructor(rootStore: UiLooseData, interappActions: UiLooseData) {
+  constructor(rootStore: RootStore, interappActions: InterappActions) {
     this.rootStore = rootStore;
     this.interappActions = interappActions;
 
@@ -72,7 +84,7 @@ class ShelfStore {
     this.shelfController = new ShelfController(this);
   }
 
-  seedRecentAlbums(albums) {
+  seedRecentAlbums(albums: SpotifyAlbum[] | null | undefined) {
     if (this._recentAlbumsInitialized || !albums || albums.length === 0) return;
     this._recentAlbumsInitialized = true;
 
@@ -87,7 +99,7 @@ class ShelfStore {
     this.recentAlbums = merged.slice(0, MAX_RECENT_ALBUMS);
   }
 
-  pushCurrentAlbum(album) {
+  pushCurrentAlbum(album: SpotifyAlbum | null | undefined) {
     if (!album?.id) return;
 
     const existing = this.recentAlbums.find((a) => a.id === album.id);
@@ -97,6 +109,8 @@ class ShelfStore {
 
     this.recentAlbums = updated.slice(0, MAX_RECENT_ALBUMS);
   }
+
+  declare getItemsByCategory: ((category: string) => ShelfItem[]) | undefined;
 
   async getShelfData() {
     if (!this.rootStore.sessionStateStore?.isLoggedIn) {
@@ -115,11 +129,13 @@ class ShelfStore {
     }
   }
 
-  populateVoice = action(({ items, id }) => {
-    this.voiceItems = items.slice(0, 12);
-    this.voiceCategoryId = id ?? VOICE_IDENTIFIER;
-    this.shelfController.swiperUiState.refreshTrigger++;
-  });
+  populateVoice = action(
+    ({ items, id }: { items: VoiceShelfItem[]; id?: string }) => {
+      this.voiceItems = items.slice(0, 12);
+      this.voiceCategoryId = id ?? VOICE_IDENTIFIER;
+      this.shelfController.swiperUiState.refreshTrigger++;
+    },
+  );
 
   clearVoiceItems = action(() => {
     this.voiceItems = [];
@@ -135,12 +151,12 @@ class ShelfStore {
 }
 
 class ShelfHeaderUiState {
-  declare selectedCategoryId: UiLooseData;
-  declare shelfStore: UiLooseData;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(shelfStore) {
+  declare selectedCategoryId: string;
+  declare shelfStore: ShelfStore;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(shelfStore: ShelfStore) {
     this.shelfStore = shelfStore;
     this.selectedCategoryId = HOME_IDENTIFIER;
     makeAutoObservable(this);
@@ -198,7 +214,7 @@ class ShelfHeaderUiState {
     );
   }
 
-  isSelectedItemCategory(categoryId) {
+  isSelectedItemCategory(categoryId: string) {
     return categoryId === this.selectedCategoryId;
   }
 
@@ -206,7 +222,7 @@ class ShelfHeaderUiState {
     this.selectedCategoryId = HOME_IDENTIFIER;
   }
 
-  headerItemClicked(id) {
+  headerItemClicked(id: string) {
     let targetCategoryId = id;
     if (id === YOUR_LIBRARY) {
       const firstLibraryId = this.firstLibraryCategoryId;
@@ -229,7 +245,7 @@ class ShelfHeaderUiState {
     this.updateToFirstItemOfCategory(targetCategoryId);
   }
 
-  updateToFirstItemOfCategory(categoryId) {
+  updateToFirstItemOfCategory(categoryId: string) {
     const swiperUiState = this.shelfStore.shelfController.swiperUiState;
     const allItems = swiperUiState.allShelfItems;
     const firstItemOfCategory = allItems.find(
@@ -252,16 +268,16 @@ class ShelfHeaderUiState {
 
 class ShelfSwiperUiState {
   declare animateSliding: boolean;
-  declare categories: UiLooseData;
-  declare collapseTimeouts: Map;
-  declare expandedCategories: Set;
+  declare categories: Record<string, never>;
+  declare collapseTimeouts: Map<string, ReturnType<typeof setTimeout>>;
+  declare expandedCategories: Set<string>;
   declare refreshTrigger: number;
   declare selectedItemIndex: number;
-  declare shelfStore: UiLooseData;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(shelfStore) {
+  declare shelfStore: ShelfStore;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(shelfStore: ShelfStore) {
     this.selectedItemIndex = 0;
     this.shelfStore = shelfStore;
     this.categories = {};
@@ -272,7 +288,7 @@ class ShelfSwiperUiState {
     makeAutoObservable(this);
   }
 
-  get allShelfItems() {
+  get allShelfItems(): ShelfItem[] {
     const recentAlbums = this.shelfStore.recentAlbums;
 
     const rootStore = this.shelfStore.rootStore;
@@ -293,11 +309,11 @@ class ShelfSwiperUiState {
   }
 
   buildContinuousShelfItems(
-    spotifyData,
-    currentTrack = null,
+    spotifyData: SpotifyDataState,
+    currentTrack: PlayerItem | null = null,
     isPlaying = false,
   ) {
-    const items = [];
+    const items: ShelfItem[] = [];
     const recentAlbums = this.shelfStore.recentAlbums;
 
     const effectiveCurrentTrack =
@@ -307,7 +323,7 @@ class ShelfSwiperUiState {
     const homeVisible = this.getCategoryVisibleCount(HOME_IDENTIFIER, 5);
     const visibleAlbums = recentAlbums.slice(0, homeVisible);
 
-    const homeItems = visibleAlbums.map((album, index) => {
+    const homeItems = visibleAlbums.map((album, index): ShelfContextItem => {
       const isCurrentlyPlaying =
         index === 0 && !!currentAlbumId && album.id === currentAlbumId;
       const artistNames = album.artists
@@ -321,8 +337,8 @@ class ShelfSwiperUiState {
         identifier: isCurrentlyPlaying
           ? `current-playing-${album.id}`
           : `recent-${album.id}`,
-        uri: album.uri,
-        title: album.name,
+        uri: album.uri ?? "",
+        title: album.name ?? "",
         subtitle: artistNames,
         image_id: getShelfImageUrl(album.images) || "",
         category: HOME_IDENTIFIER,
@@ -404,13 +420,12 @@ class ShelfSwiperUiState {
     }
 
     if (otherPlaylists.length > 0) {
-      const playlistItems = otherPlaylists
-        .slice(0, playlistsVisible)
-        .map((playlist) => ({
+      const playlistItems = otherPlaylists.slice(0, playlistsVisible).map(
+        (playlist): ShelfContextItem => ({
           type: "CONTEXT_ITEM",
           identifier: `playlist-${playlist.id}`,
-          uri: playlist.uri,
-          title: playlist.name,
+          uri: playlist.uri ?? "",
+          title: playlist.name ?? "",
           subtitle: (() => {
             const count =
               playlist.tracks?.total ??
@@ -421,7 +436,8 @@ class ShelfSwiperUiState {
           image_id: getShelfImageUrl(playlist.images) || "",
           category: "playlists",
           playable: true,
-        }));
+        }),
+      );
       items.push(...playlistItems);
 
       if (otherPlaylists.length > playlistsVisible) {
@@ -451,15 +467,19 @@ class ShelfSwiperUiState {
     if (spotifyData.userShows && spotifyData.userShows.length > 0) {
       const podcastItems = spotifyData.userShows
         .slice(0, podcastsVisible)
-        .map((showItem) => {
+        .map((showItem): ShelfContextItem => {
           const show = showItem.show || showItem;
           return {
             type: "CONTEXT_ITEM",
             identifier: `podcast-${show.id}`,
-            uri: show.uri,
-            title: show.name,
+            uri: show.uri ?? "",
+            title: show.name ?? "",
             subtitle:
-              show.publisher || show.description?.substring(0, 50) || "Podcast",
+              show.publisher ||
+              (typeof show.description === "string"
+                ? show.description.substring(0, 50)
+                : "") ||
+              "Podcast",
             image_id: getShelfImageUrl(show.images) || "",
             category: "podcasts",
             playable: true,
@@ -492,18 +512,18 @@ class ShelfSwiperUiState {
 
     const artistsVisible = this.getCategoryVisibleCount("artists", 5);
     if (spotifyData.topArtists && spotifyData.topArtists.length > 0) {
-      const artistItems = spotifyData.topArtists
-        .slice(0, artistsVisible)
-        .map((artist) => ({
+      const artistItems = spotifyData.topArtists.slice(0, artistsVisible).map(
+        (artist): ShelfContextItem => ({
           type: "CONTEXT_ITEM",
           identifier: `artist-${artist.id}`,
-          uri: artist.uri,
-          title: artist.name,
+          uri: artist.uri ?? "",
+          title: artist.name ?? "",
           subtitle: "",
           image_id: getShelfImageUrl(artist.images) || "",
           category: "artists",
           playable: true,
-        }));
+        }),
+      );
       items.push(...artistItems);
 
       if (spotifyData.topArtists.length > artistsVisible) {
@@ -533,13 +553,13 @@ class ShelfSwiperUiState {
     if (spotifyData.userAlbums && spotifyData.userAlbums.length > 0) {
       const albumItems = spotifyData.userAlbums
         .slice(0, albumsVisible)
-        .map((albumItem) => {
+        .map((albumItem): ShelfContextItem => {
           const album = albumItem.album || albumItem;
           return {
             type: "CONTEXT_ITEM",
             identifier: `album-${album.id}`,
-            uri: album.uri,
-            title: album.name,
+            uri: album.uri ?? "",
+            title: album.name ?? "",
             subtitle: album.artists
               ? album.artists.map((a) => a.name).join(", ")
               : "Various Artists",
@@ -571,7 +591,7 @@ class ShelfSwiperUiState {
     return items;
   }
 
-  getCategoryVisibleCount(categoryId, defaultVisible = 5) {
+  getCategoryVisibleCount(categoryId: string, defaultVisible = 5) {
     const expandCount = this.expandedCategories.has(categoryId) ? 9 : 0;
     return defaultVisible + expandCount;
   }
@@ -589,12 +609,12 @@ class ShelfSwiperUiState {
     return 5000;
   }
 
-  expandCategory(categoryId) {
+  expandCategory(categoryId: string) {
     this.expandedCategories.add(categoryId);
     this.collapseOtherCategories(categoryId);
   }
 
-  collapseOtherCategories(activeCategoryId) {
+  collapseOtherCategories(activeCategoryId: string) {
     [HOME_IDENTIFIER, VOICE_IDENTIFIER, YOUR_LIBRARY].forEach((categoryId) => {
       if (categoryId !== activeCategoryId) {
         this.expandedCategories.delete(categoryId);
@@ -603,7 +623,7 @@ class ShelfSwiperUiState {
     });
   }
 
-  scheduleCollapse(categoryId) {
+  scheduleCollapse(categoryId: string) {
     this.clearCollapseTimeout(categoryId);
 
     const timeoutId = setTimeout(() => {
@@ -613,7 +633,7 @@ class ShelfSwiperUiState {
     this.collapseTimeouts.set(categoryId, timeoutId);
   }
 
-  clearCollapseTimeout(categoryId) {
+  clearCollapseTimeout(categoryId: string) {
     const timeoutId = this.collapseTimeouts.get(categoryId);
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -623,13 +643,13 @@ class ShelfSwiperUiState {
 
   dismissBanner() {}
 
-  handleDraggedToIndex(index) {
+  handleDraggedToIndex(index: number) {
     this.selectedItemIndex = index;
     this.updateSelectedCategoryFromIndex(index);
     this.shelfStore.rootStore.viewStore.showContentShelf();
   }
 
-  updateSelectedCategoryFromIndex(index) {
+  updateSelectedCategoryFromIndex(index: number) {
     const items = this.allShelfItems;
     const selectedItem = items[index];
 
@@ -641,17 +661,17 @@ class ShelfSwiperUiState {
     }
   }
 
-  handleMoreButtonClicked(categoryId) {
+  handleMoreButtonClicked(categoryId: string) {
     this.expandCategory(categoryId);
   }
 }
 
 class ShelfSwiperItemUiState {
-  declare shelfStore: UiLooseData;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(shelfStore) {
+  declare shelfStore: ShelfStore;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(shelfStore: ShelfStore) {
     this.shelfStore = shelfStore;
     makeAutoObservable(this);
   }
@@ -672,36 +692,36 @@ class ShelfSwiperItemUiState {
     return true;
   }
 
-  isMoreItem(item) {
+  isMoreItem(item: ShelfItem) {
     return item.type === "MORE_ITEM";
   }
-  isContextItem(item) {
+  isContextItem(item: ShelfItem): item is ShelfContextItem {
     return item.type === "CONTEXT_ITEM";
   }
-  isSpacerItem(item) {
+  isSpacerItem(item: ShelfItem) {
     return item.type === "SPACER_ITEM";
   }
-  isTextPlaceholder(item) {
+  isTextPlaceholder(item: ShelfItem) {
     return (
       item.type === "TEXT_PLACEHOLDER" ||
       item.type === "INLINE_TIP_ITEM" ||
       item.type === "VOICE_TEXT_PLACEHOLDER"
     );
   }
-  isVoiceDefaultItem(item) {
+  isVoiceDefaultItem(item: ShelfItem) {
     return item.type === "VOICE_DEFAULT";
   }
-  isVoiceTextPlaceholder(item) {
+  isVoiceTextPlaceholder(item: ShelfItem) {
     return item.type === "VOICE_TEXT_PLACEHOLDER";
   }
-  isLeftItem(item) {
+  isLeftItem(item: ShelfItem) {
     return false;
   }
-  isHidden(item) {
+  isHidden(item: ShelfItem) {
     return false;
   }
 
-  artworkClicked(item) {
+  artworkClicked(item: ShelfItem) {
     if (item.type === "CONTEXT_ITEM" && item.playable) {
       if (item.category === VOICE_IDENTIFIER && item.type === "CONTEXT_ITEM") {
         routeVoiceItem(this.shelfStore.rootStore, item);
@@ -740,19 +760,19 @@ class ShelfSwiperItemUiState {
       }
     }
   }
-  moreButtonClicked(itemCategory) {
+  moreButtonClicked(itemCategory: string) {
     const shelfStore = this.shelfStore || this.rootStore?.shelfStore;
     const swiperUiState = shelfStore?.shelfController?.swiperUiState;
     if (swiperUiState) {
       swiperUiState.handleMoreButtonClicked(itemCategory);
     }
   }
-  pushToTalkClicked(item) {
+  pushToTalkClicked(item: ShelfItem) {
     console.log("Push to talk:", item);
   }
-  logContextItemImpression(uri, category) {}
-  showNowPlaying(uri) {
-    this.refreshTrigger;
+  logContextItemImpression(uri: string, category: string) {}
+  showNowPlaying(uri: string | undefined) {
+    this.shelfStore.shelfController.swiperUiState.refreshTrigger;
     const currentTrack = this.shelfStore.rootStore.playerStore?.state?.track;
     if (!currentTrack || !uri) return false;
     return (
@@ -761,15 +781,15 @@ class ShelfSwiperItemUiState {
       currentTrack.album?.id === uri.replace("spotify:album:", "")
     );
   }
-  getcategoryItemTitle(category) {
+  getcategoryItemTitle(category: string) {
     return category;
   }
 }
 
 class VoiceMuteBannerUiState {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor() {
     makeAutoObservable(this);
   }
@@ -784,15 +804,16 @@ class VoiceMuteBannerUiState {
 }
 
 class ShelfController {
+  declare shelfStore: ShelfStore;
   declare headerUiState: ShelfHeaderUiState;
-  declare selectedItem: UiLooseData | undefined;
+  declare selectedItem: ShelfItem | undefined;
   declare shelfSwiperItemUiState: ShelfSwiperItemUiState;
   declare swiperUiState: ShelfSwiperUiState;
   declare voiceMuteBannerUiState: VoiceMuteBannerUiState;
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
-  constructor(shelfStore) {
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
+  constructor(shelfStore: ShelfStore) {
     this.shelfStore = shelfStore;
     this.selectedItem = undefined;
     this.headerUiState = new ShelfHeaderUiState(shelfStore);

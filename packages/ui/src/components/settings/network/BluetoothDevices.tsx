@@ -1,3 +1,4 @@
+import type { BluetoothDevice } from "../../../types";
 import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -22,8 +23,8 @@ const BluetoothDevices = () => {
   const { deviceInfo } = useDeviceInfo();
 
   const [showForgetDialog, setShowForgetDialog] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState(null);
-  const longPressTimer = useRef(null);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buttonPressInProgress = useRef(false);
 
   useEffect(() => {
@@ -39,11 +40,11 @@ const BluetoothDevices = () => {
     };
   }, [startDiscovery, fetchDevices, stopDiscovery]);
 
-  const handleConnect = async (deviceAddress) => {
+  const handleConnect = async (deviceAddress: string) => {
     await connectDeviceNoRetry(deviceAddress);
   };
 
-  const handleDisconnect = async (deviceAddress) => {
+  const handleDisconnect = async (deviceAddress: string) => {
     await disconnectDevice(deviceAddress);
   };
 
@@ -56,9 +57,11 @@ const BluetoothDevices = () => {
     }
   };
 
-  const handleCardPress = (device) => {
+  const handleCardPress = (device: BluetoothDevice) => {
+    const address = device.address;
+    if (!address) return;
     longPressTimer.current = setTimeout(() => {
-      setSelectedDevice(device.address);
+      setSelectedDevice(address);
       setShowForgetDialog(true);
     }, 800);
   };
@@ -69,7 +72,11 @@ const BluetoothDevices = () => {
     }
   };
 
-  const handleButtonClick = (e, device) => {
+  const handleButtonClick = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    device: BluetoothDevice,
+  ) => {
+    if (!device.address) return;
     e.stopPropagation();
     buttonPressInProgress.current = true;
 

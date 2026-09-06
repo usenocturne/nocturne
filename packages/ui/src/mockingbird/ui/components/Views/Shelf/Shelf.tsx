@@ -7,7 +7,7 @@ import { useCarThingStore } from "../../../contexts/CarThingStore";
 import ShelfSwiper from "./ShelfSwiper/ShelfSwiper";
 import VoiceMutedBanner from "./VoiceMutedBanner/VoiceMutedBanner";
 
-const getGradientBackground = (rgbChannels) => {
+const getGradientBackground = (rgbChannels: number[]) => {
   return `radial-gradient(ellipse at 100px -200px, rgb(${rgbChannels.join(
     ",",
   )}) 5%, black 60%)`;
@@ -28,9 +28,7 @@ const Shelf = () => {
     uiState.showNowPlaying(item.uri),
   );
   const gradientImageId =
-    nowPlayingItem?.image_uri ||
-    nowPlayingItem?.image_id ||
-    playerStore.currentImageId;
+    nowPlayingItem?.image_id || playerStore.currentImageId;
 
   return (
     <>

@@ -1,3 +1,12 @@
+import type {
+  PlaybackProgress,
+  SpotifyPlaybackItem,
+  SpotifyPlaybackState,
+  SpotifyDevice,
+  StateSetter,
+  UpdateGradientColors,
+} from "../../types";
+import { getErrorMessage } from "../../utils/helpers";
 import React, {
   useState,
   useEffect,
@@ -44,7 +53,18 @@ import {
   RepeatOneIcon,
   SpeedIcon,
 } from "../common/icons";
-import { generateRandomString } from "../../utils/helpers";
+
+interface NowPlayingProps {
+  currentPlayback: SpotifyPlaybackState | null;
+  playbackProgress: PlaybackProgress;
+  onClose: () => void;
+  updateGradientColors?: UpdateGradientColors;
+  onOpenDeviceSwitcher?: (devices: SpotifyDevice[]) => void;
+  onNavigateToArtist?: (id: string, type: "artist") => void;
+  onNavigateToAlbum?: (id: string, type: "album") => void;
+  setIgnoreNextRelease?: StateSetter<boolean>;
+  isReceivingNowPlayingUpdates?: boolean;
+}
 
 export const getNowPlayingLeadingControl = (
   itemType: string | undefined,
@@ -76,7 +96,7 @@ export const canSeekFromLyrics = (
 ): boolean => isTimeSynced && !isPhoneMedia;
 
 export const canShowLyricsForItem = (
-  item: UiLooseData | null | undefined,
+  item: SpotifyPlaybackItem | null | undefined,
 ): boolean => Boolean(item && item.type !== "episode");
 
 function NowPlaying({
@@ -89,7 +109,7 @@ function NowPlaying({
   onNavigateToAlbum,
   setIgnoreNextRelease,
   isReceivingNowPlayingUpdates = false,
-}: UiComponentProps) {
+}: NowPlayingProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(false);
   const [isProgressScrubbing, setIsProgressScrubbing] = useState(false);
@@ -98,24 +118,24 @@ function NowPlaying({
     animation: "hidden",
   });
   const [suppressFillTransition, setSuppressFillTransition] = useState(false);
-  const [phoneVolume, setPhoneVolume] = useState(null);
+  const [phoneVolume, setPhoneVolume] = useState<number | null>(null);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
   const [showDeviceSwitcher, setShowDeviceSwitcher] = useState(false);
 
-  const volumeTimerRef = useRef(null);
-  const volumeHideTimerRef = useRef(null);
+  const volumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const volumeHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const volumeLastAdjustedRef = useRef(0);
   const lastWheelEventRef = useRef(0);
   const wheelDeltaAccumulatorRef = useRef(0);
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const currentTrackIdRef = useRef<string | null>(null);
-  const prevVolumeRef = useRef(null);
+  const prevVolumeRef = useRef<number | null>(null);
   const manualVolumeChangeRef = useRef(false);
-  const latestPhoneVolumeRef = useRef(null);
-  const acceptedPhoneVolumeRef = useRef(null);
+  const latestPhoneVolumeRef = useRef<number | null>(null);
+  const acceptedPhoneVolumeRef = useRef<number | null>(null);
   const phoneVolumeInteractionUntilRef = useRef(0);
 
   const isDJPlaylist =
@@ -140,12 +160,13 @@ function NowPlaying({
   );
   const isSmartphoneDevice =
     currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
-  const contentContainerRef = useRef(null);
+  const contentContainerRef = useRef<HTMLDivElement>(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
   const { settings } = useSettings();
 
-  const { getPlaylist, getArtist } = useSpotifyWebSocket();
+  const { getPlaylist, getArtist, getDevices, transferPlayback } =
+    useSpotifyWebSocket();
 
   const {
     playTrack,
@@ -166,7 +187,6 @@ function NowPlaying({
     setRepeatMode: setRepeatModeApi,
     setPlaybackSpeed: setPlaybackSpeedApi,
     getCurrentDeviceOptions,
-    transferPlayback,
     phoneMediaPlay,
     phoneMediaPause,
     phoneMediaNext,
@@ -183,7 +203,7 @@ function NowPlaying({
   const { isPlaying, duration, updateProgress, triggerRefresh } =
     playbackProgress;
 
-  const convertTimeToLength = (ms, elapsed) => {
+  const convertTimeToLength = (ms: number, elapsed: boolean) => {
     let totalSeconds = Math.floor(ms / 1000);
 
     const hours = Math.floor(totalSeconds / 3600);
@@ -207,11 +227,13 @@ function NowPlaying({
       if (prevVolumeRef.current === null) {
         prevVolumeRef.current = currentPlayback.device.volume_percent;
       }
-      updateVolumeFromDevice(currentPlayback.device.volume_percent);
+      updateVolumeFromDevice(
+        currentPlayback.device.volume_percent ?? undefined,
+      );
     }
   }, [currentPlayback?.device?.volume_percent, updateVolumeFromDevice]);
 
-  const roundDownToSupportedSpeed = useCallback((speed) => {
+  const roundDownToSupportedSpeed = useCallback((speed: unknown) => {
     if (typeof speed !== "number" || !isFinite(speed) || speed <= 0) {
       return null;
     }
@@ -379,8 +401,6 @@ function NowPlaying({
     try {
       setIsStartingPlayback(true);
 
-      const connectEndpoint = `https://gue1-spclient.spotify.com/connect-state/v1/devices/hobs_${generateRandomString(40)}`;
-
       const devicesData = await getDevices();
       const devicesArray = devicesData?.devices || [];
 
@@ -401,6 +421,10 @@ function NowPlaying({
 
       const target = activeDevice || devicesArray[0];
       const targetDeviceId = target.device_id || target.id;
+      if (!targetDeviceId) {
+        setIsStartingPlayback(false);
+        return;
+      }
 
       try {
         await transferPlayback(targetDeviceId, true);
@@ -418,7 +442,7 @@ function NowPlaying({
       }, 2000);
     } catch (err) {
       console.error("Error attempting to resume playback:", err);
-      if (err.message?.includes("No playback devices available")) {
+      if (getErrorMessage(err)?.includes("No playback devices available")) {
         if (typeof onOpenDeviceSwitcher === "function") {
           onOpenDeviceSwitcher([]);
         }
@@ -428,22 +452,19 @@ function NowPlaying({
   };
 
   const trackInfo = useMemo(() => {
-    const hasCurrentItem = currentPlayback?.item && !isStartingPlayback;
+    const currentItem = currentPlayback?.item;
+    const hasCurrentItem = currentItem && !isStartingPlayback;
 
     const trackName = hasCurrentItem
-      ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.name
-        : currentPlayback.item.name || "Not Playing"
+      ? currentItem.type === "episode"
+        ? currentItem.name
+        : currentItem.name || "Not Playing"
       : "Not Playing";
 
     const artistName = hasCurrentItem
-      ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.show?.publisher ||
-          currentPlayback.item.show?.name ||
-          ""
-        : currentPlayback.item.artists
-            ?.map((artist) => artist.name)
-            .join(", ") || ""
+      ? currentItem.type === "episode"
+        ? currentItem.show?.publisher || currentItem.show?.name || ""
+        : currentItem.artists?.map((artist) => artist.name).join(", ") || ""
       : "";
 
     const firstArtistId =
@@ -454,11 +475,9 @@ function NowPlaying({
     const albumId = hasCurrentItem ? currentPlayback?.item?.album?.id : null;
 
     const albumImages = hasCurrentItem
-      ? currentPlayback.item.type === "episode"
-        ? currentPlayback.item.images ||
-          currentPlayback.item.show?.images ||
-          null
-        : currentPlayback.item.album?.images || null
+      ? currentItem.type === "episode"
+        ? currentItem.images || currentItem.show?.images || null
+        : currentItem.album?.images || null
       : null;
 
     const trackId = hasCurrentItem ? currentPlayback?.item?.id : null;
@@ -657,7 +676,7 @@ function NowPlaying({
   });
 
   const handleWheel = useCallback(
-    (e) => {
+    (e: WheelEvent) => {
       if (
         settings.knobSeeksPlaybackEnabled &&
         !isPhoneMedia &&
@@ -717,7 +736,7 @@ function NowPlaying({
     const container = containerRef.current;
     let options = { passive: false, capture: true };
 
-    const handleWheelWithOptions = (e) => {
+    const handleWheelWithOptions = (e: WheelEvent) => {
       handleWheel(e);
     };
 
@@ -758,7 +777,7 @@ function NowPlaying({
   } = useLyrics(currentPlayback);
 
   const handleColorsExtracted = useCallback(
-    (colors) => {
+    (colors: string[]) => {
       if (colors && updateGradientColors) {
         updateGradientColors(colors, "nowPlaying");
       }
@@ -930,12 +949,12 @@ function NowPlaying({
     unlikeCurrentItem,
   ]);
 
-  const handleScrubbingChange = (scrubbing) => {
+  const handleScrubbingChange = (scrubbing: boolean) => {
     setIsProgressScrubbing(scrubbing);
   };
 
   const handleSeek = useCallback(
-    async (position) => {
+    async (position: number) => {
       if (isPhoneMedia) {
         return false;
       }
@@ -957,7 +976,7 @@ function NowPlaying({
   );
 
   const handleLyricClick = useCallback(
-    (lyricTimeSeconds, lyricIndex) => {
+    (lyricTimeSeconds: number, lyricIndex: number) => {
       if (typeof suspendAutoScroll === "function") suspendAutoScroll(5000);
       if (typeof resumeAutoScrollOnNextLyric === "function")
         resumeAutoScrollOnNextLyric();
@@ -965,8 +984,8 @@ function NowPlaying({
       if (lyricsContainerRef.current && lyricIndex >= 0) {
         const container = lyricsContainerRef.current;
         const lyricElements = container.children;
-        if (lyricElements[lyricIndex]) {
-          const lyricElement = lyricElements[lyricIndex];
+        const lyricElement = lyricElements[lyricIndex];
+        if (lyricElement instanceof HTMLElement) {
           const containerHeight = container.clientHeight;
           const lyricTop = lyricElement.offsetTop;
           const lyricHeight = lyricElement.offsetHeight;
@@ -1018,8 +1037,12 @@ function NowPlaying({
       if (isPhoneMedia || usePhoneHidControlsForCurrentItem) {
         await phoneMediaRepeat();
       } else {
-        const nextModeMap = { off: "context", context: "track", track: "off" };
-        const newRepeatMode = nextModeMap[repeatMode] || "off";
+        const newRepeatMode =
+          repeatMode === "off"
+            ? "context"
+            : repeatMode === "context"
+              ? "track"
+              : "off";
 
         setRepeatMode(newRepeatMode);
         await setRepeatModeApi(newRepeatMode);
@@ -1049,7 +1072,7 @@ function NowPlaying({
     }
   }, [getCurrentDeviceOptions, roundDownToSupportedSpeed]);
 
-  const handleSpeedChange = async (speed) => {
+  const handleSpeedChange = async (speed: number) => {
     setPlaybackSpeed(speed);
     const success = await setPlaybackSpeedApi(speed);
     if (!success) {
@@ -1057,7 +1080,7 @@ function NowPlaying({
     }
   };
 
-  const handleDeviceSwitcherClose = (selectedDeviceId) => {
+  const handleDeviceSwitcherClose = (selectedDeviceId: string | null) => {
     setShowDeviceSwitcher(false);
     if (selectedDeviceId) {
       console.log("Device switched to:", selectedDeviceId);
@@ -1295,7 +1318,6 @@ function NowPlaying({
           }
           durationMs={duration}
           onSeek={handleSeek}
-          onPlayPause={handlePlayPause}
           onScrubbingChange={handleScrubbingChange}
           updateProgress={updateProgress}
           disabled={isPhoneMedia || isSpotifyPending}
@@ -1331,7 +1353,7 @@ function NowPlaying({
                 <span className="text-white/60 text-[20px]">
                   {hasKnownTimeline
                     ? convertTimeToLength(
-                        currentPlayback.item.duration_ms,
+                        currentPlayback.item.duration_ms ?? 0,
                         true,
                       )
                     : "--:--"}
@@ -1381,11 +1403,11 @@ function NowPlaying({
                 >
                   <div className="py-1">
                     {[0.5, 0.8, 1, 1.2, 1.5, 2].map((speed) => (
-                      <MenuItem
-                        key={speed}
-                        onClick={() => handleSpeedChange(speed)}
-                      >
-                        <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
+                      <MenuItem key={speed}>
+                        <div
+                          onClick={() => handleSpeedChange(speed)}
+                          className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                        >
                           <span className="text-[24px]">{speed}x</span>
                           {playbackSpeed === speed && (
                             <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -1487,8 +1509,9 @@ function NowPlaying({
             >
               <div className="py-1">
                 {canShowLyricsForItem(currentPlayback?.item) && (
-                  <MenuItem onClick={toggleLyrics} disabled={!currentPlayback}>
+                  <MenuItem disabled={!currentPlayback}>
                     <div
+                      onClick={toggleLyrics}
                       className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/50"} font-[560] tracking-tight focus:outline-none outline-none`}
                     >
                       <span className="text-[28px]">
@@ -1505,8 +1528,11 @@ function NowPlaying({
                 )}
                 {!isDJPlaylist && (
                   <>
-                    <MenuItem onClick={handleToggleShuffle}>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
+                    <MenuItem>
+                      <div
+                        onClick={handleToggleShuffle}
+                        className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                      >
                         <span className="text-[28px]">
                           {shuffleEnabled
                             ? "Disable Shuffle"
@@ -1520,8 +1546,11 @@ function NowPlaying({
                         />
                       </div>
                     </MenuItem>
-                    <MenuItem onClick={handleToggleRepeat}>
-                      <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
+                    <MenuItem>
+                      <div
+                        onClick={handleToggleRepeat}
+                        className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                      >
                         <span className="text-[28px]">
                           {repeatMode === "off"
                             ? "Enable Repeat"
@@ -1549,8 +1578,11 @@ function NowPlaying({
                   </>
                 )}
                 {!isLocalMedia && !isPhoneMedia && (
-                  <MenuItem onClick={() => setShowDeviceSwitcher(true)}>
-                    <div className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none">
+                  <MenuItem>
+                    <div
+                      onClick={() => setShowDeviceSwitcher(true)}
+                      className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                    >
                       <span className="text-[28px]">Switch Device</span>
                       <DeviceSwitcherIcon
                         aria-hidden="true"
@@ -1586,15 +1618,21 @@ function NowPlaying({
   );
 }
 
-const areNowPlayingPropsEqual = (prev, next) => {
-  const keys = Object.keys(next);
-  for (const key of keys) {
-    if (key === "playbackProgress") continue;
-    if (!Object.is(prev[key], next[key])) return false;
-  }
-  const pp = prev.playbackProgress || {};
-  const np = next.playbackProgress || {};
+const areNowPlayingPropsEqual = (
+  prev: NowPlayingProps,
+  next: NowPlayingProps,
+) => {
+  const pp = prev.playbackProgress;
+  const np = next.playbackProgress;
   return (
+    prev.currentPlayback === next.currentPlayback &&
+    prev.onClose === next.onClose &&
+    prev.updateGradientColors === next.updateGradientColors &&
+    prev.onOpenDeviceSwitcher === next.onOpenDeviceSwitcher &&
+    prev.onNavigateToArtist === next.onNavigateToArtist &&
+    prev.onNavigateToAlbum === next.onNavigateToAlbum &&
+    prev.setIgnoreNextRelease === next.setIgnoreNextRelease &&
+    prev.isReceivingNowPlayingUpdates === next.isReceivingNowPlayingUpdates &&
     pp.isPlaying === np.isPlaying &&
     pp.duration === np.duration &&
     pp.trackId === np.trackId &&

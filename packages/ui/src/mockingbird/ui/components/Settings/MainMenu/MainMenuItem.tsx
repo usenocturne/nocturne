@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import type { SettingsMenuItem } from "../../../stores/SettingsStore";
 import classNames from "classnames";
 import { useState } from "react";
 import styles from "./MainMenuItem.module.scss";
@@ -66,7 +68,7 @@ const IconSwitch = () => (
   </svg>
 );
 
-export const iconMapping = {
+export const iconMapping: Record<string, ReactNode> = {
   [MainMenuItemId.MIC]: null,
   [MainMenuItemId.PHONE_CONNECTION]: <IconMobile />,
   [MainMenuItemId.OPTIONS]: <IconOption />,
@@ -102,11 +104,17 @@ const DynamicMicContent = observer(() => {
   );
 });
 
-const contentMapping = {
+const contentMapping: Record<string, ReactNode> = {
   [MainMenuItemId.MIC]: <DynamicMicContent />,
 };
 
-const MainMenuItem = ({ item, active }: UiComponentProps) => {
+const MainMenuItem = ({
+  item,
+  active,
+}: {
+  item: SettingsMenuItem;
+  active?: boolean;
+}) => {
   const { disabledOffline, id } = item;
   const [pressed, setPressed] = useState(false);
   const { hardwareStore, settingsStore, voiceStore } = useCarThingStore();

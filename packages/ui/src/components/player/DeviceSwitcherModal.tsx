@@ -1,3 +1,4 @@
+import type { SpotifyDevice } from "../../types";
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -16,14 +17,20 @@ import {
 } from "../common/icons";
 import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
 
+interface DeviceSwitcherModalProps {
+  isOpen: boolean;
+  onClose: (selectedDeviceId: string | null) => void;
+  initialDevices?: SpotifyDevice[] | null;
+}
+
 const DeviceSwitcherModal = ({
   isOpen,
   onClose,
   initialDevices,
-}: UiComponentProps) => {
+}: DeviceSwitcherModalProps) => {
   const { isSpotifyReady, getDevices, transferPlayback } =
     useSpotifyWebSocket();
-  const [devices, setDevices] = useState<UiContentItem[]>([]);
+  const [devices, setDevices] = useState<SpotifyDevice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
@@ -67,7 +74,7 @@ const DeviceSwitcherModal = ({
     }
   };
 
-  const handleDeviceSelect = async (deviceId) => {
+  const handleDeviceSelect = async (deviceId: string) => {
     if (!isSpotifyReady) return;
 
     try {
@@ -86,7 +93,7 @@ const DeviceSwitcherModal = ({
     fetchDevices();
   };
 
-  const getDeviceIcon = (type) => {
+  const getDeviceIcon = (type?: string) => {
     type = type?.toLowerCase() || "";
     if (type.includes("computer") || type.includes("laptop")) {
       return <LaptopIcon className="h-8 w-8 text-white opacity-60" />;
@@ -169,17 +176,20 @@ const DeviceSwitcherModal = ({
                     className="mt-2 px-6 scrollbar-hide"
                     style={{ maxHeight: "60vh", overflowY: "auto" }}
                   >
-                    {devices.map((device) => (
+                    {devices.map((device, index) => (
                       <button
-                        key={device.device_id}
-                        onClick={() => handleDeviceSelect(device.device_id)}
+                        key={device.device_id ?? device.id ?? index}
+                        onClick={() => {
+                          const id = device.device_id ?? device.id;
+                          if (id) void handleDeviceSelect(id);
+                        }}
                         disabled={isTransferring}
                         className="w-full flex items-center justify-between p-4 mb-2 rounded-xl hover:bg-white hover:bg-opacity-5 transition-colors disabled:opacity-50"
                         style={{ backgroundColor: "transparent" }}
                       >
                         <div className="flex items-center">
                           <div style={{ marginRight: "12px" }}>
-                            {getDeviceIcon(device.device_type)}
+                            {getDeviceIcon(device.device_type ?? device.type)}
                           </div>
                           <div className="text-left">
                             <p

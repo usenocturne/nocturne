@@ -428,7 +428,7 @@ mod tests {
         }
         let legacy_elapsed = legacy_started.elapsed();
 
-        let mut run = |denoise: bool| {
+        let run = |denoise: bool| {
             let mut converter = if denoise {
                 ARecordPcmConverter::new().with_denoise()
             } else {

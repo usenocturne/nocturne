@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import type { SettingsMenuItem } from "../../stores/SettingsStore";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { observer } from "mobx-react-lite";
 import { Transition } from "react-transition-group";
@@ -30,7 +32,7 @@ import variables from "../../styles/variables.module.scss";
 const transitionDurationMs =
   parseInt(variables["transition-duration-ms"], 10) || 500;
 
-const viewToComp = {
+const viewToComp: Record<string, (() => ReactNode) | undefined> = {
   [MainMenuItemId.SETTINGS_ROOT]: () => <MainMenu />,
   [OptionsMenuItemId.AIR_VENT_INTERFERENCE]: () => <AirVentInterference />,
   [OptionsMenuItemId.DISPLAY_AND_BRIGHTNESS]: () => <DisplayAndBrightness />,
@@ -44,10 +46,9 @@ const viewToComp = {
   [AboutMenuItemId.LICENSE]: () => <Licenses />,
 };
 
-const getComponent = (view) => {
-  if (view.id && viewToComp[view.id]) {
-    return viewToComp[view.id]();
-  }
+const getComponent = (view: SettingsMenuItem) => {
+  const renderView = viewToComp[view.id];
+  if (renderView) return renderView();
   if (view.rows) {
     return <Submenu view={view} />;
   }
@@ -57,13 +58,15 @@ const getComponent = (view) => {
 const Settings = () => {
   const { settingsStore, overlayController } = useCarThingStore();
   const { viewStack } = settingsStore;
-  const overlayRef = useRef(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-  const [exitingSnapshot, setExitingSnapshot] = useState(null);
-  const [exitAnimType, setExitAnimType] = useState(null);
-  const [enteringViewId, setEnteringViewId] = useState(null);
+  const [exitingSnapshot, setExitingSnapshot] = useState<string | null>(null);
+  const [exitAnimType, setExitAnimType] = useState<"fade" | "slide" | null>(
+    null,
+  );
+  const [enteringViewId, setEnteringViewId] = useState<string | null>(null);
   const prevLenRef = useRef(viewStack.length);
-  const topLayerRef = useRef(null);
+  const topLayerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const disposer = reaction(
@@ -76,11 +79,11 @@ const Settings = () => {
           setTimeout(() => setEnteringViewId(null), transitionDurationMs);
         } else if (newLen < prevLen && topLayerRef.current) {
           const el = topLayerRef.current;
-          const clone = el.cloneNode(true);
+          const snapshot = el.innerHTML;
 
           const animType = el.dataset.animtype;
           setExitAnimType(animType === "fade" ? "fade" : "slide");
-          setExitingSnapshot(clone.innerHTML);
+          setExitingSnapshot(snapshot);
           setTimeout(() => {
             setExitingSnapshot(null);
             setExitAnimType(null);

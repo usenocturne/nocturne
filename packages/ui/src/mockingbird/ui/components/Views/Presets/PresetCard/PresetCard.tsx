@@ -1,3 +1,4 @@
+import type { PresetSlot } from "../../../../stores/PresetsStore";
 import { useRef } from "react";
 import { observer } from "mobx-react-lite";
 import classNames from "classnames";
@@ -15,11 +16,11 @@ const transitionStyles = {
   exitActive: styles.exitActive,
 };
 
-const PresetCard = ({ preset }: UiComponentProps) => {
+const PresetCard = ({ preset }: { preset: PresetSlot }) => {
   const { presetsController } = useCarThingStore();
   const uiState = presetsController.presetsUiState;
   const isFocused = uiState.selectedPresetNumber === preset.slot_index;
-  const nodeRef = useRef(null);
+  const nodeRef = useRef<HTMLDivElement>(null);
 
   return (
     <CSSTransition

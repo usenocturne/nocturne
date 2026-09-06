@@ -1,5 +1,7 @@
-const IconHeartActive48 = () => (
+import type { FixedIconProps } from "../IconProps";
+const IconHeartActive48 = (props: FixedIconProps) => (
   <svg
+    {...props}
     width="48"
     height="48"
     viewBox="0 0 24 24"

@@ -1,3 +1,4 @@
+import type { PresetData } from "../../../../stores/PresetsStore";
 import { observer } from "mobx-react-lite";
 import LazyImage from "../../Npv/PlayingInfo/LazyImage/LazyImage";
 import styles from "./PresetUnavailable.module.scss";
@@ -5,12 +6,12 @@ import Type from "../../../CarthingUIComponents/Type/Type";
 import { useCarThingStore } from "../../../../contexts/CarThingStore";
 import classNames from "classnames";
 
-const PresetUnavailable = ({ preset }: UiComponentProps) => {
+const PresetUnavailable = ({ preset }: { preset: PresetData }) => {
   const { presetsController } = useCarThingStore();
   const uiState = presetsController.presetsUiState;
   const isFocused = uiState.selectedPresetNumber === preset.slot_index;
 
-  const getPresetCategoryType = (uri) => {
+  const getPresetCategoryType = (uri: string) => {
     if (uri.includes("spotify:playlist:")) return "Playlist";
     if (uri.includes("spotify:album:")) return "Album";
     if (uri.includes("spotify:artist:")) return "Artist";

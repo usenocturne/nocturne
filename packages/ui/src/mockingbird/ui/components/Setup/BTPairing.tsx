@@ -1,11 +1,11 @@
 import styles from "./BTPairing.module.scss";
 
-const parsePincode = (pinCode) => {
+const parsePincode = (pinCode: string | undefined) => {
   if (!pinCode) return pinCode;
   return pinCode.split("").join(" ");
 };
 
-const BTPairing = ({ pin }: UiComponentProps) => {
+const BTPairing = ({ pin }: { pin?: string }) => {
   return (
     <div className={styles.screen} data-testid="bt-pairing-screen">
       <div className={styles.title}>Pairing code</div>

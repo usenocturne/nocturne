@@ -1,3 +1,10 @@
+import type { MiddlewareMessage } from "./StoreContracts";
+import type { RootStore } from "./RootStore";
+import type {
+  InterappActions,
+  MiddlewareActions,
+  MiddlewareSocket,
+} from "./StoreContracts";
 import { makeAutoObservable } from "mobx";
 import { sendNocturneWsRequest } from "../../../hooks/useNocturned";
 
@@ -23,8 +30,8 @@ export const NoInteractionModalOption = {
   END: "END",
 };
 
-export const delayedAction = (actionToRun, timeout) => {
-  return new Promise((resolve) => {
+export const delayedAction = (actionToRun: () => void, timeout: number) => {
+  return new Promise<void>((resolve) => {
     setTimeout(() => {
       actionToRun();
       resolve();
@@ -87,14 +94,14 @@ const TTS = {
 };
 
 class OnboardingStore {
-  declare rootStore: UiLooseData;
-  declare interappActions: UiLooseData;
-  declare middlewareActions: UiLooseData;
+  declare rootStore: RootStore;
+  declare interappActions: InterappActions;
+  declare middlewareActions: MiddlewareActions;
   constructor(
-    rootStore: UiLooseData,
-    socket: UiLooseData,
-    interappActions: UiLooseData,
-    middlewareActions: UiLooseData,
+    rootStore: RootStore,
+    socket: MiddlewareSocket,
+    interappActions: InterappActions,
+    middlewareActions: MiddlewareActions,
   ) {
     makeAutoObservable(this, {
       rootStore: false,
@@ -122,15 +129,20 @@ class OnboardingStore {
   dialTurnCounter = 0;
   dialPressCounter = 0;
   backCounter = 0;
-  noInteractionModal = undefined;
+  noInteractionModal:
+    | {
+        tactileEnabledOnClose: { back: boolean; turn: boolean; press: boolean };
+        currentOption: string;
+      }
+    | undefined = undefined;
   learnVoiceStep = LearnVoiceStepId.FIRST_UP;
   wakewordTriggered = false;
-  _onCompleteCallback = null;
+  _onCompleteCallback: (() => void) | null = null;
 
-  onMiddlewareEvent(msg) {
+  onMiddlewareEvent(msg: MiddlewareMessage) {
     if (
       msg.type === "settings_response" &&
-      msg.payload.key === "onboarding_status"
+      msg.payload?.key === "onboarding_status"
     ) {
       this.onboardingMsgReceived = true;
       if (msg.payload.value) {
@@ -150,36 +162,36 @@ class OnboardingStore {
     return this.onboardingStarted && !this.onboardingFinished;
   }
 
-  setOnCompleteCallback(callback) {
+  setOnCompleteCallback(callback: (() => void) | null) {
     this._onCompleteCallback = callback;
   }
 
-  setOnboardingStarted(started) {
+  setOnboardingStarted(started: boolean) {
     this.onboardingStarted = started;
     if (started) {
       this._notifyPhoneOnboarding(true);
     }
   }
 
-  setOnboardingView(onboardingStep) {
+  setOnboardingView(onboardingStep: number) {
     this.onboardingStep = onboardingStep;
   }
 
-  playTts(fileName) {
+  playTts(fileName: string) {
     const request = /** @type {TtsSpeakRequest} */ { text: fileName };
     sendNocturneWsRequest("tts.speak", request).catch((e) => {
       console.warn("[OnboardingStore] TTS failed:", fileName, e);
     });
   }
 
-  waitForTts(tts) {
+  waitForTts(tts: { fileName: string; fileLength: number }) {
     this.playTts(tts.fileName);
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       setTimeout(resolve, tts.fileLength + 1000);
     });
   }
 
-  setWakewordTriggered(triggered) {
+  setWakewordTriggered(triggered: boolean) {
     this.wakewordTriggered = triggered;
   }
 
@@ -190,7 +202,7 @@ class OnboardingStore {
     ).catch(() => {});
   }
 
-  _notifyPhoneOnboarding(active) {
+  _notifyPhoneOnboarding(active: boolean) {
     const request = /** @type {OnboardingSetStateRequest} */ {
       state: active ? "active" : "inactive",
     };
@@ -253,21 +265,21 @@ class OnboardingStore {
     }
   }
 
-  waitForDelay(delayMs) {
-    return new Promise((resolve) => {
+  waitForDelay(delayMs: number) {
+    return new Promise<void>((resolve) => {
       setTimeout(resolve, delayMs);
     });
   }
 
-  setDialPressEnabled(dialPressed) {
+  setDialPressEnabled(dialPressed: boolean) {
     this.dialPressEnabled = dialPressed;
   }
 
-  setDialTurnEnabled(dialTurned) {
+  setDialTurnEnabled(dialTurned: boolean) {
     this.dialTurnEnabled = dialTurned;
   }
 
-  setBackEnabled(backPressed) {
+  setBackEnabled(backPressed: boolean) {
     this.backEnabled = backPressed;
   }
 
@@ -312,7 +324,7 @@ class OnboardingStore {
     return this.onboardingStarted && !this.onboardingFinished;
   }
 
-  setLearnVoiceStep(step) {
+  setLearnVoiceStep(step: number) {
     this.learnVoiceStep = step;
   }
 

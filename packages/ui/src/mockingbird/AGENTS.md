@@ -144,3 +144,33 @@ daemon → WebSocket event → useNocturned → VoiceStore (mockingbird)
 - **Don't instantiate additional RootStores** — the singleton in `contexts/CarThingStore.jsx` is intentional (and stamps `window.carThingRootStore`)
 
 - **Pairing code verification:** Both skins display the fresh matching code and direct the user to confirm on the other device. The Car Thing has no pairing buttons or code-entry fields. Preserve discovery owners, ignore stale cancellation scoped by `request_id`, and recover pending prompts through `bluetooth.pairing.pending` on socket reconnect. Historical prompts without request ids remain display-only.
+
+Preset metadata and artwork refresh failures retain existing fallback content and log a warning. Do not silently swallow those errors or clear the saved preset on a lookup failure.
+
+## Typed integration contracts
+
+Production Mockingbird source uses actual `RootStore`/dependency classes and
+explicit state and component contracts. `StoreContracts`, `NpvModels`,
+`TracklistModels`, `ShelfModels`, and `VoiceModels` describe the active boundaries;
+do not restore generic callable/indexable catch-all types. Voice payload and
+search-result guards validate unknown data before it enters observable state.
+The shared parent playback model remains the canonical bridge input.
+
+Initialize `PresetsController` once, after its shelf and Now Playing dependencies
+exist. Unavailable preset flags must reach the presentation discriminator, queue
+entries must retain explicit-content metadata, and fixed-size icon wrappers must
+forward standard SVG styling/accessibility props. Back-button routing uses the
+same lower-case `View` constants as `ViewStore`.
+
+Clearing the image proxy settles queued requests instead of abandoning their
+promises. Podcast-speed changes send the speed RPC directly; they do not fetch
+player state just to discard it. Settings exit snapshots copy the existing HTML
+string without cloning a DOM subtree, and title measurement holds a stable ref.
+
+Only the current view wrapper accepts pointer input. Inactive wrappers remain
+mounted for transitions and can be empty after delayed content unmounts; they
+must never intercept shelf touches, including while exit content is retained.
+
+The daemon owns reboot after `device.factoryreset`. Neither Mockingbird reset
+entry point schedules a second `device.power.reboot` request. Verify that contract
+with mocked commands; never exercise a factory reset on a user's device.

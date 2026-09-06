@@ -1,7 +1,14 @@
+import type { TracklistItem } from "../../../stores/TracklistModels";
 import { observer } from "mobx-react-lite";
 import styles from "./ProgressBar.module.scss";
 
-const ProgressBar = ({ item, isCurrent }: UiComponentProps) => {
+const ProgressBar = ({
+  item,
+  isCurrent,
+}: {
+  item: TracklistItem;
+  isCurrent?: boolean;
+}) => {
   const { uri, metadata } = item;
 
   if (isCurrent && metadata && metadata.progress_percentage !== undefined) {

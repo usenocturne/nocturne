@@ -1,3 +1,4 @@
+import type { TracklistItem as TracklistItemModel } from "../../../stores/TracklistModels";
 import IconDownloadAltActive from "../../Icons/EncoreWeb/IconDownloadAltActive";
 import IconCheckAltActive from "../../Icons/EncoreWeb/IconCheckAltActive";
 import IconAddToQueue from "../../Icons/EncoreWeb/IconAddToQueue";
@@ -14,7 +15,13 @@ import { useInView } from "react-intersection-observer";
 import Trailer from "../../CarthingUIComponents/Trailer/Trailer";
 import { Type } from "../../CarthingUIComponents";
 
-const TracklistItem = ({ item, isActive = false }: UiComponentProps) => {
+const TracklistItem = ({
+  item,
+  isActive = false,
+}: {
+  item: TracklistItemModel;
+  isActive?: boolean;
+}) => {
   const [pressed, setPressed] = useState(false);
   const { ref, inView } = useInView();
   const { tracklistStore } = useCarThingStore();

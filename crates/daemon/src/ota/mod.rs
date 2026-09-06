@@ -1040,6 +1040,12 @@ impl OtaActor {
         self.state = OtaState::Idle;
         self.delta_source.deactivate().await;
         clear_manifest(&self.persist_dir).await;
+        emit_error(
+            &self.events_tx,
+            OtaErrorCode::Cancelled,
+            format!("ota {update_id} abandoned by companion"),
+        )
+        .await;
     }
 
     /// Re-emits companion-reported download progress as an `OtaPhase::Downloading`
@@ -3123,15 +3129,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn abandon_clears_state_back_to_idle() {
+    async fn abandon_emits_one_terminal_event_after_cleanup() {
         let root = tempfile::TempDir::new().unwrap();
-        let (handle, _events_rx) = spawn_actor(&root);
+        let (handle, mut events_rx) = spawn_actor(&root);
         let (_bytes, sha, size) = fixture();
-
-        // First Begin
         do_begin(&handle, &sha, size).await.expect("first begin ok");
 
-        // Abandon
         handle
             .cmd_tx
             .send(Command::Abandon {
@@ -3140,15 +3143,120 @@ mod tests {
             })
             .await
             .unwrap();
+        let terminal = timeout(Duration::from_secs(2), async {
+            loop {
+                if let OtaEvent::Error(error) = events_rx.recv().await.unwrap() {
+                    return error;
+                }
+            }
+        })
+        .await
+        .expect("accepted abandon must terminate OTA presentation");
+        assert_eq!(terminal.code, OtaErrorCode::Cancelled);
+        assert_eq!(terminal.msg, format!("ota {sha} abandoned by companion"));
+        let transfers = ChunkedTransfer::new(root.path().join("transfers"));
+        assert!(!tokio::fs::try_exists(transfers.path(&sha)).await.unwrap());
+        assert!(!tokio::fs::try_exists(transfers.meta_path(&sha))
+            .await
+            .unwrap());
+        assert!(manifest::load(root.path()).await.unwrap().is_none());
 
-        // Give the actor time to process the abandon
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        handle
+            .cmd_tx
+            .send(Command::Abandon {
+                update_id: sha.clone(),
+                source: test_source(),
+            })
+            .await
+            .unwrap();
+        do_begin(&handle, &sha, size)
+            .await
+            .expect("next begin after duplicate abandon should succeed");
+        let mut begins = 0;
+        while let Ok(event) = events_rx.try_recv() {
+            match event {
+                OtaEvent::Error(error) => panic!("duplicate terminal event: {error:?}"),
+                OtaEvent::Begin { .. } => begins += 1,
+                _ => {}
+            }
+        }
+        assert_eq!(begins, 1);
+    }
 
-        // Second Begin should succeed (state is back to Idle)
-        let result = do_begin(&handle, &sha, size).await;
-        assert!(
-            result.is_ok(),
-            "second begin after abandon should succeed, got: {result:?}"
+    #[tokio::test]
+    async fn abandon_preserves_nonmatching_transfers_and_active_writes() {
+        let root = tempfile::TempDir::new().unwrap();
+        let (_bytes, sha, size) = fixture();
+        let source = OtaSource::new(
+            Some("AA:BB:CC:DD:EE:01".parse().unwrap()),
+            Some("active".into()),
         );
+        let mut actor = actor_with_state(&root, OtaState::Idle);
+        let (events_tx, mut events_rx) = mpsc::channel(16);
+        actor.events_tx = events_tx;
+        let (ack, response) = oneshot::channel();
+        actor
+            .handle_begin(
+                OtaBegin {
+                    kind: OtaKind::BuiltinWebapp,
+                    update_id: sha.clone(),
+                    expected_size: size,
+                    expected_sha256: sha.clone(),
+                    update_url_base: None,
+                },
+                source.clone(),
+                ack,
+            )
+            .await;
+        response.await.unwrap().unwrap();
+        while events_rx.try_recv().is_ok() {}
+        let persisted = manifest::load(root.path()).await.unwrap();
+
+        for (id, candidate) in [
+            ("other-update".to_string(), source.clone()),
+            ("../invalid".to_string(), source.clone()),
+            (
+                sha.clone(),
+                OtaSource::new(
+                    Some("AA:BB:CC:DD:EE:02".parse().unwrap()),
+                    Some("active".into()),
+                ),
+            ),
+            (
+                sha.clone(),
+                OtaSource::new(source.peer, Some("stale".into())),
+            ),
+        ] {
+            actor.handle_abandon(id, &candidate).await;
+            assert!(matches!(actor.state, OtaState::Streaming { .. }));
+            assert_eq!(manifest::load(root.path()).await.unwrap(), persisted);
+            assert!(tokio::fs::try_exists(actor.transfers.path(&sha))
+                .await
+                .unwrap());
+            assert!(events_rx.try_recv().is_err());
+        }
+
+        actor.state = OtaState::Writing {
+            kind: OtaKind::BuiltinWebapp,
+            update_id: sha.clone(),
+            expected_size: u64::from(size),
+            expected_sha256: sha.clone(),
+            target_version: Some("4.2.0".into()),
+            transfer_window_size: None,
+            source: source.clone(),
+            write_id: uuid::Uuid::new_v4(),
+            target_slot: None,
+        };
+        actor.handle_abandon(sha.clone(), &source).await;
+        assert!(matches!(actor.state, OtaState::Writing { .. }));
+        assert_eq!(manifest::load(root.path()).await.unwrap(), persisted);
+        assert!(tokio::fs::try_exists(actor.transfers.path(&sha))
+            .await
+            .unwrap());
+        let OtaEvent::Error(error) = events_rx.try_recv().unwrap() else {
+            panic!("writing abandon must retain its rejection");
+        };
+        assert_eq!(error.code, OtaErrorCode::WriteFailed);
+        assert!(events_rx.try_recv().is_err());
     }
 }

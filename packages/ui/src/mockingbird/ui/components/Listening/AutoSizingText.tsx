@@ -7,11 +7,17 @@ const AutoSizingText = ({
   maxHeight,
   textSizesDescending,
   dataTestId,
-}: UiComponentProps) => {
+}: {
+  className?: string;
+  textContent: string;
+  maxHeight: number;
+  textSizesDescending: string[];
+  dataTestId?: string;
+}) => {
   const [showText, setShowText] = useState(true);
   const [textSizeIndex, setTextSizeIndex] = useState(0);
   const [refText, setRefText] = useState("");
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const preRenderDiv = ref.current;

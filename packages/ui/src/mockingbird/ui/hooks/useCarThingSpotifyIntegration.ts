@@ -1,3 +1,14 @@
+import type { RootStore } from "../stores/RootStore";
+import type {
+  SpotifyPlaybackState,
+  SpotifyPlaybackItem,
+  SpotifyArtist,
+  SpotifyAlbum,
+  SpotifyPlaylist,
+  SpotifyShow,
+  SpotifyImage,
+  PlayerControls,
+} from "../../../types";
 import { useEffect, useRef, useCallback } from "react";
 import { runInAction } from "mobx";
 import {
@@ -23,7 +34,10 @@ import { injectArtwork, retryImage } from "../utils/imageProxy";
 /** @typedef {import("@schema/spotify").SpotifyPlayerVolumeRequest} SpotifyPlayerVolumeRequest */
 /** @typedef {import("@schema/spotify").SpotifyShowGetRequest} SpotifyShowGetRequest */
 
-const getArtistNames = (artistName, artists) => {
+const getArtistNames = (
+  artistName: string,
+  artists: SpotifyArtist[] | undefined,
+) => {
   if (artists && artists?.length > 0) {
     return artists
       .filter((artist) => !!artist?.name)
@@ -33,7 +47,7 @@ const getArtistNames = (artistName, artists) => {
   return artistName;
 };
 
-const getPlaylistName = async (context) => {
+const getPlaylistName = async (context: SpotifyPlaybackState["context"]) => {
   if (!context?.uri) return null;
 
   try {
@@ -46,7 +60,7 @@ const getPlaylistName = async (context) => {
         contentId: playlistId,
         fields: "name",
       };
-      const result = await sendNocturneWsRequest(
+      const result = await sendNocturneWsRequest<SpotifyPlaylist>(
         "spotify.playlist.get",
         params,
       );
@@ -55,19 +69,28 @@ const getPlaylistName = async (context) => {
       const albumId = contextUri.replace("spotify:album:", "");
       /** @type {SpotifyAlbumGetRequest} */
       const params = { contentId: albumId };
-      const result = await sendNocturneWsRequest("spotify.album.get", params);
+      const result = await sendNocturneWsRequest<SpotifyAlbum>(
+        "spotify.album.get",
+        params,
+      );
       return result?.name || null;
     } else if (contextUri.includes("spotify:artist:")) {
       const artistId = contextUri.replace("spotify:artist:", "");
       /** @type {SpotifyArtistGetRequest} */
       const params = { contentId: artistId };
-      const result = await sendNocturneWsRequest("spotify.artist.get", params);
+      const result = await sendNocturneWsRequest<SpotifyArtist>(
+        "spotify.artist.get",
+        params,
+      );
       return result?.name || null;
     } else if (contextUri.includes("spotify:show:")) {
       const showId = contextUri.replace("spotify:show:", "");
       /** @type {SpotifyShowGetRequest} */
       const params = { contentId: showId };
-      const result = await sendNocturneWsRequest("spotify.show.get", params);
+      const result = await sendNocturneWsRequest<SpotifyShow>(
+        "spotify.show.get",
+        params,
+      );
       return result?.name || null;
     }
   } catch (error) {
@@ -78,9 +101,9 @@ const getPlaylistName = async (context) => {
 };
 
 export function useCarThingSpotifyIntegration(
-  carThingStores,
-  currentPlayback,
-  playerControls,
+  carThingStores: RootStore,
+  currentPlayback: SpotifyPlaybackState | null | undefined,
+  playerControls: PlayerControls | undefined,
 ) {
   const playTrack = playerControls?.playTrack;
   const pausePlayback = playerControls?.pausePlayback;
@@ -104,28 +127,31 @@ export function useCarThingSpotifyIntegration(
 
   const getQueue = useCallback(async () => {
     try {
-      const result = await sendNocturneWsRequest(
+      const result = await sendNocturneWsRequest<{ queue?: BridgeQueueItem[] }>(
         "spotify.player.queue",
         {},
         { timeoutMs: 5000 },
       );
       return result;
     } catch (error) {
+      console.warn("Failed to fetch Mockingbird queue:", error);
       return null;
     }
   }, []);
 
-  const lastCheckedTrackId = useRef(null);
+  const lastCheckedTrackId = useRef<string | null>(null);
   const lastPhoneLikedState = useRef<boolean | null>(null);
-  const likeCheckTimeoutRef = useRef(null);
-  const lastTrackId = useRef(null);
-  const lastSeekPositionRef = useRef(null);
+  const likeCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const lastTrackId = useRef<string | null | undefined>(null);
+  const lastSeekPositionRef = useRef<number | null>(null);
   const lastSeekTimeRef = useRef(0);
-  const currentImageUrlsRef = useRef([]);
+  const currentImageUrlsRef = useRef<string[]>([]);
   const shouldInjectPushedArtworkRef = useRef(false);
   const volumeRef = useRef(50);
-  const volumeDebounceRef = useRef(null);
-  const acceptedPhoneVolumeRef = useRef(null);
+  const volumeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const acceptedPhoneVolumeRef = useRef<number | null>(null);
   const phoneVolumeInteractionUntilRef = useRef(0);
 
   useEffect(() => {
@@ -135,8 +161,9 @@ export function useCarThingSpotifyIntegration(
       return;
     }
 
+    const currentItem = currentPlayback.item;
     const { npvStore } = carThingStores;
-    const currentTrackId = currentPlayback.item?.id;
+    const currentTrackId = currentItem?.id;
     const isPlaying = currentPlayback.is_playing;
     const isShuffled = currentPlayback.shuffle_state;
 
@@ -144,22 +171,21 @@ export function useCarThingSpotifyIntegration(
       currentTrackId && lastTrackId.current !== currentTrackId;
 
     runInAction(() => {
-      if (currentPlayback.item) {
+      if (currentItem) {
         if (trackChanged) {
           npvStore.playingInfoUiState.swipeHandler.setSwipeDirection("LEFT");
         }
         lastTrackId.current = currentTrackId;
 
-        npvStore.playingInfoUiState.title =
-          currentPlayback.item.name || "Unknown Track";
+        npvStore.playingInfoUiState.title = currentItem.name || "Unknown Track";
 
-        if (currentPlayback.item.type === "episode") {
+        if (currentItem.type === "episode") {
           npvStore.playingInfoUiState.subtitle =
-            currentPlayback.item.show?.name || "Unknown Podcast";
+            currentItem.show?.name || "Unknown Podcast";
         } else {
           npvStore.playingInfoUiState.subtitle = getArtistNames(
             "Unknown Artist",
-            currentPlayback.item.artists,
+            currentItem.artists,
           );
         }
         const getContextTitle = async () => {
@@ -174,18 +200,14 @@ export function useCarThingSpotifyIntegration(
           }
 
           if (!currentPlayback.context) {
-            if (currentPlayback.item.type === "episode") {
-              return currentPlayback.item.show?.name || "";
+            if (currentItem.type === "episode") {
+              return currentItem.show?.name || "";
             }
-            return currentPlayback.item.album?.name || "";
+            return currentItem.album?.name || "";
           }
 
           if (contextType === "show" || contextType === "episode") {
-            return (
-              currentPlayback.item.show?.name ||
-              currentPlayback.item.album?.name ||
-              ""
-            );
+            return currentItem.show?.name || currentItem.album?.name || "";
           }
 
           if (
@@ -193,11 +215,11 @@ export function useCarThingSpotifyIntegration(
             contextType === "album" ||
             contextType === "search"
           ) {
-            return currentPlayback.item.album?.name || "";
+            return currentItem.album?.name || "";
           }
 
           if (contextType === "artist") {
-            return getArtistNames("", currentPlayback.item.artists) || "";
+            return getArtistNames("", currentItem.artists) || "";
           }
 
           if (contextType === "station") {
@@ -230,42 +252,41 @@ export function useCarThingSpotifyIntegration(
 
         let imageUri = "";
         const rawImages =
-          currentPlayback.item.type === "episode"
-            ? currentPlayback.item.show?.images ||
-              currentPlayback.item.images ||
-              []
-            : currentPlayback.item.album?.images || [];
-        if (currentPlayback.item.type === "episode") {
+          currentItem.type === "episode"
+            ? currentItem.show?.images || currentItem.images || []
+            : currentItem.album?.images || [];
+        if (currentItem.type === "episode") {
           imageUri =
-            getNpvImageUrl(currentPlayback.item.show?.images) ||
-            getNpvImageUrl(currentPlayback.item.images) ||
+            getNpvImageUrl(currentItem.show?.images) ||
+            getNpvImageUrl(currentItem.images) ||
             "";
         } else {
-          imageUri = getNpvImageUrl(currentPlayback.item.album?.images) || "";
+          imageUri = getNpvImageUrl(currentItem.album?.images) || "";
         }
         currentImageUrlsRef.current = rawImages
           .map((img) => img?.url)
-          .filter(Boolean);
-        shouldInjectPushedArtworkRef.current = !isCanonicalSpotifyItem(
-          currentPlayback.item,
-        );
+          .filter(
+            (url): url is string => typeof url === "string" && url.length > 0,
+          );
+        shouldInjectPushedArtworkRef.current =
+          !isCanonicalSpotifyItem(currentItem);
 
         npvStore.playingInfoUiState.currentItem = {
-          uid: currentPlayback.item.id || "unknown",
-          uri: currentPlayback.item.uri || "",
+          uid: currentItem.id || "unknown",
+          uri: currentItem.uri || "",
           image_uri: imageUri,
-          name: currentPlayback.item.name || "Unknown Track",
+          name: currentItem.name || "Unknown Track",
           artist_name:
-            currentPlayback.item.type === "episode"
-              ? currentPlayback.item.show?.name || "Unknown Podcast"
-              : getArtistNames("Unknown Artist", currentPlayback.item.artists),
+            currentItem.type === "episode"
+              ? currentItem.show?.name || "Unknown Podcast"
+              : getArtistNames("Unknown Artist", currentItem.artists),
         };
 
         if (carThingStores.queueStore) {
           carThingStores.queueStore.updateCurrent(
             imageUri,
             currentTrackId,
-            currentPlayback.item.uri,
+            currentItem.uri,
           );
 
           if (trackChanged)
@@ -279,8 +300,8 @@ export function useCarThingSpotifyIntegration(
                   const formattedQueue = queueData.queue.map((item, index) => ({
                     queue_index: index,
                     uid: item.uid || "",
-                    uri: item.uri,
-                    name: item.name,
+                    uri: item.uri ?? "",
+                    name: item.name ?? "",
 
                     artist_name:
                       item.artist_name ||
@@ -310,7 +331,7 @@ export function useCarThingSpotifyIntegration(
         const isOtherMedia =
           !!currentPlayback.currently_active_application ||
           !!currentPlayback?.item?.is_phone_media;
-        const isEpisode = currentPlayback.item.type === "episode";
+        const isEpisode = currentItem.type === "episode";
         const isPodcastContext = currentPlayback.context?.type === "show";
         const isPodcast = isEpisode || isPodcastContext;
 
@@ -363,7 +384,7 @@ export function useCarThingSpotifyIntegration(
         npvStore.volumeUiState.isPlayingSpotify = !isOtherMedia;
 
         const deviceVolume = currentPlayback.device?.volume_percent;
-        if (deviceVolume !== undefined && !volumeDebounceRef.current) {
+        if (typeof deviceVolume === "number" && !volumeDebounceRef.current) {
           volumeRef.current = deviceVolume;
           const pct = deviceVolume / 100;
           npvStore.volumeUiState.displayVolume = pct;
@@ -382,17 +403,15 @@ export function useCarThingSpotifyIntegration(
 
         carThingStores.playerStore.state.is_playing = isPlaying || false;
         carThingStores.playerStore.state.context_uri = contextUri;
-        carThingStores.playerStore.state.track = currentPlayback.item;
+        carThingStores.playerStore.state.track = currentItem;
         carThingStores.playerStore.state.currently_active_application =
           currentPlayback.currently_active_application || null;
       }
     });
 
     if (trackChanged && carThingStores.shelfStore) {
-      const isPodcast = currentPlayback.item?.type === "episode";
-      const currentAlbum = isPodcast
-        ? currentPlayback.item?.show
-        : currentPlayback.item?.album;
+      const isPodcast = currentItem?.type === "episode";
+      const currentAlbum = isPodcast ? currentItem?.show : currentItem?.album;
       const currentAlbumId = currentAlbum?.id;
 
       if (
@@ -421,15 +440,23 @@ export function useCarThingSpotifyIntegration(
             name: currentAlbum.name || "",
             images: currentAlbum.images || [],
             artists: isPodcast
-              ? [{ name: currentAlbum.publisher || "Podcast" }]
-              : currentPlayback.item?.artists || [],
+              ? [
+                  {
+                    name:
+                      "publisher" in currentAlbum &&
+                      typeof currentAlbum.publisher === "string"
+                        ? currentAlbum.publisher
+                        : "Podcast",
+                  },
+                ]
+              : currentItem?.artists || [],
           });
         });
       }
     }
 
     const likeIdentity = likeTarget
-      ? `${likeTarget.source}:${likeTarget.reference || currentPlayback.item?.uri || currentTrackId}`
+      ? `${likeTarget.source}:${likeTarget.reference || currentItem?.uri || currentTrackId}`
       : null;
     if (likeTarget?.source === "phone_media" && likeIdentity) {
       const trackChanged = likeIdentity !== lastCheckedTrackId.current;
@@ -558,16 +585,11 @@ export function useCarThingSpotifyIntegration(
           npvStore.controlButtonsUiState.podcastSpeed = nextSpeed;
         });
 
-        sendNocturneWsRequest("spotify.player.state", {}, { timeoutMs: 3000 })
-          .then((state) => {
-            void state?.device?.id;
-            /** @type {SpotifyPlayerSpeedRequest} */
-            const params = {
-              speed: nextSpeed,
-            };
-            return sendNocturneWsRequest("spotify.player.speed", params);
-          })
-          .catch(() => {});
+        sendNocturneWsRequest("spotify.player.speed", {
+          speed: nextSpeed,
+        }).catch((error) =>
+          console.warn("Failed to change podcast speed:", error),
+        );
       };
 
       npvStore.controlButtonsUiState.handleSeekBackClick = () => {
@@ -575,9 +597,10 @@ export function useCarThingSpotifyIntegration(
         const useLastSeek =
           lastSeekPositionRef.current !== null &&
           now - lastSeekTimeRef.current < 3000;
-        const currentPos = useLastSeek
-          ? lastSeekPositionRef.current
-          : currentPlayback?.progress_ms || 0;
+        const currentPos =
+          (useLastSeek
+            ? lastSeekPositionRef.current
+            : currentPlayback?.progress_ms) ?? 0;
         const newPosition = Math.max(0, currentPos - 15000);
         lastSeekPositionRef.current = newPosition;
         lastSeekTimeRef.current = now;
@@ -591,9 +614,10 @@ export function useCarThingSpotifyIntegration(
         const useLastSeek =
           lastSeekPositionRef.current !== null &&
           now - lastSeekTimeRef.current < 3000;
-        const currentPos = useLastSeek
-          ? lastSeekPositionRef.current
-          : currentPlayback?.progress_ms || 0;
+        const currentPos =
+          (useLastSeek
+            ? lastSeekPositionRef.current
+            : currentPlayback?.progress_ms) ?? 0;
         const newPosition = Math.min(duration, currentPos + 15000);
         lastSeekPositionRef.current = newPosition;
         lastSeekTimeRef.current = now;
@@ -648,7 +672,7 @@ export function useCarThingSpotifyIntegration(
     });
 
     if (carThingStores.volumeStore) {
-      const adjustVolume = (delta) => {
+      const adjustVolume = (delta: number) => {
         const activeDeviceType = getActiveDeviceType();
         if (
           carThingStores.playerStore.isOtherMediaPlaying ||
@@ -684,7 +708,7 @@ export function useCarThingSpotifyIntegration(
         const params = { volumePercent: Math.round(newVolume) };
         sendNocturneWsRequest("spotify.player.volume", params, {
           timeoutMs: 3000,
-        }).catch(() => {});
+        }).catch((error) => console.warn("Failed to change volume:", error));
       };
 
       const increaseVolume = () => adjustVolume(6.25);
@@ -729,7 +753,7 @@ export function useCarThingSpotifyIntegration(
           return;
         }
         const contextUri = carThingStores.playerStore.state.context_uri || "";
-        const params = { uid };
+        const params: { uid: string; context_uri?: string } = { uid };
         if (contextUri) {
           params.context_uri = contextUri;
         }
@@ -813,9 +837,13 @@ export function useCarThingSpotifyIntegration(
             return;
           }
 
-          const base64 = data.data?.data;
+          const payload = data.data;
+          const base64 =
+            payload && typeof payload === "object" && "data" in payload
+              ? payload.data
+              : undefined;
           if (
-            base64 &&
+            typeof base64 === "string" &&
             base64.trim() !== "" &&
             shouldInjectPushedArtworkRef.current &&
             currentImageUrlsRef.current.length > 0
@@ -842,7 +870,7 @@ export function useCarThingSpotifyIntegration(
     if (!carThingStores?.npvStore) return;
     const { npvStore } = carThingStores;
 
-    const applyPhoneVolume = (volumePercent, shouldShow) => {
+    const applyPhoneVolume = (volumePercent: number, shouldShow: boolean) => {
       const pct = volumePercent / 100;
       volumeRef.current = volumePercent;
       runInAction(() => {
@@ -886,4 +914,11 @@ export function useCarThingSpotifyIntegration(
     currentPlayback,
     isLoading: false,
   };
+}
+
+interface BridgeQueueItem extends SpotifyPlaybackItem {
+  uid?: string;
+  artist_name?: string;
+  image_url?: string;
+  album_name?: string;
 }

@@ -9,7 +9,7 @@ export const URITypeMap = {
   COLLECTION: "collection",
 };
 
-export const parseURI = (uri) => {
+export const parseURI = (uri: unknown) => {
   if (!uri || typeof uri !== "string") return null;
 
   const parts = uri.split(":");
@@ -21,6 +21,6 @@ export const parseURI = (uri) => {
   };
 };
 
-export const isLikedSongsURI = (uri) => {
+export const isLikedSongsURI = (uri: string | null | undefined) => {
   return uri && uri.includes("collection:your-music");
 };

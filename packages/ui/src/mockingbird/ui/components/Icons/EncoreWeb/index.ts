@@ -14,7 +14,6 @@ export type EncoreIconProps = SVGProps<SVGSVGElement> & {
   title?: string;
   titleId?: string;
   viewBox?: string;
-  dangerouslySetInnerHTML?: { __html: string };
 };
 
 export function findClosestGlyphAvailable(
@@ -30,23 +29,19 @@ export function findClosestGlyphAvailable(
   return best;
 }
 
-export function Icon(props: EncoreIconProps) {
-  var iconSize = props.iconSize || 24;
-  var viewBox = props.viewBox;
-  var dangerouslySetInnerHTML = props.dangerouslySetInnerHTML;
-  var className = props.className;
-  var style = props.style;
-
-  return React.createElement(
-    "svg",
-    Object.assign({}, props, {
-      width: iconSize,
-      height: iconSize,
-      viewBox: viewBox,
-      fill: "currentColor",
-      className: className,
-      style: style,
-      dangerouslySetInnerHTML: dangerouslySetInnerHTML,
-    }),
-  );
+export function Icon({
+  iconSize: requestedSize,
+  autoMirror: _autoMirror,
+  desc: _desc,
+  descId: _descId,
+  titleId: _titleId,
+  ...svgProps
+}: EncoreIconProps) {
+  const iconSize = requestedSize || 24;
+  return React.createElement("svg", {
+    ...svgProps,
+    width: iconSize,
+    height: iconSize,
+    fill: "currentColor",
+  });
 }

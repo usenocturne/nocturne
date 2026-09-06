@@ -1,3 +1,4 @@
+import type { ShelfContextItem } from "../../../../stores/ShelfModels";
 import { useEffect, useState, useRef } from "react";
 import { runInAction } from "mobx";
 import classNames from "classnames";
@@ -7,13 +8,13 @@ import { ARTWORK_WIDTH } from "./ShelfSwiperItem";
 import styles from "./ShelfSwiperItem.module.scss";
 import shelfSwiperItemStyles from "./ShelfSwiperItem.module.scss";
 
-const pointerListenersMaker = (setTouchDown) => ({
+const pointerListenersMaker = (setTouchDown: (pressed: boolean) => void) => ({
   onPointerDown: () => setTouchDown(true),
   onPointerUp: () => setTouchDown(false),
   onPointerLeave: () => setTouchDown(false),
 });
 
-const getShelfItemTitle = (title, uri) => {
+const getShelfItemTitle = (title: string, uri: string) => {
   return title;
 };
 
@@ -30,13 +31,17 @@ const EqAnimation = {
 
 const PAUSE_PLAY_TRANSITION_MS = 250;
 
-const Equaliser = ({ playing }: UiComponentProps) => {
+const Equaliser = ({ playing }: { playing?: boolean }) => {
   const [eqAnimation, setEqAnimation] = useState(
     playing ? EqAnimation.PLAYING : EqAnimation.PAUSED,
   );
 
-  const playTimeout = useRef();
-  const pauseTimeout = useRef();
+  const playTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const pauseTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     const startPlayingTimer = () => {
@@ -105,7 +110,13 @@ const Equaliser = ({ playing }: UiComponentProps) => {
   );
 };
 
-const NowPlaying = ({ playing, textName }: UiComponentProps) => {
+const NowPlaying = ({
+  playing,
+  textName,
+}: {
+  playing?: boolean;
+  textName?: string;
+}) => {
   return (
     <div className={styles.nowPlaying}>
       <Equaliser playing={playing} />
@@ -114,7 +125,13 @@ const NowPlaying = ({ playing, textName }: UiComponentProps) => {
   );
 };
 
-const ContextItem = ({ item, isActive }: UiComponentProps) => {
+const ContextItem = ({
+  item,
+  isActive,
+}: {
+  item: ShelfContextItem;
+  isActive?: boolean;
+}) => {
   const { shelfStore } = useCarThingStore();
   const uiState = shelfStore.shelfController.shelfSwiperItemUiState;
   const { uri, image_id: imageId, title, subtitle, category } = item;

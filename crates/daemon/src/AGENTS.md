@@ -21,7 +21,7 @@ src/
 ├── hardware/
 │   ├── mod.rs              # Hardware re-exports
 │   ├── brightness.rs       # Display brightness + ambient light sensor
-│   └── image_cache.rs      # Disk-backed image cache for album art
+│   └── image_cache.rs      # Disk-backed artwork cache; async reads preserve existing Spotify locale keys
 ├── audio/
 │   ├── mod.rs              # Audio/wake word re-exports, ARecordPcmConverter (4-mic DSP front-end)
 │   ├── dsp.rs              # Per-channel 100Hz HPF, wind-aware mic mixer, RNNoise denoiser, 165-tap FIR 48k→16k decimator
@@ -38,9 +38,9 @@ src/
 │   ├── websocket.rs        # WebSocket server on port 5000, UI broadcast
 │   └── webapp.rs           # Webapp HTTP server on localhost:8080
 ├── app/
-│   ├── mod.rs              # AppCommunicationManager, AppMessage, session multiplexing (179 lines)
-│   ├── msgpack.rs          # MsgPack RPC handler: chunking, CRC32, EA commands (1,604 lines)
-│   └── websocket_handler.rs # WebSocket→iPhone command routing (297 lines)
+│   ├── mod.rs              # AppCommunicationManager, AppMessage, session multiplexing
+│   ├── msgpack.rs          # MsgPack RPC handler: chunking, CRC32, EA commands
+│   └── websocket_handler.rs # WebSocket→iPhone command routing
 └── ota/                    # OTA actors, slots, SWUpdate bindings, delta source, swap helpers
 ```
 
@@ -123,3 +123,5 @@ Supported methods (11 total, both sources): `play`, `pause`, `playPause`/`toggle
 - **The transport HID report is two bytes**: preserve the descriptor and report-mask ordering in `crates/iap2/src/csm/hid.rs`. Existing transport controls occupy bits 0 through 5, Shuffle and Repeat occupy bits 6 and 7, and Apple Promote and Demote occupy bits 8 and 9 for `media.control.like` and `media.control.unlike`. The remaining six bits are constant padding. A report press and its all-zero release must both contain two bytes.
 
 Pairing display state lives in `bluetooth/pairing.rs`: numeric comparison is displayed on Car Thing and confirmed on the peer, with no on-device buttons or fixed PIN fallback. `bluetooth.pairing.pending` restores the active display after a UI reconnect. Completion must match the pending device and must not clear a challenge merely because an initial snapshot says the peer is unpaired.
+
+WebSocket outbound delivery uses a bounded FIFO per connection and disconnects a slow client on overflow. Both regular responses and malformed-request errors use the same five-second cancellable socket-write limit. Do not silently discard individual events from a still-connected client.

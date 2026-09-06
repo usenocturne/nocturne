@@ -20,11 +20,13 @@ const LearnTactile = () => {
   const [showDialTurnDots, setShowDialTurnDots] = useState(false);
   const [showDialPressPulse, setShowDialPressPulse] = useState(false);
   const [showBackPressBanner, setShowBackPressBanner] = useState(false);
-  const noInteractionTimeoutId = useRef();
+  const noInteractionTimeoutId = useRef<number | undefined>(undefined);
 
   const [modalMounted, setModalMounted] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const modalTimerRef = useRef();
+  const modalTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const isModalActive = !!onboardingStore.noInteractionModal;
 

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import type { MockingbirdShellProps } from "./ui/MockingbirdShell";
 import React from "react";
 import type { PhoneCallOverlayProps } from "../hooks/usePhoneCalls";
 
@@ -42,7 +44,11 @@ export default function UIShell({
   isMockingbird,
   children,
   mockingbirdProps,
-}: UiComponentProps) {
+}: {
+  isMockingbird: boolean;
+  children?: ReactNode;
+  mockingbirdProps?: MockingbirdShellProps;
+}) {
   if (!isMockingbird) {
     return <>{children}</>;
   }

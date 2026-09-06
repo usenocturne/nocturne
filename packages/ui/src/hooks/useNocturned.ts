@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSettings } from "../contexts/SettingsContext";
-import { useUpdateCheck } from "./useUpdateCheck";
+import { getErrorMessage } from "../utils/helpers";
 import type { BluetoothDevice, PairingRequest, WsMessage } from "../types";
 
 type Listener<T> = (state: T) => void;
@@ -45,19 +45,31 @@ type BluetoothPresentationStateOptions = {
 type GlobalWsListener = {
   id: string;
   onMessage?: (data: WsMessage) => void;
-  onOpen?: () => void;
+  onOpen?: (socket: WebSocket) => void;
   onClose?: () => void;
   onError?: (error: Event) => void;
 };
-type PendingWsRequest<T = UiLooseData> = {
+type PendingWsRequest<T = unknown> = {
   resolve: (value: T | PromiseLike<T>) => void;
   reject: (reason?: unknown) => void;
   method: string;
 };
+type DeviceConnectResult = {
+  connected?: boolean;
+  status?: string;
+  error?: string;
+};
+type ConnectFacade = { ok: boolean; json: () => Promise<DeviceConnectResult> };
+type BtReconnectSnapshot = {
+  attempts: number;
+  inProgress: boolean;
+  pending: boolean;
+  exhausted: boolean;
+};
 type ConnectQueueEntry = {
   deviceAddress: string;
   options: Record<string, unknown>;
-  resolve: (value) => void;
+  resolve: (value: ConnectFacade) => void;
   reject: (reason?: unknown) => void;
 };
 type BluetoothDiscoverySender = (discoverable: boolean) => Promise<void>;
@@ -191,19 +203,33 @@ export const getWsRequestError = (
   return typeof detail === "string" ? detail : "Request failed";
 };
 
+export interface NocturneDeviceInfo {
+  device?: string;
+  version?: string;
+  fullVersion?: string;
+  imageVersion?: string;
+  bandaidVersion?: string;
+  buildDate?: string;
+  gitHash?: string;
+  serialNumber?: string;
+}
 export const normalizeDeviceInfoResponse = (
-  info: UiLooseData | null | undefined,
-): UiLooseData | null => {
+  value: unknown,
+): NocturneDeviceInfo | null => {
+  const info = asUnknownRecord(value);
   if (!info) return null;
-
+  const text = (value: unknown) =>
+    typeof value === "string" ? value : undefined;
   return {
     ...info,
-    fullVersion: info.fullVersion ?? info.full_version,
-    imageVersion: info.imageVersion ?? info.image_version,
-    bandaidVersion: info.bandaidVersion ?? info.bandaid_version,
-    buildDate: info.buildDate ?? info.build_date,
-    gitHash: info.gitHash ?? info.git_hash,
-    serialNumber: info.serialNumber ?? info.serial_number,
+    device: text(info.device),
+    version: text(info.version),
+    fullVersion: text(info.fullVersion ?? info.full_version),
+    imageVersion: text(info.imageVersion ?? info.image_version),
+    bandaidVersion: text(info.bandaidVersion ?? info.bandaid_version),
+    buildDate: text(info.buildDate ?? info.build_date),
+    gitHash: text(info.gitHash ?? info.git_hash),
+    serialNumber: text(info.serialNumber ?? info.serial_number),
   };
 };
 
@@ -213,16 +239,17 @@ const cleanDeviceVersion = (value: unknown): string | null => {
   return version || null;
 };
 
-export const normalizeDeviceVersionResponse = (
-  info: UiLooseData | null | undefined,
-) => ({
-  version: cleanDeviceVersion(info?.version),
-  shortVersion: cleanDeviceVersion(info?.shortVersion ?? info?.short_version),
-  imageVersion: cleanDeviceVersion(info?.imageVersion ?? info?.image_version),
-  bandaidVersion: cleanDeviceVersion(
-    info?.bandaidVersion ?? info?.bandaid_version,
-  ),
-});
+export const normalizeDeviceVersionResponse = (value: unknown) => {
+  const info = asUnknownRecord(value);
+  return {
+    version: cleanDeviceVersion(info?.version),
+    shortVersion: cleanDeviceVersion(info?.shortVersion ?? info?.short_version),
+    imageVersion: cleanDeviceVersion(info?.imageVersion ?? info?.image_version),
+    bandaidVersion: cleanDeviceVersion(
+      info?.bandaidVersion ?? info?.bandaid_version,
+    ),
+  };
+};
 
 export const isConnectorPlatform = (platform: string | null | undefined) =>
   platform === "web" || platform === "macos";
@@ -370,10 +397,13 @@ const WS_RECONNECT_BASE_INTERVAL = 1000;
 const WS_RECONNECT_MAX_INTERVAL = 30000;
 
 let isDevicesFetching = false;
-let pendingDevicesFetchPromise: Promise<UiLooseData> | null = null;
-let pendingDevicesListWsPromise: Promise<UiLooseData> | null = null;
-let lastDevicesListCache: { resp: UiLooseData; timestamp: number } | null =
+let pendingDevicesFetchPromise: Promise<BluetoothDevice[]> | null = null;
+let pendingDevicesListWsPromise: Promise<BluetoothDevicesListResponse> | null =
   null;
+let lastDevicesListCache: {
+  resp: BluetoothDevicesListResponse;
+  timestamp: number;
+} | null = null;
 const DEVICES_LIST_CACHE_TTL_MS = 3000;
 let isConnectRequestInProgress = false;
 let connectRequestQueue: ConnectQueueEntry[] = [];
@@ -398,7 +428,7 @@ const BT_RECONNECT_BASE_INTERVAL = 2000;
 const BT_RECONNECT_MAX_INTERVAL = 60000;
 const BT_RECONNECT_INITIAL_DELAY = 1000;
 const BT_RECONNECT_EXP_CAP = 30;
-const btReconnectSubscribers = new Set<Listener<UiLooseData>>();
+const btReconnectSubscribers = new Set<Listener<BtReconnectSnapshot>>();
 const BT_RECONNECT_SETTLE_MS = 5000;
 const BT_RECONNECT_WATCHDOG_MS = 10000;
 let btReconnectSettleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -452,11 +482,35 @@ const hasLiveBtSessionEvidence = (address: string) =>
   btActiveSessions.has(address) ||
   (lastAppReadyAt > 0 && lastAppReadyAt >= lastBtSessionClosedAt);
 
-const getDevicesFromListResponse = (
-  resp: BluetoothDevicesListResponse | UiLooseData | null | undefined,
-): BluetoothDevice[] => {
-  const response = resp as BluetoothDevicesListResponse | null | undefined;
-  return response?.payload || response?.result?.payload || [];
+const getDevicesFromListResponse = (value: unknown): BluetoothDevice[] => {
+  const response = asUnknownRecord(value);
+  const result = asUnknownRecord(response?.result);
+  const list = response?.payload ?? result?.payload;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((item: unknown) => {
+    const device = asUnknownRecord(item);
+    if (!device || typeof device.address !== "string") return [];
+    const info = asUnknownRecord(device.device_info);
+    return [
+      {
+        ...device,
+        address: device.address,
+        name: typeof device.name === "string" ? device.name : undefined,
+        alias: typeof device.alias === "string" ? device.alias : undefined,
+        connected: device.connected === true,
+        paired: device.paired === true,
+        trusted: device.trusted === true,
+        rssi: typeof device.rssi === "number" ? device.rssi : null,
+        icon: typeof device.icon === "string" ? device.icon : null,
+        device_info: info
+          ? {
+              ...info,
+              name: typeof info.name === "string" ? info.name : undefined,
+            }
+          : undefined,
+      },
+    ];
+  });
 };
 
 const findDeviceByAddress = (
@@ -818,7 +872,7 @@ export const subscribeBluetoothConnectionState = (
 const clearConnectQueue = () => {
   while (connectRequestQueue.length > 0) {
     const pendingRequest = connectRequestQueue.shift();
-    pendingRequest.reject(
+    pendingRequest?.reject(
       new Error("Connection already established to another device"),
     );
   }
@@ -876,7 +930,7 @@ const queueConnectRequest = async (
   deviceAddress: string,
   options: Record<string, unknown> = {},
 ) => {
-  return new Promise<UiLooseData>((resolve, reject) => {
+  return new Promise<ConnectFacade>((resolve, reject) => {
     const cachedDevice = findDeviceByAddress(
       getDevicesFromListResponse(lastDevicesListCache?.resp),
       deviceAddress,
@@ -904,6 +958,10 @@ const processConnectQueue = async () => {
 
   isConnectRequestInProgress = true;
   const request = connectRequestQueue.shift();
+  if (!request) {
+    isConnectRequestInProgress = false;
+    return;
+  }
 
   try {
     let result;
@@ -915,9 +973,12 @@ const processConnectQueue = async () => {
         ...(options.channel ? { channel: options.channel } : {}),
         ...(options.device_type ? { device_type: options.device_type } : {}),
       };
-      result = await sendWsRequest("bluetooth.device.connect", connectRequest);
+      result = await sendWsRequest<DeviceConnectResult>(
+        "bluetooth.device.connect",
+        connectRequest,
+      );
     } catch (err) {
-      result = { error: err?.message || "Connection failed" };
+      result = { error: getErrorMessage(err) || "Connection failed" };
     }
 
     let connectionSuccessful = false;
@@ -925,7 +986,7 @@ const processConnectQueue = async () => {
       connectionSuccessful = true;
       while (connectRequestQueue.length > 0) {
         const pendingRequest = connectRequestQueue.shift();
-        pendingRequest.reject(
+        pendingRequest?.reject(
           new Error("Connection already established to another device"),
         );
       }
@@ -953,20 +1014,29 @@ const processConnectQueue = async () => {
   }
 };
 
-const readConnectResponseJson = async (response) => {
-  if (!response || typeof response.json !== "function") {
+const readConnectResponseJson = async (
+  response: ConnectFacade | null | undefined,
+): Promise<DeviceConnectResult> => {
+  if (!response) return {};
+  try {
+    return await response.json();
+  } catch (error) {
+    console.error("Invalid Bluetooth connection response:", error);
     return {};
   }
-  return response.json().catch(() => ({}));
 };
-
-const isConnectResponseConnected = (data) =>
-  data?.connected === true || data?.status === "connected";
-
-export const isConnectResponsePending = (data) =>
-  data?.status === "waiting_for_ios" ||
-  data?.status === "waiting_for_macos_connector" ||
-  data?.status === "waiting_for_android";
+const isConnectResponseConnected = (value: unknown) => {
+  const data = asUnknownRecord(value);
+  return data?.connected === true || data?.status === "connected";
+};
+export const isConnectResponsePending = (value: unknown) => {
+  const data = asUnknownRecord(value);
+  return (
+    data?.status === "waiting_for_ios" ||
+    data?.status === "waiting_for_macos_connector" ||
+    data?.status === "waiting_for_android"
+  );
+};
 
 const attemptWsReconnection = () => {
   if (wsReconnectInProgress) {
@@ -1191,7 +1261,7 @@ const setupGlobalWebSocket = async () => {
           const pending = pendingWsRequests.get(data.id);
           if (pending) {
             pendingWsRequests.delete(data.id);
-            const result = data.result ?? data;
+            const result = data.result ?? normalizeLegacyUpdate(data);
 
             if (pending.method && !data.method) {
               data.method = pending.method;
@@ -1240,12 +1310,17 @@ const setupGlobalWebSocket = async () => {
   }
 };
 
-const sendWsRequest = <T = UiLooseData>(
+function sendWsRequest<T = Record<string, unknown>>(
+  method: string,
+  params?: object,
+  options?: { timeoutMs?: number },
+): Promise<T>;
+function sendWsRequest(
   method: string,
   params: object = {},
   { timeoutMs = 30000 }: { timeoutMs?: number } = {},
-): Promise<T> => {
-  return new Promise<T>((resolve, reject) => {
+): Promise<unknown> {
+  return new Promise<unknown>((resolve, reject) => {
     const start = Date.now();
 
     const ensureInitialized = () => {
@@ -1318,9 +1393,9 @@ const sendWsRequest = <T = UiLooseData>(
     ensureInitialized();
     attemptSend();
   });
-};
+}
 
-export const sendNocturneWsRequest = <T = UiLooseData>(
+export const sendNocturneWsRequest = <T = Record<string, unknown>>(
   method: string,
   params: object = {},
   options: { timeoutMs?: number } = {},
@@ -1359,7 +1434,10 @@ const requestDevicesListDeduped = async (force = false) => {
   if (pendingDevicesListWsPromise) return pendingDevicesListWsPromise;
   /** @type {import("@schema/bluetooth").BluetoothDevicesListRequest} */
   const request = {};
-  pendingDevicesListWsPromise = sendWsRequest("bluetooth.devices.list", request)
+  pendingDevicesListWsPromise = sendWsRequest<BluetoothDevicesListResponse>(
+    "bluetooth.devices.list",
+    request,
+  )
     .then((resp) => {
       lastDevicesListCache = { resp, timestamp: Date.now() };
       return resp;
@@ -1389,7 +1467,9 @@ const emitBtReconnectState = () => {
   });
 };
 
-export const subscribeBtReconnect = (listener) => {
+export const subscribeBtReconnect = (
+  listener: Listener<BtReconnectSnapshot>,
+) => {
   btReconnectSubscribers.add(listener);
   return () => {
     btReconnectSubscribers.delete(listener);
@@ -1713,13 +1793,13 @@ export async function attemptBtReconnect() {
   }
 }
 
-const handleBluetoothSingletonMessage = (data) => {
+const handleBluetoothSingletonMessage = (data: WsMessage) => {
   if (data?.type !== "event") return;
 
   if (data.topic === "bluetooth.device") {
     /** @type {import("@schema/bluetooth").BluetoothDeviceEvent} */
-    const ev = data.data || {};
-    if (ev.event === "disconnected" && ev.device) {
+    const ev = asUnknownRecord(data.data) || {};
+    if (ev.event === "disconnected" && typeof ev.device === "string") {
       btActiveSessions.delete(ev.device);
       if (ev.device === localStorage.getItem("lastConnectedBluetoothDevice")) {
         lastBtSessionClosedAt = Date.now();
@@ -1731,10 +1811,12 @@ const handleBluetoothSingletonMessage = (data) => {
 
   if (data.topic !== "bluetooth.connection") return;
   /** @type {import("@schema/bluetooth").BluetoothConnectionEvent} */
-  const ev = data.data || {};
+  const ev = asUnknownRecord(data.data) || {};
 
+  if (typeof ev.device !== "string") return;
   if (ev.event === "connection_established") {
-    const connType = ev.connection_type || "unknown";
+    const connType =
+      typeof ev.connection_type === "string" ? ev.connection_type : "unknown";
     btConnectionTypeByDevice.set(ev.device, connType);
     if (
       lastBtLinkDownAt > 0 &&
@@ -1848,7 +1930,7 @@ globalWsListeners.push({
 
 export const useNocturned = () => {
   const [wsConnected, setWsConnected] = useState(false);
-  const listenerIdRef = useRef(null);
+  const listenerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!wsInitialized) {
@@ -1888,26 +1970,32 @@ export const useNocturned = () => {
   }, []);
 
   const apiRequest = useCallback(
-    async (endpoint, method = "GET", body = null) => {
+    async (
+      endpoint: string,
+      method = "GET",
+      body: unknown = null,
+    ): Promise<unknown> => {
       const url = `${API_BASE}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`;
 
       try {
-        const options = {
-          method,
-          headers: {},
-        };
+        const headers: Record<string, string> = {};
+        const options: RequestInit = { method, headers };
 
         if (body) {
-          options.headers["Content-Type"] = "application/json";
+          headers["Content-Type"] = "application/json";
           options.body = JSON.stringify(body);
         }
 
         const response = await fetch(url, options);
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          const errorData = asUnknownRecord(
+            await response.json().catch(() => null),
+          );
           throw new Error(
-            errorData.error || `Request failed: ${response.status}`,
+            typeof errorData?.error === "string"
+              ? errorData.error
+              : `Request failed: ${response.status}`,
           );
         }
 
@@ -1953,7 +2041,7 @@ export const useNocturneInfo = () => {
   const [imageVersion, setImageVersion] = useState<string | null>(null);
   const [bandaidVersion, setBandaidVersion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchInfo = useCallback(async () => {
     try {
@@ -1970,7 +2058,7 @@ export const useNocturneInfo = () => {
       setBandaidVersion(normalized.bandaidVersion);
     } catch (err) {
       console.error("Failed to fetch info from nocturned:", err);
-      setError(err.message);
+      setError(getErrorMessage(err));
       setVersion(null);
       setImageVersion(null);
       setBandaidVersion(null);
@@ -1994,9 +2082,9 @@ export const useNocturneInfo = () => {
 };
 
 export const useDeviceInfo = () => {
-  const [deviceInfo, setDeviceInfo] = useState(null);
+  const [deviceInfo, setDeviceInfo] = useState<NocturneDeviceInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDeviceInfo = useCallback(async () => {
     try {
@@ -2014,7 +2102,7 @@ export const useDeviceInfo = () => {
       }
     } catch (err) {
       console.error("Failed to fetch device info from nocturned:", err);
-      setError(err.message);
+      setError(getErrorMessage(err));
       setDeviceInfo(null);
     } finally {
       setIsLoading(false);
@@ -2030,6 +2118,29 @@ export const useDeviceInfo = () => {
     isLoading,
     error,
     refetch: fetchDeviceInfo,
+  };
+};
+
+const normalizeLegacyUpdate = (value: unknown) => {
+  const data = asUnknownRecord(value) ?? {};
+  const text = (value: unknown) =>
+    typeof value === "string" ? value : undefined;
+  const number = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return {
+    ...data,
+    type: text(data.type),
+    status: text(data.status),
+    current: text(data.current),
+    ota: text(data.ota),
+    success: data.success === true,
+    message: text(data.message),
+    error: text(data.error),
+    stage: text(data.stage),
+    bytes_complete: number(data.bytes_complete),
+    bytes_total: number(data.bytes_total),
+    speed: number(data.speed),
+    percent: number(data.percent),
   };
 };
 
@@ -2052,12 +2163,12 @@ export const useSystemUpdate = () => {
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isApplyComplete, setIsApplyComplete] = useState(false);
-  const listenerIdRef = useRef(null);
-  const lastSuccessfulStageRef = useRef(null);
-  const postCommandsRef = useRef([]);
+  const listenerIdRef = useRef<string | null>(null);
+  const lastSuccessfulStageRef = useRef<string | null>(null);
+  const postCommandsRef = useRef<string[]>([]);
 
   const execCommands = useCallback(
-    async (commands) => {
+    async (commands: string[]) => {
       if (!commands || commands.length === 0) return;
       try {
         await apiRequest("/device/exec", "POST", { commands });
@@ -2069,7 +2180,11 @@ export const useSystemUpdate = () => {
   );
 
   const startUpdate = useCallback(
-    async (currentVersion, targetVersion, commands = {}) => {
+    async (
+      currentVersion: string,
+      targetVersion: string,
+      commands: { pre?: string[]; post?: string[] } = {},
+    ) => {
       try {
         const pre = commands.pre || [];
         const post = commands.post || [];
@@ -2120,7 +2235,7 @@ export const useSystemUpdate = () => {
         console.error("Error starting update:", error);
         setIsUpdating(false);
         setIsError(true);
-        setErrorMessage(`Failed to start update: ${error.message}`);
+        setErrorMessage(`Failed to start update: ${getErrorMessage(error)}`);
         return null;
       }
     },
@@ -2128,7 +2243,16 @@ export const useSystemUpdate = () => {
   );
 
   const handleWsMessage = useCallback(
-    async (data) => {
+    async (message: WsMessage) => {
+      const data = {
+        ...message,
+        result:
+          message.result == null ? null : normalizeLegacyUpdate(message.result),
+        data: normalizeLegacyUpdate(message.data),
+        payload: message.payload
+          ? normalizeLegacyUpdate(message.payload)
+          : null,
+      };
       if (
         data.type === "response" &&
         (data.method === "device.ota.apply" ||
@@ -2137,7 +2261,7 @@ export const useSystemUpdate = () => {
             (data.result.current !== undefined ||
               data.result.ota !== undefined)))
       ) {
-        const result = data.result ?? data;
+        const result = data.result ?? normalizeLegacyUpdate(data);
 
         if (
           result &&
@@ -2239,12 +2363,12 @@ export const useSystemUpdate = () => {
         } catch (error) {
           console.error("Failed to apply OTA update:", error);
           setIsError(true);
-          setErrorMessage(`Failed to apply update: ${error.message}`);
+          setErrorMessage(`Failed to apply update: ${getErrorMessage(error)}`);
           setIsUpdating(false);
           setUpdateStatus((prev) => ({
             ...prev,
             inProgress: false,
-            error: error.message,
+            error: getErrorMessage(error),
           }));
           setIsApplyComplete(false);
           otaApplyTriggered = false;
@@ -2274,7 +2398,7 @@ export const useSystemUpdate = () => {
             lastSuccessfulStageRef.current = payload.stage;
             setUpdateStatus((prev) => ({
               ...prev,
-              stage: payload.stage,
+              stage: payload.stage ?? "",
               inProgress: true,
             }));
           }
@@ -2347,17 +2471,20 @@ export const useBluetooth = () => {
     null,
   );
   const pairingRevision = useRef(0);
-  const [connectedDevices, setConnectedDevices] = useState<UiContentItem[]>([]);
+  const [connectedDevices, setConnectedDevices] = useState<BluetoothDevice[]>(
+    [],
+  );
   const [activeSessionDevices, setActiveSessionDevices] = useState<
-    UiContentItem[]
+    BluetoothDevice[]
   >([]);
   const [hasFetchedInitialDevices, setHasFetchedInitialDevices] =
     useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [lastConnectedDevice, setLastConnectedDevice] = useState(null);
-  const [devices, setDevices] = useState<UiContentItem[]>([]);
+  const [lastConnectedDevice, setLastConnectedDevice] =
+    useState<BluetoothDevice | null>(null);
+  const [devices, setDevices] = useState<BluetoothDevice[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [reconnectAttempt, setReconnectAttempt] = useState(
     () => getBtReconnectState().attempts,
   );
@@ -2365,13 +2492,12 @@ export const useBluetooth = () => {
     () => getBtReconnectState().pending,
   );
 
-  const networkStartRef = useRef(null);
-  const networkPollRef = useRef(null);
-  const retryTimeoutRef = useRef(null);
+  const networkPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const listenerIdRef = useRef(null);
+  const listenerIdRef = useRef<string | null>(null);
   const discoveryOwner = useRef(Symbol("bluetooth-discovery"));
-  const retryDeviceAddressRef = useRef(null);
+  const retryDeviceAddressRef = useRef<string | null>(null);
 
   useEffect(() => {
     updateBluetoothConnectionState(connectedDevices);
@@ -2398,12 +2524,8 @@ export const useBluetooth = () => {
     isNetworkPollingActive = false;
 
     if (networkPollRef.current) {
-      clearInterval(networkPollRef.current);
+      clearInterval(networkPollRef.current ?? undefined);
       networkPollRef.current = null;
-    }
-    if (networkStartRef.current) {
-      clearInterval(networkStartRef.current);
-      networkStartRef.current = null;
     }
   }, []);
 
@@ -2438,10 +2560,7 @@ export const useBluetooth = () => {
       try {
         isDevicesFetching = true;
         const resp = await requestDevicesListDeduped(force);
-        const list =
-          (resp && resp.payload) ||
-          (resp && resp.result && resp.result.payload) ||
-          [];
+        const list = getDevicesFromListResponse(resp);
         setDevices(list);
 
         const connectedList = list.filter((device) => device?.connected);
@@ -2464,7 +2583,7 @@ export const useBluetooth = () => {
         setHasFetchedInitialDevices(true);
         return list;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         setHasFetchedInitialDevices(true);
         return [];
       } finally {
@@ -2481,7 +2600,7 @@ export const useBluetooth = () => {
     fetchDevices(true);
   }, [fetchDevices]);
 
-  const startNetworkPolling = useCallback(async (deviceAddress) => {
+  const startNetworkPolling = useCallback(async (deviceAddress: string) => {
     if (!deviceAddress) return;
 
     let isPolling = true;
@@ -2507,7 +2626,7 @@ export const useBluetooth = () => {
           console.log("Network connection established successfully");
 
           isPolling = false;
-          clearInterval(networkPollRef.current);
+          clearInterval(networkPollRef.current ?? undefined);
           networkPollRef.current = null;
           isNetworkPollingActive = false;
           return true;
@@ -2522,7 +2641,7 @@ export const useBluetooth = () => {
 
     networkPollRef.current = setInterval(async () => {
       if (!isPolling) {
-        clearInterval(networkPollRef.current);
+        clearInterval(networkPollRef.current ?? undefined);
         networkPollRef.current = null;
         return;
       }
@@ -2535,15 +2654,13 @@ export const useBluetooth = () => {
     const success = await attemptNetworkConnection();
     if (success) {
       isPolling = false;
-      clearInterval(networkPollRef.current);
+      clearInterval(networkPollRef.current ?? undefined);
       networkPollRef.current = null;
     }
-
-    networkStartRef.current = Date.now();
   }, []);
 
   const connectDeviceNoRetry = useCallback(
-    async (deviceAddress) => {
+    async (deviceAddress: string) => {
       try {
         setLoading(true);
         manualDisconnectInProgress = false;
@@ -2555,7 +2672,7 @@ export const useBluetooth = () => {
         const response = await queueConnectRequest(deviceAddress);
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          const errorData = await readConnectResponseJson(response);
           setError(errorData.error || "Failed to connect device");
           return false;
         }
@@ -2567,7 +2684,7 @@ export const useBluetooth = () => {
         reconnectionExhausted = false;
         return true;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         return false;
       } finally {
         setLoading(false);
@@ -2577,7 +2694,7 @@ export const useBluetooth = () => {
   );
 
   const connectDevice = useCallback(
-    async (deviceAddress) => {
+    async (deviceAddress: string) => {
       try {
         setLoading(true);
         manualDisconnectInProgress = false;
@@ -2589,7 +2706,7 @@ export const useBluetooth = () => {
         const response = await queueConnectRequest(deviceAddress);
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          const errorData = await readConnectResponseJson(response);
 
           if (
             errorData.error === "Failed to connect to device: exit status 4"
@@ -2645,7 +2762,7 @@ export const useBluetooth = () => {
         return true;
       } catch (err) {
         window.dispatchEvent(new Event("networkBannerShow"));
-        setError(err.message);
+        setError(getErrorMessage(err));
         return false;
       } finally {
         setLoading(false);
@@ -2655,7 +2772,7 @@ export const useBluetooth = () => {
   );
 
   const disconnectDevice = useCallback(
-    async (address) => {
+    async (address: string) => {
       try {
         manualDisconnectInProgress = true;
 
@@ -2701,7 +2818,7 @@ export const useBluetooth = () => {
   );
 
   const forgetDevice = useCallback(
-    async (deviceAddress) => {
+    async (deviceAddress: string) => {
       try {
         setLoading(true);
         stopNetworkPolling();
@@ -2713,8 +2830,10 @@ export const useBluetooth = () => {
           address: deviceAddress,
         };
         const resp = await sendWsRequest("bluetooth.device.unpair", request);
-        if (!resp || (resp.error && resp.error.message)) {
-          throw new Error(resp?.error?.message || "Failed to remove device");
+        if (!resp || resp.error) {
+          throw new Error(
+            getErrorMessage(resp?.error) || "Failed to remove device",
+          );
         }
 
         if (
@@ -2727,7 +2846,7 @@ export const useBluetooth = () => {
         await fetchDevices(true);
         return true;
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err));
         return false;
       } finally {
         setLoading(false);
@@ -2737,10 +2856,10 @@ export const useBluetooth = () => {
   );
 
   const handleWsMessage = useCallback(
-    (data) => {
+    (data: WsMessage) => {
       if (data?.type === "event") {
         const topic = data.topic;
-        const ev = data.data || {};
+        const ev = asUnknownRecord(data.data) || {};
         const pairingUiUpdate = getBluetoothPairingUiUpdate(topic, ev);
 
         if (pairingUiUpdate) {
@@ -2757,6 +2876,7 @@ export const useBluetooth = () => {
         } else if (topic === "bluetooth.connection") {
           /** @type {import("@schema/bluetooth").BluetoothConnectionEvent} */
           const connectionEvent = ev;
+          if (typeof connectionEvent.device !== "string") return;
           if (connectionEvent.event === "connection_established") {
             const address = connectionEvent.device;
             localStorage.setItem("lastConnectedBluetoothDevice", address);
@@ -2841,7 +2961,7 @@ export const useBluetooth = () => {
   }, []);
 
   const setDiscoverable = useCallback(
-    async (enabled) => {
+    async (enabled: boolean) => {
       return enabled ? startDiscovery() : stopDiscovery();
     },
     [startDiscovery, stopDiscovery],
@@ -2873,7 +2993,7 @@ export const useBluetooth = () => {
   }, [pairingRequest]);
 
   const enableNetworking = useCallback(async () => {
-    if (!lastConnectedDevice) return;
+    if (!lastConnectedDevice?.address) return;
     startNetworkPolling(lastConnectedDevice.address);
   }, [lastConnectedDevice, startNetworkPolling]);
 
@@ -2942,3 +3062,6 @@ export const useBluetooth = () => {
     hasFetchedInitialDevices,
   };
 };
+
+export type BluetoothHook = ReturnType<typeof useBluetooth>;
+export type NocturneDeviceInfoHook = ReturnType<typeof useDeviceInfo>;
