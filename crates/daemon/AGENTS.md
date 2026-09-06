@@ -93,6 +93,8 @@ The production accessory link proposal uses a 32-packet send window and 4096-byt
 
 ## ARCHITECTURE
 
+Delta range progress reporting must never await space in the broker mailbox: the broker may already be waiting for the reporting consumer to drain its bounded chunk queue. Drop an intermediate progress update under saturation while preserving all payload chunks and terminal OTA events.
+
 The daemon follows a layered protocol architecture:
 
 ```

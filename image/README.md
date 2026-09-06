@@ -25,7 +25,7 @@ just build
 KAS_CONTAINER_ENGINE=podman just build   # if you don't run docker
 ```
 
-The first cold build downloads upstream layers, crates, and tarballs (multiple gigabytes). Subsequent builds reuse `build/sstate-cache/` and `ccache/`. `yocto-superbird` exposes a public sstate mirror at `http://yocto.24hgr.love/sstate/` that primes most of the build for you.
+The first cold build downloads upstream layers, crates, and tarballs (multiple gigabytes). Subsequent builds reuse `build/sstate-cache/` and `ccache/`. The Nocturne kas configuration uses the project sstate mirror at `https://sstate.bridgething.com/sstate/` and hash-equivalence service at `wss://hashserv.bridgething.com/ws`, with the public Yocto mirror as a fallback.
 
 Outputs land in `build/tmp/deploy/images/superbird/`:
 
@@ -165,7 +165,7 @@ Available recipes:
     pre-commit-install                      # Install the pre-commit git hook so `git commit` runs the lint set.
     publish variant="prod"                  # Stage signed full + compatible delta release metadata.
     publish-component kind version ...      # Publish a packaged component directory through nocturne-ota.
-    push-sstate                             # Push local sstate-cache to your team's rsync mirror.
+    push-sstate                             # Upload new sstate objects and a live stamp manifest to the R2 mirror.
     push-webapp local name=""               # Push a webapp bundle into /opt/nocturne/webapps/<name>/.
     reboot-to-fastboot                      # Reboot a running device into u-boot fastboot.
     reboot-to-maskrom                       # Reboot a running device into amlogic mask-rom usb mode (1b8e:c003).

@@ -104,7 +104,7 @@ NOCTURNE_BUILD_ID="$BUILD_ID" \
   "${VERSION_CORE}+${BUILD_ID}" prod nocturne-local # build and publish full/zchunk OTA
 ```
 
-The first cold build downloads upstream layers, crates, and tarballs (multiple gigabytes). Subsequent builds reuse `image/build/sstate-cache/` and `image/ccache/`. `yocto-superbird` exposes a public sstate mirror at `http://yocto.24hgr.love/sstate/` that primes most of the build for you.
+The first cold build downloads upstream layers, crates, and tarballs (multiple gigabytes). Subsequent builds reuse `image/build/sstate-cache/` and `image/ccache/`. The Nocturne kas configuration uses the project sstate mirror at `https://sstate.bridgething.com/sstate/` and hash-equivalence service at `wss://hashserv.bridgething.com/ws`, with the public Yocto mirror as a fallback.
 
 Because the daemon and UI sources live in-tree, the image build picks them up directly via Yocto `EXTERNALSRC` - there is no separate "publish daemon, bump SRCREV, rebuild image" round trip when you're iterating.
 
@@ -122,7 +122,7 @@ Outputs land in `image/build/tmp/deploy/images/superbird/`:
 just daemon-host              # cargo build for the dev host (no swupdate)
 just daemon-build             # cross build for aarch64 + --features device
 just daemon-copy              # build daemon via Yocto + install to a running device (default: nocturne.local)
-just test                     # cargo test --workspace
+just test                     # native Linux; native codegen + aarch64 cross runtime tests on macOS
 just lint                     # cargo clippy --workspace -- -D warnings + cargo fmt --check
 ```
 
