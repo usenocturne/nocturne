@@ -266,24 +266,35 @@ vscode-setup:
 
 # --- Cache server ---
 
-cache_host    := env_var_or_default('YOCTO_CACHE_HOST', '10.1.10.10')
-cache_port    := env_var_or_default('YOCTO_CACHE_RSYNC_PORT', '8733')
+r2_endpoint := "https://0a665ba1f35a38354b3f623be13f14bd.r2.cloudflarestorage.com"
+sstate_remote := "r2:bridgething-sstate/sstate"
+r2_creds := env_var_or_default('CARTHING_R2_CREDS', '/tmp/carthing-r2-creds.env')
 
+# Upload this build's new sstate objects to the public mirror.
 push-sstate:
   #!/usr/bin/env bash
   set -euo pipefail
+  source scripts/sstate-rclone-env {{r2_creds}} {{r2_endpoint}}
+  args=(copy --ignore-existing --fast-list --transfers 8 --checkers 16 --stats 30s --stats-one-line
+    --exclude '*.lock' --exclude 'sstate:bridgething-daemon:*' --exclude 'sstate:bridgething-webapps:*')
+  manifest=$(mktemp)
+  trap 'rm -f "$manifest"' EXIT
+  stamp_hashes='find /build/build/tmp/stamps {{build_dir}}/tmp/stamps -type f \( -name "*.do_*.sigdata.*" -o -name "*.do_*_setscene.*" \) 2>/dev/null | sed -E "s/.*(sigdata|_setscene)\\.//; s/\\..*//" | sort -u'
   if [ "$(uname)" = "Darwin" ]; then
-    # sstate lives in the build volume - rsync straight from it via a container.
-    docker run --rm -v {{build_vol}}:/build alpine sh -c '
-      apk add --no-cache rsync >/dev/null 2>&1
-      rsync -ah --info=progress2 --ignore-existing --partial --append-verify \
-        --port={{cache_port}} /build/build/sstate-cache/ rsync://{{cache_host}}/sstate/'
+    docker run --rm -v {{build_vol}}:/build "${RCLONE_DOCKER_ENV[@]}" rclone/rclone \
+      "${args[@]}" /build/build/sstate-cache {{sstate_remote}}
+    docker run --rm -v {{build_vol}}:/build alpine sh -c "$stamp_hashes" > "$manifest"
+    arch=$(docker run --rm alpine uname -m)
   else
-    rsync -ah --info=progress2 --ignore-existing --partial --append-verify \
-      --port={{cache_port}} \
-      {{build_dir}}/sstate-cache/ \
-      rsync://{{cache_host}}/sstate/
+    rclone "${args[@]}" {{build_dir}}/sstate-cache {{sstate_remote}}
+    sh -c "$stamp_hashes" > "$manifest"
+    arch=$(uname -m)
   fi
+
+  [ -s "$manifest" ] || { echo "no stamps under tmp/stamps; not publishing a manifest" >&2; exit 1; }
+  # The manifest is what the mirror's garbage collector keeps; only a green build should publish one.
+  rclone copyto "$manifest" "r2:bridgething-sstate/manifests/$arch/$(date -u +%Y%m%dT%H%M%SZ).txt"
+  echo "published manifest: $(wc -l < "$manifest" | tr -d ' ') live hashes for $arch" >&2
 
 # --- Flash ---
 
