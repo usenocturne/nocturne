@@ -6,6 +6,16 @@ header:
 
 distro: nocturne
 
+local_conf_header:
+  cache: |
+    SSTATE_MIRRORS = "file://.* https://sstate.bridgething.com/sstate/PATH;downloadfilename=PATH \n file://.* http://sstate.yoctoproject.org/all/PATH;downloadfilename=PATH"
+    PREMIRRORS ?= "https?$://.*/.* http://sources.openembedded.org/ \n git://.*/.* http://sources.openembedded.org/ \n"
+    BB_GENERATE_MIRROR_TARBALLS = "1"
+  hashequiv: |
+    BB_SIGNATURE_HANDLER = "OEEquivHash"
+    BB_HASHSERVE = "auto"
+    BB_HASHSERVE_UPSTREAM = "wss://hashserv.bridgething.com/ws"
+
 env:
   NOCTURNE_BUILD_ID: null
   NOCTURNE_SWUPDATE_SIGNING_MODE: null
