@@ -40,6 +40,19 @@ export const getRemoteArtworkLoadAction = ({
   return "load";
 };
 
+export const shouldReuseLoadedArtwork = ({
+  imageUrl,
+  loadedUrl,
+  currentSrc,
+  fallbackSrc,
+}: {
+  imageUrl: string | null | undefined;
+  loadedUrl: string | null;
+  currentSrc: string;
+  fallbackSrc: string;
+}): boolean =>
+  Boolean(imageUrl && loadedUrl === imageUrl && currentSrc !== fallbackSrc);
+
 interface SpotifyImageProps extends Omit<
   ImgHTMLAttributes<HTMLImageElement>,
   "onLoad" | "onError"
@@ -155,6 +168,19 @@ export default function SpotifyImage({
     if (imageUrl === fallbackSrc) {
       loadedUrlRef.current = imageUrl;
       setCurrentSrc(fallbackSrc);
+      setIsLoading(false);
+      setHasError(false);
+      return;
+    }
+
+    if (
+      shouldReuseLoadedArtwork({
+        imageUrl,
+        loadedUrl: loadedUrlRef.current,
+        currentSrc,
+        fallbackSrc,
+      })
+    ) {
       setIsLoading(false);
       setHasError(false);
       return;

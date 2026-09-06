@@ -10,6 +10,7 @@ import {
   getPushedArtworkTargetUri,
   getPhoneMediaTrackId,
   getDealerArtists,
+  hasUsableDealerArtwork,
   isCanonicalSpotifyItem,
   isPendingSpotifyTrackChange,
   isResolvedSpotifyItem,
@@ -116,6 +117,19 @@ describe("Spotify phone media source precedence", () => {
         { MediaItemTitle: null, MediaItemArtist: null },
         { PlaybackStatus: "Stopped" },
       ),
+    ).toBe(true);
+  });
+
+  it("keeps startup recovery alive for a sparse Dealer snapshot", () => {
+    expect(
+      hasUsableDealerArtwork({
+        track: { metadata: { title: "Song", image_url: "" } },
+      }),
+    ).toBe(false);
+    expect(
+      hasUsableDealerArtwork({
+        track: { metadata: { image_url: "i.scdn.co/image/cover" } },
+      }),
     ).toBe(true);
   });
 

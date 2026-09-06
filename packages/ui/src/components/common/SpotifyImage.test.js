@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { getRemoteArtworkLoadAction } from "./SpotifyImage";
+import {
+  getRemoteArtworkLoadAction,
+  shouldReuseLoadedArtwork,
+} from "./SpotifyImage";
 
 describe("SpotifyImage remote artwork transitions", () => {
   const fallbackSrc = "/images/not-playing.webp";
@@ -65,5 +68,24 @@ describe("SpotifyImage remote artwork transitions", () => {
         isCurrentArtworkLoaded: true,
       }),
     ).toBe("load");
+  });
+
+  it("does not restart a request after the requested artwork is displayed", () => {
+    expect(
+      shouldReuseLoadedArtwork({
+        imageUrl: "https://i.scdn.co/image/cover",
+        loadedUrl: "https://i.scdn.co/image/cover",
+        currentSrc: "data:image/jpeg;base64,cover",
+        fallbackSrc,
+      }),
+    ).toBe(true);
+    expect(
+      shouldReuseLoadedArtwork({
+        imageUrl: "https://i.scdn.co/image/cover",
+        loadedUrl: "https://i.scdn.co/image/cover",
+        currentSrc: fallbackSrc,
+        fallbackSrc,
+      }),
+    ).toBe(false);
   });
 });

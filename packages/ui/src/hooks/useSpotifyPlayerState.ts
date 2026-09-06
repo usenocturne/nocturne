@@ -76,7 +76,7 @@ let cachedActiveDeviceType: string | null = null;
 let progressResetSignal: ProgressResetSignal = null;
 let nowPlayingTrackLatch: NowPlayingTrackLatch | null = null;
 let lastDealerEventTimestamp = 0;
-let lastCanonicalDealerStateTimestamp = 0;
+let lastCompleteDealerStateTimestamp = 0;
 const NOWPLAYING_PRECEDENCE_WINDOW_MS = 30000;
 const DEALER_FRESH_THRESHOLD_MS = 8000;
 const PHONE_ARTWORK_CONTEXT_TTL_MS = 10000;
@@ -184,6 +184,28 @@ export const normalizeSpotifyDeviceType = (
 
 const hasNonEmptyText = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
+
+export const hasUsableDealerArtwork = (
+  playerState:
+    | {
+        track?: {
+          metadata?: {
+            image_url?: unknown;
+            is_narration?: unknown;
+            album_artist_name?: unknown;
+          } | null;
+        } | null;
+      }
+    | null
+    | undefined,
+): boolean => {
+  const metadata = playerState?.track?.metadata;
+  return Boolean(
+    hasNonEmptyText(metadata?.image_url) ||
+    metadata?.is_narration === "true" ||
+    metadata?.album_artist_name === "DJ X",
+  );
+};
 
 export const isSpotifyPlaybackApp = (appName: unknown): boolean =>
   typeof appName === "string" && appName.trim().toLowerCase() === "spotify";
@@ -1417,13 +1439,13 @@ export function useSpotifyPlayerState() {
       signal: controller.signal,
       shouldStop: () =>
         startupWarmupGenerationRef.current !== generation ||
-        lastCanonicalDealerStateTimestamp > warmupStartedAt,
+        lastCompleteDealerStateTimestamp > warmupStartedAt,
     })
       .then((playback) => {
         if (
           !controller.signal.aborted &&
           startupWarmupGenerationRef.current === generation &&
-          lastCanonicalDealerStateTimestamp <= warmupStartedAt &&
+          lastCompleteDealerStateTimestamp <= warmupStartedAt &&
           playback
         ) {
           processPlaybackState(playback);
@@ -1500,9 +1522,11 @@ export function useSpotifyPlayerState() {
         }
 
         if (payloads.length > 0 && payloads[0]?.cluster?.player_state) {
-          lastCanonicalDealerStateTimestamp = Date.now();
-          startupWarmupAbortRef.current?.abort();
           const playerState = payloads[0].cluster.player_state;
+          if (hasUsableDealerArtwork(playerState)) {
+            lastCompleteDealerStateTimestamp = Date.now();
+            startupWarmupAbortRef.current?.abort();
+          }
 
           if (currentPlaybackRef.current?.item?.is_phone_media) {
             lastSpotifyDeviceStateChange = Date.now();
