@@ -167,7 +167,14 @@ impl DeltaSource {
     }
 
     async fn emit_progress(&self, progress: OtaProgress) {
-        let _ = self.cmd_tx.send(BrokerCmd::EmitProgress(progress)).await;
+        // The broker can be waiting for this consumer to drain its chunk queue.
+        // Waiting for mailbox space here would deadlock both sides.
+        match self.cmd_tx.try_send(BrokerCmd::EmitProgress(progress)) {
+            Ok(()) | Err(mpsc::error::TrySendError::Full(_)) => {}
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                tracing::warn!("ota delta source broker closed while reporting progress");
+            }
+        }
     }
 
     async fn abandon_range(&self, request_id: Uuid) {
@@ -1188,6 +1195,81 @@ mod tests {
 
         let err = validate_reply_matches_request(&reply, &requested).unwrap_err();
         assert!(err.contains("did not match"), "unexpected error: {err}");
+    }
+
+    #[tokio::test]
+    async fn saturated_broker_does_not_block_range_consumer_progress() {
+        let request_id = Uuid::new_v4();
+        let (cmd_tx, cmd_rx) = mpsc::channel(1);
+        let (events_tx, _events_rx) = mpsc::channel(16);
+        let (chunk_tx, chunk_rx) = mpsc::channel(1);
+        let chunk = |offset| OtaAssetRangeChunk {
+            request_id,
+            part_index: 0,
+            offset,
+            bytes: vec![offset as u8],
+            last: offset == 2,
+        };
+        chunk_tx.send(chunk(0)).await.unwrap();
+        let broker = BrokerActor {
+            cmd_rx,
+            active: None,
+            inflight: std::collections::HashMap::from([(
+                request_id,
+                InflightRange {
+                    chunk_tx,
+                    reply_tx: None,
+                    request: None,
+                },
+            )]),
+            events_tx,
+        };
+        cmd_tx.send(BrokerCmd::RouteChunk(chunk(1))).await.unwrap();
+        let broker_task = tokio::spawn(broker.run());
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while cmd_tx.capacity() == 0 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("broker must reach the full range queue");
+        cmd_tx.send(BrokerCmd::RouteChunk(chunk(2))).await.unwrap();
+        let source = DeltaSource { cmd_tx };
+        let plan = ResponsePlan::from_reply(&range_reply(
+            vec![RangePart {
+                start: 0,
+                length: 3,
+            }],
+            3,
+        ))
+        .unwrap();
+        let mut writer = Vec::new();
+        let result = tokio::time::timeout(
+            Duration::from_secs(1),
+            stream_plan(
+                &source,
+                &mut writer,
+                request_id,
+                "system.img.zck",
+                plan,
+                chunk_rx,
+            ),
+        )
+        .await;
+        broker_task.abort();
+        result
+            .expect("progress reporting must not deadlock a saturated delta stream")
+            .unwrap();
+        let mut data = Vec::new();
+        let mut remaining = writer.as_slice();
+        while !remaining.is_empty() {
+            let length = u32::from_be_bytes(remaining[1..5].try_into().unwrap()) as usize;
+            if remaining[0] == FRAME_DATA {
+                data.extend_from_slice(&remaining[5..5 + length]);
+            }
+            remaining = &remaining[5 + length..];
+        }
+        assert_eq!(data, vec![0, 1, 2]);
     }
 
     #[tokio::test]
