@@ -1,17 +1,23 @@
 //! Audio capture and wake word detection.
 
 use anyhow::{anyhow, Result};
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
 use tokio::process::Command;
+use tokio::sync::broadcast;
 
 pub(crate) const ARECORD_WAKEWORD_DEVICE: &str = "hw:0,0";
 pub(crate) const ARECORD_CAPTURE_DEVICE: &str = "hw:0,1";
 pub(crate) const ARECORD_RAW_CHANNELS: &str = "4";
 pub(crate) const ARECORD_RAW_SAMPLE_RATE: &str = "48000";
 
-pub(crate) fn arecord_args(device: &'static str) -> [&'static str; 11] {
+pub(crate) fn arecord_args(device: &'static str) -> [&'static str; 12] {
     [
         "-q",
+        "--fatal-errors",
         "-D",
         device,
         "-f",
@@ -64,17 +70,72 @@ async fn set_capture_route(control: &'static str) -> Result<()> {
 }
 
 const RAW_BYTES_PER_SECOND: usize = 48_000 * RAW_FRAME_BYTES;
-const PREROLL_MAX_BYTES: usize = RAW_BYTES_PER_SECOND; // 1 s of raw 4-channel audio
+const CONTINUOUS_CHUNK_BYTES: usize = 2560;
+const CONTINUOUS_QUEUE_CHUNKS: usize = 512;
+const CONTINUOUS_FRESHNESS: std::time::Duration = std::time::Duration::from_millis(500);
+const PREROLL_MAX_BYTES: usize = RAW_BYTES_PER_SECOND * 33 / 10;
+const VOICE_PRIMING_MAX_BYTES: usize = RAW_BYTES_PER_SECOND * 3;
 
 pub struct PreRollBuffer {
     inner: std::sync::Mutex<PreRollInner>,
 }
 
-#[derive(Default)]
 struct PreRollInner {
-    chunks: std::collections::VecDeque<(std::time::Instant, Vec<u8>)>,
+    chunks: std::collections::VecDeque<(std::time::Instant, Bytes)>,
     total_bytes: usize,
     carry: Vec<u8>,
+    live: broadcast::Sender<Bytes>,
+    generation: Arc<AtomicU64>,
+}
+
+impl Default for PreRollInner {
+    fn default() -> Self {
+        Self {
+            chunks: Default::default(),
+            total_bytes: 0,
+            carry: Vec::new(),
+            live: broadcast::channel(CONTINUOUS_QUEUE_CHUNKS).0,
+            generation: Arc::new(AtomicU64::new(0)),
+        }
+    }
+}
+
+pub(crate) struct ContinuousCapture {
+    snapshot: std::collections::VecDeque<Bytes>,
+    receiver: broadcast::Receiver<Bytes>,
+    generation: Arc<AtomicU64>,
+    subscribed_generation: u64,
+    pub(crate) preroll_bytes: usize,
+}
+
+pub(crate) struct PrimedVoiceCapture {
+    pub(crate) source: ContinuousCapture,
+    pub(crate) history_before_output_bytes: usize,
+}
+
+impl ContinuousCapture {
+    pub(crate) fn validate(&self) -> Result<()> {
+        if self.generation.load(Ordering::Acquire) != self.subscribed_generation {
+            return Err(anyhow!("continuous microphone stream reset"));
+        }
+        if self.receiver.len() > CONTINUOUS_QUEUE_CHUNKS {
+            return Err(anyhow!("continuous microphone stream lagged"));
+        }
+        Ok(())
+    }
+
+    pub(crate) async fn next_chunk(&mut self) -> Result<Bytes> {
+        self.validate()?;
+        if let Some(chunk) = self.snapshot.pop_front() {
+            return Ok(chunk);
+        }
+        let chunk = tokio::time::timeout(std::time::Duration::from_secs(2), self.receiver.recv())
+            .await
+            .map_err(|_| anyhow!("continuous microphone stream stalled"))?
+            .map_err(|err| anyhow!("continuous microphone stream interrupted: {err}"))?;
+        self.validate()?;
+        Ok(chunk)
+    }
 }
 
 impl PreRollBuffer {
@@ -91,8 +152,13 @@ impl PreRollBuffer {
         let aligned = buffer.len() - buffer.len() % RAW_FRAME_BYTES;
         if aligned > 0 {
             inner.carry = buffer.split_off(aligned);
-            inner.total_bytes += buffer.len();
-            inner.chunks.push_back((std::time::Instant::now(), buffer));
+            let now = std::time::Instant::now();
+            for chunk in buffer.chunks(CONTINUOUS_CHUNK_BYTES) {
+                let chunk = Bytes::copy_from_slice(chunk);
+                inner.total_bytes += chunk.len();
+                let _ = inner.live.send(chunk.clone());
+                inner.chunks.push_back((now, chunk));
+            }
         } else {
             inner.carry = buffer;
         }
@@ -106,11 +172,71 @@ impl PreRollBuffer {
 
     pub(crate) fn reset_stream(&self) {
         let mut inner = self.inner.lock().expect("preroll lock poisoned");
+        inner.generation.fetch_add(1, Ordering::AcqRel);
+        let _ = inner.live.send(Bytes::new());
         inner.chunks.clear();
         inner.total_bytes = 0;
         inner.carry.clear();
     }
 
+    pub(crate) fn subscribe_since(&self, cutoff: std::time::Instant) -> Option<ContinuousCapture> {
+        let inner = self.inner.lock().expect("preroll lock poisoned");
+        let (latest, _) = inner.chunks.back()?;
+        if latest.elapsed() > CONTINUOUS_FRESHNESS {
+            return None;
+        }
+        let snapshot: std::collections::VecDeque<_> = inner
+            .chunks
+            .iter()
+            .filter(|(received_at, _)| *received_at >= cutoff)
+            .map(|(_, chunk)| chunk.clone())
+            .collect();
+        Some(ContinuousCapture {
+            preroll_bytes: snapshot.iter().map(Bytes::len).sum(),
+            snapshot,
+            receiver: inner.live.subscribe(),
+            generation: Arc::clone(&inner.generation),
+            subscribed_generation: inner.generation.load(Ordering::Acquire),
+        })
+    }
+
+    pub(crate) fn subscribe_for_voice_priming(
+        &self,
+        output_cutoff: std::time::Instant,
+    ) -> Option<PrimedVoiceCapture> {
+        let inner = self.inner.lock().expect("preroll lock poisoned");
+        let (latest, _) = inner.chunks.back()?;
+        if latest.elapsed() > CONTINUOUS_FRESHNESS {
+            return None;
+        }
+        let history_bytes: usize = inner
+            .chunks
+            .iter()
+            .take_while(|(received_at, _)| *received_at < output_cutoff)
+            .map(|(_, chunk)| chunk.len())
+            .sum();
+        let mut skip = history_bytes.saturating_sub(VOICE_PRIMING_MAX_BYTES);
+        let mut snapshot = std::collections::VecDeque::new();
+        for (_, chunk) in &inner.chunks {
+            let skipped = skip.min(chunk.len());
+            skip -= skipped;
+            if skipped < chunk.len() {
+                snapshot.push_back(chunk.slice(skipped..));
+            }
+        }
+        Some(PrimedVoiceCapture {
+            history_before_output_bytes: history_bytes.min(VOICE_PRIMING_MAX_BYTES),
+            source: ContinuousCapture {
+                preroll_bytes: snapshot.iter().map(Bytes::len).sum(),
+                snapshot,
+                receiver: inner.live.subscribe(),
+                generation: Arc::clone(&inner.generation),
+                subscribed_generation: inner.generation.load(Ordering::Acquire),
+            },
+        })
+    }
+
+    #[cfg(test)]
     pub(crate) fn snapshot_since(&self, cutoff: std::time::Instant) -> Vec<u8> {
         let inner = self.inner.lock().expect("preroll lock poisoned");
         let mut out = Vec::new();
@@ -234,6 +360,7 @@ fn write_pcm_sample(pcm_out: &mut BytesMut, sample: f32) {
 
 pub mod capture;
 pub(crate) mod dsp;
+mod noise_suppression;
 pub mod wakeword;
 pub mod wind;
 
@@ -246,16 +373,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn arecord_args_use_superbird_native_capture_format() {
+    fn arecord_args_use_native_format_and_fail_on_xrun_for_both_sources() {
         assert_eq!(ARECORD_WAKEWORD_DEVICE, "hw:0,0");
         assert_eq!(ARECORD_CAPTURE_DEVICE, "hw:0,1");
         assert_eq!(
             arecord_args(ARECORD_WAKEWORD_DEVICE),
-            ["-q", "-D", "hw:0,0", "-f", "S32_LE", "-c", "4", "-r", "48000", "-t", "raw"]
+            [
+                "-q",
+                "--fatal-errors",
+                "-D",
+                "hw:0,0",
+                "-f",
+                "S32_LE",
+                "-c",
+                "4",
+                "-r",
+                "48000",
+                "-t",
+                "raw"
+            ]
         );
         assert_eq!(
             arecord_args(ARECORD_CAPTURE_DEVICE),
-            ["-q", "-D", "hw:0,1", "-f", "S32_LE", "-c", "4", "-r", "48000", "-t", "raw"]
+            [
+                "-q",
+                "--fatal-errors",
+                "-D",
+                "hw:0,1",
+                "-f",
+                "S32_LE",
+                "-c",
+                "4",
+                "-r",
+                "48000",
+                "-t",
+                "raw"
+            ]
         );
     }
 
@@ -279,7 +432,7 @@ mod tests {
         let preroll = PreRollBuffer::new();
         let start = std::time::Instant::now();
         let chunk = vec![7u8; RAW_FRAME_BYTES * 3000]; // 48000 bytes
-        for _ in 0..20 {
+        for _ in 0..PREROLL_MAX_BYTES / chunk.len() + 2 {
             preroll.push(&chunk);
         }
         let snapshot = preroll.snapshot_since(start);
@@ -304,6 +457,139 @@ mod tests {
         assert_eq!(recent, chunk2);
         let all = preroll.snapshot_since(after_first - std::time::Duration::from_secs(1));
         assert_eq!(all.len(), chunk.len() + chunk2.len());
+    }
+
+    #[tokio::test]
+    async fn voice_priming_snapshot_preserves_atomic_history_and_live_continuity() {
+        let preroll = PreRollBuffer::new();
+        let raw: Vec<u8> = (0..CONTINUOUS_CHUNK_BYTES * 80)
+            .map(|i| (i % 251) as u8)
+            .collect();
+        let older_bytes = CONTINUOUS_CHUNK_BYTES * 30;
+        preroll.push(&raw[..older_bytes]);
+        let cutoff = std::time::Instant::now();
+        preroll.push(&raw[older_bytes..CONTINUOUS_CHUNK_BYTES * 60]);
+        let ordinary = preroll.subscribe_since(cutoff).unwrap();
+        assert_eq!(ordinary.preroll_bytes, CONTINUOUS_CHUNK_BYTES * 30);
+        let mut voice = preroll.subscribe_for_voice_priming(cutoff).unwrap();
+        assert_eq!(voice.history_before_output_bytes, older_bytes);
+        assert_eq!(voice.source.preroll_bytes, CONTINUOUS_CHUNK_BYTES * 60);
+        preroll.push(&raw[CONTINUOUS_CHUNK_BYTES * 60..CONTINUOUS_CHUNK_BYTES * 60 + 17]);
+        preroll.push(&raw[CONTINUOUS_CHUNK_BYTES * 60 + 17..]);
+        let mut received = Vec::new();
+        while received.len() < raw.len() {
+            let chunk = voice.source.next_chunk().await.unwrap();
+            assert_eq!(chunk.len() % RAW_FRAME_BYTES, 0);
+            received.extend_from_slice(&chunk);
+        }
+        assert_eq!(received, raw);
+        preroll.reset_stream();
+        assert!(voice.source.validate().is_err());
+    }
+
+    #[test]
+    fn voice_priming_history_is_bounded_and_requires_fresh_input() {
+        let preroll = PreRollBuffer::new();
+        assert!(preroll
+            .subscribe_for_voice_priming(std::time::Instant::now())
+            .is_none());
+        for _ in 0..1100 {
+            preroll.push(&[7; CONTINUOUS_CHUNK_BYTES]);
+        }
+        let now = std::time::Instant::now();
+        {
+            let mut inner = preroll.inner.lock().unwrap();
+            assert!(inner.total_bytes <= PREROLL_MAX_BYTES);
+            assert_eq!(PREROLL_MAX_BYTES, RAW_BYTES_PER_SECOND * 33 / 10);
+            for (received_at, _) in &mut inner.chunks {
+                *received_at = now - std::time::Duration::from_secs(1);
+            }
+            inner.chunks.back_mut().unwrap().0 = now;
+        }
+        let voice = preroll.subscribe_for_voice_priming(now).unwrap();
+        assert_eq!(voice.history_before_output_bytes, VOICE_PRIMING_MAX_BYTES);
+        assert_eq!(
+            voice.source.preroll_bytes,
+            VOICE_PRIMING_MAX_BYTES + CONTINUOUS_CHUNK_BYTES
+        );
+        assert!(voice
+            .source
+            .snapshot
+            .iter()
+            .all(|chunk| chunk.len() % RAW_FRAME_BYTES == 0));
+        preroll.inner.lock().unwrap().chunks.back_mut().unwrap().0 = now - CONTINUOUS_FRESHNESS;
+        assert!(preroll.subscribe_for_voice_priming(now).is_none());
+    }
+
+    #[tokio::test]
+    async fn continuous_capture_preserves_split_frames_across_snapshot_boundary() {
+        let preroll = PreRollBuffer::new();
+        let start = std::time::Instant::now();
+        let raw: Vec<u8> = (0..9600).map(|i| (i % 251) as u8).collect();
+        preroll.push(&raw[..1003]);
+        let mut capture = preroll.subscribe_since(start).unwrap();
+        assert_eq!(capture.preroll_bytes, 992);
+        preroll.push(&raw[1003..2561]);
+        preroll.push(&raw[2561..]);
+        let mut actual = Vec::new();
+        while actual.len() < raw.len() {
+            let chunk = capture.next_chunk().await.unwrap();
+            assert_eq!(chunk.len() % RAW_FRAME_BYTES, 0);
+            actual.extend_from_slice(&chunk);
+        }
+        assert_eq!(actual, raw);
+    }
+
+    #[tokio::test]
+    async fn continuous_capture_rejects_reset_and_overflow_without_skipping_audio() {
+        let preroll = PreRollBuffer::new();
+        let start = std::time::Instant::now();
+        preroll.push(&[1; RAW_FRAME_BYTES]);
+        let mut reset_capture = preroll.subscribe_since(start).unwrap();
+        preroll.reset_stream();
+        preroll.push(&[2; RAW_FRAME_BYTES]);
+        assert!(reset_capture
+            .next_chunk()
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("reset"));
+        let mut lagged_capture = preroll.subscribe_since(start).unwrap();
+        for _ in 0..=CONTINUOUS_QUEUE_CHUNKS {
+            preroll.push(&[3; RAW_FRAME_BYTES]);
+        }
+        assert!(lagged_capture
+            .next_chunk()
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("lagged"));
+    }
+
+    #[test]
+    fn continuous_capture_requires_a_fresh_source() {
+        let preroll = PreRollBuffer::new();
+        let start = std::time::Instant::now();
+        assert!(preroll.subscribe_since(start).is_none());
+        preroll.push(&[1; RAW_FRAME_BYTES]);
+        preroll.inner.lock().unwrap().chunks.back_mut().unwrap().0 =
+            start - CONTINUOUS_FRESHNESS - std::time::Duration::from_millis(1);
+        assert!(preroll.subscribe_since(start).is_none());
+    }
+
+    #[tokio::test]
+    async fn continuous_capture_aborts_when_source_stalls() {
+        let preroll = PreRollBuffer::new();
+        let start = std::time::Instant::now();
+        preroll.push(&[1; RAW_FRAME_BYTES]);
+        let mut capture = preroll.subscribe_since(start).unwrap();
+        capture.next_chunk().await.unwrap();
+        assert!(capture
+            .next_chunk()
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("stalled"));
     }
 
     #[test]

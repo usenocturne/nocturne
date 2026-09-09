@@ -56,6 +56,10 @@ export interface AudioRecordingStartedEvent {
    * Frame duration. Current runtime uses frameMs; tests expect frame_ms. Inventory field `frame_ms` emits as `frameMs`. Current source key: `frameMs`.
    */
   frameMs: number;
+  /**
+   * Whether capture audio has already undergone noise suppression. Inventory field `noise_suppressed` emits as `noiseSuppressed`. Current source key: `noiseSuppressed`.
+   */
+  noiseSuppressed?: boolean;
 }
 
 /**

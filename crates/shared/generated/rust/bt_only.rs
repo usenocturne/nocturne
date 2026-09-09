@@ -15,6 +15,7 @@ pub struct AudioRecordingStartedEvent {
     pub sample_rate: u32,
     pub channels: u8,
     pub frame_ms: u16,
+    pub noise_suppressed: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

@@ -211,8 +211,7 @@ async fn main() -> Result<()> {
 
     let (wind_frame_tx, mut wind_event_rx) = audio::start_wind_detector();
     let voice_preroll = Arc::new(audio::PreRollBuffer::new());
-    let (audio_capture, audio_event_rx) =
-        audio::AudioCapture::new(wind_frame_tx.clone(), Arc::clone(&voice_preroll));
+    let (audio_capture, audio_event_rx) = audio::AudioCapture::new(Arc::clone(&voice_preroll));
     let mut audio_events_for_wakeword = audio_capture.subscribe();
     let mut audio_events_for_mic_level = audio_capture.subscribe();
     let (audio_cmd_tx, audio_cmd_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -224,9 +223,8 @@ async fn main() -> Result<()> {
     let threshold = audio::threshold_from_env("WAKEWORD_THRESHOLD", 0.65);
     let support_threshold =
         audio::threshold_from_env("WAKEWORD_SUPPORT_THRESHOLD", threshold.min(0.5));
-    let default_playback_threshold = threshold.max(0.9);
     let configured_playback_threshold =
-        audio::threshold_from_env("WAKEWORD_PLAYBACK_THRESHOLD", default_playback_threshold);
+        audio::threshold_from_env("WAKEWORD_PLAYBACK_THRESHOLD", threshold);
     let playback_threshold = if configured_playback_threshold < threshold {
         warn!(
             configured_playback_threshold,

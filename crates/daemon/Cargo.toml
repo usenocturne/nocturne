@@ -2,7 +2,7 @@
 name = "nocturned"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
+rust-version = "1.91"
 license.workspace = true
 authors.workspace = true
 homepage.workspace = true
@@ -40,6 +40,7 @@ crc32fast = { workspace = true }
 md5 = { workspace = true }
 opus = { workspace = true }
 nnnoiseless = { workspace = true }
+sonora-ns = "0.2.0"
 tract-ndarray = { workspace = true }
 tract-onnx = { workspace = true }
 axum = { workspace = true }

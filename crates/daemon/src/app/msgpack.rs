@@ -2869,7 +2869,8 @@ mod tests {
         let event = create_audio_recording_started_event(AudioRecordingStartedEvent {
             sample_rate: 16000,
             channels: 1,
-            frame_ms: 20,
+            frame_ms: 60,
+            noise_suppressed: Some(true),
         });
 
         match event {
@@ -2877,10 +2878,20 @@ mod tests {
                 assert_eq!(topic, "audio.recording.started");
                 assert_eq!(data["sample_rate"], serde_json::json!(16000));
                 assert_eq!(data["channels"], serde_json::json!(1));
-                assert_eq!(data["frame_ms"], serde_json::json!(20));
+                assert_eq!(data["frame_ms"], serde_json::json!(60));
+                assert_eq!(data["noise_suppressed"], serde_json::json!(true));
             }
             other => panic!("expected event message, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn legacy_audio_start_without_processing_metadata_remains_valid() {
+        let event: AudioRecordingStartedEvent = serde_json::from_value(serde_json::json!({
+            "sample_rate": 16000, "channels": 1, "frame_ms": 60,
+        }))
+        .unwrap();
+        assert_eq!(event.noise_suppressed, None);
     }
 
     #[test]

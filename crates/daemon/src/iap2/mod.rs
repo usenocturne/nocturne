@@ -1149,6 +1149,7 @@ async fn send_audio_event(session_id: u8, outbound: &EaStreamSender, event: &Aud
                     sample_rate: *sample_rate,
                     channels: *channels,
                     frame_ms: *frame_ms,
+                    noise_suppressed: Some(true),
                 }),
                 "audio.recording.started",
             )

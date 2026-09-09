@@ -75,6 +75,8 @@ It reads (these are hardcoded; don't try to make them configurable in recipes):
 - `chromium-kiosk.service` pulls in `nocturned.service` and probes `127.0.0.1:8080` every 500 ms for up to 30 seconds before launching Chromium. Keep the HTTP readiness probe: `After=nocturned.service` alone is insufficient because the daemon is `Type=simple`, and Cast Shell does not retry an initial failed navigation.
 - spawns `arecord` against ALSA `hw:0,0` after routing TODDR_A/B to PDM `IN 4` (so `alsa-utils` is an `RDEPENDS`)
 
+The phrase classifiers use the supplied `rqj51jw` retraining bundle: `hey_nocturne_w50.onnx` is installed as `hey_nocturne.onnx`, alongside the main `ok_nocturne` (negative weight 200), `hey_spotify`, and `ok_spotify` models. Selection compares all six supplied Nocturne-head combinations with Sonora first and the unsuppressed recordings as a tie-break; equal results retain the recommended main head. Keep the stock mel and embedding backbones unchanged. Classifier input/output remain float32 `[1,16,96]` and `[1,1]`, with opset 17. Bundle recipe provenance pins openWakeWord `368c03716d1e92591906a84949bc477f3a834455` and piper-sample-generator `f1988a4d54eddb23d99e86f0adfef6226a85acc7`. These assets do not change daemon thresholds or imply live device validation.
+
 The daemon recipe currently declares build-time `DEPENDS` on `dbus libopus swupdate clang-native` and exports `LIBCLANG_PATH` and `BINDGEN_EXTRA_CLANG_ARGS`. The current `crates/swupdate-sys` build compiles vendored C sources directly; it does not invoke bindgen. Any removal of retained recipe dependencies needs a full Yocto build to establish which other native dependencies still need them.
 
 ## Device interaction

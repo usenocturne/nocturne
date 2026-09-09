@@ -1906,6 +1906,7 @@ impl BluetoothDaemon {
                                         sample_rate: *sample_rate,
                                         channels: *channels,
                                         frame_ms: *frame_ms,
+                                        noise_suppressed: Some(true),
                                     })
                                 }
                                 AudioEvent::Stopped { reason, total_frames } => {

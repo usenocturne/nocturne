@@ -29,21 +29,25 @@ public struct AudioRecordingStartedEvent: Codable, Sendable {
   public let sampleRate: UInt32
   public let channels: UInt8
   public let frameMs: UInt16
+  public let noiseSuppressed: Bool?
 
   public init(
     sampleRate: UInt32,
     channels: UInt8,
-    frameMs: UInt16
+    frameMs: UInt16,
+    noiseSuppressed: Bool?
   ) {
     self.sampleRate = sampleRate
     self.channels = channels
     self.frameMs = frameMs
+    self.noiseSuppressed = noiseSuppressed
   }
 
   private enum CodingKeys: String, CodingKey {
     case sampleRate = "sample_rate"
     case channels = "channels"
     case frameMs = "frame_ms"
+    case noiseSuppressed = "noise_suppressed"
   }
 }
 

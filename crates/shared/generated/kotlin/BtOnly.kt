@@ -18,6 +18,7 @@ data class AudioRecordingStartedEvent(
   @SerialName("sample_rate") val sampleRate: UInt,
   @SerialName("channels") val channels: UByte,
   @SerialName("frame_ms") val frameMs: UShort,
+  @SerialName("noise_suppressed") val noiseSuppressed: Boolean? = null,
 )
 
 @Serializable

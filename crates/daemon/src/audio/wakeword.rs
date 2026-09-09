@@ -8,8 +8,8 @@ use std::time::Duration;
 use anyhow::anyhow;
 use bytes::BytesMut;
 use tokio::fs;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt};
-use tokio::process::{Child, ChildStderr, ChildStdout, Command};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt};
+use tokio::process::{Child, ChildStderr, Command};
 use tokio::sync::{broadcast, mpsc};
 use tokio::time::sleep;
 use tracing::{debug, info, warn};
@@ -20,6 +20,7 @@ use crate::error::{NocturnedError, Result};
 const SHARED_MODELS: &[&str] = &["melspectrogram.onnx", "embedding_model.onnx"];
 
 const FRAME_SAMPLES: usize = 1_280;
+const _: () = assert!(FRAME_SAMPLES.is_multiple_of(super::noise_suppression::FRAME_SAMPLES));
 const FRAME_BYTES: usize = FRAME_SAMPLES * 2;
 const MEL_OVERLAP_SAMPLES: usize = 480; // 160 * 3 — STFT context from previous chunk
 const MEL_INPUT_SAMPLES: usize = FRAME_SAMPLES + MEL_OVERLAP_SAMPLES;
@@ -30,7 +31,7 @@ const EMBEDDING_SIZE: usize = 96;
 const EMBEDDING_WINDOW: usize = 16;
 const MAX_EMBEDDINGS: usize = 120;
 const EVENT_CHANNEL_CAPACITY: usize = 16;
-const SCORE_SUPPORT_WINDOW: usize = 3;
+const SCORE_SUPPORT_WINDOW: usize = 2;
 const SCORE_SUPPORT_REQUIRED: usize = SCORE_SUPPORT_WINDOW;
 const RESTART_DELAY: Duration = Duration::from_millis(250);
 const PREFERENCE_PATH: &str = "/var/lib/wakeword.state";
@@ -232,12 +233,28 @@ impl WakeWordDetector {
         let mut stdout = None;
         let mut pcm_buffer = BytesMut::with_capacity(FRAME_BYTES * 2);
         let mut converter = self.fresh_converter();
+        let noise_suppression_enabled = wake_noise_suppression_enabled(
+            std::env::var_os("WAKEWORD_NOISE_SUPPRESSION").as_deref(),
+        );
+        let mut noise_suppressor =
+            noise_suppression_enabled.then(super::noise_suppression::NoiseSuppressor16k::new);
+        info!(
+            noise_suppression_enabled,
+            "Wake word noise suppression configured"
+        );
         let mut mel_overlap: Vec<f32> = vec![0.0; MEL_OVERLAP_SAMPLES];
         let mut mel_buffer: Vec<[f32; MEL_BINS]> = Vec::new();
         let mut mel_frames_since_embed: usize = 0;
         let mut embeddings: VecDeque<[f32; EMBEDDING_SIZE]> =
             VecDeque::with_capacity(MAX_EMBEDDINGS);
         let mut candidate_pending = false;
+        let mut diagnostic_peaks = vec![0.0f32; classifiers.len()];
+        let mut diagnostic_frames = 0usize;
+        let mut diagnostic_rms_peak = 0.0f32;
+        let score_trace_started = std::time::Instant::now();
+        let mut capture_sequence = 0u64;
+        let mut capture_frame = 0u64;
+        let mut classification_window = 0u64;
 
         loop {
             if pause_state.user_muted {
@@ -248,12 +265,18 @@ impl WakeWordDetector {
                 pcm_buffer.clear();
                 self.preroll.reset_stream();
                 converter = self.fresh_converter();
+                if let Some(suppressor) = &mut noise_suppressor {
+                    suppressor.reset();
+                }
                 mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                 mel_buffer.clear();
                 mel_frames_since_embed = 0;
                 embeddings.clear();
                 score_gates.iter_mut().for_each(WakeWordScoreGate::reset);
                 candidate_pending = false;
+                diagnostic_peaks.fill(0.0);
+                diagnostic_frames = 0;
+                diagnostic_rms_peak = 0.0;
 
                 loop {
                     match cmd_rx.recv().await {
@@ -292,17 +315,25 @@ impl WakeWordDetector {
                                 tokio::spawn(log_arecord_stderr(stderr));
                             }
                             info!("Wake word listener started");
+                            capture_sequence += 1;
+                            capture_frame = 0;
                             child = Some(spawned_child);
                             stdout = Some(spawned_stdout);
                             pcm_buffer.clear();
                             self.preroll.reset_stream();
                             converter = self.fresh_converter();
+                            if let Some(suppressor) = &mut noise_suppressor {
+                                suppressor.reset();
+                            }
                             mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                             mel_buffer.clear();
                             mel_frames_since_embed = 0;
                             embeddings.clear();
                             score_gates.iter_mut().for_each(WakeWordScoreGate::reset);
                             candidate_pending = false;
+                            diagnostic_peaks.fill(0.0);
+                            diagnostic_frames = 0;
+                            diagnostic_rms_peak = 0.0;
                         }
                         None => {
                             warn!("wake word arecord stdout not piped");
@@ -332,13 +363,19 @@ impl WakeWordDetector {
                                 pcm_buffer.clear();
                                 self.preroll.reset_stream();
                                 converter = self.fresh_converter();
+                                if let Some(suppressor) = &mut noise_suppressor {
+                                    suppressor.reset();
+                                }
+                                mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
+                                mel_buffer.clear();
+                                mel_frames_since_embed = 0;
+                                embeddings.clear();
                             }
-                            mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
-                            mel_buffer.clear();
-                            mel_frames_since_embed = 0;
-                            embeddings.clear();
                             score_gates.iter_mut().for_each(WakeWordScoreGate::reset);
                             candidate_pending = false;
+                            diagnostic_peaks.fill(0.0);
+                            diagnostic_frames = 0;
+                            diagnostic_rms_peak = 0.0;
                             if let Some(muted) = notify_muted {
                                 persist_and_notify(&self.event_tx, muted).await;
                             }
@@ -356,6 +393,9 @@ impl WakeWordDetector {
                         Some(WakeWordCommand::RejectDetection) => {
                             score_gates.iter_mut().for_each(WakeWordScoreGate::reset);
                             candidate_pending = false;
+                            diagnostic_peaks.fill(0.0);
+                            diagnostic_frames = 0;
+                            diagnostic_rms_peak = 0.0;
                             continue;
                         }
                         None => {
@@ -385,12 +425,18 @@ impl WakeWordDetector {
                     stdout = None;
                     pcm_buffer.clear();
                     converter = self.fresh_converter();
+                    if let Some(suppressor) = &mut noise_suppressor {
+                        suppressor.reset();
+                    }
                     mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                     mel_buffer.clear();
                     mel_frames_since_embed = 0;
                     embeddings.clear();
                     score_gates.iter_mut().for_each(WakeWordScoreGate::reset);
                     candidate_pending = false;
+                    diagnostic_peaks.fill(0.0);
+                    diagnostic_frames = 0;
+                    diagnostic_rms_peak = 0.0;
                     sleep(RESTART_DELAY).await;
                     continue;
                 }
@@ -402,22 +448,33 @@ impl WakeWordDetector {
                     stdout = None;
                     pcm_buffer.clear();
                     converter = self.fresh_converter();
+                    if let Some(suppressor) = &mut noise_suppressor {
+                        suppressor.reset();
+                    }
                     mel_overlap = vec![0.0; MEL_OVERLAP_SAMPLES];
                     mel_buffer.clear();
                     mel_frames_since_embed = 0;
                     embeddings.clear();
                     score_gates.iter_mut().for_each(WakeWordScoreGate::reset);
                     candidate_pending = false;
+                    diagnostic_peaks.fill(0.0);
+                    diagnostic_frames = 0;
+                    diagnostic_rms_peak = 0.0;
                     sleep(RESTART_DELAY).await;
                     continue;
                 }
             };
 
-            if pause_state.is_paused() {
-                continue;
+            capture_frame += 1;
+            let mut audio_f32 = pcm_to_f32(&pcm_frame);
+            if let Some(suppressor) = &mut noise_suppressor {
+                let (frames, remainder) =
+                    audio_f32.as_chunks_mut::<{ super::noise_suppression::FRAME_SAMPLES }>();
+                debug_assert!(remainder.is_empty());
+                for frame in frames {
+                    suppressor.process(frame);
+                }
             }
-
-            let audio_f32 = pcm_to_f32(&pcm_frame);
             let mut mel_input_data = Vec::with_capacity(MEL_INPUT_SAMPLES);
             mel_input_data.extend_from_slice(&mel_overlap);
             mel_input_data.extend_from_slice(&audio_f32);
@@ -490,7 +547,8 @@ impl WakeWordDetector {
                 }
             }
 
-            if embeddings.len() < EMBEDDING_WINDOW {
+            // Recording suppresses classification, but keeps its two-second feature history warm.
+            if pause_state.is_paused() || embeddings.len() < EMBEDDING_WINDOW {
                 continue;
             }
 
@@ -507,8 +565,10 @@ impl WakeWordDetector {
                 |(_, f, feat)| recent[f][feat],
             );
 
+            classification_window += 1;
+            let playback_active = self.playback_active.load(Ordering::Relaxed);
             let effective_threshold = threshold_for_playback_state(
-                self.playback_active.load(Ordering::Relaxed),
+                playback_active,
                 &mut last_playback_active,
                 &mut score_gates,
                 self.activation_threshold,
@@ -524,9 +584,33 @@ impl WakeWordDetector {
                     .copied()
                     .unwrap_or(0.0);
 
+                if tracing::enabled!(tracing::Level::DEBUG) {
+                    diagnostic_peaks[model_index] = diagnostic_peaks[model_index].max(confidence);
+                }
                 let gate = &mut score_gates[model_index];
                 let confirmed_confidence =
                     gate.observe_at_threshold(confidence, effective_threshold);
+                tracing::trace!(
+                    target: "nocturned::audio::wakeword::scores",
+                    window_index = classification_window,
+                    capture_sequence,
+                    audio_end_samples = capture_frame * FRAME_SAMPLES as u64,
+                    monotonic_ms = score_trace_started.elapsed().as_millis() as u64,
+                    model_index,
+                    keyword,
+                    score = confidence,
+                    window_peak = gate.scores.iter().copied().fold(0.0f32, f32::max),
+                    effective_peak = effective_threshold,
+                    normal_peak = self.activation_threshold,
+                    playback_peak = self.playback_threshold,
+                    support_threshold = self.support_threshold,
+                    supporting_frames = gate.supporting_frames(),
+                    required_frames = SCORE_SUPPORT_REQUIRED,
+                    playback_active,
+                    candidate_pending,
+                    confirmed = confirmed_confidence.is_some(),
+                    "Wake word classifier score"
+                );
                 if candidate_pending {
                     continue;
                 }
@@ -555,6 +639,29 @@ impl WakeWordDetector {
                         required_frames = SCORE_SUPPORT_REQUIRED,
                         "Wake word candidate awaiting temporal confirmation"
                     );
+                }
+            }
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                let rms = (audio_f32.iter().map(|sample| sample * sample).sum::<f32>()
+                    / audio_f32.len() as f32)
+                    .sqrt();
+                diagnostic_rms_peak = diagnostic_rms_peak.max(rms);
+                diagnostic_frames += 1;
+                if diagnostic_frames == 16 {
+                    for ((keyword, _), confidence_peak) in classifiers.iter().zip(&diagnostic_peaks)
+                    {
+                        debug!(
+                            keyword,
+                            confidence_peak,
+                            pcm_rms_peak = diagnostic_rms_peak,
+                            effective_threshold,
+                            candidate_pending,
+                            "Wake word inference window"
+                        );
+                    }
+                    diagnostic_peaks.fill(0.0);
+                    diagnostic_rms_peak = 0.0;
+                    diagnostic_frames = 0;
                 }
             }
         }
@@ -725,7 +832,7 @@ async fn log_arecord_stderr(stderr: ChildStderr) {
 }
 
 async fn next_pcm_frame(
-    stdout: &mut ChildStdout,
+    stdout: &mut (impl AsyncRead + Unpin),
     converter: &mut super::ARecordPcmConverter,
     pcm_buffer: &mut BytesMut,
     preroll: &super::PreRollBuffer,
@@ -736,10 +843,17 @@ async fn next_pcm_frame(
         }
 
         let mut chunk = [0u8; FRAME_BYTES];
-        let bytes_read = stdout.read(&mut chunk).await?;
-        if bytes_read == 0 {
-            return Ok(None);
-        }
+        let bytes_read = match stdout.read(&mut chunk).await {
+            Ok(0) => {
+                preroll.reset_stream();
+                return Ok(None);
+            }
+            Ok(bytes_read) => bytes_read,
+            Err(error) => {
+                preroll.reset_stream();
+                return Err(error);
+            }
+        };
 
         preroll.push(&chunk[..bytes_read]);
         converter.push_raw(&chunk[..bytes_read], pcm_buffer);
@@ -763,9 +877,91 @@ async fn stop_child(child: &mut Child) -> Result<()> {
     Ok(())
 }
 
+fn wake_noise_suppression_enabled(value: Option<&std::ffi::OsStr>) -> bool {
+    match value {
+        None => false,
+        Some(value) if value == "0" => false,
+        Some(value) if value == "1" => true,
+        Some(_) => {
+            warn!("Invalid WAKEWORD_NOISE_SUPPRESSION; expected 0 or 1, using disabled default");
+            false
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn wake_noise_suppression_requires_explicit_opt_in() {
+        for (value, expected) in [
+            (None, false),
+            (Some("0"), false),
+            (Some("1"), true),
+            (Some(""), false),
+            (Some("true"), false),
+            (Some(" 1"), false),
+            (Some("2"), false),
+        ] {
+            assert_eq!(
+                super::wake_noise_suppression_enabled(value.map(std::ffi::OsStr::new)),
+                expected,
+            );
+        }
+    }
+
     use super::*;
+
+    struct FailedReader;
+
+    impl AsyncRead for FailedReader {
+        fn poll_read(
+            self: std::pin::Pin<&mut Self>,
+            _cx: &mut std::task::Context<'_>,
+            _buf: &mut tokio::io::ReadBuf<'_>,
+        ) -> std::task::Poll<std::io::Result<()>> {
+            std::task::Poll::Ready(Err(std::io::Error::other("injected read failure")))
+        }
+    }
+
+    async fn assert_read_failure_invalidates_queued_audio(
+        reader: &mut (impl AsyncRead + Unpin),
+        expect_error: bool,
+    ) {
+        let preroll = super::super::PreRollBuffer::new();
+        let cutoff = std::time::Instant::now();
+        preroll.push(&[0; 2560]);
+        let mut continuous = preroll.subscribe_since(cutoff).unwrap();
+        preroll.push(&[1; 2560]);
+        let result = next_pcm_frame(
+            reader,
+            &mut super::super::ARecordPcmConverter::new(),
+            &mut BytesMut::new(),
+            &preroll,
+        )
+        .await;
+        if expect_error {
+            assert_eq!(result.unwrap_err().to_string(), "injected read failure");
+        } else {
+            assert!(result.unwrap().is_none());
+        }
+        assert!(preroll.subscribe_since(cutoff).is_none());
+        assert!(continuous
+            .next_chunk()
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("reset"));
+    }
+
+    #[tokio::test]
+    async fn reader_eof_invalidates_snapshot_and_queued_audio_before_restart() {
+        assert_read_failure_invalidates_queued_audio(&mut tokio::io::empty(), false).await;
+    }
+
+    #[tokio::test]
+    async fn reader_error_invalidates_snapshot_and_queued_audio_before_restart() {
+        assert_read_failure_invalidates_queued_audio(&mut FailedReader, true).await;
+    }
 
     #[test]
     fn pcm_to_f32_returns_raw_magnitude() {
@@ -805,7 +1001,7 @@ mod tests {
     }
 
     #[test]
-    fn peak_with_two_supporting_scores_activates_with_peak_confidence() {
+    fn two_consecutive_supporting_scores_activate_with_peak_confidence() {
         let mut gate = WakeWordScoreGate::new(0.5);
 
         assert_eq!(gate.observe(0.54), None);
@@ -814,21 +1010,29 @@ mod tests {
     }
 
     #[test]
-    fn peak_with_only_one_supporting_score_does_not_activate() {
+    fn exact_peak_and_support_boundaries_activate_after_two_windows() {
         let mut gate = WakeWordScoreGate::new(0.5);
 
-        assert_eq!(gate.observe(0.54), None);
-        assert_eq!(gate.observe(0.86), None);
-        assert_eq!(gate.observe(0.1), None);
+        assert_eq!(gate.observe(0.65), None);
+        assert_eq!(gate.observe(0.5), Some(0.65));
     }
 
     #[test]
-    fn two_falling_scores_can_confirm_a_recent_peak() {
+    fn separated_supporting_scores_do_not_activate() {
+        let mut gate = WakeWordScoreGate::new(0.5);
+
+        assert_eq!(gate.observe(0.86), None);
+        assert_eq!(gate.observe(0.1), None);
+        assert_eq!(gate.observe(0.54), None);
+    }
+
+    #[test]
+    fn a_falling_supporting_score_can_confirm_a_recent_peak() {
         let mut gate = WakeWordScoreGate::new(0.5);
 
         assert_eq!(gate.observe(0.81), None);
-        assert_eq!(gate.observe(0.58), None);
-        assert_eq!(gate.observe(0.56), Some(0.81));
+        assert_eq!(gate.observe(0.58), Some(0.81));
+        assert_eq!(gate.observe(0.56), None);
     }
 
     #[test]
@@ -860,8 +1064,8 @@ mod tests {
         assert_eq!(gate.observe(0.75), Some(0.75));
         gate.reset();
         assert_eq!(gate.observe(0.95), None);
-        assert_eq!(gate.observe(0.6), None);
-        assert_eq!(gate.observe(0.61), Some(0.95));
+        assert_eq!(gate.observe(0.6), Some(0.95));
+        assert_eq!(gate.observe(0.61), None);
     }
 
     #[test]
@@ -886,7 +1090,7 @@ mod tests {
         let threshold =
             threshold_for_playback_state(false, &mut last_playback_active, &mut gates, 0.65, 0.9);
         assert_eq!(gates[0].observe_at_threshold(0.6, threshold), None);
-        assert_eq!(gates[0].observe_at_threshold(0.67, threshold), None);
+        assert_eq!(gates[0].observe_at_threshold(0.67, threshold), Some(0.67));
         assert_eq!(gates[0].observe_at_threshold(0.55, threshold), Some(0.67));
     }
 
@@ -935,5 +1139,19 @@ mod tests {
         assert!(!state.is_paused());
         assert!(!state.user_muted);
         assert!(!state.recording_suppressed);
+    }
+
+    #[test]
+    fn muting_during_recording_requires_user_resume_after_recording_finishes() {
+        let mut state = WakeWordPauseState::new(false);
+
+        assert_eq!(state.pause(false), None);
+        assert_eq!(state.pause(true), Some(true));
+        assert_eq!(state.resume(false), None);
+        assert!(state.user_muted);
+        assert!(state.is_paused());
+
+        assert_eq!(state.resume(true), Some(false));
+        assert!(!state.is_paused());
     }
 }
