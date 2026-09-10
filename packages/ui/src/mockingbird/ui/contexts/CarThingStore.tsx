@@ -1,3 +1,4 @@
+import { useSettings } from "../../../contexts/SettingsContext";
 import type { ReactNode } from "react";
 import type {
   SpotifyPlaybackState,
@@ -68,6 +69,29 @@ export const CarThingStoreProvider = ({
   sharedPhoneDisplaySettings,
 }: CarThingStoreProviderProps) => {
   useCarThingSpotifyIntegration(rootStore, currentPlayback, playerControls);
+  const {
+    settings,
+    updateSetting,
+    isAppLaunchSettingReady,
+    isAppLaunchSettingSaving,
+    appLaunchSettingError,
+  } = useSettings();
+
+  useLayoutEffect(() => {
+    rootStore.settingsStore.syncSharedAppLaunchSetting({
+      enabled: settings.foregroundAppLaunchEnabled !== false,
+      ready: isAppLaunchSettingReady,
+      saving: isAppLaunchSettingSaving,
+      error: appLaunchSettingError,
+      update: (enabled) => updateSetting("foregroundAppLaunchEnabled", enabled),
+    });
+  }, [
+    settings.foregroundAppLaunchEnabled,
+    isAppLaunchSettingReady,
+    isAppLaunchSettingSaving,
+    appLaunchSettingError,
+    updateSetting,
+  ]);
 
   useLayoutEffect(() => {
     const windAlertUiState =

@@ -14,6 +14,7 @@ import {
   hasConnectedMacosConnector,
   isConnectorPlatform,
 } from "../hooks/useNocturned";
+import { useAppLaunchSetting } from "../hooks/useAppLaunchSetting";
 import { useSubscription } from "../hooks/useSubscription";
 
 const SETTING_STORAGE_KEYS: Partial<Record<keyof SettingsState, string>> = {
@@ -40,6 +41,7 @@ const NOCTURNE_PLUS_REQUIRED_MESSAGE =
   "Subscribe to Nocturne+ to use phone calls and notifications.";
 
 export function SettingsProvider({ children }: ChildrenProps) {
+  const appLaunch = useAppLaunchSetting();
   const [appPlatform, setAppPlatform] = useState(
     () => getAppReadyState().platform,
   );
@@ -167,6 +169,10 @@ export function SettingsProvider({ children }: ChildrenProps) {
   }, [appPlatform, isMicLocked]);
 
   const updateSetting: SettingsContextValue["updateSetting"] = (key, value) => {
+    if (key === "foregroundAppLaunchEnabled") {
+      if (typeof value === "boolean") void appLaunch.save(value);
+      return;
+    }
     const newSettings: SettingsState = { ...settings };
 
     const updateLocalStorage = (updates: Partial<SettingsState>) => {
@@ -229,7 +235,13 @@ export function SettingsProvider({ children }: ChildrenProps) {
   return (
     <SettingsContext.Provider
       value={{
-        settings,
+        settings: {
+          ...settings,
+          foregroundAppLaunchEnabled: appLaunch.foreground,
+        },
+        isAppLaunchSettingReady: appLaunch.ready,
+        isAppLaunchSettingSaving: appLaunch.saving,
+        appLaunchSettingError: appLaunch.error,
         updateSetting,
         isMicLocked,
         appPlatform,

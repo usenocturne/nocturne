@@ -683,7 +683,7 @@ async fn run_iap2_connection(
                     app_launch_attempts += 1;
                     last_app_launch_attempt = Some(Instant::now());
                     info!(
-                        "No EA session with {} yet, sending RequestAppLaunch for {} (attempt {}/{})",
+                        "No EA session with {} yet, checking app launch preference for {} (attempt {}/{})",
                         device_address,
                         DEFAULT_APP_BUNDLE_ID,
                         app_launch_attempts,
@@ -1020,14 +1020,14 @@ async fn handle_websocket_message_new(
             .as_deref()
             .unwrap_or(DEFAULT_APP_BUNDLE_ID);
         match send_app_launch(link_command_tx, bundle_id).await {
-            Ok(()) => {
-                info!(bundle_id, "Sent RequestAppLaunch");
+            Ok(launched) => {
+                info!(bundle_id, launched, "Handled RequestAppLaunch");
                 if let Some(ws_server) = websocket_server {
                     ws_server
                         .send_response(
                             message.id.clone(),
                             serde_json::to_value(DeviceLaunchAppResponse {
-                                status: "ok".to_string(),
+                                status: if launched { "ok" } else { "background" }.to_string(),
                             })?,
                         )
                         .await;
@@ -1093,7 +1093,19 @@ async fn handle_websocket_message_new(
 async fn send_app_launch(
     link_command_tx: &mpsc::Sender<Iap2Command>,
     bundle_id: &str,
-) -> Result<()> {
+) -> Result<bool> {
+    let settings = crate::system::app_launch::get().await?;
+    send_app_launch_with_settings(link_command_tx, bundle_id, settings).await
+}
+
+async fn send_app_launch_with_settings(
+    link_command_tx: &mpsc::Sender<Iap2Command>,
+    bundle_id: &str,
+    settings: crate::system::app_launch::AppLaunchSettings,
+) -> Result<bool> {
+    if !settings.foreground {
+        return Ok(false);
+    }
     let frame: CsmFrame = RequestAppLaunch {
         bundle_id: bundle_id.to_string(),
         launch_method: AppLaunchMethod::WithoutUserAlert,
@@ -1105,7 +1117,8 @@ async fn send_app_launch(
             payload: frame.into_bytes(),
         })
         .await
-        .map_err(|err| NocturnedError::Iap2Protocol(err.to_string()))
+        .map_err(|err| NocturnedError::Iap2Protocol(err.to_string()))?;
+    Ok(true)
 }
 
 async fn send_daemon_ready(session_id: u8, outbound: Option<&EaStreamSender>) {
@@ -1363,6 +1376,35 @@ mod tests {
     use iap2_rs::csm::now_playing::{MediaItemAttributes, PlaybackAttributes};
 
     use super::*;
+
+    #[tokio::test]
+    async fn background_preference_suppresses_foreground_csm_but_default_sends_it() -> Result<()> {
+        let (sender, mut receiver) = mpsc::channel(1);
+        let launched = send_app_launch_with_settings(
+            &sender,
+            DEFAULT_APP_BUNDLE_ID,
+            crate::system::app_launch::AppLaunchSettings { foreground: false },
+        )
+        .await?;
+        assert!(!launched);
+        assert!(matches!(
+            receiver.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        ));
+        assert!(
+            send_app_launch_with_settings(
+                &sender,
+                DEFAULT_APP_BUNDLE_ID,
+                crate::system::app_launch::AppLaunchSettings::default(),
+            )
+            .await?
+        );
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(Iap2Command::Send { session_id: 1, .. })
+        ));
+        Ok(())
+    }
 
     fn media_update(
         persistent_id: u64,

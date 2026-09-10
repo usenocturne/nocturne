@@ -1,0 +1,12 @@
+@use "../../../styles/variables.module" as vars;
+
+.scrollContainer {
+  height: 352px;
+  overflow-y: auto;
+}
+
+.text {
+  padding: 32px 40px;
+  color: vars.$gray-80;
+  @include vars.text-style(32px, 40px, -0.02em);
+}

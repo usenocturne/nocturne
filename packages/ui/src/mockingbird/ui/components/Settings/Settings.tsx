@@ -21,6 +21,7 @@ import PowerTutorial from "./PowerTutorial/PowerTutorial";
 import Licenses from "./Licenses/Licenses";
 import TipsOnDemand from "./TipsOnDemand/TipsOnDemand";
 import DisplayAndBrightness from "./DisplayAndBrightness/DisplayAndBrightness";
+import AppLaunch from "./AppLaunch/AppLaunch";
 import PhoneCalls from "./PhoneCalls/PhoneCalls";
 import Notifications from "./Notifications/Notifications";
 import AirVentInterference from "./AirVentInterference/AirVentInterference";
@@ -41,6 +42,7 @@ const viewToComp: Record<string, (() => ReactNode) | undefined> = {
   [RestartMenuItemId.FACTORY_RESET]: () => <FactoryReset />,
   [RestartMenuItemId.POWER_OFF_TUTORIAL]: () => <PowerTutorial />,
   [MainMenuItemId.PHONE_CONNECTION]: () => <PhoneConnection />,
+  [OptionsMenuItemId.APP_LAUNCH]: () => <AppLaunch />,
   [OptionsMenuItemId.PHONE_CALLS]: () => <PhoneCalls />,
   [OptionsMenuItemId.NOTIFICATIONS]: () => <Notifications />,
   [AboutMenuItemId.LICENSE]: () => <Licenses />,

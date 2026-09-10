@@ -1960,6 +1960,19 @@ impl MsgPackProtocolHandler {
             MsgPackMessage::Call { id, method, params } => {
                 debug!("Handling msgpack call: {} -> {}", id, method);
 
+                if method == "device.appLaunch.get" {
+                    return Ok(Some(match crate::system::app_launch::get().await {
+                        Ok(settings) => MsgPackMessage::Result {
+                            id,
+                            result: serde_json::to_value(settings)?,
+                        },
+                        Err(error) => MsgPackMessage::Error {
+                            id,
+                            error: error.to_string(),
+                        },
+                    }));
+                }
+
                 if let Some(response) = self.try_route_ota_call(&id, &method, &params).await? {
                     return Ok(Some(response));
                 }

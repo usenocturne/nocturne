@@ -283,6 +283,7 @@ export interface SettingsState {
   knobSeeksPlaybackEnabled?: boolean;
   mockingbirdUiEnabled?: boolean;
   micMuted?: boolean;
+  foregroundAppLaunchEnabled?: boolean;
   nativePhoneCallsEnabled?: boolean;
   nativeNotificationsEnabled?: boolean;
   showPlaybackTime?: boolean;
@@ -301,6 +302,9 @@ export interface SettingsContextValue {
     key: keyof SettingsState | string,
     value: boolean | string | number | null,
   ) => void;
+  isAppLaunchSettingReady: boolean;
+  isAppLaunchSettingSaving: boolean;
+  appLaunchSettingError: string | null;
   isMicLocked: boolean;
   appPlatform: string | null;
   isNativePhonePresentationLocked: boolean;

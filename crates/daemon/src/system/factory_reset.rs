@@ -10,7 +10,8 @@ const RESET_DIRECTORIES: [&str; 5] = [
     "/var/lib/nocturne/transfers",
     "/var/nocturne",
 ];
-const RESET_FILES: [&str; 2] = [
+const RESET_FILES: [&str; 3] = [
+    "/var/lib/nocturne/app-launch.json",
     "/var/lib/nocturne/known-macos-connectors.json",
     "/var/lib/nocturne/ota-current.json",
 ];

@@ -139,6 +139,15 @@ const settingsStructure: Record<string, SettingsSection> = {
         defaultValue: false,
       },
       {
+        id: "foreground-app-launch",
+        title: "Open Phone App",
+        type: "toggle",
+        description:
+          "Open Nocturne in the foreground when your phone connects. May prevent some features from working.",
+        storageKey: "foregroundAppLaunchEnabled",
+        defaultValue: true,
+      },
+      {
         id: "phone-calls",
         title: "Phone Calls",
         type: "toggle",
@@ -322,6 +331,9 @@ export default function Settings({
     appPlatform,
     isNativePhonePresentationLocked,
     nativePhonePresentationLockMessage,
+    isAppLaunchSettingReady,
+    isAppLaunchSettingSaving,
+    appLaunchSettingError,
   } = useSettings();
   const { isSubscribed, hasPhoneAccess } = useSubscription();
   const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false);
@@ -572,6 +584,8 @@ export default function Settings({
       case "toggle": {
         const isMockingbirdToggle = item.storageKey === "mockingbirdUiEnabled";
         const isMicToggle = item.storageKey === "micMuted";
+        const isAppLaunchToggle =
+          item.storageKey === "foregroundAppLaunchEnabled";
         const isNativePhoneToggle = item.requiresDirectPhone === true;
 
         const isMicConnectorLocked =
@@ -586,6 +600,8 @@ export default function Settings({
           hasPhoneAccess === false;
 
         const isToggleDisabled =
+          (isAppLaunchToggle &&
+            (!isAppLaunchSettingReady || isAppLaunchSettingSaving)) ||
           isMicConnectorLocked ||
           isMicSubLocked ||
           isMockingbirdSubLocked ||
@@ -607,6 +623,7 @@ export default function Settings({
           >
             <div className="flex items-center">
               <Switch
+                aria-label={item.title}
                 checked={Boolean(displayedValue)}
                 onChange={() =>
                   !isToggleDisabled && handleToggle(item.storageKey)
@@ -627,15 +644,22 @@ export default function Settings({
               </span>
             </div>
             <p className="pt-4 text-[28px] font-[560] text-white/60 max-w-[380px] tracking-tight">
-              {isToggleDisabled
-                ? isMicConnectorLocked
-                  ? "The microphone is only available when using the Nocturne mobile app."
-                  : isMicSubLocked
-                    ? "Subscribe to Nocturne+ to use voice controls."
-                    : isNativePhoneToggle
-                      ? nativePhonePresentationLockMessage
-                      : "Get Nocturne+ or Nocturne Lifetime to use the classic Spotify Car Thing interface."
-                : item.description}
+              {isAppLaunchToggle
+                ? appLaunchSettingError ||
+                  (isAppLaunchSettingSaving
+                    ? "Saving..."
+                    : !isAppLaunchSettingReady
+                      ? "Waiting for device settings..."
+                      : item.description)
+                : isToggleDisabled
+                  ? isMicConnectorLocked
+                    ? "The microphone is only available when using the Nocturne mobile app."
+                    : isMicSubLocked
+                      ? "Subscribe to Nocturne+ to use voice controls."
+                      : isNativePhoneToggle
+                        ? nativePhonePresentationLockMessage
+                        : "Get Nocturne+ or Nocturne Lifetime to use the classic Spotify Car Thing interface."
+                  : item.description}
             </p>
           </div>
         );

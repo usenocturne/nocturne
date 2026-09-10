@@ -196,3 +196,7 @@ bun run lint-check    # Full source typecheck + Prettier --check (CI)
 - **Build targets modern Chrome.** Vite defaults apply — no `@vitejs/plugin-legacy`, no dev-time esbuild downgrade, no manual polyfills. PostCSS is just Tailwind + autoprefixer.
 
 - **Pairing code verification:** Both skins display the fresh matching code and direct the user to confirm on the other device. The Car Thing has no pairing buttons or code-entry fields. Preserve discovery owners, ignore stale cancellation scoped by `request_id`, and recover pending prompts through `bluetooth.pairing.pending` on socket reconnect. Historical prompts without request ids remain display-only.
+
+### Phone app launch preference
+
+General > Open Phone App and Mockingbird Options > Auto launch app share the daemon-backed `foregroundAppLaunchEnabled` preference. It defaults to foreground launch. `useAppLaunchSetting` reads `device.appLaunch.get` on connection and saves through `device.appLaunch.set`; never persist or restore this preference from browser localStorage. Disable the control until loaded and while saving, preserve the acknowledged value on failure, and display the error. Background mode retains phone data connections.

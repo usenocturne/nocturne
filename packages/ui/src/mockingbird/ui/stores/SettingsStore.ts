@@ -19,6 +19,8 @@ export const MainMenuItemId = {
 };
 
 export const OptionsMenuItemId = {
+  APP_LAUNCH: "APP_LAUNCH",
+  APP_LAUNCH_TOGGLE: "APP_LAUNCH_TOGGLE",
   PHONE_CALLS: "PHONE_CALLS",
   PHONE_CALLS_TOGGLE: "PHONE_CALLS_TOGGLE",
   NOTIFICATIONS: "NOTIFICATIONS",
@@ -77,6 +79,7 @@ class SettingsStore {
   declare licenseView: SettingsMenuItem;
   declare phoneConnectionView: SettingsMenuItem;
   declare phoneCallsView: SettingsMenuItem;
+  declare appLaunchView: SettingsMenuItem;
   declare notificationsView: SettingsMenuItem;
   declare airVentInterferenceView: SettingsMenuItem;
   declare displayAndBrightnessView: SettingsMenuItem;
@@ -100,6 +103,11 @@ class SettingsStore {
     device?: string;
   } | null = null;
   tipsEnabled = localStorage.getItem("tipsEnabled") !== "false";
+  foregroundAppLaunchEnabled = true;
+  isAppLaunchSettingReady = false;
+  isAppLaunchSettingSaving = false;
+  appLaunchSettingError: string | null = null;
+  appLaunchSettingUpdater: ((enabled: boolean) => void) | null = null;
   phoneCallsEnabled = true;
   notificationsEnabled = true;
   phonePresentationLocked = false;
@@ -124,6 +132,25 @@ class SettingsStore {
       index: 0,
       visible: () => true,
       type: "parent",
+    };
+
+    this.appLaunchView = {
+      id: OptionsMenuItemId.APP_LAUNCH,
+      label: "Auto launch app",
+      index: 0,
+      visible: () => true,
+      type: "parent",
+      rows: [
+        {
+          id: OptionsMenuItemId.APP_LAUNCH_TOGGLE,
+          label: "Auto launch app",
+          index: 0,
+          visible: () => true,
+          type: "toggle",
+          disabled: () =>
+            !this.isAppLaunchSettingReady || this.isAppLaunchSettingSaving,
+        },
+      ],
     };
 
     this.phoneCallsView = {
@@ -270,6 +297,7 @@ class SettingsStore {
           rows: [
             this.phoneCallsView,
             this.notificationsView,
+            this.appLaunchView,
             this.airVentInterferenceView,
             this.displayAndBrightnessView,
             {
@@ -351,6 +379,7 @@ class SettingsStore {
       submenuUiState: false,
       unavailableSettingsBannerUiState: false,
       sharedSettingsUpdater: false,
+      appLaunchSettingUpdater: false,
       displayAndBrightnessUiState: false,
     });
 
@@ -361,6 +390,9 @@ class SettingsStore {
     const store = this;
     return {
       isToggleOn(item: SettingsMenuItem) {
+        if (item.id === OptionsMenuItemId.APP_LAUNCH_TOGGLE) {
+          return store.foregroundAppLaunchEnabled;
+        }
         if (item.id === OptionsMenuItemId.PHONE_CALLS_TOGGLE) {
           return store.phoneCallsEnabled && !store.phonePresentationLocked;
         }
@@ -415,6 +447,8 @@ class SettingsStore {
           item.id === OptionsMenuItemId.NOTIFICATIONS_TOGGLE
         ) {
           store.togglePhoneDisplaySetting(item.id);
+        } else if (item.id === OptionsMenuItemId.APP_LAUNCH_TOGGLE) {
+          store.appLaunchSettingUpdater?.(!store.foregroundAppLaunchEnabled);
         } else if (item.id === OptionsMenuItemId.TIPS_TOGGLE) {
           store.toggleTips();
         } else {
@@ -727,7 +761,29 @@ class SettingsStore {
         : null;
   }
 
+  syncSharedAppLaunchSetting(settings: {
+    enabled: boolean;
+    ready: boolean;
+    saving: boolean;
+    error: string | null;
+    update: (enabled: boolean) => void;
+  }) {
+    this.foregroundAppLaunchEnabled = settings.enabled;
+    this.isAppLaunchSettingReady = settings.ready;
+    this.isAppLaunchSettingSaving = settings.saving;
+    this.appLaunchSettingError = settings.error;
+    this.appLaunchSettingUpdater = settings.update;
+  }
+
   getSettingDisabledMessage(item: SettingsMenuItem) {
+    if (item.id === OptionsMenuItemId.APP_LAUNCH_TOGGLE) {
+      return (
+        this.appLaunchSettingError ||
+        (this.isAppLaunchSettingSaving
+          ? "Saving phone app setting..."
+          : "Waiting for the device connection...")
+      );
+    }
     if (
       item.id === OptionsMenuItemId.PHONE_CALLS_TOGGLE ||
       item.id === OptionsMenuItemId.NOTIFICATIONS_TOGGLE

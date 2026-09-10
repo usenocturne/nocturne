@@ -221,6 +221,8 @@ Unzip `resources.zip` locally (gitignored — too large to track) for reverse-en
 - No kernel driver / `/dev/apple_mfi`; no host fallback — iAP2 only works on real Car Thing silicon
 
 ### Display Sleep
+
+- **Companion launch preference**: daemon-local WebSocket `device.appLaunch.get` and `device.appLaunch.set` use `{foreground: boolean}` and default to `true`. Save under `/var/lib/nocturne/app-launch.json` before acknowledging changes, then broadcast `device.appLaunch.state`. Companions can read the same preference through MessagePack `device.appLaunch.get`. Both cold-start and UI-requested iOS `RequestAppLaunch` calls honor it. Background mode preserves the accessory session and native iOS accessory wake; `AppLaunchMethod::WithoutUserAlert` controls prompts, not foreground placement. Android keeps its headless companion service running and consults the preference before starting an activity. Do not disable Bluetooth reconnect or data sessions when foreground launch is disabled.
 - UI lock/sleep uses WebSocket methods `device.display.get`, `device.display.sleep`, and `device.display.wake`; this is a daemon-local UI contract, not part of the phone MsgPack protocol.
 - Display sleep is transient and separate from entering the UI lock screen. `crates/daemon/src/hardware/brightness.rs` stores the current saved brightness/auto config in memory, stops native auto brightness, writes the dimmest backlight value, and restores the saved manual value or restarts auto brightness on wake.
 - Do not use `device.brightness.set` for sleep: that command intentionally persists a manual brightness value and disables auto brightness.

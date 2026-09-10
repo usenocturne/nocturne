@@ -481,6 +481,8 @@ fn phone_request_route(device: &str, active_app: Option<&ActiveAppReady>) -> Str
     format!("iap2:{device}")
 }
 
+static APP_LAUNCH_PUBLICATION_LOCK: Mutex<()> = Mutex::const_new(());
+
 pub struct WebSocketServer {
     connections: Arc<RwLock<HashMap<String, WebSocketConnection>>>,
     app_manager_tx: mpsc::UnboundedSender<AppMessage>,
@@ -782,6 +784,40 @@ impl WebSocketServer {
         match ws_msg {
             WebSocketMessage::Request { id, method, params } => {
                 debug!("WebSocket request: {} -> {}", id, method);
+
+                if method == "device.appLaunch.get" || method == "device.appLaunch.set" {
+                    // Keep snapshots, responses and state events in the same order as writes.
+                    let _publication = APP_LAUNCH_PUBLICATION_LOCK.lock().await;
+                    let result = if method == "device.appLaunch.set" {
+                        match Self::decode_params(params) {
+                            Ok(settings) => crate::system::app_launch::set(settings).await,
+                            Err(error) => {
+                                self.send_error(
+                                    id,
+                                    format!("invalid app launch preference: {error}"),
+                                )
+                                .await;
+                                return Ok(());
+                            }
+                        }
+                    } else {
+                        crate::system::app_launch::get().await
+                    };
+                    match result {
+                        Ok(settings) => {
+                            self.send_typed_response(id, settings).await;
+                            if method == "device.appLaunch.set" {
+                                self.broadcast_event(
+                                    "device.appLaunch.state".to_string(),
+                                    serde_json::to_value(settings)?,
+                                )
+                                .await;
+                            }
+                        }
+                        Err(error) => self.send_error(id, error.to_string()).await,
+                    }
+                    return Ok(());
+                }
 
                 if method.starts_with("device.ab.") {
                     match method.as_str() {

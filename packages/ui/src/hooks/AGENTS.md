@@ -108,3 +108,5 @@ The artwork queue keeps at most 64 cached images and approximately 32 MiB of raw
 - Device metadata is represented by `NocturneDeviceInfo`; `device` is a product-name string. Both the singleton reconnect path and the Bluetooth hook use the same device-list normalization.
 - `LyricLine` contains string timestamps and words. Numeric wire timestamps are normalized without losing a zero anchor. Malformed lines are ignored at the response boundary.
 - Preset long-press mapping passes `true` to the release-suppression callback, which supports both a state setter and a no-argument callback. Playback acknowledgements used as booleans return `true` after successful completion and still reject errors.
+
+- **Phone app launch preference**: `useAppLaunchSetting.ts` owns daemon preference loading, acknowledged saves, and `device.appLaunch.state` updates. Invalidate pending reads on newer state events or disconnects. Foreground defaults belong to the daemon; never push a browser default on reconnect. The existing iOS `device.launchApp` request is enforced by the daemon so background mode suppresses it regardless of caller.

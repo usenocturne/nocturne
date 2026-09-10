@@ -174,3 +174,10 @@ must never intercept shelf touches, including while exit content is retained.
 The daemon owns reboot after `device.factoryreset`. Neither Mockingbird reset
 entry point schedules a second `device.power.reboot` request. Verify that contract
 with mocked commands; never exercise a factory reset on a user's device.
+
+The Options menu's Auto launch app toggle mirrors the daemon-backed
+`foregroundAppLaunchEnabled` setting through `SettingsContext`. It defaults on,
+uses the same shared preference as the main UI, and disables editing while the
+setting is unavailable or saving. Turning it off requests background launch
+for iPhone and Android while preserving the companion connection. Never persist
+another Mockingbird copy or optimistically change the acknowledged value.

@@ -170,3 +170,60 @@ describe("Mockingbird phone display settings", () => {
     },
   );
 });
+
+describe("Mockingbird phone app launch setting", () => {
+  test("defaults on and waits for the daemon setting before accepting input", () => {
+    const store = createStore();
+    const item = store.appLaunchView.rows[0];
+    expect(store.submenuUiState.isToggleOn(item)).toBe(true);
+    expect(store.isSettingItemDisabled(item)).toBe(true);
+  });
+
+  test("touch and dial delegate to the shared setting without optimistic persistence", () => {
+    const store = createStore();
+    const updates = [];
+    const sync = (enabled, saving = false) =>
+      store.syncSharedAppLaunchSetting({
+        enabled,
+        ready: true,
+        saving,
+        error: null,
+        update: (value) => updates.push(value),
+      });
+    const item = store.appLaunchView.rows[0];
+    sync(true);
+    store.submenuUiState.handleSubmenuItemClicked(item);
+    expect(updates).toEqual([false]);
+    expect(store.foregroundAppLaunchEnabled).toBe(true);
+    sync(false);
+    store.viewStack.push(store.appLaunchView);
+    store.handleDialPress();
+    expect(updates).toEqual([false, true]);
+    sync(false, true);
+    store.handleDialPress();
+    expect(updates).toEqual([false, true]);
+    expect(store.unavailableSettingsBannerUiState.message).toBe(
+      "Saving phone app setting...",
+    );
+    store.unavailableSettingsBannerUiState.hideUnavailableBanner();
+  });
+
+  test("disconnection blocks changes and keeps the acknowledged preference", () => {
+    const store = createStore();
+    const updates = [];
+    store.syncSharedAppLaunchSetting({
+      enabled: false,
+      ready: false,
+      saving: false,
+      error: "Device disconnected.",
+      update: (value) => updates.push(value),
+    });
+    store.submenuUiState.handleSubmenuItemClicked(store.appLaunchView.rows[0]);
+    expect(updates).toEqual([]);
+    expect(store.foregroundAppLaunchEnabled).toBe(false);
+    expect(store.unavailableSettingsBannerUiState.message).toBe(
+      "Device disconnected.",
+    );
+    store.unavailableSettingsBannerUiState.hideUnavailableBanner();
+  });
+});
