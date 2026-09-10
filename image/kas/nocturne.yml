@@ -32,7 +32,7 @@ target:
 repos:
   yocto-superbird:
     url: https://github.com/JoeyEamigh/yocto-superbird.git
-    commit: c1576ad54d6a7520a6de5591ee08e58724f8077b
+    commit: 5969a5f1c63dfc4ab2f52191db6d0ebbc22a672d
     path: sources/yocto-superbird
     layers:
       meta-superbird:
