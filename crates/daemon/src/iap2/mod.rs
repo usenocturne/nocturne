@@ -33,6 +33,7 @@ use libnocturne::generated::phone::{
     PhoneCallAcceptResponse, PhoneCallDeclineResponse, PhoneCallsGetResponse,
 };
 use tokio::sync::{broadcast, mpsc, Mutex};
+use tokio_util::{sync::CancellationToken, task::AbortOnDropHandle};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::app::{
@@ -260,8 +261,10 @@ impl NowPlayingState {
 #[derive(Clone)]
 pub struct Iap2Connection {
     device_address: Address,
-    running: Arc<Mutex<bool>>,
     user_initiated_disconnect: Arc<Mutex<bool>>,
+    disconnect: CancellationToken,
+    stopped: CancellationToken,
+    cleanup_complete: CancellationToken,
     websocket_tx: mpsc::UnboundedSender<AppMessage>,
 }
 
@@ -279,8 +282,8 @@ struct Iap2TaskInputs {
     websocket_rx: mpsc::UnboundedReceiver<AppMessage>,
     hid_tx: mpsc::UnboundedSender<HidCommand>,
     hid_rx: mpsc::UnboundedReceiver<HidCommand>,
-    running: Arc<Mutex<bool>>,
     ready_tx: tokio::sync::oneshot::Sender<Result<()>>,
+    disconnect: CancellationToken,
     audio_event_rx: broadcast::Receiver<AudioEvent>,
     audio_cmd_tx: mpsc::UnboundedSender<AudioCommand>,
     wakeword_pause_tx: mpsc::UnboundedSender<WakeWordCommand>,
@@ -350,19 +353,22 @@ impl Iap2Connection {
         } = options;
         let (websocket_tx, websocket_rx) = mpsc::unbounded_channel();
         let (hid_tx, hid_rx) = mpsc::unbounded_channel();
-        let running = Arc::new(Mutex::new(false));
         let user_initiated_disconnect = Arc::new(Mutex::new(false));
 
         let conn = Iap2Connection {
             device_address,
-            running,
             user_initiated_disconnect,
+            disconnect: CancellationToken::new(),
+            stopped: CancellationToken::new(),
+            cleanup_complete: CancellationToken::new(),
             websocket_tx,
         };
 
-        let running_clone = conn.running.clone();
         let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+        let disconnect = conn.disconnect.clone();
+        let stopped = conn.stopped.clone();
         tokio::spawn(async move {
+            let _stopped_guard = stopped.drop_guard();
             let result = run_iap2_connection(
                 device_address,
                 stream,
@@ -371,8 +377,8 @@ impl Iap2Connection {
                     websocket_rx,
                     hid_tx,
                     hid_rx,
-                    running: running_clone.clone(),
                     ready_tx,
+                    disconnect,
                     audio_event_rx,
                     audio_cmd_tx,
                     wakeword_pause_tx,
@@ -385,7 +391,6 @@ impl Iap2Connection {
             if let Err(err) = result {
                 error!(%device_address, %err, "iAP2 connection error");
             }
-            *running_clone.lock().await = false;
         });
 
         match ready_rx.await {
@@ -398,9 +403,7 @@ impl Iap2Connection {
     }
 
     pub async fn run(self) -> Result<()> {
-        while *self.running.lock().await {
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
+        self.stopped.cancelled().await;
         Ok(())
     }
 
@@ -415,12 +418,21 @@ impl Iap2Connection {
     }
 
     pub async fn is_running(&self) -> bool {
-        *self.running.lock().await
+        !self.stopped.is_cancelled()
     }
 
-    pub async fn close(&mut self) {
-        *self.running.lock().await = false;
+    pub async fn close(&self) {
         info!(%self.device_address, "Closing iAP2 connection");
+        self.disconnect.cancel();
+        self.stopped.cancelled().await;
+    }
+
+    pub fn cleanup_complete_signal(&self) -> CancellationToken {
+        self.cleanup_complete.clone()
+    }
+
+    pub async fn wait_for_cleanup(&self) {
+        self.cleanup_complete.cancelled().await;
     }
 
     pub async fn mark_user_initiated_disconnect(&self) {
@@ -440,8 +452,8 @@ async fn run_iap2_connection(
         mut websocket_rx,
         hid_tx,
         mut hid_rx,
-        running,
         ready_tx,
+        disconnect,
         mut audio_event_rx,
         audio_cmd_tx,
         wakeword_pause_tx,
@@ -468,12 +480,12 @@ async fn run_iap2_connection(
     let link_config = LinkConfig::new(Lsp::accessory_default());
     // Follow-up: when `debug-iap2-frame-tap` is enabled, construct an iap2_rs::FrameTap,
     // pass it through Link::run_with_frame_tap, and drain/forward events on a debug WS channel.
-    let link_handle = tokio::spawn(Link::run(
+    let link_handle = AbortOnDropHandle::new(tokio::spawn(Link::run(
         stream,
         link_config,
         link_event_tx,
         link_command_rx,
-    ));
+    )));
     let session = Iap2Session::new(
         identification,
         mfi,
@@ -484,9 +496,8 @@ async fn run_iap2_connection(
         now_playing_rx,
         telephony_rx,
     );
-    let session_handle = tokio::spawn(session.run());
+    let session_handle = AbortOnDropHandle::new(tokio::spawn(session.run()));
 
-    *running.lock().await = true;
     let _ = ready_tx.send(Ok(()));
 
     let (ea_data_tx, mut ea_data_rx) = mpsc::unbounded_channel();
@@ -540,169 +551,179 @@ async fn run_iap2_connection(
         APP_LAUNCH_INITIAL_DELAY
     };
 
-    while *running.lock().await {
-        let ea_inbound = async {
-            match &mut ea_inbound_rx {
-                Some(rx) => rx.recv().await,
-                None => std::future::pending::<Option<Bytes>>().await,
-            }
-        };
+    let connection_loop = async {
+        loop {
+            let ea_inbound = async {
+                match &mut ea_inbound_rx {
+                    Some(rx) => rx.recv().await,
+                    None => std::future::pending::<Option<Bytes>>().await,
+                }
+            };
 
-        tokio::select! {
-            session_event = session_event_rx.recv() => {
-                match session_event {
-                    Some(event) => {
-                        match &event {
-                            SessionEvent::EaStreamOpened { .. } => {
-                                app_launch_attempts = 0;
-                                last_app_launch_attempt = None;
-                                ea_session_ever_established = true;
+            tokio::select! {
+                session_event = session_event_rx.recv() => {
+                    match session_event {
+                        Some(event) => {
+                            match &event {
+                                SessionEvent::EaStreamOpened { .. } => {
+                                    app_launch_attempts = 0;
+                                    last_app_launch_attempt = None;
+                                    ea_session_ever_established = true;
+                                }
+                                SessionEvent::EaStreamClosed { .. } => {
+                                    ea_session_waiting_since = Instant::now();
+                                    app_launch_attempts = 0;
+                                    last_app_launch_attempt = None;
+                                }
+                                _ => {}
                             }
-                            SessionEvent::EaStreamClosed { .. } => {
-                                ea_session_waiting_since = Instant::now();
-                                app_launch_attempts = 0;
-                                last_app_launch_attempt = None;
+                            let context = SessionEventContext {
+                                websocket_server: &websocket_server,
+                                device_address: &device_address,
+                                now_playing_state: &mut now_playing_state,
+                                call_tracker: &mut call_tracker,
+                                app_manager: &mut app_manager,
+                                active_ea: &mut active_ea,
+                                ea_inbound_rx: &mut ea_inbound_rx,
+                                next_local_session_id: &mut next_local_session_id,
+                            };
+                            if handle_session_event(event, context).await? {
+                                break;
                             }
-                            _ => {}
+                            if let Some(active) = active_ea.as_ref() {
+                                if active.local_session_id != 0 && last_daemon_ready.elapsed() >= daemon_ready_interval {
+                                    send_daemon_ready(active.local_session_id, Some(&active.outbound)).await;
+                                    last_daemon_ready = Instant::now();
+                                }
+                            }
                         }
-                        let context = SessionEventContext {
-                            websocket_server: &websocket_server,
-                            device_address: &device_address,
-                            now_playing_state: &mut now_playing_state,
-                            call_tracker: &mut call_tracker,
-                            app_manager: &mut app_manager,
-                            active_ea: &mut active_ea,
-                            ea_inbound_rx: &mut ea_inbound_rx,
-                            next_local_session_id: &mut next_local_session_id,
-                        };
-                        if handle_session_event(event, context).await? {
-                            break;
-                        }
+                        None => break,
+                    }
+                }
+
+                ea_data = ea_inbound => {
+                    if let Some(data) = ea_data {
                         if let Some(active) = active_ea.as_ref() {
-                            if active.local_session_id != 0 && last_daemon_ready.elapsed() >= daemon_ready_interval {
-                                send_daemon_ready(active.local_session_id, Some(&active.outbound)).await;
-                                last_daemon_ready = Instant::now();
+                            trace!(bytes = data.len(), session = active.local_session_id, "FROM_IPHONE: Received EA data");
+                            if let Err(err) = app_manager.handle_incoming_data(active.local_session_id, data).await {
+                                error!(%err, "Failed to handle EA data");
                             }
+                        }
+                    } else if ea_inbound_rx.is_some() {
+                        info!("EA stream channel closed");
+                        ea_inbound_rx = None;
+                        active_ea = None;
+                    }
+                }
+
+                ea_out = ea_data_rx.recv() => {
+                    if let Some((session_id, priority, data)) = ea_out {
+                        if let Some(active) = active_ea.as_ref().filter(|active| active.local_session_id == session_id) {
+                            trace!(bytes = data.len(), session = session_id, stream = active.stream_id, ?priority, "TO_IPHONE: Sending EA data");
+                            if let Err(err) = active.outbound.send(ea_priority(priority), data).await {
+                                error!(%err, "Failed to send EA data");
+                            }
+                        } else {
+                            warn!(session = session_id, "No active EA stream to send data to");
                         }
                     }
-                    None => break,
                 }
-            }
 
-            ea_data = ea_inbound => {
-                if let Some(data) = ea_data {
+                ws_msg = websocket_rx.recv() => {
+                    if let Some(message) = ws_msg {
+                        info!(id = %message.id, "WebSocket message received");
+                        if let Err(err) = handle_websocket_message_new(
+                            &message,
+                            WebSocketMessageContext {
+                                app_manager: &mut app_manager,
+                                active_ea: active_ea.as_ref(),
+                                websocket_server: &websocket_server,
+                                hid_tx: &session_hid_tx,
+                                telephony_tx: &telephony_tx,
+                                call_tracker: &call_tracker,
+                                link_command_tx: &link_command_tx,
+                            },
+                        ).await {
+                            error!(%err, "Failed to handle WebSocket message");
+                        }
+                    }
+                }
+
+                hid_cmd = hid_rx.recv() => {
+                    if let Some(cmd) = hid_cmd {
+                        info!(?cmd, "Sending HID command");
+                        if let Err(err) = session_hid_tx.send(cmd).await {
+                            error!(%err, "Failed to queue HID command");
+                        }
+                    }
+                }
+
+                audio_event = audio_event_rx.recv(), if !audio_events_closed => {
+                    match audio_event {
+                        Ok(event) => {
+                            if let Some(active) = active_ea.as_ref() {
+                                send_audio_event(active.local_session_id, &active.outbound, &event).await;
+                            }
+                        }
+                        Err(broadcast::error::RecvError::Lagged(n)) => warn!(messages = n, "iAP2 audio event receiver lagged"),
+                        Err(broadcast::error::RecvError::Closed) => {
+                            debug!("Audio event channel closed for iAP2 handler");
+                            audio_events_closed = true;
+                        }
+                    }
+                }
+
+                _ = tokio::time::sleep(Duration::from_millis(500)) => {
                     if let Some(active) = active_ea.as_ref() {
-                        trace!(bytes = data.len(), session = active.local_session_id, "FROM_IPHONE: Received EA data");
-                        if let Err(err) = app_manager.handle_incoming_data(active.local_session_id, data).await {
-                            error!(%err, "Failed to handle EA data");
+                        if !app_ready_received.load(Ordering::Relaxed)
+                            && last_daemon_ready.elapsed() >= daemon_ready_interval
+                        {
+                            send_daemon_ready(active.local_session_id, Some(&active.outbound)).await;
+                            last_daemon_ready = Instant::now();
                         }
-                    }
-                } else if ea_inbound_rx.is_some() {
-                    info!("EA stream channel closed");
-                    ea_inbound_rx = None;
-                    active_ea = None;
-                }
-            }
-
-            ea_out = ea_data_rx.recv() => {
-                if let Some((session_id, priority, data)) = ea_out {
-                    if let Some(active) = active_ea.as_ref().filter(|active| active.local_session_id == session_id) {
-                        trace!(bytes = data.len(), session = session_id, stream = active.stream_id, ?priority, "TO_IPHONE: Sending EA data");
-                        if let Err(err) = active.outbound.send(ea_priority(priority), data).await {
-                            error!(%err, "Failed to send EA data");
+                        if last_heartbeat.elapsed() >= heartbeat_interval {
+                            send_heartbeat(active.local_session_id, &active.outbound).await;
+                            last_heartbeat = Instant::now();
                         }
-                    } else {
-                        warn!(session = session_id, "No active EA stream to send data to");
-                    }
-                }
-            }
-
-            ws_msg = websocket_rx.recv() => {
-                if let Some(message) = ws_msg {
-                    info!(id = %message.id, "WebSocket message received");
-                    if let Err(err) = handle_websocket_message_new(
-                        &message,
-                        WebSocketMessageContext {
-                            app_manager: &mut app_manager,
-                            active_ea: active_ea.as_ref(),
-                            websocket_server: &websocket_server,
-                            hid_tx: &session_hid_tx,
-                            telephony_tx: &telephony_tx,
-                            call_tracker: &call_tracker,
-                            link_command_tx: &link_command_tx,
-                        },
-                    ).await {
-                        error!(%err, "Failed to handle WebSocket message");
-                    }
-                }
-            }
-
-            hid_cmd = hid_rx.recv() => {
-                if let Some(cmd) = hid_cmd {
-                    info!(?cmd, "Sending HID command");
-                    if let Err(err) = session_hid_tx.send(cmd).await {
-                        error!(%err, "Failed to queue HID command");
-                    }
-                }
-            }
-
-            audio_event = audio_event_rx.recv(), if !audio_events_closed => {
-                match audio_event {
-                    Ok(event) => {
-                        if let Some(active) = active_ea.as_ref() {
-                            send_audio_event(active.local_session_id, &active.outbound, &event).await;
-                        }
-                    }
-                    Err(broadcast::error::RecvError::Lagged(n)) => warn!(messages = n, "iAP2 audio event receiver lagged"),
-                    Err(broadcast::error::RecvError::Closed) => {
-                        debug!("Audio event channel closed for iAP2 handler");
-                        audio_events_closed = true;
-                    }
-                }
-            }
-
-            _ = tokio::time::sleep(Duration::from_millis(500)) => {
-                if let Some(active) = active_ea.as_ref() {
-                    if !app_ready_received.load(Ordering::Relaxed)
-                        && last_daemon_ready.elapsed() >= daemon_ready_interval
+                    } else if !ea_session_ever_established
+                        && app_launch_attempts < APP_LAUNCH_MAX_ATTEMPTS
+                        && ea_session_waiting_since.elapsed() >= app_launch_initial_delay
+                        && last_app_launch_attempt
+                            .map(|at| at.elapsed() >= APP_LAUNCH_RETRY_INTERVAL)
+                            .unwrap_or(true)
                     {
-                        send_daemon_ready(active.local_session_id, Some(&active.outbound)).await;
-                        last_daemon_ready = Instant::now();
-                    }
-                    if last_heartbeat.elapsed() >= heartbeat_interval {
-                        send_heartbeat(active.local_session_id, &active.outbound).await;
-                        last_heartbeat = Instant::now();
-                    }
-                } else if !ea_session_ever_established
-                    && app_launch_attempts < APP_LAUNCH_MAX_ATTEMPTS
-                    && ea_session_waiting_since.elapsed() >= app_launch_initial_delay
-                    && last_app_launch_attempt
-                        .map(|at| at.elapsed() >= APP_LAUNCH_RETRY_INTERVAL)
-                        .unwrap_or(true)
-                {
-                    app_launch_attempts += 1;
-                    last_app_launch_attempt = Some(Instant::now());
-                    info!(
-                        "No EA session with {} yet, checking app launch preference for {} (attempt {}/{})",
-                        device_address,
-                        DEFAULT_APP_BUNDLE_ID,
-                        app_launch_attempts,
-                        APP_LAUNCH_MAX_ATTEMPTS
-                    );
-                    if let Err(e) = send_app_launch(&link_command_tx, DEFAULT_APP_BUNDLE_ID).await {
-                        warn!("Failed to send RequestAppLaunch: {}", e);
+                        app_launch_attempts += 1;
+                        last_app_launch_attempt = Some(Instant::now());
+                        info!(
+                            "No EA session with {} yet, checking app launch preference for {} (attempt {}/{})",
+                            device_address,
+                            DEFAULT_APP_BUNDLE_ID,
+                            app_launch_attempts,
+                            APP_LAUNCH_MAX_ATTEMPTS
+                        );
+                        if let Err(e) = send_app_launch(&link_command_tx, DEFAULT_APP_BUNDLE_ID).await {
+                            warn!("Failed to send RequestAppLaunch: {}", e);
+                        }
                     }
                 }
             }
         }
-    }
+
+        Ok::<(), NocturnedError>(())
+    };
+    let result = tokio::select! {
+        biased;
+        _ = disconnect.cancelled() => Ok(()),
+        result = connection_loop => result,
+    };
 
     broadcast_phone_call_events(&websocket_server, call_tracker.drain("connection_lost")).await;
-    let _ = link_command_tx.send(Iap2Command::Disconnect).await;
+    let _ = link_command_tx.try_send(Iap2Command::Disconnect);
     link_handle.abort();
     session_handle.abort();
+    let _ = tokio::join!(link_handle, session_handle);
     info!(%device_address, "iAP2 connection handler stopped");
-    Ok(())
+    result
 }
 
 async fn handle_session_event(
@@ -1376,6 +1397,64 @@ mod tests {
     use iap2_rs::csm::now_playing::{MediaItemAttributes, PlaybackAttributes};
 
     use super::*;
+
+    fn test_connection() -> Iap2Connection {
+        let (websocket_tx, _) = mpsc::unbounded_channel();
+        Iap2Connection {
+            device_address: "A8:AB:B5:AB:02:ED".parse().unwrap(),
+            user_initiated_disconnect: Arc::new(Mutex::new(false)),
+            disconnect: CancellationToken::new(),
+            stopped: CancellationToken::new(),
+            cleanup_complete: CancellationToken::new(),
+            websocket_tx,
+        }
+    }
+
+    #[tokio::test]
+    async fn close_waits_for_transport_shutdown_before_reporting_stopped() {
+        let connection = test_connection();
+        let disconnect = connection.disconnect.clone();
+        let stopped = connection.stopped.clone();
+        let (release_tx, release_rx) = tokio::sync::oneshot::channel();
+        let worker = tokio::spawn(async move {
+            let _stopped_guard = stopped.drop_guard();
+            disconnect.cancelled().await;
+            release_rx.await.unwrap();
+        });
+        let closing = connection.clone();
+        let close_task = tokio::spawn(async move { closing.close().await });
+        connection.disconnect.cancelled().await;
+        assert!(connection.is_running().await);
+        assert!(!close_task.is_finished());
+        release_tx.send(()).unwrap();
+        close_task.await.unwrap();
+        worker.await.unwrap();
+        assert!(!connection.is_running().await);
+        connection.run().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn aborted_connection_task_wakes_close_and_connection_monitor() {
+        let connection = test_connection();
+        let stopped = connection.stopped.clone();
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let worker = tokio::spawn(async move {
+            let _stopped_guard = stopped.drop_guard();
+            started_tx.send(()).unwrap();
+            std::future::pending::<()>().await;
+        });
+        started_rx.await.unwrap();
+        worker.abort();
+        assert!(worker.await.unwrap_err().is_cancelled());
+        tokio::time::timeout(Duration::from_secs(1), connection.close())
+            .await
+            .unwrap();
+        assert!(!connection.is_running().await);
+        tokio::time::timeout(Duration::from_secs(1), connection.run())
+            .await
+            .unwrap()
+            .unwrap();
+    }
 
     #[tokio::test]
     async fn background_preference_suppresses_foreground_csm_but_default_sends_it() -> Result<()> {

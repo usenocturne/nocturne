@@ -301,21 +301,36 @@ struct ResolvedBluezDevice {
     canonical_address: Address,
 }
 
+struct BluezDeviceCandidate {
+    object_address: Address,
+    remote_address: Option<Address>,
+    paired: bool,
+    connected: bool,
+}
+
 fn select_device_address(
     requested: Address,
-    candidates: &[(Address, Option<Address>)],
+    candidates: &[BluezDeviceCandidate],
 ) -> Option<(Address, Address)> {
+    let canonical_address = candidates
+        .iter()
+        .find(|candidate| candidate.object_address == requested)
+        .and_then(|candidate| candidate.remote_address)
+        .unwrap_or(requested);
+
     candidates
         .iter()
-        .find(|(object_address, _)| *object_address == requested)
-        .or_else(|| {
-            candidates
-                .iter()
-                .find(|(_, remote_address)| *remote_address == Some(requested))
+        .filter(|candidate| {
+            candidate.remote_address.unwrap_or(candidate.object_address) == canonical_address
         })
-        .map(|(object_address, remote_address)| {
-            (*object_address, remote_address.unwrap_or(*object_address))
+        .max_by_key(|candidate| {
+            (
+                candidate.paired,
+                candidate.connected,
+                candidate.object_address == requested,
+            )
         })
+        .map(|candidate| (candidate.object_address, canonical_address))
 }
 
 fn name_identifies_ios_device(value: Option<&str>) -> bool {
@@ -618,7 +633,13 @@ impl BluetoothDaemon {
                 continue;
             };
             let remote_address = device.remote_address().await.ok();
-            candidates.push((object_address, remote_address));
+            let (paired, connected) = tokio::join!(device.is_paired(), device.is_connected());
+            candidates.push(BluezDeviceCandidate {
+                object_address,
+                remote_address,
+                paired: paired.unwrap_or(false),
+                connected: connected.unwrap_or(false),
+            });
         }
 
         let (object_address, canonical_address) = select_device_address(requested, &candidates)?;
@@ -2234,10 +2255,12 @@ impl BluetoothDaemon {
 
             let conn_clone = connection.clone();
             let user_flag = conn_clone.user_disconnect_flag();
+            let cleanup_complete = conn_clone.cleanup_complete_signal();
             if let Some(manager) = &ancs_manager {
                 manager.attach(device, ancs_connection_id.clone()).await;
             }
             tokio::spawn(async move {
+                let _cleanup_guard = cleanup_complete.drop_guard();
                 if let Err(e) = conn_clone.run().await {
                     error!("iAP2 connection error: {}", e);
                 }
@@ -2827,14 +2850,20 @@ impl BluetoothDaemon {
     ) -> Result<()> {
         info!("Disconnecting device {}", address);
 
-        {
-            let conns = connections.lock().await;
-            if let Some(conn) = conns.iter().find(|c| c.address() == address) {
-                conn.mark_user_initiated_disconnect().await;
-            }
+        let active_connections: Vec<_> = connections
+            .lock()
+            .await
+            .iter()
+            .filter(|connection| connection.address() == address)
+            .cloned()
+            .collect();
+        for connection in &active_connections {
+            connection.mark_user_initiated_disconnect().await;
+            connection.close().await;
+            connection.wait_for_cleanup().await;
         }
 
-        let addr_str = address.to_string();
+        let owned_transport_closed = !active_connections.is_empty();
         let result = tokio::task::spawn_blocking(move || -> Result<()> {
             use dbus::blocking::stdintf::org_freedesktop_dbus::ObjectManager;
             use std::time::Duration;
@@ -2847,25 +2876,40 @@ impl BluetoothDaemon {
                 .get_managed_objects()
                 .map_err(|e| crate::error::NocturnedError::General(anyhow::anyhow!(e)))?;
 
-            let mut device_path: Option<dbus::Path<'static>> = None;
+            let mut candidates = Vec::new();
+            let mut device_paths = HashMap::new();
             for (path, ifaces) in objects {
-                if let Some(props) = ifaces.get("org.bluez.Device1") {
-                    if let Some(addr) = props
-                        .get("Address")
-                        .and_then(|v| v.0.as_str())
-                        .map(|s| s.to_string())
-                    {
-                        if addr == addr_str {
-                            device_path = Some(path);
-                            break;
-                        }
-                    }
-                }
+                let Some(props) = ifaces.get("org.bluez.Device1") else {
+                    continue;
+                };
+                let Some(object_address) = path
+                    .rsplit('/')
+                    .next()
+                    .and_then(|name| name.strip_prefix("dev_"))
+                    .and_then(|name| name.replace('_', ":").parse().ok())
+                else {
+                    continue;
+                };
+                let remote_address = props
+                    .get("Address")
+                    .and_then(|value| value.0.as_str())
+                    .and_then(|value| value.parse().ok());
+                candidates.push(BluezDeviceCandidate {
+                    object_address,
+                    remote_address,
+                    paired: props.get("Paired").and_then(|value| value.0.as_i64()) == Some(1),
+                    connected: props.get("Connected").and_then(|value| value.0.as_i64()) == Some(1),
+                });
+                device_paths.insert(object_address, path);
             }
 
-            let device_path = device_path.ok_or_else(|| {
-                crate::error::NocturnedError::General(anyhow::anyhow!("Device not found in BlueZ"))
-            })?;
+            let device_path = select_device_address(address, &candidates)
+                .and_then(|(object_address, _)| device_paths.remove(&object_address))
+                .ok_or_else(|| {
+                    crate::error::NocturnedError::General(anyhow::anyhow!(
+                        "Device not found in BlueZ"
+                    ))
+                })?;
 
             let dev_proxy = conn.with_proxy("org.bluez", device_path, Duration::from_secs(4));
             let call_res: std::result::Result<(), dbus::Error> =
@@ -2875,6 +2919,9 @@ impl BluetoothDaemon {
                 Err(e) => {
                     let msg = e.to_string();
                     if msg.contains("NotConnected") || msg.contains("not connected") {
+                        if owned_transport_closed {
+                            return Ok(());
+                        }
                         Err(crate::error::NocturnedError::General(anyhow::anyhow!(
                             "Device not connected"
                         )))
@@ -3166,13 +3213,79 @@ mod tests {
         assert!(should_route_message(&message, "spp:mac", mac));
     }
 
+    fn bluez_candidate(
+        object_address: Address,
+        remote_address: Option<Address>,
+        paired: bool,
+        connected: bool,
+    ) -> BluezDeviceCandidate {
+        BluezDeviceCandidate {
+            object_address,
+            remote_address,
+            paired,
+            connected,
+        }
+    }
+
+    #[test]
+    fn bluez_bonded_private_object_supersedes_stale_identity_object() {
+        let private = address("7E:95:20:98:9D:13");
+        let identity = address("A8:AB:B5:AB:02:ED");
+        let candidates = [
+            bluez_candidate(identity, Some(identity), false, false),
+            bluez_candidate(private, Some(identity), true, true),
+        ];
+
+        assert_eq!(
+            select_device_address(identity, &candidates),
+            Some((private, identity))
+        );
+        assert_eq!(
+            select_device_address(private, &candidates),
+            Some((private, identity))
+        );
+    }
+
+    #[test]
+    fn bluez_pairing_takes_priority_over_unpaired_connection() {
+        let private = address("7E:95:20:98:9D:13");
+        let identity = address("A8:AB:B5:AB:02:ED");
+        let candidates = [
+            bluez_candidate(identity, Some(identity), false, true),
+            bluez_candidate(private, Some(identity), true, false),
+        ];
+
+        assert_eq!(
+            select_device_address(identity, &candidates),
+            Some((private, identity))
+        );
+    }
+
+    #[test]
+    fn bluez_connected_object_breaks_ties_between_paired_objects() {
+        let private = address("7E:95:20:98:9D:13");
+        let identity = address("A8:AB:B5:AB:02:ED");
+        let candidates = [
+            bluez_candidate(identity, Some(identity), true, false),
+            bluez_candidate(private, Some(identity), true, true),
+        ];
+
+        assert_eq!(
+            select_device_address(identity, &candidates),
+            Some((private, identity))
+        );
+    }
+
     #[test]
     fn bluez_identity_address_resolves_to_live_private_object() {
         let private = address("61:B7:33:1C:77:95");
         let identity = address("A8:AB:B5:AB:02:ED");
 
         assert_eq!(
-            select_device_address(identity, &[(private, Some(identity))]),
+            select_device_address(
+                identity,
+                &[bluez_candidate(private, Some(identity), false, false)]
+            ),
             Some((private, identity))
         );
     }
@@ -3183,7 +3296,10 @@ mod tests {
         let identity = address("A8:AB:B5:AB:02:ED");
 
         assert_eq!(
-            select_device_address(private, &[(private, Some(identity))]),
+            select_device_address(
+                private,
+                &[bluez_candidate(private, Some(identity), false, false)]
+            ),
             Some((private, identity))
         );
     }
@@ -3198,8 +3314,8 @@ mod tests {
             select_device_address(
                 requested,
                 &[
-                    (unrelated_object, Some(requested)),
-                    (requested, Some(exact_identity)),
+                    bluez_candidate(unrelated_object, Some(requested), true, true),
+                    bluez_candidate(requested, Some(exact_identity), false, false),
                 ],
             ),
             Some((requested, exact_identity))
@@ -3211,7 +3327,10 @@ mod tests {
         let requested = address("A8:AB:B5:AB:02:ED");
         let object = address("D8:3A:DD:31:B0:49");
 
-        assert_eq!(select_device_address(requested, &[(object, None)]), None);
+        assert_eq!(
+            select_device_address(requested, &[bluez_candidate(object, None, false, false)]),
+            None
+        );
     }
 
     #[test]
