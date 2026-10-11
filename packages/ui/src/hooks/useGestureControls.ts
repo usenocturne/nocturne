@@ -9,6 +9,8 @@ interface GestureControlsOptions {
   onSwipeRight?: SwipeHandler;
   onSwipeUp?: SwipeHandler;
   onSwipeDown?: SwipeHandler;
+  swipeUpEnabled?: boolean;
+  swipeDownEnabled?: boolean;
   isActive?: boolean;
 }
 
@@ -18,9 +20,13 @@ export function useGestureControls({
   onSwipeRight,
   onSwipeUp,
   onSwipeDown,
+  swipeUpEnabled,
+  swipeDownEnabled,
   isActive = true,
 }: GestureControlsOptions) {
   const { settings } = useSettings();
+  const canSwipeUp = swipeUpEnabled ?? !!settings.showLyricsGestureEnabled;
+  const canSwipeDown = swipeDownEnabled ?? !!settings.showLyricsGestureEnabled;
   const touchStartRef = useRef<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const touchTargetRef = useRef<EventTarget | null>(null);
@@ -83,7 +89,7 @@ export function useGestureControls({
         if (
           Math.abs(deltaY) > Math.abs(deltaX) &&
           Math.abs(deltaY) > 20 &&
-          settings.showLyricsGestureEnabled &&
+          (deltaY > 0 ? canSwipeUp : canSwipeDown) &&
           !scrollableContainer
         ) {
           e.preventDefault();
@@ -121,14 +127,10 @@ export function useGestureControls({
         } else if (deltaX < -50 && onSwipeRightRef.current) {
           onSwipeRightRef.current();
         }
-      } else if (
-        !isHorizontalSwipe &&
-        settings.showLyricsGestureEnabled &&
-        !scrollableContainer
-      ) {
-        if (deltaY > 50 && onSwipeUpRef.current) {
+      } else if (!isHorizontalSwipe && !scrollableContainer) {
+        if (deltaY > 50 && canSwipeUp && onSwipeUpRef.current) {
           onSwipeUpRef.current();
-        } else if (deltaY < -50 && onSwipeDownRef.current) {
+        } else if (deltaY < -50 && canSwipeDown && onSwipeDownRef.current) {
           onSwipeDownRef.current();
         }
       }
@@ -150,7 +152,8 @@ export function useGestureControls({
   }, [
     contentRef,
     isActive,
-    settings.showLyricsGestureEnabled,
+    canSwipeUp,
+    canSwipeDown,
     settings.songChangeGestureEnabled,
   ]);
 }

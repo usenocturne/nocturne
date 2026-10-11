@@ -138,7 +138,7 @@ pub(crate) fn canonical_music_request(
         "spotify.me.tracks.contains" => typed::<SpotifyMeTracksContainsRequest>(params),
         "spotify.me.tracks.remove" => typed::<SpotifyMeTracksRemoveRequest>(params),
         "spotify.me.tracks.save" => typed::<SpotifyMeTracksSaveRequest>(params),
-        "spotify.player.next" => typed::<SpotifyPlayerNextRequest>(unit_params(params)),
+        "spotify.player.next" => typed::<SpotifyPlayerNextRequest>(object_params(params)),
         "spotify.player.pause" => typed::<SpotifyPlayerPauseRequest>(unit_params(params)),
         "spotify.player.play" => typed::<SpotifyPlayerPlayRequest>(params),
         "spotify.player.previous" => typed::<SpotifyPlayerPreviousRequest>(unit_params(params)),
@@ -209,6 +209,13 @@ where
     let decoded = serde_json::from_value::<T>(params)
         .map_err(|err| format!("invalid request payload: {err}"))?;
     serde_json::to_value(decoded).map_err(|err| format!("failed to encode request payload: {err}"))
+}
+
+fn object_params(params: serde_json::Value) -> serde_json::Value {
+    match params {
+        serde_json::Value::Null => serde_json::Value::Object(serde_json::Map::new()),
+        value => value,
+    }
 }
 
 fn unit_params(params: serde_json::Value) -> serde_json::Value {
@@ -1993,6 +2000,34 @@ mod tests {
                 .expect("legacy method should be recognized");
 
             assert_eq!(method, canonical);
+        }
+    }
+
+    #[test]
+    fn canonical_music_request_forwards_queue_skip_target() {
+        let (_, params) = canonical_music_request(
+            "spotify.player.next",
+            serde_json::json!({
+                "uid": "6a96ae9c0f3b46f8",
+                "contextUri": "spotify:playlist:abc",
+            }),
+        )
+        .expect("queue skip should decode")
+        .expect("queue skip should be recognized");
+
+        assert_eq!(params["uid"], "6a96ae9c0f3b46f8");
+        assert_eq!(params["context_uri"], "spotify:playlist:abc");
+    }
+
+    #[test]
+    fn canonical_music_request_keeps_plain_skip_without_target() {
+        for params in [serde_json::Value::Null, serde_json::json!({})] {
+            let (_, params) = canonical_music_request("spotify.player.next", params)
+                .expect("plain skip should decode")
+                .expect("plain skip should be recognized");
+
+            assert!(params["uid"].is_null());
+            assert!(params["context_uri"].is_null());
         }
     }
 

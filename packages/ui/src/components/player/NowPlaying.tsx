@@ -34,6 +34,8 @@ import VolumeOverlay from "./VolumeOverlay";
 import PlaybackTimeLabel from "./PlaybackTimeLabel";
 import { getProgressSnapshot } from "../../hooks/usePlaybackProgress";
 import ProgressBar from "./ProgressBar";
+import QueueView from "./QueueView";
+import { getNowPlayingSwipeActions, QUEUE_SHEET_EXIT_MS } from "./queue";
 import ScrollingText from "../common/ScrollingText";
 import SpotifyImage from "../common/SpotifyImage";
 import { normalizeSpotifyContext } from "../../utils/spotifyContext";
@@ -46,6 +48,7 @@ import {
   ForwardIcon,
   MenuIcon,
   LyricsIcon,
+  QueueIcon,
   DJIcon,
   DeviceSwitcherIcon,
   VolumeLoudIcon,
@@ -127,6 +130,10 @@ function NowPlaying({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
   const [showDeviceSwitcher, setShowDeviceSwitcher] = useState(false);
+  const [queuePhase, setQueuePhase] = useState<"closed" | "open" | "closing">(
+    "closed",
+  );
+  const isQueueOpen = queuePhase !== "closed";
 
   const volumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const volumeHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,7 +150,6 @@ function NowPlaying({
 
   const isDJPlaylist =
     currentPlayback?.context?.uri === "spotify:playlist:37i9dQZF1EYkqdzj48dyYq";
-  const isPodcast = currentPlayback?.item?.type === "episode";
   const isDJTrack = currentPlayback?.item?.album?.images?.[0]?.url?.includes(
     "/images/radio-cover/dj.webp",
   );
@@ -163,6 +169,7 @@ function NowPlaying({
   );
   const isSmartphoneDevice =
     currentPlayback?.device?.type?.toUpperCase() === "SMARTPHONE";
+  const canShowQueue = Boolean(currentPlayback?.item) && !isPhoneMedia;
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
   const { elapsedTimeEnabled } = useElapsedTime();
@@ -686,6 +693,8 @@ function NowPlaying({
 
   const handleWheel = useCallback(
     (e: WheelEvent) => {
+      if (isQueueOpen) return;
+
       if (
         settings.knobSeeksPlaybackEnabled &&
         !isPhoneMedia &&
@@ -740,6 +749,7 @@ function NowPlaying({
       }
     },
     [
+      isQueueOpen,
       isProgressScrubbing,
       adjustVolumeByDelta,
       isPhoneMedia,
@@ -773,9 +783,9 @@ function NowPlaying({
 
   useNavigation({
     containerRef,
-    enableEscapeKey: true,
+    enableEscapeKey: !isQueueOpen,
     enableWheelNavigation: false,
-    enableKeyboardNavigation: true,
+    enableKeyboardNavigation: !isQueueOpen,
     onEscape: onClose,
     onEnterKey: handlePlayPause,
     activeSection: "nowPlaying",
@@ -853,17 +863,57 @@ function NowPlaying({
     handleSkipPrevious();
   }, [handleSkipPrevious]);
 
-  const handleSwipeUp = useCallback(() => {
-    if (!isPodcast && !showLyrics) {
-      toggleLyrics();
+  const queueUnderlayRef = useRef<HTMLDivElement>(null);
+  const queueCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openQueue = useCallback(() => {
+    if (queueCloseTimerRef.current) {
+      clearTimeout(queueCloseTimerRef.current);
+      queueCloseTimerRef.current = null;
     }
-  }, [isPodcast, showLyrics, toggleLyrics]);
+    setQueuePhase("open");
+  }, []);
+
+  const closeQueue = useCallback(() => {
+    if (queueCloseTimerRef.current) return;
+    setQueuePhase((phase) => (phase === "open" ? "closing" : phase));
+    queueCloseTimerRef.current = setTimeout(() => {
+      queueCloseTimerRef.current = null;
+      setQueuePhase("closed");
+    }, QUEUE_SHEET_EXIT_MS);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (queueCloseTimerRef.current) clearTimeout(queueCloseTimerRef.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (canShowQueue) return;
+    if (queueCloseTimerRef.current) {
+      clearTimeout(queueCloseTimerRef.current);
+      queueCloseTimerRef.current = null;
+    }
+    setQueuePhase("closed");
+  }, [canShowQueue]);
+
+  const swipeActions = getNowPlayingSwipeActions({
+    showLyrics,
+    canShowLyrics: canShowLyricsForItem(currentPlayback?.item),
+    canShowQueue,
+    lyricsGestureEnabled: !!settings.showLyricsGestureEnabled,
+    queueGestureEnabled: settings.queueGestureEnabled !== false,
+  });
+
+  const handleSwipeUp = useCallback(() => {
+    if (swipeActions.up) toggleLyrics();
+  }, [swipeActions.up, toggleLyrics]);
 
   const handleSwipeDown = useCallback(() => {
-    if (!isPodcast && showLyrics) {
-      toggleLyrics();
-    }
-  }, [isPodcast, showLyrics, toggleLyrics]);
+    if (swipeActions.down === "openQueue") openQueue();
+  }, [swipeActions.down, openQueue]);
 
   useGestureControls({
     contentRef: contentContainerRef,
@@ -871,7 +921,9 @@ function NowPlaying({
     onSwipeRight: handleSwipeRight,
     onSwipeUp: handleSwipeUp,
     onSwipeDown: handleSwipeDown,
-    isActive: true,
+    swipeUpEnabled: swipeActions.up !== null,
+    swipeDownEnabled: swipeActions.down !== null,
+    isActive: !isQueueOpen,
   });
 
   const likeIdentity = `${likeTarget.source}:${
@@ -1179,443 +1231,474 @@ function NowPlaying({
       className="flex flex-col h-screen w-full z-10 fadeIn-animation"
       ref={containerRef}
     >
-      <div ref={contentContainerRef}>
-        <div className="w-full flex flex-row items-center px-12 pt-10">
-          <div
-            className={`min-w-[280px] h-[280px] mr-8 ${albumId && !isLocalMedia && !isPhoneMedia ? "cursor-pointer" : ""}`}
-            onClick={handleAlbumClick}
-          >
-            <SpotifyImage
-              images={albumImages}
-              preferredSizeIndex={1}
-              alt={
-                currentPlayback?.item?.type === "episode"
-                  ? "Podcast Cover"
-                  : "Album Art"
-              }
-              width={280}
-              height={280}
-              priority={100}
-              extractColors={true}
-              onColorsExtracted={handleColorsExtracted}
-              fallbackSrc="/images/not-playing.webp"
-              useDirectUrl={
-                albumImages?.[0]?.url?.includes("/images/not-playing.webp") ||
-                albumImages?.[0]?.url?.startsWith("blob:")
-              }
-              skipFetchWhenNowPlaying={true}
-              isReceivingNowPlayingUpdates={isReceivingNowPlayingUpdates}
-              disableSpotifyFetch={isPhoneMedia || isSpotifyPending}
-              className="w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
-            />
-          </div>
-
-          {!showLyrics ? (
-            <div className="flex-1 text-center md:text-left">
-              <div className="max-w-[400px]">
-                <ScrollingText
-                  text={trackName}
-                  className="text-[40px] font-[580] text-white tracking-tight"
-                  maxWidth="400px"
-                  pauseDuration={1000}
-                  pixelsPerSecond={40}
-                  multilineWhenDisabled={true}
-                  multilineMaxHeight={200}
-                  multilineMinFontSize={24}
-                />
-              </div>
-              <h4
-                className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${settings.trackNameScrollingEnabled ? "" : "mt-2"} ${firstArtistId && !isLocalMedia && !isPhoneMedia ? "cursor-pointer" : ""}`}
-                onClick={handleArtistClick}
-              >
-                {artistName}
-              </h4>
+      <div ref={queueUnderlayRef} aria-hidden={queuePhase === "open"}>
+        <div ref={contentContainerRef}>
+          <div className="w-full flex flex-row items-center px-12 pt-10">
+            <div
+              className={`min-w-[280px] h-[280px] mr-8 ${albumId && !isLocalMedia && !isPhoneMedia ? "cursor-pointer" : ""}`}
+              onClick={handleAlbumClick}
+            >
+              <SpotifyImage
+                images={albumImages}
+                preferredSizeIndex={1}
+                alt={
+                  currentPlayback?.item?.type === "episode"
+                    ? "Podcast Cover"
+                    : "Album Art"
+                }
+                width={280}
+                height={280}
+                priority={100}
+                extractColors={true}
+                onColorsExtracted={handleColorsExtracted}
+                fallbackSrc="/images/not-playing.webp"
+                useDirectUrl={
+                  albumImages?.[0]?.url?.includes("/images/not-playing.webp") ||
+                  albumImages?.[0]?.url?.startsWith("blob:")
+                }
+                skipFetchWhenNowPlaying={true}
+                isReceivingNowPlayingUpdates={isReceivingNowPlayingUpdates}
+                disableSpotifyFetch={isPhoneMedia || isSpotifyPending}
+                className="w-[280px] h-[280px] object-cover rounded-[12px] drop-shadow-[0_8px_5px_rgba(0,0,0,0.25)]"
+              />
             </div>
-          ) : (
-            <div className="flex-1 flex flex-col h-[280px]">
-              <div
-                className="flex-1 text-left overflow-y-auto h-[280px] w-[380px] transform-gpu will-change-scroll"
-                ref={lyricsContainerRef}
-                style={{
-                  scrollBehavior: "smooth",
-                  transform: "translateZ(0)",
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
-                  perspective: "1000px",
-                }}
-              >
-                {lyricsLoading ? (
-                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
-                    Loading lyrics...
-                  </p>
-                ) : lyricsError ? (
-                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
-                    Lyrics not available
-                  </p>
-                ) : lyrics.length > 0 ? (
-                  lyrics.map((lyric, index) => (
-                    <p
-                      key={index}
-                      className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto ${
-                        isTimeSynced
-                          ? index === currentLyricIndex
-                            ? "text-white current-lyric-animation"
-                            : index === currentLyricIndex - 1 ||
-                                index === currentLyricIndex + 1
-                              ? "text-white/40"
-                              : "text-white/20"
-                          : "text-white/80"
-                      } ${canSeekFromLyrics(isTimeSynced, isPhoneMedia) ? "cursor-pointer" : ""} select-none`}
-                      style={{
-                        transform: "translateZ(0)",
-                        backfaceVisibility: "hidden",
-                        WebkitBackfaceVisibility: "hidden",
-                        WebkitTapHighlightColor: "transparent",
-                        outline: "none",
-                        boxShadow: "none",
-                      }}
-                      onClick={
-                        canSeekFromLyrics(isTimeSynced, isPhoneMedia)
-                          ? () =>
-                              handleLyricClick(
-                                parseInt(lyric.startTimeMs) / 1000,
-                                index,
-                              )
-                          : undefined
-                      }
-                      role={
-                        canSeekFromLyrics(isTimeSynced, isPhoneMedia)
-                          ? "button"
-                          : undefined
-                      }
-                      tabIndex={
-                        canSeekFromLyrics(isTimeSynced, isPhoneMedia)
-                          ? 0
-                          : undefined
-                      }
-                      onKeyDown={
-                        canSeekFromLyrics(isTimeSynced, isPhoneMedia)
-                          ? (e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
+
+            {!showLyrics ? (
+              <div className="flex-1 text-center md:text-left">
+                <div className="max-w-[400px]">
+                  <ScrollingText
+                    text={trackName}
+                    className="text-[40px] font-[580] text-white tracking-tight"
+                    maxWidth="400px"
+                    pauseDuration={1000}
+                    pixelsPerSecond={40}
+                    multilineWhenDisabled={true}
+                    multilineMaxHeight={200}
+                    multilineMinFontSize={24}
+                  />
+                </div>
+                <h4
+                  className={`text-[36px] font-[560] text-white/60 truncate tracking-tight max-w-[380px] ${settings.trackNameScrollingEnabled ? "" : "mt-2"} ${firstArtistId && !isLocalMedia && !isPhoneMedia ? "cursor-pointer" : ""}`}
+                  onClick={handleArtistClick}
+                >
+                  {artistName}
+                </h4>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col h-[280px]">
+                <div
+                  className="flex-1 text-left overflow-y-auto h-[280px] w-[380px] transform-gpu will-change-scroll"
+                  ref={lyricsContainerRef}
+                  style={{
+                    scrollBehavior: "smooth",
+                    transform: "translateZ(0)",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                    perspective: "1000px",
+                  }}
+                >
+                  {lyricsLoading ? (
+                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
+                      Loading lyrics...
+                    </p>
+                  ) : lyricsError ? (
+                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
+                      Lyrics not available
+                    </p>
+                  ) : lyrics.length > 0 ? (
+                    lyrics.map((lyric, index) => (
+                      <p
+                        key={index}
+                        className={`text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto ${
+                          isTimeSynced
+                            ? index === currentLyricIndex
+                              ? "text-white current-lyric-animation"
+                              : index === currentLyricIndex - 1 ||
+                                  index === currentLyricIndex + 1
+                                ? "text-white/40"
+                                : "text-white/20"
+                            : "text-white/80"
+                        } ${canSeekFromLyrics(isTimeSynced, isPhoneMedia) ? "cursor-pointer" : ""} select-none`}
+                        style={{
+                          transform: "translateZ(0)",
+                          backfaceVisibility: "hidden",
+                          WebkitBackfaceVisibility: "hidden",
+                          WebkitTapHighlightColor: "transparent",
+                          outline: "none",
+                          boxShadow: "none",
+                        }}
+                        onClick={
+                          canSeekFromLyrics(isTimeSynced, isPhoneMedia)
+                            ? () =>
                                 handleLyricClick(
                                   parseInt(lyric.startTimeMs) / 1000,
                                   index,
-                                );
+                                )
+                            : undefined
+                        }
+                        role={
+                          canSeekFromLyrics(isTimeSynced, isPhoneMedia)
+                            ? "button"
+                            : undefined
+                        }
+                        tabIndex={
+                          canSeekFromLyrics(isTimeSynced, isPhoneMedia)
+                            ? 0
+                            : undefined
+                        }
+                        onKeyDown={
+                          canSeekFromLyrics(isTimeSynced, isPhoneMedia)
+                            ? (e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  handleLyricClick(
+                                    parseInt(lyric.startTimeMs) / 1000,
+                                    index,
+                                  );
+                                }
                               }
-                            }
-                          : undefined
-                      }
-                    >
-                      {lyric.words}
+                            : undefined
+                        }
+                      >
+                        {lyric.words}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
+                      Lyrics not available
                     </p>
-                  ))
-                ) : (
-                  <p className="text-white text-[40px] font-[580] tracking-tight transition-colors duration-300 transform-gpu will-change-auto">
-                    Lyrics not available
-                  </p>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
 
-      <div
-        className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}
-        style={{
-          visibility: showProgress ? "visible" : "hidden",
-        }}
-        aria-hidden={!showProgress}
-      >
-        <ProgressBar
-          progress={
-            !hasKnownTimeline
-              ? null
-              : currentPlayback?.item && !isStartingPlayback
-                ? 1
-                : 0
-          }
-          durationMs={duration}
-          onSeek={handleSeek}
-          onScrubbingChange={handleScrubbingChange}
-          updateProgress={updateProgress}
-          disabled={isPhoneMedia || isSpotifyPending}
-          scrubOnWheel={
-            settings.knobSeeksPlaybackEnabled &&
-            !isPhoneMedia &&
-            !isSpotifyPending
-          }
-        />
-      </div>
-
-      {elapsedTimeEnabled && (
         <div
-          className={`w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden transition-all duration-200 ease-in-out ${
-            isProgressScrubbing
-              ? "translate-y-24 opacity-0"
-              : "translate-y-0 opacity-100"
-          }`}
+          className={`px-12 ${elapsedTimeEnabled ? "pt-1 pb-1" : "pt-4 pb-7"}`}
           style={{
             visibility: showProgress ? "visible" : "hidden",
           }}
           aria-hidden={!showProgress}
         >
-          <div className="flex justify-between">
-            {currentPlayback && currentPlayback.item ? (
-              <>
-                <span className="text-white/60 text-[20px]">
-                  <PlaybackTimeLabel
-                    isSpotifyPending={!hasKnownTimeline}
-                    isElapsed={true}
-                  />
-                </span>
-                <span className="text-white/60 text-[20px]">
-                  {hasKnownTimeline
-                    ? convertTimeToLength(
-                        currentPlayback.item.duration_ms ?? 0,
-                        true,
-                      )
-                    : "--:--"}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-white/60 text-[20px]">--:--</span>
-                <span className="text-white/60 text-[20px]">--:--</span>
-              </>
-            )}
-          </div>
+          <ProgressBar
+            progress={
+              !hasKnownTimeline
+                ? null
+                : currentPlayback?.item && !isStartingPlayback
+                  ? 1
+                  : 0
+            }
+            durationMs={duration}
+            onSeek={handleSeek}
+            onScrubbingChange={handleScrubbingChange}
+            updateProgress={updateProgress}
+            disabled={isPhoneMedia || isSpotifyPending}
+            scrubOnWheel={
+              !isQueueOpen &&
+              settings.knobSeeksPlaybackEnabled &&
+              !isPhoneMedia &&
+              !isSpotifyPending
+            }
+          />
         </div>
-      )}
 
-      <div
-        className={`flex justify-between items-center w-full px-12 mt-1 transition-all duration-200 ease-in-out ${
-          isProgressScrubbing
-            ? "translate-y-24 opacity-0"
-            : "translate-y-0 opacity-100"
-        }`}
-      >
-        {leadingControl === "speed" ? (
-          <Menu as="div" className="relative inline-block text-left">
-            {({ open }) => (
-              <>
-                <MenuButton
-                  className="focus:outline-none outline-none border-none bg-transparent appearance-none"
-                  onClick={() => {
-                    if (!open) {
-                      fetchCurrentPlaybackSpeed();
-                    }
-                  }}
-                  style={{
-                    WebkitAppearance: "none",
-                    MozAppearance: "none",
-                    boxShadow: "none",
-                    WebkitTapHighlightColor: "transparent",
-                  }}
-                >
-                  <SpeedIcon className="w-14 h-14 fill-white/60" />
-                </MenuButton>
-
-                <MenuItems
-                  transition
-                  className="absolute left-0 bottom-full z-10 mb-2 w-[16rem] origin-bottom-left divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
-                >
-                  <div className="py-1">
-                    {[0.5, 0.8, 1, 1.2, 1.5, 2].map((speed) => (
-                      <MenuItem key={speed}>
-                        <div
-                          onClick={() => handleSpeedChange(speed)}
-                          className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
-                        >
-                          <span className="text-[24px]">{speed}x</span>
-                          {playbackSpeed === speed && (
-                            <div className="w-2 h-2 bg-white rounded-full"></div>
-                          )}
-                        </div>
-                      </MenuItem>
-                    ))}
-                  </div>
-                </MenuItems>
-              </>
-            )}
-          </Menu>
-        ) : leadingControl === "spacer" ? (
-          <div className="w-14 h-14"></div>
-        ) : (
+        {elapsedTimeEnabled && (
           <div
-            className="flex-shrink-0 focus:outline-none outline-none border-none bg-transparent appearance-none"
-            onClick={handleToggleLike}
+            className={`w-full px-12 pb-1.5 pt-1.5 -mb-1.5 overflow-hidden transition-all duration-200 ease-in-out ${
+              isProgressScrubbing
+                ? "translate-y-24 opacity-0"
+                : "translate-y-0 opacity-100"
+            }`}
             style={{
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-              WebkitTapHighlightColor: "transparent",
+              visibility: showProgress ? "visible" : "hidden",
             }}
+            aria-hidden={!showProgress}
           >
-            {isLiked ? (
-              <HeartIconFilled className="w-14 h-14" />
-            ) : (
-              <HeartIcon className="w-14 h-14" />
-            )}
+            <div className="flex justify-between">
+              {currentPlayback && currentPlayback.item ? (
+                <>
+                  <span className="text-white/60 text-[20px]">
+                    <PlaybackTimeLabel
+                      isSpotifyPending={!hasKnownTimeline}
+                      isElapsed={true}
+                    />
+                  </span>
+                  <span className="text-white/60 text-[20px]">
+                    {hasKnownTimeline
+                      ? convertTimeToLength(
+                          currentPlayback.item.duration_ms ?? 0,
+                          true,
+                        )
+                      : "--:--"}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-white/60 text-[20px]">--:--</span>
+                  <span className="text-white/60 text-[20px]">--:--</span>
+                </>
+              )}
+            </div>
           </div>
         )}
 
-        <div className="flex justify-center items-center flex-1">
-          <div
-            onClick={handleSkipPrevious}
-            className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
-            style={{
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <BackIcon className="w-14 h-14" />
-          </div>
-          <div
-            onClick={handlePlayPause}
-            className="transition-opacity duration-100 mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
-            style={{
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            {PlayPauseIcon}
-          </div>
-          <div
-            onClick={handleSkipNext}
-            className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
-            style={{
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <ForwardIcon className="w-14 h-14" />
-          </div>
-        </div>
+        <div
+          className={`flex justify-between items-center w-full px-12 mt-1 transition-all duration-200 ease-in-out ${
+            isProgressScrubbing
+              ? "translate-y-24 opacity-0"
+              : "translate-y-0 opacity-100"
+          }`}
+        >
+          {leadingControl === "speed" ? (
+            <Menu as="div" className="relative inline-block text-left">
+              {({ open }) => (
+                <>
+                  <MenuButton
+                    className="focus:outline-none outline-none border-none bg-transparent appearance-none"
+                    onClick={() => {
+                      if (!open) {
+                        fetchCurrentPlaybackSpeed();
+                      }
+                    }}
+                    style={{
+                      WebkitAppearance: "none",
+                      MozAppearance: "none",
+                      boxShadow: "none",
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                  >
+                    <SpeedIcon className="w-14 h-14 fill-white/60" />
+                  </MenuButton>
 
-        <div className="flex items-center">
-          {isDJPlaylist && (
+                  <MenuItems
+                    transition
+                    className="absolute left-0 bottom-full z-10 mb-2 w-[16rem] origin-bottom-left divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+                  >
+                    <div className="py-1">
+                      {[0.5, 0.8, 1, 1.2, 1.5, 2].map((speed) => (
+                        <MenuItem key={speed}>
+                          <div
+                            onClick={() => handleSpeedChange(speed)}
+                            className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                          >
+                            <span className="text-[24px]">{speed}x</span>
+                            {playbackSpeed === speed && (
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            )}
+                          </div>
+                        </MenuItem>
+                      ))}
+                    </div>
+                  </MenuItems>
+                </>
+              )}
+            </Menu>
+          ) : leadingControl === "spacer" ? (
+            <div className="w-14 h-14"></div>
+          ) : (
             <div
-              onClick={() => sendDJSignal(currentPlayback?.device?.id)}
-              className="focus:outline-none outline-none border-none bg-transparent appearance-none"
+              className="flex-shrink-0 focus:outline-none outline-none border-none bg-transparent appearance-none"
+              onClick={handleToggleLike}
               style={{
                 WebkitAppearance: "none",
                 MozAppearance: "none",
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              <DJIcon className="w-14 h-14 fill-white/60 mr-4 mb-1" />
+              {isLiked ? (
+                <HeartIconFilled className="w-14 h-14" />
+              ) : (
+                <HeartIcon className="w-14 h-14" />
+              )}
             </div>
           )}
-          <Menu as="div" className="relative inline-block text-left">
-            <MenuButton
-              className="focus:outline-none outline-none border-none bg-transparent appearance-none"
+
+          <div className="flex justify-center items-center flex-1">
+            <div
+              onClick={handleSkipPrevious}
+              className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
               style={{
                 WebkitAppearance: "none",
                 MozAppearance: "none",
-                boxShadow: "none",
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              <MenuIcon className="w-14 h-14 fill-white/60" />
-            </MenuButton>
-
-            <MenuItems
-              transition
-              className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+              <BackIcon className="w-14 h-14" />
+            </div>
+            <div
+              onClick={handlePlayPause}
+              className="transition-opacity duration-100 mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
+              style={{
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
             >
-              <div className="py-1">
-                {canShowLyricsForItem(currentPlayback?.item) && (
-                  <MenuItem disabled={!currentPlayback}>
-                    <div
-                      onClick={toggleLyrics}
-                      className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/50"} font-[560] tracking-tight focus:outline-none outline-none`}
-                    >
-                      <span className="text-[28px]">
-                        {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
-                      </span>
-                      <LyricsIcon
-                        aria-hidden="true"
-                        className={`h-8 w-8 ${
-                          showLyrics ? "text-white" : "text-white/60"
-                        }`}
-                      />
-                    </div>
-                  </MenuItem>
-                )}
-                {!isDJPlaylist && (
-                  <>
-                    <MenuItem>
+              {PlayPauseIcon}
+            </div>
+            <div
+              onClick={handleSkipNext}
+              className="mx-6 focus:outline-none outline-none border-none bg-transparent appearance-none"
+              style={{
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <ForwardIcon className="w-14 h-14" />
+            </div>
+          </div>
+
+          <div className="flex items-center">
+            {isDJPlaylist && (
+              <div
+                onClick={() => sendDJSignal(currentPlayback?.device?.id)}
+                className="focus:outline-none outline-none border-none bg-transparent appearance-none"
+                style={{
+                  WebkitAppearance: "none",
+                  MozAppearance: "none",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <DJIcon className="w-14 h-14 fill-white/60 mr-4 mb-1" />
+              </div>
+            )}
+            <Menu as="div" className="relative inline-block text-left">
+              <MenuButton
+                className="focus:outline-none outline-none border-none bg-transparent appearance-none"
+                style={{
+                  WebkitAppearance: "none",
+                  MozAppearance: "none",
+                  boxShadow: "none",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <MenuIcon className="w-14 h-14 fill-white/60" />
+              </MenuButton>
+
+              <MenuItems
+                transition
+                className="absolute right-0 bottom-full z-10 mb-2 w-[22rem] origin-bottom-right divide-y divide-slate-100/25 bg-[#161616] rounded-[13px] shadow-xl transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+              >
+                <div className="py-1">
+                  {canShowLyricsForItem(currentPlayback?.item) && (
+                    <MenuItem disabled={!currentPlayback}>
                       <div
-                        onClick={handleToggleShuffle}
-                        className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                        onClick={toggleLyrics}
+                        className={`group flex items-center justify-between px-4 py-[16px] text-sm ${currentPlayback ? "text-white" : "text-white/50"} font-[560] tracking-tight focus:outline-none outline-none`}
                       >
                         <span className="text-[28px]">
-                          {shuffleEnabled
-                            ? "Disable Shuffle"
-                            : "Enable Shuffle"}
+                          {showLyrics ? "Hide Lyrics" : "Show Lyrics"}
                         </span>
-                        <ShuffleIcon
+                        <LyricsIcon
                           aria-hidden="true"
                           className={`h-8 w-8 ${
-                            shuffleEnabled ? "text-white" : "text-white/60"
+                            showLyrics ? "text-white" : "text-white/60"
                           }`}
                         />
                       </div>
                     </MenuItem>
+                  )}
+                  {canShowQueue && (
                     <MenuItem>
                       <div
-                        onClick={handleToggleRepeat}
+                        onClick={openQueue}
                         className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
                       >
-                        <span className="text-[28px]">
-                          {repeatMode === "off"
-                            ? "Enable Repeat"
-                            : repeatMode === "context"
-                              ? "Enable Repeat One"
-                              : "Disable Repeat"}
-                        </span>
-                        {repeatMode === "track" ? (
-                          <RepeatOneIcon
-                            aria-hidden="true"
-                            className="h-8 w-8 text-white"
-                          />
-                        ) : (
-                          <RepeatIcon
-                            aria-hidden="true"
-                            className={`h-8 w-8 ${
-                              repeatMode === "context"
-                                ? "text-white"
-                                : "text-white/60"
-                            }`}
-                          />
-                        )}
+                        <span className="text-[28px]">Show Queue</span>
+                        <QueueIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
                       </div>
                     </MenuItem>
-                  </>
-                )}
-                {!isLocalMedia && !isPhoneMedia && (
-                  <MenuItem>
-                    <div
-                      onClick={() => setShowDeviceSwitcher(true)}
-                      className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
-                    >
-                      <span className="text-[28px]">Switch Device</span>
-                      <DeviceSwitcherIcon
-                        aria-hidden="true"
-                        className="h-8 w-8 text-white/60"
-                      />
-                    </div>
-                  </MenuItem>
-                )}
-              </div>
-            </MenuItems>
-          </Menu>
+                  )}
+                  {!isDJPlaylist && (
+                    <>
+                      <MenuItem>
+                        <div
+                          onClick={handleToggleShuffle}
+                          className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                        >
+                          <span className="text-[28px]">
+                            {shuffleEnabled
+                              ? "Disable Shuffle"
+                              : "Enable Shuffle"}
+                          </span>
+                          <ShuffleIcon
+                            aria-hidden="true"
+                            className={`h-8 w-8 ${
+                              shuffleEnabled ? "text-white" : "text-white/60"
+                            }`}
+                          />
+                        </div>
+                      </MenuItem>
+                      <MenuItem>
+                        <div
+                          onClick={handleToggleRepeat}
+                          className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                        >
+                          <span className="text-[28px]">
+                            {repeatMode === "off"
+                              ? "Enable Repeat"
+                              : repeatMode === "context"
+                                ? "Enable Repeat One"
+                                : "Disable Repeat"}
+                          </span>
+                          {repeatMode === "track" ? (
+                            <RepeatOneIcon
+                              aria-hidden="true"
+                              className="h-8 w-8 text-white"
+                            />
+                          ) : (
+                            <RepeatIcon
+                              aria-hidden="true"
+                              className={`h-8 w-8 ${
+                                repeatMode === "context"
+                                  ? "text-white"
+                                  : "text-white/60"
+                              }`}
+                            />
+                          )}
+                        </div>
+                      </MenuItem>
+                    </>
+                  )}
+                  {!isLocalMedia && !isPhoneMedia && (
+                    <MenuItem>
+                      <div
+                        onClick={() => setShowDeviceSwitcher(true)}
+                        className="group flex items-center justify-between px-4 py-[16px] text-sm text-white font-[560] tracking-tight focus:outline-none outline-none"
+                      >
+                        <span className="text-[28px]">Switch Device</span>
+                        <DeviceSwitcherIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-white/60"
+                        />
+                      </div>
+                    </MenuItem>
+                  )}
+                </div>
+              </MenuItems>
+            </Menu>
+          </div>
         </div>
       </div>
+      {isQueueOpen && (
+        <QueueView
+          isClosing={queuePhase === "closing"}
+          underlayRef={queueUnderlayRef}
+          currentTrackUri={currentPlayback?.item?.uri ?? null}
+          contextUri={currentPlayback?.context?.uri ?? null}
+          contextName={bindingFields.contentName}
+          trackName={trackName ?? ""}
+          artistName={artistName}
+          albumImages={albumImages}
+          isPlaying={currentPlayback?.is_playing === true}
+          onClose={closeQueue}
+        />
+      )}
       <VolumeOverlay
         visible={volumeOverlayState.visible}
         animation={volumeOverlayState.animation}

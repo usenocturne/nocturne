@@ -271,6 +271,7 @@ export interface SettingsState {
   trackNameScrollingEnabled?: boolean;
   showLyricsGestureEnabled?: boolean;
   songChangeGestureEnabled?: boolean;
+  queueGestureEnabled?: boolean;
   lyricsMenuEnabled?: boolean;
   elapsedTimeEnabled?: boolean;
   idleLockEnabled?: boolean;

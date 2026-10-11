@@ -103,6 +103,8 @@ export default function LockView({
     },
     onSwipeUp: undefined,
     onSwipeDown: undefined,
+    swipeUpEnabled: false,
+    swipeDownEnabled: false,
     isActive: true,
   });
 

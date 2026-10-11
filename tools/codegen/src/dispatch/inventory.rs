@@ -1546,9 +1546,26 @@ pub const METHOD_INVENTORY: &[Method] = &[
         Family::Spotify,
         "spotify.player.next",
         &[],
-        EMPTY_PAYLOAD,
+        payload(
+            &[
+                f(
+                    "uid",
+                    FieldKind::String,
+                    false,
+                    "Queue entry uid to skip to. Omit for a plain skip.",
+                ),
+                f(
+                    "context_uri",
+                    FieldKind::String,
+                    false,
+                    "Playback context that owns the queue entry uid.",
+                ),
+            ],
+            r#"{"uid":"6a96ae9c0f3b46f8","context_uri":"spotify:playlist:abc"}"#,
+            "Skip request.",
+        ),
         OPAQUE_JSON_PAYLOAD,
-        "Skip to next Spotify item.",
+        "Skip to the next Spotify item, or to a specific queue entry.",
     ),
     method(
         "spotify.player.previous",

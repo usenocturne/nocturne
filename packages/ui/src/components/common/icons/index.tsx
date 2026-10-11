@@ -26,6 +26,7 @@ export { default as RepeatOneIcon } from "./RepeatOneIcon";
 export { default as ShuffleIcon } from "./ShuffleIcon";
 export { default as ShuffleActiveIcon } from "./ShuffleActiveIcon";
 export { default as LyricsIcon } from "./LyricsIcon";
+export { default as QueueIcon } from "./QueueIcon";
 export { default as CarIcon } from "./CarIcon";
 export { default as CastIcon } from "./CastIcon";
 export { default as GamepadIcon } from "./GamepadIcon";

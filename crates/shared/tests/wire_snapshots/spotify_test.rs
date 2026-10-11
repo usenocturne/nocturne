@@ -175,7 +175,7 @@ fn spotify_wire_snapshots_round_trip() {
         "spotify.me.tracks.save",
         "response",
     );
-    assert_empty_payload::<SpotifyPlayerNextRequest>(&snapshot, "spotify.player.next", "request");
+    assert_round_trip::<SpotifyPlayerNextRequest>(&snapshot, "spotify.player.next", "request");
     assert_empty_payload::<SpotifyPlayerNextResponse>(&snapshot, "spotify.player.next", "response");
     assert_empty_payload::<SpotifyPlayerPauseRequest>(&snapshot, "spotify.player.pause", "request");
     assert_empty_payload::<SpotifyPlayerPauseResponse>(

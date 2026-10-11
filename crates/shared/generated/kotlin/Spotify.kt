@@ -307,7 +307,10 @@ enum class SpotifyMethod {
 }
 
 @Serializable
-object SpotifyPlayerNextRequest
+data class SpotifyPlayerNextRequest(
+  @SerialName("uid") val uid: String? = null,
+  @SerialName("context_uri") val contextUri: String? = null,
+)
 
 @Serializable
 object SpotifyPlayerNextResponse

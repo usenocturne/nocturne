@@ -273,9 +273,42 @@ body {
   animation: queue-swipe-error 240ms ease-out;
 }
 
+@keyframes queue-sheet-enter {
+  0% {
+    transform: translate3d(0, -100%, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes queue-sheet-exit {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(0, -100%, 0);
+  }
+}
+
+.queue-sheet-enter {
+  animation: queue-sheet-enter 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.queue-sheet-exit {
+  animation: queue-sheet-exit 260ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .notification-banner-enter {
+  .notification-banner-enter,
+  .queue-sheet-enter {
     animation: none;
+  }
+
+  .queue-sheet-exit {
+    animation-duration: 1ms;
   }
 
   .queue-swipe-action,

@@ -260,7 +260,10 @@ pub enum SpotifyMethod {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct SpotifyPlayerNextRequest;
+pub struct SpotifyPlayerNextRequest {
+    pub uid: Option<String>,
+    pub context_uri: Option<String>,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SpotifyPlayerNextResponse;

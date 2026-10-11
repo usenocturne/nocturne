@@ -532,7 +532,21 @@ public enum SpotifyMethod: Codable, Sendable {
 }
 
 public struct SpotifyPlayerNextRequest: Codable, Sendable {
-  public init() {}
+  public let uid: String?
+  public let contextUri: String?
+
+  public init(
+    uid: String?,
+    contextUri: String?
+  ) {
+    self.uid = uid
+    self.contextUri = contextUri
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case uid = "uid"
+    case contextUri = "context_uri"
+  }
 }
 
 public struct SpotifyPlayerNextResponse: Codable, Sendable {

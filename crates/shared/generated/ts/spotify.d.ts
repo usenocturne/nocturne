@@ -1364,10 +1364,18 @@ export interface SpotifyPlayerNextMethodResponseMessage {
 
 /**
  * Request payload for `spotify.player.next`.
- * No payload.
+ * Skip request.
  * Inventory: `METHOD_INVENTORY` entry `spotify.player.next` request.
  */
 export interface SpotifyPlayerNextRequest {
+  /**
+   * Queue entry uid to skip to. Omit for a plain skip. Inventory field `uid` emits as `uid`.
+   */
+  uid?: string;
+  /**
+   * Playback context that owns the queue entry uid. Inventory field `context_uri` emits as `contextUri`.
+   */
+  contextUri?: string;
 }
 
 /**

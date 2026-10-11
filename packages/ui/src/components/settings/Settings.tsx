@@ -260,6 +260,15 @@ const settingsStructure: Record<string, SettingsSection> = {
         defaultValue: true,
       },
       {
+        id: "queue-gesture",
+        title: "Swipe to Show Queue",
+        type: "toggle",
+        description:
+          "Enable swiping down on Now Playing to show the upcoming queue.",
+        storageKey: "queueGestureEnabled",
+        defaultValue: true,
+      },
+      {
         id: "elapsed-time",
         title: "Show Time Elapsed",
         type: "toggle",

@@ -82,6 +82,7 @@ export function SettingsProvider({ children }: ChildrenProps) {
       "songChangeGestureEnabled",
       true,
     ),
+    queueGestureEnabled: getDefaultSettingValue("queueGestureEnabled", true),
     lyricsMenuEnabled: getDefaultSettingValue("lyricsMenuEnabled", true),
     elapsedTimeEnabled: getDefaultSettingValue("elapsedTimeEnabled", false),
     idleLockEnabled: getDefaultSettingValue("idleLockEnabled", false),
