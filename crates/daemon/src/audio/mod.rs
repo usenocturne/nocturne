@@ -359,7 +359,9 @@ fn write_pcm_sample(pcm_out: &mut BytesMut, sample: f32) {
 }
 
 pub mod capture;
+pub(crate) mod direction;
 pub(crate) mod dsp;
+mod endpoint;
 mod noise_suppression;
 pub mod wakeword;
 pub mod wind;

@@ -41,6 +41,7 @@ md5 = { workspace = true }
 opus = { workspace = true }
 nnnoiseless = { workspace = true }
 sonora-ns = "0.2.0"
+realfft = "3.5.0"
 tract-ndarray = { workspace = true }
 tract-onnx = { workspace = true }
 axum = { workspace = true }

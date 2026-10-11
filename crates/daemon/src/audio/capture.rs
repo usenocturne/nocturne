@@ -19,11 +19,6 @@ const PCM_FRAME_SAMPLES: usize = 960;
 const _: () = assert!(PCM_FRAME_SAMPLES.is_multiple_of(super::noise_suppression::FRAME_SAMPLES));
 const OPUS_OUTPUT_BYTES: usize = 4096;
 const EVENT_CHANNEL_CAPACITY: usize = 64;
-const SILENCE_THRESHOLD_RMS: f32 = 200.0;
-const VAD_ACTIVITY_MIN: f32 = 0.15;
-const VAD_CONFIDENT_SPEECH: f32 = 0.75;
-const SILENCE_DURATION_MS: u64 = 1500;
-const SILENCE_GRACE_PERIOD_MS: u64 = 1500;
 const PREROLL_MARGIN: Duration = Duration::from_millis(300);
 const RAW_BYTES_PER_MS: usize = 48 * 16;
 const PCM_TRACE_MAX_BYTES: usize = 30 * 16_000 * 2;
@@ -399,8 +394,7 @@ async fn run_recording_task_with(
         let mut converter = CapturePcmConverter::new();
         let mut seq = 0u64;
         let mut started_sent = false;
-        let mut first_frame_at = None;
-        let mut silence_start = None;
+        let mut endpointer = super::endpoint::Endpointer::default();
         let mut mic_level_counter = 0u64;
 
         loop {
@@ -431,10 +425,6 @@ async fn run_recording_task_with(
                                 started_sent = true;
                             }
 
-                            let now = Instant::now();
-                            let first_frame = *first_frame_at.get_or_insert(now);
-                            let within_grace_period = now.duration_since(first_frame)
-                                < Duration::from_millis(SILENCE_GRACE_PERIOD_MS);
                             let rms = rms_energy(&frame.endpoint_pcm);
                             let vad_peak = frame.vad_peak;
 
@@ -451,23 +441,8 @@ async fn run_recording_task_with(
                                 }
                             }
 
-                            let voice_active = match vad_peak {
-                                Some(vad) => {
-                                    (rms >= SILENCE_THRESHOLD_RMS && vad >= VAD_ACTIVITY_MIN)
-                                        || vad >= VAD_CONFIDENT_SPEECH
-                                }
-                                None => rms >= SILENCE_THRESHOLD_RMS,
-                            };
-
-                            if within_grace_period || voice_active {
-                                silence_start = None;
-                            } else {
-                                let silence_since = silence_start.get_or_insert(now);
-                                if now.duration_since(*silence_since)
-                                    >= Duration::from_millis(SILENCE_DURATION_MS)
-                                {
-                                    return Ok("silence".to_string());
-                                }
+                            if let Some(stop) = endpointer.observe(rms, vad_peak, frame.direction) {
+                                return Ok(stop.reason().to_string());
                             }
 
                             let opus_data = encode(&mut encoder, &frame.pcm)?;
@@ -578,14 +553,17 @@ struct CapturePcmFrame {
     pcm: Vec<u8>,
     endpoint_pcm: Vec<u8>,
     vad_peak: Option<f32>,
+    direction: Option<super::direction::FrameDirection>,
 }
 
 struct CapturePcmConverter {
     output: super::ARecordPcmConverter,
     endpoint: super::ARecordPcmConverter,
+    direction: super::direction::DirectionEstimator,
     output_pcm: BytesMut,
     endpoint_pcm: BytesMut,
     suppressor: super::noise_suppression::NoiseSuppressor16k,
+    frames: u64,
 }
 
 impl CapturePcmConverter {
@@ -593,15 +571,18 @@ impl CapturePcmConverter {
         Self {
             output: super::ARecordPcmConverter::new(),
             endpoint: super::ARecordPcmConverter::new().with_denoise(),
+            direction: super::direction::DirectionEstimator::new(),
             output_pcm: BytesMut::with_capacity(PCM_FRAME_BYTES * 2),
             endpoint_pcm: BytesMut::with_capacity(PCM_FRAME_BYTES * 2),
             suppressor: super::noise_suppression::NoiseSuppressor16k::new(),
+            frames: 0,
         }
     }
 
     fn push_raw(&mut self, raw: &[u8]) {
         self.output.push_raw(raw, &mut self.output_pcm);
         self.endpoint.push_raw(raw, &mut self.endpoint_pcm);
+        self.direction.push_raw(raw);
     }
 
     fn next_frame(&mut self) -> anyhow::Result<Option<CapturePcmFrame>> {
@@ -622,10 +603,13 @@ impl CapturePcmConverter {
                 bytes.copy_from_slice(&(sample as i16).to_le_bytes());
             }
         }
+        let direction = self.direction.take(self.frames);
+        self.frames += 1;
         Ok(Some(CapturePcmFrame {
             pcm,
             endpoint_pcm: self.endpoint_pcm.split_to(PCM_FRAME_BYTES).to_vec(),
             vad_peak: self.endpoint.take_vad_peak(),
+            direction,
         }))
     }
 }
@@ -814,6 +798,7 @@ mod tests {
                         pcm: pcm.split_to(PCM_FRAME_BYTES).to_vec(),
                         endpoint_pcm: Vec::new(),
                         vad_peak: previous.take_vad_peak(),
+                        direction: None,
                     })
                 };
                 let encoded = frame.as_ref().map(|frame| {
@@ -916,6 +901,103 @@ mod tests {
             let after = selected.source.next_chunk().await.unwrap();
             assert_eq!(after, before);
             assert!(after.iter().all(|byte| *byte == expected));
+        }
+    }
+
+    #[test]
+    #[ignore = "requires NOCTURNE_ENDPOINT_EVAL_DIR of 48 kHz four-channel S32_LE recordings"]
+    fn replay_recordings_through_capture_endpointing() {
+        use super::super::endpoint::Endpointer;
+        use std::fmt::Write as _;
+
+        type Evidence = (
+            f32,
+            Option<f32>,
+            Option<super::super::direction::FrameDirection>,
+        );
+
+        fn legacy_stop(evidence: &[Evidence]) -> Option<usize> {
+            let mut silent = 0;
+            for (index, (rms, vad, _)) in evidence.iter().enumerate() {
+                let active = match vad {
+                    Some(vad) => (*rms >= 200.0 && *vad >= 0.15) || *vad >= 0.75,
+                    None => *rms >= 200.0,
+                };
+                if index < 25 || active {
+                    silent = 0;
+                } else {
+                    silent += 1;
+                    if silent > 25 {
+                        return Some(index);
+                    }
+                }
+            }
+            None
+        }
+
+        let directory = PathBuf::from(
+            std::env::var("NOCTURNE_ENDPOINT_EVAL_DIR").expect("set NOCTURNE_ENDPOINT_EVAL_DIR"),
+        );
+        let mut inputs: Vec<_> = std::fs::read_dir(&directory)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().is_some_and(|ext| ext == "s32le"))
+            .collect();
+        inputs.sort();
+        assert!(
+            !inputs.is_empty(),
+            "no .s32le inputs in {}",
+            directory.display()
+        );
+        for input in inputs {
+            let raw = std::fs::read(&input).unwrap();
+            assert_eq!(raw.len() % RAW_TRACE_FRAME_BYTES, 0);
+            let mut converter = CapturePcmConverter::new();
+            let mut evidence = Vec::new();
+            for chunk in raw.chunks(RAW_BYTES_PER_MS * 20) {
+                converter.push_raw(chunk);
+                while let Some(frame) = converter.next_frame().unwrap() {
+                    evidence.push((
+                        rms_energy(&frame.endpoint_pcm),
+                        frame.vad_peak,
+                        frame.direction,
+                    ));
+                }
+            }
+            let mut endpointer = Endpointer::default();
+            let stop = evidence
+                .iter()
+                .enumerate()
+                .find_map(|(index, (rms, vad, direction))| {
+                    endpointer
+                        .observe(*rms, *vad, *direction)
+                        .map(|stop| (index, stop.reason()))
+                });
+            let mut csv = String::from("frame,rms,vad,peak,lag0,lag1,lag2,lag3,lag4,lag5\n");
+            for (index, (rms, vad, direction)) in evidence.iter().enumerate() {
+                write!(csv, "{index},{rms},{}", vad.unwrap_or(-1.0)).unwrap();
+                match direction {
+                    Some(direction) => {
+                        write!(csv, ",{}", direction.peak).unwrap();
+                        for lag in direction.lags {
+                            write!(csv, ",{lag}").unwrap();
+                        }
+                        csv.push('\n');
+                    }
+                    None => csv.push_str(",,,,,,,\n"),
+                }
+            }
+            std::fs::write(input.with_extension("evidence.csv"), csv).unwrap();
+            let name = input.file_stem().unwrap().to_string_lossy();
+            let ms =
+                |frame: Option<usize>| frame.map_or("none".to_string(), |f| (f * 60).to_string());
+            println!(
+                "endpoint_eval file={name} frames={} new_stop_ms={} new_reason={} legacy_stop_ms={}",
+                evidence.len(),
+                ms(stop.map(|(frame, _)| frame)),
+                stop.map_or("none", |(_, reason)| reason),
+                ms(legacy_stop(&evidence)),
+            );
         }
     }
 
