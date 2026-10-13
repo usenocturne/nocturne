@@ -38,6 +38,17 @@ const joinArtistNames = (artists: unknown): string | null => {
   return names.length > 0 ? names.join(", ") : null;
 };
 
+const SPOTIFY_IMAGE_CDN = "https://i.scdn.co/image/";
+
+export const normalizeQueueImageUrl = (url: string): string => {
+  const stripped = url.replace(/^https?:\/\//, "");
+  if (stripped.startsWith("spotify:image:")) {
+    return SPOTIFY_IMAGE_CDN + stripped.slice("spotify:image:".length);
+  }
+  if (stripped.startsWith("i.scdn.co/")) return `https://${stripped}`;
+  return url;
+};
+
 const firstImageUrl = (images: unknown): string | null => {
   if (!Array.isArray(images)) return null;
   for (const image of images) {
@@ -45,7 +56,7 @@ const firstImageUrl = (images: unknown): string | null => {
       image && typeof image === "object"
         ? nonEmptyString((image as { url?: unknown }).url)
         : null;
-    if (url) return url;
+    if (url) return normalizeQueueImageUrl(url);
   }
   return null;
 };
@@ -63,6 +74,7 @@ export const normalizeQueueResponse = (response: unknown): QueueEntry[] => {
     const uri = nonEmptyString(item.uri);
     if (!uri) return [];
     const uid = nonEmptyString(item.uid);
+    const imageUrl = nonEmptyString(item.image_url);
 
     return [
       {
@@ -76,8 +88,9 @@ export const normalizeQueueResponse = (response: unknown): QueueEntry[] => {
           nonEmptyString(item.album_name) ??
           nonEmptyString(item.album?.name) ??
           "",
-        imageUrl:
-          nonEmptyString(item.image_url) ?? firstImageUrl(item.album?.images),
+        imageUrl: imageUrl
+          ? normalizeQueueImageUrl(imageUrl)
+          : firstImageUrl(item.album?.images),
         explicit: item.explicit === true,
       },
     ];

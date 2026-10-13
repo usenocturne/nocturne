@@ -56,6 +56,27 @@ describe("Now Playing queue", () => {
     expect(withArtists.imageUrl).toBe("https://img/b");
   });
 
+  test("resolves Spotify image URIs to CDN URLs", () => {
+    const entries = normalizeQueueResponse({
+      queue: [
+        { uri: "spotify:track:a", image_url: "spotify:image:ab67" },
+        { uri: "spotify:track:b", image_url: "https://spotify:image:cd89" },
+        { uri: "spotify:track:c", image_url: "i.scdn.co/image/ef01" },
+        {
+          uri: "spotify:track:d",
+          album: { images: [{ url: "spotify:image:2345" }] },
+        },
+      ],
+    });
+
+    expect(entries.map((entry) => entry.imageUrl)).toEqual([
+      "https://i.scdn.co/image/ab67",
+      "https://i.scdn.co/image/cd89",
+      "https://i.scdn.co/image/ef01",
+      "https://i.scdn.co/image/2345",
+    ]);
+  });
+
   test("drops malformed entries and keeps keys unique without uids", () => {
     const entries = normalizeQueueResponse({
       queue: [
