@@ -53,6 +53,13 @@ impl ImageCache {
         let cache_path = self.get_cache_path(url);
 
         match fs::read_to_string(&cache_path).await {
+            Ok(base64_data) if base64_data.is_empty() => {
+                warn!("Discarding empty cached image for {}", url);
+                if let Err(e) = fs::remove_file(&cache_path).await {
+                    warn!("Failed to remove empty cached image for {}: {}", url, e);
+                }
+                None
+            }
             Ok(base64_data) => {
                 debug!("Cache hit for URL: {}", url);
                 Some(base64_data)
@@ -69,9 +76,18 @@ impl ImageCache {
     }
 
     pub async fn put(&self, url: &str, data: String) -> Result<()> {
-        let cache_path = self.get_cache_path(url);
+        if data.is_empty() {
+            warn!("Refusing to cache empty image for {}", url);
+            return Ok(());
+        }
 
-        fs::write(&cache_path, &data).await?;
+        let cache_path = self.get_cache_path(url);
+        let mut partial_path = cache_path.clone().into_os_string();
+        partial_path.push(".partial");
+
+        // Write then rename so an interrupted write never leaves a truncated entry.
+        fs::write(&partial_path, &data).await?;
+        fs::rename(&partial_path, &cache_path).await?;
 
         debug!("Cached image for URL: {} at {:?}", url, cache_path);
         Ok(())
@@ -114,5 +130,24 @@ mod tests {
         fs::remove_file(root.path().join("artwork")).await.unwrap();
         fs::create_dir(root.path().join("artwork")).await.unwrap();
         assert!(cache.get(url).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn empty_artwork_is_never_served_or_stored() {
+        let root = tempfile::tempdir().unwrap();
+        let cache = ImageCache::with_dir(root.path().to_path_buf());
+        let url = "https://i.scdn.co/image/artwork";
+        let path = root.path().join("artwork");
+
+        fs::write(&path, "").await.unwrap();
+        assert!(cache.get(url).await.is_none());
+        assert!(!path.exists());
+
+        cache.put(url, String::new()).await.unwrap();
+        assert!(!path.exists());
+
+        cache.put(url, "artwork".into()).await.unwrap();
+        assert_eq!(cache.get(url).await.as_deref(), Some("artwork"));
+        assert!(!root.path().join("artwork.partial").exists());
     }
 }

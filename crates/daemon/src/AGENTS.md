@@ -21,7 +21,7 @@ src/
 ├── hardware/
 │   ├── mod.rs              # Hardware re-exports
 │   ├── brightness.rs       # Display brightness + ambient light sensor
-│   └── image_cache.rs      # Disk-backed artwork cache; async reads preserve existing Spotify locale keys
+│   └── image_cache.rs      # Disk-backed artwork cache; async reads preserve existing Spotify locale keys, treat empty entries as misses and delete them; writes are atomic and skip empty data
 ├── audio/
 │   ├── mod.rs              # Audio/wake word re-exports, ARecordPcmConverter (4-mic DSP front-end)
 │   ├── dsp.rs              # Per-channel 100Hz HPF, wind-aware mic mixer, RNNoise denoiser, 165-tap FIR 48k→16k decimator
