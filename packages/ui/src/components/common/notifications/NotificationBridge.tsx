@@ -112,7 +112,7 @@ const isAuthenticated = (value: unknown): boolean => {
 
 const AUTO_DISMISS_ON_SPOTIFY_AUTH_IDS = new Set(["spotify.auth.reconnecting"]);
 const MIRRORED_NOTIFICATION_DURATION_MS = 8000;
-const MAX_VISIBLE_MIRRORED_NOTIFICATIONS = 2;
+const MAX_VISIBLE_MIRRORED_NOTIFICATIONS = 1;
 
 const iconForCategory = (category: string): NotificationIcon => {
   if (category.startsWith("ios.") || category.startsWith("android.")) {

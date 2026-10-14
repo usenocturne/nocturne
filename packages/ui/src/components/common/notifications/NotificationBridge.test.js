@@ -10,10 +10,8 @@ import {
 } from "./NotificationBridge";
 import NotificationBanner from "./NotificationBanner";
 import {
-  hasMultipleNotificationDescriptionLines,
   notificationDescriptionClassName,
-  shouldEmphasizeNotificationFirstLine,
-  visibleNotificationsForExpandedId,
+  visibleNotificationForExpandedId,
 } from "./notificationLayout";
 import {
   NOTIFICATION_APP_ICON_CATALOG,
@@ -286,23 +284,18 @@ describe("notification app icon catalog", () => {
       }),
     );
     expect(markup).toContain('src="/images/notification-apps/messages.jpg"');
-    expect(markup).toContain("h-16 w-16 rounded-[16px] object-cover");
+    expect(markup).toContain("h-[72px] w-[72px] rounded-[17px] object-cover");
     expect(markup).toContain("notification-banner-enter");
-    expect(markup).toContain("min-h-[120px]");
-    expect(markup).toContain("max-h-[160px]");
-    expect(markup).toContain("rounded-[24px]");
-    expect(markup).toContain("bg-[#121218]");
-    expect(markup).not.toContain("bg-[#121218]/95");
-    expect(markup).toContain("gap-[18px]");
-    expect(markup).toContain("truncate text-[25px] font-bold leading-[30px]");
+    expect(markup).toContain("max-h-[200px]");
+    expect(markup).toContain("rounded-[30px]");
+    expect(markup).toContain("bg-[#1c1c1e]");
+    expect(markup).toContain("truncate text-[30px] font-semibold leading-[36px]");
     expect(markup).toContain("tracking-tight");
-    expect(markup).not.toContain("tracking-[-0.025em]");
-    expect(markup).not.toContain("space-x-3");
     expect(markup).toContain("whitespace-pre-wrap break-words line-clamp-2");
     expect(markup).not.toContain("opacity-80 truncate");
     expect(markup).not.toContain(">Messages<");
     expect(markup).toContain('aria-label="Dismiss notification"');
-    expect(markup).toContain("h-[52px] w-[52px]");
+    expect(markup).toContain("h-14 w-14");
     expect(markup.match(/<button/g)).toHaveLength(1);
     expect(markup).not.toContain("aria-expanded");
   });
@@ -324,88 +317,52 @@ describe("notification app icon catalog", () => {
   });
 
   test("keeps descriptions tight to notification titles", () => {
-    const collapsedClassName = notificationDescriptionClassName(false);
-    expect(collapsedClassName).toContain("-mt-px");
-    expect(collapsedClassName).not.toContain("mt-0");
-    expect(collapsedClassName).not.toContain("mt-1");
-    expect(collapsedClassName).toContain("font-medium");
-    expect(collapsedClassName).not.toContain("font-normal");
-    const expandedClassName = notificationDescriptionClassName(true);
-    expect(expandedClassName).toContain("-mt-px");
-    expect(expandedClassName).not.toContain("mt-0");
-    expect(expandedClassName).not.toContain("mt-1");
+    for (const expanded of [false, true]) {
+      const className = notificationDescriptionClassName(expanded);
+      expect(className).toContain("text-[26px] font-medium leading-[32px]");
+      expect(className).not.toMatch(/(^|\s)-?mt-/);
+    }
   });
 
-  test("adds first-line emphasis when requested", () => {
-    expect(notificationDescriptionClassName(false, true)).toContain(
-      "first-line:font-bold",
-    );
-    expect(notificationDescriptionClassName(false, false)).not.toContain(
-      "first-line:font-bold",
-    );
-    const expandedClassName = notificationDescriptionClassName(true, true);
-    expect(expandedClassName).toContain("max-h-[81px]");
-    expect(expandedClassName).toContain("overflow-y-auto");
-    expect(expandedClassName).toContain("first-line:font-bold");
-    expect(expandedClassName).toContain("tracking-tight");
-    expect(expandedClassName).not.toContain("tracking-[-0.01em]");
-  });
-
-  test("requests first-line emphasis only for registered multiline bodies", () => {
-    expect(
-      shouldEmphasizeNotificationFirstLine(
-        "/images/notification-apps/messages.jpg",
-        54,
-      ),
-    ).toBe(true);
-    expect(
-      shouldEmphasizeNotificationFirstLine(
-        "/images/notification-apps/messages.jpg",
-        27,
-      ),
-    ).toBe(false);
-    expect(shouldEmphasizeNotificationFirstLine(null, 54)).toBe(false);
-  });
-
-  test("detects bodies taller than one rendered line", () => {
-    expect(hasMultipleNotificationDescriptionLines(27)).toBe(false);
-    expect(hasMultipleNotificationDescriptionLines(28)).toBe(false);
-    expect(hasMultipleNotificationDescriptionLines(29)).toBe(true);
-    expect(hasMultipleNotificationDescriptionLines(54)).toBe(true);
+  test("never emphasizes the first body line", () => {
+    for (const expanded of [false, true]) {
+      for (const showsAppName of [false, true]) {
+        expect(
+          notificationDescriptionClassName(expanded, showsAppName),
+        ).not.toContain("first-line:");
+      }
+    }
   });
 
   test("keeps expanded notification text in a bounded scroll viewport", () => {
     const className = notificationDescriptionClassName(true);
-    const classNameWithAppName = notificationDescriptionClassName(
-      true,
-      false,
-      true,
-    );
+    const classNameWithAppName = notificationDescriptionClassName(true, true);
     expect(className).toContain("whitespace-pre-wrap break-words");
-    expect(className).toContain("max-h-[81px]");
+    expect(className).toContain("max-h-[96px]");
     expect(className).toContain("overflow-y-auto");
     expect(className).toContain("overscroll-contain");
     expect(className).toContain("scrollbar-hide");
     expect(className).not.toContain("line-clamp");
-    expect(classNameWithAppName).toContain("max-h-[54px]");
-    expect(classNameWithAppName).not.toContain("max-h-[81px]");
+    expect(classNameWithAppName).toContain("max-h-[64px]");
+    expect(classNameWithAppName).not.toContain("max-h-[96px]");
   });
 
-  test("temporarily hides sibling notifications while one is expanded", () => {
+  test("shows only the newest notification unless one is expanded", () => {
     const notifications = [
       { id: "one", title: "One", description: "First" },
       { id: "two", title: "Two", description: "Second" },
       { id: "three", title: "Three", description: "Third" },
     ];
-    expect(visibleNotificationsForExpandedId(notifications, null)).toEqual(
-      notifications,
+    expect(visibleNotificationForExpandedId(notifications, null)).toBe(
+      notifications[2],
     );
-    expect(visibleNotificationsForExpandedId(notifications, "two")).toEqual([
+    expect(visibleNotificationForExpandedId(notifications, "two")).toBe(
       notifications[1],
-    ]);
-    expect(visibleNotificationsForExpandedId(notifications, "removed")).toEqual(
-      notifications,
     );
+    expect(visibleNotificationForExpandedId(notifications, "removed")).toBe(
+      notifications[2],
+    );
+    expect(visibleNotificationForExpandedId([], null)).toBeNull();
   });
 });
 
@@ -599,12 +556,17 @@ describe("notification bridge lifecycle", () => {
         }),
       );
     }
-    expect(harness.removed).toEqual(["internal-1", "internal-2"]);
-    expect(harness.timers.size).toBe(2);
-
-    harness.timers.get(3).callback();
     expect(harness.removed).toEqual(["internal-1", "internal-2", "internal-3"]);
     expect(harness.timers.size).toBe(1);
+
+    harness.timers.get(4).callback();
+    expect(harness.removed).toEqual([
+      "internal-1",
+      "internal-2",
+      "internal-3",
+      "internal-4",
+    ]);
+    expect(harness.timers.size).toBe(0);
   });
 
   test("manual dismissal forgets external state without double-removing", () => {

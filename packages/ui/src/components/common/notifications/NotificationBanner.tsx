@@ -2,10 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { XIcon } from "../icons";
 import type { AppNotification } from "../../../types";
-import {
-  notificationDescriptionClassName,
-  shouldEmphasizeNotificationFirstLine,
-} from "./notificationLayout";
+import { notificationDescriptionClassName } from "./notificationLayout";
 
 interface NotificationBannerProps {
   notification: AppNotification;
@@ -21,7 +18,6 @@ const NotificationBanner = ({
   const { icon, iconSrc, appName, title, description, action } = notification;
   const [expanded, setExpanded] = useState(false);
   const [canExpand, setCanExpand] = useState(false);
-  const [descriptionScrollHeight, setDescriptionScrollHeight] = useState(0);
   const [failedIconSrc, setFailedIconSrc] = useState<string | null>(null);
   const descriptionRef = useRef<HTMLDivElement | null>(null);
   const resolvedIconSrc = iconSrc && iconSrc !== failedIconSrc ? iconSrc : null;
@@ -38,22 +34,19 @@ const NotificationBanner = ({
     const el = descriptionRef.current;
     if (!el) {
       setCanExpand(false);
-      setDescriptionScrollHeight(0);
       return;
     }
-    setDescriptionScrollHeight(el.scrollHeight);
     if (!expanded) {
       const isTruncated =
         el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
       setCanExpand(isTruncated);
     }
-  }, [description, descriptionScrollHeight, expanded]);
+  }, [description, expanded]);
 
   useEffect(() => {
     const onResize = () => {
       const el = descriptionRef.current;
       if (!el) return;
-      setDescriptionScrollHeight(el.scrollHeight);
       if (!expanded) {
         const isTruncated =
           el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
@@ -68,7 +61,7 @@ const NotificationBanner = ({
     <>
       {(iconSrc || icon) && (
         <div
-          className={`flex h-16 w-16 flex-shrink-0 items-center justify-center ${expanded ? "self-start" : "self-center"}`}
+          className={`flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center ${expanded ? "self-start" : "self-center"}`}
         >
           {resolvedIconSrc ? (
             <img
@@ -76,39 +69,32 @@ const NotificationBanner = ({
               alt=""
               aria-hidden="true"
               draggable={false}
-              className="h-16 w-16 rounded-[16px] object-cover shadow-[0_10px_24px_rgba(0,0,0,0.32)] ring-1 ring-[#383842]"
+              className="h-[72px] w-[72px] rounded-[17px] object-cover"
               onError={() => setFailedIconSrc(resolvedIconSrc)}
             />
           ) : typeof icon === "string" ? (
-            <div className="flex h-16 w-16 items-center justify-center rounded-[16px] border border-[#3a3a45] bg-[#282832] text-[30px] text-[#d8d8dc]">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[17px] bg-[#3a3a3c] text-[34px] text-white">
               {icon}
             </div>
           ) : icon ? (
-            <div className="flex h-16 w-16 items-center justify-center rounded-[16px] border border-[#3a3a45] bg-[#282832] text-[#d8d8dc]">
-              {React.createElement(icon, { className: "h-[30px] w-[30px]" })}
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[17px] bg-[#3a3a3c] text-white">
+              {React.createElement(icon, { className: "h-9 w-9" })}
             </div>
           ) : null}
         </div>
       )}
       <div className="min-h-0 min-w-0 flex-1">
         {showsAppName && (
-          <div className="mb-0.5 truncate text-[14px] font-[580] uppercase leading-[18px] tracking-tight text-[#8b8b94]">
+          <div className="truncate text-[18px] font-semibold uppercase leading-[22px] tracking-wide text-white/50">
             {appName}
           </div>
         )}
-        <div className="truncate text-[25px] font-bold leading-[30px] tracking-tight">
+        <div className="truncate text-[30px] font-semibold leading-[36px] tracking-tight">
           {title}
         </div>
         {description && (
           <div
-            className={notificationDescriptionClassName(
-              expanded,
-              shouldEmphasizeNotificationFirstLine(
-                iconSrc,
-                descriptionScrollHeight,
-              ),
-              showsAppName,
-            )}
+            className={notificationDescriptionClassName(expanded, showsAppName)}
             ref={descriptionRef}
           >
             {description}
@@ -120,19 +106,19 @@ const NotificationBanner = ({
 
   return (
     <div
-      className={`notification-banner-enter relative flex min-h-[120px] max-h-[160px] w-full gap-[18px] overflow-hidden rounded-[24px] border border-[#33333d] bg-[#121218] px-5 py-[18px] text-white shadow-[0_18px_50px_rgba(0,0,0,0.58)] ${expanded ? "items-start" : "items-center"}`}
+      className={`notification-banner-enter relative flex max-h-[200px] w-full gap-4 overflow-hidden rounded-[30px] bg-[#1c1c1e] px-5 py-4 text-white shadow-[0_16px_48px_rgba(0,0,0,0.55)] ring-1 ring-inset ring-white/[0.08] ${expanded ? "items-start" : "items-center"}`}
     >
       {isInteractive ? (
         <button
           type="button"
-          className={`flex min-h-0 min-w-0 flex-1 gap-[18px] border-0 bg-transparent p-0 text-left text-white outline-none focus-visible:ring-2 focus-visible:ring-white ${expanded ? "items-start" : "items-center"}`}
+          className={`flex min-h-0 min-w-0 flex-1 gap-5 border-0 bg-transparent p-0 text-left text-white outline-none focus-visible:ring-2 focus-visible:ring-white ${expanded ? "items-start" : "items-center"}`}
           aria-expanded={expanded}
           onClick={toggleExpanded}
         >
           {notificationContent}
         </button>
       ) : (
-        <div className="flex min-w-0 flex-1 items-center gap-[18px]">
+        <div className="flex min-w-0 flex-1 items-center gap-5">
           {notificationContent}
         </div>
       )}
@@ -144,7 +130,7 @@ const NotificationBanner = ({
             action.onPress();
             onDismiss();
           }}
-          className="min-h-[52px] flex-shrink-0 rounded-full border border-[#454550] bg-[#2c2c36] px-6 text-[18px] font-[580] tracking-tight text-white transition duration-200 active:scale-[0.97] active:bg-[#3a3a46] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="h-14 flex-shrink-0 self-center rounded-full bg-white/[0.14] px-6 text-[22px] font-semibold tracking-tight text-white transition duration-200 active:scale-[0.97] active:bg-white/[0.22] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           {action.label}
         </button>
@@ -156,9 +142,9 @@ const NotificationBanner = ({
           e.stopPropagation();
           onDismiss();
         }}
-        className="-mr-1 flex h-[52px] w-[52px] flex-shrink-0 items-center justify-center rounded-full border border-[#393943] bg-[#262630] p-0 text-[#a6a6ae] transition duration-200 active:scale-[0.94] active:bg-[#34343e] active:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        className="flex h-14 w-14 flex-shrink-0 items-center justify-center self-center rounded-full bg-white/[0.1] p-0 text-white/70 transition duration-200 active:scale-[0.94] active:bg-white/[0.2] active:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
       >
-        <XIcon className="h-6 w-6" />
+        <XIcon className="h-7 w-7" />
       </button>
     </div>
   );

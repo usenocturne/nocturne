@@ -174,8 +174,15 @@ function DeferredVoiceOverlay() {
 
 function DeferredNotificationsContainer() {
   const { notifications } = useNotifications();
+  const [hasShown, setHasShown] = useState(false);
 
-  if (notifications.length === 0) return null;
+  useEffect(() => {
+    if (notifications.length > 0) {
+      setHasShown(true);
+    }
+  }, [notifications.length]);
+
+  if (notifications.length === 0 && !hasShown) return null;
 
   return (
     <React.Suspense fallback={null}>

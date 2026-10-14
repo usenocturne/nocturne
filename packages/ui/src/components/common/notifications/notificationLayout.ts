@@ -1,35 +1,23 @@
 import type { AppNotification } from "../../../types";
 
-export const NOTIFICATION_DESCRIPTION_LINE_HEIGHT_PX = 27;
-
-export const hasMultipleNotificationDescriptionLines = (scrollHeight: number) =>
-  scrollHeight > NOTIFICATION_DESCRIPTION_LINE_HEIGHT_PX + 1;
-
-export const shouldEmphasizeNotificationFirstLine = (
-  iconSrc: string | null | undefined,
-  scrollHeight: number,
-) => Boolean(iconSrc && hasMultipleNotificationDescriptionLines(scrollHeight));
-
 export const notificationDescriptionClassName = (
   expanded: boolean,
-  emphasizeFirstLine = false,
   showsAppName = false,
 ) =>
-  `${
+  `text-[26px] font-medium leading-[32px] tracking-tight text-white/70 whitespace-pre-wrap break-words ${
     expanded
-      ? `-mt-px text-[20px] font-medium leading-[27px] tracking-tight text-[#b8b8c0] whitespace-pre-wrap break-words ${
-          showsAppName ? "max-h-[54px]" : "max-h-[81px]"
+      ? `${
+          showsAppName ? "max-h-[64px]" : "max-h-[96px]"
         } overflow-y-auto overscroll-contain scrollbar-hide`
-      : "-mt-px text-[20px] font-medium leading-[27px] tracking-tight text-[#b8b8c0] whitespace-pre-wrap break-words line-clamp-2"
-  }${emphasizeFirstLine ? " first-line:font-bold" : ""}`;
+      : "line-clamp-2"
+  }`;
 
-export const visibleNotificationsForExpandedId = (
+export const visibleNotificationForExpandedId = (
   notifications: AppNotification[],
   expandedNotificationId: string | null,
-): AppNotification[] => {
-  if (!expandedNotificationId) return notifications;
-  const expandedNotification = notifications.find(
-    ({ id }) => id === expandedNotificationId,
-  );
-  return expandedNotification ? [expandedNotification] : notifications;
+): AppNotification | null => {
+  const expandedNotification = expandedNotificationId
+    ? notifications.find(({ id }) => id === expandedNotificationId)
+    : undefined;
+  return expandedNotification ?? notifications.at(-1) ?? null;
 };
