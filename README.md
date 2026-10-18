@@ -71,7 +71,7 @@ Use a tool of your choice (`flashthing-cli` with stock firmware, or Terbium for 
 
 ## Donate
 
-Nocturne and [Prelude](https://github.com/usenocturne/nocturne) are massive endeavors, and the team has spent every day over the last year making it a reality out of our passion for creating something that people like you love to use.
+Nocturne and [Prelude](https://github.com/usenocturne/prelude) are massive endeavors, and the team has spent every day over the last year making it a reality out of our passion for creating something that people like you love to use.
 
 All donations are split between the three members of the Nocturne team and go towards the development of future features. We are so grateful for your support!
 
