@@ -1510,11 +1510,15 @@ export function useSpotifyPlayerState() {
         const ctxUri =
           typeof data.context?.uri === "string" ? data.context.uri : "";
         const rawItemUri = itemWithArtwork?.uri || data.item?.uri || "";
-        const fallbackUri = ctxUri.startsWith("spotify:show:")
-          ? ctxUri
-          : ctxUri.startsWith("spotify:episode:")
+        const albumLikeUri =
+          itemWithArtwork?.album?.uri || data.item?.album?.uri || "";
+        const fallbackUri = albumLikeUri.startsWith("spotify:show:")
+          ? albumLikeUri
+          : ctxUri.startsWith("spotify:show:")
             ? ctxUri
-            : rawItemUri || ctxUri || "";
+            : ctxUri.startsWith("spotify:episode:")
+              ? ctxUri
+              : rawItemUri || ctxUri || "";
         const existingShow = itemWithArtwork?.show;
         const showUri = existingShow?.uri || fallbackUri;
         const showId =
@@ -1908,6 +1912,10 @@ export function useSpotifyPlayerState() {
 
           const isEpisode =
             playerState.track?.uri?.startsWith("spotify:episode:");
+          const episodeShowUri =
+            playerState.track?.metadata?.album_uri?.startsWith("spotify:show:")
+              ? playerState.track.metadata.album_uri
+              : playerState.context_uri;
           const isLocalTrack =
             playerState.track?.uri?.startsWith("spotify:local:") ||
             isSpotifyLocalImageUrl(playerState.track?.metadata?.image_url);
@@ -1942,12 +1950,13 @@ export function useSpotifyPlayerState() {
                     type: "episode",
                     name: playerState.track.metadata.title,
                     show: {
-                      id: playerState.context_uri?.split(":")[2],
-                      uri: playerState.context_uri,
+                      id: episodeShowUri?.split(":")[2],
+                      uri: episodeShowUri,
                       name:
                         playerState.track.metadata.album_title ||
                         "Unknown Show",
                       publisher:
+                        playerState.track.metadata.artist_name ||
                         playerState.track.metadata.album_title ||
                         "Unknown Show",
                       images: playerState.track.metadata.image_url

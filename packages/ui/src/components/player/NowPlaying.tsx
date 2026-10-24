@@ -67,7 +67,7 @@ interface NowPlayingProps {
   updateGradientColors?: UpdateGradientColors;
   onOpenDeviceSwitcher?: (devices: SpotifyDevice[]) => void;
   onNavigateToArtist?: (id: string, type: "artist") => void;
-  onNavigateToAlbum?: (id: string, type: "album") => void;
+  onNavigateToAlbum?: (id: string, type: "album" | "show") => void;
   setIgnoreNextRelease?: StateSetter<boolean>;
   isReceivingNowPlayingUpdates?: boolean;
 }
@@ -488,7 +488,13 @@ function NowPlaying({
         ? currentPlayback?.item?.artists?.[0]?.id
         : null;
 
-    const albumId = hasCurrentItem ? currentPlayback?.item?.album?.id : null;
+    const albumContentType: "album" | "show" =
+      currentItem?.type === "episode" ? "show" : "album";
+    const albumId = hasCurrentItem
+      ? albumContentType === "show"
+        ? currentItem.show?.id
+        : currentItem.album?.id
+      : null;
 
     const albumImages = hasCurrentItem
       ? currentItem.type === "episode"
@@ -505,6 +511,7 @@ function NowPlaying({
       trackId,
       firstArtistId,
       albumId,
+      albumContentType,
     };
   }, [currentPlayback, isStartingPlayback]);
 
@@ -515,6 +522,7 @@ function NowPlaying({
     trackId,
     firstArtistId,
     albumId,
+    albumContentType,
   } = trackInfo;
 
   const bindableContext = useMemo(
@@ -1222,9 +1230,15 @@ function NowPlaying({
 
   const handleAlbumClick = useCallback(() => {
     if (!isLocalMedia && !isPhoneMedia && albumId && onNavigateToAlbum) {
-      onNavigateToAlbum(albumId, "album");
+      onNavigateToAlbum(albumId, albumContentType);
     }
-  }, [isLocalMedia, isPhoneMedia, albumId, onNavigateToAlbum]);
+  }, [
+    isLocalMedia,
+    isPhoneMedia,
+    albumId,
+    albumContentType,
+    onNavigateToAlbum,
+  ]);
 
   return (
     <div
