@@ -7,6 +7,7 @@ TEST_ROOT=$(mktemp -d)
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 mkdir -p \
+  "$TEST_ROOT/var/cache/nocturned/images" \
   "$TEST_ROOT/var/lib/bluetooth/adapter/peer" \
   "$TEST_ROOT/var/lib/chromium-kiosk/Local Storage" \
   "$TEST_ROOT/var/lib/nocturne/state" \
@@ -14,6 +15,7 @@ mkdir -p \
   "$TEST_ROOT/var/nocturne/webapps" \
   "$TEST_ROOT/var/lib/bandaid/nocturne" \
   "$TEST_ROOT/var/lib/superbird"
+printf 'artwork\n' > "$TEST_ROOT/var/cache/nocturned/images/cover"
 printf 'paired\n' > "$TEST_ROOT/var/lib/bluetooth/adapter/peer/info"
 printf 'settings\n' > "$TEST_ROOT/var/lib/chromium-kiosk/Local Storage/settings"
 printf 'state\n' > "$TEST_ROOT/var/lib/nocturne/state/state.db"
@@ -28,6 +30,7 @@ touch "$TEST_ROOT/var/lib/nocturne/factory-reset.pending"
 NOCTURNE_FACTORY_RESET_ROOT="$TEST_ROOT" /bin/sh "$RESET_SCRIPT"
 
 test ! -e "$TEST_ROOT/var/lib/nocturne/factory-reset.pending"
+test -z "$(find "$TEST_ROOT/var/cache/nocturned" -mindepth 1 -maxdepth 1 -print -prune)"
 test -z "$(find "$TEST_ROOT/var/lib/bluetooth" -mindepth 1 -maxdepth 1 -print -prune)"
 test -z "$(find "$TEST_ROOT/var/lib/chromium-kiosk" -mindepth 1 -maxdepth 1 -print -prune)"
 test -z "$(find "$TEST_ROOT/var/lib/nocturne/state" -mindepth 1 -maxdepth 1 -print -prune)"

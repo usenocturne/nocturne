@@ -20,6 +20,7 @@ clear_children() {
   find "$directory" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 }
 
+clear_children "$(path /var/cache/nocturned)"
 clear_children "$(path /var/lib/bluetooth)"
 clear_children "$(path /var/lib/chromium-kiosk)"
 clear_children "$(path /var/lib/nocturne/state)"

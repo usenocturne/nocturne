@@ -1,5 +1,7 @@
 use std::{
+    ffi::CString,
     io,
+    os::unix::ffi::OsStrExt,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -15,6 +17,7 @@ use tokio_util::sync::CancellationToken;
 const META_FLUSH_INTERVAL_BYTES: u64 = 1024 * 1024;
 const REAPER_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 const STALE_AFTER: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+const FREE_SPACE_RESERVE_BYTES: u64 = 16 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct ChunkedTransfer {
@@ -37,6 +40,10 @@ pub enum TransferError {
     HashMismatch { expected: String, got: String },
     #[error("size mismatch: expected {expected}, got {got}")]
     SizeMismatch { expected: u64, got: u64 },
+    #[error(
+        "not enough free storage for the update: {needed} bytes needed, {available} bytes available"
+    )]
+    InsufficientSpace { needed: u64, available: u64 },
     #[error("io error: {0}")]
     Io(#[from] io::Error),
     #[error("json error: {0}")]
@@ -62,6 +69,9 @@ impl ChunkedTransfer {
         expected_sha256: &str,
     ) -> Result<u64, TransferError> {
         tokio::fs::create_dir_all(&self.transfers_dir).await?;
+        // Only one update streams at a time, so anything else here is dead weight
+        // that would otherwise hold a full package's worth of the data partition.
+        self.retain_only(Some(update_id)).await;
 
         let partial_path = self.path(update_id);
         let meta_path = self.meta_path(update_id);
@@ -69,14 +79,17 @@ impl ChunkedTransfer {
         let meta_exists = tokio::fs::try_exists(&meta_path).await?;
         match (partial_exists, meta_exists) {
             (true, true) => {
-                return self
+                let received = self
                     .resume_offset(update_id, expected_size, expected_sha256)
-                    .await;
+                    .await?;
+                self.ensure_free_space(expected_size - received).await?;
+                return Ok(received);
             }
             (true, false) => remove_if_exists(partial_path.clone()).await?,
             (false, true) => remove_if_exists(meta_path.clone()).await?,
             (false, false) => {}
         }
+        self.ensure_free_space(expected_size).await?;
 
         let file = OpenOptions::new()
             .create(true)
@@ -191,6 +204,55 @@ impl ChunkedTransfer {
         Ok(())
     }
 
+    /// Removes every transfer file except those belonging to `update_id`.
+    pub async fn retain_only(&self, update_id: Option<&str>) {
+        let keep = update_id.map(|id| [self.path(id), self.meta_path(id)]);
+        let mut entries = match tokio::fs::read_dir(&self.transfers_dir).await {
+            Ok(entries) => entries,
+            Err(err) if err.kind() == io::ErrorKind::NotFound => return,
+            Err(err) => {
+                tracing::warn!(?err, dir = %self.transfers_dir.display(), "failed to read OTA transfers dir");
+                return;
+            }
+        };
+
+        loop {
+            let entry = match entries.next_entry().await {
+                Ok(Some(entry)) => entry,
+                Ok(None) => return,
+                Err(err) => {
+                    tracing::warn!(?err, dir = %self.transfers_dir.display(), "failed to list OTA transfers dir");
+                    return;
+                }
+            };
+            let path = entry.path();
+            if keep.as_ref().is_some_and(|keep| keep.contains(&path)) {
+                continue;
+            }
+            if entry.file_type().await.is_ok_and(|kind| kind.is_dir()) {
+                continue;
+            }
+            match remove_if_exists(path.clone()).await {
+                Ok(()) => tracing::info!(path = %path.display(), "removed stale OTA transfer file"),
+                Err(err) => {
+                    tracing::warn!(?err, path = %path.display(), "failed to remove stale OTA transfer file")
+                }
+            }
+        }
+    }
+
+    async fn ensure_free_space(&self, remaining: u64) -> Result<(), TransferError> {
+        if remaining == 0 {
+            return Ok(());
+        }
+        let needed = remaining.saturating_add(FREE_SPACE_RESERVE_BYTES);
+        let available = available_bytes(self.transfers_dir.clone()).await?;
+        if available < needed {
+            return Err(TransferError::InsufficientSpace { needed, available });
+        }
+        Ok(())
+    }
+
     pub fn path(&self, update_id: &str) -> PathBuf {
         self.transfers_dir.join(format!("{update_id}.partial"))
     }
@@ -270,6 +332,22 @@ async fn remove_if_exists(path: PathBuf) -> Result<(), TransferError> {
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(err) => Err(err.into()),
     }
+}
+
+async fn available_bytes(path: PathBuf) -> io::Result<u64> {
+    tokio::task::spawn_blocking(move || {
+        let path = CString::new(path.as_os_str().as_bytes()).map_err(io::Error::other)?;
+        let mut stat = std::mem::MaybeUninit::<libc::statvfs>::uninit();
+        // SAFETY: `path` is a valid NUL-terminated string and `stat` is a writable statvfs.
+        if unsafe { libc::statvfs(path.as_ptr(), stat.as_mut_ptr()) } != 0 {
+            return Err(io::Error::last_os_error());
+        }
+        // SAFETY: statvfs returned success, so it initialized `stat`.
+        let stat = unsafe { stat.assume_init() };
+        Ok(stat.f_bavail.saturating_mul(stat.f_frsize))
+    })
+    .await
+    .map_err(io::Error::other)?
 }
 
 async fn sweep_stale(transfers_dir: &Path) {
@@ -589,5 +667,63 @@ mod tests {
 
         assert!(partial_path.exists(), ".partial should still exist");
         assert!(meta_path.exists(), ".meta should still exist");
+    }
+
+    #[tokio::test]
+    async fn begin_removes_transfers_for_other_updates() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let transfer = ChunkedTransfer::new(temp.path().to_path_buf());
+        let body = b"current update";
+        let sha = sha256_bytes(body);
+        for stale in ["old.partial", "old.meta", "orphan.partial", ".tmpABC123"] {
+            tokio::fs::write(temp.path().join(stale), b"stale")
+                .await
+                .unwrap();
+        }
+
+        transfer
+            .begin("current", body.len() as u64, &sha)
+            .await
+            .unwrap();
+
+        let mut names = Vec::new();
+        let mut entries = tokio::fs::read_dir(temp.path()).await.unwrap();
+        while let Some(entry) = entries.next_entry().await.unwrap() {
+            names.push(entry.file_name().into_string().unwrap());
+        }
+        names.sort();
+        assert_eq!(names, ["current.meta", "current.partial"]);
+    }
+
+    #[tokio::test]
+    async fn retain_only_none_clears_every_transfer() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let transfer = ChunkedTransfer::new(temp.path().to_path_buf());
+        tokio::fs::write(temp.path().join("a.partial"), b"a")
+            .await
+            .unwrap();
+        tokio::fs::write(temp.path().join("a.meta"), b"{}")
+            .await
+            .unwrap();
+
+        transfer.retain_only(None).await;
+
+        let mut entries = tokio::fs::read_dir(temp.path()).await.unwrap();
+        assert!(entries.next_entry().await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn begin_rejects_package_larger_than_free_space() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let transfer = ChunkedTransfer::new(temp.path().to_path_buf());
+
+        let err = transfer
+            .begin("too-big", u64::MAX / 2, &sha256_bytes(b""))
+            .await
+            .unwrap_err();
+
+        assert!(matches!(err, TransferError::InsufficientSpace { .. }));
+        assert!(!transfer.path("too-big").exists());
+        assert!(!transfer.meta_path("too-big").exists());
     }
 }

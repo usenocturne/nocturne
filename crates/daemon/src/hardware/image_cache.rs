@@ -1,17 +1,29 @@
 use crate::error::Result;
-use std::path::PathBuf;
+use std::{
+    path::PathBuf,
+    sync::atomic::{AtomicU64, Ordering},
+    time::SystemTime,
+};
 use tokio::fs;
 use tracing::{debug, info, warn};
 
 const CACHE_DIR: &str = "/var/cache/nocturned/images";
+// Roughly 500 base64 album covers; shares the data partition with OTA downloads.
+const MAX_CACHE_BYTES: u64 = 64 * 1024 * 1024;
 
 pub struct ImageCache {
     cache_dir: PathBuf,
+    max_bytes: u64,
+    size_bytes: AtomicU64,
 }
 
 impl ImageCache {
     pub fn with_dir(cache_dir: PathBuf) -> Self {
-        Self { cache_dir }
+        Self {
+            cache_dir,
+            max_bytes: MAX_CACHE_BYTES,
+            size_bytes: AtomicU64::new(0),
+        }
     }
 
     pub async fn new() -> Result<Self> {
@@ -27,13 +39,13 @@ impl ImageCache {
                     "failed to create {CACHE_DIR}; falling back to ephemeral tmpfs cache",
                 );
                 fs::create_dir_all(&fallback).await?;
-                return Ok(Self {
-                    cache_dir: fallback,
-                });
+                return Ok(Self::with_dir(fallback));
             }
         }
 
-        Ok(Self { cache_dir })
+        let cache = Self::with_dir(cache_dir);
+        cache.trim().await;
+        Ok(cache)
     }
 
     fn get_cache_path(&self, url: &str) -> PathBuf {
@@ -85,12 +97,84 @@ impl ImageCache {
         let mut partial_path = cache_path.clone().into_os_string();
         partial_path.push(".partial");
 
+        let replaced = fs::metadata(&cache_path).await.map_or(0, |meta| meta.len());
+
         // Write then rename so an interrupted write never leaves a truncated entry.
         fs::write(&partial_path, &data).await?;
         fs::rename(&partial_path, &cache_path).await?;
 
         debug!("Cached image for URL: {} at {:?}", url, cache_path);
+        let size = self
+            .size_bytes
+            .load(Ordering::Relaxed)
+            .saturating_sub(replaced)
+            .saturating_add(data.len() as u64);
+        self.size_bytes.store(size, Ordering::Relaxed);
+        if size > self.max_bytes {
+            self.trim().await;
+        }
         Ok(())
+    }
+
+    /// Recounts the cache and evicts the oldest entries until it is back under
+    /// three quarters of its budget, so a full cache does not trim on every put.
+    async fn trim(&self) {
+        let mut entries = match fs::read_dir(&self.cache_dir).await {
+            Ok(entries) => entries,
+            Err(err) => {
+                warn!(%err, dir = %self.cache_dir.display(), "failed to read image cache");
+                return;
+            }
+        };
+
+        let mut files = Vec::new();
+        let mut total = 0u64;
+        loop {
+            let entry = match entries.next_entry().await {
+                Ok(Some(entry)) => entry,
+                Ok(None) => break,
+                Err(err) => {
+                    warn!(%err, dir = %self.cache_dir.display(), "failed to list image cache");
+                    break;
+                }
+            };
+            let path = entry.path();
+            let Ok(meta) = entry.metadata().await else {
+                continue;
+            };
+            if !meta.is_file() {
+                continue;
+            }
+            if path.extension().is_some_and(|ext| ext == "partial") {
+                if let Err(err) = fs::remove_file(&path).await {
+                    warn!(%err, path = %path.display(), "failed to remove partial cached image");
+                }
+                continue;
+            }
+            total += meta.len();
+            files.push((
+                meta.modified().unwrap_or(SystemTime::UNIX_EPOCH),
+                meta.len(),
+                path,
+            ));
+        }
+
+        let target = self.max_bytes / 4 * 3;
+        if total > self.max_bytes {
+            files.sort_unstable_by_key(|(modified, ..)| *modified);
+            let before = total;
+            for (_, len, path) in &files {
+                if total <= target {
+                    break;
+                }
+                match fs::remove_file(path).await {
+                    Ok(()) => total -= len,
+                    Err(err) => warn!(%err, path = %path.display(), "failed to evict cached image"),
+                }
+            }
+            info!(before, after = total, "trimmed image cache");
+        }
+        self.size_bytes.store(total, Ordering::Relaxed);
     }
 }
 
@@ -149,5 +233,38 @@ mod tests {
         cache.put(url, "artwork".into()).await.unwrap();
         assert_eq!(cache.get(url).await.as_deref(), Some("artwork"));
         assert!(!root.path().join("artwork.partial").exists());
+    }
+
+    #[tokio::test]
+    async fn evicts_oldest_entries_when_over_budget() {
+        let root = tempfile::tempdir().unwrap();
+        let cache = ImageCache {
+            max_bytes: 40,
+            ..ImageCache::with_dir(root.path().to_path_buf())
+        };
+        let base = SystemTime::now() - std::time::Duration::from_secs(60);
+        for (index, name) in ["a", "b", "c"].into_iter().enumerate() {
+            let path = root.path().join(name);
+            fs::write(&path, "x".repeat(10)).await.unwrap();
+            let file = std::fs::File::options().write(true).open(&path).unwrap();
+            file.set_modified(base + std::time::Duration::from_secs(index as u64))
+                .unwrap();
+        }
+        fs::write(root.path().join("stale.partial"), "x")
+            .await
+            .unwrap();
+        cache.trim().await;
+
+        cache
+            .put("https://i.scdn.co/image/d", "x".repeat(20))
+            .await
+            .unwrap();
+
+        assert!(!root.path().join("a").exists());
+        assert!(!root.path().join("b").exists());
+        assert!(root.path().join("c").exists());
+        assert!(root.path().join("d").exists());
+        assert!(!root.path().join("stale.partial").exists());
+        assert_eq!(cache.size_bytes.load(Ordering::Relaxed), 30);
     }
 }

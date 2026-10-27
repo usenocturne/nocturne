@@ -3,7 +3,8 @@ use std::{io, path::Path};
 use tokio::{fs, process::Command};
 
 pub(crate) const RESET_MARKER_PATH: &str = "/var/lib/nocturne/factory-reset.pending";
-const RESET_DIRECTORIES: [&str; 5] = [
+const RESET_DIRECTORIES: [&str; 6] = [
+    "/var/cache/nocturned",
     "/var/lib/bluetooth",
     "/var/lib/chromium-kiosk",
     "/var/lib/nocturne/state",

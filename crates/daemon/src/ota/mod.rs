@@ -428,6 +428,11 @@ impl OtaActor {
     async fn run(mut self) {
         info!("ota actor started");
         self.recover_from_persisted_manifest().await;
+        let active = match &self.state {
+            OtaState::Streaming { update_id, .. } => Some(update_id.as_str()),
+            _ => None,
+        };
+        self.transfers.retain_only(active).await;
         while let Some(cmd) = self.cmd_rx.recv().await {
             match cmd {
                 Command::Begin { req, source, ack } => self.handle_begin(req, source, ack).await,
@@ -1620,9 +1625,10 @@ fn transfer_error_code(err: &TransferError) -> OtaErrorCode {
         TransferError::OffsetMismatch { .. } => OtaErrorCode::OffsetMismatch,
         TransferError::HashMismatch { .. } => OtaErrorCode::HashMismatch,
         TransferError::SizeMismatch { .. } => OtaErrorCode::SizeMismatch,
-        TransferError::MetadataMismatch | TransferError::Io(_) | TransferError::Json(_) => {
-            OtaErrorCode::Internal
-        }
+        TransferError::MetadataMismatch
+        | TransferError::InsufficientSpace { .. }
+        | TransferError::Io(_)
+        | TransferError::Json(_) => OtaErrorCode::Internal,
     }
 }
 
