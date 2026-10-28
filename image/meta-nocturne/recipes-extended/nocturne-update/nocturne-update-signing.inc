@@ -8,6 +8,13 @@ NOCTURNE_SWUPDATE_PUBLIC_KEY = "${NOCTURNE_LAYERDIR}/recipes-core/nocturne-keys/
 # with even one unhashed image entry.
 FILESEXTRAPATHS:prepend := "${NOCTURNE_LAYERDIR}/recipes-extended/nocturne-update/files/${SUPERBIRD_OTA_SW_DESCRIPTION_VARIANT}:"
 
+# The BSP render task substitutes placeholders in place, and a new build ID
+# reruns it without rerunning do_unpack. Restore the template first so the
+# previous build's version is never carried into the signed description.
+do_render_sw_description:prepend() {
+    install -m 0644 ${@bb.utils.which(d.getVar('FILESPATH'), 'sw-description')} ${UNPACKDIR}/sw-description
+}
+
 SWUPDATE_SIGNING = "${@'RSA' if d.getVar('NOCTURNE_SWUPDATE_SIGNING_MODE') == 'production' else ''}"
 SWUPDATE_PRIVATE_KEY = "${NOCTURNE_SWUPDATE_PRIVATE_KEY}"
 
