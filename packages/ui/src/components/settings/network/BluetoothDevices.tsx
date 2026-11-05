@@ -27,6 +27,15 @@ const BluetoothDevices = () => {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buttonPressInProgress = useRef(false);
 
+  const clearLongPressTimer = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  useEffect(() => clearLongPressTimer, []);
+
   useEffect(() => {
     const initialize = async () => {
       await startDiscovery();
@@ -60,16 +69,16 @@ const BluetoothDevices = () => {
   const handleCardPress = (device: BluetoothDevice) => {
     const address = device.address;
     if (!address) return;
+    clearLongPressTimer();
     longPressTimer.current = setTimeout(() => {
+      longPressTimer.current = null;
       setSelectedDevice(address);
       setShowForgetDialog(true);
     }, 800);
   };
 
   const handleCardRelease = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-    }
+    clearLongPressTimer();
   };
 
   const handleButtonClick = (
@@ -127,11 +136,7 @@ const BluetoothDevices = () => {
         }
         onTouchEnd={() => !buttonPressInProgress.current && handleCardRelease()}
         onMouseUp={() => !buttonPressInProgress.current && handleCardRelease()}
-        onMouseLeave={() => {
-          if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current);
-          }
-        }}
+        onMouseLeave={clearLongPressTimer}
         className="bg-white/10 rounded-xl p-6 select-none border border-white/10"
       >
         <div className="flex justify-between items-center">

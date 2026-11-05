@@ -176,7 +176,12 @@ impl EstablishedState {
     where
         W: AsyncWrite + Unpin,
     {
-        let Some(&furthest_buffered) = self.out_of_order.keys().last() else {
+        let last_in_sequence = self.last_received_in_sequence_psn;
+        let Some(&furthest_buffered) = self
+            .out_of_order
+            .keys()
+            .max_by_key(|psn| psn.wrapping_sub(last_in_sequence))
+        else {
             return Ok(());
         };
         let total = furthest_buffered.wrapping_sub(self.last_received_in_sequence_psn);
@@ -428,6 +433,24 @@ mod tests {
         assert_eq!(delivered[1].payload.as_ref(), b"two");
         assert_eq!(state.last_received_in_sequence_psn, 52);
         assert!(state.out_of_order.is_empty());
+    }
+
+    #[tokio::test]
+    async fn send_eak_requests_every_gap_across_psn_wrap() {
+        use tokio_util::codec::Decoder;
+
+        let mut state = EstablishedState::new(99, 250, &test_lsp(127, 65535, 3));
+        state
+            .out_of_order
+            .insert(252, data_packet(252, 100, 1, b"a"));
+        state.out_of_order.insert(2, data_packet(2, 100, 1, b"b"));
+        let mut codec = LinkCodec::new();
+        let mut wire = Vec::new();
+        state.send_eak(&mut wire, &mut codec).await.unwrap();
+
+        let mut buf = BytesMut::from(&wire[..]);
+        let eak = codec.decode(&mut buf).unwrap().expect("EAK packet");
+        assert_eq!(eak.payload.as_ref(), &[251, 253, 254, 255, 0, 1]);
     }
 
     #[test]

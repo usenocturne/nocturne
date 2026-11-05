@@ -48,15 +48,23 @@ export function useCurrentTime() {
 
   useEffect(() => {
     let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const scheduleRetry = () => {
+      if (cancelled) return;
+      if (retryTimeout) clearTimeout(retryTimeout);
+      retryTimeout = setTimeout(updateTime, 5000);
+    };
 
     const updateTime = async () => {
-      if (!appReady) return;
+      if (!appReady || cancelled) return;
 
       try {
         const data = await sendNocturneWsRequest<{ time?: string }>(
           "device.time.get",
           {},
         );
+        if (cancelled) return;
         if (data && typeof data.time === "string") {
           const timeString = data.time;
           const [hours24, minutes] = timeString.split(":");
@@ -73,11 +81,11 @@ export function useCurrentTime() {
 
           setCurrentTime(`${displayHours}:${minutes}`);
         } else {
-          retryTimeout = setTimeout(updateTime, 5000);
+          scheduleRetry();
         }
       } catch (error) {
         console.error("Error fetching time from server:", error);
-        retryTimeout = setTimeout(updateTime, 5000);
+        scheduleRetry();
       }
     };
 
@@ -91,6 +99,7 @@ export function useCurrentTime() {
     window.addEventListener("timeFormatChanged", handleTimeFormatChange);
 
     return () => {
+      cancelled = true;
       clearInterval(interval);
       if (retryTimeout) clearTimeout(retryTimeout);
       window.removeEventListener("timeFormatChanged", handleTimeFormatChange);

@@ -122,7 +122,7 @@ const OTA_TRANSFER_MAX_ATTEMPTS: usize = 3;
 const OTA_PULL_BURST_CHUNKS: u64 = 16;
 const OTA_PULL_BURST_DELAY: Duration = Duration::from_millis(40);
 const MSGPACK_PROTOCOL: &str = "com.usenocturne.daemon";
-const MAX_INBOUND_BUFFER: usize = OTA_MAX_PULL_WINDOW_SIZE * 2;
+pub(crate) const MAX_INBOUND_BUFFER: usize = OTA_MAX_PULL_WINDOW_SIZE * 2;
 const MAX_REASSEMBLED_MESSAGE: usize = MAX_INBOUND_BUFFER;
 const MAX_PENDING_MESSAGE_BYTES: usize = MAX_REASSEMBLED_MESSAGE;
 const PENDING_MESSAGE_TTL: Duration = Duration::from_secs(120);
@@ -819,6 +819,7 @@ async fn pull_ota_chunks_task(
     source: crate::ota::OtaSource,
     ready: OtaPackageReady,
     transfer_window_size: u32,
+    pull_generation: u64,
 ) -> Result<()> {
     let update_id = ready.update_id.clone();
     let result = pull_ota_chunks_inner(
@@ -828,6 +829,7 @@ async fn pull_ota_chunks_task(
         source.clone(),
         ready,
         transfer_window_size,
+        pull_generation,
     )
     .await;
 
@@ -885,6 +887,7 @@ async fn pull_ota_chunks_inner(
     source: crate::ota::OtaSource,
     ready: OtaPackageReady,
     transfer_window_size: u32,
+    pull_generation: u64,
 ) -> Result<()> {
     let transfer_window_size = usize::try_from(transfer_window_size)
         .unwrap_or(OTA_LEGACY_PULL_SIZE)
@@ -916,6 +919,7 @@ async fn pull_ota_chunks_inner(
                     last: true,
                 },
                 source: source.clone(),
+                pull_generation,
                 ack,
             })
             .await
@@ -967,6 +971,7 @@ async fn pull_ota_chunks_inner(
                     last,
                 },
                 source: source.clone(),
+                pull_generation,
                 ack,
             })
             .await
@@ -1459,6 +1464,7 @@ impl MsgPackProtocolHandler {
                 };
                 ready.resume_from_offset = authorization.resume_from_offset;
                 let transfer_window_size = authorization.transfer_window_size;
+                let pull_generation = authorization.pull_generation;
                 abort_ota_pull_task(
                     &self.ota_pull_task,
                     &self.pending_calls,
@@ -1481,6 +1487,7 @@ impl MsgPackProtocolHandler {
                         source,
                         ready,
                         transfer_window_size,
+                        pull_generation,
                     )
                     .await
                     {
@@ -3161,6 +3168,7 @@ mod tests {
                     resume_from_offset: 4,
                     transfer_window_size: OTA_LEGACY_PULL_SIZE as u32,
                     pull_required: true,
+                    pull_generation: 1,
                 }))
                 .unwrap();
             }
@@ -3213,6 +3221,7 @@ mod tests {
                     resume_from_offset: 4,
                     transfer_window_size: OTA_LEGACY_PULL_SIZE as u32,
                     pull_required: false,
+                    pull_generation: 1,
                 }))
                 .unwrap();
             }
@@ -3345,6 +3354,7 @@ mod tests {
             test_ota_source(),
             ready,
             OTA_MAX_PULL_WINDOW_SIZE as u32,
+            0,
         ));
 
         let first_call = timeout(Duration::from_secs(1), session_rx.recv())
@@ -3511,6 +3521,7 @@ mod tests {
             test_ota_source(),
             ready,
             OTA_MAX_PULL_WINDOW_SIZE as u32,
+            0,
         ));
 
         let first_call = timeout(Duration::from_secs(1), first_rx.recv())

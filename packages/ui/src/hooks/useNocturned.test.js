@@ -3,6 +3,7 @@ import deviceWireSnapshot from "../../test/wire_snapshots/device.json";
 import {
   completePendingBtReconnectOnAppReady,
   createBluetoothDiscoveryCoordinator,
+  createWsListenerId,
   getBtReconnectState,
   getWsRequestError,
   getBluetoothPairingUiUpdate,
@@ -590,5 +591,21 @@ describe("Bluetooth pairing peer isolation", () => {
         }),
       ),
     ).toBeNull();
+  });
+});
+
+describe("websocket listener ids", () => {
+  it("stays unique for listeners registered within the same millisecond", () => {
+    const realNow = Date.now;
+    Date.now = () => 1_700_000_000_000;
+    try {
+      const ids = Array.from({ length: 50 }, () =>
+        createWsListenerId("spotify-ws"),
+      );
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(ids.every((id) => id.startsWith("spotify-ws-"))).toBe(true);
+    } finally {
+      Date.now = realNow;
+    }
   });
 });

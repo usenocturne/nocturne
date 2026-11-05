@@ -20,8 +20,9 @@
 //! Reassembly accepts every Setup-declared file type and emits the
 //! result as a generic event the daemon's observer routes by transfer
 //! id (artwork vs queue-snapshot vs anything else iOS may push).
-//! The reassembly buffer is pre-allocated with the Setup-declared size
-//! so we don't grow as bytes arrive. Bytes that exceed the declared
+//! The reassembly buffer is pre-allocated with the Setup-declared size,
+//! capped at `MAX_PREALLOCATED_BYTES` so a bogus declared size cannot
+//! abort the daemon before any data arrives. Bytes that exceed the declared
 //! size hard-stop the transfer (drops the buffer, drops the future
 //! SetupAck).
 
@@ -49,6 +50,9 @@ const OP_COMPLETE_ACK: u8 = 0x05;
 const OP_LAST_DATA: u8 = 0x40;
 const OP_FIRST_DATA: u8 = 0x80;
 const OP_FIRST_AND_ONLY: u8 = 0xC0;
+
+/// 4 MiB: covers artwork and queue snapshots; larger transfers grow on demand.
+const MAX_PREALLOCATED_BYTES: usize = 4 * 1024 * 1024;
 
 /// File type for `MediaItemArtwork` transfers. Other types emit a generic event upstream.
 const FILE_TYPE_ARTWORK: u16 = 2;
@@ -160,7 +164,7 @@ impl FileTransferFlow {
         self.in_flight.insert(
             id,
             InFlight {
-                buffer: BytesMut::with_capacity(declared_size),
+                buffer: BytesMut::with_capacity(declared_size.min(MAX_PREALLOCATED_BYTES)),
                 declared_size,
                 file_type,
             },
@@ -439,6 +443,30 @@ mod tests {
         p.extend_from_slice(&[id, op]);
         p.extend_from_slice(body);
         p.freeze()
+    }
+
+    #[tokio::test]
+    async fn oversized_setup_declaration_does_not_preallocate_it() {
+        let (mut flow, mut outbox, mut events, evt_tx) = flow_with_outbox();
+        flow.dispatch_link_data(setup_payload(9, u64::MAX, 2), &evt_tx)
+            .await
+            .unwrap();
+        assert!(matches!(
+            outbox.recv().await.unwrap(),
+            Iap2Command::Send { session_id: 2, ref payload } if payload[..] == [9, OP_SETUP_ACK]
+        ));
+        assert!(flow.in_flight[&9].buffer.capacity() <= MAX_PREALLOCATED_BYTES);
+
+        flow.dispatch_link_data(data_with(9, OP_FIRST_AND_ONLY, b"art"), &evt_tx)
+            .await
+            .unwrap();
+        match events.recv().await.unwrap() {
+            SessionEvent::ArtworkBytes { transfer_id, bytes } => {
+                assert_eq!(transfer_id, 9);
+                assert_eq!(&bytes[..], b"art");
+            }
+            _ => panic!("unexpected event"),
+        }
     }
 
     #[tokio::test]

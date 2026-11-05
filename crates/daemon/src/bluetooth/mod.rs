@@ -6,7 +6,7 @@ pub mod pairing;
 use crate::app::msgpack::{
     create_audio_data_event, create_audio_recording_started_event,
     create_audio_recording_stopped_event, create_daemon_ready_event, MsgPackMessage,
-    MsgPackProtocolHandler,
+    MsgPackProtocolHandler, MAX_INBOUND_BUFFER,
 };
 use crate::audio;
 use crate::hardware::ImageCache;
@@ -1779,7 +1779,7 @@ impl BluetoothDaemon {
         let mut audio_events_closed = false;
 
         let mut read_buf = [0u8; 4096];
-        let mut input_buffer = BytesMut::new();
+        let mut input_buffer = SppLineBuffer::default();
 
         loop {
             tokio::select! {
@@ -1791,15 +1791,10 @@ impl BluetoothDaemon {
                         }
                         Ok(n) => {
                             debug!("Received {} bytes from SPP device {}", n, device);
-                            input_buffer.extend_from_slice(&read_buf[..n]);
+                            input_buffer.push(&read_buf[..n], device);
 
                             let mut write_error = false;
-                            while let Some(newline_pos) = input_buffer.iter().position(|&b| b == b'\n') {
-                                let b64_data = input_buffer[..newline_pos].to_vec();
-
-                                let remaining = input_buffer.split_off(newline_pos + 1);
-                                input_buffer.clear();
-                                input_buffer = remaining;
+                            while let Some(b64_data) = input_buffer.next_line() {
 
                                 let decoded = match base64::engine::general_purpose::STANDARD.decode(&b64_data) {
                                     Ok(d) => d,
@@ -3088,9 +3083,88 @@ impl BluetoothDaemon {
     }
 }
 
+/// Base64 length of the largest message the msgpack handler accepts; longer lines can never decode.
+const MAX_SPP_LINE_BYTES: usize = MAX_INBOUND_BUFFER.div_ceil(3) * 4;
+
+/// Newline-framed SPP input that drops any line longer than `MAX_SPP_LINE_BYTES`.
+#[derive(Default)]
+struct SppLineBuffer {
+    buffer: BytesMut,
+    discarding_line: bool,
+}
+
+impl SppLineBuffer {
+    fn push(&mut self, data: &[u8], device: impl std::fmt::Display) {
+        let mut data = data;
+        if self.discarding_line {
+            let Some(newline_pos) = data.iter().position(|&b| b == b'\n') else {
+                return;
+            };
+            self.discarding_line = false;
+            data = &data[newline_pos + 1..];
+        }
+        self.buffer.extend_from_slice(data);
+        let unterminated_start = self
+            .buffer
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |pos| pos + 1);
+        if self.buffer.len() - unterminated_start > MAX_SPP_LINE_BYTES {
+            warn!(
+                "SPP line from {} exceeds {} bytes without a newline, discarding it",
+                device, MAX_SPP_LINE_BYTES
+            );
+            self.buffer.truncate(unterminated_start);
+            self.discarding_line = true;
+        }
+    }
+
+    fn next_line(&mut self) -> Option<Vec<u8>> {
+        let newline_pos = self.buffer.iter().position(|&b| b == b'\n')?;
+        let line = self.buffer.split_to(newline_pos + 1);
+        Some(line[..newline_pos].to_vec())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn spp_line_buffer_splits_lines_across_reads() {
+        let mut lines = SppLineBuffer::default();
+        lines.push(b"YWJj\nZG", "peer");
+        lines.push(b"Vm\n", "peer");
+        assert_eq!(lines.next_line(), Some(b"YWJj".to_vec()));
+        assert_eq!(lines.next_line(), Some(b"ZGVm".to_vec()));
+        assert_eq!(lines.next_line(), None);
+    }
+
+    #[test]
+    fn spp_line_buffer_accepts_the_largest_decodable_line() {
+        let mut lines = SppLineBuffer::default();
+        let line = vec![b'A'; MAX_SPP_LINE_BYTES];
+        for chunk in line.chunks(4096) {
+            lines.push(chunk, "peer");
+        }
+        lines.push(b"\n", "peer");
+        assert_eq!(lines.next_line(), Some(line));
+    }
+
+    #[test]
+    fn spp_line_buffer_drops_an_unterminated_oversized_line() {
+        let mut lines = SppLineBuffer::default();
+        lines.push(b"YWJj\n", "peer");
+        let junk = vec![b'A'; 4096];
+        for _ in 0..=(MAX_SPP_LINE_BYTES / junk.len()) {
+            lines.push(&junk, "peer");
+        }
+        assert!(lines.buffer.len() <= MAX_SPP_LINE_BYTES + junk.len());
+        lines.push(b"AAAA\nZGVm\n", "peer");
+        assert_eq!(lines.next_line(), Some(b"YWJj".to_vec()));
+        assert_eq!(lines.next_line(), Some(b"ZGVm".to_vec()));
+        assert_eq!(lines.next_line(), None);
+    }
 
     #[test]
     fn adapter_identity_is_set_before_the_radio_is_powered() {

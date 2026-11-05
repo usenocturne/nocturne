@@ -55,6 +55,8 @@ pub struct OtaPullAuthorization {
     pub resume_from_offset: u32,
     pub transfer_window_size: u32,
     pub pull_required: bool,
+    /// Tags the pull task started for this authorization; chunks from older tasks are dropped.
+    pub pull_generation: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -132,6 +134,7 @@ pub enum Command {
     PulledChunk {
         chunk: OtaChunk,
         source: OtaSource,
+        pull_generation: u64,
         ack: oneshot::Sender<Result<(), String>>,
     },
     AuthorizePull {
@@ -280,6 +283,7 @@ pub struct OtaActor {
     installed_versions: InstalledVersions,
     last_streaming_emit_at: Option<Instant>,
     last_streaming_percent: Option<u8>,
+    pull_generation: u64,
 }
 
 impl OtaActor {
@@ -320,6 +324,7 @@ impl OtaActor {
             installed_versions,
             last_streaming_emit_at: None,
             last_streaming_percent: None,
+            pull_generation: 0,
         };
         let _join = tokio::spawn(actor.run());
         OtaHandle { cmd_tx, _join }
@@ -439,8 +444,26 @@ impl OtaActor {
                 Command::Chunk { chunk, source } => {
                     let _ = self.handle_chunk(chunk, &source).await;
                 }
-                Command::PulledChunk { chunk, source, ack } => {
-                    let _ = ack.send(self.handle_chunk(chunk, &source).await);
+                Command::PulledChunk {
+                    chunk,
+                    source,
+                    pull_generation,
+                    ack,
+                } => {
+                    if pull_generation != self.pull_generation {
+                        // A repeated package_ready superseded this task; its bytes would
+                        // collide with the new task's resume offset.
+                        warn!(
+                            update_id = %chunk.update_id,
+                            offset = chunk.offset,
+                            pull_generation,
+                            current_pull_generation = self.pull_generation,
+                            "dropping chunk from superseded OTA pull task"
+                        );
+                        let _ = ack.send(Ok(()));
+                    } else {
+                        let _ = ack.send(self.handle_chunk(chunk, &source).await);
+                    }
                 }
                 Command::AuthorizePull {
                     ready,
@@ -949,10 +972,12 @@ impl OtaActor {
                 )
                 .await;
         }
+        self.pull_generation = self.pull_generation.wrapping_add(1);
         Ok(OtaPullAuthorization {
             resume_from_offset,
             transfer_window_size,
             pull_required: !writing,
+            pull_generation: self.pull_generation,
         })
     }
 
@@ -1970,6 +1995,7 @@ mod tests {
             installed_versions: test_installed_versions(),
             last_streaming_emit_at: None,
             last_streaming_percent: None,
+            pull_generation: 0,
         };
         let completed_sha = sha.clone();
         let completion = tokio::spawn(async move {
@@ -2253,6 +2279,7 @@ mod tests {
                     last: false,
                 },
                 source: test_source(),
+                pull_generation: 0,
                 ack: chunk_ack,
             })
             .await
@@ -2332,6 +2359,7 @@ mod tests {
                     last: false,
                 },
                 source: stale,
+                pull_generation: 0,
                 ack,
             })
             .await
@@ -2404,6 +2432,7 @@ mod tests {
                     last: false,
                 },
                 source: test_source(),
+                pull_generation: 0,
                 ack: chunk_ack,
             })
             .await
@@ -2508,6 +2537,81 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn repeated_package_ready_drops_chunks_from_the_superseded_pull_task() {
+        let root = tempfile::TempDir::new().unwrap();
+        let (handle, _events_rx) = spawn_actor(&root);
+        let (bytes, sha, size) = fixture();
+        do_begin(&handle, &sha, size).await.expect("begin ok");
+        let ready = OtaPackageReady {
+            update_id: sha.clone(),
+            version: "4.2.0".into(),
+            size,
+            expected_sha256: sha.clone(),
+            resume_from_offset: 0,
+            max_transfer_chunk_size: None,
+            supports_chunked_transfer_response: None,
+            transfer_data_encoding: None,
+        };
+        let authorize = |ready: OtaPackageReady| {
+            let cmd_tx = handle.cmd_tx.clone();
+            async move {
+                let (ack, rx) = oneshot::channel();
+                cmd_tx
+                    .send(Command::AuthorizePull {
+                        ready,
+                        transfer_window_size: 9,
+                        source: test_source(),
+                        ack,
+                    })
+                    .await
+                    .unwrap();
+                rx.await.unwrap().unwrap()
+            }
+        };
+        let pull = |offset: usize, pull_generation: u64| {
+            let cmd_tx = handle.cmd_tx.clone();
+            let chunk = bytes[offset..offset + 9].to_vec();
+            let sha = sha.clone();
+            async move {
+                let (ack, rx) = oneshot::channel();
+                cmd_tx
+                    .send(Command::PulledChunk {
+                        chunk: OtaChunk {
+                            update_id: sha,
+                            offset: offset as u32,
+                            bytes: chunk,
+                            last: false,
+                        },
+                        source: test_source(),
+                        pull_generation,
+                        ack,
+                    })
+                    .await
+                    .unwrap();
+                rx.await.unwrap()
+            }
+        };
+
+        let first = authorize(ready.clone()).await;
+        pull(0, first.pull_generation).await.unwrap();
+
+        let second = authorize(ready).await;
+        assert_eq!(second.resume_from_offset, 9);
+        // The superseded task's in-flight chunk lands before it is aborted.
+        pull(9, first.pull_generation).await.unwrap();
+        pull(9, second.pull_generation)
+            .await
+            .expect("the new pull task must keep the resumable partial");
+
+        assert_eq!(
+            tokio::fs::read(root.path().join("transfers").join(format!("{sha}.partial")))
+                .await
+                .unwrap(),
+            bytes[..18].to_vec()
+        );
+    }
+
+    #[tokio::test]
     async fn package_ready_can_grow_the_window_without_changing_the_durable_offset() {
         let root = tempfile::TempDir::new().unwrap();
         let (handle, _events_rx) = spawn_actor(&root);
@@ -2535,7 +2639,8 @@ mod tests {
             })
             .await
             .unwrap();
-        assert_eq!(legacy_rx.await.unwrap().unwrap().transfer_window_size, 1800);
+        let legacy_authorization = legacy_rx.await.unwrap().unwrap();
+        assert_eq!(legacy_authorization.transfer_window_size, 1800);
 
         let first = bytes[..9].to_vec();
         let (chunk_ack, chunk_rx) = oneshot::channel();
@@ -2549,6 +2654,7 @@ mod tests {
                     last: false,
                 },
                 source: test_source(),
+                pull_generation: legacy_authorization.pull_generation,
                 ack: chunk_ack,
             })
             .await
@@ -2798,6 +2904,7 @@ mod tests {
             installed_versions,
             last_streaming_emit_at: None,
             last_streaming_percent: None,
+            pull_generation: 0,
         }
     }
 

@@ -862,7 +862,15 @@ impl WebSocketServer {
                             return Ok(());
                         }
                         "device.ab.setSlot" | "device.ab.set_slot" => {
-                            let request: DeviceAbSetSlotRequest = Self::decode_params(params)?;
+                            let request: DeviceAbSetSlotRequest = match Self::decode_params(params)
+                            {
+                                Ok(request) => request,
+                                Err(error) => {
+                                    self.send_error(id, format!("invalid params: {error}"))
+                                        .await;
+                                    return Ok(());
+                                }
+                            };
                             if request.slot > 1 {
                                 self.send_error(
                                     id,
@@ -893,7 +901,14 @@ impl WebSocketServer {
                         }
                         "device.ab.setBootResult" | "device.ab.set_boot_result" => {
                             let request: DeviceAbSetBootResultRequest =
-                                Self::decode_params(params)?;
+                                match Self::decode_params(params) {
+                                    Ok(request) => request,
+                                    Err(error) => {
+                                        self.send_error(id, format!("invalid params: {error}"))
+                                            .await;
+                                        return Ok(());
+                                    }
+                                };
                             if request.result != 0 && request.result != 1 {
                                 self.send_error(
                                     id,
@@ -973,7 +988,15 @@ impl WebSocketServer {
                             return Ok(());
                         }
                         "device.brightness.set" => {
-                            let request: DeviceBrightnessSetRequest = Self::decode_params(params)?;
+                            let request: DeviceBrightnessSetRequest =
+                                match Self::decode_params(params) {
+                                    Ok(request) => request,
+                                    Err(error) => {
+                                        self.send_error(id, format!("invalid params: {error}"))
+                                            .await;
+                                        return Ok(());
+                                    }
+                                };
 
                             match crate::hardware::set_brightness(request.brightness).await {
                                 Ok(()) => match crate::hardware::get_brightness_config().await {
@@ -998,7 +1021,15 @@ impl WebSocketServer {
                             return Ok(());
                         }
                         "device.brightness.auto" => {
-                            let request: DeviceBrightnessAutoRequest = Self::decode_params(params)?;
+                            let request: DeviceBrightnessAutoRequest =
+                                match Self::decode_params(params) {
+                                    Ok(request) => request,
+                                    Err(error) => {
+                                        self.send_error(id, format!("invalid params: {error}"))
+                                            .await;
+                                        return Ok(());
+                                    }
+                                };
 
                             match crate::hardware::set_auto_brightness(request.enabled).await {
                                 Ok(()) => match crate::hardware::get_brightness_config().await {
@@ -1921,6 +1952,64 @@ mod tests {
             assert_eq!(id, expected);
         }
         assert!(slow_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn malformed_request_params_answer_the_request_id() {
+        let (app_tx, _app_rx) = mpsc::unbounded_channel();
+        let server = WebSocketServer::new(
+            app_tx,
+            0,
+            Arc::new(Mutex::new(ImageCache::with_dir(std::env::temp_dir()))),
+        );
+        let (tx, mut rx) = mpsc::channel(8);
+        server.connections.write().await.insert(
+            "client".into(),
+            WebSocketConnection {
+                id: "client".into(),
+                addr: "127.0.0.1:1234".parse().unwrap(),
+                tx,
+                disconnect: CancellationToken::new(),
+            },
+        );
+
+        for (id, method, params) in [
+            (
+                "set-slot",
+                "device.ab.setSlot",
+                serde_json::json!({ "slot": "a" }),
+            ),
+            (
+                "boot-result",
+                "device.ab.setBootResult",
+                serde_json::json!({}),
+            ),
+            (
+                "brightness",
+                "device.brightness.set",
+                serde_json::json!({ "brightness": "x" }),
+            ),
+            (
+                "auto",
+                "device.brightness.auto",
+                serde_json::json!({ "enabled": 1 }),
+            ),
+        ] {
+            let request = serde_json::json!({
+                "type": "request",
+                "id": id,
+                "method": method,
+                "params": params,
+            });
+            server
+                .handle_incoming_message(&request.to_string())
+                .await
+                .expect("malformed params must be answered, not bubbled");
+            let WebSocketMessage::Error { id: received, .. } = rx.try_recv().unwrap() else {
+                panic!("expected an error reply for {method}");
+            };
+            assert_eq!(received, id);
+        }
     }
 
     #[tokio::test]

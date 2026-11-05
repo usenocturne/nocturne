@@ -16,6 +16,7 @@ import {
   CarIcon,
 } from "../common/icons";
 import { useSpotifyWebSocket } from "../../hooks/useSpotifyWebSocket";
+import { shouldApplyDeviceResponse } from "./deviceSwitcher";
 
 const WAKE_REFETCH_DELAY_MS = 2_500;
 
@@ -37,10 +38,13 @@ const DeviceSwitcherModal = ({
   const [isTransferring, setIsTransferring] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const requestIdRef = useRef(0);
+  const cancelledThroughIdRef = useRef(0);
+  const lastAppliedIdRef = useRef(0);
   const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cancelPendingFetches = () => {
     requestIdRef.current += 1;
+    cancelledThroughIdRef.current = requestIdRef.current;
     if (refetchTimerRef.current) {
       clearTimeout(refetchTimerRef.current);
       refetchTimerRef.current = null;
@@ -80,7 +84,16 @@ const DeviceSwitcherModal = ({
 
     try {
       const data = await getDevices();
-      if (requestId === requestIdRef.current) setDevices(data.devices || []);
+      if (
+        shouldApplyDeviceResponse(
+          requestId,
+          cancelledThroughIdRef.current,
+          lastAppliedIdRef.current,
+        )
+      ) {
+        lastAppliedIdRef.current = requestId;
+        setDevices(data.devices || []);
+      }
     } catch (error) {
       console.error("Error fetching devices:", error);
       if (!quiet && requestId === requestIdRef.current) setDevices([]);

@@ -383,6 +383,11 @@ const generateUUID = () => crypto.randomUUID();
 
 let globalWsRef: WebSocket | null = null;
 let globalWsListeners: GlobalWsListener[] = [];
+let wsListenerSequence = 0;
+
+export const createWsListenerId = (prefix: string) =>
+  `${prefix}-${Date.now()}-${++wsListenerSequence}`;
+
 let wsInitialized = false;
 const pendingWsRequests = new Map<string, PendingWsRequest>();
 let appReady = false;
@@ -1953,7 +1958,7 @@ export const useNocturned = () => {
       wsInitialized = true;
     }
 
-    const listenerId = `nocturned-${Date.now()}`;
+    const listenerId = createWsListenerId("nocturned");
     listenerIdRef.current = listenerId;
 
     globalWsListeners.push({
@@ -2025,7 +2030,7 @@ export const useNocturned = () => {
 
   const addMessageListener = useCallback(
     (id: string, messageHandler: (message: WsMessage) => void) => {
-      const listenerId = `${id}-${Date.now()}`;
+      const listenerId = createWsListenerId(id);
 
       globalWsListeners.push({
         id: listenerId,
