@@ -3,6 +3,7 @@ import type {
   SpotifyPlaybackState as SpotifyPlayback,
   UpdateGradientColors,
 } from "../../types";
+import { useSettings } from "../../contexts/SettingsContext";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
 import { useSpotifyPlayerControls } from "../../hooks/useSpotifyPlayerControls";
 import { useGestureControls } from "../../hooks/useGestureControls";
@@ -21,6 +22,8 @@ export default function LockView({
   updateGradientColors,
 }: LockViewProps) {
   const { currentTime } = useCurrentTime();
+  const { settings } = useSettings();
+  const minimalClock = settings.minimalClockEnabled === true;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const {
     playTrack,
@@ -122,6 +125,8 @@ export default function LockView({
   }, [onClose, handlePlayPause]);
 
   useEffect(() => {
+    if (minimalClock) return;
+
     if (currentPlayback?.item && updateGradientColors) {
       let imageUrl: string | null = null;
       const item = currentPlayback.item;
@@ -138,12 +143,14 @@ export default function LockView({
         updateGradientColors(imageUrl, "lock");
       }
     }
-  }, [currentPlayback?.item, updateGradientColors]);
+  }, [currentPlayback?.item, updateGradientColors, minimalClock]);
 
   return (
     <div
       ref={containerRef}
-      className="flex items-center justify-center h-screen w-full z-10 fadeIn-animation text-white"
+      className={`flex items-center justify-center h-screen w-full z-10 ${
+        minimalClock ? "bg-black text-[#666666]" : "fadeIn-animation text-white"
+      }`}
     >
       <div className="text-[20vw] leading-none font-semibold tracking-tight">
         {currentTime}

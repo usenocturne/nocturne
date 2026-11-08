@@ -210,3 +210,7 @@ Android GPS guidance shares the Phone Notifications preference through `NavNotif
 ### Phone app launch preference
 
 General > Open Phone App and Mockingbird Options > Auto Launch App share the daemon-backed `foregroundAppLaunchEnabled` preference. It defaults to foreground launch. `useAppLaunchSetting` reads `device.appLaunch.get` on connection and saves through `device.appLaunch.set`; never persist or restore this preference from browser localStorage. Disable the control until loaded and while saving, preserve the acknowledged value on failure, and display the error. Background mode retains phone data connections. General > Launch Spotify sits directly below Open Phone App. It is backed by the daemon `spotify` flag (`spotifyAppLaunchEnabled` in settings context), defaults on, and shares the same loading, saving, and error gating. Mockingbird mirrors it as Options > Launch Spotify.
+
+### Minimal Clock
+
+General > Minimal Clock is an opt-in, localStorage-backed `minimalClockEnabled` setting. `LockView` uses an opaque black background and gray digits without the entrance fade so the album gradient never shows through. It preserves clock formatting and controls and does not change backlight settings.
