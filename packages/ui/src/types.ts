@@ -275,6 +275,7 @@ export interface SettingsState {
   lyricsMenuEnabled?: boolean;
   elapsedTimeEnabled?: boolean;
   idleLockEnabled?: boolean;
+  minimalClockEnabled?: boolean;
   idleDisplaySleepEnabled?: boolean;
   remainingTimeEnabled?: boolean;
   showStatusBar?: boolean;

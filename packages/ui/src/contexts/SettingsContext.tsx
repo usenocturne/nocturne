@@ -86,6 +86,7 @@ export function SettingsProvider({ children }: ChildrenProps) {
     lyricsMenuEnabled: getDefaultSettingValue("lyricsMenuEnabled", true),
     elapsedTimeEnabled: getDefaultSettingValue("elapsedTimeEnabled", false),
     idleLockEnabled: getDefaultSettingValue("idleLockEnabled", false),
+    minimalClockEnabled: getDefaultSettingValue("minimalClockEnabled", false),
     idleDisplaySleepEnabled: getDefaultSettingValue(
       "idleDisplaySleepEnabled",
       false,

@@ -113,6 +113,15 @@ const settingsStructure: Record<string, SettingsSection> = {
         defaultValue: false,
       },
       {
+        id: "minimal-clock",
+        title: "Minimal Clock",
+        type: "toggle",
+        description:
+          "Use gray digits on a black background for the lock screen clock.",
+        storageKey: "minimalClockEnabled",
+        defaultValue: false,
+      },
+      {
         id: "idle-display-sleep",
         title: "Backlight off when idle",
         type: "toggle",
