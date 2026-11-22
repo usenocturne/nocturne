@@ -46,7 +46,7 @@ Flashing will likely take about 5-10 minutes, depending on your USB ports and so
 ### Connecting to Nocturne
 
 <details>
-<summary><img src="https://camo.githubusercontent.com/b9c79d36777ba11fe5423f498b522f7b786898772a1ddbb44074fb6bc59adf06/68747470733a2f2f7573656e6f637475726e652e636f6d2f696d616765732f6c6f676f2e706e67" height="14" style="vertical-align: middle;"> Mobile Device (iOS 16.1+ / Android 13+, recommended)</summary>
+<summary><img src="https://usenocturne.com/images/logo.png" height="14" style="vertical-align: middle;"> Mobile Device (iOS 16.1+ / Android 13+, recommended)</summary>
 
 Nocturne supports Bluetooth without tethering. An internet connection is still required to access the Spotify API. App access requires Nocturne Lifetime ($9.99 one-time) or Nocturne+ ($1.99/month). Nocturne+ also unlocks voice controls on your Car Thing.
 
